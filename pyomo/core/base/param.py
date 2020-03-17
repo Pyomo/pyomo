@@ -49,9 +49,8 @@ class _ImplicitAny(Any.__class__):
     change of Param's implicit domain from Any to Reals.
 
     """
-    def __init__(self, owner, **kwds):
-        super(_ImplicitAny, self).__init__(**kwds)
-        self._owner = weakref_ref(owner)
+    def __init__(self, owner_name, **kwds):
+        self._owner_name = owner_name
 
     def __contains__(self, val):
         if val not in Reals:
@@ -61,7 +60,7 @@ class _ImplicitAny(Any.__class__):
                 "future.  If you really intend the domain of this Param (%s) "
                 "to be 'Any', you can suppress this warning by explicitly "
                 "specifying 'within=Any' to the Param constructor."
-                % (self._owner().name,),
+                % (self._owner_name,),
                 version='TBD', remove_in='6.0')
         return True
 
@@ -247,7 +246,7 @@ class Param(IndexedComponent):
                 "The 'repn' keyword is not a validate keyword argument for Param")
         #
         if self.domain is None:
-            self.domain = _ImplicitAny(owner=self, name='Any')
+            self.domain = _ImplicitAny(owner_name=self.name, name='Any')
         #
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
