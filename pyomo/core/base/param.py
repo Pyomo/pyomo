@@ -55,13 +55,13 @@ class _ImplicitAny(Any.__class__):
 
     def __getstate__(self):
         state = super(_ImplicitAny, self).__getstate__()
-        state['_owner'] = self._owner()
+        state['_owner'] = None if self._owner is None else self._owner()
         return state
 
     def __setstate__(self, state):
         _owner = state.pop('_owner')
         super(_ImplicitAny, self).__setstate__(state)
-        self._owner = weakref_ref(_owner)
+        self._owner = None if _owner is None else weakref_ref(_owner)
 
     def __contains__(self, val):
         if val not in Reals:
@@ -71,7 +71,7 @@ class _ImplicitAny(Any.__class__):
                 "future.  If you really intend the domain of this Param (%s) "
                 "to be 'Any', you can suppress this warning by explicitly "
                 "specifying 'within=Any' to the Param constructor."
-                % (self._owner().name,),
+                % ('Unknown' if self._owner is None else self._owner().name,),
                 version='TBD', remove_in='6.0')
         return True
 
