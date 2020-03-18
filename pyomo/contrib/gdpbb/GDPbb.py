@@ -81,7 +81,7 @@ class GDPbbSolver(object):
     @deprecated("GDPbb has been merged into GDPopt. "
                 "You can use the algorithm using GDPopt with strategy='LBB'.",
                 logger="pyomo.solvers",
-                version='TBD', remove_in='TBD')
+                version='5.6.9')
     def __init__(self, *args, **kwargs):
         super(GDPbbSolver, self).__init__(*args, **kwargs)
 
