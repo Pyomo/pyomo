@@ -18,7 +18,7 @@ class DeferredImportError(ImportError):
 class ModuleUnavailable(object):
     """Dummy object that raises a DeferredImportError upon attribute access
 
-    This object is returned by attempt_import() in liu of the module in
+    This object is returned by attempt_import() in lieu of the module in
     the case that the module import fails.  Any attempts to access
     attributes on this object will raise a DeferredImportError
     exception.
@@ -43,7 +43,7 @@ class DeferredImportModule(object):
     getattr is called, at which point it imports the module and returns
     the module attribute.
 
-    This object is returned by attempt_import() in liu of the module in
+    This object is returned by attempt_import() in lieu of the module in
     the case that the module import fails.  Any attempts to access
     attributes on this object will raise a DeferredImportError
     exception.
