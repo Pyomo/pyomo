@@ -59,8 +59,8 @@ https://github.com/hgrecco/pint/blob/master/pint/default_en.txt.
 
 If you need a unit that is not in the standard set of defined units,
 you can create your own units by adding to the unit definitions within
-pint. See :method:`PyomoUnitsContainer.load_definitions_from_file` or
-:method:`PyomoUnitsContainer.load_definitions_from_strings` for more
+pint. See :py:meth:`PyomoUnitsContainer.load_definitions_from_file` or
+:py:meth:`PyomoUnitsContainer.load_definitions_from_strings` for more
 information.
 
 .. note:: In this implementation of units, "offset" units for
@@ -399,8 +399,8 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         """
         Visitor class used to determine units of an expression. Do not use
         this class directly, but rather use
-        :method:`PyomoUnitsContainer.assert_units_consistent`
-        or :method:`PyomoUnitsContainer.get_units`
+        "py:meth:`PyomoUnitsContainer.assert_units_consistent`
+        or :py:meth:`PyomoUnitsContainer.get_units`
 
         Parameters
         ----------
@@ -1120,12 +1120,16 @@ class PyomoUnitsContainer(object):
     this class, see the module documentation
     (:mod:`pyomo.core.base.units_container`)
 
-    This class is based on the "pint" module. Documentation for available units can be found
-    at the following url: https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
+    This class is based on the "pint" module. Documentation for
+    available units can be found at the following url:
+    https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
 
-    Note: Pre-defined units can be accessed through attributes on the PyomoUnitsContainer
-    class; however, these attributes are created dynamically through the __getattr__ method,
-    and are not present on the class until they are requested.
+    .. note::
+
+        Pre-defined units can be accessed through attributes on the
+        PyomoUnitsContainer class; however, these attributes are created
+        dynamically through the __getattr__ method, and are not present
+        on the class until they are requested.
 
     """
     def __init__(self):
@@ -1133,38 +1137,64 @@ class PyomoUnitsContainer(object):
         self._pint_registry = pint_module.UnitRegistry()
 
     def load_definitions_from_file(self, definition_file):
-        """
+        """Load new units definitions from a file
+
         This method loads additional units definitions from a user
         specified definition file. An example of a definitions file
         can be found at:
         https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
 
-        Example
-        -------
-        If we have a file called my_additional_units.txt with the
-        following lines:
+        If we have a file called ``my_additional_units.txt`` with the
+        following lines::
 
-        ``usd = [currency]``
+            USD = [currency]
 
         Then we can add this to the container with:
 
-        >>> u.load_definitions_from_file('my_additional_units.txt')
-        >>> print(u.USD)
-        USD
+        .. doctest::
+            :hide:
+
+            # get a local units object (to avoid duplicate registration
+            # with the example in load_definitions_from_strings)
+            >>> import pyomo.core.base.units_container as _units
+            >>> u = _units.PyomoUnitsContainer()
+            >>> with open('my_additional_units.txt', 'w') as FILE:
+            ...     tmp = FILE.write("USD = [currency]\\n")
+
+        .. doctest::
+
+            >>> u.load_definitions_from_file('my_additional_units.txt')
+            >>> print(u.USD)
+            USD
+
         """
         self._pint_registry.load_definitions(definition_file)
 
     def load_definitions_from_strings(self, definition_string_list):
-        """
+        """Load new units definitions from a string
+
         This method loads additional units definitions from a list of
         strings (one for each line). An example of the definitions
         strings can be found at:
         https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
 
-        For example, to add the currency dimension and US dollars as a unit, use
-        >>> u.load_definitions_from_strings(['USD = [currency]'])
-        >>> print(u.USD)
-        USD
+        For example, to add the currency dimension and US dollars as a
+        unit, use
+
+        .. doctest::
+            :hide:
+
+            # get a local units object (to avoid duplicate registration
+            # with the example in load_definitions_from_strings)
+            >>> import pyomo.core.base.units_container as _units
+            >>> u = _units.PyomoUnitsContainer()
+
+        .. doctest::
+
+            >>> u.load_definitions_from_strings(['USD = [currency]'])
+            >>> print(u.USD)
+            USD
+
         """
         self._pint_registry.load_definitions(definition_string_list)
 
@@ -1539,8 +1569,8 @@ class PyomoUnitsContainer(object):
         Constraint, Objective, Expression, or it can be a Pyomo
         expression object
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         obj : Pyomo component (Block, Model, Constraint, Objective, or Expression) or Pyomo expression
            The object or expression to test
 
