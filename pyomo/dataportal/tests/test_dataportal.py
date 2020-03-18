@@ -992,7 +992,7 @@ class TestTextPortal(unittest.TestCase):
         model.p = Param(model.A, initialize={(1,2):10, (2,3):20, (3,4):30})
         model.q = Param(model.A, initialize={(1,2):11, (2,3):21, (3,4):31})
         data = DataPortal()
-        data.store(param=(model.p,model.q), columns=('a','b','c','d'), **self.create_write_options('param4'))
+        data.store(param=(model.p,model.q), **self.create_write_options('param4'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param4'+self.suffix, currdir+'param4.baseline'+self.suffix)
         elif self.suffix == '.yaml':

@@ -8,14 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import attempt_import
-
-scipy, scipy_available = attempt_import('scipy', 'Pynumero requires scipy')
+from pyomo.common.dependencies import attempt_import, scipy, scipy_available
 
 # Note: sparse.BlockVector leverages the __array__ufunc__ interface
 # released in numpy 1.13
 numpy, numpy_available = attempt_import('numpy', 'Pynumero requires numpy',
-                                        minimum_version='1.13.0')
+                                        minimum_version='1.13.0',
+                                        defer_check=False)
 
 if not scipy_available:
     # In general, generating output in __init__.py is undesirable, as

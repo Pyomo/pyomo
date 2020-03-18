@@ -29,12 +29,6 @@ from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
 
-try:
-    import numpy
-    numpy_available = True
-except ImportError:
-    numpy_available = False
-
 
 def repn_to_rounded_dict(repn, digits):
     temp = dict()

@@ -13,13 +13,13 @@ import importlib as im
 import types
 import json
 from itertools import combinations
-try:
-    import numpy as np
-    import pandas as pd
-    from scipy import stats
-    parmest_available = True
-except ImportError:
-    parmest_available = False
+
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+    scipy, scipy_available,
+)
+parmest_available = numpy_available & pandas_available & scipy_available
 
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
@@ -981,7 +981,7 @@ class Estimator(object):
         S = len(self.callback_data)
         thresholds = {}
         for a in alphas:
-            chi2_val = stats.chi2.ppf(a, 2)
+            chi2_val = scipy.stats.chi2.ppf(a, 2)
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
             LR[a] = LR['obj'] < thresholds[a]
         
@@ -1050,7 +1050,7 @@ class Estimator(object):
             elif distribution == 'MVN':
                 dist = fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
-                score = stats.scoreatpercentile(Z, (1-a)*100) 
+                score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)
                 
                 if test_theta_values is not None:
@@ -1061,7 +1061,7 @@ class Estimator(object):
             elif distribution == 'KDE':
                 dist = fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
-                score = stats.scoreatpercentile(Z, (1-a)*100) 
+                score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)
                 
                 if test_theta_values is not None:
