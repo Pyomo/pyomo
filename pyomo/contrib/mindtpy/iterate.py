@@ -16,6 +16,8 @@ def MindtPy_iteration_loop(solve_data, config):
     main_objective = next(
         working_model.component_data_objects(Objective, active=True))
     while solve_data.mip_iter < config.iteration_limit:
+
+        # if we don't use lazy callback, i.e. LP_NLP
         if config.lazy_callback == False:
             config.logger.info(
                 '---MindtPy Master Iteration %s---'
@@ -90,6 +92,7 @@ def MindtPy_iteration_loop(solve_data, config):
                         'Switching to OA.'.format(max_nonimprove_iter))
                     config.strategy = 'OA'
 
+        # if we use lazycallback, i.e. LP_NLP
         elif config.lazy_callback == True:
             config.logger.info(
                 '---MindtPy Master Iteration %s---'
@@ -101,7 +104,6 @@ def MindtPy_iteration_loop(solve_data, config):
             solve_data.mip_subiter = 0
             # solve MILP master problem
             if config.strategy == 'OA':
-                # solve_data.mip.pprint()
                 master_mip, master_mip_results = solve_OA_master(
                     solve_data, config)
                 if master_mip_results.solver.termination_condition is tc.optimal:
@@ -116,21 +118,6 @@ def MindtPy_iteration_loop(solve_data, config):
 
             if algorithm_should_terminate(solve_data, config):
                 break
-
-            '''
-            # Solve NLP subproblem
-            # The constraint linearization happens in the handlers
-            fix_nlp, fix_nlp_result = solve_NLP_subproblem(solve_data, config)
-            if fix_nlp_result.solver.termination_condition is tc.optimal:
-                handle_NLP_subproblem_optimal(fix_nlp, solve_data, config)
-            elif fix_nlp_result.solver.termination_condition is tc.infeasible:
-                handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config)
-            else:
-                handle_NLP_subproblem_other_termination(fix_nlp, fix_nlp_result.solver.termination_condition,
-                                                        solve_data, config)
-            # Call the NLP post-solve callback
-            config.call_after_subproblem_solve(fix_nlp, solve_data)
-            '''
 
             if config.strategy == 'PSC':
                 # If the hybrid algorithm is not making progress, switch to OA.

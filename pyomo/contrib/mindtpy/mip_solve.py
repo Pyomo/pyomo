@@ -31,6 +31,7 @@ except ImportError:
 
 
 class LazyOACallback(LazyConstraintCallback):
+    """Inherent class in Cplex to call Lazy callback."""
 
     def copy_lazy_var_list_values(self, opt, from_list, to_list, config,
                                   skip_stale=False, skip_fixed=True,
@@ -52,6 +53,8 @@ class LazyOACallback(LazyConstraintCallback):
                     v_to.stale = False
             except ValueError as err:
                 err_msg = getattr(err, 'message', str(err))
+                # get the value of current feasible solution
+                # self.get_value() is an inherent function from Cplex
                 var_val = self.get_values(
                     opt._pyomo_var_to_solver_var_map[v_from])
                 rounded_val = int(round(var_val))
@@ -81,11 +84,8 @@ class LazyOACallback(LazyConstraintCallback):
                          linearize_violated=True,
                          linearize_inactive=False,
                          use_slack_var=False):
-        """Linearizes nonlinear constraints.
+        """Add oa_cuts through Cplex inherent function self.add()"""
 
-        For nonconvex problems, turn on 'use_slack_var'. Slack variables will
-        always be used for nonlinear equality constraints.
-        """
         for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
                                         dual_values):
             if constr.body.polynomial_degree() in (0, 1):
@@ -101,6 +101,7 @@ class LazyOACallback(LazyConstraintCallback):
                        + (0 if constr.lower is None else constr.lower))
                 rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
 
+                # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
                 pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (
                     var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
                 cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
@@ -134,7 +135,10 @@ class LazyOACallback(LazyConstraintCallback):
                              rhs=constr.lower.value+cplex_rhs)
 
     def handle_lazy_master_mip_optimal(self, master_mip, solve_data, config, opt):
-        """Copy the result to working model and update upper or lower bound"""
+        """Copy the result to working model and update upper or lower bound
+        In LP-NLP, upper or lower bound are updated during solving the master problem
+        TODO: the name of this function might need to be changed, since the master problem is not solve to "optimality" in practice.
+        """
         # proceed. Just need integer values
         MindtPy = master_mip.MindtPy_utils
         main_objective = next(
@@ -145,7 +149,7 @@ class LazyOACallback(LazyConstraintCallback):
                                        master_mip.MindtPy_utils.variable_list,
                                        solve_data.working_model.MindtPy_utils.variable_list,
                                        config)
-
+        # update the bound
         if main_objective.sense == minimize:
             solve_data.LB = max(
                 self.get_best_objective_value(),
@@ -162,7 +166,7 @@ class LazyOACallback(LazyConstraintCallback):
                solve_data.LB, solve_data.UB))
 
     def handle_lazy_NLP_subproblem_optimal(self, fix_nlp, solve_data, config, opt):
-        """Copies result to working model, updates bound, adds OA and integer cut,
+        """Copies result to mip(explaination see below), updates bound, adds OA and integer cut,
         stores best solution if new one is best"""
         for c in fix_nlp.tmp_duals:
             if fix_nlp.dual.get(c, None) is None:
@@ -193,6 +197,7 @@ class LazyOACallback(LazyConstraintCallback):
         if config.strategy == 'OA':
             # In OA algorithm, OA cuts are generated based on the solution of the subproblem
             # We need to first copy the value of variales from the subproblem and then add cuts
+            # since value(constr.body), value(jacs[constr][var]), value(var) are used in self.add_lazy_oa_cuts()
             copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config)
@@ -243,7 +248,7 @@ class LazyOACallback(LazyConstraintCallback):
         config = self.config
         opt = self.opt
         master_mip = self.master_mip
-        cpx = opt._solver_model
+        cpx = opt._solver_model  # Cplex model
 
         self.handle_lazy_master_mip_optimal(
             master_mip, solve_data, config, opt)
@@ -302,19 +307,24 @@ def solve_OA_master(solve_data, config):
     getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-    # master_mip.pprint() #print oa master problem for debugging
     with SuppressInfeasibleWarning():
         masteropt = SolverFactory(config.mip_solver)
+        # determine if persistent solver is called.
         if isinstance(masteropt, PersistentSolver):
             masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
         if config.lazy_callback == True:
+            # Configuration of lazy callback
             lazyoa = masteropt._solver_model.register_callback(LazyOACallback)
+            # pass necessary data and parameters to lazyoa
             lazyoa.master_mip = solve_data.mip
             lazyoa.solve_data = solve_data
             lazyoa.config = config
             lazyoa.opt = masteropt
+            masteropt._solver_model.set_warning_stream(None)
+            masteropt._solver_model.set_log_stream(None)
+            masteropt._solver_model.set_error_stream(None)
         master_mip_results = masteropt.solve(
-            solve_data.mip, **config.mip_solver_args)
+            solve_data.mip, **config.mip_solver_args)  # , tee=True)
 
         if config.lazy_callback == True:
             if main_objective.sense == minimize:
