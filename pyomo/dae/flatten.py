@@ -47,7 +47,7 @@ def generate_time_only_slices(obj, time):
             idx += 1
         elif s.dimen is not None:
             for sub_idx in range(s.dimen):
-                regular_idx.append(idx)
+                regular_idx.append(idx+sub_idx)
             idx += s.dimen
         elif ellipsis_idx is None:
             ellipsis_idx = idx
@@ -74,7 +74,7 @@ def generate_time_only_slices(obj, time):
     )
     # For each combination of regular indices, we can generate a single
     # slice over the time index
-    time_sliced = {time_idx: time.first()}
+    time_sliced = [time_idx]
     for key in _slice.wildcard_keys():
         if type(key) is not tuple:
             key = (key,)

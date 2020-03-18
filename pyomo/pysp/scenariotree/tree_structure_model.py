@@ -20,7 +20,9 @@ from pyomo.common.dependencies import attempt_import
 networkx, networkx_available = attempt_import('networkx', minimum_version="2.0")
 
 def CreateAbstractScenarioTreeModel():
-    from pyomo.core import (AbstractModel, Set, Param, Boolean)
+    from pyomo.core import (
+        AbstractModel, Set, Param, Boolean, Any, UnitInterval,
+    )
 
     model = AbstractModel()
 
@@ -38,6 +40,7 @@ def CreateAbstractScenarioTreeModel():
                          initialize=[],
                          ordered=True)
     model.ConditionalProbability = Param(model.Nodes,
+                                         within=UnitInterval,
                                          mutable=True)
 
     model.Scenarios = Set(ordered=True)
@@ -54,14 +57,17 @@ def CreateAbstractScenarioTreeModel():
                               ordered=True)
 
     model.StageCost = Param(model.Stages,
+                            within=Any,
                             mutable=True,
                             default=None)
     model.NodeCost = Param(model.Nodes,
+                           within=Any,
                            mutable=True,
                            default=None)
 
     # DEPRECATED
     model.StageCostVariable = Param(model.Stages,
+                                    within=Any,
                                     mutable=True)
 
     # it is often the case that a subset of the stage variables are strictly "derived"
