@@ -431,8 +431,9 @@ def get_main_elapsed_time(timing_data_obj):
 
 
 @deprecated(
-    "'restore_logger_level()' has been deprecated in favor of the more specific "
-    "'lower_logger_level_to()' function.", version='TBD', remove_in='TBD')
+    "'restore_logger_level()' has been deprecated in favor of the more "
+    "specific 'lower_logger_level_to()' function.",
+    version='5.6.9')
 @contextmanager
 def restore_logger_level(logger):
     old_logger_level = logger.getEffectiveLevel()

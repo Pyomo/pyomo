@@ -50,11 +50,10 @@ Pyomo 5.6.9   18 Mar 2020
   - Set up GitHub actions for Linux, OSX, and Windows testing (#1233, #1232, 
     #1230, #1262, #1277, #1317, #1281, #1323, #1331, #1342)
   - Clean up Travis driver (#1264)
-  - Update Appveyor driver (#1293)
+  - Update Appveyor driver (#1293, #1343)
   - Add GitHub Actions workflow for testing forks/branches (#1294)
   - Update tests to use sys.executable to launch python subprocesses (#1322)
   - Improve testing and coverage reporting for MPI tests (#1325)
-  - Disable Pyomo testing with "EXTRAS" in Python 3.6 on Appveyor (#1343)
   - Update codecov config to reduce failing coverage checks on PRs (#1345)
 - Documentation
   - Remove CBC from installation documentation (#1303)
