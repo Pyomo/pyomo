@@ -166,7 +166,7 @@ def _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compr
     if len(alpha) == 0:
         return 1
     else:
-        return alpha.min()
+        return min(alpha.min(), 1)
 
 
 def _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix):
@@ -192,7 +192,7 @@ def _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compr
     if len(alpha) == 0:
         return 1
     else:
-        return alpha.min()
+        return min(alpha.min(), 1)
 
 
 def fraction_to_the_boundary(interface, tau):
