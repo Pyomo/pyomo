@@ -21,33 +21,14 @@ import shutil
 from decimal import Decimal
 from six import iteritems
 
-try:
-    import pyodbc
-    pyodbc_available=True
-except ImportError:
-    pyodbc_available=False
-
-try:
-    import pypyodbc
-    pypyodbc_available=True
-except Exception:
-    pypyodbc_available=False
-
-try:
-    import sqlite3
-    sqlite3_available=True
-except ImportError:
-    sqlite3_available=False
-
-try:
-    import pymysql
-    pymysql_available=True
-except ImportError:
-    pymysql_available=False
-
+from pyomo.common.dependencies import attempt_import
 from pyomo.dataportal import TableData
 from pyomo.dataportal.factory import DataManagerFactory
 
+pyodbc, pyodbc_available = attempt_import('pyodbc')
+pypyodbc, pypyodbc_available = attempt_import('pypyodbc')
+sqlite3, sqlite3_available = attempt_import('sqlite3')
+pymysql, pymysql_available = attempt_import('pymysql')
 
 # format=
 # using=

@@ -12,6 +12,12 @@ import logging
 from six.moves import xrange
 from six import next
 
+# If the user has numpy then the collocation points and the a matrix for
+# the Runge-Kutta basis formulation will be calculated as needed.
+# If the user does not have numpy then these values will be read from a
+# stored dictionary for up to 10 collocation points.
+from pyomo.common.dependencies import numpy, numpy_available
+
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import Var, ConstraintList, Expression, Objective
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
@@ -27,16 +33,6 @@ from pyomo.dae.misc import get_index_information
 from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.common.config import ConfigBlock, ConfigValue, PositiveInt, In
-
-# If the user has numpy then the collocation points and the a matrix for
-# the Runge-Kutta basis formulation will be calculated as needed.
-# If the user does not have numpy then these values will be read from a
-# stored dictionary for up to 10 collocation points.
-try:
-    import numpy
-    numpy_available = True
-except ImportError:  # pragma:nocover
-    numpy_available = False
 
 logger = logging.getLogger('pyomo.dae')
 

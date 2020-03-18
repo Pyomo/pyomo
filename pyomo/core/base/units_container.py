@@ -105,6 +105,8 @@ information.
 #    * Extend external function interface to support units for the arguments in addition to the function itself
 
 import six
+
+from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_numeric_types
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
@@ -115,9 +117,10 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import current as EXPR
-from pyomo.common.dependencies import attempt_import
 
-pint_module, pint_available = attempt_import('pint', 'The "pint" package failed to import. This package is necessary to use Pyomo units.')
+pint_module, pint_available = attempt_import(
+    'pint', defer_check=True, error_message='The "pint" package failed '
+    'to import. This package is necessary to use Pyomo units.')
 
 class UnitsError(Exception):
     """
@@ -1572,13 +1575,34 @@ class PyomoUnitsContainer(object):
             self._assert_units_consistent_expression(obj)
 
 
+class DeferredUnitsSingleton(PyomoUnitsContainer):
+    """A class supporting deferred interrogation of pint_available.
+
+    This class supports creating a module-level singleton, but deferring
+    the interrogation of the pint_available flag until the first time
+    the object is actually used.  If pint is available, this instance
+    object is replaced by an actual PyomoUnitsContainer.  Otherwise this
+    leverages the pint_module to raise an (informative)
+    DeferredImportError exception.
+
+    """
+
+    def __init__(self):
+        # do NOT call the base class __init__ so that the pint_module is
+        # not accessed
+        pass
+
+    def __getattribute__(self, attr):
+        if pint_available:
+            self.__class__ = PyomoUnitsContainer
+            self.__init__()
+            return getattr(self, attr)
+        else:
+            # Generate the ImportError
+            return getattr(pint_module, attr)
+
 # Define a module level instance of a PyomoUnitsContainer to use for
 # all units within a Pyomo model. If pint is not available, this will
 # cause an error at the first usage See module level documentation for
 # an example.
-if pint_available:
-    units = PyomoUnitsContainer()
-else:
-    # pint not available, assign the ModuleUnavailable object
-    # to the singleton
-    units = pint_module
+units = DeferredUnitsSingleton()

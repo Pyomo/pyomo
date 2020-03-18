@@ -22,24 +22,15 @@ try:
     from collections import OrderedDict
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
-try:
-    from pympler import muppy
-    from pympler import summary
-    pympler_available = True
-except ImportError:                         #pragma:nocover
-    pympler_available = False
-except AttributeError:                         #pragma:nocover
-    pympler_available = False
-
 
 from pyutilib.math import *
 from pyutilib.misc import tuplize, Container, PauseGC, Bunch
 
 import pyomo.common
+from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.plugin import ExtensionPoint
 from pyomo.common._task import pyomo_api
-from pyomo.common.deprecation import deprecation_warning
 
 from pyomo.core.expr import expr_common
 from pyomo.core.expr.symbol_map import SymbolMap
@@ -824,17 +815,17 @@ from solvers are immediately loaded into the original model instance.""")
             #
             profile_memory = kwds.get('profile_memory', 0)
 
-            if (pympler_available is True) and (profile_memory >= 2):
-                mem_used = muppy.get_size(muppy.get_objects())
+            if profile_memory >= 2 and pympler_available:
+                mem_used = pympler.muppy.get_size(muppy.get_objects())
                 print("")
                 print("      Total memory = %d bytes prior to model "
                       "construction" % mem_used)
 
-            if (pympler_available is True) and (profile_memory >= 3):
-                gc.collect()
-                mem_used = muppy.get_size(muppy.get_objects())
-                print("      Total memory = %d bytes prior to model "
-                      "construction (after garbage collection)" % mem_used)
+                if profile_memory >= 3:
+                    gc.collect()
+                    mem_used = pympler.muppy.get_size(muppy.get_objects())
+                    print("      Total memory = %d bytes prior to model "
+                          "construction (after garbage collection)" % mem_used)
 
             #
             # Do some error checking
@@ -875,11 +866,12 @@ from solvers are immediately loaded into the original model instance.""")
             #connector_expander = ConnectorExpander()
             #connector_expander.apply(instance=self)
 
-            if (pympler_available is True) and (profile_memory >= 2):
+            if profile_memory >= 2 and pympler_available:
                 print("")
                 print("      Summary of objects following instance construction")
-                post_construction_summary = summary.summarize(muppy.get_objects())
-                summary.print_(post_construction_summary, limit=100)
+                post_construction_summary = pympler.summary.summarize(
+                    pympler.muppy.get_objects())
+                pympler.summary.print_(post_construction_summary, limit=100)
                 print("")
 
     def _initialize_component(self, modeldata, namespaces, component_name, profile_memory):
@@ -922,14 +914,14 @@ from solvers are immediately loaded into the original model instance.""")
                 logger.debug("Constructed component '%s':\n    %s"
                              % ( declaration.name, _out.getvalue()))
 
-        if (pympler_available is True) and (profile_memory >= 2):
-            mem_used = muppy.get_size(muppy.get_objects())
+        if profile_memory >= 2 and pympler_available:
+            mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
             print("      Total memory = %d bytes following construction of component=%s" % (mem_used, component_name))
 
-        if (pympler_available is True) and (profile_memory >= 3):
-            gc.collect()
-            mem_used = muppy.get_size(muppy.get_objects())
-            print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
+            if profile_memory >= 3:
+                gc.collect()
+                mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
+                print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
 
 
     def create(self, filename=None, **kwargs):
