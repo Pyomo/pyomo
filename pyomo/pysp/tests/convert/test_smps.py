@@ -16,6 +16,7 @@ import difflib
 import filecmp
 import shutil
 import subprocess
+import sys
 import pyutilib.subprocess
 import pyutilib.services
 import pyutilib.th as unittest
@@ -35,7 +36,7 @@ pysp_examples_dir = \
 
 _run_verbose = True
 
-@unittest.category('nightly','expensive')
+@unittest.category('nightly')
 class TestConvertSMPSSimple(unittest.TestCase):
 
     @unittest.nottest
@@ -74,7 +75,7 @@ class TestConvertSMPSSimple(unittest.TestCase):
             shutil.rmtree(options['--output-directory'],
                           ignore_errors=True)
 
-        cmd = ['python','-m','pyomo.pysp.convert.smps']
+        cmd = [sys.executable,'-m','pyomo.pysp.convert.smps']
         for name, val in options.items():
             cmd.append(name)
             if val is not None:
@@ -247,7 +248,7 @@ class _SMPSTesterBase(object):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = ['python','-m','pyomo.pysp.convert.smps']
+        cmd = [sys.executable,'-m','pyomo.pysp.convert.smps']
         for name, val in self.options.items():
             cmd.append(name)
             if val is not None:
@@ -586,7 +587,7 @@ create_test_classes('farmer',
                     'farmer',
                     farmer_model_dir,
                     farmer_data_dir,
-                    ('nightly','expensive'))
+                    ('nightly',))
 
 piecewise_model = join(thisdir, "piecewise_model.py")
 piecewise_scenario_tree = join(thisdir, "piecewise_scenario_tree.py")
@@ -594,7 +595,7 @@ create_test_classes('piecewise',
                     'piecewise',
                     piecewise_model,
                     piecewise_scenario_tree,
-                    ('nightly','expensive'))
+                    ('nightly',))
 
 # uses the same baselines as 'piecewise',
 # except annotations are declared differently
@@ -603,7 +604,7 @@ create_test_classes('piecewise_alt',
                     'piecewise',
                     piecewise_model,
                     piecewise_scenario_tree,
-                    ('nightly','expensive'))
+                    ('nightly',))
 
 if __name__ == "__main__":
     unittest.main()

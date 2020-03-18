@@ -4,12 +4,11 @@
 class GDPoptSolveData(object):
     """Data container to hold solve-instance data.
 
-    Key attributes:
-        - original_model: the original model that the user gave us to solve
-        - working_model: the original model after preprocessing
-        - linear_GDP: the linear-discrete master problem
-        - results: Pyomo results objective
-        - timing: dictionary of time elapsed for solver functions
+    Attributes:
+        - original_model (ConcreteModel): the original model that the user gave us to solve
+        - working_model (ConcreteModel): the original model after preprocessing
+        - results (SolverResults): Pyomo results objective
+        - timing (Bunch): dictionary of time elapsed for solver functions
 
     """
     pass

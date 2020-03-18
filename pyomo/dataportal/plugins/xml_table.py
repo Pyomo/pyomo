@@ -9,14 +9,29 @@
 #  ___________________________________________________________________________
 
 import os.path
-try:
-    import lxml.etree.ElementTree as ET
-except:
-    import xml.etree.ElementTree as ET
-
+from pyomo.common.dependencies import attempt_import
 from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.dataportal import TableData
 
+def _xml_importer():
+    try:
+        from lxml import etree
+        return etree
+    except ImportError:
+        pass
+
+    try:
+        # Python 2.5+
+        import xml.etree.cElementTree as etree
+        return etree
+    except ImportError:
+        pass
+
+    # Python 2.5+
+    import xml.etree.ElementTree as etree
+    return etree
+
+ET, ET_available = attempt_import('ET', importer=_xml_importer)
 
 @DataManagerFactory.register("xml", "XML file interface")
 class XMLTable(TableData):

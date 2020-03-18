@@ -1,31 +1,56 @@
 # -*- coding: utf-8 -*-
-"""Main driver module for GDPopt solver."""
+"""Main driver module for GDPopt solver.
+
+20.2.28 changes:
+- bugfixes on tests
+20.1.22 changes:
+- improved subsolver time limit support for GAMS interface
+- add maxTimeLimit exit condition for GDPopt-LBB
+- add token Big M for reactivated constraints in GDPopt-LBB
+- activate fbbt for branch-and-bound nodes
+20.1.15 changes:
+- internal cleanup of codebase
+- merge GDPbb capabilities (logic-based branch and bound)
+- refactoring of GDPbb code
+- update logging information to include subsolver options
+- improve SuppressInfeasibleWarning
+- simplify mip preprocessing
+- remove not-fully-implemented 'backtracking' from LOA
+19.10.11 changes:
+- bugfix on SolverStatus error message
+19.5.13 changes:
+- add handling to integer cuts for disjunct pruning during FBBT
+19.4.23 changes:
+- add support for linear subproblems
+- use automatic differentiation for large constraints
+- bugfixes on time limit support
+- treat fixed variables as constants in GLOA cut generation
+19.3.25 changes:
+- add rudimentary time limit support
+- start keeping basic changelog
+
+"""
 from __future__ import division
 
-import logging
+import six
+from six import StringIO
 
 from pyomo.common.config import (
-    ConfigBlock, ConfigList, ConfigValue, In, NonNegativeFloat, NonNegativeInt,
     add_docstring_list
 )
-from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
+from pyomo.contrib.gdpopt.branch_and_bound import _perform_branch_and_bound
+from pyomo.contrib.gdpopt.config_options import _get_GDPopt_config
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
 from pyomo.contrib.gdpopt.master_initialize import (
-    GDPopt_initialize_master, valid_init_strategies
+    GDPopt_initialize_master
 )
 from pyomo.contrib.gdpopt.util import (
-    _DoNothing, a_logger, build_ordered_component_lists, copy_var_list_values,
-    create_utility_block, model_is_valid, process_objective,
-    record_original_model_statistics, record_working_model_statistics,
-    reformulate_integer_variables, restore_logger_level, time_code
-)
-from pyomo.core.base import ConstraintList, value
-from pyomo.core.kernel.component_map import ComponentMap
+    presolve_lp_nlp, process_objective,
+    time_code, indent,
+    setup_solver_environment)
 from pyomo.opt.base import SolverFactory
-from pyomo.opt.results import SolverResults
-from pyutilib.misc import Container
 
-__version__ = (0, 5, 0)
+__version__ = (20, 2, 28)  # Note: date-based version number
 
 
 @SolverFactory.register(
@@ -42,165 +67,29 @@ class GDPoptSolver(object):
 
     These approaches include:
 
-    - Outer approximation
+    - Logic-based outer approximation (LOA)
+    - Logic-based branch-and-bound (LBB)
     - Partial surrogate cuts [pending]
     - Generalized Bender decomposition [pending]
 
     This solver implementation was developed by Carnegie Mellon University in the
     research group of Ignacio Grossmann.
 
-    For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
+    For nonconvex problems, LOA may not report rigorous lower/upper bounds.
 
     Questions: Please make a post at StackOverflow and/or contact Qi Chen
     <https://github.com/qtothec>.
 
-    Keyword arguments below are specified for the :code:`solve` function.
+    Several key GDPopt components were prototyped by BS and MS students:
+
+    - Logic-based branch and bound: Sunjeev Kale
+    - MC++ interface: Johnny Bates
+    - LOA set-covering initialization: Eloy Fernandez
 
     """
 
-    _metasolver = False
-
-    CONFIG = ConfigBlock("GDPopt")
-    CONFIG.declare("iterlim", ConfigValue(
-        default=30, domain=NonNegativeInt,
-        description="Iteration limit."
-    ))
-    CONFIG.declare("strategy", ConfigValue(
-        default="LOA", domain=In(["LOA", "GLOA"]),
-        description="Decomposition strategy to use."
-    ))
-    CONFIG.declare("init_strategy", ConfigValue(
-        default="set_covering", domain=In(valid_init_strategies.keys()),
-        description="Initialization strategy to use.",
-        doc="""Selects the initialization strategy to use when generating
-        the initial cuts to construct the master problem."""
-    ))
-    CONFIG.declare("custom_init_disjuncts", ConfigList(
-        # domain=ComponentSets of Disjuncts,
-        default=None,
-        description="List of disjunct sets to use for initialization."
-    ))
-    CONFIG.declare("max_slack", ConfigValue(
-        default=1000, domain=NonNegativeFloat,
-        description="Upper bound on slack variables for OA"
-    ))
-    CONFIG.declare("OA_penalty_factor", ConfigValue(
-        default=1000, domain=NonNegativeFloat,
-        description="Penalty multiplication term for slack variables on the "
-        "objective value."
-    ))
-    CONFIG.declare("set_cover_iterlim", ConfigValue(
-        default=8, domain=NonNegativeInt,
-        description="Limit on the number of set covering iterations."
-    ))
-    CONFIG.declare("mip_solver", ConfigValue(
-        default="gurobi",
-        description="Mixed integer linear solver to use."
-    ))
-    CONFIG.declare("mip_presolve", ConfigValue(
-        default="true",
-        description="Flag to enable or diable Pyomo MIP presolve. Default=True.",
-        domain=bool
-    ))
-    mip_solver_args = CONFIG.declare(
-        "mip_solver_args", ConfigBlock(implicit=True))
-    CONFIG.declare("nlp_solver", ConfigValue(
-        default="ipopt",
-        description="Nonlinear solver to use"))
-    nlp_solver_args = CONFIG.declare(
-        "nlp_solver_args", ConfigBlock(implicit=True))
-    CONFIG.declare("nlp_presolve", ConfigValue(
-        default=True,
-        description="Flag to enable or disable NLP presolve. Default=True.",
-        domain=bool
-    ))
-    CONFIG.declare("call_before_master_solve", ConfigValue(
-        default=_DoNothing,
-        description="callback hook before calling the master problem solver"
-    ))
-    CONFIG.declare("call_after_master_solve", ConfigValue(
-        default=_DoNothing,
-        description="callback hook after a solution of the master problem"
-    ))
-    CONFIG.declare("call_before_subproblem_solve", ConfigValue(
-        default=_DoNothing,
-        description="callback hook before calling the subproblem solver"
-    ))
-    CONFIG.declare("call_after_subproblem_solve", ConfigValue(
-        default=_DoNothing,
-        description="callback hook after a solution of the "
-        "nonlinear subproblem"
-    ))
-    CONFIG.declare("call_after_subproblem_feasible", ConfigValue(
-        default=_DoNothing,
-        description="callback hook after feasible solution of "
-        "the nonlinear subproblem"
-    ))
-    CONFIG.declare("algorithm_stall_after", ConfigValue(
-        default=2,
-        description="number of non-improving master iterations after which "
-        "the algorithm will stall and exit."
-    ))
-    CONFIG.declare("tee", ConfigValue(
-        default=False,
-        description="Stream output to terminal.",
-        domain=bool
-    ))
-    CONFIG.declare("logger", ConfigValue(
-        default='pyomo.contrib.gdpopt',
-        description="The logger object or name to use for reporting.",
-        domain=a_logger
-    ))
-    CONFIG.declare("bound_tolerance", ConfigValue(
-        default=1E-6, domain=NonNegativeFloat,
-        description="Tolerance for bound convergence."
-    ))
-    CONFIG.declare("small_dual_tolerance", ConfigValue(
-        default=1E-8,
-        description="When generating cuts, small duals multiplied "
-        "by expressions can cause problems. Exclude all duals "
-        "smaller in absolue value than the following."
-    ))
-    CONFIG.declare("integer_tolerance", ConfigValue(
-        default=1E-5,
-        description="Tolerance on integral values."
-    ))
-    CONFIG.declare("constraint_tolerance", ConfigValue(
-        default=1E-6,
-        description="Tolerance on constraint satisfaction."
-    ))
-    CONFIG.declare("variable_tolerance", ConfigValue(
-        default=1E-8,
-        description="Tolerance on variable bounds."
-    ))
-    CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-15,
-        description="Tolerance on variable equal to zero."))
-    CONFIG.declare("round_NLP_binaries", ConfigValue(
-        default=True,
-        description="flag to round binary values to exactly 0 or 1. "
-        "Rounding is done before fixing disjuncts."
-    ))
-    CONFIG.declare("reformulate_integer_vars_using", ConfigValue(
-        default=None,
-        description="The method to use for reformulating integer variables "
-        "into binary for this solver."
-    ))
-
-    __doc__ = add_docstring_list(__doc__, CONFIG)
-
-    def available(self, exception_flag=True):
-        """Check if solver is available.
-
-        TODO: For now, it is always available. However, sub-solvers may not
-        always be available, and so this should reflect that possibility.
-
-        """
-        return True
-
-    def version(self):
-        """Return a 3-tuple describing the solver version."""
-        return __version__
+    # Declare configuration options for the GDPopt solver
+    CONFIG = _get_GDPopt_config()
 
     def solve(self, model, **kwds):
         """Solve the model.
@@ -218,119 +107,140 @@ class GDPoptSolver(object):
         """
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
-        solve_data = GDPoptSolveData()
-        solve_data.results = SolverResults()
-        solve_data.timing = Container()
 
-        old_logger_level = config.logger.getEffectiveLevel()
-        with time_code(solve_data.timing, 'total'), \
-                restore_logger_level(config.logger), \
-                create_utility_block(model, 'GDPopt_utils', solve_data):
-            if config.tee and old_logger_level > logging.INFO:
-                # If the logger does not already include INFO, include it.
-                config.logger.setLevel(logging.INFO)
-            config.logger.info("---Starting GDPopt---")
-
-            solve_data.original_model = model
-
-            build_ordered_component_lists(model, solve_data, prefix='orig')
-            solve_data.working_model = model.clone()
-            GDPopt = solve_data.working_model.GDPopt_utils
-            record_original_model_statistics(solve_data, config)
-
-            solve_data.current_strategy = config.strategy
-
-            # Reformulate integer variables to binary
-            reformulate_integer_variables(solve_data.working_model, config)
-            process_objective(solve_data, config)
-
-            # Save ordered lists of main modeling components, so that data can
-            # be easily transferred between future model clones.
-            build_ordered_component_lists(
-                solve_data.working_model, solve_data, prefix='working')
-            record_working_model_statistics(solve_data, config)
+        with setup_solver_environment(model, config) as solve_data:
+            self._log_solver_intro_message(config)
             solve_data.results.solver.name = 'GDPopt %s - %s' % (
                 str(self.version()), config.strategy)
 
-            # Save model initial values. These are used later to initialize NLP
-            # subproblems.
-            solve_data.initial_var_values = list(
-                v.value for v in GDPopt.working_var_list)
+            # Verify that objective has correct form
+            process_objective(solve_data, config)
 
-            # Store the initial model state as the best solution found. If we
-            # find no better solution, then we will restore from this copy.
-            solve_data.best_solution_found = solve_data.initial_var_values
+            # Presolve LP or NLP problems using subsolvers
+            presolved, presolve_results = presolve_lp_nlp(solve_data, config)
+            if presolved:
+                # TODO merge the solver results
+                return presolve_results  # problem presolved
 
-            # Validate the model to ensure that GDPopt is able to solve it.
-            if not model_is_valid(solve_data, config):
-                return
+            if solve_data.active_strategy in {'LOA', 'GLOA'}:
+                # Initialize the master problem
+                with time_code(solve_data.timing, 'initialization'):
+                    GDPopt_initialize_master(solve_data, config)
 
-            # Maps in order to keep track of certain generated constraints
-            GDPopt.oa_cut_map = ComponentMap()
-
-            # Integer cuts exclude particular discrete decisions
-            GDPopt.integer_cuts = ConstraintList(doc='integer cuts')
-
-            # Feasible integer cuts exclude discrete realizations that have
-            # been explored via an NLP subproblem. Depending on model
-            # characteristics, the user may wish to revisit NLP subproblems
-            # (with a different initialization, for example). Therefore, these
-            # cuts are not enabled by default, unless the initial model has no
-            # discrete decisions.
-
-            # Note: these cuts will only exclude integer realizations that are
-            # not already in the primary GDPopt_integer_cuts ConstraintList.
-            GDPopt.no_backtracking = ConstraintList(
-                doc='explored integer cuts')
-
-            # Set up iteration counters
-            solve_data.master_iteration = 0
-            solve_data.mip_iteration = 0
-            solve_data.nlp_iteration = 0
-
-            # set up bounds
-            solve_data.LB = float('-inf')
-            solve_data.UB = float('inf')
-            solve_data.iteration_log = {}
-
-            # Flag indicating whether the solution improved in the past
-            # iteration or not
-            solve_data.feasible_solution_improved = False
-
-            # Initialize the master problem
-            with time_code(solve_data.timing, 'initialization'):
-                GDPopt_initialize_master(solve_data, config)
-
-            # Algorithm main loop
-            with time_code(solve_data.timing, 'main loop'):
-                GDPopt_iteration_loop(solve_data, config)
-
-            # Update values in working model
-            copy_var_list_values(
-                from_list=solve_data.best_solution_found,
-                to_list=GDPopt.working_var_list,
-                config=config)
-            GDPopt.objective_value.set_value(
-                value(solve_data.working_objective_expr, exception=False))
-
-            # Update values in original model
-            copy_var_list_values(
-                GDPopt.orig_var_list,
-                solve_data.original_model.GDPopt_utils.orig_var_list,
-                config)
-
-            solve_data.results.problem.lower_bound = solve_data.LB
-            solve_data.results.problem.upper_bound = solve_data.UB
-
-        solve_data.results.solver.timing = solve_data.timing
+                # Algorithm main loop
+                with time_code(solve_data.timing, 'main loop'):
+                    GDPopt_iteration_loop(solve_data, config)
+            elif solve_data.active_strategy == 'LBB':
+                _perform_branch_and_bound(solve_data)
 
         return solve_data.results
 
-    #
-    # Support "with" statements.
-    #
+    """Support use as a context manager under current solver API"""
     def __enter__(self):
         return self
 
     def __exit__(self, t, v, traceback):
         pass
+
+    def available(self, exception_flag=True):
+        """Check if solver is available.
+
+        TODO: For now, it is always available. However, sub-solvers may not
+        always be available, and so this should reflect that possibility.
+
+        """
+        return True
+
+    def version(self):
+        """Return a 3-tuple describing the solver version."""
+        return __version__
+
+    def _log_solver_intro_message(self, config):
+        config.logger.info(
+            "Starting GDPopt version %s using %s algorithm"
+            % (".".join(map(str, self.version())), config.strategy)
+        )
+        mip_args_output = StringIO()
+        nlp_args_output = StringIO()
+        minlp_args_output = StringIO()
+        lminlp_args_output = StringIO()
+        config.mip_solver_args.display(ostream=mip_args_output)
+        config.nlp_solver_args.display(ostream=nlp_args_output)
+        config.minlp_solver_args.display(ostream=minlp_args_output)
+        config.local_minlp_solver_args.display(ostream=lminlp_args_output)
+        mip_args_text = indent(mip_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
+        nlp_args_text = indent(nlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
+        minlp_args_text = indent(minlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
+        lminlp_args_text = indent(lminlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
+        mip_args_text = "" if len(mip_args_text.strip()) == 0 else "\n" + mip_args_text
+        nlp_args_text = "" if len(nlp_args_text.strip()) == 0 else "\n" + nlp_args_text
+        minlp_args_text = "" if len(minlp_args_text.strip()) == 0 else "\n" + minlp_args_text
+        lminlp_args_text = "" if len(lminlp_args_text.strip()) == 0 else "\n" + lminlp_args_text
+        config.logger.info(
+            """
+Subsolvers:
+- MILP: {milp}{milp_args}
+- NLP: {nlp}{nlp_args}
+- MINLP: {minlp}{minlp_args}
+- local MINLP: {lminlp}{lminlp_args}
+            """.format(
+                milp=config.mip_solver,
+                milp_args=mip_args_text,
+                nlp=config.nlp_solver,
+                nlp_args=nlp_args_text,
+                minlp=config.minlp_solver,
+                minlp_args=minlp_args_text,
+                lminlp=config.local_minlp_solver,
+                lminlp_args=lminlp_args_text,
+            ).strip()
+        )
+        to_cite_text = """
+If you use this software, you may cite the following:
+- Implementation:
+Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
+Pyomo.GDP: Disjunctive Models in Python. 
+Proc. of the 13th Intl. Symposium on Process Systems Eng.
+San Diego, 2018.
+        """.strip()
+        if config.strategy == "LOA":
+            to_cite_text += "\n"
+            to_cite_text += """
+- LOA algorithm:
+Türkay, M; Grossmann, IE.
+Logic-based MINLP algorithms for the optimal synthesis of process networks.
+Comp. and Chem. Eng. 1996, 20(8), 959–978.
+DOI: 10.1016/0098-1354(95)00219-7.
+            """.strip()
+        elif config.strategy == "GLOA":
+            to_cite_text += "\n"
+            to_cite_text += """
+- GLOA algorithm:
+Lee, S; Grossmann, IE.
+A Global Optimization Algorithm for Nonconvex Generalized Disjunctive Programming and Applications to Process Systems.
+Comp. and Chem. Eng. 2001, 25, 1675-1697.
+DOI: 10.1016/S0098-1354(01)00732-3.
+            """.strip()
+        elif config.strategy == "LBB":
+            to_cite_text += "\n"
+            to_cite_text += """
+- LBB algorithm:
+Lee, S; Grossmann, IE.
+New algorithms for nonlinear generalized disjunctive programming.
+Comp. and Chem. Eng. 2000, 24, 2125-2141.
+DOI: 10.1016/S0098-1354(00)00581-0.
+            """.strip()
+        config.logger.info(to_cite_text)
+
+    _metasolver = False
+
+    if six.PY2:
+        __doc__ = """
+    Keyword arguments below are specified for the :code:`solve` function.
+        
+    """ + add_docstring_list(__doc__, CONFIG)
+
+
+if six.PY3:
+    # Add the CONFIG arguments to the solve method docstring
+    GDPoptSolver.solve.__doc__ = add_docstring_list(
+        GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)

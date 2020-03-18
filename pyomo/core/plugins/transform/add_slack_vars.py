@@ -11,9 +11,6 @@ from random import randint
 import logging
 logger = logging.getLogger('pyomo.core')
 
-# DEBUG
-from nose.tools import set_trace
-
 
 @TransformationFactory.register('core.add_slack_variables', \
           doc="Create a model where we add slack variables to every constraint "

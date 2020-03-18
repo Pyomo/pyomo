@@ -19,22 +19,13 @@ try:
     guppy_available = True
 except ImportError:
     guppy_available = False
-try:
-    from pympler.muppy import muppy
-    from pympler.muppy import summary
-    from pympler.muppy import tracker
-    from pympler.asizeof import *
-    pympler_available = True
-except ImportError:
-    pympler_available = False
-except AttributeError:
-    pympler_available = False
 
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.misc import import_file
 
 from pyomo.common import pyomo_command
-from pyomo.common.plugin import ExtensionPoint
+from pyomo.common.dependencies import pympler_available
+from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
 from pyomo.core.base import maximize, minimize, Var, Suffix
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
@@ -722,11 +713,10 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find],
                                                 inspect.isclass):
-                import pyomo.common
                 # the second condition gets around goofyness related
                 # to issubclass returning True when the obj is the
                 # same as the test class.
-                if issubclass(obj, pyomo.common.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, SingletonPlugin) and name != "SingletonPlugin":
                     for plugin in solution_writer_plugins(all=True):
                         if isinstance(plugin, obj):
                             plugin.enable()
@@ -835,11 +825,10 @@ def PHAlgorithmBuilder(options, scenario_tree):
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find],
                                                 inspect.isclass):
-                import pyomo.common
                 # the second condition gets around goofyness related
                 # to issubclass returning True when the obj is the
                 # same as the test class.
-                if issubclass(obj, pyomo.common.plugin.SingletonPlugin) and name != "SingletonPlugin":
+                if issubclass(obj, SingletonPlugin) and name != "SingletonPlugin":
                     ph_extension_point = ExtensionPoint(IPHExtension)
                     for plugin in ph_extension_point(all=True):
                         if isinstance(plugin, obj):

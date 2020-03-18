@@ -62,8 +62,8 @@ class TestDerivativeVar(unittest.TestCase):
         self.assertTrue(m.dv._sVar is m.v)
         self.assertTrue(m.v._derivative[('t',)]() is m.dv)
         self.assertTrue(m.dv.type() is DerivativeVar)
-        self.assertTrue(m.t in m.dv._implicit_subsets)
-        self.assertTrue(m.s in m.dv._implicit_subsets)
+        self.assertTrue(m.t in m.dv.index_set().set_tuple)
+        self.assertTrue(m.s in m.dv.index_set().set_tuple)
         self.assertTrue(m.dv2._wrt[0] is m.t)
         self.assertTrue(m.dv2._wrt[1] is m.t)
         self.assertTrue(m.v._derivative[('t', 't')]() is m.dv2)
@@ -71,8 +71,6 @@ class TestDerivativeVar(unittest.TestCase):
         del m.dv2
         del m.v
         del m.v_index
-        del m.dv_index
-        del m.dv2_index
 
         m.v = Var(m.x, m.t)
         m.dv = DerivativeVar(m.v, wrt=m.x)
@@ -88,8 +86,8 @@ class TestDerivativeVar(unittest.TestCase):
         self.assertTrue(m.v._derivative[('t', 'x')]() is m.dv3)
         self.assertTrue(m.v._derivative[('t', 't')]() is m.dv4)
         self.assertTrue(m.dv.type() is DerivativeVar)
-        self.assertTrue(m.x in m.dv._implicit_subsets)
-        self.assertTrue(m.t in m.dv._implicit_subsets)
+        self.assertTrue(m.x in m.dv.index_set().set_tuple)
+        self.assertTrue(m.t in m.dv.index_set().set_tuple)
         self.assertTrue(m.dv3._wrt[0] is m.t)
         self.assertTrue(m.dv3._wrt[1] is m.x)
         self.assertTrue(m.dv4._wrt[0] is m.t)
@@ -107,80 +105,47 @@ class TestDerivativeVar(unittest.TestCase):
         m.y = Var()
 
         # Not passing a Var as the first positional argument
-        try:
+        with self.assertRaises(DAE_Error):
             m.ds = DerivativeVar(m.s)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
         # Specifying both option aliases
-        try:
+        with self.assertRaises(TypeError):
             m.dv = DerivativeVar(m.v, wrt=m.t, withrespectto=m.t)
-            self.fail('Expected TypeError')
-        except TypeError:
-            pass
 
         # Passing in Var not indexed by a ContinuousSet
-        try:
+        with self.assertRaises(DAE_Error):
             m.dy = DerivativeVar(m.y)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
         # Not specifying 'wrt' when Var indexed by multiple ContinuousSets
-        try:
+        with self.assertRaises(DAE_Error):
             m.dv3 = DerivativeVar(m.v3)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
         # 'wrt' is not a ContinuousSet
-        try:
+        with self.assertRaises(DAE_Error):
             m.dv2 = DerivativeVar(m.v2, wrt=m.s)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
-        try:
+        with self.assertRaises(DAE_Error):
             m.dv2 = DerivativeVar(m.v2, wrt=(m.t, m.s))
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
         # Specified ContinuousSet does not index the Var
-        try:
+        with self.assertRaises(DAE_Error):
             m.dv = DerivativeVar(m.v, wrt=m.x)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
-        try:
+        with self.assertRaises(DAE_Error):
             m.dv2 = DerivativeVar(m.v2, wrt=[m.t, m.x])
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
         # Declaring the same derivative twice
         m.dvdt = DerivativeVar(m.v)
-        try:
+        with self.assertRaises(DAE_Error):
             m.dvdt2 = DerivativeVar(m.v)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
         m.dv2dt = DerivativeVar(m.v2, wrt=m.t)
-        try:
+        with self.assertRaises(DAE_Error):
             m.dv2dt2 = DerivativeVar(m.v2, wrt=m.t)
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
         m.dv3 = DerivativeVar(m.v3, wrt=(m.x, m.x))
-        try:
+        with self.assertRaises(DAE_Error):
             m.dv4 = DerivativeVar(m.v3, wrt=(m.x, m.x))
-            self.fail('Expected DAE_Error')
-        except DAE_Error:
-            pass
 
     # test DerivativeVar reclassification after discretization
     def test_reclassification(self):

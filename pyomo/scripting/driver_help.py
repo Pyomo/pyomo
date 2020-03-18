@@ -20,52 +20,10 @@ import argparse
 import pyutilib.subprocess
 from pyutilib.misc import Options
 
-from pyomo.common import get_pyomo_commands
+import pyomo.common
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
-
-
-#--------------------------------------------------
-# install-extras
-#   -v
-#--------------------------------------------------
-
-def setup_install_extras_parser(parser):
-    parser.add_argument("--pip-args", dest="arg", nargs="*", help="Arguments that are passed to the 'pip' command when installing packages")
-    parser.add_argument("-q", dest="tee", action="store_false", default=True, help="Suppress the default verbose output")
-
-def install_extras_exec(options):
-    cmddir = os.path.dirname(os.path.abspath(sys.executable))+os.sep
-    if options.arg is None:
-        command = [cmddir+'get_pyomo_extras']
-    else:
-        command = [cmddir+'get_pyomo_extras'] + options.arg
-    if not options.tee:
-        command.append('-q')
-    pyutilib.subprocess.run(command, tee=True)
-
-#
-# Add a subparser for the pyomo install-extras subcommand
-#
-setup_install_extras_parser(
-    pyomo.scripting.pyomo_parser.add_subparser('install-extras',
-        func=install_extras_exec,
-        help='Install "extra" packages that Pyomo can leverage.',
-        description="""
-This pyomo subcommand is used to install packages that Pyomo could
-leverage.  The installation of some packages may fail, but this
-subcommand ignore these failures and provides a summary describing
-which packages were installed.
-""",
-        epilog="""
-Since pip options begin with a dash, the --pip-args option can only
-be used with the equals syntax.  For example:\n\n
-    pyomo install-extras --pip-args="--upgrade"
-""",
-        formatter_class=pyomo.scripting.pyomo_parser.CustomHelpFormatter
-        ))
-
 
 #--------------------------------------------------
 # run
@@ -91,11 +49,11 @@ def command_exec(options):
         return
     if len(options.command) == 0:
         print("  ERROR: no command specified")
-        return
+        return 1
     if not os.path.exists(cmddir+options.command[0]):
         print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
-        return
-    pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)
+        return 1
+    return pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)[0]
 
 #
 # Add a subparser for the pyomo command
@@ -128,7 +86,7 @@ def help_commands():
     print("")
     print("The following commands are installed with Pyomo:")
     print("-"*75)
-    registry = get_pyomo_commands()
+    registry = pyomo.common.get_pyomo_commands()
     d = max(len(key) for key in registry)
     fmt = "%%-%ds  %%s" % d
     for key in sorted(registry.keys(), key=lambda v: v.upper()):
@@ -181,7 +139,6 @@ def help_datamanagers(options):
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
 def help_api(options):
-    import pyomo.common
     services = pyomo.common.PyomoAPIFactory.services()
     #
     f = {}

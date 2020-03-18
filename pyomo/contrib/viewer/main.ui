@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1531</width>
+    <height>1078</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>IDAES/Pyomo Model View</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_3">
+    <item>
+     <widget class="QMdiArea" name="mdiArea"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1531</width>
+     <height>38</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu_View">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+    <addaction name="actionModel_Selector"/>
+    <addaction name="actionRestart_Variable_View"/>
+    <addaction name="actionRestart_Constraint_View"/>
+    <addaction name="actionRestart_Parameter_View"/>
+    <addaction name="actionRestart_Expression_View"/>
+    <addaction name="actionRestart_Residual_Table"/>
+    <addaction name="separator"/>
+    <addaction name="actionTile"/>
+    <addaction name="actionCascade"/>
+    <addaction name="separator"/>
+    <addaction name="actionTabs"/>
+   </widget>
+   <widget class="QMenu" name="menuCalculate">
+    <property name="title">
+     <string>&amp;Calculate</string>
+    </property>
+    <addaction name="actionCalculateConstraints"/>
+    <addaction name="actionCalculateExpressions"/>
+   </widget>
+   <widget class="QMenu" name="menuModel">
+    <property name="title">
+     <string>&amp;Model</string>
+    </property>
+    <addaction name="actionInformation"/>
+   </widget>
+   <addaction name="menu_View"/>
+   <addaction name="menuCalculate"/>
+   <addaction name="menuModel"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_toggle_variables">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Variable View</string>
+   </property>
+  </action>
+  <action name="action_toggle_constraints">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Constraint View</string>
+   </property>
+  </action>
+  <action name="action_toggle_parameters">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Parameter View</string>
+   </property>
+  </action>
+  <action name="action_Exit">
+   <property name="text">
+    <string>C&amp;lose Window</string>
+   </property>
+  </action>
+  <action name="action_toggle_expressions">
+   <property name="text">
+    <string>Toggle Expression View</string>
+   </property>
+  </action>
+  <action name="actionCalculateConstraints">
+   <property name="text">
+    <string>All &amp;Constraints</string>
+   </property>
+  </action>
+  <action name="actionCalculateExpressions">
+   <property name="text">
+    <string>All &amp;Expressions</string>
+   </property>
+  </action>
+  <action name="action_toggle_streams">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Toggle Streams View</string>
+   </property>
+  </action>
+  <action name="action_toggle_jupyter_header">
+   <property name="text">
+    <string>Toggle Jupyter Header</string>
+   </property>
+  </action>
+  <action name="actionShow_Jupyter_Header">
+   <property name="text">
+    <string>Show Jupyter Header</string>
+   </property>
+  </action>
+  <action name="actionReport">
+   <property name="text">
+    <string>Report...</string>
+   </property>
+  </action>
+  <action name="actionPlot">
+   <property name="text">
+    <string>Plot...</string>
+   </property>
+  </action>
+  <action name="action_Save">
+   <property name="text">
+    <string>&amp;Save Notebook</string>
+   </property>
+  </action>
+  <action name="actionSave_Model_State">
+   <property name="text">
+    <string>Save Model State</string>
+   </property>
+  </action>
+  <action name="actionLoad_Model_State">
+   <property name="text">
+    <string>Load Model State</string>
+   </property>
+  </action>
+  <action name="action_Add_Cell">
+   <property name="text">
+    <string>&amp;Add Cell</string>
+   </property>
+  </action>
+  <action name="actionCu_t_Cell">
+   <property name="text">
+    <string>Cu&amp;t Cell</string>
+   </property>
+  </action>
+  <action name="actionMove_Cell_Up">
+   <property name="text">
+    <string>Move Cell &amp;Up</string>
+   </property>
+  </action>
+  <action name="actionMove_Cell_Down">
+   <property name="text">
+    <string>Move Cell &amp;Down</string>
+   </property>
+  </action>
+  <action name="action_Interupt_Kernel">
+   <property name="text">
+    <string>&amp;Interupt Kernel</string>
+   </property>
+  </action>
+  <action name="actionToggle_Always_on_Top">
+   <property name="text">
+    <string>Toggle Always on Top</string>
+   </property>
+  </action>
+  <action name="actionInformation">
+   <property name="text">
+    <string>&amp;Information</string>
+   </property>
+  </action>
+  <action name="actionSolve">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Solver Options</string>
+   </property>
+  </action>
+  <action name="actionStrip_Bounds">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Strip Bounds</string>
+   </property>
+  </action>
+  <action name="actionRestore_Bounds">
+   <property name="text">
+    <string>Restore Bounds</string>
+   </property>
+  </action>
+  <action name="actionSolve_2">
+   <property name="text">
+    <string>Solve</string>
+   </property>
+  </action>
+  <action name="actionRestart_Variable_View">
+   <property name="text">
+    <string>Restart Variable View</string>
+   </property>
+  </action>
+  <action name="actionRestart_Constraint_View">
+   <property name="text">
+    <string>Restart &amp;Constraint View</string>
+   </property>
+  </action>
+  <action name="actionRestart_Parameter_View">
+   <property name="text">
+    <string>Restart &amp;Parameter View</string>
+   </property>
+  </action>
+  <action name="actionRestart_Expression_View">
+   <property name="text">
+    <string>Restart &amp;Expression View</string>
+   </property>
+  </action>
+  <action name="actionTile">
+   <property name="text">
+    <string>Tile</string>
+   </property>
+  </action>
+  <action name="actionCascade">
+   <property name="text">
+    <string>C&amp;ascade</string>
+   </property>
+  </action>
+  <action name="actionTabs">
+   <property name="text">
+    <string>Toggle Ta&amp;bs</string>
+   </property>
+  </action>
+  <action name="actionModel_Selector">
+   <property name="text">
+    <string>Model Sele&amp;ctor ...</string>
+   </property>
+  </action>
+  <action name="actionRestart_Residual_Table">
+   <property name="text">
+    <string>Restart Residual Table</string>
+   </property>
+  </action>
+  <action name="actionSet_Working_Directory">
+   <property name="text">
+    <string>Set &amp;Working Directory ...</string>
+   </property>
+  </action>
+  <action name="action_Run_Script">
+   <property name="text">
+    <string>&amp;Run Script ...</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

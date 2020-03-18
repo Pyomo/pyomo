@@ -43,7 +43,8 @@ def process_setarg(arg):
 
     This method is used by IndexedComponent
     """
-    if isinstance(arg,_SetDataBase):
+    import pyomo.core.base.set as new_set
+    if isinstance(arg, (_SetDataBase, new_set._SetDataBase)):
         # Argument is a non-indexed Set instance
         return arg
     elif isinstance(arg,IndexedSet):
@@ -121,7 +122,7 @@ def _value_sorter(self, obj):
 
     """
     if self.ordered:
-        return obj.value
+        return obj.value_list
     else:
         return sorted_robust(obj)
 
@@ -279,7 +280,7 @@ class _OrderedSetData(_SetDataBase):
                                 if the discard method is used.
     """
 
-    __slots__ = ('value', 'order_dict', '_bounds', '_is_sorted')
+    __slots__ = ('value', 'value_list', 'order_dict', '_bounds', '_is_sorted')
 
     def __init__(self, owner, bounds):
         #
@@ -323,7 +324,7 @@ class _OrderedSetData(_SetDataBase):
         'value' attribute.  The underlying set values are not be stored
         as a Python set() object.
         """
-        return set(self.value)
+        return self.value
 
     def _sort(self):
         """
@@ -332,15 +333,19 @@ class _OrderedSetData(_SetDataBase):
         that the set is sorted.
         """
         _sorter = self.parent_component().ordered
-        self.value = sorted(self.value, key=None if _sorter is Set.SortedOrder else _sorter)
-        self.order_dict = dict((j,i) for i,j in enumerate(self.value))
+        self.value_list = sorted(
+            self.value_list,
+            key=None if _sorter is Set.SortedOrder else _sorter
+        )
+        self.order_dict = {j:i for i,j in enumerate(self.value_list)}
         self._is_sorted = 1
 
     def _clear(self):
         """
         Reset the set data
         """
-        self.value = []
+        self.value = set()
+        self.value_list = []
         self.order_dict = {}
         if self._is_sorted:
             self._is_sorted = 1
@@ -353,8 +358,9 @@ class _OrderedSetData(_SetDataBase):
         """
         if verify:
             self._component()._verify(val)
-        self.order_dict[val] = len(self.value)
-        self.value.append(val)
+        self.order_dict[val] = len(self.value_list)
+        self.value_list.append(val)
+        self.value.add(val)
         if self._is_sorted:
             self._is_sorted = 2
 
@@ -367,19 +373,20 @@ class _OrderedSetData(_SetDataBase):
             _id = self.order_dict.pop(val)
         except KeyError:
             return
-        del self.value[_id]
+        del self.value_list[_id]
+        self.value.remove(val)
         #
         # Update the order_dict: this assumes the user-specified sorter
         # (if one was used) is stable.
         #
-        for i in xrange(_id,len(self.value)):
-            self.order_dict[self.value[i]] = i
+        for i in xrange(_id,len(self.value_list)):
+            self.order_dict[self.value_list[i]] = i
 
     def __len__(self):
         """
         Return the number of elements in the set.
         """
-        return len(self.value)
+        return len(self.value_list)
 
     def __iter__(self):
         """
@@ -387,7 +394,7 @@ class _OrderedSetData(_SetDataBase):
         """
         if self._is_sorted == 2:
             self._sort()
-        return self.value.__iter__()
+        return self.value_list.__iter__()
 
     def __contains__(self, val):
         """
@@ -423,11 +430,11 @@ class _OrderedSetData(_SetDataBase):
         if idx >= 1:
             if idx > len(self):
                 raise IndexError("Cannot index a RangeSet past the last element")
-            return self.value[idx-1]
+            return self.value_list[idx-1]
         elif idx < 0:
             if len(self)+idx < 0:
                 raise IndexError("Cannot index a RangeSet past the first element")
-            return self.value[idx]
+            return self.value_list[idx]
         else:
             raise IndexError("Valid index values for sets are 1 .. len(set) or -1 .. -len(set)")
 
@@ -480,7 +487,7 @@ class _OrderedSetData(_SetDataBase):
         except KeyError:
             raise KeyError("Cannot obtain nextw() member of set="+self.name+"; input element="+str(match_element)+" is not a member of the set!")
         #
-        return self[(element_position+k-1) % len(self.value) + 1]
+        return self[(element_position+k-1) % len(self.value_list) + 1]
 
     def prev(self, match_element, k=1):
         """
@@ -522,7 +529,7 @@ class _IndexedSetData(_SetData):
         """
         Return the underlying set data.
         """
-        return self.value
+        return self.data()
 
     def clear(self):
         """
@@ -557,7 +564,7 @@ class _IndexedOrderedSetData(_OrderedSetData):
         """
         Return the underlying set data.
         """
-        return self.value
+        return self.data()
 
     def clear(self):
         """
@@ -868,11 +875,12 @@ class SimpleSetBase(Set):
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
             iteritems( {None: self} ),
-            None, #("Members",),
-            lambda k, v: [
+            None, # ("Members",),
+            lambda os, k, v: os.write(str(
                 "Virtual" if not self.concrete or v.virtual \
-                    else v.value if v.ordered \
-                    else sorted(v), ] )
+                    else v.value_list if v.ordered \
+                    else sorted(v), )+"\n"),
+        )
 
     def _set_repn(self, other):
         """
@@ -890,7 +898,7 @@ class SimpleSetBase(Set):
         """
         if not self.concrete:
             raise ValueError("The size of a non-concrete set is unknown")
-        return len(self.value)
+        return len(self.value_list)
 
     def __iter__(self):
         """
@@ -902,7 +910,8 @@ class SimpleSetBase(Set):
                 "been constructed (initialized)." % (self.name,) )
         if not self.concrete:
             raise TypeError("Cannot iterate over a non-concrete set '%s'" % self.name)
-        return self.value.__iter__()
+        return self.value_list.__iter__()
+        #return super(SimpleSetBase, self).__iter__()
 
     def __reversed__(self):
         """
@@ -1537,7 +1546,7 @@ class _SetProduct(_SetOperator):
         _SetOperator.__init__(self, *args, **kwd)
         # the individual index sets definining the product set.
         if isinstance(self._setA,_SetProduct):
-            self.set_tuple = self._setA.set_tuple
+            self.set_tuple = list(self._setA.set_tuple)
         else:
             self.set_tuple = [self._setA]
         if isinstance(self._setB,_SetProduct):

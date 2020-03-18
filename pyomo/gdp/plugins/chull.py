@@ -24,7 +24,8 @@ from pyomo.core import (
     Any, RangeSet, Reals, value
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import clone_without_expression_components, target_list
+from pyomo.gdp.util import clone_without_expression_components, target_list, \
+    is_child_of
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from six import iteritems, iterkeys
@@ -32,6 +33,7 @@ from six import iteritems, iterkeys
 
 logger = logging.getLogger('pyomo.gdp.chull')
 
+NAME_BUFFER = {}
 
 @TransformationFactory.register('gdp.chull', doc="Relax disjunctive model by forming the convex hull.")
 class ConvexHull_Transformation(Transformation):
@@ -50,7 +52,7 @@ class ConvexHull_Transformation(Transformation):
         'LeeGrossmann', or 'GrossmannLee'
     EPS : float
         The value to use for epsilon [default: 1e-4]
-    targets : (block, disjunction, ComponentUID or list of those types)
+    targets : (block, disjunction, or list of those types)
         The targets to transform. This can be a block, disjunction, or a
         list of blocks and Disjunctions [default: the instance]
 
@@ -95,9 +97,10 @@ class ConvexHull_Transformation(Transformation):
         doc="""
 
         This specifies the target or list of targets to relax as either a
-        component, ComponentUID, or string that can be passed to a
-        ComponentUID; or an iterable of these types.  If None (default),
-        the entire model is transformed."""
+        component or a list of components. If None (default), the entire model
+        is transformed. Note that if the transformation is done out of place,
+        the list of targets should be attached to the model before it is cloned,
+        and the list will specify the targets on the cloned instance."""
     ))
     CONFIG.declare('perspective function', cfg.ConfigValue(
         default='FurmanSawayaGrossmann',
@@ -170,6 +173,15 @@ class ConvexHull_Transformation(Transformation):
 
 
     def _apply_to(self, instance, **kwds):
+        assert not NAME_BUFFER
+        try:
+            self._apply_to_impl(instance, **kwds)
+        finally:
+            # Clear the global name buffer now that we are done
+            NAME_BUFFER.clear()
+
+
+    def _apply_to_impl(self, instance, **kwds):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
 
@@ -189,13 +201,14 @@ class ConvexHull_Transformation(Transformation):
             _HACK_transform_whole_instance = True
         else:
             _HACK_transform_whole_instance = False
-        for _t in targets:
-            t = _t.find_component(instance)
-            if t is None:
-                raise GDP_Error(
-                    "Target %s is not a component on the instance!" % _t)
-
-            if t.type() is Disjunction:
+        knownBlocks = {}
+        for t in targets:
+            # check that t is in fact a child of instance
+            if not is_child_of(parent=instance, child=t,
+                               knownBlocks=knownBlocks):
+                raise GDP_Error("Target %s is not a component on instance %s!"
+                                % (t.name, instance.name))
+            elif t.type() is Disjunction:
                 if t.parent_component() is t:
                     self._transformDisjunction(t, transBlock)
                 else:
@@ -248,6 +261,7 @@ class ConvexHull_Transformation(Transformation):
         # all the variables that it needs (in this case, indicator_vars).
         if _HACK_transform_whole_instance:
             HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
+
 
     def _contained_in(self, var, block):
         "Return True if a var is in the subtree rooted at block"
@@ -320,8 +334,10 @@ class ConvexHull_Transformation(Transformation):
             disaggregationConstraint \
                 = disaggregationConstraintMap[disjunction] = Constraint(Any)
             parent.add_component(
-                unique_component_name(parent, '_gdp_chull_relaxation_' + \
-                                      disjunction.name + '_disaggregation'),
+                unique_component_name(
+                    parent, '_gdp_chull_relaxation_' + disjunction.getname(
+                        fully_qualified=True, name_buffer=NAME_BUFFER
+                    ) + '_disaggregation'),
                 disaggregationConstraint)
 
         # If the Constraint already exists, return it
@@ -334,8 +350,10 @@ class ConvexHull_Transformation(Transformation):
             orC = Constraint(disjunction.index_set()) if \
                   disjunction.is_indexed() else Constraint()
             parent.add_component(
-                unique_component_name(parent, '_gdp_chull_relaxation_' +
-                                      disjunction.name + '_xor'),
+                unique_component_name(
+                    parent, '_gdp_chull_relaxation_' + disjunction.getname(
+                        fully_qualified=True, name_buffer=NAME_BUFFER
+                    ) + '_xor'),
                 orC)
             orConstraintMap[disjunction] = orC
 
@@ -534,7 +552,9 @@ class ConvexHull_Transformation(Transformation):
             # of variables from different blocks coming together, so we
             # get a unique name
             disaggregatedVarName = unique_component_name(
-                relaxationBlock, var.local_name)
+                relaxationBlock, 
+                var.getname(fully_qualified=False, name_buffer=NAME_BUFFER),
+            )
             relaxationBlock.add_component(
                 disaggregatedVarName, disaggregatedVar)
             chull['disaggregatedVars'][var] = disaggregatedVar
@@ -569,7 +589,10 @@ class ConvexHull_Transformation(Transformation):
             # of variables from different blocks coming together, so we
             # get a unique name
             conName = unique_component_name(
-                relaxationBlock, var.local_name+"_bounds")
+                relaxationBlock,
+                var.getname(fully_qualified=False, name_buffer=NAME_BUFFER
+                        ) + "_bounds"
+            )
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(conName, bigmConstraint)
             bigmConstraint.add('lb', obj.indicator_var*lb <= var)
@@ -636,13 +659,15 @@ class ConvexHull_Transformation(Transformation):
                 return
         parentblock = problemdisj.parent_block()
         # the disjunction should only have been active if it wasn't transformed
+        _probDisjName = problemdisj.getname(
+            fully_qualified=True, name_buffer=NAME_BUFFER)
         assert (not hasattr(parentblock, "_gdp_transformation_info")) or \
-            problemdisj.name not in parentblock._gdp_transformation_info
+            _probDisjName not in parentblock._gdp_transformation_info
         raise GDP_Error("Found untransformed disjunction %s in disjunct %s! "
                         "The disjunction must be transformed before the "
                         "disjunct. If you are using targets, put the "
                         "disjunction before the disjunct in the list." \
-                        % (problemdisj.name, disjunct.name))
+                        % (_probDisjName, disjunct.name))
 
 
     def _warn_for_active_disjunct(
@@ -692,7 +717,8 @@ class ConvexHull_Transformation(Transformation):
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
         # same block. So we get a unique name
-        name = unique_component_name(relaxationBlock, obj.name)
+        name = unique_component_name(relaxationBlock, obj.getname(
+            fully_qualified=True, name_buffer=NAME_BUFFER))
 
         if obj.is_indexed():
             try:
@@ -787,8 +813,10 @@ class ConvexHull_Transformation(Transformation):
                 # lower and upper... I think there could be though if I say what
                 # the new constraint is going to be or something.
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                    _name = c.getname(
+                        fully_qualified=True, name_buffer=NAME_BUFFER)
                     logger.debug("GDP(cHull): Transforming constraint " +
-                                 "'%s'", c.name)
+                                 "'%s'", _name)
                 if NL:
                     newConsExpr = expr >= c.lower*y
                 else:
@@ -801,8 +829,10 @@ class ConvexHull_Transformation(Transformation):
 
             if c.upper is not None:
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                    _name = c.getname(
+                        fully_qualified=True, name_buffer=NAME_BUFFER)
                     logger.debug("GDP(cHull): Transforming constraint " +
-                                 "'%s'", c.name)
+                                 "'%s'", _name)
                 if NL:
                     newConsExpr = expr <= c.upper*y
                 else:

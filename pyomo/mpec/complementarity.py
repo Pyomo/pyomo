@@ -2,15 +2,15 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import sys
 import inspect
-from six import iteritems
+from six import iteritems, StringIO
 from collections import namedtuple
 
 from pyomo.common.timing import ConstructionTimer
@@ -19,7 +19,7 @@ from pyomo.core.expr.numvalue import ZeroConstant, _sub, native_numeric_types, a
 from pyomo.core import *
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.numvalue import ZeroConstant, _sub
-from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.block import _BlockData
 
 import logging
@@ -250,16 +250,35 @@ Error thrown for Complementarity "%s"
         self[index]._args = tuple( as_numeric(x) for x in cc )
         return self[index]
 
-    def pprint(self, **kwargs):
-        if self._type is Complementarity:
-            Component.pprint(self, **kwargs)
-        else:
-            Block.pprint(self, **kwargs)
-
     def _pprint(self):
         """
         Return data that will be printed for this component.
         """
+        _table_data = lambda k, v: [
+            v._args[0], v._args[1], v.active,
+        ]
+
+        # This is a bit weird, but is being implemented to preserve
+        # backwards compatibility.  The Complementarity transformation
+        # is "in place", in that modeling components are added to this
+        # block.  If the transformation has been executed (or if any
+        # components have been added to the block), we want to output
+        # the block components as well as the normal complementarity
+        # table.
+        #
+        # TODO: In the future we should probably reconsider how
+        # Complementarity is implemented and move away from this
+        # paradigm.
+        #
+        # FIXME: remove the _transformed check and only invoke
+        # _pprint_callback if there are components (requires baseline
+        # updates and a check that we do not break anything in the
+        # Book).
+        _transformed = not issubclass(self._type, Complementarity)
+        def _conditional_block_printer(ostream, idx, data):
+            if _transformed or len(data.component_map()):
+                self._pprint_callback(ostream, idx, data)
+
         return (
             [("Size", len(self)),
              ("Index", self._index if self.is_indexed() else None),
@@ -267,10 +286,7 @@ Error thrown for Complementarity "%s"
              ],
             iteritems(self._data),
             ( "Arg0","Arg1","Active" ),
-            lambda k, v: [ v._args[0],
-                           v._args[1],
-                           v.active,
-                           ]
+            (_table_data, _conditional_block_printer),
             )
 
 
@@ -280,9 +296,6 @@ class SimpleComplementarity(_ComplementarityData, Complementarity):
         _ComplementarityData.__init__(self, self)
         Complementarity.__init__(self, *args, **kwds)
         self._data[None] = self
-
-    def pprint(self, **kwargs):
-        Complementarity.pprint(self, **kwargs)
 
 
 class IndexedComplementarity(Complementarity):

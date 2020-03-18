@@ -1,4 +1,13 @@
-# the matpolotlib stuff is to avoid $DISPLAY errors on Travis (DLW Oct 2018)
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -10,6 +19,10 @@ try:
     imports_not_present = False
 except:
     imports_not_present = True
+
+import platform
+is_osx = platform.mac_ver()[0] != ''
+
 import pyutilib.th as unittest
 import tempfile
 import sys
@@ -17,9 +30,11 @@ import os
 import shutil
 import glob
 import subprocess
+import sys
 from itertools import product
 
 import pyomo.contrib.parmest.parmest as parmest
+import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
 import pyomo.environ as pyo
 
@@ -47,7 +62,8 @@ class Object_from_string_Tester(unittest.TestCase):
         self.assertEqual(fixstatus, False)
 
         
-@unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class parmest_object_Tester_RB(unittest.TestCase):
     
@@ -71,7 +87,9 @@ class parmest_object_Tester_RB(unittest.TestCase):
         self.assertAlmostEqual(objval, 4.4675, places=2)
         self.assertAlmostEqual(thetavals['asymptote'], 19.2189, places=2) # 19.1426 from the paper
         self.assertAlmostEqual(thetavals['rate_constant'], 0.5312, places=2) # 0.5311 from the paper
-        
+
+    @unittest.skipIf(not graphics.imports_available,
+                     "parmest.graphics imports are unavailable")
     def test_bootstrap(self):
         objval, thetavals = self.pest.theta_est()
         
@@ -84,27 +102,21 @@ class parmest_object_Tester_RB(unittest.TestCase):
 
         del theta_est['samples']
         
-        filename = os.path.abspath(os.path.join(testdir, 'pairwise_bootstrap.png'))
-        if os.path.isfile(filename):
-            os.remove(filename)
-        parmest.pairwise_plot(theta_est, filename=filename)
-        #self.assertTrue(os.path.isfile(filename))
+        # apply cofidence region test
+        CR = self.pest.confidence_region_test(theta_est, 'MVN', [0.5, 0.75, 1.0])
         
-        filename = os.path.abspath(os.path.join(testdir, 'pairwise_bootstrap_theta.png'))
-        if os.path.isfile(filename):
-            os.remove(filename)
-        parmest.pairwise_plot(theta_est, thetavals, filename=filename)
-        #self.assertTrue(os.path.isfile(filename))
+        self.assertTrue(set(CR.columns) >= set([0.5, 0.75, 1.0]))
+        self.assertTrue(CR[0.5].sum() == 5) 
+        self.assertTrue(CR[0.75].sum() == 7)
+        self.assertTrue(CR[1.0].sum() == 10) # all true
         
-        filename = os.path.abspath(os.path.join(testdir, 'pairwise_bootstrap_theta_CI.png'))
-        if os.path.isfile(filename):
-            os.remove(filename)
-        parmest.pairwise_plot(theta_est, thetavals, 0.8, ['MVN', 'KDE', 'Rect'],
-                                         filename=filename)
-        #self.assertTrue(os.path.isfile(filename))
+        parmest.pairwise_plot(theta_est)
+        parmest.pairwise_plot(theta_est, thetavals)
+        parmest.pairwise_plot(theta_est, thetavals, 0.8, ['MVN', 'KDE', 'Rect'])
         
+    @unittest.skipIf(not graphics.imports_available,
+                     "parmest.graphics imports are unavailable")
     def test_likelihood_ratio(self):
-        # tbd: write the plot file(s) to a temp dir and delete in cleanup
         objval, thetavals = self.pest.theta_est()
         
         asym = np.arange(10, 30, 2)
@@ -113,16 +125,32 @@ class parmest_object_Tester_RB(unittest.TestCase):
         
         obj_at_theta = self.pest.objective_at_theta(theta_vals)
         
-        LR = self.pest.likelihood_ratio_test(obj_at_theta, objval, [0.8, 0.85, 0.9, 0.95])
+        LR = self.pest.likelihood_ratio_test(obj_at_theta, objval, [0.8, 0.9, 1.0])
         
-        self.assertTrue(set(LR.columns) >= set([0.8, 0.85, 0.9, 0.95]))
+        self.assertTrue(set(LR.columns) >= set([0.8, 0.9, 1.0]))
+        self.assertTrue(LR[0.8].sum() == 7) 
+        self.assertTrue(LR[0.9].sum() == 11)
+        self.assertTrue(LR[1.0].sum() == 60) # all true
         
-        filename = os.path.abspath(os.path.join(testdir, 'pairwise_LR_plot.png'))
-        if os.path.isfile(filename):
-            os.remove(filename)
-        parmest.pairwise_plot(LR, thetavals, 0.8,  filename=filename)
-        #self.assertTrue(os.path.isfile(filename))
+        parmest.pairwise_plot(LR, thetavals, 0.8)
 
+    def test_leaveNout(self):
+        lNo_theta = self.pest.theta_est_leaveNout(1) 
+        self.assertTrue(lNo_theta.shape == (6,2))
+        
+        results = self.pest.leaveNout_bootstrap_test(1, None, 3, 'Rect', [0.5, 1.0])
+        self.assertTrue(len(results) == 6) # 6 lNo samples
+        i = 1
+        samples = results[i][0] # list of N samples that are left out
+        lno_theta = results[i][1] 
+        bootstrap_theta = results[i][2] 
+        self.assertTrue(samples == [1]) # sample 1 was left out
+        self.assertTrue(lno_theta.shape[0] == 1) # lno estimate for sample 1
+        self.assertTrue(set(lno_theta.columns) >= set([0.5, 1.0]))
+        self.assertTrue(lno_theta[1.0].sum() == 1) # all true
+        self.assertTrue(bootstrap_theta.shape[0] == 3) # bootstrap for sample 1
+        self.assertTrue(bootstrap_theta[1.0].sum() == 3) # all true
+        
     def test_diagnostic_mode(self):
         self.pest.diagnostic_mode = True
 
@@ -145,11 +173,11 @@ class parmest_object_Tester_RB(unittest.TestCase):
         rbpath = parmestpath + os.sep + "examples" + os.sep + \
                    "rooney_biegler" + os.sep + "rooney_biegler.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-        if sys.version_info >= (3,0):
-            ret = subprocess.run(["python", rbpath])
+        if sys.version_info >= (3,5):
+            ret = subprocess.run([sys.executable, rbpath])
             retcode = ret.returncode
         else:
-            retcode = subprocess.call(["python", rbpath])
+            retcode = subprocess.call([sys.executable, rbpath])
         assert(retcode == 0)
         
     @unittest.skip("Presently having trouble with mpiexec on appveyor")
@@ -162,8 +190,8 @@ class parmest_object_Tester_RB(unittest.TestCase):
         rbpath = parmestpath + os.sep + "examples" + os.sep + \
                    "rooney_biegler" + os.sep + "rooney_biegler_parmest.py"
         rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-        rlist = ["mpiexec", "--allow-run-as-root", "-n", "2", "python", rbpath]
-        if sys.version_info >= (3,0):
+        rlist = ["mpiexec", "--allow-run-as-root", "-n", "2", sys.executable, rbpath]
+        if sys.version_info >= (3,5):
             ret = subprocess.run(rlist)
             retcode = ret.returncode
         else:
@@ -224,6 +252,26 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
         self.assertAlmostEqual(thetavals['k2'], 5.0/3.0, places=4) 
         self.assertAlmostEqual(thetavals['k3'], 1.0/6000.0, places=7) 
         
-
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not graphics.imports_available,
+                 "parmest.graphics imports are unavailable")
+@unittest.skipIf(is_osx, "Disabling graphics tests on OSX due to issue in Matplotlib, see Pyomo PR #1337")
+class parmest_graphics(unittest.TestCase):
+    
+    def setUp(self):
+        self.A = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))
+        self.B = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))
+        
+    def test_pairwise_plot(self):
+        parmest.pairwise_plot(self.A, alpha=0.8, distributions=['Rect', 'MVN', 'KDE'])
+        
+    def test_grouped_boxplot(self):
+        parmest.grouped_boxplot(self.A, self.B, normalize=True, 
+                                group_names=['A', 'B'])
+        
+    def test_grouped_violinplot(self):
+        parmest.grouped_violinplot(self.A, self.B)
+        
 if __name__ == '__main__':
     unittest.main()

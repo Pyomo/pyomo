@@ -8,13 +8,20 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
 import math
 import sys
 
 from pyutilib.misc import compare_repn
 
 from pyomo.pysp.plugins.phhistoryextension import load_history
+
+import six
+
+if six.PY3:
+    from collections.abc import MutableMapping as collections_MutableMapping
+else:
+    from collections import MutableMapping as collections_MutableMapping
+
 
 assert len(sys.argv) == 3
 
@@ -25,7 +32,7 @@ def flatten(d, parent_key=''):
     items = []
     for k, v in d.items():
         new_key = parent_key + '_' + k if parent_key else k
-        if v and isinstance(v, collections.MutableMapping):
+        if v and isinstance(v, collections_MutableMapping):
             items.extend(flatten(v, new_key).items())
         else:
             items.append((new_key, v))

@@ -54,13 +54,15 @@ class Test(unittest.TestCase):
             self.model.write(currdir+'test3.nl')
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("ampl") is None:
-                self.fail("Unexpected ApplicationError - ampl is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("ampl"):
+                self.fail("Unexpected ApplicationError - ampl is enabled "
+                          "but not available: '%s'" % str(err))
             return
         except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("ampl") is None:
-                self.fail("Unexpected ConverterError - ampl is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("ampl"):
+                self.fail("Unexpected ConverterError - ampl is enabled "
+                          "but not available: '%s'" % str(err))
             return
         self.assertFileEqualsBaseline(currdir+'test3.nl', currdir+'test3.baseline.nl', filter=filter_nl, tolerance=1e-6)
 
@@ -71,32 +73,36 @@ class Test(unittest.TestCase):
             self.model.write(currdir+'test3.lp')
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("glpsol") is None:
-                self.fail("Unexpected ApplicationError - glpsol is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("glpsol"):
+                self.fail("Unexpected ApplicationError - glpsol is enabled "
+                          "but not available: '%s'" % str(err))
             return
         except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("glpsol") is None:
-                self.fail("Unexpected ConverterError - glpsol is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("glpsol"):
+                self.fail("Unexpected ConverterError - glpsol is enabled "
+                          "but not available: '%s'" % str(err))
             return
         self.assertFileEqualsBaseline(currdir+'test3.lp', currdir+'test3.baseline.lp', filter=filter, tolerance=1e-6)
 
     def test3_write_mps(self):
         """ Convert from AMPL to MPS """
-        if not pyomo.common.registered_executable("ampl"):
+        if not pyomo.common.Executable("ampl"):
             self.skipTest("The ampl executable is not available")
         self.model = pyomo.opt.AmplModel(currdir+'test3.mod')
         try:
             self.model.write(currdir+'test3.mps')
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("ampl") is None:
-                self.fail("Unexpected ApplicationError - ampl is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("ampl"):
+                self.fail("Unexpected ApplicationError - ampl is enabled "
+                          "but not available: '%s'" % str(err))
             return
         except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("ampl") is None:
-                self.fail("Unexpected ConverterError - ampl is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("ampl"):
+                self.fail("Unexpected ConverterError - ampl is enabled "
+                          "but not available: '%s'" % str(err))
             return
         self.assertFileEqualsBaseline(currdir+'test3.mps', currdir+'test3.baseline.mps', filter=filter, tolerance=1e-6)
 
@@ -107,13 +113,15 @@ class Test(unittest.TestCase):
             self.model.write(currdir+'test3a.nl')
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("ampl") is None:
-                self.fail("Unexpected ApplicationError - ampl is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("ampl"):
+                self.fail("Unexpected ApplicationError - ampl is enabled "
+                          "but not available: '%s'" % str(err))
             return
         except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("ampl") is None:
-                self.fail("Unexpected ConverterError - ampl is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("ampl"):
+                self.fail("Unexpected ConverterError - ampl is enabled "
+                          "but not available: '%s'" % str(err))
             return
         self.assertFileEqualsBaseline(currdir+'test3a.nl', currdir+'test3.baseline.nl', filter=filter_nl, tolerance=1e-6)
 
@@ -124,32 +132,36 @@ class Test(unittest.TestCase):
             self.model.write(currdir+'test3a.lp')
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("glpsol") is None:
-                self.fail("Unexpected ApplicationError - glpsol is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("glpsol"):
+                self.fail("Unexpected ApplicationError - glpsol is enabled "
+                          "but not available: '%s'" % str(err))
             return
         except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("glpsol") is None:
-                self.fail("Unexpected ConverterError - glpsol is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("glpsol"):
+                self.fail("Unexpected ConverterError - glpsol is enabled "
+                          "but not available: '%s'" % str(err))
             return
         self.assertFileEqualsBaseline(currdir+'test3a.lp', currdir+'test3.baseline.lp', filter=filter, tolerance=1e-6)
 
     def test3a_write_mps(self):
         """ Convert from AMPL to MPS """
-        if not pyomo.common.registered_executable("ampl"):
+        if not pyomo.common.Executable("ampl"):
             self.skipTest("The ampl executable is not available")
         self.model = pyomo.opt.AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
         try:
             self.model.write(currdir+'test3a.mps')
         except pyutilib.common.ApplicationError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("ampl") is None:
-                self.fail("Unexpected ApplicationError - ampl is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("ampl"):
+                self.fail("Unexpected ApplicationError - ampl is enabled "
+                          "but not available: '%s'" % str(err))
             return
         except pyomo.opt.ConverterError:
             err = sys.exc_info()[1]
-            if not pyomo.common.registered_executable("ampl") is None:
-                self.fail("Unexpected ConverterError - ampl is enabled but not available: '%s'" % str(err))
+            if pyomo.common.Executable("ampl"):
+                self.fail("Unexpected ConverterError - ampl is enabled "
+                          "but not available: '%s'" % str(err))
             return
         self.assertFileEqualsBaseline(currdir+'test3a.mps', currdir+'test3.baseline.mps', filter=filter, tolerance=1e-6)
 

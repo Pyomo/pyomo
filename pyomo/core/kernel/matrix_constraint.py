@@ -8,6 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.dependencies import (
+    numpy, numpy_available as has_numpy,
+    scipy, scipy_available as has_scipy,
+)
 import pyomo.core.expr
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.constraint import \
@@ -16,18 +20,6 @@ from pyomo.core.kernel.constraint import \
 
 import six
 from six.moves import zip, xrange
-
-try:
-    import numpy
-    has_numpy = True
-except:     #pragma:nocover
-    has_numpy = False
-
-try:
-    import scipy
-    has_scipy = True
-except:     #pragma:nocover
-    has_scipy = False
 
 _noarg = object()
 
@@ -278,11 +270,15 @@ class matrix_constraint(constraint_tuple):
             self._A = scipy.sparse.csr_matrix(A,
                                               dtype=float,
                                               copy=True)
+            self._A.data.setflags(write=False)
+            self._A.indices.setflags(write=False)
+            self._A.indptr.setflags(write=False)
         else:
             self._sparse = False
             self._A = numpy.array(A,
                                   dtype=float,
                                   copy=True)
+            self._A.setflags(write=False)
         self._lb = numpy.ndarray(m, dtype=float)
         self._ub = numpy.ndarray(m, dtype=float)
         self._equality = numpy.ndarray(m, dtype=bool)
@@ -307,6 +303,15 @@ class matrix_constraint(constraint_tuple):
         """Boolean indicating whether or not the underlying
         matrix uses sparse storage"""
         return self._sparse
+
+    @property
+    def A(self):
+        """A read-only view of the constraint matrix"""
+        if self._sparse:
+            return scipy.sparse.csr_matrix(self._A,
+                                           copy=False)
+        else:
+            return self._A.view()
 
     @property
     def x(self):

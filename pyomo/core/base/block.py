@@ -10,16 +10,26 @@
 
 __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'active_components', 'components', 'active_components_data',
-           'components_data']
+           'components_data', 'SimpleBlock']
 
+import collections
 import copy
+import logging
 import sys
 import weakref
-import logging
+import textwrap
+
 from inspect import isclass
 from operator import itemgetter, attrgetter
 from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
+
+if PY3:
+    from collections.abc import Mapping as collections_Mapping
+else:
+    from collections import Mapping as collections_Mapping
+
+from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import *  # ModelComponentFactory
@@ -31,7 +41,6 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.indexed_component import IndexedComponent, \
     ActiveIndexedComponent, UnindexedComponent_set
-import collections
 
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt import WriterFactory
@@ -97,6 +106,7 @@ class _generic_component_decorator(object):
             rule.__name__,
             self._component(*self._args, rule=rule, **(self._kwds))
         )
+        return rule
 
 
 class _component_decorator(object):
@@ -700,15 +710,116 @@ class _BlockData(ActiveComponentData):
             #
             super(_BlockData, self).__delattr__(name)
 
+    def _compact_decl_storage(self):
+        idxMap = {}
+        _new_decl_order = []
+        j = 0
+        # Squeeze out the None entries
+        for i, entry in enumerate(self._decl_order):
+            if entry[0] is not None:
+                idxMap[i] = j
+                j += 1
+                _new_decl_order.append(entry)
+        # Update the _decl map
+        self._decl = {k:idxMap[idx] for k,idx in iteritems(self._decl)}
+        # Update the ctypes, _decl_order linked lists
+        for ctype, info in iteritems(self._ctypes):
+            idx = info[0]
+            entry = self._decl_order[idx]
+            while entry[0] is None:
+                idx = entry[1]
+                entry = self._decl_order[idx]
+            info[0] = last = idxMap[idx]
+            while entry[1] is not None:
+                idx = entry[1]
+                entry = self._decl_order[idx]
+                if entry[0] is not None:
+                    this = idxMap[idx]
+                    _new_decl_order[last] = (_new_decl_order[last][0], this)
+                    last = this
+            info[1] = last
+            _new_decl_order[last] = (_new_decl_order[last][0], None)
+        self._decl_order = _new_decl_order
+
     def set_value(self, val):
-        for k in list(getattr(self, '_decl', {})):
-            self.del_component(k)
-        self._ctypes = {}
-        self._decl = {}
-        self._decl_order = []
-        if val:
-            for k in sorted(iterkeys(val)):
-                self.add_component(k,val[k])
+        raise RuntimeError(textwrap.dedent(
+            """\
+            Block components do not support assignment or set_value().
+            Use the transfer_attributes_from() method to transfer the
+            components and public attributes from one block to another:
+                model.b[1].transfer_attributes_from(other_block)
+            """))
+
+    def clear(self):
+        for name in iterkeys(self.component_map()):
+            if name not in self._Block_reserved_words:
+                self.del_component(name)
+        for attr in tuple(self.__dict__):
+            if attr not in self._Block_reserved_words:
+                delattr(self, attr)
+        self._compact_decl_storage()
+
+    def transfer_attributes_from(self, src):
+        """Transfer user-defined attributes from src to this block
+
+        This transfers all components and user-defined attributes from
+        the block or dictionary `src` and places them on this Block.
+        Components are transferred in declaration order.
+
+        If a Component on `src` is also declared on this block as either
+        a Component or attribute, the local Component or attribute is
+        replaced by the incoming component.  If an attribute name on
+        `src` matches a Component declared on this block, then the
+        incoming attribute is passed to the local Component's
+        `set_value()` method.  Attribute names appearing in this block's
+        `_Block_reserved_words` set will not be transferred (although
+        Components will be).
+
+        Parameters
+        ----------
+        src: _BlockData or dict
+            The Block or mapping that contains the new attributes to
+            assign to this block.
+        """
+        if isinstance(src, _BlockData):
+            # There is a special case where assigning a parent block to
+            # this block creates a circular hierarchy
+            if src is self:
+                return
+            p_block = self.parent_block()
+            while p_block is not None:
+                if p_block is src:
+                    raise ValueError(
+                        "_BlockData.transfer_attributes_from(): Cannot set a "
+                        "sub-block (%s) to a parent block (%s): creates a "
+                        "circular hierarchy" % (self, src))
+                p_block = p_block.parent_block()
+            # record the components and the non-component objects added
+            # to the block
+            src_comp_map = src.component_map()
+            src_raw_dict = {k:v for k,v in iteritems(src.__dict__)
+                            if k not in src_comp_map}
+        elif isinstance(src, collections_Mapping):
+            src_comp_map = {}
+            src_raw_dict = src
+        else:
+            raise ValueError(
+                "_BlockData.transfer_attributes_from(): expected a "
+                "Block or dict; received %s" % (type(src).__name__,))
+
+        # Use component_map for the components to preserve decl_order
+        for k,v in iteritems(src_comp_map):
+            if k in self._decl:
+                self.del_component(k)
+            src.del_component(k)
+            self.add_component(k,v)
+        # Because Blocks are not slotized and we allow the
+        # assignment of arbitrary data to Blocks, we will move over
+        # any other unrecognized entries in the object's __dict__:
+        for k in sorted(iterkeys(src_raw_dict)):
+            if k not in self._Block_reserved_words or not hasattr(self, k) \
+               or k in self._decl:
+                setattr(self, k, src_raw_dict[k])
 
     def _add_temporary_set(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -721,7 +832,7 @@ class _BlockData(ActiveComponentData):
         #
         if _component_sets is not None:
             for ctr, tset in enumerate(_component_sets):
-                if tset._name == "_unknown_":
+                if tset.parent_component()._name == "_unknown_":
                     self._construct_temporary_set(
                         tset,
                         val.local_name + "_index_" + str(ctr)
@@ -851,7 +962,7 @@ class _BlockData(ActiveComponentData):
         if not val.valid_model_component():
             raise RuntimeError(
                 "Cannot add '%s' as a component to a block" % str(type(val)))
-        if name in self._Block_reserved_words:
+        if name in self._Block_reserved_words and hasattr(self, name):
             raise ValueError("Attempting to declare a block component using "
                              "the name of a reserved attribute:\n\t%s"
                              % (name,))
@@ -889,6 +1000,18 @@ single owning block (or model), and a component may not appear
 multiple times in a block.  If you want to re-name or move this
 component, use the block del_component() and add_component() methods.
 """ % (msg.strip(),))
+        #
+        # If the new component is a Block, then there is the chance that
+        # it is the model(), and assigning it would create a circular
+        # hierarchy.  Note that we only have to check the model as the
+        # check immediately above would catch any "internal" blocks in
+        # the block hierarchy
+        #
+        if isinstance(val, Block) and val is self.model():
+            raise ValueError(
+                "Cannot assign the top-level block as a subblock of one of "
+                "its children (%s): creates a circular hierarchy"
+                % (self,))
         #
         # Set the name and parent pointer of this component.
         #
@@ -1568,17 +1691,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 return False
         return True
 
-    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
-        """
-        Print a summary of the block info
-        """
-        if filename is not None:
-            OUTPUT = open(filename, "w")
-            self.pprint(ostream=OUTPUT, verbose=verbose, prefix=prefix)
-            OUTPUT.close()
-            return
-        if ostream is None:
-            ostream = sys.stdout
+    def _pprint_blockdata_components(self, ostream):
         #
         # We hard-code the order of the core Pyomo modeling
         # components, to ensure that the output follows the logical order
@@ -1601,6 +1714,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         items.append(Block)
         items.extend(sorted(dynamic_items, key=lambda x: x.__name__))
 
+        indented_ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
         for item in items:
             keys = sorted(self.component_map(item))
             if not keys:
@@ -1608,18 +1722,17 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #
             # NOTE: these conditional checks should not be hard-coded.
             #
-            ostream.write("%s%d %s Declarations\n"
-                          % (prefix, len(keys), item.__name__))
+            ostream.write("%d %s Declarations\n"
+                          % (len(keys), item.__name__))
             for key in keys:
-                self.component(key).pprint(
-                    ostream=ostream, verbose=verbose, prefix=prefix + '    ')
+                self.component(key).pprint(ostream=indented_ostream)
             ostream.write("\n")
         #
         # Model Order
         #
         decl_order_keys = list(self.component_map().keys())
-        ostream.write("%s%d Declarations: %s\n"
-                      % (prefix, len(decl_order_keys),
+        ostream.write("%d Declarations: %s\n"
+                      % (len(decl_order_keys),
                           ' '.join(str(x) for x in decl_order_keys)))
 
     def display(self, filename=None, ostream=None, prefix=""):
@@ -1773,7 +1886,7 @@ class Block(ActiveIndexedComponent):
             self.construct()
 
     def _getitem_when_not_present(self, idx):
-        return self._setitem_when_not_present(idx, None)
+        return self._setitem_when_not_present(idx)
 
     def find_component(self, label_or_component):
         """
@@ -1833,62 +1946,35 @@ class Block(ActiveIndexedComponent):
             if id(_block) in _BlockConstruction.data:
                 del _BlockConstruction.data[id(_block)]
 
-            if isinstance(obj, _BlockData) and obj is not _block:
-                # If the user returns a block, use their block instead
-                # of the empty one we just created.
-                for c in list(obj.component_objects(descend_into=False)):
-                    obj.del_component(c)
-                    _block.add_component(c.local_name, c)
-                # transfer over any other attributes that are not components
-                for name, val in iteritems(obj.__dict__):
-                    if not hasattr(_block, name) and not hasattr(self, name):
-                        super(_BlockData, _block).__setattr__(name, val)
+            if obj is not _block and isinstance(obj, _BlockData):
+                # If the user returns a block, transfer over everything
+                # they defined into the empty one we created.
+                _block.transfer_attributes_from(obj)
 
             # TBD: Should we allow skipping Blocks???
             # if obj is Block.Skip and idx is not None:
             #   del self._data[idx]
         timer.report()
 
-    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
-        """
-        Print block information
-        """
-        if filename is not None:
-            OUTPUT = open(filename, "w")
-            self.pprint(ostream=OUTPUT, verbose=verbose, prefix=prefix)
-            OUTPUT.close()
-            return
-        if ostream is None:
-            ostream = sys.stdout
-
-        subblock = self._parent is not None and self.parent_block() is not None
-        if subblock:
-            super(Block, self).pprint(ostream=ostream, verbose=verbose,
-                                      prefix=prefix)
-
-        if not len(self):
-            return
+    def _pprint_callback(self, ostream, idx, data):
         if not self.is_indexed():
-            _BlockData.pprint(self, ostream=ostream, verbose=verbose,
-                              prefix=prefix+'    ' if subblock else prefix)
-            return
-
-        # Note: all indexed blocks must be sub-blocks (if they aren't
-        # then you will run into problems constructing them as there is
-        # nowhere to put (or find) the indexing set!).
-        prefix += '    '
-        for key in sorted(self):
-            b = self[key]
-            ostream.write("%s%s : Active=%s\n" %
-                          (prefix, b.name, b.active))
-            _BlockData.pprint(b, ostream=ostream, verbose=verbose,
-                              prefix=prefix + '    ' if subblock else prefix)
+            data._pprint_blockdata_components(ostream)
+        else:
+            ostream.write("%s : Active=%s\n" % (data.name, data.active))
+            ostream = StreamIndenter(ostream, self._PPRINT_INDENT)
+            data._pprint_blockdata_components(ostream)
 
     def _pprint(self):
-        return [("Size", len(self)),
-                ("Index", self._index if self.is_indexed() else None),
-                ('Active', self.active),
-                ], ().__iter__(), (), ()
+        _attrs = [
+            ("Size", len(self)),
+            ("Index", self._index if self.is_indexed() else None),
+            ('Active', self.active),
+        ]
+        # HACK: suppress the top-level block header (for historical reasons)
+        if self.parent_block() is None and not self.is_indexed():
+            return None, iteritems(self._data), None, self._pprint_callback
+        else:
+            return _attrs, iteritems(self._data), None, self._pprint_callback
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
@@ -1912,12 +1998,6 @@ class SimpleBlock(_BlockData, Block):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
         self._data[None] = self
-
-    def pprint(self, filename=None, ostream=None, verbose=False, prefix=""):
-        """
-        Print block information
-        """
-        Block.pprint(self, filename, ostream, verbose, prefix)
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
@@ -2070,4 +2150,83 @@ def components_data(block, ctype,
 # These will be assumes to be the set of illegal component names.
 #
 _BlockData._Block_reserved_words = set(dir(Block()))
+
+
+class _IndexedCustomBlockMeta(type):
+    """Metaclass for creating an indexed block with
+    a custom block data type."""
+
+    def __new__(meta, name, bases, dct):
+        def __init__(self, *args, **kwargs):
+            bases[0].__init__(self, *args, **kwargs)
+
+        dct["__init__"] = __init__
+        return type.__new__(meta, name, bases, dct)
+
+
+class _ScalarCustomBlockMeta(type):
+    '''Metaclass used to create a scalar block with a
+    custom block data type
+    '''
+
+    def __new__(meta, name, bases, dct):
+        def __init__(self, *args, **kwargs):
+            # bases[0] is the custom block data object
+            bases[0].__init__(self, component=self)
+            # bases[1] is the custom block object that
+            # is used for declaration
+            bases[1].__init__(self, *args, **kwargs)
+
+        dct["__init__"] = __init__
+        return type.__new__(meta, name, bases, dct)
+
+
+class CustomBlock(Block):
+    ''' This CustomBlock is the base class that allows
+    for easy creation of specialized derived blocks
+    '''
+
+    def __new__(cls, *args, **kwds):
+        if cls.__name__.startswith('_Indexed') or \
+                cls.__name__.startswith('_Scalar'):
+            # we are entering here the second time (recursive)
+            # therefore, we need to create what we have
+            return super(CustomBlock, cls).__new__(cls)
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
+            bname = "_Scalar{}".format(cls.__name__)
+            n = _ScalarCustomBlockMeta(bname, (cls._ComponentDataClass, cls), {})
+            return n.__new__(n)
+        else:
+            bname = "_Indexed{}".format(cls.__name__)
+            n = _IndexedCustomBlockMeta(bname, (cls,), {})
+            return n.__new__(n)
+
+
+def declare_custom_block(name):
+    ''' Decorator to declare the custom component
+    that goes along with a custom block data
+
+    @declare_custom_block(name=FooBlock)
+    class FooBlockData(_BlockData):
+       # custom block data class
+    '''
+
+    def proc_dec(cls):
+        # this is the decorator function that
+        # creates the block component class
+        c = type(
+            name,
+            # name of new class
+            (CustomBlock,),
+            # base classes
+            {"__module__": cls.__module__,
+             "_ComponentDataClass": cls})  # magic to fix the module
+
+        # are these necessary?
+        setattr(sys.modules[cls.__module__], name, c)
+        setattr(cls, '_orig_name', name)
+        setattr(cls, '_orig_module', cls.__module__)
+        return cls
+
+    return proc_dec
 

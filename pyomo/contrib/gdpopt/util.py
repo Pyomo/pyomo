@@ -2,19 +2,25 @@
 from __future__ import division
 
 import logging
-from math import fabs, floor, log
-
-from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
-                        Objective, Reals, Var, minimize, value)
-from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.gdp import Disjunct, Disjunction
-from pyomo.opt import SolverFactory
-from pyomo.opt.results import ProblemSense
-from six import StringIO
-from pyomo.common.log import LoggingIntercept
 import timeit
 from contextlib import contextmanager
+from math import fabs
+
+import six
+from pyutilib.misc import Container
+
+from pyomo.common import deprecated
+from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
+from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
+from pyomo.core import (Block, Constraint,
+                        Objective, Reals, Var, minimize, value, ConstraintList)
+from pyomo.core.expr.current import identify_variables
+from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.gdp import Disjunct, Disjunction
+from pyomo.opt import SolverFactory, SolverResults
+from pyomo.opt.results import ProblemSense
+from pyomo.util.model_size import build_model_size_report
 
 
 class _DoNothing(object):
@@ -32,28 +38,40 @@ class _DoNothing(object):
     def __getattr__(self, attr):
         def _do_nothing(*args, **kwargs):
             pass
+
         return _do_nothing
 
 
-class SuppressInfeasibleWarning(LoggingIntercept):
+class SuppressInfeasibleWarning(object):
     """Suppress the infeasible model warning message from solve().
 
     The "WARNING: Loading a SolverResults object with a warning status" warning
     message from calling solve() is often unwanted, but there is no clear way
     to suppress it.
 
+    This is modeled on LoggingIntercept from pyomo.common.log,
+    but different in function.
+
     """
 
-    def __init__(self):
-        super(SuppressInfeasibleWarning, self).__init__(
-            StringIO(), 'pyomo.core', logging.WARNING)
+    class InfeasibleWarningFilter(logging.Filter):
+        def filter(self, record):
+            return not record.getMessage().startswith(
+                "Loading a SolverResults object with a warning status into model=")
+
+    warning_filter = InfeasibleWarningFilter()
+
+    def __enter__(self):
+        logger = logging.getLogger('pyomo.core')
+        logger.addFilter(self.warning_filter)
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        logger = logging.getLogger('pyomo.core')
+        logger.removeFilter(self.warning_filter)
 
 
-def model_is_valid(solve_data, config):
-    """Validate that the model is solveable by GDPopt.
-
-    Also preforms some preprocessing such as moving the objective to the
-    constraints.
+def presolve_lp_nlp(solve_data, config):
+    """If the model is an LP or NLP, solve it directly.
 
     """
     m = solve_data.working_model
@@ -62,64 +80,98 @@ def model_is_valid(solve_data, config):
     # Handle LP/NLP being passed to the solver
     prob = solve_data.results.problem
     if (prob.number_of_binary_variables == 0 and
-        prob.number_of_integer_variables == 0 and
+            prob.number_of_integer_variables == 0 and
             prob.number_of_disjunctions == 0):
         config.logger.info('Problem has no discrete decisions.')
-        if len(GDPopt.working_nonlinear_constraints) > 0:
+        obj = next(m.component_data_objects(Objective, active=True))
+        if (any(c.body.polynomial_degree() not in (1, 0) for c in GDPopt.constraint_list) or
+                obj.expr.polynomial_degree() not in (1, 0)):
             config.logger.info(
                 "Your model is an NLP (nonlinear program). "
                 "Using NLP solver %s to solve." % config.nlp_solver)
-            SolverFactory(config.nlp_solver).solve(
+            results = SolverFactory(config.nlp_solver).solve(
                 solve_data.original_model, **config.nlp_solver_args)
-            return False
+            return True, results
         else:
             config.logger.info(
                 "Your model is an LP (linear program). "
                 "Using LP solver %s to solve." % config.mip_solver)
-            SolverFactory(config.mip_solver).solve(
+            results = SolverFactory(config.mip_solver).solve(
                 solve_data.original_model, **config.mip_solver_args)
-            return False
+            return True, results
 
     # TODO if any continuous variables are multipled with binary ones, need
     # to do some kind of transformation (Glover?) or throw an error message
-    return True
+    return False, None
 
 
-def process_objective(solve_data, config):
+def process_objective(solve_data, config, move_linear_objective=False):
+    """Process model objective function.
+
+    Check that the model has only 1 valid objective.
+    If the objective is nonlinear, move it into the constraints.
+    If no objective function exists, emit a warning and create a dummy objective.
+
+    Parameters
+    ----------
+    solve_data (GDPoptSolveData): solver environment data class
+    config (ConfigBlock): solver configuration options
+    move_linear_objective (bool): if True, move even linear
+        objective functions to the constraints
+
+    """
     m = solve_data.working_model
-    GDPopt = m.GDPopt_utils
+    util_blk = getattr(m, solve_data.util_block_name)
     # Handle missing or multiple objectives
-    objs = list(m.component_data_objects(
+    active_objectives = list(m.component_data_objects(
         ctype=Objective, active=True, descend_into=True))
-    num_objs = len(objs)
-    solve_data.results.problem.number_of_objectives = num_objs
-    if num_objs == 0:
+    solve_data.results.problem.number_of_objectives = len(active_objectives)
+    if len(active_objectives) == 0:
         config.logger.warning(
             'Model has no active objectives. Adding dummy objective.')
-        GDPopt.dummy_objective = Objective(expr=1)
-        main_obj = GDPopt.dummy_objective
-    elif num_objs > 1:
+        util_blk.dummy_objective = Objective(expr=1)
+        main_obj = util_blk.dummy_objective
+    elif len(active_objectives) > 1:
         raise ValueError('Model has multiple active objectives.')
     else:
-        main_obj = objs[0]
-    solve_data.working_objective_expr = main_obj.expr
-
-    # Move the objective to the constraints
-
-    # TODO only move the objective if nonlinear?
-    GDPopt.objective_value = Var(domain=Reals, initialize=0)
+        main_obj = active_objectives[0]
+    solve_data.results.problem.sense = main_obj.sense
     solve_data.objective_sense = main_obj.sense
-    if main_obj.sense == minimize:
-        GDPopt.objective_expr = Constraint(
-            expr=GDPopt.objective_value >= main_obj.expr)
-        solve_data.results.problem.sense = ProblemSense.minimize
-    else:
-        GDPopt.objective_expr = Constraint(
-            expr=GDPopt.objective_value <= main_obj.expr)
-        solve_data.results.problem.sense = ProblemSense.maximize
-    main_obj.deactivate()
-    GDPopt.objective = Objective(
-        expr=GDPopt.objective_value, sense=main_obj.sense)
+
+    # Move the objective to the constraints if it is nonlinear
+    if main_obj.expr.polynomial_degree() not in (1, 0) \
+            or move_linear_objective:
+        if move_linear_objective:
+            config.logger.info("Moving objective to constraint set.")
+        else:
+            config.logger.info("Objective is nonlinear. Moving it to constraint set.")
+
+        util_blk.objective_value = Var(domain=Reals, initialize=0)
+        if mcpp_available():
+            mc_obj = McCormick(main_obj.expr)
+            util_blk.objective_value.setub(mc_obj.upper())
+            util_blk.objective_value.setlb(mc_obj.lower())
+        else:
+            # Use Pyomo's contrib.fbbt package
+            lb, ub = compute_bounds_on_expr(main_obj.expr)
+            util_blk.objective_value.setub(ub)
+            util_blk.objective_value.setlb(lb)
+
+        if main_obj.sense == minimize:
+            util_blk.objective_constr = Constraint(
+                expr=util_blk.objective_value >= main_obj.expr)
+            solve_data.results.problem.sense = ProblemSense.minimize
+        else:
+            util_blk.objective_constr = Constraint(
+                expr=util_blk.objective_value <= main_obj.expr)
+            solve_data.results.problem.sense = ProblemSense.maximize
+        # Deactivate the original objective and add this new one.
+        main_obj.deactivate()
+        util_blk.objective = Objective(
+            expr=util_blk.objective_value, sense=main_obj.sense)
+        # Add the new variable and constraint to the working lists
+        util_blk.variable_list.append(util_blk.objective_value)
+        util_blk.constraint_list.append(util_blk.objective_constr)
 
 
 def a_logger(str_or_logger):
@@ -130,11 +182,19 @@ def a_logger(str_or_logger):
         return logging.getLogger(str_or_logger)
 
 
-def copy_var_list_values(from_list, to_list, config, skip_stale=False):
-    """Copy variable values from one list to another."""
+def copy_var_list_values(from_list, to_list, config,
+                         skip_stale=False, skip_fixed=True,
+                         ignore_integrality=False):
+    """Copy variable values from one list to another.
+
+    Rounds to Binary/Integer if neccessary
+    Sets to zero for NonNegativeReals if neccessary
+    """
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
             continue  # Skip stale variable values.
+        if skip_fixed and v_to.is_fixed():
+            continue  # Skip fixed variables.
         try:
             v_to.set_value(value(v_from, exception=False))
             if skip_stale:
@@ -142,12 +202,17 @@ def copy_var_list_values(from_list, to_list, config, skip_stale=False):
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             var_val = value(v_from)
-            rounded_val = round(var_val)
+            rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
-            if 'is not in domain Binary' in err_msg and (
+            if ignore_integrality \
+                and ('is not in domain Binary' in err_msg
+                or 'is not in domain Integers' in err_msg):
+               v_to.value = value(v_from, exception=False)
+            elif 'is not in domain Binary' in err_msg and (
                     fabs(var_val - 1) <= config.integer_tolerance or
                     fabs(var_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
+            # TODO What about PositiveIntegers etc?
             elif 'is not in domain Integers' in err_msg and (
                     fabs(var_val - rounded_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
@@ -180,16 +245,16 @@ def is_feasible(model, config):
             ctype=Constraint, active=True, descend_into=True):
         # Check constraint lower bound
         if (constr.lower is not None and (
-            value(constr.lower) - value(constr.body)
-            >= config.constraint_tolerance
+                value(constr.lower) - value(constr.body)
+                >= config.constraint_tolerance
         )):
             config.logger.info('%s: body %s < LB %s' % (
                 constr.name, value(constr.body), value(constr.lower)))
             return False
         # check constraint upper bound
         if (constr.upper is not None and (
-            value(constr.body) - value(constr.upper)
-            >= config.constraint_tolerance
+                value(constr.body) - value(constr.upper)
+                >= config.constraint_tolerance
         )):
             config.logger.info('%s: body %s > UB %s' % (
                 constr.name, value(constr.body), value(constr.upper)))
@@ -198,32 +263,20 @@ def is_feasible(model, config):
         # Check variable lower bound
         if (var.has_lb() and
                 value(var.lb) - value(var) >= config.variable_tolerance):
-            config.logger.info('%s: %s < LB %s' % (
+            config.logger.info('%s: value %s < LB %s' % (
                 var.name, value(var), value(var.lb)))
             return False
         # Check variable upper bound
         if (var.has_ub() and
                 value(var) - value(var.ub) >= config.variable_tolerance):
-            config.logger.info('%s: %s > UB %s' % (
+            config.logger.info('%s: value %s > UB %s' % (
                 var.name, value(var), value(var.ub)))
             return False
     config.logger.info('Model is feasible.')
     return True
 
 
-# def clone_orig_model_with_lists(original_model, solve_data):
-#     """Clones the original model to create a working model.
-#
-#     Also attaches ordered lists of the variables, constraints, disjuncts, and
-#     disjunctions to the model so that they can be used for mapping back and
-#     forth.
-#
-#     """
-#     build_ordered_component_lists(original_model, solve_data, prefix='orig')
-#     return original_model.clone()
-
-
-def build_ordered_component_lists(model, solve_data, prefix='working'):
+def build_ordered_component_lists(model, solve_data):
     """Define lists used for future data transfer.
 
     Also attaches ordered lists of the variables, constraints, disjuncts, and
@@ -234,33 +287,34 @@ def build_ordered_component_lists(model, solve_data, prefix='working'):
     util_blk = getattr(model, solve_data.util_block_name)
     var_set = ComponentSet()
     setattr(
-        util_blk, '%s_constraints_list' % prefix, list(
+        util_blk, 'constraint_list', list(
             model.component_data_objects(
                 ctype=Constraint, active=True,
                 descend_into=(Block, Disjunct))))
     setattr(
-        util_blk, '%s_disjuncts_list' % prefix, list(
+        util_blk, 'disjunct_list', list(
             model.component_data_objects(
-                ctype=Disjunct, descend_into=(Block, Disjunct))))
+                ctype=Disjunct, active=True,
+                descend_into=(Block, Disjunct))))
     setattr(
-        util_blk, '%s_disjunctions_list' % prefix, list(
+        util_blk, 'disjunction_list', list(
             model.component_data_objects(
                 ctype=Disjunction, active=True,
                 descend_into=(Disjunct, Block))))
 
     # Identify the non-fixed variables in (potentially) active constraints and
     # objective functions
-    for constr in getattr(util_blk, '%s_constraints_list' % prefix):
-        for v in EXPR.identify_variables(constr.body, include_fixed=False):
+    for constr in getattr(util_blk, 'constraint_list'):
+        for v in identify_variables(constr.body, include_fixed=False):
             var_set.add(v)
     for obj in model.component_data_objects(ctype=Objective, active=True):
-        for v in EXPR.identify_variables(obj.expr, include_fixed=False):
+        for v in identify_variables(obj.expr, include_fixed=False):
             var_set.add(v)
     # Disjunct indicator variables might not appear in active constraints. In
     # fact, if we consider them Logical variables, they should not appear in
     # active algebraic constraints. For now, they need to be added to the
     # variable set.
-    for disj in getattr(util_blk, '%s_disjuncts_list' % prefix):
+    for disj in getattr(util_blk, 'disjunct_list'):
         var_set.add(disj.indicator_var)
 
     # We use component_data_objects rather than list(var_set) in order to
@@ -269,185 +323,66 @@ def build_ordered_component_lists(model, solve_data, prefix='working'):
         v for v in model.component_data_objects(
             ctype=Var, descend_into=(Block, Disjunct))
         if v in var_set)
-    setattr(util_blk, '%s_var_list' % prefix, var_list)
-    setattr(util_blk, '%s_binary_vars' % prefix, list(
-        v for v in var_list if v.domain == Binary))
-    setattr(
-        util_blk, '%s_nonlinear_constraints' % prefix, [
-            v for v in getattr(util_blk, '%s_constraints_list' % prefix)
-            if v.body.polynomial_degree() not in (0, 1)])
+    setattr(util_blk, 'variable_list', var_list)
 
 
-def record_original_model_statistics(solve_data, config, util_block_name='GDPopt_utils'):
+def setup_results_object(solve_data, config):
     """Record problem statistics for original model."""
     # Create the solver results object
     res = solve_data.results
     prob = res.problem
-    origUtilBlock = getattr(solve_data.original_model, util_block_name)
-    res.problem.name = solve_data.working_model.name
+    res.problem.name = solve_data.original_model.name
     res.problem.number_of_nonzeros = None  # TODO
     # TODO work on termination condition and message
     res.solver.termination_condition = None
     res.solver.message = None
-    # TODO add some kind of timing
     res.solver.user_time = None
     res.solver.system_time = None
     res.solver.wallclock_time = None
     res.solver.termination_message = None
 
-    # Classify the variables
-    orig_binary = sum(1 for v in origUtilBlock.orig_var_list if v.is_binary())
-    orig_continuous = sum(
-        1 for v in origUtilBlock.orig_var_list if v.is_continuous())
-    orig_integer = sum(1 for v in origUtilBlock.orig_var_list if v.is_integer())
+    num_of = build_model_size_report(solve_data.original_model)
 
     # Get count of constraints and variables
-    prob.number_of_constraints = len(origUtilBlock.orig_constraints_list)
-    prob.number_of_disjunctions = len(origUtilBlock.orig_disjunctions_list)
-    prob.number_of_variables = len(origUtilBlock.orig_var_list)
-    prob.number_of_binary_variables = orig_binary
-    prob.number_of_continuous_variables = orig_continuous
-    prob.number_of_integer_variables = orig_integer
+    prob.number_of_constraints = num_of.activated.constraints
+    prob.number_of_disjunctions = num_of.activated.disjunctions
+    prob.number_of_variables = num_of.activated.variables
+    prob.number_of_binary_variables = num_of.activated.binary_variables
+    prob.number_of_continuous_variables = num_of.activated.continuous_variables
+    prob.number_of_integer_variables = num_of.activated.integer_variables
 
     config.logger.info(
         "Original model has %s constraints (%s nonlinear) "
         "and %s disjunctions, "
         "with %s variables, of which %s are binary, %s are integer, "
         "and %s are continuous." %
-        (prob.number_of_constraints,
-         len(origUtilBlock.orig_nonlinear_constraints),
-         prob.number_of_disjunctions,
-         prob.number_of_variables,
-         orig_binary,
-         orig_integer,
-         orig_continuous))
+        (num_of.activated.constraints,
+         num_of.activated.nonlinear_constraints,
+         num_of.activated.disjunctions,
+         num_of.activated.variables,
+         num_of.activated.binary_variables,
+         num_of.activated.integer_variables,
+         num_of.activated.continuous_variables))
 
 
-def record_working_model_statistics(solve_data, config, util_block_name='GDPopt_utils'):
-    """Record problem statistics for preprocessed model."""
-    util_blk = solve_data.working_model.component(util_block_name)
-    now_binary = sum(1 for v in util_blk.working_var_list if v.is_binary())
-    now_continuous = sum(
-        1 for v in util_blk.working_var_list if v.is_continuous())
-    now_integer = sum(1 for v in util_blk.working_var_list if v.is_integer())
-    assert now_integer == 0, "Unreformulated, unfixed integer variables found."
-
-    config.logger.info(
-        "After preprocessing, model has %s constraints (%s nonlinear) "
-        "and %s disjunctions, "
-        "with %s variables, of which %s are binary and %s are continuous." %
-        (len(util_blk.working_constraints_list),
-         len(util_blk.working_nonlinear_constraints),
-         len(util_blk.working_disjunctions_list),
-         len(util_blk.working_var_list),
-         now_binary,
-         now_continuous))
-
-
-def reformulate_integer_variables(model, config):
-    integer_vars = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v.is_integer() and not v.fixed)
-    if len(integer_vars) == 0:
-        return  # if no free integer variables, no reformulation needed.
-
-    if config.reformulate_integer_vars_using is None:
-        config.logger.warning(
-            "Model contains unfixed integer variables. "
-            "GDPopt will reformulate using base 2 binary variables "
-            "by default. To specify a different method, see the "
-            "reformulate_integer_vars_using configuration option.")
-        config.reformulate_integer_vars_using = 'base2_binary'
-
-    config.logger.info(
-        "Reformulating integer variables using the %s strategy."
-        % config.reformulate_integer_vars_using)
-
-    # Set up reformulation block
-    reform_block = model.GDPopt_utils.integer_reform = Block(
-        doc="Holds variables and constraints for reformulating "
-        "integer variables to binary variables.")
-    reform_block.new_binary_var = Var(
-        Any, domain=Binary, dense=False,
-        doc="Binary variable with index (int_var.name, indx)")
-    reform_block.integer_to_binary_constraint = Constraint(
-        Any, doc="Equality constraints mapping the binary variable values "
-        "to the integer variable value.")
-
-    # check that variables are bounded and non-negative
-    for int_var in integer_vars:
-        if not (int_var.has_lb() and int_var.has_ub()):
-            raise ValueError(
-                "Integer variable %s is missing an "
-                "upper or lower bound. LB: %s; UB: %s. "
-                "GDPopt does not support unbounded integer variables."
-                % (int_var.name, int_var.lb, int_var.ub))
-        if int_var.lb < 0:
-            raise ValueError(
-                "Integer variable %s can be negative. "
-                "GDPopt currently only supports positive integer "
-                "variables." % (int_var.name)
-            )
-        # do the reformulation
-        highest_power = floor(log(value(int_var.ub), 2))
-        var_name = int_var.name
-        reform_block.integer_to_binary_constraint.add(
-            var_name, expr=int_var == sum(
-                reform_block.new_binary_var[var_name, pwr] * (2 ** pwr)
-                for pwr in range(0, int(highest_power) + 1)))
-        int_var.domain = NonNegativeReals
-
-    config.logger.info(
-        "Reformulated %s integer variables using "
-        "%s binary variables and %s constraints."
-        % (len(integer_vars), len(reform_block.new_binary_var),
-           len(reform_block.integer_to_binary_constraint)))
-
-
-def validate_disjunctions(model, config):
-    """Validate that the active disjunctions on the model are satisfied
-    by the current disjunct indicator_var values."""
-    active_disjunctions = model.component_data_objects(
-        ctype=Disjunction, active=True, descend_into=(Block, Disjunct))
-    for disjtn in active_disjunctions:
-        sum_disj_vals = sum(disj.indicator_var.value
-                            for disj in disjtn.disjuncts)
-        if disjtn.xor and fabs(sum_disj_vals - 1) > config.integer_tolerance:
-            raise ValueError(
-                "Expected disjunct values to add up to 1 "
-                "for XOR disjunction %s. "
-                "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
-        elif sum_disj_vals + config.integer_tolerance < 1:
-            raise ValueError(
-                "Expected disjunct values to add up to at least 1 for "
-                "OR disjunction %s. "
-                "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
-
-
-def copy_and_fix_mip_values_to_nlp(var_list, val_list, config):
-    """Copy MIP solution values to the corresponding NLP variable list.
-
-    Fix binary variables and optionally round their values.
-
-    """
-    for var, val in zip(var_list, val_list):
-        if val is None:
-            continue
-        if not var.is_binary():
-            var.value = val
-        elif ((fabs(val) > config.integer_tolerance and
-               fabs(val - 1) > config.integer_tolerance)):
-            raise ValueError(
-                "Binary variable %s value %s is not "
-                "within tolerance %s of 0 or 1." %
-                (var.name, var.value, config.integer_tolerance))
-        else:
-            # variable is binary and within tolerances
-            if config.round_NLP_binaries:
-                var.fix(int(round(val)))
-            else:
-                var.fix(val)
+# def validate_disjunctions(model, config):
+#     """Validate that the active disjunctions on the model are satisfied
+#     by the current disjunct indicator_var values."""
+#     active_disjunctions = model.component_data_objects(
+#         ctype=Disjunction, active=True, descend_into=(Block, Disjunct))
+#     for disjtn in active_disjunctions:
+#         sum_disj_vals = sum(disj.indicator_var.value
+#                             for disj in disjtn.disjuncts)
+#         if disjtn.xor and fabs(sum_disj_vals - 1) > config.integer_tolerance:
+#             raise ValueError(
+#                 "Expected disjunct values to add up to 1 "
+#                 "for XOR disjunction %s. "
+#                 "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
+#         elif sum_disj_vals + config.integer_tolerance < 1:
+#             raise ValueError(
+#                 "Expected disjunct values to add up to at least 1 for "
+#                 "OR disjunction %s. "
+#                 "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
 
 
 def constraints_in_True_disjuncts(model, config):
@@ -467,19 +402,55 @@ def constraints_in_True_disjuncts(model, config):
 
 
 @contextmanager
-def time_code(timing_data_obj, code_block_name):
+def time_code(timing_data_obj, code_block_name, is_main_timer=False):
+    """Starts timer at entry, stores elapsed time at exit
+
+    If `is_main_timer=True`, the start time is stored in the timing_data_obj,
+    allowing calculation of total elapsed time 'on the fly' (e.g. to enforce
+    a time limit) using `get_main_elapsed_time(timing_data_obj)`.
+    """
     start_time = timeit.default_timer()
+    if is_main_timer:
+        timing_data_obj.main_timer_start_time = start_time
     yield
     elapsed_time = timeit.default_timer() - start_time
     prev_time = timing_data_obj.get(code_block_name, 0)
     timing_data_obj[code_block_name] = prev_time + elapsed_time
 
 
+def get_main_elapsed_time(timing_data_obj):
+    """Returns the time since entering the main `time_code` context"""
+    current_time = timeit.default_timer()
+    try:
+        return current_time - timing_data_obj.main_timer_start_time
+    except AttributeError as e:
+        if 'main_timer_start_time' in str(e):
+            six.raise_from(e, AttributeError(
+                "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
+            ))
+
+
+@deprecated(
+    "'restore_logger_level()' has been deprecated in favor of the more specific "
+    "'lower_logger_level_to()' function.", version='TBD', remove_in='TBD')
 @contextmanager
 def restore_logger_level(logger):
     old_logger_level = logger.getEffectiveLevel()
     yield
     logger.setLevel(old_logger_level)
+
+
+@contextmanager
+def lower_logger_level_to(logger, level=None):
+    """Increases logger verbosity by lowering reporting level."""
+    old_logger_level = logger.getEffectiveLevel()
+    if level is not None and old_logger_level > level:
+        # If logger level is higher (less verbose), decrease it
+        logger.setLevel(level)
+        yield
+        logger.setLevel(old_logger_level)
+    else:
+        yield  # Otherwise, leave the logger alone
 
 
 @contextmanager
@@ -497,6 +468,75 @@ def create_utility_block(model, name, solve_data):
         setattr(model, name, Block(
             doc="Container for GDPopt solver utility modeling objects"))
         solve_data.util_block_name = name
+
+        # Save ordered lists of main modeling components, so that data can
+        # be easily transferred between future model clones.
+        build_ordered_component_lists(model, solve_data)
     yield
     if created_util_block:
         model.del_component(name)
+
+
+@contextmanager
+def setup_solver_environment(model, config):
+    solve_data = GDPoptSolveData()  # data object for storing solver state
+    solve_data.config = config
+    solve_data.results = SolverResults()
+    solve_data.timing = Container()
+    min_logging_level = logging.INFO if config.tee else None
+    with time_code(solve_data.timing, 'total', is_main_timer=True), \
+            lower_logger_level_to(config.logger, min_logging_level), \
+            create_utility_block(model, 'GDPopt_utils', solve_data):
+
+        # Create a working copy of the original model
+        solve_data.original_model = model
+        solve_data.working_model = model.clone()
+        setup_results_object(solve_data, config)
+        solve_data.active_strategy = config.strategy
+        util_block = solve_data.working_model.GDPopt_utils
+
+        # Save model initial values.
+        # These can be used later to initialize NLP subproblems.
+        solve_data.initial_var_values = list(
+            v.value for v in util_block.variable_list)
+        solve_data.best_solution_found = None
+
+        # Integer cuts exclude particular discrete decisions
+        util_block.integer_cuts = ConstraintList(doc='integer cuts')
+
+        # Set up iteration counters
+        solve_data.master_iteration = 0
+        solve_data.mip_iteration = 0
+        solve_data.nlp_iteration = 0
+
+        # set up bounds
+        solve_data.LB = float('-inf')
+        solve_data.UB = float('inf')
+        solve_data.iteration_log = {}
+
+        # Flag indicating whether the solution improved in the past
+        # iteration or not
+        solve_data.feasible_solution_improved = False
+
+        yield solve_data  # yield setup solver environment
+
+        if (solve_data.best_solution_found is not None
+                and solve_data.best_solution_found is not solve_data.original_model):
+            # Update values on the original model
+            copy_var_list_values(
+                from_list=solve_data.best_solution_found.GDPopt_utils.variable_list,
+                to_list=solve_data.original_model.GDPopt_utils.variable_list,
+                config=config)
+
+    # Finalize results object
+    solve_data.results.problem.lower_bound = solve_data.LB
+    solve_data.results.problem.upper_bound = solve_data.UB
+    solve_data.results.solver.iterations = solve_data.master_iteration
+    solve_data.results.solver.timing = solve_data.timing
+    solve_data.results.solver.user_time = solve_data.timing.total
+    solve_data.results.solver.wallclock_time = solve_data.timing.total
+
+
+def indent(text, prefix):
+    """This should be replaced with textwrap.indent when we stop supporting python 2.7."""
+    return ''.join(prefix + line for line in text.splitlines(True))

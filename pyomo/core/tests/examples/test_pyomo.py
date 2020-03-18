@@ -21,17 +21,12 @@ import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 
+from pyomo.common.dependencies import yaml_available
 import pyomo.core
 import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers
 
 from six import StringIO
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '
@@ -65,12 +60,12 @@ class BaseTester(unittest.TestCase):
         setup_redirect(OUTPUT)
         os.chdir(currdir)
         if type(cmd) is list:
-            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd, get_return=True)
+            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd)
         elif cmd.endswith('json') or cmd.endswith('yaml'):
-            output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd], get_return=True)
+            output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd])
         else:
             args=re.split('[ ]+',cmd)
-            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args), get_return=True)
+            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args))
         reset_redirect()
         if not 'root' in kwds:
             return OUTPUT.getvalue()

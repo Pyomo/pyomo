@@ -1,8 +1,7 @@
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.core.expr import current as EXPR
-from pyomo.core.expr import inequality
+from pyomo.core.expr import logical_expr
 import pyomo.kernel
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
@@ -738,14 +737,14 @@ class Test_constraint(unittest.TestCase):
         self.assertIs(c.body, x)
         self.assertEqual(c.equality, True)
 
-        c = constraint(expr=EXPR.EqualityExpression((p, x)))
+        c = constraint(expr=logical_expr.EqualityExpression((p, x)))
         self.assertTrue(c.ub is p)
         self.assertTrue(c.lb is p)
         self.assertTrue(c.rhs is p)
         self.assertIs(c.body, x)
         self.assertEqual(c.equality, True)
 
-        c = constraint(expr=EXPR.EqualityExpression((x, p)))
+        c = constraint(expr=logical_expr.EqualityExpression((x, p)))
         self.assertTrue(c.ub is p)
         self.assertTrue(c.lb is p)
         self.assertTrue(c.rhs is p)
@@ -872,10 +871,10 @@ class Test_constraint(unittest.TestCase):
         y = variable()
         z = variable()
         with self.assertRaises(ValueError):
-            constraint(EXPR.RangedExpression((x,y,1),(False,False)))
+            constraint(logical_expr.RangedExpression((x,y,1),(False,False)))
 
         with self.assertRaises(ValueError):
-            constraint(EXPR.RangedExpression((0,y,z),(False,False)))
+            constraint(logical_expr.RangedExpression((0,y,z),(False,False)))
 
     def test_expr_construct_equality(self):
         x = variable(value=1)
@@ -921,34 +920,34 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (x < 0)
         with self.assertRaises(ValueError):
-            c.expr = EXPR.inequality(body=x,upper=0,strict=True)
+            c.expr = logical_expr.inequality(body=x,upper=0,strict=True)
         c.expr = (x <= 0)
-        c.expr = EXPR.inequality(body=x,upper=0,strict=False)
+        c.expr = logical_expr.inequality(body=x,upper=0,strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x > 0)
         with self.assertRaises(ValueError):
-            c.expr = EXPR.inequality(body=x,lower=0,strict=True)
+            c.expr = logical_expr.inequality(body=x,lower=0,strict=True)
         c.expr = (x >= 0)
-        c.expr = EXPR.inequality(body=x,lower=0,strict=False)
+        c.expr = logical_expr.inequality(body=x,lower=0,strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x < y)
         with self.assertRaises(ValueError):
-            c.expr = EXPR.inequality(body=x,upper=y,strict=True)
+            c.expr = logical_expr.inequality(body=x,upper=y,strict=True)
         c.expr = (x <= y)
-        c.expr = EXPR.inequality(body=x,upper=y,strict=False)
+        c.expr = logical_expr.inequality(body=x,upper=y,strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x > y)
         with self.assertRaises(ValueError):
-            c.expr = EXPR.inequality(body=x,lower=y,strict=True)
+            c.expr = logical_expr.inequality(body=x,lower=y,strict=True)
         c.expr = (x >= y)
-        c.expr = EXPR.inequality(body=x,lower=y,strict=False)
+        c.expr = logical_expr.inequality(body=x,lower=y,strict=False)
         with self.assertRaises(ValueError):
-            c.expr = EXPR.RangedExpression((0,x,1),(True,True))
+            c.expr = logical_expr.RangedExpression((0,x,1),(True,True))
         with self.assertRaises(ValueError):
-            c.expr = EXPR.RangedExpression((0,x,1),(False,True))
+            c.expr = logical_expr.RangedExpression((0,x,1),(False,True))
         with self.assertRaises(ValueError):
-            c.expr = EXPR.RangedExpression((0,x,1),(True,False))
-        c.expr = EXPR.RangedExpression((0,x,1),(False,False))
+            c.expr = logical_expr.RangedExpression((0,x,1),(True,False))
+        c.expr = logical_expr.RangedExpression((0,x,1),(False,False))
 
     def test_expr_construct_inf_equality(self):
         x = variable()
@@ -1483,7 +1482,7 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (True)
 
-    @unittest.skipIf(not EXPR._using_chained_inequality, "Chained inequalities are not supported.")
+    @unittest.skipIf(not logical_expr._using_chained_inequality, "Chained inequalities are not supported.")
     def test_chainedInequalityError(self):
         x = variable()
         c = constraint()

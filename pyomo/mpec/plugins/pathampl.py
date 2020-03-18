@@ -42,16 +42,14 @@ class PATHAMPL(ASL):
         self._capabilities.linear = True
 
     def _default_executable(self):
-        executable = pyomo.common.registered_executable("pathampl")
-        if executable is None:                      #pragma:nocover
-            logger.warning("Could not locate the 'pathampl' executable, which is required for solver %s" % self.name)
+        executable = pyomo.common.Executable("pathampl")
+        if not executable:                      #pragma:nocover
+            logger.warning("Could not locate the 'pathampl' executable, "
+                           "which is required for solver %s" % self.name)
             self.enable = False
             return None
-        return executable.get_path()
+        return executable.path()
 
     def create_command_line(self, executable, problem_files):
         self.options.solver = 'pathampl'
         return ASL.create_command_line(self, executable, problem_files)
-
-
-pyomo.common.register_executable(name="pathampl")

@@ -124,25 +124,35 @@ class _robust_sort_keyfcn(object):
         argument of the sort key.
 
         """
-        _type = type(val)
-        if _type not in self._typemap:
+        try:
+            i, _typename = self._typemap[val.__class__]
+        except KeyError:
             # If this is not a type we have seen before, determine what
             # to use for the second value in the tuple.
+            _type = val.__class__
+            _typename = _type.__name__
             try:
-                # 1: Check if the type is comparable
+                # 1: Check if the type is comparable.  In Python 3, sorted()
+                #    uses "<" to compare objects.
                 val < val
-                self._typemap[_type] = lambda x:x
+                i = 1
             except:
                 try:
                     # 2: try converting the value to string
                     str(val)
-                    self._typemap[_type] = lambda x:str(x)
+                    i = 2
                 except:
                     # 3: fallback on id().  Not deterministic
-                    # (run-to-run), but at least is consistent within
-                    # this run.
-                    self._typemap[_type] = lambda x:id(x)
-        return _type.__name__, self._typemap[_type](val)
+                    #    (run-to-run), but at least is consistent within
+                    #    this run.
+                    i = 3
+            self._typemap[_type] = i, _typename
+        if i == 1:
+            return _typename, val
+        elif i == 2:
+            return _typename, str(val)
+        else:
+            return _typename, id(val)
 
 
 def sorted_robust(arg):
@@ -154,6 +164,14 @@ def sorted_robust(arg):
     (above) to generate sortable keys.
 
     """
+    # It is possible that arg is a generator.  We need to cache the
+    # elements returned by the generator in case 'sorted' raises an
+    # exception (this ensures we don't loose any elements).  Howevver,
+    # if we were passed a list, we do not want to make an unnecessary
+    # copy.  Tuples are OK because tuple(a) will not copy a if it is
+    # already a tuple.
+    if type(arg) is not list:
+        arg = tuple(arg)
     try:
         return sorted(arg)
     except:

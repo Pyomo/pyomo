@@ -226,7 +226,8 @@ class Transformation(object):
         "Transformation.apply() has been deprecated.  Please use either "
         "Transformation.apply_to() for in-place transformations or "
         "Transformation.create_using() for transformations that create a "
-        "new, independent transformed model instance.")
+        "new, independent transformed model instance.",
+        version='4.3.11323')
     def apply(self, model, **kwds):
         inplace = kwds.pop('inplace', True)
         if inplace:
@@ -277,9 +278,9 @@ class Transformation(object):
 
 TransformationFactory = Factory('transformation type')
 
-@deprecated()
+@deprecated(version='4.3.11323')
 def apply_transformation(*args, **kwds):
-    if len(args) is 0:
+    if len(args) == 0:
         return list(TransformationFactory)
     xfrm = TransformationFactory(args[0])
     if len(args) == 1 or xfrm is None:

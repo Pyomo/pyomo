@@ -98,14 +98,13 @@ Emulate some aspects of `runef`
    >>> obj = stsolver.root_E_obj() # doctest: +SKIP
    >>> print ("Expecatation take over scenarios=", obj) # doctest: +SKIP
    
-.. testoutput::
-   :hide:
-   :options: +ELLIPSIS
-
-   Also, `stsolver.scenario_tree` has the solution (csvw is imported
-   from PySP and is not part of `rapper`.)
+   Also, `stsolver.scenario_tree` has the solution. The package
+   csvw is imported from PySP as shown above.
    
    >>> csvw.write_csv_soln(stsolver.scenario_tree, "testcref") # doctest: +SKIP
+
+   It is also possible to add arguments for chance constraints and CVaR; see :ref:`rapperAPI`
+   for details.
 
 Again, but with mip gap reported
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
