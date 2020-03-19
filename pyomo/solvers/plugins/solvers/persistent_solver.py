@@ -455,12 +455,16 @@ class PersistentSolver(DirectOrPersistentSolver):
 
             # we're good to go.
             initial_time = time.time()
+            initial_det_time = self._solver_model.get_dettime()
 
             self._presolve(**kwds)
 
             presolve_completion_time = time.time()
+            presolve_completion_dettime = self._solver_model.get_dettime()
+
             if self._report_timing:
                 print("      %6.2f seconds required for presolve" % (presolve_completion_time - initial_time))
+                print("      %6.2f tick required for presolve" % (presolve_completion_dettime - initial_det_time))
 
             if self._pyomo_model is not None:
                 self._initialize_callbacks(self._pyomo_model)
@@ -485,8 +489,10 @@ class PersistentSolver(DirectOrPersistentSolver):
                 raise ApplicationError(
                     "Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
+            solve_completion_dettime = self._solver_model.get_dettime()
             if self._report_timing:
                 print("      %6.2f seconds required for solver" % (solve_completion_time - presolve_completion_time))
+                print("      %6.2f ticks required for solver" % (solve_completion_dettime - presolve_completion_dettime))
 
             result = self._postsolve()
             # ***********************************************************
@@ -529,10 +535,13 @@ class PersistentSolver(DirectOrPersistentSolver):
                             _model.solutions.delete_symbol_map(self._smap_id)
             # ********************************************************
             postsolve_completion_time = time.time()
+            postsolve_completion_dettime = self._solver_model.get_dettime()
 
             if self._report_timing:
                 print("      %6.2f seconds required for postsolve" % (postsolve_completion_time -
                                                                       solve_completion_time))
+                print("      %6.2f ticks required for postsolve" % (postsolve_completion_dettime -
+                                                                      solve_completion_dettime))
 
         finally:
             #
