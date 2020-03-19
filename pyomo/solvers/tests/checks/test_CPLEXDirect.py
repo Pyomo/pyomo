@@ -704,5 +704,22 @@ class TestLoadVars(unittest.TestCase):
                              SolutionStatus.stoppedByLimit)
             self.assertGreater(results.solver.deterministic_time, 0.0)
 
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
+    def test_no_soln_due_to_det_time_limit(self):
+        with SolverFactory("cplex", solver_io="python") as opt:
+            model = ConcreteModel()
+            model.X = Var(within=Binary)
+            model.C1 = Constraint(expr=model.X == 1)
+            model.O = Objective(expr=model.X)
+
+            opt.options['dettimelimit'] = 0.0001
+            results = opt.solve(model)
+            self.assertEqual(results.solver.status,
+                             SolverStatus.warning)
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.noSolution)
+            self.assertEqual(results.solver.deterministic_time, 0.0009851455688476562)
+
 if __name__ == "__main__":
     unittest.main()

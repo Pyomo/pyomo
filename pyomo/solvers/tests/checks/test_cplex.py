@@ -427,6 +427,7 @@ CPLEX>"""
         self.assertEqual(
             results.solver.termination_condition, TerminationCondition.maxTimeLimit
         )
+        self.assertEqual(results.solver.deterministic_time, 100.00)
 
     def test_log_file_shows_max_deterministic_time_limit_exceeded_with_feasible_solution(self):
         log_file_text = """
@@ -445,6 +446,7 @@ CPLEX>"""
         self.assertEqual(
             results.solver.termination_condition, TerminationCondition.maxDetTimeLimit
         )
+        self.assertEqual(results.solver.deterministic_time, 100.00)
 
 if __name__ == "__main__":
     unittest.main()
