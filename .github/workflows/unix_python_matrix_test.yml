@@ -43,7 +43,7 @@ jobs:
         echo ""
         echo "Install Pyomo dependencies..."
         echo ""
-        pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd "pandas<=1.0.1" matplotlib dill seaborn pymysql pyro4 pint pathos
+        pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd "pandas!=1.0.3" matplotlib dill seaborn pymysql pyro4 pint pathos
         echo ""
         echo "Install CPLEX Community Edition..."
         echo ""
