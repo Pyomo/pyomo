@@ -43,6 +43,7 @@ jobs:
         echo ""
         echo "Install Pyomo dependencies..."
         echo ""
+        # pandas 1.0.3 causes gams failures in python 3.8
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd "pandas!=1.0.3" matplotlib dill seaborn pymysql pyro4 pint pathos
         echo ""
         echo "Install CPLEX Community Edition..."
