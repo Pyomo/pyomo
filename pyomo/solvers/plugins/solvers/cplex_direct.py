@@ -264,7 +264,7 @@ class CPLEXDirect(DirectSolver):
             t1 = time.time()
             det1 = self._solver_model.get_dettime()
             self._wallclock_time = t1 - t0
-            self._deterministic_time = det1 = det0
+            self._deterministic_time = det1 - det0
         finally:
             self._solver_model.set_results_stream(None)
             if _close_log_file:
