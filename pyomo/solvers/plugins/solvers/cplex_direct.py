@@ -254,6 +254,7 @@ class CPLEXDirect(DirectSolver):
 
             self._error_code = None
             t0 = time.time()
+            det0 = self._solver_model.get_dettime()
 
             try:
                 self._solver_model.solve()
@@ -261,8 +262,9 @@ class CPLEXDirect(DirectSolver):
                 self._error_code = e.args[2]  # See cplex.exceptions.error_codes
 
             t1 = time.time()
+            det1 = self._solver_model.get_dettime()
             self._wallclock_time = t1 - t0
-            self._deterministic_time = self._solver_model.get_dettime()
+            self._deterministic_time = det1 = det0
         finally:
             self._solver_model.set_results_stream(None)
             if _close_log_file:
