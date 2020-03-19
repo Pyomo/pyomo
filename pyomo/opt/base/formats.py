@@ -13,7 +13,10 @@
 #
 __all__ = ['ProblemFormat', 'ResultsFormat', 'guess_format']
 
-from pyutilib.enum import Enum
+try:
+    from enum import Enum
+except:
+    from enum34 import Enum
 
 #
 # pyomo - A pyomo.core.PyomoModel object, or a *.py file that defines such an object
@@ -31,7 +34,19 @@ from pyutilib.enum import Enum
 # bar - A Baron input file
 # gams - A GAMS input file
 #
-ProblemFormat = Enum('colin', 'pyomo', 'cpxlp', 'nl', 'mps', 'mod', 'lpxlp', 'osil', 'colin_optproblem', 'FuncDesigner','bar','gams')
+class ProblemFormat(Enum):
+    colin=1
+    pyomo=2
+    cpxlp=3
+    nl=4
+    mps=5
+    mod=6
+    lpxlp=7
+    osil=8
+    colin_optproblem=9
+    FuncDesigner=10
+    bar=11
+    gams=12
 
 #
 # osrl - osrl XML file defined by the COIN-OR OS project: Result
@@ -41,7 +56,13 @@ ProblemFormat = Enum('colin', 'pyomo', 'cpxlp', 'nl', 'mps', 'mod', 'lpxlp', 'os
 # yaml - A Pyomo results file in YAML format
 # json - A Pyomo results file in JSON format
 #
-ResultsFormat = Enum('osrl', 'results', 'sol', 'soln', 'yaml', 'json')
+class ResultsFormat(Enum):
+    osrl=1
+    results=2
+    sol=3
+    soln=4
+    yaml=5
+    json=6
 
 
 def guess_format(filename):

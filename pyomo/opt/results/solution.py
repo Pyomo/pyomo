@@ -18,7 +18,10 @@ except:
 from six import iterkeys, advance_iterator, itervalues, iteritems
 from six.moves import xrange
 from pyutilib.misc import Bunch
-from pyutilib.enum import Enum
+try:
+    from enum import Enum
+except:
+    from enum34 import Enum
 from pyutilib.math import as_number
 from pyomo.opt.results.container import *
 
@@ -28,20 +31,19 @@ default_print_options = Bunch(schema=False,
                               ignore_time=False,
                               ignore_defaults=False)
 
-SolutionStatus = Enum(
-  'bestSoFar',
-  'error',
-  'feasible',
-  'globallyOptimal',
-  'infeasible',
-  'locallyOptimal',
-  'optimal',
-  'other',
-  'stoppedByLimit',
-  'unbounded',
-  'unknown',
-  'unsure',
-)
+class SolutionStatus(Enum):
+    bestSoFar=1
+    error=2
+    feasible=3
+    globallyOptimal=4
+    infeasible=5
+    locallyOptimal=6
+    optimal=7
+    other=8
+    stoppedByLimit=9
+    unbounded=10
+    unknown=11
+    unsure=12
 
 
 try:

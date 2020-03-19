@@ -30,7 +30,6 @@ try:
 except ImportError:
     pstats_available=False
 
-from pyutilib.enum import EnumValue
 from pyutilib.misc import PauseGC, import_file
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyutilib.pyro.util import find_unused_port
@@ -515,7 +514,8 @@ def _get_test_dispatcher(ns_host=None,
             dispatcher_process = None
     return dispatcher_process, dispatcher_port
 
-class _EnumValueWithData(EnumValue):
+#class _EnumValueWithData(EnumValue):
+class _EnumValueWithData(object):
     """A subclass of pyutilib.enum.EnumValue that carries additional data.
 
     The data carried by the _EnumValueWithData object does not affect

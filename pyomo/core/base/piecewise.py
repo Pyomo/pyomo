@@ -44,7 +44,10 @@ import itertools
 import operator
 import types
 
-from pyutilib.enum import Enum
+try:
+    from enum import Enum
+except:
+    from enum34 import Enum
 from pyutilib.misc import flatten_tuple
 
 from pyomo.common.timing import ConstructionTimer
@@ -61,19 +64,21 @@ from six.moves import xrange, zip
 
 logger = logging.getLogger('pyomo.core')
 
-PWRepn = Enum('SOS2',
-              'BIGM_BIN',
-              'BIGM_SOS1',
-              'CC',
-              'DCC',
-              'DLOG',
-              'LOG',
-              'MC',
-              'INC')
+class PWRepn(Enum):
+    SOS2=1
+    BIGM_BIN=2
+    BIGM_SOS1=3
+    CC=4
+    DCC=5
+    DLOG=6
+    LOG=7
+    MC=8
+    INC=9
 
-Bound = Enum('Lower',
-             'Upper',
-             'Equal')
+class Bound(Enum):
+    Lower=1
+    Upper=2
+    Equal=3
 
 # BE SURE TO CHANGE THE PIECWISE DOCSTRING
 # IF THIS GETS CHANGED

@@ -13,20 +13,24 @@
 
 import time
 import itertools
-
-from pyutilib.enum import Enum
+try:
+    from enum import Enum
+except:
+    from enum34 import Enum
+from six import iteritems, itervalues
 
 from pyomo.core import *
 
-from six import iteritems, itervalues
 
-InvocationType = Enum('SingleInvocation',
-                      'PerBundleInvocation',
-                      'PerBundleChainedInvocation',
-                      'PerScenarioInvocation',
-                      'PerScenarioChainedInvocation',
-                      'PerNodeInvocation',
-                      'PerNodeChainedInvocation')
+class InvocationType(Enum):
+    SingleInvocation=1
+    PerBundleInvocation=2
+    PerBundleChainedInvocation=3
+    PerScenarioInvocation=4
+    PerScenarioChainedInvocation=5
+    PerNodeInvocation=6
+    PerNodeChainedInvocation=7
+
 
 class TransmitType(object):
 

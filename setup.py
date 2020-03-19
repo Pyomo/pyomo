@@ -47,6 +47,8 @@ if sys.version_info < (2, 7):
     requires.append('argparse')
     requires.append('unittest2')
     requires.append('ordereddict')
+if sys.version_info < (3, 4):
+    requires.append('enum34')
 
 from setuptools import setup, find_packages
 import sys

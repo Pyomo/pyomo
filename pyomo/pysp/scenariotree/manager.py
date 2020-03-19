@@ -24,7 +24,10 @@ from collections import (defaultdict,
                          namedtuple)
 
 import pyutilib.misc
-import pyutilib.enum
+try:
+    from enum import Enum
+except:
+    from enum34 import Enum
 from pyutilib.pyro import (shutdown_pyro_components,
                            using_pyro4)
 from pyomo.opt import (UndefinedData,
@@ -66,51 +69,52 @@ except ImportError:                               #pragma:nocover
 logger = logging.getLogger('pyomo.pysp')
 
 _invocation_type_enum_list = []
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 0, 'Single'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 1, 'PerScenario'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 2, 'PerScenarioChained'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 3, 'PerBundle'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 4, 'PerBundleChained'))
+if False:
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 0, 'Single'))
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 1, 'PerScenario'))
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 2, 'PerScenarioChained'))
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 3, 'PerBundle'))
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 4, 'PerBundleChained'))
 
-##### These values are DEPRECATED
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 5, 'SingleInvocation'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 6, 'PerScenarioInvocation'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 7, 'PerScenarioChainedInvocation'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 8, 'PerBundleInvocation'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 9, 'PerBundleChainedInvocation'))
-#####
+    ##### These values are DEPRECATED
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 5, 'SingleInvocation'))
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 6, 'PerScenarioInvocation'))
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 7, 'PerScenarioChainedInvocation'))
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 8, 'PerBundleInvocation'))
+    _invocation_type_enum_list.append(
+        pyutilib.enum.EnumValue('InvocationType', 9, 'PerBundleChainedInvocation'))
+    #####
 
-# These are enum values that carry data with them
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_must_be_str,
+    # These are enum values that carry data with them
+    _invocation_type_enum_list.append(
+        _EnumValueWithData(_domain_must_be_str,
                        'InvocationType', 10, 'OnScenario'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_tuple_of_str,
+    _invocation_type_enum_list.append(
+        _EnumValueWithData(_domain_tuple_of_str,
                        'InvocationType', 11, 'OnScenarios'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_must_be_str,
+    _invocation_type_enum_list.append(
+        _EnumValueWithData(_domain_must_be_str,
                        'InvocationType', 12, 'OnBundle'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_tuple_of_str,
+    _invocation_type_enum_list.append(
+        _EnumValueWithData(_domain_tuple_of_str,
                        'InvocationType', 13, 'OnBundles'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_tuple_of_str,
+    _invocation_type_enum_list.append(
+        _EnumValueWithData(_domain_tuple_of_str,
                        'InvocationType', 14, 'OnScenariosChained'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_tuple_of_str,
+    _invocation_type_enum_list.append(
+        _EnumValueWithData(_domain_tuple_of_str,
                        'InvocationType', 15, 'OnBundlesChained'))
 
-class _InvocationTypeDocumentedEnum(pyutilib.enum.Enum):
+class InvocationType(Enum):
     """Controls execution of function invocations with a scenario tree manager.
 
     In all cases, the function must accept the process-local scenario
@@ -225,8 +229,18 @@ class _InvocationTypeDocumentedEnum(pyutilib.enum.Enum):
             managed by the named scenario tree worker.
 
     """
+    #InvocationType = _InvocationTypeDocumentedEnum(*_invocation_type_enum_list)
 
-InvocationType = _InvocationTypeDocumentedEnum(*_invocation_type_enum_list)
+    Single=0
+    PerScenario=1
+    PerScenarioChained=2
+    PerBundle=3
+    PerBundleChained=4
+    SingleInvocation=5
+    PerScenarioInvocation=6
+    PerScenarioChainedInvocation=7
+    PerBundleInvocation=8
+    PerBundleChainedInvocation=9
 
 _deprecated_invocation_types = \
     {InvocationType.SingleInvocation: InvocationType.Single,
@@ -234,6 +248,7 @@ _deprecated_invocation_types = \
      InvocationType.PerScenarioChainedInvocation: InvocationType.PerScenarioChained,
      InvocationType.PerBundleInvocation: InvocationType.PerBundle,
      InvocationType.PerBundleChainedInvocation: InvocationType.PerBundleChained}
+
 def _map_deprecated_invocation_type(invocation_type):
     if invocation_type in _deprecated_invocation_types:      #pragma:nocover
         logger.warning("DEPRECATED: %s has been renamed to %s"

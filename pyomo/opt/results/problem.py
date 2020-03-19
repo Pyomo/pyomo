@@ -10,10 +10,16 @@
 
 __all__ = ['ProblemInformation', 'ProblemSense']
 
-from pyutilib.enum import Enum
+try:
+    from enum import Enum
+except:
+    from enum34 import Enum
 from pyomo.opt.results.container import *
 
-ProblemSense = Enum('unknown', 'minimize', 'maximize')
+class ProblemSense(Enum):
+    unknown=1
+    minimize=2
+    maximize=3
 
 
 class ProblemInformation(MapContainer):

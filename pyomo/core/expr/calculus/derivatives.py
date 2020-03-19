@@ -1,10 +1,16 @@
 from .diff_with_sympy import differentiate as sympy_diff
 from .diff_with_pyomo import reverse_sd, reverse_ad
-from pyutilib.enum import Enum
+try:
+    from enum import Enum
+except:
+    from enum34 import Enum
 from pyomo.core.kernel.component_map import ComponentMap
 
 
-Modes = Enum('sympy', 'reverse_symbolic', 'reverse_numeric')
+class Modes(Enum):
+    sympy=1
+    reverse_symbolic=2
+    reverse_numeric=3
 
 
 def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):

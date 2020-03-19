@@ -15,7 +15,10 @@ import math
 
 import pyutilib.math
 from pyutilib.misc import Bunch
-from pyutilib.enum import EnumValue, Enum
+try:
+    from enum import Enum
+except:
+    from enum34 import Enum
 
 from six import iterkeys, itervalues, iteritems, advance_iterator, StringIO
 from six.moves import xrange
@@ -24,7 +27,13 @@ try:
 except NameError:
     basestring = unicode = str
 
-ScalarType = Enum('int', 'time', 'string', 'float', 'enum', 'undefined')
+class ScalarType(Enum):
+    int=1
+    time=2
+    string=3
+    float=4
+    enum=5
+    undefined=6
 
 default_print_options = Bunch(schema=False, ignore_time=False)
 
@@ -50,9 +59,9 @@ class ScalarData(object):
         self._required=required
 
     def get_value(self):
-        if type(self.value) is EnumValue:
-            value = str(self.value)
-        elif type(self.value) is UndefinedData:
+        #if type(self.value) is EnumValue:
+        #    value = str(self.value)
+        if type(self.value) is UndefinedData:
             value = '<undefined>'
         else:
             value = self.value

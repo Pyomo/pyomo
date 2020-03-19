@@ -11,11 +11,18 @@
 
 __all__ = ['ActionManagerError', 'ActionHandle', 'AsynchronousActionManager', 'ActionStatus', 'FailedActionHandle', 'solve_all_instances']
 
-from pyutilib.enum import Enum
-
+try:
+    from enum import Enum
+except:
+    from enum34 import Enum
 from six import itervalues
 
-ActionStatus = Enum('done', 'error', 'queued', 'executing', 'unknown')
+class ActionStatus(Enum):
+    done=1
+    error=2
+    queued=3
+    executing=4
+    unknown=5
 
 def solve_all_instances(solver_manager, solver, instances, **kwds):
     """
