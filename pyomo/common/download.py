@@ -18,11 +18,13 @@ import ssl
 import sys
 import zipfile
 
-from six.moves.urllib.request import urlopen
-
 from .config import PYOMO_CONFIG_DIR
+from .deprecation import deprecated
 from .errors import DeveloperError
 import pyomo.common
+from pyomo.common.dependencies import attempt_import
+
+request = attempt_import('six.moves.urllib.request')[0]
 
 logger = logging.getLogger('pyomo.common.download')
 
@@ -58,7 +60,26 @@ class FileDownloader(object):
         return system, bits
 
 
+    @deprecated("get_url() is deprecated. Use get_platform_url()",
+                version='5.6.9')
     def get_url(self, urlmap):
+        return self.get_platform_url(urlmap)
+
+
+    def get_platform_url(self, urlmap):
+        """Select the url for this platform
+
+        Given a `urlmap` dict that maps the platform name (from
+        `FileDownloader.get_sysinfo()`) to a platform-specific URL,
+        return the URL that matches the current platform.
+
+        Parameters
+        ----------
+        urlmap: dict
+            Map of platform name (e.g., `linux`, `windows`, `cygwin`,
+            `darwin`) to URL
+
+        """
         system, bits = self.get_sysinfo()
         url = urlmap.get(system, None)
         if url is None:
@@ -85,6 +106,13 @@ class FileDownloader(object):
             default=None,
             help="Use CACERT as the file of certificate authorities "
             "to verify peers.",
+        )
+        parser.add_argument(
+            '-v','--verbose',
+            action='store_true',
+            dest='verbose',
+            default=False,
+            help="Verbose output when download fails",
         )
         return parser
 
@@ -122,27 +150,39 @@ class FileDownloader(object):
     def retrieve_url(self, url):
         """Return the contents of a URL as an io.BytesIO object"""
         try:
-            ctx = ssl.create_default_context(cafile=self.cacert)
+            ctx = ssl.create_default_context()
+            if self.cacert:
+                ctx.load_verify_locations(cafile=self.cacert)
             if self.insecure:
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
-            fetch = urlopen(url, context=ctx)
+            fetch = request.urlopen(url, context=ctx)
         except AttributeError:
             # Revert to pre-2.7.9 syntax
-            fetch = urlopen(url)
+            fetch = request.urlopen(url)
         ans = fetch.read()
         logger.info("  ...downloaded %s bytes" % (len(ans),))
         return ans
 
 
-    def get_binary_file(self, url):
+    def get_file(self, url, mode):
         if self._fname is None:
             raise DeveloperError("target file name has not been initialized "
                                  "with set_destination_filename")
-        with open(self._fname, 'wb') as FILE:
+        with open(self._fname, mode) as FILE:
             raw_file = self.retrieve_url(url)
             FILE.write(raw_file)
             logger.info("  ...wrote %s bytes" % (len(raw_file),))
+
+
+    def get_binary_file(self, url):
+        """Retrieve the specified url and write as a binary file"""
+        return self.get_file(url, mode='wb')
+
+
+    def get_text_file(self, url):
+        """Retrieve the specified url and write as a text file"""
+        return self.get_file(url, mode='wt')
 
 
     def get_binary_file_from_zip_archive(self, url, srcname):

@@ -13,6 +13,7 @@ __all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
@@ -252,7 +253,7 @@ class _VarData(ComponentData, NumericValue):
         """
         raise NotImplementedError
 
-    def fix(self, *val):
+    def fix(self, value=NoArgumentGiven):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
@@ -440,16 +441,14 @@ class _GeneralVarData(_VarData):
                 "parameters"
                 % (type(val),))
 
-    def fix(self, *val):
+    def fix(self, value=NoArgumentGiven):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         self.fixed = True
-        if len(val) == 1:
-            self.value = val[0]
-        elif len(val) > 1:
-            raise TypeError("fix expected at most 1 arguments, got %d" % (len(val)))
+        if value is not NoArgumentGiven:
+            self.value = value
 
     def unfix(self):
         """Sets the fixed indicator to False."""
@@ -552,11 +551,10 @@ class Var(IndexedComponent):
         Return a dictionary of index-value pairs.
         """
         if include_fixed_values:
-            return dict((idx, vardata.value)
-                            for idx, vardata in iteritems(self._data))
-        return dict((idx, vardata.value)
+            return {idx:vardata.value for idx,vardata in iteritems(self._data)}
+        return {idx:vardata.value
                             for idx, vardata in iteritems(self._data)
-                                                if not vardata.fixed)
+                                                if not vardata.fixed}
 
     extract_values = get_values
 
@@ -891,13 +889,13 @@ class SimpleVar(_GeneralVarData, Var):
             "is currently nothing to set)."
             % (self.name))
 
-    def fix(self, *val):
+    def fix(self, value=NoArgumentGiven):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         if self._constructed:
-            return _GeneralVarData.fix(self, *val)
+            return _GeneralVarData.fix(self, value)
         raise ValueError(
             "Fixing variable '%s' "
             "before the Var has been constructed (there "
@@ -933,13 +931,13 @@ class IndexedVar(Var):
         for vardata in itervalues(self):
             vardata.setub(val)
 
-    def fix(self, *val):
+    def fix(self, value=NoArgumentGiven):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         for vardata in itervalues(self):
-            vardata.fix(*val)
+            vardata.fix(value=value)
 
     def unfix(self):
         """Sets the fixed indicator to False."""

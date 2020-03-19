@@ -26,6 +26,7 @@ import pyutilib.services
 import pyutilib.th as unittest
 
 from pyomo.environ import *
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.param import _NotValid
 
 from six import iteritems, itervalues, StringIO
@@ -1169,6 +1170,58 @@ class MiscParamTests(unittest.TestCase):
             return 0.0
         model.p = Param(model.A, initialize=rule)
 
+    def test_param_validate(self):
+        """Test Param `validate` and `within` throw ValueError when not valid.
+
+        The `within` argument will catch the ValueError, log extra information
+        with of an "ERROR" message, and reraise the ValueError.
+
+        1. Immutable Param (unindexed)
+        2. Immutable Param (indexed)
+        3. Immutable Param (arbitrary validation rule)
+        4. Mutable Param (unindexed)
+        5. Mutable Param (indexed)
+        6. Mutable Param (arbitrary validation rule)
+        """
+        def validation_rule(model, value):
+            """Arbitrary validation rule that always returns False."""
+            return False
+
+        # 1. Immutable Param (unindexed)
+        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+            m = ConcreteModel()
+            m.p1 = Param(initialize=-3, within=NonNegativeReals)
+
+        # 2. Immutable Param (indexed)
+        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+            m = ConcreteModel()
+            m.A = RangeSet(1, 2)
+            m.p2 = Param(m.A, initialize=-3, within=NonNegativeReals)
+
+        # 3. Immutable Param (arbitrary validation rule)
+        with self.assertRaisesRegex(ValueError, "Invalid parameter value"):
+            m = ConcreteModel()
+            m.p5 = Param(initialize=1, validate=validation_rule)
+
+        # 4. Mutable Param (unindexed)
+        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+            m = ConcreteModel()
+            m.p3 = Param(within=NonNegativeReals, mutable=True)
+            m.p3 = -3
+
+        # 5. Mutable Param (indexed)
+        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+            m = ConcreteModel()
+            m.A = RangeSet(1, 2)
+            m.p4 = Param(m.A, within=NonNegativeReals, mutable=True)
+            m.p4[1] = -3
+
+        # 6. Mutable Param (arbitrary validation rule)
+        with self.assertRaisesRegex(ValueError, "Invalid parameter value"):
+            m = ConcreteModel()
+            m.p6 = Param(mutable=True, validate=validation_rule)
+            m.p6 = 1
+
     def test_get_uninitialized(self):
         model=AbstractModel()
         model.a = Param()
@@ -1292,6 +1345,26 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
       2 : <class 'pyomo.core.base.param._NotValid'>
       a : b
             """.strip())
+
+    def test_domain_deprecation(self):
+        m = ConcreteModel()
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.core'):
+            m.p = Param(mutable=True)
+            m.p = 10
+        self.assertEqual(log.getvalue(), "")
+        self.assertEqual(value(m.p), 10)
+
+        with LoggingIntercept(log, 'pyomo.core'):
+            m.p = 'a'
+        self.assertIn(
+            "DEPRECATED: The default domain for Param objects is 'Any'",
+            log.getvalue())
+        self.assertIn(
+            "domain of this Param (p) to be 'Any'",
+            log.getvalue())
+        self.assertEqual(value(m.p), 'a')
+
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
 

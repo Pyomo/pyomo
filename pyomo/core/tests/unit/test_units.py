@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -15,19 +16,15 @@ from pyomo.environ import *
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as expr
-from pyomo.core.base.units_container import InconsistentUnitsError, UnitsError
+from pyomo.core.base.units_container import (
+    pint_available, InconsistentUnitsError, UnitsError,
+)
 from six import StringIO
-
-try:
-    import pint
-    pint_available = True
-except ImportError:
-    pint_available = False
 
 def python_callback_function(arg1, arg2):
     return 42.0
 
-@unittest.skipIf(pint_available is False, 'Testing units requires pint')
+@unittest.skipIf(not pint_available, 'Testing units requires pint')
 class TestPyomoUnit(unittest.TestCase):
 
     def test_PyomoUnit_NumericValueMethods(self):
@@ -422,7 +419,13 @@ class TestPyomoUnit(unittest.TestCase):
         delta_degF = uc.delta_degF
         R = uc.rankine
 
-        self._get_check_units_ok(2.0*R + 3.0*R, uc, 'rankine', expr.NPV_SumExpression)
+        # In some recent versions of pint, rankine can be either
+        # 'rankine' or '°R' (note UTF-8 encoding, which requires the
+        # "coding: utf-8" comment flag at the top of this file).
+        R_str = R.getname()
+        #self.assertIn(R_str, ['rankine', '°R'])
+
+        self._get_check_units_ok(2.0*R + 3.0*R, uc, R_str, expr.NPV_SumExpression)
         self._get_check_units_ok(2.0*K + 3.0*K, uc, 'K', expr.NPV_SumExpression)
 
         ex = 2.0*delta_degC + 3.0*delta_degC + 1.0*delta_degC

@@ -12,14 +12,22 @@ __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'active_components', 'components', 'active_components_data',
            'components_data', 'SimpleBlock']
 
+import collections
 import copy
+import logging
 import sys
 import weakref
-import logging
+import textwrap
+
 from inspect import isclass
 from operator import itemgetter, attrgetter
 from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
+
+if PY3:
+    from collections.abc import Mapping as collections_Mapping
+else:
+    from collections import Mapping as collections_Mapping
 
 from pyutilib.misc.indent_io import StreamIndenter
 
@@ -33,7 +41,6 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.indexed_component import IndexedComponent, \
     ActiveIndexedComponent, UnindexedComponent_set
-import collections
 
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt import WriterFactory
@@ -99,6 +106,7 @@ class _generic_component_decorator(object):
             rule.__name__,
             self._component(*self._args, rule=rule, **(self._kwds))
         )
+        return rule
 
 
 class _component_decorator(object):
@@ -702,15 +710,116 @@ class _BlockData(ActiveComponentData):
             #
             super(_BlockData, self).__delattr__(name)
 
+    def _compact_decl_storage(self):
+        idxMap = {}
+        _new_decl_order = []
+        j = 0
+        # Squeeze out the None entries
+        for i, entry in enumerate(self._decl_order):
+            if entry[0] is not None:
+                idxMap[i] = j
+                j += 1
+                _new_decl_order.append(entry)
+        # Update the _decl map
+        self._decl = {k:idxMap[idx] for k,idx in iteritems(self._decl)}
+        # Update the ctypes, _decl_order linked lists
+        for ctype, info in iteritems(self._ctypes):
+            idx = info[0]
+            entry = self._decl_order[idx]
+            while entry[0] is None:
+                idx = entry[1]
+                entry = self._decl_order[idx]
+            info[0] = last = idxMap[idx]
+            while entry[1] is not None:
+                idx = entry[1]
+                entry = self._decl_order[idx]
+                if entry[0] is not None:
+                    this = idxMap[idx]
+                    _new_decl_order[last] = (_new_decl_order[last][0], this)
+                    last = this
+            info[1] = last
+            _new_decl_order[last] = (_new_decl_order[last][0], None)
+        self._decl_order = _new_decl_order
+
     def set_value(self, val):
-        for k in list(getattr(self, '_decl', {})):
-            self.del_component(k)
-        self._ctypes = {}
-        self._decl = {}
-        self._decl_order = []
-        if val:
-            for k in sorted(iterkeys(val)):
-                self.add_component(k,val[k])
+        raise RuntimeError(textwrap.dedent(
+            """\
+            Block components do not support assignment or set_value().
+            Use the transfer_attributes_from() method to transfer the
+            components and public attributes from one block to another:
+                model.b[1].transfer_attributes_from(other_block)
+            """))
+
+    def clear(self):
+        for name in iterkeys(self.component_map()):
+            if name not in self._Block_reserved_words:
+                self.del_component(name)
+        for attr in tuple(self.__dict__):
+            if attr not in self._Block_reserved_words:
+                delattr(self, attr)
+        self._compact_decl_storage()
+
+    def transfer_attributes_from(self, src):
+        """Transfer user-defined attributes from src to this block
+
+        This transfers all components and user-defined attributes from
+        the block or dictionary `src` and places them on this Block.
+        Components are transferred in declaration order.
+
+        If a Component on `src` is also declared on this block as either
+        a Component or attribute, the local Component or attribute is
+        replaced by the incoming component.  If an attribute name on
+        `src` matches a Component declared on this block, then the
+        incoming attribute is passed to the local Component's
+        `set_value()` method.  Attribute names appearing in this block's
+        `_Block_reserved_words` set will not be transferred (although
+        Components will be).
+
+        Parameters
+        ----------
+        src: _BlockData or dict
+            The Block or mapping that contains the new attributes to
+            assign to this block.
+        """
+        if isinstance(src, _BlockData):
+            # There is a special case where assigning a parent block to
+            # this block creates a circular hierarchy
+            if src is self:
+                return
+            p_block = self.parent_block()
+            while p_block is not None:
+                if p_block is src:
+                    raise ValueError(
+                        "_BlockData.transfer_attributes_from(): Cannot set a "
+                        "sub-block (%s) to a parent block (%s): creates a "
+                        "circular hierarchy" % (self, src))
+                p_block = p_block.parent_block()
+            # record the components and the non-component objects added
+            # to the block
+            src_comp_map = src.component_map()
+            src_raw_dict = {k:v for k,v in iteritems(src.__dict__)
+                            if k not in src_comp_map}
+        elif isinstance(src, collections_Mapping):
+            src_comp_map = {}
+            src_raw_dict = src
+        else:
+            raise ValueError(
+                "_BlockData.transfer_attributes_from(): expected a "
+                "Block or dict; received %s" % (type(src).__name__,))
+
+        # Use component_map for the components to preserve decl_order
+        for k,v in iteritems(src_comp_map):
+            if k in self._decl:
+                self.del_component(k)
+            src.del_component(k)
+            self.add_component(k,v)
+        # Because Blocks are not slotized and we allow the
+        # assignment of arbitrary data to Blocks, we will move over
+        # any other unrecognized entries in the object's __dict__:
+        for k in sorted(iterkeys(src_raw_dict)):
+            if k not in self._Block_reserved_words or not hasattr(self, k) \
+               or k in self._decl:
+                setattr(self, k, src_raw_dict[k])
 
     def _add_temporary_set(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -853,7 +962,7 @@ class _BlockData(ActiveComponentData):
         if not val.valid_model_component():
             raise RuntimeError(
                 "Cannot add '%s' as a component to a block" % str(type(val)))
-        if name in self._Block_reserved_words:
+        if name in self._Block_reserved_words and hasattr(self, name):
             raise ValueError("Attempting to declare a block component using "
                              "the name of a reserved attribute:\n\t%s"
                              % (name,))
@@ -891,6 +1000,18 @@ single owning block (or model), and a component may not appear
 multiple times in a block.  If you want to re-name or move this
 component, use the block del_component() and add_component() methods.
 """ % (msg.strip(),))
+        #
+        # If the new component is a Block, then there is the chance that
+        # it is the model(), and assigning it would create a circular
+        # hierarchy.  Note that we only have to check the model as the
+        # check immediately above would catch any "internal" blocks in
+        # the block hierarchy
+        #
+        if isinstance(val, Block) and val is self.model():
+            raise ValueError(
+                "Cannot assign the top-level block as a subblock of one of "
+                "its children (%s): creates a circular hierarchy"
+                % (self,))
         #
         # Set the name and parent pointer of this component.
         #
@@ -1765,7 +1886,7 @@ class Block(ActiveIndexedComponent):
             self.construct()
 
     def _getitem_when_not_present(self, idx):
-        return self._setitem_when_not_present(idx, None)
+        return self._setitem_when_not_present(idx)
 
     def find_component(self, label_or_component):
         """
@@ -1825,16 +1946,10 @@ class Block(ActiveIndexedComponent):
             if id(_block) in _BlockConstruction.data:
                 del _BlockConstruction.data[id(_block)]
 
-            if isinstance(obj, _BlockData) and obj is not _block:
-                # If the user returns a block, use their block instead
-                # of the empty one we just created.
-                for c in list(obj.component_objects(descend_into=False)):
-                    obj.del_component(c)
-                    _block.add_component(c.local_name, c)
-                # transfer over any other attributes that are not components
-                for name, val in iteritems(obj.__dict__):
-                    if not hasattr(_block, name) and not hasattr(self, name):
-                        super(_BlockData, _block).__setattr__(name, val)
+            if obj is not _block and isinstance(obj, _BlockData):
+                # If the user returns a block, transfer over everything
+                # they defined into the empty one we created.
+                _block.transfer_attributes_from(obj)
 
             # TBD: Should we allow skipping Blocks???
             # if obj is Block.Skip and idx is not None:

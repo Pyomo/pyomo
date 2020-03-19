@@ -1,38 +1,42 @@
 import appdirs
 import os
 import json
-try:
-    import yaml
-    yaml_available = True
-except ImportError:
-    yaml_available = False
 
 from pyutilib.misc.config import ConfigBase
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, ADVANCED_OPTION, PYOMO_CONFIG_DIR,
 )
+from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
+import logging
+logger = logging.getLogger('pyomo.core')
 
 
-class PyomoOptions_(object):
+class _PyomoOptions(object):
 
     def __init__(self):
         self._options_stack = [ default_pyomo_config() ]
 
         # Load the user's configuration
-        sources = [(json.load, 'json')]
-        if yaml_available:
-            sources.append( (yaml.load, 'yml') )
-            sources.append( (yaml.load, 'yaml') )
-        for parser, suffix in sources:
+        sources = [(json, 'json', True, 'json', {}),
+                   (json, 'jsn', True, 'json', {})]
+        sources.append((yaml, 'yml', yaml_available, 'yaml', yaml_load_args))
+        sources.append((yaml, 'yaml', yaml_available, 'yaml', yaml_load_args))
+        for parser, suffix, available, library, parser_args in sources:
             cfg_file = os.path.join( PYOMO_CONFIG_DIR, 'config.'+suffix)
-            if os.path.exists(cfg_file):
-                fp = open(cfg_file)
-                try:
-                    data = parser(fp)
-                except:
-                    logger.error("Error parsing the user's default "
-                                 "configuration file\n\t%s." % (cfg_file,))
-                self._options_stack[0].set_value(data)
+            if not os.path.exists(cfg_file):
+                continue
+            if not available:
+                logger.warning("Default configuration file (%s) cannot be "
+                               "loaded; %s is not available"
+                               % (cfg_file, library))
+                continue
+            fp = open(cfg_file)
+            try:
+                data = parser.load(fp, **parser_args)
+            except:
+                logger.error("Error parsing the user's default "
+                             "configuration file\n\t%s." % (cfg_file,))
+            self._options_stack[0].set_value(data)
 
     def active_config(self):
         return self._options_stack[-1]
@@ -66,7 +70,7 @@ class PyomoOptions_(object):
 
     def __setattr__(self, name, value):
         if name == '_options_stack':
-            super(PyomoOptions_,self).__setattr__(name, value)
+            super(_PyomoOptions,self).__setattr__(name, value)
         else:
             return self.active_config().__setattr__(name, value)
 
@@ -97,7 +101,7 @@ class PyomoOptions_(object):
         return self.active_config().items(name, config)
 
     def add(self, name, config):
-        return self.active_config().add(name, value)
+        return self.active_config().add(name, config)
 
     def value(self, accessValue=True):
         return self.active_config().value(accessValue)
@@ -111,7 +115,6 @@ class PyomoOptions_(object):
     #
     # END clone of the ConfigBlock API
     #
-
 
 
 def default_pyomo_config():
@@ -129,4 +132,4 @@ def default_pyomo_config():
     return config
 
 
-PyomoOptions = PyomoOptions_()
+PyomoOptions = _PyomoOptions()

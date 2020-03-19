@@ -21,12 +21,6 @@ import pyutilib.th as unittest
 from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.environ import *
 
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
-
 currdir=dirname(abspath(__file__))+os.sep
 example_dir=pyomo_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep+"tab"+os.sep
 tutorial_dir=pyomo_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep
@@ -998,7 +992,7 @@ class TestTextPortal(unittest.TestCase):
         model.p = Param(model.A, initialize={(1,2):10, (2,3):20, (3,4):30})
         model.q = Param(model.A, initialize={(1,2):11, (2,3):21, (3,4):31})
         data = DataPortal()
-        data.store(param=(model.p,model.q), columns=('a','b','c','d'), **self.create_write_options('param4'))
+        data.store(param=(model.p,model.q), **self.create_write_options('param4'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'param4'+self.suffix, currdir+'param4.baseline'+self.suffix)
         elif self.suffix == '.yaml':
@@ -1033,7 +1027,7 @@ class TestJsonPortal(TestTextPortal):
         return {'filename':os.path.abspath(tutorial_dir+os.sep+'json'+os.sep+name+self.suffix)}
 
 
-@unittest.skipIf(not yaml_available, "YAML not available available")
+@unittest.skipIf(not yaml_interface, "YAML interface not available")
 class TestYamlPortal(TestTextPortal):
 
     suffix = '.yaml'

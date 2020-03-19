@@ -11,12 +11,14 @@
 from pyomo.core.base import Var, Param, Expression, Objective, Block, \
     Constraint, Suffix
 from pyomo.core.expr.numvalue import native_numeric_types, is_fixed, value
+import logging
+
+logger = logging.getLogger('pyomo.core')
 
 valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
 valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
 
-
-#Copied from cpxlp.py:
+# Copied from cpxlp.py:
 # Keven Hunter made a nice point about using %.16g in his attachment
 # to ticket #4319. I am adjusting this to %.17g as this mocks the
 # behavior of using %r (i.e., float('%r'%<number>) == <number>) with
@@ -30,6 +32,7 @@ valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
 #               the number's sign.
 _ftoa_precision_str = '%.17g'
 
+
 def ftoa(val):
     if val is None:
         return val
@@ -42,7 +45,7 @@ def ftoa(val):
             _val = value(val)
         else:
             raise ValueError(
-                "Converting non-fixed bound or value to string: %s" (val,))
+                "Converting non-fixed bound or value to string: %s" % (val,))
     #
     # Convert to string
     a = _ftoa_precision_str % _val

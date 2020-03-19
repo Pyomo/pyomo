@@ -13,8 +13,7 @@ import os
 import re
 import six
 
-from six.moves.xmlrpc_client import ProtocolError
-
+from pyomo.common.dependencies import attempt_import
 from pyomo.opt import SolverFactory, SolverManagerFactory, OptSolver
 from pyomo.opt.parallel.manager import ActionManagerError
 from pyomo.opt.parallel.async_solver import (
@@ -24,6 +23,7 @@ from pyomo.opt.base import OptSolver
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
+xmlrpc_client = attempt_import('six.moves.xmlrpc_client')[0]
 
 logger = logging.getLogger('pyomo.neos')
 
@@ -270,7 +270,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                         current_message + (
                             message_fragment.data if six.PY2
                             else (message_fragment.data).decode('utf-8') ) )
-                except ProtocolError:
+                except xmlrpc_client.ProtocolError:
                     # The command probably timed out
                     pass
 

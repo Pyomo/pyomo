@@ -337,7 +337,7 @@ class _OrderedSetData(_SetDataBase):
             self.value_list,
             key=None if _sorter is Set.SortedOrder else _sorter
         )
-        self.order_dict = dict((j,i) for i,j in enumerate(self.value_list))
+        self.order_dict = {j:i for i,j in enumerate(self.value_list)}
         self._is_sorted = 1
 
     def _clear(self):
