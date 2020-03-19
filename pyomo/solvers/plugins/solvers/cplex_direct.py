@@ -184,6 +184,7 @@ class CPLEXDirect(DirectSolver):
 
             self._error_code = None
             t0 = time.time()
+            det0 = self._solver_model.get_dettime()
 
             try:
                 self._solver_model.solve()
@@ -191,8 +192,9 @@ class CPLEXDirect(DirectSolver):
                 self._error_code = e.args[2]  # See cplex.exceptions.error_codes
 
             t1 = time.time()
+            det1 = self._solver_model.get_dettime()
             self._wallclock_time = t1 - t0
-            self._deterministic_time = self._solver_model.get_dettime()
+            self._deterministic_time = det1 = det0
         finally:
             if self.version() >= (12, 10):
                 _log_file.close()
