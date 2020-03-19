@@ -66,7 +66,8 @@ def name(component, index=None, fully_qualified=False, relative_to=None):
         return base + _name_index_generator( index )
 
 
-@deprecated(msg="The cname() function has been renamed to name()", version='TBD', remove_in='TBD')
+@deprecated(msg="The cname() function has been renamed to name()",
+            version='5.6.9')
 def cname(*args, **kwds):
     return name(*args, **kwds)
 

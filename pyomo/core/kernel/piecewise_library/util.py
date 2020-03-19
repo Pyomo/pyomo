@@ -15,20 +15,9 @@ import six
 from six.moves import xrange
 from six import advance_iterator
 
-numpy_available = False
-try:
-    import numpy
-    numpy_available = True
-except:             #pragma:nocover
-    pass
-
-scipy_available = False
-try:
-    import scipy
-    import scipy.spatial
-    scipy_available = True
-except:             #pragma:nocover
-    pass
+from pyomo.common.dependencies import (
+    numpy, numpy_available, scipy, scipy_available
+)
 
 class PiecewiseValidationError(Exception):
     """An exception raised when validation of piecewise
@@ -179,9 +168,6 @@ def generate_delaunay(variables, num=10, **kwds):
     Returns:
         A scipy.spatial.Delaunay object.
     """
-    if not (numpy_available and scipy_available):             #pragma:nocover
-        raise ImportError(
-            "numpy and scipy are required")
     linegrids = []
     for v in variables:
         if v.has_lb() and v.has_ub():

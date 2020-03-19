@@ -1,13 +1,9 @@
-import pyutilib.th as unittest
 import math
-import pyomo.contrib.fbbt.interval as interval
+import pyutilib.th as unittest
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.errors import InfeasibleConstraintException
-try:
-    import numpy as np
-    numpy_available = True
-    np.random.seed(0)
-except ImportError:
-    numpy_available = False
+import pyomo.contrib.fbbt.interval as interval
+
 try:
     isfinite = math.isfinite
 except AttributeError:
@@ -16,6 +12,10 @@ except AttributeError:
         return not (math.isnan(x) or math.isinf(x))
 
 class TestInterval(unittest.TestCase):
+    def setUp(self):
+        if numpy_available:
+            np.random.seed(0)
+
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_add(self):
         xl = -2.5

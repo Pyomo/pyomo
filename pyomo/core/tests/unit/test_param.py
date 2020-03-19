@@ -26,6 +26,7 @@ import pyutilib.services
 import pyutilib.th as unittest
 
 from pyomo.environ import *
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.param import _NotValid
 
 from six import iteritems, itervalues, StringIO
@@ -1344,6 +1345,26 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
       2 : <class 'pyomo.core.base.param._NotValid'>
       a : b
             """.strip())
+
+    def test_domain_deprecation(self):
+        m = ConcreteModel()
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.core'):
+            m.p = Param(mutable=True)
+            m.p = 10
+        self.assertEqual(log.getvalue(), "")
+        self.assertEqual(value(m.p), 10)
+
+        with LoggingIntercept(log, 'pyomo.core'):
+            m.p = 'a'
+        self.assertIn(
+            "DEPRECATED: The default domain for Param objects is 'Any'",
+            log.getvalue())
+        self.assertIn(
+            "domain of this Param (p) to be 'Any'",
+            log.getvalue())
+        self.assertEqual(value(m.p), 'a')
+
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
 

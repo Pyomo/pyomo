@@ -29,11 +29,14 @@ def this_file(stack_offset=1):
     # __file__ fails if script is called in different ways on Windows
     # __file__ fails if someone does os.chdir() before
     # sys.argv[0] also fails because it does not always contains the path
-    callerFrame = inspect.stack()[stack_offset]
-    frameName = callerFrame[1]
+    callerFrame = inspect.currentframe()
+    while stack_offset:
+        callerFrame = callerFrame.f_back
+        stack_offset -= 1
+    frameName = callerFrame.f_code.co_filename
     if frameName and frameName[0] == '<' and frameName[-1] == '>':
         return frameName
-    return os.path.abspath(inspect.getfile(callerFrame[0]))
+    return os.path.abspath(inspect.getfile(callerFrame))
 
 
 def this_file_dir():
