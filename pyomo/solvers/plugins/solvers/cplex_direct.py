@@ -194,7 +194,7 @@ class CPLEXDirect(DirectSolver):
             t1 = time.time()
             det1 = self._solver_model.get_dettime()
             self._wallclock_time = t1 - t0
-            self._deterministic_time = det1 = det0
+            self._deterministic_time = det1 - det0
         finally:
             if self.version() >= (12, 10):
                 _log_file.close()
