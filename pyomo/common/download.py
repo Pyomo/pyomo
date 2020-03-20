@@ -61,7 +61,7 @@ class FileDownloader(object):
 
 
     @deprecated("get_url() is deprecated. Use get_platform_url()",
-                version='TBD')
+                version='5.6.9')
     def get_url(self, urlmap):
         return self.get_platform_url(urlmap)
 
