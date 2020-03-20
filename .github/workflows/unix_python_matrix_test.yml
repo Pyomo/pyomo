@@ -30,18 +30,20 @@ jobs:
       run: |
         if hash brew; then
             echo "Install pre-dependencies for pyodbc..."
-            brew update 
-            brew install bash gcc
+            brew update
+            brew list bash || brew install bash
+            brew list gcc || brew install gcc
             brew link --overwrite gcc
-            brew install pkg-config
-            brew install unixodbc
-            brew install freetds 
+            brew list pkg-config || brew install pkg-config
+            brew list unixodbc || brew install unixodbc
+            brew list freetds || brew install freetds 
         fi
         echo "Upgrade pip..."
         python -m pip install --upgrade pip
         echo ""
         echo "Install Pyomo dependencies..."
         echo ""
+        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
         echo ""
         echo "Install CPLEX Community Edition..."

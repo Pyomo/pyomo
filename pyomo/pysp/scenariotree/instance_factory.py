@@ -39,12 +39,9 @@ from pyomo.pysp.scenariotree.tree_structure import \
 
 import six
 
-has_networkx = False
-try:
-    import networkx
-    has_networkx = True
-except:                #pragma:nocover
-    has_networkx = False
+from pyomo.common.dependencies import (
+    networkx, networkx_available as has_networkx
+)
 
 logger = logging.getLogger('pyomo.pysp')
 

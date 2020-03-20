@@ -31,10 +31,6 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.block import SimpleBlock, SubclassOf, _BlockData, declare_custom_block
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import *
-try:
-    from StringIO import StringIO  # python 2
-except ImportError:
-    from io import StringIO  # python 3
 
 from pyomo.gdp import Disjunct
 

@@ -1,4 +1,4 @@
- #  ___________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
@@ -8,3 +8,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+raise ValueError("cannot import module")
