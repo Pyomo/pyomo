@@ -9,14 +9,17 @@ import pyomo.environ as pyo
 class ScenarioSet(object):
     """
     Class to hold scenario sets
+
     Args:
     name (str): name of the set (might be "")
-    NOTE: Delete this note by May 2020
-         As of March 2020, this uses a list as the underlying data structure.
-         The list could be changed to a dataframe with not outside impact.
+
     """
 
     def __init__(self, name):
+        """ NOTE: Delete this note by May 2020
+         As of March 2020, this uses a list as the underlying data structure.
+         The list could be changed to a dataframe with no outside impact.
+        """
         self._scens = list()  # use a df instead?
         self.name = name  #  might be ""
 
@@ -28,16 +31,18 @@ class ScenarioSet(object):
 
 
     def ScensIterator(self):
+        """ Usage: for scenario in ScensIterator()"""
         return iter(self._scens)
 
 
     def ScenarioNumber(self, scennum):
-        # zero-based scenario number (might, or might not, match name)
+        """ Returns the scenario with the given, zero-based number"""
         return self._scens[scennum]
 
     
     def addone(self, scen):
         """ Add a scenario to the set
+
         Args:
             scen (ParmestScen): the scenario to add
         """
@@ -47,6 +52,7 @@ class ScenarioSet(object):
         
     def Concatwith(self, set1,  newname):
         """ Concatenate a set to this set and return a new set 
+
         Args: 
             set1 (ScenarioSet): to append to this
         Returns:
@@ -61,6 +67,7 @@ class ScenarioSet(object):
 
     def append_bootstrap(self, bootstrap_theta):
         """ Append a boostrap theta df to the scenario set; equally likely
+
         Args:
             boostrap_theta (dataframe): created by the bootstrap
         Note: this can be cleaned up a lot with the list becomes a df,
@@ -79,6 +86,7 @@ class ScenarioSet(object):
 
     def write_csv(self, filename):
         """ write a csv file with the scenarios in the set
+
         Args:
             filename (str): full path and full name of file
         """
@@ -99,6 +107,7 @@ class ScenarioSet(object):
 
 class ParmestScen(object):
     """ A little container for scenarios; the Args are the attributes.
+
     Args:
         name (str): name for reporting; might be ""
         ThetaVals (dict): ThetaVals[name]=val
@@ -131,6 +140,7 @@ class ScenarioCreator(object):
 
     def ScenariosFromExperiments(self, addtoSet):
         """Creates new self.Scenarios list using the experiments only.
+
         Args:
             addtoSet (ScenarioSet): the scenarios will be added to this set
         Returns:
@@ -156,6 +166,7 @@ class ScenarioCreator(object):
             
     def ScenariosFromBoostrap(self, addtoSet, numtomake, seed=None):
         """Creates new self.Scenarios list using the experiments only.
+
         Args:
             addtoSet (ScenarioSet): the scenarios will be added to this set
             numtomake (int) : number of scenarios to create

@@ -1,0 +1,27 @@
+Scenario Creation
+=================
+
+In addition to model-based parameter estimation, parmest can create
+scenarios for use in optimization under uncertainty. To do this, one
+first creates an ``Estimator`` object, then a ``ScenarioCreator``
+object, which has methods to add ``ParmestScen`` scenario objects to a
+``ScenarioSet`` object, which can write them to a csv file or output them
+via an iterator method.
+
+Example
+-------
+
+This example is in the semibatch subdirectory of the examples directory in
+the file ``scencreate.py``
+
+.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/semibatch/scencreate.py
+   :language: python
+
+
+API
+---
+
+.. automodule:: pyomo.contrib.parmest.ScenarioCreator
+    :members:
+    :undoc-members:
+    :show-inheritance:

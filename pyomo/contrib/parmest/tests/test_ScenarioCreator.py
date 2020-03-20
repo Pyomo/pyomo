@@ -65,14 +65,6 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
         
         self.pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
 
-    ##def test_theta_est(self):
-        ##objval, thetavals = self.pest.theta_est()
-        
-        ##self.assertAlmostEqual(thetavals['k1'], 5.0/6.0, places=4) 
-        ##self.assertAlmostEqual(thetavals['k2'], 5.0/3.0, places=4) 
-        ##self.assertAlmostEqual(thetavals['k3'], 1.0/6000.0, places=7) 
-        
-
     def test_scen_from_exps(self):
         scenmaker = sc.ScenarioCreator(self.pest, "ipopt")
         experimentscens = sc.ScenarioSet("Experiments")
@@ -80,15 +72,14 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
         experimentscens.write_csv("delme_exp_csv.csv")
         df = pd.read_csv("delme_exp_csv.csv")
         os.remove("delme_exp_csv.csv")
-        print(df.head())
-        # as of March 2020, all experiments have the same theta values!
+        # March '20: all reactor_design experiments have the same theta values!
         k1val = df.loc[5].at["k1"] 
         self.assertAlmostEqual(k1val, 5.0/6.0, places=2)
 
 
 @unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-class parmest_object_Tester_reactor_design(unittest.TestCase):
+class parmest_object_Tester_semibatch(unittest.TestCase):
     
     def setUp(self):
         import pyomo.contrib.parmest.examples.semibatch.semibatch as sb
@@ -121,10 +112,6 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
         tval = bootscens.ScenarioNumber(0).ThetaVals["k1"]
         self.assertAlmostEqual(tval, 20.64, places=1)
         
-        ##obj, theta = self.pest.theta_est()
-        ##self.assertAlmostEqual(obj, 24.29, places=1)
-        ##self.assertAlmostEqual(theta["k1"], 19.14, places=1)
-
         
 if __name__ == '__main__':
     unittest.main()

@@ -1,16 +1,14 @@
-# scenario creation; DLW March 2020
-import numpy as np
-import pandas as pd
-from itertools import product
+# scenario creation example; DLW March 2020
+
 import json
 import pyomo.contrib.parmest.parmest as parmest
 from semibatch import generate_model
-import pyomo.environ as pyo
+import pyomo.contrib.parmest.ScenarioCreator as sc
 
-# Vars to estimate in parmest
+# Semibatch Vars to estimate in parmest
 theta_names = ['k1', 'k2', 'E1', 'E2']
 
-# Data, list of dictionaries
+# Semibatch data: list of dictionaries
 data = [] 
 for exp_num in range(10):
     fname = 'exp'+str(exp_num+1)+'.out'
@@ -18,32 +16,21 @@ for exp_num in range(10):
         d = json.load(infile)
         data.append(d)
 
-# Note, the model already includes a 'SecondStageCost' expression 
-# for sum of squared error that will be used in parameter estimation
-
 pest = parmest.Estimator(generate_model, data, theta_names)
 
-# create one scenario for each experiment
-for exp_num in pest._numbers_list:
-    print("Experiment number=", exp_num)
-    model = pest._instance_creation_callback(exp_num, data)
-    opt = pyo.SolverFactory('ipopt')
-    results = opt.solve(model)  # solves and updates model
-    ## pyo.check_termination_optimal(results)
-    for theta in pest.theta_names:
-        tvar = eval('model.'+theta)
-        tval = pyo.value(tvar)
-        print("    tvar, tval=", tvar, tval)
+scenmaker = sc.ScenarioCreator(pest, "ipopt")
 
+ofile = "delme_exp.csv"
+print("Make one scenario per experiment and write to {}".format(ofile))
+experimentscens = sc.ScenarioSet("Experiments")
+scenmaker.ScenariosFromExperiments(experimentscens)
+###experimentscens.write_csv(ofile)
 
-###obj, theta = pest.theta_est()
-###print(obj)
-###print(theta)
-
-### Parameter estimation with bootstrap resampling
-
-bootstrap_theta = pest.theta_est_bootstrap(10)
-print(bootstrap_theta.head())
-
-###parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'])
-
+numtomake = 3
+print("\nUse the bootstrap to make {} scenarios and print.".format(numtomake))
+bootscens = sc.ScenarioSet("Bootstrap")
+scenmaker.ScenariosFromBoostrap(bootscens, numtomake)
+for s in bootscens.ScensIterator():
+    print("{}, {}".format(s.name, s.probability))
+    for n,v in s.ThetaVals.items():
+        print("   {}={}".format(n, v))
