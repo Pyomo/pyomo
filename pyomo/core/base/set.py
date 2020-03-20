@@ -2108,7 +2108,7 @@ class Set(IndexedComponent):
 
     @staticmethod
     def _pprint_domain(x):
-        if x._domain is x:
+        if x._domain is x and isinstance(x, SetOperator):
             return x._expression_str()
         else:
             return x._domain

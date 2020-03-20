@@ -49,9 +49,14 @@ class _ImplicitAny(Any.__class__):
     change of Param's implicit domain from Any to Reals.
 
     """
+    def __new__(cls, **kwds):
+        return super(_ImplicitAny, cls).__new__(cls)
+
     def __init__(self, owner, **kwds):
         super(_ImplicitAny, self).__init__(**kwds)
         self._owner = weakref_ref(owner)
+        self._component = weakref_ref(self)
+        self.construct()
 
     def __getstate__(self):
         state = super(_ImplicitAny, self).__getstate__()
@@ -62,6 +67,9 @@ class _ImplicitAny(Any.__class__):
         _owner = state.pop('_owner')
         super(_ImplicitAny, self).__setstate__(state)
         self._owner = None if _owner is None else weakref_ref(_owner)
+
+    def __deepcopy__(self, memo):
+        return super(Any.__class__, self).__deepcopy__(memo)
 
     def __contains__(self, val):
         if val not in Reals:
