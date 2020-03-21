@@ -204,7 +204,7 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
 ERROR: setup() failed:
     %s
 Re-running setup() without the Cython modules
-""" % (e_info.message,))
+""" % (str(e_info),))
         ext_modules = []
         run_setup()
         print("""
@@ -213,4 +213,4 @@ WARNING: Installation completed successfully, but the attempt to cythonize
          optimizations and is not required for any Pyomo functionality.
          Cython returned the following error:
    "%s"
-""" % (e_info.message,))
+""" % (str(e_info),))
