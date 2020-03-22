@@ -87,7 +87,8 @@ t_ASTERISK  = r"\*"
 
 # Discard comments
 def t_COMMENT(t):
-    r'(\#[^\n]*)|(/\*(.*?).?(\*/))'
+    r'(?:\#[^\n]*)'   '|'   r'(?:/\*(?:[\n]|.)*?\*/)'
+    # Single-line and multi-line strings
 
 def t_COLONEQ(t):
     r':='
