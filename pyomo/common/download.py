@@ -165,24 +165,27 @@ class FileDownloader(object):
         return ans
 
 
-    def get_file(self, url, mode):
+    def get_file(self, url, binary):
         if self._fname is None:
             raise DeveloperError("target file name has not been initialized "
                                  "with set_destination_filename")
-        with open(self._fname, mode) as FILE:
+        with open(self._fname, 'wb' if binary else 'wt') as FILE:
             raw_file = self.retrieve_url(url)
-            FILE.write(raw_file)
+            if binary:
+                FILE.write(raw_file)
+            else:
+                FILE.write(raw_file.decode())
             logger.info("  ...wrote %s bytes" % (len(raw_file),))
 
 
     def get_binary_file(self, url):
         """Retrieve the specified url and write as a binary file"""
-        return self.get_file(url, mode='wb')
+        return self.get_file(url, binary=True)
 
 
     def get_text_file(self, url):
         """Retrieve the specified url and write as a text file"""
-        return self.get_file(url, mode='wt')
+        return self.get_file(url, binary=False)
 
 
     def get_binary_file_from_zip_archive(self, url, srcname):
