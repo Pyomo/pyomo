@@ -127,6 +127,7 @@ def t_WORD(t):
 
 def t_STRING(t):
     r'[a-zA-Z0-9_\.+\-\\\/]+'
+    # Note: RE guarantees the string has no embedded quotation characters
     t.value = '"'+t.value+'"'
     return t
 
@@ -139,6 +140,9 @@ def t_data_BRACKETEDSTRING(t):
 
 def t_QUOTEDSTRING(t):
     r'"(?:[^"]|"")*"'   '|'   r"'(?:[^']|'')*'"
+    # Normalize the quotes to use '"', and replace doubled ("escaped")
+    # quotation characters with a single character
+    t.value = '"' + t.value[1:-1].replace(2*t.value[0], t.value[0]) + '"'
     return t
 
 #t_NONWORD   = r"[^\.A-Za-z0-9,;:=<>\*\(\)\#{}\[\] \n\t\r]+"
