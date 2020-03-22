@@ -67,9 +67,8 @@ tokens = [
     "EQ",
     "TR",
     "ASTERISK",
+    "NUM_VAL",
     #"NONWORD",
-    "INT_VAL",
-    "FLOAT_VAL",
 ] + list(reserved.values())
 
 # Regular expression rules
@@ -84,6 +83,12 @@ t_TR        = r"\(tr\)"
 t_LPAREN    = r"\("
 t_RPAREN    = r"\)"
 t_ASTERISK  = r"\*"
+
+#
+# Notes on PLY tokenization
+#   - token functions (beginning with "t_") are prioritized in the order
+#     that they are declared in this module
+#
 
 # Discard comments
 def t_COMMENT(t):
@@ -100,6 +105,16 @@ def t_SEMICOLON(t):
     t.lexer.begin('INITIAL')
     return t
 
+def t_NUM_VAL(t):
+    r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?(?=[\s()\[\]{}:;,])'
+    _num = float(t.value)
+    if '.' in t.value:
+        t.value = _num
+    else:
+        _int = int(_num)
+        t.value = _int if _num == _int else _num
+    return t
+
 def t_WORDWITHLBRACKET(t):
     r'[a-zA-Z0-9_][a-zA-Z0-9_\.\-]*\['
     if t.value in reserved:
@@ -114,24 +129,6 @@ def t_WORD(t):
 
 def t_STRING(t):
     r'[a-zA-Z0-9_\.+\-\\\/]+'
-    if t.value in reserved:
-        t.type = reserved[t.value]    # Check for reserved words
-    return t
-
-def t_FLOAT_VAL(t):
-    '[-+]?[0-9]+(\.([0-9]+)?([eE][-+]?[0-9]+)?|[eE][-+]?[0-9]+)'
-    try:
-        t.value = float(t.value)
-        #t.type = "FLOAT_VAL"
-        return t
-    except:
-        print("ERROR: "+t.value)
-        raise IOError
-
-def t_INT_VAL(t):
-    '[-+]?[0-9]+([eE][-+]?[0-9]+)?'
-    #t.type = "INT_VAL"
-    t.value = int(t.value)
     return t
 
 def t_data_BRACKETEDSTRING(t):
@@ -250,19 +247,19 @@ def p_datastar(p):
 
 def p_data(p):
     '''
-    data : data WORD
+    data : data NUM_VAL
+         | data WORD
          | data STRING
          | data QUOTEDSTRING
          | data BRACKETEDSTRING
          | data SET
          | data TABLE
          | data PARAM
-         | data INT_VAL
-         | data FLOAT_VAL
          | data LPAREN
          | data RPAREN
          | data COMMA
          | data ASTERISK
+         | NUM_VAL
          | WORD
          | STRING
          | QUOTEDSTRING
@@ -270,8 +267,6 @@ def p_data(p):
          | SET
          | TABLE
          | PARAM
-         | INT_VAL
-         | FLOAT_VAL
          | LPAREN
          | RPAREN
          | COMMA
@@ -308,22 +303,20 @@ def p_args(p):
 
 def p_arg(p):
     '''
-    arg : arg COMMA WORD
+    arg : arg COMMA NUM_VAL
+         | arg COMMA WORD
          | arg COMMA STRING
          | arg COMMA QUOTEDSTRING
          | arg COMMA SET
          | arg COMMA TABLE
          | arg COMMA PARAM
-         | arg COMMA INT_VAL
-         | arg COMMA FLOAT_VAL
+         | NUM_VAL
          | WORD
          | STRING
          | QUOTEDSTRING
          | SET
          | TABLE
          | PARAM
-         | INT_VAL
-         | FLOAT_VAL
     '''
     # Locate and handle item as necessary
     single_item = len(p) == 2
@@ -356,7 +349,8 @@ def p_itemstar(p):
 
 def p_items(p):
     '''
-    items : items WORD
+    items : items NUM_VAL
+          | items WORD
           | items STRING
           | items QUOTEDSTRING
           | items COMMA
@@ -373,8 +367,7 @@ def p_items(p):
           | items SET
           | items TABLE
           | items PARAM
-          | items INT_VAL
-          | items FLOAT_VAL
+          | NUM_VAL
           | WORD
           | STRING
           | QUOTEDSTRING
@@ -392,8 +385,6 @@ def p_items(p):
           | SET
           | TABLE
           | PARAM
-          | INT_VAL
-          | FLOAT_VAL
     '''
     # Locate and handle item as necessary
     single_item = len(p) == 2
