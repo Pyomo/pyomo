@@ -22,6 +22,8 @@ from pyutilib.misc import flatten_list
 from pyutilib.ply import t_newline, t_ignore, _find_column, p_error, ply_init
         
 
+_re_number = r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?'
+
 ## -----------------------------------------------------------
 ##
 ## Lexer definitions for tokenizing the input
@@ -105,8 +107,10 @@ def t_SEMICOLON(t):
     t.lexer.begin('INITIAL')
     return t
 
+# Numbers must be followed by a delimiter token (EOF is not a concern,
+# as valid DAT files always end with a ';').
+@lex.TOKEN(_re_number + r'(?=[\s()\[\]{}:;,])')
 def t_NUM_VAL(t):
-    r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?(?=[\s()\[\]{}:;,])'
     _num = float(t.value)
     if '.' in t.value:
         t.value = _num

@@ -19,7 +19,7 @@ import pyutilib.common
 from pyutilib.misc import flatten
 
 from pyomo.dataportal.parse_datacmds import (
-    parse_data_commands, t_NUM_VAL
+    parse_data_commands, _re_number
 )
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 
@@ -44,13 +44,13 @@ logger = logging.getLogger('pyomo.core')
 global Lineno
 global Filename
 
-_num_pattern = re.compile("^("+t_NUM_VAL.__doc__+")$")
+_num_pattern = re.compile("^("+_re_number+")$")
 _str_false_values = {'False','false','FALSE'}
 _str_bool_values = {'True','true','TRUE'}
 _str_bool_values.update(_str_false_values)
 
 def _process_token(token):
-    #print("TOKEN:",token)
+    #print("TOKEN:", token, type(token))
     if type(token) is tuple:
         return tuple(_process_token(i) for i in token)
     elif type(token) in numlist:
