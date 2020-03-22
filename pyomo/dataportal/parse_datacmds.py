@@ -116,19 +116,18 @@ def t_NUM_VAL(t):
     return t
 
 def t_WORDWITHLBRACKET(t):
-    r'[a-zA-Z0-9_][a-zA-Z0-9_\.\-]*\['
-    if t.value in reserved:
-        t.type = reserved[t.value]    # Check for reserved words
+    r'[a-zA-Z_][a-zA-Z0-9_\.\-]*\['
     return t
 
 def t_WORD(t):
-    r'[a-zA-Z_0-9][a-zA-Z_0-9\.+\-]*'
+    r'[a-zA-Z_][a-zA-Z_0-9\.+\-]*'
     if t.value in reserved:
         t.type = reserved[t.value]    # Check for reserved words
     return t
 
 def t_STRING(t):
     r'[a-zA-Z0-9_\.+\-\\\/]+'
+    t.value = '"'+t.value+'"'
     return t
 
 def t_data_BRACKETEDSTRING(t):
@@ -136,14 +135,10 @@ def t_data_BRACKETEDSTRING(t):
     # NO SPACES
     # a[1,_df,'foo bar']
     # [1,*,'foo bar']
-    if t.value in reserved:
-        t.type = reserved[t.value]    # Check for reserved words
     return t
 
 def t_QUOTEDSTRING(t):
-    r'"([^"]|\"\")*"|\'([^\']|\'\')*\''
-    if t.value in reserved:
-        t.type = reserved[t.value]    # Check for reserved words
+    r'"(?:[^"]|"")*"'   '|'   r"'(?:[^']|'')*'"
     return t
 
 #t_NONWORD   = r"[^\.A-Za-z0-9,;:=<>\*\(\)\#{}\[\] \n\t\r]+"
@@ -153,6 +148,17 @@ def t_error(t):             #pragma:nocover
     raise IOError("ERROR: Token %s Value %s Line %s Column %s" % (t.type, t.value, t.lineno, t.lexpos))
     t.lexer.skip(1)
 
+## DEBUGGING: uncomment to get tokenization information
+# def _wrap(_name, _fcn):
+#     def _wrapper(t):
+#         print(_name + ": %s" % (t.value,))
+#         return _fcn(t)
+#     _wrapper.__doc__ = _fcn.__doc__
+#     return _wrapper
+# import inspect
+# for _name in list(globals()):
+#     if _name.startswith('t_') and inspect.isfunction(globals()[_name]):
+#         globals()[_name] = _wrap(_name, globals()[_name])
 
 ## -----------------------------------------------------------
 ##
@@ -278,8 +284,8 @@ def p_data(p):
         tmp = p[1]
     else:
         tmp = p[2]
-    if type(tmp) is str and tmp[0] == '"' and tmp[-1] == '"' and len(tmp) > 2 and not ' ' in tmp:
-        tmp = tmp[1:-1]
+    #if type(tmp) is str and tmp[0] == '"' and tmp[-1] == '"' and len(tmp) > 2 and not ' ' in tmp:
+    #    tmp = tmp[1:-1]
 
     # Grow items list according to parsed item length
     if single_item:
