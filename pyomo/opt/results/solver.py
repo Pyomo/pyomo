@@ -35,8 +35,6 @@ TerminationCondition = Enum(
     # OK
     'maxTimeLimit',            # Exceeded maximum time limited allowed by user
                                #    but having return a feasible solution
-    'maxDetTimeLimit',         # Exceeded deterministic maximum time limited allowed by user
-                               #    but having return a feasible solution
     'maxIterations',           # Exceeded maximum number of iterations allowed
                                #    by user (e.g., simplex iterations)
     'minFunctionValue',        # Found solution smaller than specified function
