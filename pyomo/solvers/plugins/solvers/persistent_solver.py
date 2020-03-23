@@ -386,6 +386,14 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         raise NotImplementedError('This method should be implemented by subclasses.')
 
+    def get_dettime(self):
+        """
+        Returns deterministic time if it is available for the solver
+        """
+        if hasattr(self._solver_model, 'get_dettime'):
+            return self._solver_model.get_dettime()
+        return 0
+
     def solve(self, *args, **kwds):
         """
         Solve the model.
@@ -455,12 +463,12 @@ class PersistentSolver(DirectOrPersistentSolver):
 
             # we're good to go.
             initial_time = time.time()
-            initial_det_time = self._solver_model.get_dettime()
+            initial_det_time = self.get_dettime()
 
             self._presolve(**kwds)
 
             presolve_completion_time = time.time()
-            presolve_completion_dettime = self._solver_model.get_dettime()
+            presolve_completion_dettime = self.get_dettime()
 
             if self._report_timing:
                 print("      %6.2f seconds required for presolve" % (presolve_completion_time - initial_time))
@@ -489,7 +497,7 @@ class PersistentSolver(DirectOrPersistentSolver):
                 raise ApplicationError(
                     "Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
-            solve_completion_dettime = self._solver_model.get_dettime()
+            solve_completion_dettime = self.get_dettime()
             if self._report_timing:
                 print("      %6.2f seconds required for solver" % (solve_completion_time - presolve_completion_time))
                 print("      %6.2f ticks required for solver" % (solve_completion_dettime - presolve_completion_dettime))
@@ -535,7 +543,7 @@ class PersistentSolver(DirectOrPersistentSolver):
                             _model.solutions.delete_symbol_map(self._smap_id)
             # ********************************************************
             postsolve_completion_time = time.time()
-            postsolve_completion_dettime = self._solver_model.get_dettime()
+            postsolve_completion_dettime = self.get_dettime()
 
             if self._report_timing:
                 print("      %6.2f seconds required for postsolve" % (postsolve_completion_time -
