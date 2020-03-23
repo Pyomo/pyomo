@@ -264,6 +264,8 @@ class CPLEXDirectTests(unittest.TestCase):
             self.assertEqual(model.solutions[0].status,
                              SolutionStatus.stoppedByLimit)
 
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_dettime_limit_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
             nodes = list(range(20))
