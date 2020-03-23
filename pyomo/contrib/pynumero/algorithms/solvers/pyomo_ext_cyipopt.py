@@ -22,8 +22,7 @@ To use this interface:
      that map to the outputs from the external model.
    * The standard CyIpopt solver interface can be called using the PyomoExternalCyIpoptProblem
 
-See the PyNumero examples to see the module in use.
-You can also look at the tests for this interface to see an example of use.
+See the PyNumero tests for this interface to see an example of use.
 
 Todo:
    * Currently, you cannot "fix" a pyomo variable that corresponds to an input or output
