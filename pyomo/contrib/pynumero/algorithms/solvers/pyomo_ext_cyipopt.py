@@ -1,4 +1,6 @@
 import numpy as np
+import six
+import abc
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptProblemInterface
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
@@ -21,6 +23,7 @@ To use this interface:
    * The standard CyIpopt solver interface can be called using the PyomoExternalCyIpoptProblem
 
 See the PyNumero examples to see the module in use.
+You can also look at the tests for this interface to see an example of use.
 
 Todo:
    * Currently, you cannot "fix" a pyomo variable that corresponds to an input or output
@@ -29,7 +32,7 @@ Todo:
    * Remove the dummy variable and constraint once Pyomo supports non-removal of certain
      variables
 """
-
+@six.add_metaclass(abc.ABCMeta)
 class ExternalInputOutputModel(object):
     """
     This is the base class for building external input output models
@@ -37,17 +40,26 @@ class ExternalInputOutputModel(object):
     """
     def __init__(self):
         pass
-    
+
+    @abc.abstractmethod
     def set_inputs(self, input_values):
+        """
+        This method is called by the solver to set the current values
+        for the input variables. The derived class must cache these if
+        necessary for any subsequent calls to evalute_outputs or
+        evaluate_derivatives.
+        """
         pass
 
+    @abc.abstractmethod
     def evaluate_outputs(self):
         """
         Compute the outputs from the model (using the values
         set in input_values) and return as a numpy array
         """
-        raise NotImplementedError('evaluate_external_model not implemented.')
+        pass
 
+    @abc.abstractmethod
     def evaluate_derivatives(self):
         """
         Compute the derivatives of the outputs with respect
@@ -56,12 +68,35 @@ class ExternalInputOutputModel(object):
         the order of the output variables and the cols in
         the order of the input variables.
         """
-        raise NotImplementedError('evaluate_derivatives not implemented')
+        pass
 
     # ToDo: Hessians not yet handled
 
 class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
     def __init__(self, pyomo_model, ex_input_output_model, inputs, outputs):
+        """
+        Create an instance of this class to pass as a problem to CyIpopt.
+
+        Parameters
+        ----------
+        pyomo_model : ConcreteModel
+           The ConcreteModel representing the Pyomo part of the problem. This
+           model must contain Pyomo variables for the inputs and the outputs.
+
+        ex_input_output_model : ExternalInputOutputModel
+           An instance of a derived class (from ExternalInputOutputModel) that provides
+           the methods to compute the outputs and the derivatives.
+
+        inputs : list of Pyomo variables (_VarData)
+           The Pyomo model needs to have variables to represent the inputs to the 
+           external model. This is the list of those input variables in the order 
+           that corresponds to the input_values vector provided in the set_inputs call.
+
+        outputs : list of Pyomo variables (_VarData)
+          The Pyomo model needs to have variables to represent the outputs from the
+          external model. This is the list of those output variables in the order
+          that corresponds to the numpy array returned from the evaluate_outputs call.
+        """
         self._pyomo_model = pyomo_model
         self._ex_io_model = ex_input_output_model
 
@@ -168,6 +203,17 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         # currently, this interface does not do anything with Hessians
 
     def load_x_into_pyomo(self, primals):
+        """
+        Use this method to load a numpy array of values into the corresponding
+        Pyomo variables (e.g., the solution from CyIpopt)
+
+        Parameters
+        ----------
+        primals : numpy array
+           The array of values that will be given to the Pyomo variables. The
+           order of this array is the same as the order in the PyomoNLP created
+           internally.
+        """
         pyomo_variables = self._pyomo_nlp.get_pyomo_variables()
         for i,v in enumerate(primals):
             pyomo_variables[i].set_value(v)
