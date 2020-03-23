@@ -117,19 +117,16 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         # we need to add a dummy variable and constraint to the pyomo_nlp
         # to make sure it does not remove variables that do not
         # appear in the pyomo part of the model
-        # ToDo: Find a better way to do this
+        # ToDo: Improve this by convincing Pyomo not to remote the inputs and outputs
         if hasattr(self._pyomo_model, '_dummy_constraint_CyIpoptPyomoExNLP'):
-            del self._pyomo_model._dummy_constraint_CyIPoptPyomoExNLP
+            del self._pyomo_model._dummy_constraint_CyIpoptPyomoExNLP
         if hasattr(self._pyomo_model, '_dummy_variable_CyIpoptPyomoExNLP'):
-            del self._pyomo_model._dummy_variable_CyIPoptPyomoExNLP
+            del self._pyomo_model._dummy_variable_CyIpoptPyomoExNLP
         
         self._pyomo_model._dummy_variable_CyIpoptPyomoExNLP = Var()
-        self._pyomo_model._dummy_constraint_CyIPoptPyomoExNLP = Constraint(
-            expr = 0 == sum(v for v in self._pyomo_model.component_data_objects(ctype=Var,
-                                                                                 descend_into=True,
-                                                                                 active=True)
-                           )
-           )
+        self._pyomo_model._dummy_constraint_CyIpoptPyomoExNLP = Constraint(
+            expr = self._pyomo_model._dummy_variable_CyIpoptPyomoExNLP == \
+               sum(v for v in self._inputs) + sum(v for v in self._outputs))
 
         # make an nlp interface from the pyomo model
         self._pyomo_nlp = PyomoNLP(self._pyomo_model)
@@ -138,9 +135,9 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         init_primals = self._pyomo_nlp.init_primals()
         init_duals_pyomo = self._pyomo_nlp.init_duals()
         if np.any(np.isnan(init_duals_pyomo)):
-            # set initial values to 1 if we did not get
-            # any from Pyomo
-            init_duals_pyomo.fill(1.0)
+            # set initial values to 1 for any entries that we don't get
+            # (typically, all are set, or none are set)
+            init_duals_pyomo[np.isnan(init_duals_pyomo)] = 1.0
         init_duals_ex = np.ones(len(self._outputs), dtype=np.float64)
         init_duals = BlockVector(2)
         init_duals.set_block(0, init_duals_pyomo)
@@ -148,11 +145,11 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
         # build the map from inputs and outputs to the full x vector
         self._input_columns = self._pyomo_nlp.get_primal_indices(self._inputs)
-        self._input_x_mask = np.zeros(self._pyomo_nlp.n_primals(), dtype=np.float64)
-        self._input_x_mask[self._input_columns] = 1.0
+        #self._input_x_mask = np.zeros(self._pyomo_nlp.n_primals(), dtype=np.float64)
+        #self._input_x_mask[self._input_columns] = 1.0
         self._output_columns = self._pyomo_nlp.get_primal_indices(self._outputs)
-        self._output_x_mask = np.zeros(self._pyomo_nlp.n_primals(), dtype=np.float64)
-        self._output_x_mask[self._output_columns] = 1.0
+        #self._output_x_mask = np.zeros(self._pyomo_nlp.n_primals(), dtype=np.float64)
+        #self._output_x_mask[self._output_columns] = 1.0
         
         # create caches for primals and duals
         self._cached_primals = init_primals.copy()
@@ -306,10 +303,12 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         raise NotImplementedError('No Hessians for now')
 
     def _ex_io_inputs_from_full_primals(self, primals):
-        return np.compress(self._input_x_mask, primals)
+        return primals[self._input_columns]
+        #return np.compress(self._input_x_mask, primals)
 
     def _ex_io_outputs_from_full_primals(self, primals):
-        return  np.compress(self._output_x_mask, primals)
+        return primals[self._output_columns]
+        #return  np.compress(self._output_x_mask, primals)
 
     
         
