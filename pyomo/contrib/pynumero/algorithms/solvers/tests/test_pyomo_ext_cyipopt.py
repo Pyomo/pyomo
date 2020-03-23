@@ -53,7 +53,8 @@ class PressureDropModel(ExternalInputOutputModel):
     def evaluate_derivatives(self):
         jac = [[1, -self._F**2, 0, -2*self._c1*self._F],
                [1, -self._F**2, -self._F**2, -2*self._F*(self._c1 + self._c2)]]
-        return np.asarray(jac, dtype=np.float64)
+        jac = np.asarray(jac, dtype=np.float64)
+        return spa.coo_matrix(jac)
 
 class TestExternalInputOutputModel(unittest.TestCase):
 
@@ -68,7 +69,7 @@ class TestExternalInputOutputModel(unittest.TestCase):
 
         jac = iom.evaluate_derivatives()
         expected_jac = np.asarray([[1, -1, 0, -2], [1, -1, -1, -4]], dtype=np.float64)
-        self.assertTrue(np.array_equal(jac, expected_jac))
+        self.assertTrue(np.array_equal(jac.todense(), expected_jac))
 
     def test_pyomo_external_model(self):
         m = pyo.ConcreteModel()

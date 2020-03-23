@@ -181,24 +181,39 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         # We will be mapping the dense external jacobian (doutputs/dinputs)
         # to the correct columns from the full x vector
         ex_start_row = self._pyomo_nlp.n_constraints()
+
         jac_ex = self._ex_io_model.evaluate_derivatives()
-        jac_ex_irows = list()
-        jac_ex_jcols = list()
-        jac_ex_data = list()
-        for i in range(len(self._outputs)):
-            for j in range(len(self._inputs)):
-                jac_ex_irows.append(ex_start_row + i)
-                jac_ex_jcols.append(self._input_columns[j])
-                jac_ex_data.append(jac_ex[i,j])
+
+        # the jacobian returned from the external model is in the
+        # space of the external model only. We need to shift
+        # the rows down and shift the columns appropriately
+        jac_ex_irows = np.copy(jac_ex.row)
+        jac_ex_irows += ex_start_row
+        jac_ex_jcols = np.copy(jac_ex.col)
+        for z,col in enumerate(jac_ex_jcols):
+            jac_ex_jcols[z] = self._input_columns[col]
+        jac_ex_data = np.copy(jac_ex.data)
+
+        # CDL: this code was for the dense version of evaluate_derivatives
+        # for i in range(len(self._outputs)):
+        #     for j in range(len(self._inputs)):
+        #         jac_ex_irows.append(ex_start_row + i)
+        #         jac_ex_jcols.append(self._input_columns[j])
+        #         jac_ex_data.append(jac_ex[i,j])
+
+        jac_ex_output_irows = list()
+        jac_ex_output_jcols = list()
+        jac_ex_output_data = list()
+
         # add the jac for output variables from the extra equations
         for i in range(len(self._outputs)):
-           jac_ex_irows.append(ex_start_row + i)
-           jac_ex_jcols.append(self._output_columns[i])
-           jac_ex_data.append(-1.0)
+           jac_ex_output_irows.append(ex_start_row + i)
+           jac_ex_output_jcols.append(self._output_columns[i])
+           jac_ex_output_data.append(-1.0)
 
-        self._full_jac_irows = np.concatenate((self._jac_pyomo.row, jac_ex_irows))
-        self._full_jac_jcols = np.concatenate((self._jac_pyomo.col, jac_ex_jcols))
-        self._full_jac_data = np.concatenate((self._jac_pyomo.data, jac_ex_data))
+        self._full_jac_irows = np.concatenate((self._jac_pyomo.row, jac_ex_irows, jac_ex_output_irows))
+        self._full_jac_jcols = np.concatenate((self._jac_pyomo.col, jac_ex_jcols, jac_ex_output_jcols))
+        self._full_jac_data = np.concatenate((self._jac_pyomo.data, jac_ex_data, jac_ex_output_data))
 
         # currently, this interface does not do anything with Hessians
 
@@ -275,9 +290,11 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         self._set_primals_if_necessary(primals)
         self._pyomo_nlp.evaluate_jacobian(out=self._jac_pyomo)
         pyomo_data = self._jac_pyomo.data
-        ex_io_deriv = self._ex_io_model.evaluate_derivatives().flatten('C')
+        ex_io_deriv = self._ex_io_model.evaluate_derivatives()
+        # CDL: dense version: ex_io_deriv = self._ex_io_model.evaluate_derivatives().flatten('C')
         self._full_jac_data[0:len(pyomo_data)] = pyomo_data
-        self._full_jac_data[len(pyomo_data):len(pyomo_data)+len(ex_io_deriv)] = ex_io_deriv
+        self._full_jac_data[len(pyomo_data):len(pyomo_data)+len(ex_io_deriv.data)] = ex_io_deriv.data
+        # CDL: dense version: self._full_jac_data[len(pyomo_data):len(pyomo_data)+len(ex_io_deriv)] = ex_io_deriv
 
         # the -1s for the output variables should still be  here
         return self._full_jac_data
