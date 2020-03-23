@@ -93,8 +93,10 @@ t_ASTERISK  = r"\*"
 #
 
 # Discard comments
+_re_singleline_comment = r'(?:\#[^\n]*)'
+_re_multiline_comment = r'(?:/\*(?:[\n]|.)*?\*/)'
+@lex.TOKEN('|'.join([_re_singleline_comment, _re_multiline_comment]))
 def t_COMMENT(t):
-    r'(?:\#[^\n]*)'   '|'   r'(?:/\*(?:[\n]|.)*?\*/)'
     # Single-line and multi-line strings
 
 def t_COLONEQ(t):
@@ -142,8 +144,9 @@ def t_data_BRACKETEDSTRING(t):
     # [1,*,'foo bar']
     return t
 
+_re_quoted_str = r'"(?:[^"]|"")*"'
+@lex.TOKEN("|".join([_re_quoted_str, _re_quoted_str.replace('"',"'")]))
 def t_QUOTEDSTRING(t):
-    r'"(?:[^"]|"")*"'   '|'   r"'(?:[^']|'')*'"
     # Normalize the quotes to use '"', and replace doubled ("escaped")
     # quotation characters with a single character
     t.value = '"' + t.value[1:-1].replace(2*t.value[0], t.value[0]) + '"'
@@ -152,8 +155,9 @@ def t_QUOTEDSTRING(t):
 #t_NONWORD   = r"[^\.A-Za-z0-9,;:=<>\*\(\)\#{}\[\] \n\t\r]+"
 
 # Error handling rule
-def t_error(t):             #pragma:nocover
-    raise IOError("ERROR: Token %s Value %s Line %s Column %s" % (t.type, t.value, t.lineno, t.lexpos))
+def t_error(t):
+    raise IOError("ERROR: Token %s Value %s Line %s Column %s"
+                  % (t.type, t.value, t.lineno, t.lexpos))
     t.lexer.skip(1)
 
 ## DEBUGGING: uncomment to get tokenization information
