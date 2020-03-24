@@ -65,18 +65,6 @@ def get_version():
             platform.release() )
 
 #
-# `BaseException.message` is deprecated as of Python 2.6, its usage triggers
-# a `DeprecationWarning`.  As `ArgumentError` derives indirectly from
-# `BaseException`, `ArgumentError.message` triggers this warning too
-#
-if sys.version_info[:2] == (2,6):
-    warnings.filterwarnings(
-        'ignore',
-        message='BaseException.message has been deprecated as of Python 2.6',
-        category=DeprecationWarning,
-        module='argparse')
-
-#
 # Create the argparse parser for Pyomo
 #
 doc="This is the main driver for the Pyomo optimization software."
