@@ -33,12 +33,12 @@ jobs:
       run: |
         if hash brew; then
             echo "Install pre-dependencies for pyodbc..."
-            brew update 
+            brew update
             brew install bash gcc
             brew link --overwrite gcc
             brew install pkg-config
             brew install unixodbc
-            brew install freetds 
+            brew install freetds
         fi
         echo "Upgrade pip..."
         python -m pip install --upgrade pip
