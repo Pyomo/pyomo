@@ -7,7 +7,7 @@ from copy import deepcopy
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.core import (Block, Expression, Objective, TransformationFactory,
                         Var, minimize, value, Constraint)
 from pyomo.gdp import Disjunct
@@ -76,21 +76,13 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
 
     try:
         with SuppressInfeasibleWarning():
-            mip_args = dict(config.mip_solver_args)
-            elapsed = get_main_elapsed_time(solve_data.timing)
-            remaining = max(config.time_limit - elapsed, 1)
-            if config.mip_solver == 'gams':
-                mip_args['add_options'] = mip_args.get('add_options', [])
-                mip_args['add_options'].append('option reslim=%s;' % remaining)
-            elif config.mip_solver == 'multisolve':
-                mip_args['time_limit'] = min(mip_args.get(
-                    'time_limit', float('inf')), remaining)
-            results = SolverFactory(config.mip_solver).solve(
-                m, **mip_args)
+            opt = SolverFactory(config.mip_solver)
+            if isinstance(opt,PersistentSolver):
+                opt.set_instance(m)
+            results = opt.solve(m, **config.mip_solver_args)
     except RuntimeError as e:
         if 'GAMS encountered an error during solve.' in str(e):
-            config.logger.warning(
-                "GAMS encountered an error in solve. Treating as infeasible.")
+            config.logger.warning("GAMS encountered an error in solve. Treating as infeasible.")
             mip_result = MasterProblemResult()
             mip_result.feasible = False
             mip_result.var_values = list(v.value for v in GDPopt.variable_list)
@@ -118,11 +110,10 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
             'Check your initialization routine.'.format(obj_bound))
         main_objective = next(m.component_data_objects(Objective, active=True))
-        GDPopt.objective_bound = Constraint(
-            expr=(-obj_bound, main_objective.expr, obj_bound))
+        GDPopt.objective_bound = Constraint(expr=(-obj_bound, main_objective.expr, obj_bound))
         with SuppressInfeasibleWarning():
             opt = SolverFactory(config.mip_solver)
-            if isinstance(opt, PersistentSolver):
+            if isinstance(opt,PersistentSolver):
                 opt.set_instance(m)
             results = opt.solve(
                 m, **config.mip_solver_args)
@@ -179,7 +170,7 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
     tmp_args['options']['DualReductions'] = 0
     with SuppressInfeasibleWarning():
         mipopt = SolverFactory(config.mip_solver)
-        if isinstance(mipopt, PersistentSolver):
+        if isinstance(mipopt,PersistentSolver):
             mipopt.set_instance(m)
         results = mipopt.solve(m, **tmp_args)
     termination_condition = results.solver.termination_condition

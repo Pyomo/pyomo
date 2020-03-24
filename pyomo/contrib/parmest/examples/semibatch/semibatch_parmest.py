@@ -1,13 +1,3 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 import numpy as np
 import pandas as pd
 from itertools import product
@@ -41,9 +31,7 @@ print(theta)
 bootstrap_theta = pest.theta_est_bootstrap(50)
 print(bootstrap_theta.head())
 
-parmest.pairwise_plot(bootstrap_theta, title='Bootstrap theta estimates')
-parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'], 
-                      title='Bootstrap theta with confidence regions')
+parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'])
 
 ### Likelihood ratio test
 
@@ -60,5 +48,4 @@ LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
 print(LR.head())
 
 theta_slice = {'k1': 19, 'k2': theta['k2'], 'E1': 30524, 'E2': theta['E2']}
-parmest.pairwise_plot(LR, theta_slice, 0.8, 
-                      title='LR results within 80% confidence region')
+parmest.pairwise_plot(LR, theta_slice, 0.8)

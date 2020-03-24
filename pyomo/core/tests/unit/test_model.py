@@ -18,17 +18,22 @@ import sys
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 import pickle
-
 import pyutilib.th as unittest
 import pyutilib.services
-
-from pyomo.common.dependencies import yaml_available
-from pyomo.core.expr import current as EXPR
-from pyomo.environ import *
-from pyomo.opt import SolutionStatus, check_available_solvers
+import pyomo.opt
+from pyomo.opt import SolutionStatus
 from pyomo.opt.parallel.local import SolverManager_Serial
+from pyomo.environ import *
+from pyomo.core.expr import current as EXPR
 
-solvers = check_available_solvers('glpk')
+solvers = pyomo.opt.check_available_solvers('glpk')
+
+try:
+    import yaml
+    yaml_available=True
+except ImportError:
+    yaml_available=False
+
 
 class Test(unittest.TestCase):
 

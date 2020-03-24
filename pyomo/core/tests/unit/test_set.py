@@ -23,9 +23,8 @@ except ImportError:
 
 import pyutilib.th as unittest
 
-from pyomo.common import DeveloperError
-from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.log import LoggingIntercept
+from pyomo.common import DeveloperError
 from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.indexed_component import normalize_index
@@ -63,6 +62,11 @@ from pyomo.environ import (
     Objective,
 )
 
+try:
+    import numpy as np
+    numpy_available = True
+except ImportError:
+    numpy_available = False
 
 class Test_SetInitializer(unittest.TestCase):
     def test_single_set(self):

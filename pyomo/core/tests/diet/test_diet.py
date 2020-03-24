@@ -12,6 +12,8 @@ import os
 from nose.tools import nottest
 
 import pyutilib.th as unittest
+from pyutilib.misc.pyyaml_util import *
+import pyutilib.common
 
 import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers

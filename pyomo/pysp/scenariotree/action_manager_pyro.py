@@ -20,12 +20,14 @@ try:
 except:
     import pickle
 
-from pyomo.common.dependencies import attempt_import
+import pyutilib.pyro
+from pyutilib.pyro import using_pyro3, using_pyro4, TaskProcessingError
+if using_pyro4:
+    import Pyro4
+from pyutilib.pyro import Pyro as _pyro
+from pyutilib.pyro.util import _connection_problem
 from pyomo.opt.parallel.manager import ActionStatus
 from pyomo.opt.parallel.pyro import PyroAsynchronousActionManager
-
-pyu_pyro = attempt_import('pyutilib.pyro', alt_names=['pyu_pyro'])[0]
-Pyro4 = attempt_import('Pyro4')[0]
 
 import six
 from six import advance_iterator, iteritems, itervalues
@@ -100,11 +102,11 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
                 break
 
             try:
-                dispatchers = pyu_pyro.util.get_dispatchers(
+                dispatchers = pyutilib.pyro.util.get_dispatchers(
                     host=self.host,
                     port=self.port,
                     caller_name="Client")
-            except pyu_pyro.util._connection_problem:
+            except _connection_problem:
                 print("Failed to obtain one or more dispatchers from nameserver")
                 continue
             for (name, uri) in dispatchers:
@@ -112,21 +114,21 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
                 server_names = None
                 if name not in dispatcher_proxies:
                     # connect to the dispatcher
-                    if pyu_pyro.using_pyro3:
-                        dispatcher = pyu_pyro.Pyro.core.getProxyForURI(uri)
+                    if using_pyro3:
+                        dispatcher = _pyro.core.getProxyForURI(uri)
                     else:
-                        dispatcher = pyu_pyro.Pyro.Proxy(uri)
+                        dispatcher = _pyro.Proxy(uri)
                         dispatcher._pyroTimeout = 10
                     try:
                         server_names = dispatcher.acquire_available_workers()
-                    except pyu_pyro.util._connection_problem:
-                        if pyu_pyro.using_pyro4:
+                    except _connection_problem:
+                        if using_pyro4:
                             dispatcher._pyroRelease()
                         else:
                             dispatcher._release()
                         continue
                     dispatcher_proxies[name] = dispatcher
-                    if pyu_pyro.using_pyro4:
+                    if using_pyro4:
                         dispatcher._pyroTimeout = None
                 else:
                     dispatcher = dispatcher_proxies[name]
@@ -185,7 +187,7 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
             if len(servers) == 0:
                 # release the proxy to this dispatcher,
                 # we don't need it
-                if pyu_pyro.using_pyro4:
+                if using_pyro4:
                     dispatcher._pyroRelease()
                 else:
                     dispatcher._release()
@@ -260,7 +262,7 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
                     # The only reason we are go through this much
                     # effort to deal with the serpent serializer
                     # is because it is the default in Pyro4.
-                    if pyu_pyro.using_pyro4 and \
+                    if using_pyro4 and \
                        (Pyro4.config.SERIALIZER == 'serpent'):
                         if six.PY3:
                             assert type(task['result']) is dict
@@ -283,7 +285,7 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
                             "below:\n%s" % (type(self).__name__,
                                             task['id'],
                                             task.get('result', None)))
-                    if type(task['result']) is pyu_pyro.TaskProcessingError:
+                    if type(task['result']) is TaskProcessingError:
                         ah.status = ActionStatus.error
                         self.event_handle[ah.id].update(ah)
                         msg = ("ScenarioTreeServer reported a processing "

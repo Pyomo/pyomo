@@ -18,10 +18,6 @@ from pyomo.environ import (
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.dae.simulator import (
-    is_pypy,
-    scipy_available,
-    casadi,
-    casadi_available,
     Simulator, 
     _check_getitemexpression, 
     _check_productexpression,
@@ -42,8 +38,21 @@ from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
 
-# We will skip tests unless we have scipy and not running in pypy
-scipy_available = scipy_available and not is_pypy
+try:
+    import casadi 
+    casadi_available = True
+except ImportError:
+    casadi_available = False
+
+try:
+    import platform
+    if platform.python_implementation() == "PyPy":
+        # Scipy is importable into PyPy, but ODE integrators don't work. (2/18)
+        raise ImportError
+    import scipy 
+    scipy_available = True
+except ImportError:
+    scipy_available = False
 
 
 class TestSimulator(unittest.TestCase):

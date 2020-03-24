@@ -11,6 +11,7 @@
 import logging
 from six import iteritems
 
+import pyomo.common
 from pyomo.common.deprecation import deprecated
 from pyomo.core.base import (Transformation,
                              TransformationFactory,

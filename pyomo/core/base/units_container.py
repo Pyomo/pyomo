@@ -87,16 +87,14 @@ Notes:
 #    * Implement external function interface that specifies units for the arguments and the function itself
 
 
-from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import current as expr
 import six
-pint_module, pint_available = attempt_import(
-    'pint', defer_check=True, error_message=
-    "The PyomoUnitsContainer in the units_container module requires"
-    " the package 'pint', but this package could not be imported."
-    " Please make sure you have 'pint' installed.")
+try:
+    import pint as pint_module
+except ImportError:
+    pint_module = None
 
 class UnitsError(Exception):
     """
@@ -1068,6 +1066,12 @@ class PyomoUnitsContainer(object):
     @property
     def _pint_registry(self):
         """ Return the pint.UnitsRegistry instance corresponding to this container. """
+        if pint_module is None:
+            # pint was not imported for some reason
+            raise RuntimeError("The PyomoUnitsContainer in the units_container module requires"
+                              " the package 'pint', but this package could not be imported."
+                              " Please make sure you have 'pint' installed.")
+
         if self.__pint_registry is None:
             self.__pint_registry = pint_module.UnitRegistry()
 

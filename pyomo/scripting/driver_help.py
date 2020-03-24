@@ -20,7 +20,7 @@ import argparse
 import pyutilib.subprocess
 from pyutilib.misc import Options
 
-import pyomo.common
+from pyomo.common import get_pyomo_commands
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -86,7 +86,7 @@ def help_commands():
     print("")
     print("The following commands are installed with Pyomo:")
     print("-"*75)
-    registry = pyomo.common.get_pyomo_commands()
+    registry = get_pyomo_commands()
     d = max(len(key) for key in registry)
     fmt = "%%-%ds  %%s" % d
     for key in sorted(registry.keys(), key=lambda v: v.upper()):
@@ -139,6 +139,7 @@ def help_datamanagers(options):
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
 def help_api(options):
+    import pyomo.common
     services = pyomo.common.PyomoAPIFactory.services()
     #
     f = {}

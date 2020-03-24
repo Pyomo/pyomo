@@ -17,7 +17,6 @@ currdir = dirname(abspath(__file__))
 
 import pyutilib.th as unittest
 
-from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.scripting.pyomo_command as main
 from pyomo.scripting.util import cleanup
 from pyomo.neos.kestrel import kestrelAMPL
@@ -34,6 +33,12 @@ try:
         neos_available = True
 except:
     pass
+
+try:
+    import yaml
+    yaml_available=True
+except ImportError:
+    yaml_available=False
 
 
 #
@@ -62,7 +67,7 @@ class TestKestrel(unittest.TestCase):
             self.assertEqual(output.errorcode, 0)
 
             with open(results) as FILE:
-                data = yaml.load(FILE, **yaml_load_args)
+                data = yaml.load(FILE)
             self.assertEqual(
                 data['Solver'][0]['Status'], 'ok')
             self.assertAlmostEqual(

@@ -15,15 +15,12 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyomo.common.dependencies import attempt_import
+import pyutilib.pyro
 from pyomo.opt.parallel.manager import \
     (AsynchronousActionManager,
      ActionManagerError,
      ActionHandle,
      ActionStatus)
-
-pyu_pyro = attempt_import('pyutilib.pyro', alt_names=['pyu_pyro'])[0]
-
 
 #
 # a specialized asynchronous action manager for Pyro based managers
@@ -146,9 +143,9 @@ class PyroAsynchronousActionManager(AsynchronousActionManager):
 
     def _create_client(self, dispatcher=None):
         if dispatcher is None:
-            client = pyu_pyro.Client(host=self.host, port=self.port)
+            client = pyutilib.pyro.Client(host=self.host, port=self.port)
         else:
-            client = pyu_pyro.Client(dispatcher=dispatcher)
+            client = pyutilib.pyro.Client(dispatcher=dispatcher)
         if client.URI in self._dispatcher_name_to_client:
             self._dispatcher_name_to_client[client.URI].close()
         self._dispatcher_name_to_client[client.URI] = client
@@ -169,9 +166,9 @@ class PyroAsynchronousActionManager(AsynchronousActionManager):
 
         dispatcher_name = self._get_dispatcher_name(queue_name)
         task_data = self._get_task_data(ah, *args, **kwds)
-        task = pyu_pyro.Task(data=task_data,
-                            id=ah.id,
-                            generateResponse=generate_response)
+        task = pyutilib.pyro.Task(data=task_data,
+                                  id=ah.id,
+                                  generateResponse=generate_response)
 
         if self._paused:
             if dispatcher_name not in self._paused_task_dict:

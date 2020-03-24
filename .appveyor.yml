@@ -44,9 +44,7 @@ environment:
     - PYTHON_VERSION: 3.6
       PYTHON: "C:\\Miniconda36"
       CATEGORY: "nightly"
-      # [200316]: disable extras because of installation dependency 
-      # issues on appveyor
-      #EXTRAS: YES
+      EXTRAS: YES
 
     - PYTHON_VERSION: 3.7
       PYTHON: "C:\\Miniconda37"

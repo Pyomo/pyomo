@@ -28,6 +28,7 @@ from pyomo.repn.standard_repn import (preprocess_block_objectives,
                                       preprocess_block_constraints,
                                       preprocess_constraint_data)
 
+import pyomo.common
 from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_common_option)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject

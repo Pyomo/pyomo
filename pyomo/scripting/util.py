@@ -22,6 +22,11 @@ from six.moves import xrange
 from pyomo.common import pyomo_api
 
 try:
+    import yaml
+    yaml_available=True
+except ImportError:
+    yaml_available=False
+try:
     import cProfile as profile
 except ImportError:
     import profile
@@ -31,18 +36,32 @@ try:
 except ImportError:
     pstats_available=False
 
+try:
+    import IPython
+    IPython_available=True
+    from IPython.Shell import IPShellEmbed
+except:
+    IPython_available=False
+else:
+    ipshell = IPShellEmbed([''],
+                banner = '\n# Dropping into Python interpreter',
+                exit_msg = '\n# Leaving Interpreter, back to Pyomo\n')
+
 from pyutilib.misc import Options
+try:
+    from pympler import muppy
+    from pympler import summary
+    from pympler.asizeof import *
+    pympler_available = True
+except:
+    pympler_available = False
 memory_data = Options()
 
 import pyutilib.misc
+from pyomo.common.plugin import ExtensionPoint, Plugin, implements
 from pyutilib.misc import Container
 from pyutilib.services import TempfileManager
 
-from pyomo.common.dependencies import (
-    yaml, yaml_available, yaml_load_args,
-    pympler, pympler_available,
-)
-from pyomo.common.plugin import ExtensionPoint, Plugin, implements
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
@@ -51,9 +70,6 @@ from pyomo.core import *
 from pyomo.core.base import TextLabeler
 import pyomo.core.base
 
-# Importing IPython is slow; defer the import to the point that it is
-# actually needed.
-IPython_available = None
 
 filter_excepthook=False
 modelapi = {    'pyomo_create_model':IPyomoScriptCreateModel,
@@ -247,9 +263,9 @@ def create_model(data):
         sys.stdout.write('[%8.2f] Creating model\n' % (time.time()-start_time))
         sys.stdout.flush()
     #
-    if data.options.runtime.profile_memory >= 1 and pympler_available:
+    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
         global memory_data
-        mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
+        mem_used = muppy.get_size(muppy.get_objects())
         data.local.max_memory = mem_used
         print("   Total memory = %d bytes prior to model construction" % mem_used)
     #
@@ -391,7 +407,13 @@ def create_model(data):
                                                  profile_memory=data.options.runtime.profile_memory,
                                                  report_timing=data.options.runtime.report_timing)
             elif suffix == "yml" or suffix == 'yaml':
-                modeldata = yaml.load(open(data.options.data.files[0]), **yaml_load_args)
+                try:
+                    import yaml
+                except:
+                    msg = "Cannot apply load data from a YAML file: PyYaml is not installed"
+                    raise SystemExit(msg)
+
+                modeldata = yaml.load(open(data.options.data.files[0]))
                 instance = model.create_instance(modeldata,
                                                  namespaces=data.options.data.namespaces,
                                                  profile_memory=data.options.runtime.profile_memory,
@@ -471,19 +493,19 @@ def create_model(data):
             total_time = time.time() - write_start_time
             print("      %6.2f seconds required to write file" % total_time)
 
-        if data.options.runtime.profile_memory >= 2 and pympler_available:
+        if (pympler_available is True) and (data.options.runtime.profile_memory >= 2):
             print("")
             print("      Summary of objects following file output")
-            post_file_output_summary = pympler.summary.summarize(pympler.muppy.get_objects())
-            pympler.summary.print_(post_file_output_summary, limit=100)
+            post_file_output_summary = summary.summarize(muppy.get_objects())
+            summary.print_(post_file_output_summary, limit=100)
 
             print("")
 
     for ep in ExtensionPoint(IPyomoScriptSaveInstance):
         ep.apply( options=data.options, instance=instance )
 
-    if data.options.runtime.profile_memory >= 1 and pympler_available:
-        mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
+    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
+        mem_used = muppy.get_size(muppy.get_objects())
         if mem_used > data.local.max_memory:
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following Pyomo instance creation" % mem_used)
@@ -628,9 +650,10 @@ def apply_optimizer(data, instance=None):
             #
             results = solver_mngr.solve(instance, opt=solver, **keywords)
 
-    if data.options.runtime.profile_memory >= 1 and pympler_available:
+    if (pympler_available is True) and \
+       (data.options.runtime.profile_memory >= 1):
         global memory_data
-        mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
+        mem_used = muppy.get_size(muppy.get_objects())
         if mem_used > data.local.max_memory:
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following optimization" % mem_used)
@@ -717,9 +740,9 @@ def process_results(data, instance=None, results=None, opt=None):
     for ep in ExtensionPoint(IPyomoScriptSaveResults):
         ep.apply( options=data.options, instance=instance, results=results )
     #
-    if data.options.runtime.profile_memory >= 1 and pympler_available:
+    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
         global memory_data
-        mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
+        mem_used = muppy.get_size(muppy.get_objects())
         if mem_used > data.local.max_memory:
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following results processing" % mem_used)
@@ -747,8 +770,8 @@ def apply_postprocessing(data, instance=None, results=None):
     for ep in ExtensionPoint(IPyomoScriptPostprocess):
         ep.apply( options=data.options, instance=instance, results=results )
 
-    if data.options.runtime.profile_memory >= 1 and pympler_available:
-        mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
+    if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
+        mem_used = muppy.get_size(muppy.get_objects())
         if mem_used > data.local.max_memory:
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes upon termination" % mem_used)
@@ -798,19 +821,8 @@ def finalize(data, model=None, instance=None, results=None):
     results=results
     #
     if data.options.runtime.interactive:
-        global IPython_available
-        if IPython_available is None:
-            try:
-                import IPython
-                IPython_available=True
-            except:
-                IPython_available=False
-
         if IPython_available:
-            IPython.Shell.IPShellEmbed(
-                    [''],
-                    banner = '\n# Dropping into Python interpreter',
-                    exit_msg = '\n# Leaving Interpreter, back to Pyomo\n')()
+            ipshell()
         else:
             import code
             shell = code.InteractiveConsole(locals())
@@ -1020,7 +1032,7 @@ def get_config_values(filename):
         if not yaml_available:
             raise ValueError("ERROR: yaml configuration file specified, but pyyaml is not installed!")
         INPUT = open(filename, 'r')
-        val = yaml.load(INPUT, **yaml_load_args)
+        val = yaml.load(INPUT)
         INPUT.close()
         return val
     elif filename.endswith('.jsn') or filename.endswith('.json'):

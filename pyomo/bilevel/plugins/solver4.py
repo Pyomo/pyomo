@@ -11,6 +11,7 @@
 import time
 import pyutilib.misc
 import pyomo.opt
+import pyomo.common
 from pyomo.core import TransformationFactory, Var, Set
 
 

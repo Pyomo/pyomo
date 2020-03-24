@@ -14,14 +14,12 @@ import time
 import subprocess
 
 from pyutilib.pyro import using_pyro3, using_pyro4
-import pyutilib.services
-import pyutilib.th as unittest
-
-from pyomo.common.dependencies import dill, dill_available as has_dill
 from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
                                   _kill)
+import pyutilib.services
+import pyutilib.th as unittest
 from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.scenariotree.manager import \
     (ScenarioTreeManagerClientSerial,
@@ -36,9 +34,17 @@ from pyomo.opt import undefined
 
 import pyomo.environ as aml
 
-from pyomo.common.dependencies import (
-    networkx, networkx_available as has_networkx
-)
+try:
+    import networkx
+    has_networkx = True                           #pragma:nocover
+except:                                           #pragma:nocover
+    has_networkx = False
+
+try:
+    import dill
+    has_dill = True                               #pragma:nocover
+except ImportError:                               #pragma:nocover
+    has_dill = False
 
 thisfile = os.path.abspath(__file__)
 thisdir = os.path.dirname(thisfile)
@@ -713,6 +719,7 @@ class _ScenarioTreeManagerSolverTesterBase(object):
 # create the actual testing classes
 #
 
+@unittest.skipIf(not has_networkx, "Networkx is not available")
 @unittest.skipIf(not has_networkx, "Networkx is not available")
 @unittest.skipIf(not has_dill, "Dill is not available")
 class TestScenarioTreeManagerSolverSerial(

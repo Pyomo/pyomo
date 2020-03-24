@@ -148,19 +148,12 @@ class GAMSDirect(_GAMSSolver):
             from gams import GamsWorkspace, DebugLevel
             return True
         except ImportError as e:
-            if not exception_flag:
+            if exception_flag is False:
                 return False
             else:
                 raise ImportError("Import of gams failed - GAMS direct "
                                   "solver functionality is not available.\n"
-                                  "GAMS message: %s" % (e,))
-        except:
-            logger.warning(
-                "Attempting to import gams generated unexpected exception:\n"
-                "\t%s: %s" % (sys.exc_info()[0].__name__, sys.exc_info()[1]))
-            if not exception_flag:
-                return False
-            raise
+                                  "GAMS message: %s" % e)
 
     def _get_version(self):
         """Returns a tuple describing the solver executable version."""

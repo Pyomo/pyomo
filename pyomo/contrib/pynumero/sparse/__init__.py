@@ -8,8 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.pynumero import numpy_available, scipy_available
+from .. import numpy_available, scipy_available
 
 if numpy_available and scipy_available:
-    from .block_vector import BlockVector, NotFullyDefinedBlockVectorError
-    from .block_matrix import BlockMatrix, NotFullyDefinedBlockMatrixError
+    from .coo import empty_matrix, diagonal_matrix
+    from .block_vector import BlockVector
+    from .block_matrix import BlockMatrix, BlockSymMatrix

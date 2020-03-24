@@ -11,10 +11,14 @@
 import os.path
 import json
 import six
+try:
+    import yaml
+    yaml_available = True
+except ImportError:
+    yaml_available = False
 
 from pyutilib.misc import Options
 
-from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 from pyomo.dataportal.factory import DataManagerFactory
 
 
@@ -223,7 +227,7 @@ class YamlDictionary(object):
         if not os.path.exists(self.filename):
             raise IOError("Cannot find file '%s'" % self.filename)
         INPUT = open(self.filename, 'r')
-        jdata = yaml.load(INPUT, **yaml_load_args)
+        jdata = yaml.load(INPUT)
         INPUT.close()
         if jdata is None:
             raise IOError("Empty YAML file")

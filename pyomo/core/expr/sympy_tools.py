@@ -12,26 +12,36 @@ from six import StringIO, iterkeys
 import pyutilib.misc
 from pyomo.core.expr import current
 from pyomo.common import DeveloperError
-from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr import current as EXPR, native_types
 from pyomo.core.expr.numvalue import value
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.common.errors import NondifferentiableError
 
-#
-# Sympy takes a significant time to load; defer importing it unless
-# someone actually needs the interface.
-#
+sympy_available = True
+try:
+    import sympy
 
-_operatorMap = {}
-_pyomo_operator_map = {}
-_functionMap = {}
+    def _prod(*x):
+        ans = x[0]
+        for i in x[1:]:
+            ans *= i
+        return ans
 
-def _configure_sympy(sympy, available):
-    if not available:
-        return
+    def _sum(*x):
+        return sum(x_ for x_ in x)
 
-    _operatorMap.update({
+    def _nondifferentiable(*x):
+        if type(x[1]) is tuple:
+            # sympy >= 1.3 returns tuples (var, order)
+            wrt = x[1][0]
+        else:
+            # early versions of sympy returned the bare var
+            wrt = x[1]
+        raise NondifferentiableError(
+            "The sub-expression '%s' is not differentiable with respect to %s"
+            % (x[0], wrt) )
+
+    _operatorMap = {
         sympy.Add: _sum,
         sympy.Mul: _prod,
         sympy.Pow: lambda x, y: x**y,
@@ -55,16 +65,16 @@ def _configure_sympy(sympy, available):
         sympy.Abs: lambda x: abs(x),
         sympy.Derivative: _nondifferentiable,
         sympy.Tuple: lambda *x: x,
-    })
+    }
 
-    _pyomo_operator_map.update({
+    _pyomo_operator_map = {
         EXPR.SumExpression: sympy.Add,
         EXPR.ProductExpression: sympy.Mul,
         EXPR.NPV_ProductExpression: sympy.Mul,
         EXPR.MonomialTermExpression: sympy.Mul,
-    })
+    }
 
-    _functionMap.update({
+    _functionMap = {
         'exp': sympy.exp,
         'log': sympy.log,
         'log10': lambda x: sympy.log(x)/sympy.log(10),
@@ -83,30 +93,9 @@ def _configure_sympy(sympy, available):
         'ceil': sympy.ceiling,
         'floor': sympy.floor,
         'sqrt': sympy.sqrt,
-    })
-
-sympy, sympy_available = attempt_import('sympy', callback=_configure_sympy)
-
-
-def _prod(*x):
-    ans = x[0]
-    for i in x[1:]:
-        ans *= i
-    return ans
-
-def _sum(*x):
-    return sum(x_ for x_ in x)
-
-def _nondifferentiable(*x):
-    if type(x[1]) is tuple:
-        # sympy >= 1.3 returns tuples (var, order)
-        wrt = x[1][0]
-    else:
-        # early versions of sympy returned the bare var
-        wrt = x[1]
-    raise NondifferentiableError(
-        "The sub-expression '%s' is not differentiable with respect to %s"
-        % (x[0], wrt) )
+    }
+except ImportError:
+    sympy_available = False
 
 class PyomoSympyBimap(object):
     def __init__(self):

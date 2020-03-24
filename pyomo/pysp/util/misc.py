@@ -14,7 +14,6 @@ __all__ = ("launch_command",
 
 import logging
 import time
-import six
 import sys
 import subprocess
 import traceback
@@ -33,17 +32,17 @@ except ImportError:
 
 from pyutilib.enum import EnumValue
 from pyutilib.misc import PauseGC, import_file
+from pyutilib.pyro import using_pyro3, using_pyro4
+from pyutilib.pyro.util import find_unused_port
 from pyutilib.services import TempfileManager
 import pyutilib.common
 from pyomo.opt.base import ConverterError
-from pyomo.common.dependencies import attempt_import
 from pyomo.common.plugin import (ExtensionPoint,
                                SingletonPlugin)
 from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 
-pyu_pyro = attempt_import('pyutilib.pyro', alt_names=['pyu_pyro'])[0]
-
+import six
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -447,12 +446,12 @@ def _kill(proc):
             proc.poll()
 
 def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
-    if not (pyu_pyro.using_pyro3 or pyu_pyro.using_pyro4):
+    if not (using_pyro3 or using_pyro4):
         return None, None
     ns_options = None
-    if pyu_pyro.using_pyro3:
+    if using_pyro3:
         ns_options = ["-r","-k","-n "+ns_host]
-    elif pyu_pyro.using_pyro4:
+    elif using_pyro4:
         ns_options = ["--host="+ns_host]
     # don't start the broadcast server
     ns_options += ["-x"]
@@ -460,13 +459,13 @@ def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
     ns_process = None
     for i in range(num_tries):
         try:
-            ns_port = pyu_pyro.util.find_unused_port()
+            ns_port = find_unused_port()
             print("Trying nameserver with port: "
                   +str(ns_port))
             cmd = ["pyomo_ns"] + ns_options
-            if pyu_pyro.using_pyro3:
+            if using_pyro3:
                 cmd += ["-p "+str(ns_port)]
-            elif pyu_pyro.using_pyro4:
+            elif using_pyro4:
                 cmd += ["--port="+str(ns_port)]
             print(' '.join(cmd))
             ns_process = \
@@ -487,13 +486,13 @@ def _get_test_dispatcher(ns_host=None,
                          ns_port=None,
                          dispatcher_host="127.0.0.1",
                          num_tries=20):
-    if not (pyu_pyro.using_pyro3 or pyu_pyro.using_pyro4):
+    if not (using_pyro3 or using_pyro4):
         return None, None
     dispatcher_port = None
     dispatcher_process = None
     for i in range(num_tries):
         try:
-            dispatcher_port = pyu_pyro.util.find_unused_port()
+            dispatcher_port = find_unused_port()
             print("Trying dispatcher with port: "
                   +str(dispatcher_port))
             cmd = ["dispatch_srvr",

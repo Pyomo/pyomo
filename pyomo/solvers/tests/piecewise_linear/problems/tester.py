@@ -13,6 +13,8 @@ from pyomo.opt import SolverFactory
 
 from six import itervalues
 
+#import yaml
+
 opt = SolverFactory('cplexamp',solve_io='nl')
 
 kwds = {'pw_constr_type':'UB','pw_repn':'DCC','sense':maximize,'force_pw':True}
@@ -52,3 +54,6 @@ for problem_name in problem_names:
                 if (name[:2] == 'Fx') or (name[:1] == 'x'):
                     res[name] = value(var)
     print(res)
+
+    #with open(problem_name+'_baseline_results.yml','w') as f:
+    #    yaml.dump(res,f)

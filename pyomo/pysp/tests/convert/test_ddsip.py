@@ -15,7 +15,6 @@ import difflib
 import filecmp
 import shutil
 import subprocess
-import sys
 import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
@@ -71,7 +70,7 @@ class TestConvertDDSIPSimple(unittest.TestCase):
             shutil.rmtree(options['--output-directory'],
                           ignore_errors=True)
 
-        cmd = [sys.executable,'-m','pyomo.pysp.convert.ddsip']
+        cmd = ['python','-m','pyomo.pysp.convert.ddsip']
         for name, val in options.items():
             cmd.append(name)
             if val is not None:
@@ -215,7 +214,7 @@ class _DDSIPTesterBase(object):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = [sys.executable,'-m','pyomo.pysp.convert.ddsip']
+        cmd = ['python','-m','pyomo.pysp.convert.ddsip']
         for name, val in self.options.items():
             cmd.append(name)
             if val is not None:

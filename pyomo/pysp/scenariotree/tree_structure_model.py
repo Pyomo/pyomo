@@ -14,15 +14,15 @@ import pyomo.core
 
 import six
 
-from pyomo.common.dependencies import attempt_import
-
-# The code below conforms to the networkx>=2.0 API
-networkx, networkx_available = attempt_import('networkx', minimum_version="2.0")
+try:
+    import networkx
+    # The code below conforms to the networkx>=2.0 API
+    has_networkx = int(networkx.__version__.split('.')[0]) >= 2
+except ImportError:                               #pragma:nocover
+    has_networkx = False
 
 def CreateAbstractScenarioTreeModel():
-    from pyomo.core import (
-        AbstractModel, Set, Param, Boolean, Any, UnitInterval,
-    )
+    from pyomo.core import (AbstractModel, Set, Param, Boolean)
 
     model = AbstractModel()
 
@@ -40,7 +40,6 @@ def CreateAbstractScenarioTreeModel():
                          initialize=[],
                          ordered=True)
     model.ConditionalProbability = Param(model.Nodes,
-                                         within=UnitInterval,
                                          mutable=True)
 
     model.Scenarios = Set(ordered=True)
@@ -57,17 +56,14 @@ def CreateAbstractScenarioTreeModel():
                               ordered=True)
 
     model.StageCost = Param(model.Stages,
-                            within=Any,
                             mutable=True,
                             default=None)
     model.NodeCost = Param(model.Nodes,
-                           within=Any,
                            mutable=True,
                            default=None)
 
     # DEPRECATED
     model.StageCostVariable = Param(model.Stages,
-                                    within=Any,
                                     mutable=True)
 
     # it is often the case that a subset of the stage variables are strictly "derived"
@@ -234,6 +230,10 @@ def ScenarioTreeModelFromNetworkX(
                    networkx.DiGraph())
         >>> model = ScenarioTreeModelFromNetworkX(G)
     """
+
+    if not has_networkx:                          #pragma:nocover
+        raise ValueError(
+            "networkx>=2.0 module is not available")
 
     if not networkx.is_tree(tree):
         raise TypeError(

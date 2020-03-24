@@ -27,7 +27,6 @@ import pyutilib.misc
 import pyutilib.enum
 from pyutilib.pyro import (shutdown_pyro_components,
                            using_pyro4)
-from pyomo.common.dependencies import dill, dill_available
 from pyomo.opt import (UndefinedData,
                        undefined,
                        SolverStatus,
@@ -57,6 +56,12 @@ from six import (iteritems,
                  StringIO,
                  string_types)
 from six.moves import xrange
+
+try:
+    import dill
+    dill_available = True                         #pragma:nocover
+except ImportError:                               #pragma:nocover
+    dill_available = False
 
 logger = logging.getLogger('pyomo.pysp')
 

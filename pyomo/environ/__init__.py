@@ -23,8 +23,8 @@ else:
 #
 _packages = [
     'pyomo.common',
-    'pyomo.core',
     'pyomo.opt',
+    'pyomo.core',
     'pyomo.dataportal',
     'pyomo.duality',
     'pyomo.checker',
