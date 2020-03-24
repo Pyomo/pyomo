@@ -64,7 +64,7 @@ jobs:
         export PATH=$PATH:$GAMS_DIR
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
         export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
-        cd gams/*/apifiles/Python/
+        cd $GAMS_DIR/apifiles/Python/
         py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
         gams_ver=api
         for ver in api_*; do
@@ -125,4 +125,5 @@ jobs:
       run: |
         find . -maxdepth 10 -name ".cov*"
         coverage combine
+        coverage report
         bash <(curl -s https://codecov.io/bash) -X gcov
