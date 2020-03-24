@@ -6,6 +6,7 @@ from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from pyomo.environ import Var, Constraint
 from pyomo.core.base.var import _VarData
+from pyomo.common.modeling import unique_component_name
 
 """
 This module is used for interfacing a multi-input / multi-output external
@@ -116,17 +117,18 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
         # we need to add a dummy variable and constraint to the pyomo_nlp
         # to make sure it does not remove variables that do not
-        # appear in the pyomo part of the model
-        # ToDo: Improve this by convincing Pyomo not to remote the inputs and outputs
-        if hasattr(self._pyomo_model, '_dummy_constraint_CyIpoptPyomoExNLP'):
-            del self._pyomo_model._dummy_constraint_CyIpoptPyomoExNLP
-        if hasattr(self._pyomo_model, '_dummy_variable_CyIpoptPyomoExNLP'):
-            del self._pyomo_model._dummy_variable_CyIpoptPyomoExNLP
-        
-        self._pyomo_model._dummy_variable_CyIpoptPyomoExNLP = Var()
-        self._pyomo_model._dummy_constraint_CyIpoptPyomoExNLP = Constraint(
-            expr = self._pyomo_model._dummy_variable_CyIpoptPyomoExNLP == \
-               sum(v for v in self._inputs) + sum(v for v in self._outputs))
+        # appear in the pyomo part of the model - also ensure unique name in case model
+        # is used in more than one instance of this class
+        # ToDo: Improve this by convincing Pyomo not to remove the inputs and outputs
+        dummy_var_name = unique_component_name(self._pyomo_model, '_dummy_variable_CyIpoptPyomoExNLP')
+        dummy_var = Var()
+        setattr(self._pyomo_model, dummy_var_name, dummy_var)
+        dummy_con_name = unique_component_name(self._pyomo_model, '_dummy_constraint_CyIpoptPyomoExNLP')
+        dummy_con = Constraint(
+            expr = getattr(self._pyomo_model, dummy_var_name) == \
+               sum(v for v in self._inputs) + sum(v for v in self._outputs)
+            )
+        setattr(self._pyomo_model, dummy_con_name, dummy_con)
 
         # make an nlp interface from the pyomo model
         self._pyomo_nlp = PyomoNLP(self._pyomo_model)
