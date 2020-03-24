@@ -98,11 +98,23 @@ class _VarData(ComponentData, NumericValue):
 
     def is_integer(self):
         """Returns True when the domain is a contiguous integer range."""
+        # optimization: Reals and Binary are the most common cases, so
+        # we will explicitly test that before generating the interval
+        if self.domain is Reals:
+            return False
+        elif self.domain is Binary:
+            return True
         _interval = self.domain.get_interval()
         return _interval is not None and _interval[2] == 1
 
     def is_binary(self):
         """Returns True when the domain is restricted to Binary values."""
+        # optimization: Reals and Binary are the most common cases, so
+        # we will explicitly test that before generating the interval
+        if self.domain is Reals:
+            return False
+        elif self.domain is Binary:
+            return True
         return self.domain.get_interval() == (0,1,1)
 
 # TODO?
@@ -119,9 +131,14 @@ class _VarData(ComponentData, NumericValue):
 
     def is_continuous(self):
         """Returns True when the domain is a continuous real range"""
-        # optimization: Reals is the most common case, so we will
-        # explicitly test that before generating the interval
-        return self.domain is Reals or self.domain.get_interval()[2] == 0
+        # optimization: Reals and Binary are the most common cases, so
+        # we will explicitly test that before generating the interval
+        if self.domain is Reals:
+            return True
+        elif self.domain is Binary:
+            return False
+        _interval = self.domain.get_interval()
+        return _interval is not None and _interval[2] == 0
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
