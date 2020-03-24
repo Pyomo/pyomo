@@ -34,17 +34,19 @@ jobs:
         if hash brew; then
             echo "Install pre-dependencies for pyodbc..."
             brew update
-            brew install bash gcc
+            brew list bash || brew install bash
+            brew list gcc || brew install gcc
             brew link --overwrite gcc
-            brew install pkg-config
-            brew install unixodbc
-            brew install freetds
+            brew list pkg-config || brew install pkg-config
+            brew list unixodbc || brew install unixodbc
+            brew list freetds || brew install freetds
         fi
         echo "Upgrade pip..."
         python -m pip install --upgrade pip
         echo ""
         echo "Install Pyomo dependencies..."
         echo ""
+        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos coverage nose
         echo ""
         echo "Install CPLEX Community Edition..."
@@ -60,10 +62,6 @@ jobs:
         fi
         chmod +x gams_installer.exe
         ./gams_installer.exe -q -d gams
-        GAMS_DIR=`ls -d1 $(pwd)/gams/*/ | head -1`
-        export PATH=$PATH:$GAMS_DIR
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
-        export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
         cd gams/*/apifiles/Python/
         py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
         gams_ver=api
