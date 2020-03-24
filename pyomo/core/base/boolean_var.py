@@ -146,31 +146,30 @@ class _BooleanVarData(ComponentData, LogicalValue):
             return smap.getSymbol(self, labeler)
         return self.name
 
+
 class _GeneralBooleanVarData(_BooleanVarData):
-    __slots__ = ('_value', '_domain', 'fixed', 'stale')
-
-    def __init__(self, domain=Reals, component=None):
     """
-        This class defines the data for a single Boolean variable.
+    This class defines the data for a single Boolean variable.
 
-        Constructor Arguments:
-            component   The BooleanVar object that owns this data.
+    Constructor Arguments:
+        component   The BooleanVar object that owns this data.
 
-        Public Class Attributes:
-            domain      The domain of this variable.
-            fixed       If True, then this variable is treated as a
-                            fixed constant in the model.
-            stale       A Boolean indicating whether the value of this variable is
-                            legitimiate.  This value is true if the value should
-                            be considered legitimate for purposes of reporting or
-                            other interrogation.
-            value       The numeric value of this variable.
+    Public Class Attributes:
+        domain      The domain of this variable.
+        fixed       If True, then this variable is treated as a
+                        fixed constant in the model.
+        stale       A Boolean indicating whether the value of this variable is
+                        legitimiate.  This value is true if the value should
+                        be considered legitimate for purposes of reporting or
+                        other interrogation.
+        value       The numeric value of this variable.
 
-        The domain attribute is a property because it is
-        too widely accessed directly to enforce explicit getter/setter
-        methods and we need to deter directly modifying or accessing
-        these attributes in certain cases.
-        """
+    The domain attribute is a property because it is
+    too widely accessed directly to enforce explicit getter/setter
+    methods and we need to deter directly modifying or accessing
+    these attributes in certain cases.
+    """
+
     __slots__ = ('_value', '_domain', 'fixed', 'stale', '_as_binary')
 
     def __init__(self, component=None):
