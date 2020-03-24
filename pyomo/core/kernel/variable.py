@@ -38,8 +38,7 @@ def _extract_domain_type_and_bounds(domain_type,
             domain_type = RealSet
         elif domain_step == 1:
             domain_type = IntegerSet
-        #else:
-        #    domain_type = None
+        # else: domain_type will remain None and generate an exception below
         if domain_lb is not None:
             if lb is not None:
                 raise ValueError(

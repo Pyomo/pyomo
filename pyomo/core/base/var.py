@@ -119,7 +119,8 @@ class _VarData(ComponentData, NumericValue):
 
     def is_continuous(self):
         """Returns True when the domain is a continuous real range"""
-        # optimization: Binary is the most common case
+        # optimization: Reals is the most common case, so we will
+        # explicitly test that before generating the interval
         return self.domain is Reals or self.domain.get_interval()[2] == 0
 
     def is_fixed(self):
@@ -371,7 +372,7 @@ class _GeneralVarData(_VarData):
     def domain(self, domain):
         """Set the domain for this variable."""
         # TODO: this should be migrated over to using a SetInitializer
-        # to handle the checkong / conversion of the argument to a
+        # to handle the checking / conversion of the argument to a
         # proper Pyomo Set and not use isinstance() of a private class.
         if isinstance(domain, _SetDataBase):
             self._domain = domain

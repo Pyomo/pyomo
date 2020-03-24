@@ -154,7 +154,7 @@ def process_setarg(arg):
     #
     # But this causes problems, especially because Set()'s constructor
     # needs to know if the object is ordered (Set defaults to ordered,
-    # and will toss a warning if the underlying data sourcce is not
+    # and will toss a warning if the underlying data source is not
     # ordered)).  While we could add checks where we create the Set
     # (like here and in the __r*__ operators) and pass in a reasonable
     # value for ordered, it is starting to make more sense to use SetOf
@@ -503,7 +503,7 @@ class _SetData(_SetDataBase):
         """Iterate over the set members
 
         Raises AttributeError for non-finite sets.  This must be
-        declared for non-finite sets beause scalar sets inherit from
+        declared for non-finite sets because scalar sets inherit from
         IndexedComponent, which provides an iterator (over the
         underlying indexing set).
         """
@@ -1334,7 +1334,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
                             % (value, _d, self.name, self._dimen))
 
             # Add the value to this object (this last redirection allows
-            # derived classes to implement a different storage mmechanism)
+            # derived classes to implement a different storage mechanism)
             self._add_impl(_value)
             count += 1
         return count
@@ -1717,7 +1717,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 
 _SET_API = (
     ('__contains__', 'test membership in'),
-    'get', 'ranges', 'bounds',# 'domain',
+    'get', 'ranges', 'bounds',
 )
 _FINITESET_API = _SET_API + (
     ('__iter__', 'iterate over'),
@@ -1777,7 +1777,7 @@ class Set(IndexedComponent):
             in this set
         bounds : initializer(tuple), optional
             A tuple that specifies the bounds for valid Set values
-            (accpets 1-, 2-, or 3-tuple RangeSet arguments)
+            (accepts 1-, 2-, or 3-tuple RangeSet arguments)
         filter : initializer(rule), optional
             A rule for determining membership in this set. This has the
             functional form:
@@ -1984,7 +1984,7 @@ class Set(IndexedComponent):
         # into Set (because we cannot know the dimen of a _SetData until
         # we are actually constructing that index).  This also means
         # that we need to potentially communicate the dimen to the
-        # (wrapped) vaue initializer.  So, we will get the dimen first,
+        # (wrapped) value initializer.  So, we will get the dimen first,
         # then get the values.  Only then will we know that this index
         # will actually be constructed (and not Skipped).
         _block = self.parent_block()
@@ -2519,7 +2519,7 @@ class RangeSet(Component):
     Parameters
     ----------
     *args: tuple, optional
-        The range desined by ([start=1], end, [step=1]).  If only a
+        The range defined by ([start=1], end, [step=1]).  If only a
         single positional parameter, `end` is supplied, then the
         RangeSet will be the integers starting at 1 up through and
         including end.  Providing two positional arguments, `x` and `y`,
@@ -3005,7 +3005,7 @@ class SetOperator(_SetData, Set):
                 logger.warning("""
                 Extracting subsets for Set %s, which is a SetOperator
                 other than a SetProduct.  Returning this set and not
-                decending into the set operands.  To descend into this
+                descending into the set operands.  To descend into this
                 operator, specify
                 'subsets(expand_all_set_operators=True)' or to suppress
                 this warning, specify
@@ -3550,7 +3550,7 @@ class SetProduct(SetOperator):
         """Flatten any nested set product terms (due to nested products)
 
         Note that because this is called in a recursive context, this
-        method is assued that there is no more than a single level of
+        method is assured that there is no more than a single level of
         nested tuples (so this only needs to check the top-level terms)
 
         """
@@ -3938,7 +3938,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
             global sets were instances of their own virtual set classes
             (RealSet, IntegerSet, BooleanSet), and one could create new
             instances of those sets with modified bounds.  Since the
-            GlobalSet mechansism also declares new classes for every
+            GlobalSet mechanism also declares new classes for every
             GlobalSet, we can mock up the old behavior through how we
             handle __new__().
             """

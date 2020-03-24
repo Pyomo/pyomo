@@ -572,9 +572,6 @@ def _process_data_list(param_name, dim, cmd):
     generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
     if generate_debug_messages:
         logger.debug("process_data_list %d %s",dim,cmd)
-    # We will assume all unspecified sets are dimen==1
-    #if dim is UnknownSetDimen:
-    #    dim = 1
 
     if len(cmd) % (dim+1) != 0:
         msg = "Parameter '%s' defined with '%d' dimensions, " \

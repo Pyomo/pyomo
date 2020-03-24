@@ -3309,7 +3309,7 @@ class TestGlobalSets(unittest.TestCase):
                 RuntimeError, "Duplicate Global Set declaration, Reals"):
             DeclareGlobalSet(RangeSet( name='Reals', ranges=(NR(0,2,1),) ))
 
-        # But repeat delcarations are OK
+        # But repeat declarations are OK
         a = Reals
         DeclareGlobalSet(Reals)
         self.assertIs(a, Reals)
