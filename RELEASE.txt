@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 5.6.8. Pyomo is a collection
+We are pleased to announce the release of Pyomo 5.6.9. Pyomo is a collection
 of Python software packages that supports a diverse set of optimization
 capabilities for formulating and analyzing optimization models.
 
@@ -6,6 +6,7 @@ capabilities for formulating and analyzing optimization models.
 The following are highlights of the 5.6 release series:
 
  - New expression system enables robust support for pypy
+ - Significant reduction in the time to import pyomo.environ
  - Dropped support for Python 2.6
  - New contributed packages: preprocessing, parmest, pynumero,
    sensitivity_toolbox, petsc interface, mindtpy, fbbt, gdpbb,

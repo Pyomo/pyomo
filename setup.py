@@ -38,7 +38,7 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.7.4.dev0',
+    'PyUtilib>=5.8.1.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -204,7 +204,7 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
 ERROR: setup() failed:
     %s
 Re-running setup() without the Cython modules
-""" % (e_info.message,))
+""" % (str(e_info),))
         ext_modules = []
         run_setup()
         print("""
@@ -213,4 +213,4 @@ WARNING: Installation completed successfully, but the attempt to cythonize
          optimizations and is not required for any Pyomo functionality.
          Cython returned the following error:
    "%s"
-""" % (e_info.message,))
+""" % (str(e_info),))

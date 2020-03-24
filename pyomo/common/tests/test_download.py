@@ -8,8 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
 import os
 import platform
+import six
 import shutil
 import tempfile
 
@@ -137,15 +139,15 @@ class Test_FileDownloader(unittest.TestCase):
         self.assertFalse(any(c in ans[0] for c in '.-_'))
         self.assertIn(ans[1], (32,64))
 
-    def test_get_url(self):
+    def test_get_platform_url(self):
         f = FileDownloader()
         urlmap = {'bogus_sys': 'bogus'}
         with self.assertRaisesRegexp(
                 RuntimeError, "cannot infer the correct url for platform '.*'"):
-            f.get_url(urlmap)
+            f.get_platform_url(urlmap)
 
         urlmap[f.get_sysinfo()[0]] = 'correct'
-        self.assertEqual(f.get_url(urlmap), 'correct')
+        self.assertEqual(f.get_platform_url(urlmap), 'correct')
 
 
     def test_get_files_requires_set_destination(self):
@@ -161,3 +163,28 @@ class Test_FileDownloader(unittest.TestCase):
         with self.assertRaisesRegexp(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_gzipped_binary_file('bogus')
+
+    def test_get_test_binary_file(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            f = FileDownloader()
+
+            # Mock retrieve_url so network connections are not necessary
+            if six.PY3:
+                f.retrieve_url = lambda url: bytes("\n", encoding='utf-8')
+            else:
+                f.retrieve_url = lambda url: str("\n")
+
+            # Binary files will preserve line endings
+            target = os.path.join(tmpdir, 'bin.txt')
+            f.set_destination_filename(target)
+            f.get_binary_file(None)
+            self.assertEqual(os.path.getsize(target), 1)
+
+            # Text files will convert line endings to the local platform
+            target = os.path.join(tmpdir, 'txt.txt')
+            f.set_destination_filename(target)
+            f.get_text_file(None)
+            self.assertEqual(os.path.getsize(target), len(os.linesep))
+        finally:
+            shutil.rmtree(tmpdir)

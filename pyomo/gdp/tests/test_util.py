@@ -10,10 +10,11 @@
 
 import pyutilib.th as unittest
 
-from pyomo.core import ConcreteModel, Var, Expression
+from pyomo.core import ConcreteModel, Var, Expression, Block
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.expression import _ExpressionData
-from pyomo.gdp.util import clone_without_expression_components
+from pyomo.gdp.util import clone_without_expression_components, is_child_of
+
 
 class TestGDPUtils(unittest.TestCase):
     def test_clone_without_expression_components(self):
@@ -49,6 +50,25 @@ class TestGDPUtils(unittest.TestCase):
         test = clone_without_expression_components(base, {id(m.x): m.y})
         self.assertEqual(3**2+3-1 + 3, test())
 
+    def test_is_child_of(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.b_indexed = Block([1,2])
+        m.b_parallel = Block()
+        
+        knownBlocks = {}
+        self.assertFalse(is_child_of(parent=m.b, child=m.b_parallel,
+                                     knownBlocks=knownBlocks))
+        self.assertEqual(len(knownBlocks), 2)
+        self.assertFalse(knownBlocks.get(m))
+        self.assertFalse(knownBlocks.get(m.b_parallel))
+        self.assertTrue(is_child_of(parent=m.b, child=m.b.b_indexed[1],
+                                    knownBlocks=knownBlocks))
+        self.assertEqual(len(knownBlocks), 4)
+        self.assertFalse(knownBlocks.get(m))
+        self.assertFalse(knownBlocks.get(m.b_parallel))
+        self.assertTrue(knownBlocks.get(m.b.b_indexed[1]))
+        self.assertTrue(knownBlocks.get(m.b.b_indexed))
 
 if __name__ == '__main__':
     unittest.main()

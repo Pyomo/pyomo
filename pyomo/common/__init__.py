@@ -21,7 +21,7 @@ from .fileutils import (
     # The following will be deprecated soon
     register_executable, registered_executable, unregister_executable
 )
-from . import config
+from . import config, timing
 from .deprecation import deprecated
 from .errors import DeveloperError
 from ._task import pyomo_api, PyomoAPIData, PyomoAPIFactory

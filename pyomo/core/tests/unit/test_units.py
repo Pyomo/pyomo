@@ -16,19 +16,15 @@ from pyomo.environ import *
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as expr
-from pyomo.core.base.units_container import InconsistentUnitsError, UnitsError
+from pyomo.core.base.units_container import (
+    pint_available, InconsistentUnitsError, UnitsError,
+)
 from six import StringIO
-
-try:
-    import pint
-    pint_available = True
-except ImportError:
-    pint_available = False
 
 def python_callback_function(arg1, arg2):
     return 42.0
 
-@unittest.skipIf(pint_available is False, 'Testing units requires pint')
+@unittest.skipIf(not pint_available, 'Testing units requires pint')
 class TestPyomoUnit(unittest.TestCase):
 
     def test_PyomoUnit_NumericValueMethods(self):

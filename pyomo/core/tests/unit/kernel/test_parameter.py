@@ -1,11 +1,8 @@
 import pickle
-try:
-    import dill
-    has_dill = True
-except:
-    has_dill = False
 
 import pyutilib.th as unittest
+
+from pyomo.common.dependencies import dill, dill_available as has_dill
 from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
