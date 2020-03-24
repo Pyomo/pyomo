@@ -1,6 +1,9 @@
 name: continuous-integration/github/pr
 
 on:
+  push:
+    branches:
+      - unix_coverage
   pull_request:
     branches:
       - master
@@ -59,6 +62,10 @@ jobs:
         fi
         chmod +x gams_installer.exe
         ./gams_installer.exe -q -d gams
+        GAMS_DIR=`ls -d1 $(pwd)/gams/*/ | head -1`
+        export PATH=$PATH:$GAMS_DIR
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
+        export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
         cd gams/*/apifiles/Python/
         py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
         gams_ver=api
