@@ -57,6 +57,12 @@ class TestPythonCallbackFunction(unittest.TestCase):
         self.assertEqual(M.m.f.getname(), "f")
         self.assertEqual(M.m.f.getname(True), "m.f")
 
+    def test_extra_kwargs(self):
+        m = ConcreteModel()
+        with self.assertRaises(ValueError):
+            m.f = ExternalFunction(_g, this_should_raise_error='foo')
+
+        
 class TestAMPLExternalFunction(unittest.TestCase):
     def assertListsAlmostEqual(self, first, second, places=7, msg=None):
         self.assertEqual(len(first), len(second))
