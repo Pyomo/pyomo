@@ -408,6 +408,12 @@ class _GeneralVarData(_VarData):
     def ub(self, val):
         raise AttributeError("Assignment not allowed. Use the setub method")
 
+    def get_units(self):
+        """Return the units for this variable entry."""
+        # parent_component() returns self if this is scalar, or the owning
+        # component if not scalar
+        return self.parent_component()._units
+
     # fixed is an attribute
 
     # stale is an attribute
@@ -476,6 +482,8 @@ class Var(IndexedComponent):
             `index_set()` when constructing the Var (True) or just the
             variables returned by `initialize`/`rule` (False).  Defaults
             to True.
+        units (pyomo units expression, optional): Set the units corresponding                                                  
+            to the entries in this variable.
     """
 
     _ComponentDataClass = _GeneralVarData
@@ -498,7 +506,8 @@ class Var(IndexedComponent):
         domain = kwd.pop('domain', domain)
         bounds = kwd.pop('bounds', None)
         self._dense = kwd.pop('dense', True)
-
+        self._units = kwd.pop('units', None)
+        
         #
         # Initialize the base class
         #
@@ -567,6 +576,10 @@ class Var(IndexedComponent):
         """
         for index, new_value in iteritems(new_values):
             self[index].set_value(new_value, valid)
+
+    def get_units(self):
+        """Return the units expression for this Var."""
+        return self._units
 
     def construct(self, data=None):
         """Construct this component."""
