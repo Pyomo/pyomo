@@ -1,9 +1,6 @@
 name: continuous-integration/github/pr
 
 on:
-  push:
-    branches:
-      - unix_coverage
   pull_request:
     branches:
       - master
