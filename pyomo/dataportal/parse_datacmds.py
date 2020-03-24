@@ -2,14 +2,15 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 __all__ = ['parse_data_commands']
 
+import bisect
 import sys
 import os
 import os.path
@@ -18,9 +19,10 @@ import ply.yacc as yacc
 from inspect import getfile, currentframe
 from six.moves import xrange
 
-from pyutilib.misc import flatten_list
-from pyutilib.ply import t_newline, t_ignore, _find_column, p_error, ply_init
-        
+from pyutilib.misc import flatten_list, import_file
+
+from pyomo.common import config
+from pyomo.common.fileutils import this_file_dir
 
 _re_number = r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?'
 
@@ -31,7 +33,6 @@ _re_number = r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?'
 ## -----------------------------------------------------------
 
 _parse_info = None
-debugging = False
 
 states = (
   ('data','inclusive'),
@@ -73,6 +74,9 @@ tokens = [
     #"NONWORD",
 ] + list(reserved.values())
 
+# Ignore space and tab
+t_ignore = " \t\r"
+
 # Regular expression rules
 t_COMMA     = r","
 t_LBRACKET  = r"\["
@@ -91,6 +95,10 @@ t_ASTERISK  = r"\*"
 #   - token functions (beginning with "t_") are prioritized in the order
 #     that they are declared in this module
 #
+def t_newline(t):
+    r'[\n]+'
+    t.lexer.lineno += len(t.value)
+    t.lexer.linepos.extend(t.lexpos+i for i,_ in enumerate(t.value))
 
 # Discard comments
 _re_singleline_comment = r'(?:\#[^\n]*)'
@@ -98,6 +106,13 @@ _re_multiline_comment = r'(?:/\*(?:[\n]|.)*?\*/)'
 @lex.TOKEN('|'.join([_re_singleline_comment, _re_multiline_comment]))
 def t_COMMENT(t):
     # Single-line and multi-line strings
+    nlines = t.value.count('\n')
+    t.lexer.lineno += nlines
+    # We will never need to determine column numbers within this comment
+    # block, so it is sufficient to just worry about the *last* newline
+    # in the comment
+    lastpos = t.lexpos + t.value.rfind('\n')
+    t.lexer.linepos.extend(lastpos for i in range(nlines))
 
 def t_COLONEQ(t):
     r':='
@@ -158,7 +173,6 @@ def t_QUOTEDSTRING(t):
 def t_error(t):
     raise IOError("ERROR: Token %s Value %s Line %s Column %s"
                   % (t.type, t.value, t.lineno, t.lexpos))
-    t.lexer.skip(1)
 
 ## DEBUGGING: uncomment to get tokenization information
 # def _wrap(_name, _fcn):
@@ -171,6 +185,12 @@ def t_error(t):
 # for _name in list(globals()):
 #     if _name.startswith('t_') and inspect.isfunction(globals()[_name]):
 #         globals()[_name] = _wrap(_name, globals()[_name])
+
+def _lex_token_position(t):
+    i = bisect.bisect_left(t.lexer.linepos, t.lexpos)
+    if i:
+        return t.lexpos - t.lexer.linepos[i-1]
+    return t.lexpos
 
 ## -----------------------------------------------------------
 ##
@@ -250,7 +270,7 @@ def p_statement(p):
         p[0] = [p[1]]+ [p[2]] + [p[4]]
     else:
         # Not necessary, but nice to document how statement could end up None
-        p[0] = None 
+        p[0] = None
     #print(p[0])
 
 def p_datastar(p):
@@ -423,6 +443,13 @@ def p_items(p):
         tmp_lst.append(tmp)
         p[0] = tmp_lst
 
+def p_error(p):
+    if p is None:
+        tmp = "Syntax error at end of file."
+    else:
+        tmp = "Syntax error at token '%s' with value '%s' (line %s, column %s)"\
+              % (p.type, p.value, p.lineno, _lex_token_position(p))
+    raise IOError(tmp)
 
 # --------------------------------------------------------------
 # the DAT file lexer and yaccer only need to be
@@ -440,7 +467,6 @@ dat_yaccer = None
 #
 def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
 
-    global debugging
     global dat_lexer
     global dat_yaccer
 
@@ -469,21 +495,21 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
                 os.remove(tabmodule+".py")
             if os.path.exists(tabmodule+".pyc"):
                 os.remove(tabmodule+".pyc")
-            debugging=True
 
         dat_lexer = lex.lex()
         #
         tmpsyspath = sys.path
         sys.path.append(outputdir)
-        dat_yaccer = yacc.yacc(debug=debug, 
-                                    tabmodule=tabmodule, 
-                                    outputdir=outputdir,
-                                    optimize=True)
+        dat_yaccer = yacc.yacc(debug=debug,
+                               tabmodule=tabmodule,
+                               outputdir=outputdir,
+                               optimize=True)
         sys.path = tmpsyspath
 
     #
     # Initialize parse object
     #
+    dat_lexer.linepos = []
     global _parse_info
     _parse_info = {}
     _parse_info[None] = []
@@ -491,32 +517,17 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
     #
     # Parse the file
     #
-    global _parsedata
-    if not data is None:
-        _parsedata=data
-        ply_init(_parsedata)
-        dat_yaccer.parse(data, lexer=dat_lexer, debug=debug)
-    elif not filename is None:
-        f = open(filename, 'r')
-        try:
-            data = f.read()
-        except Exception:
-            e = sys.exc_info()[1]
-            f.close()
-            del f
-            raise e
-        f.close()
-        del f
-        _parsedata=data
-        ply_init(_parsedata)
-        dat_yaccer.parse(data, lexer=dat_lexer, debug=debug)
-    else:
-        _parse_info = None
-    #
-    # Disable parsing I/O
-    #
-    debugging=False
-    #print(_parse_info)
+    if filename is not None:
+        if data is not None:
+            raise ValueError("parse_data_commands: cannot specify both "
+                             "data and filename arguments")
+        with open(filename, 'r') as FILE:
+            data = FILE.read()
+
+    if data is None:
+        return None
+
+    dat_yaccer.parse(data, lexer=dat_lexer, debug=debug)
     return _parse_info
 
 if __name__ == '__main__':
