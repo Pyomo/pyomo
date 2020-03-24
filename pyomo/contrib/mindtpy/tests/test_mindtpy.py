@@ -219,8 +219,7 @@ class TestMindtPy(unittest.TestCase):
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       bound_tolerance=1E-5,
-                      lazy_callback=True,
-                      iteration_limit=1)
+                      lazy_callback=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -235,8 +234,7 @@ class TestMindtPy(unittest.TestCase):
                       init_strategy='max_binary',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      lazy_callback=True,
-                      iteration_limit=1)
+                      lazy_callback=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -252,8 +250,7 @@ class TestMindtPy(unittest.TestCase):
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       obj_bound=10,
-                      lazy_callback=True,
-                      iteration_limit=1)
+                      lazy_callback=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -269,8 +266,7 @@ class TestMindtPy(unittest.TestCase):
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       obj_bound=10,
-                      lazy_callback=True,
-                      iteration_limit=1)
+                      lazy_callback=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -285,8 +281,7 @@ class TestMindtPy(unittest.TestCase):
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       obj_bound=10,
-                      lazy_callback=True,
-                      iteration_limit=1)
+                      lazy_callback=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -300,8 +295,7 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      lazy_callback=True,
-                      iteration_limit=1)
+                      lazy_callback=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)

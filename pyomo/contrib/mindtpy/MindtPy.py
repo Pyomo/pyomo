@@ -263,6 +263,12 @@ class MindtPySolver(object):
         """
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
+
+        # configration confirmation
+        if config.lazy_callback == True:
+            config.iteration_limit = 1
+            config.add_slack = False
+
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()

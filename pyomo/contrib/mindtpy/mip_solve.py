@@ -28,7 +28,7 @@ try:
     from cplex.callbacks import LazyConstraintCallback
 except ImportError:
     print("Cplex python API is not found. Therefore, lp-nlp is not supported")
-
+'''Other solvers (e.g. Gurobi) are not supported yet'''
 
 class LazyOACallback(LazyConstraintCallback):
     """Inherent class in Cplex to call Lazy callback."""
@@ -134,8 +134,9 @@ class LazyOACallback(LazyConstraintCallback):
                              sense="G",
                              rhs=constr.lower.value+cplex_rhs)
 
-    def handle_lazy_master_mip_optimal(self, master_mip, solve_data, config, opt):
-        """Copy the result to working model and update upper or lower bound
+    def handle_lazy_master_mip_feasible_sol(self, master_mip, solve_data, config, opt):
+        """ This function is called during the branch and bound of master mip, more exactly when a feasible solution is found and LazyCallback is activated.
+        Copy the result to working model and update upper or lower bound
         In LP-NLP, upper or lower bound are updated during solving the master problem
         TODO: the name of this function might need to be changed, since the master problem is not solve to "optimality" in practice.
         """
@@ -196,7 +197,7 @@ class LazyOACallback(LazyConstraintCallback):
 
         if config.strategy == 'OA':
             # In OA algorithm, OA cuts are generated based on the solution of the subproblem
-            # We need to first copy the value of variales from the subproblem and then add cuts
+            # We need to first copy the value of variables from the subproblem and then add cuts
             # since value(constr.body), value(jacs[constr][var]), value(var) are used in self.add_lazy_oa_cuts()
             copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
@@ -236,7 +237,7 @@ class LazyOACallback(LazyConstraintCallback):
                 config.initial_feas = False
                 feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
                 # In OA algorithm, OA cuts are generated based on the solution of the subproblem
-                # We need to first copy the value of variales from the subproblem and then add cuts
+                # We need to first copy the value of variables from the subproblem and then add cuts
                 copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
                                      solve_data.mip.MindtPy_utils.variable_list,
                                      config)
@@ -250,7 +251,7 @@ class LazyOACallback(LazyConstraintCallback):
         master_mip = self.master_mip
         cpx = opt._solver_model  # Cplex model
 
-        self.handle_lazy_master_mip_optimal(
+        self.handle_lazy_master_mip_feasible_sol(
             master_mip, solve_data, config, opt)
 
         # solve subproblem
@@ -289,9 +290,11 @@ def solve_OA_master(solve_data, config):
     sign_adjust = 1 if main_objective.sense == minimize else -1
     if MindtPy.find_component('MindtPy_oa_obj') is not None:
         del MindtPy.MindtPy_oa_obj
-    if MindtPy.find_component('MindtPy_penalty_expr') is not None:
-        del MindtPy.MindtPy_penalty_expr
+    
     if config.add_slack == True:
+        if MindtPy.find_component('MindtPy_penalty_expr') is not None:
+            del MindtPy.MindtPy_penalty_expr
+
         MindtPy.MindtPy_penalty_expr = Expression(
             expr=sign_adjust * config.OA_penalty_factor * sum(
                 v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
