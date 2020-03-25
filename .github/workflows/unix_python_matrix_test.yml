@@ -128,5 +128,5 @@ jobs:
       run: |
         find . -maxdepth 10 -name ".cov*"
         coverage combine
-        coverage report
+        coverage report -i
         bash <(curl -s https://codecov.io/bash) -X gcov
