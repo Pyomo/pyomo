@@ -90,7 +90,24 @@ from pyomo.core.kernel.set_types import \
     (RealSet,
      IntegerSet,
      BooleanSet)
-
+from pyomo.environ import (
+     Reals,
+     PositiveReals,
+     NonPositiveReals,
+     NegativeReals,
+     NonNegativeReals,
+     PercentFraction,
+     UnitInterval,
+     Integers,
+     PositiveIntegers,
+     NonPositiveIntegers,
+     NegativeIntegers,
+     NonNegativeIntegers,
+     Boolean,
+     Binary,
+     RealInterval,
+     IntegerInterval,
+)
 #
 # allow the use of standard kernel modeling components
 # as the ctype argument for the general iterator method

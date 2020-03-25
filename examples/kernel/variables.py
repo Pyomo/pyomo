@@ -1,5 +1,4 @@
 import pyomo.kernel as pmo
-import pyomo.environ as pe
 
 #
 # Continuous variables
@@ -7,9 +6,9 @@ import pyomo.environ as pe
 
 v = pmo.variable()
 
-v = pmo.variable(domain=pe.Reals)
+v = pmo.variable(domain=pmo.Reals)
 
-v = pmo.variable(domain=pe.NonNegativeReals,
+v = pmo.variable(domain=pmo.NonNegativeReals,
                  ub=10)
 
 v = pmo.variable(domain_type=pmo.RealSet,
@@ -23,11 +22,11 @@ v = pmo.variable(domain_type=pmo.RealSet,
 # Discrete variables
 #
 
-v = pmo.variable(domain=pe.Binary)
+v = pmo.variable(domain=pmo.Binary)
 
-v = pmo.variable(domain=pe.Integers)
+v = pmo.variable(domain=pmo.Integers)
 
-v = pmo.variable(domain=pe.NonNegativeIntegers,
+v = pmo.variable(domain=pmo.NonNegativeIntegers,
                  ub=10)
 
 v = pmo.variable(domain_type=pmo.IntegerSet,
@@ -60,11 +59,11 @@ assert v.lb == 10
 assert v.ub == 20
 
 # set the domain (always overwrites bounds, even if infinite)
-v.domain = pe.Reals
+v.domain = pmo.Reals
 assert v.lb == None
 assert v.ub == None
 assert v.domain_type == pmo.RealSet
-v.domain = pe.Binary
+v.domain = pmo.Binary
 assert v.lb == 0
 assert v.ub == 1
 assert v.domain_type == pmo.IntegerSet

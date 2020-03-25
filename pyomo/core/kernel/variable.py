@@ -300,11 +300,10 @@ class variable(IVariable):
 
     Examples:
         >>> import pyomo.kernel as pmo
-        >>> import pyomo.environ as pme
         >>> # A continuous variable with infinite bounds
         >>> x = pmo.variable()
         >>> # A binary variable
-        >>> x = pmo.variable(domain=pme.Binary)
+        >>> x = pmo.variable(domain=pmo.Binary)
         >>> # Also a binary variable
         >>> x = pmo.variable(domain_type=pmo.IntegerSet, lb=0, ub=1)
     """
