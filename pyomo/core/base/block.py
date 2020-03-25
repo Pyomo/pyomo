@@ -48,41 +48,6 @@ from pyomo.opt import WriterFactory
 logger = logging.getLogger('pyomo.core')
 
 
-# Monkey-patch for deepcopying weakrefs
-# Only required on Python <= 2.6
-#
-# TODO: can we verify that this is really needed? [JDS 7/8/14]
-if sys.version_info[0] == 2 and sys.version_info[1] <= 6:
-    copy._copy_dispatch[weakref.ref] = copy._copy_immutable
-    copy._deepcopy_dispatch[weakref.ref] = copy._deepcopy_atomic
-    copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
-
-    def dcwvd(self, memo):
-        """Deepcopy implementation for WeakValueDictionary class"""
-        from copy import deepcopy
-        new = self.__class__()
-        for key, wr in self.data.items():
-            o = wr()
-            if o is not None:
-                new[deepcopy(key, memo)] = o
-        return new
-    weakref.WeakValueDictionary.__copy__ = \
-        weakref.WeakValueDictionary.copy
-    weakref.WeakValueDictionary.__deepcopy__ = dcwvd
-
-    def dcwkd(self, memo):
-        """Deepcopy implementation for WeakKeyDictionary class"""
-        from copy import deepcopy
-        new = self.__class__()
-        for key, value in self.data.items():
-            o = key()
-            if o is not none:
-                new[o] = deepcopy(value, memo)
-        return new
-    weakref.WeakKeyDictionary.__copy__ = weakref.WeakKeyDictionary.copy
-    weakref.WeakKeyDictionary.__deepcopy__ = dcwkd
-
-
 class _generic_component_decorator(object):
     """A generic decorator that wraps Block.__setattr__()
 

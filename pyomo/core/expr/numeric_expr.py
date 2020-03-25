@@ -640,6 +640,9 @@ class ExternalFunctionExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         return "{0}({1})".format(self.getname(), ", ".join(values))
 
+    def get_units(self):
+        """ Return the units for this external function expression """
+        return self._fcn.get_units()
 
 class NPV_ExternalFunctionExpression(ExternalFunctionExpression):
     __slots__ = ()

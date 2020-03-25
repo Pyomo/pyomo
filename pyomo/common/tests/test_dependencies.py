@@ -31,6 +31,23 @@ bogus, bogus_available \
     = attempt_import('nonexisting.module.bogus', defer_check=True)
 
 class TestDependencies(unittest.TestCase):
+    def test_import_error(self):
+        module_obj, module_available = attempt_import(
+            '__there_is_no_module_named_this__',
+            'Testing import of a non-existant module',
+            defer_check=False)
+        self.assertFalse(module_available)
+        with self.assertRaisesRegex(
+                DeferredImportError, 'Testing import of a non-existant module'):
+            module_obj.try_to_call_a_method()
+                
+    def test_import_success(self):
+        module_obj, module_available = attempt_import(
+            'pyutilib','Testing import of PyUtilib', defer_check=False)
+        self.assertTrue(module_available)
+        import pyutilib
+        self.assertTrue(module_obj is pyutilib)
+
     def test_local_deferred_import(self):
         self.assertIs(type(bogus_available), DeferredImportIndicator)
         self.assertIs(type(bogus), DeferredImportModule)
@@ -210,3 +227,6 @@ class TestDependencies(unittest.TestCase):
         self.assertTrue(avail)
         self.assertEqual(attempted_import, [True])
         self.assertIs(mod._indicator_flag._module, dep_mod)
+
+if __name__ == '__main__':
+    unittest.main()
