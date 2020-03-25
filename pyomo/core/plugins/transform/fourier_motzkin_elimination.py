@@ -288,7 +288,7 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
     def _add_linear_constraints(self, cons1, cons2):
         """Adds two >= constraints"""
         ans = {'lower': None, 'upper': None, 'body': ComponentMap()}
-        all_vars = cons1['body'].keys() + \
+        all_vars = list(cons1['body'].keys()) + \
                    list(ComponentSet(cons2['body'].keys()) - \
                         ComponentSet(cons1['body'].keys()))
         for var in all_vars:
