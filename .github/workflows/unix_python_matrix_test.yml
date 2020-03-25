@@ -16,6 +16,8 @@ jobs:
         include:
         - os: macos-latest
           TARGET: osx
+        - os: ubuntu-latest
+          TARGET: linux
         - os: ubuntu-18.04
           TARGET: linux
         python-version: [3.5, 3.6, 3.7, 3.8]
