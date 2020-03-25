@@ -1,4 +1,4 @@
-name: GitHub CI
+name: GitHub CI (mpi)
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: mpi/${{ matrix.TARGET }}/py${{ matrix.python-version }}
+    name: ${{ matrix.TARGET }}/py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 1
@@ -122,8 +122,10 @@ jobs:
             pyomo `pwd`/pyomo-model-libraries
 
     - name: Upload coverage to codecov
+      env:
+        GITHUB_JOB_NAME: mpi/${{ matrix.TARGET }}/py${{ matrix.python-version }}
       run: |
         find . -maxdepth 10 -name ".cov*"
         coverage combine
         coverage report -i
-        bash <(curl -s https://codecov.io/bash) -X gcov
+        bash <(curl -s https://codecov.io/bash) -X gcov -n "$GITHUB_JOB_NAME"

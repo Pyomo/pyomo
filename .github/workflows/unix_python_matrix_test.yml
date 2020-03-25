@@ -1,4 +1,4 @@
-name: GitHub CI
+name: GitHub CI (unix)
 
 on:
   push:
@@ -125,8 +125,10 @@ jobs:
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
 
     - name: Upload coverage to codecov
+      env:
+        GITHUB_JOB_NAME: unix/${{ matrix.TARGET }}/py${{ matrix.python-version }}
       run: |
         find . -maxdepth 10 -name ".cov*"
         coverage combine
         coverage report -i
-        bash <(curl -s https://codecov.io/bash) -X gcov
+        bash <(curl -s https://codecov.io/bash) -X gcov -n "$GITHUB_JOB_NAME"
