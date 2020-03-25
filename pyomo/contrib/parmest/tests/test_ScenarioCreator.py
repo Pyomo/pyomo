@@ -27,7 +27,7 @@ testdir = os.path.dirname(os.path.abspath(__file__))
 
 @unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-class parmest_object_Tester_reactor_design(unittest.TestCase):
+class pamest_Scenario_creator_reactor_design(unittest.TestCase):
     
     def setUp(self):
         from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor_design_model
@@ -79,7 +79,7 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
 
 @unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-class parmest_object_Tester_semibatch(unittest.TestCase):
+class  pamest_Scenario_creator_semibatch(unittest.TestCase):
     
     def setUp(self):
         import pyomo.contrib.parmest.examples.semibatch.semibatch as sb
