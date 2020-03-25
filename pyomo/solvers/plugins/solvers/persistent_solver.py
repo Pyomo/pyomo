@@ -308,7 +308,6 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         raise NotImplementedError('This method should be implemented by subclasses.')
 
-
     def solve(self, *args, **kwds):
         """
         Solve the model.
@@ -382,7 +381,6 @@ class PersistentSolver(DirectOrPersistentSolver):
             self._presolve(**kwds)
 
             presolve_completion_time = time.time()
-
             if self._report_timing:
                 print("      %6.2f seconds required for presolve" % (presolve_completion_time - initial_time))
 
@@ -409,7 +407,6 @@ class PersistentSolver(DirectOrPersistentSolver):
                 raise pyutilib.common.ApplicationError(
                     "Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
-
             if self._report_timing:
                 print("      %6.2f seconds required for solver" % (solve_completion_time - presolve_completion_time))
 
@@ -458,7 +455,6 @@ class PersistentSolver(DirectOrPersistentSolver):
             if self._report_timing:
                 print("      %6.2f seconds required for postsolve" % (postsolve_completion_time -
                                                                       solve_completion_time))
-
 
         finally:
             #
