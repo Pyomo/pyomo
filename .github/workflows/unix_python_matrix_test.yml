@@ -1,4 +1,4 @@
-name: continuous-integration/github/pr
+name: GitHub CI
 
 on:
   pull_request:
