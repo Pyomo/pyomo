@@ -1,5 +1,5 @@
-<!--[![Travis Status](https://travis-ci.org/Pyomo/pyomo.svg?branch=master)](https://travis-ci.org/Pyomo/pyomo)-->
-[![Travis Status](https://img.shields.io/travis/Pyomo/pyomo.svg?logo=travis)](https://travis-ci.org/Pyomo/pyomo)
+<!--[![Travis Status](https://travis-ci.com/Pyomo/pyomo.svg?branch=master)](https://travis-ci.com/Pyomo/pyomo)-->
+[![Travis Status](https://img.shields.io/travis/com/Pyomo/pyomo/master?logo=travis)](https://travis-ci.com/Pyomo/pyomo)
 [![Appveyor Status](https://ci.appveyor.com/api/projects/status/km08tbkv05ik14n9/branch/master?svg=true)](https://ci.appveyor.com/project/WilliamHart/pyomo/branch/master)
 [![Jenkins Status](https://img.shields.io/jenkins/s/https/software.sandia.gov/downloads/pub/pyomo/jenkins/Pyomo_trunk.svg?logo=jenkins&logoColor=white)](https://jenkins-srn.sandia.gov/job/Pyomo_trunk)
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/master/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
