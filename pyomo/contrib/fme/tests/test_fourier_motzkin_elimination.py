@@ -53,11 +53,12 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             "The Fourier-Motzkin Elimination transformation "
             "requires the argument vars_to_eliminate, a "
             "list of Vars to be projected out of the model.",
-            TransformationFactory('core.fourier_motzkin_elimination').apply_to,
+            TransformationFactory('contrib.fourier_motzkin_elimination').\
+            apply_to,
             m)
 
     def check_projected_constraints(self, m):
-        constraints = m._pyomo_core_fme_transformation.projected_constraints
+        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # x - 0.01y <= 1
         cons = constraints[4]
         self.assertEqual(value(cons.lower), -1)
@@ -115,7 +116,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def test_transformed_constraints_indexed_var_arg(self):
         m = self.makeModel()
-        TransformationFactory('core.fourier_motzkin_elimination').apply_to( 
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
             vars_to_eliminate = m.lamb)
 
@@ -125,7 +126,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def test_transformed_constraints_varData_list_arg(self):
         m = self.makeModel()
-        TransformationFactory('core.fourier_motzkin_elimination').apply_to( 
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
             vars_to_eliminate = [m.lamb[1], m.lamb[2]])
 
@@ -133,7 +134,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def test_transformed_constraints_indexedVar_list(self):
         m = self.makeModel()
-        TransformationFactory('core.fourier_motzkin_elimination').apply_to( 
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
             vars_to_eliminate = [m.lamb])
 
@@ -141,7 +142,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def test_original_constraints_deactivated(self):
         m = self.makeModel()
-        TransformationFactory('core.fourier_motzkin_elimination').apply_to( 
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
             vars_to_eliminate = m.lamb)
         
@@ -161,7 +162,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertRaisesRegexp(
             RuntimeError,
             "Fourier-Motzkin found that model is infeasible!",
-            TransformationFactory('core.fourier_motzkin_elimination').apply_to,
+            TransformationFactory('contrib.fourier_motzkin_elimination').apply_to,
             m, 
             vars_to_eliminate=m.x)
 
@@ -174,7 +175,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertRaisesRegexp(
             RuntimeError,
             "Fourier-Motzkin found that model is infeasible!",
-            TransformationFactory('core.fourier_motzkin_elimination').apply_to,
+            TransformationFactory('contrib.fourier_motzkin_elimination').\
+            apply_to,
             m, 
             vars_to_eliminate=m.x)
         
@@ -190,7 +192,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             "Fourier-Motzkin Elimination transformation "
             "can only be applied to linear models!"
             % m.cons.name,
-            TransformationFactory('core.fourier_motzkin_elimination').apply_to,
+            TransformationFactory('contrib.fourier_motzkin_elimination').\
+            apply_to,
             m, 
             vars_to_eliminate=m.x)
 
@@ -206,6 +209,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             "Sets, Params, Vars, Constraints, Expressions, Blocks, "
             "and Objectives may be active on the model." % (m.disj.name, 
                                                             m.disj.type()),
-            TransformationFactory('core.fourier_motzkin_elimination').apply_to,
+            TransformationFactory('contrib.fourier_motzkin_elimination').\
+            apply_to,
             m, 
             vars_to_eliminate=m.x)

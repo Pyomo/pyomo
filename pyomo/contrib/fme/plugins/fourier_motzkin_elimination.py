@@ -49,7 +49,7 @@ def vars_to_eliminate_list(x):
             "Expected Var or list of Vars."
             "\n\tRecieved %s" % type(x))
 
-@TransformationFactory.register('core.fourier_motzkin_elimination',
+@TransformationFactory.register('contrib.fourier_motzkin_elimination',
                                 doc="Project out specified (continuous) "
                                 "variables from a linear model.")
 class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
@@ -60,14 +60,14 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
                            project out of the model
 
     The transformation will deactivate the original constraints of the model
-    and create a new block named "_pyomo_core_fme_transformation" with the 
+    and create a new block named "_pyomo_contrib_fme_transformation" with the 
     projected constraints. Note that this transformation will flatten the 
     structure of the original model since there is no obvious mapping between 
     the original model and the transformed one.
 
     """
 
-    CONFIG = ConfigBlock("core.fourier_motzkin_elimination")
+    CONFIG = ConfigBlock("contrib.fourier_motzkin_elimination")
     CONFIG.declare('vars_to_eliminate', ConfigValue(
         default=None,
         domain=vars_to_eliminate_list,
@@ -95,7 +95,7 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
         # make transformation block
         transBlockName = unique_component_name(
             instance,
-            '_pyomo_core_fme_transformation')
+            '_pyomo_contrib_fme_transformation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
         projected_constraints = transBlock.projected_constraints = \
