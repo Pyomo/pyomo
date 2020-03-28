@@ -1,4 +1,4 @@
-param: I: p := 
+param: I: p :=
 # simple integers
  501   2
  502  +2
@@ -25,7 +25,7 @@ param: I: p :=
  541  -2e-2
 # basic floats
  100   1.0
- 101   1. 
+ 101   1.
  102  +1.0
  103  +1.
  110  -1.0
