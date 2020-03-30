@@ -145,7 +145,7 @@ class Test_FileDownloader(unittest.TestCase):
         f = FileDownloader()
         _os, _ver = f.get_os_version(normalize=False)
         _norm = f.get_os_version(normalize=True)
-        print(_os,_ver,_norm)
+        #print(_os,_ver,_norm)
         _sys = f.get_sysinfo()[0]
         if _sys == 'linux':
             dist, dist_ver = re.match('^([^0-9]+)(.*)', _norm).groups()
@@ -158,33 +158,33 @@ class Test_FileDownloader(unittest.TestCase):
 
             if distro_available:
                 d, v = f._get_distver_from_distro()
-                print(d,v)
+                #print(d,v)
                 self.assertEqual(_os, d)
                 self.assertEqual(_ver, v)
-                self.assertTrue(v.startswith(dist_ver))
+                self.assertTrue(v.startswith(dist_ver.replace('.','')))
 
             if os.path.exists('/etc/redhat-release'):
                 d, v = f._get_distver_from_redhat_release()
-                print(d,v)
+                #print(d,v)
                 self.assertEqual(_os, d)
                 self.assertEqual(_ver, v)
-                self.assertTrue(v.startswith(dist_ver))
+                self.assertTrue(v.startswith(dist_ver.replace('.','')))
 
             if run(['lsb_release'])[0] == 0:
                 d, v = f._get_distver_from_lsb_release()
-                print(d,v)
+                #print(d,v)
                 self.assertEqual(_os, d)
                 self.assertEqual(_ver, v)
-                self.assertTrue(v.startswith(dist_ver))
+                self.assertTrue(v.startswith(dist_ver.replace('.','')))
 
             if os.path.exists('/etc/os-release'):
                 d, v = f._get_distver_from_os_release()
-                print(d,v)
+                #print(d,v)
                 self.assertEqual(_os, d)
                 # Note that (at least on centos), os_release is an
                 # imprecise version string
-                self.assertTrue(_ver.startswith(v))
-                self.assertTrue(v.startswith(dist_ver))
+                self.assertTrue(_ver.replace('.','').startswith(v))
+                self.assertTrue(v.startswith(dist_ver.replace('.','')))
 
         elif _sys == 'darwin':
             dist, dist_ver = re.match('^([^0-9]+)(.*)', _norm).groups()
