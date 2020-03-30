@@ -145,6 +145,7 @@ class Test_FileDownloader(unittest.TestCase):
         f = FileDownloader()
         _os, _ver = f.get_os_version(normalize=False)
         _norm = f.get_os_version(normalize=True)
+        print(_os,_ver,_norm)
         _sys = f.get_sysinfo()[0]
         if _sys == 'linux':
             dist, dist_ver = re.match('^([^0-9]+)(.*)', _norm).groups()
@@ -157,24 +158,28 @@ class Test_FileDownloader(unittest.TestCase):
 
             if distro_available:
                 d, v = f._get_distver_from_distro()
+                print(d,v)
                 self.assertEqual(_os, d)
                 self.assertEqual(_ver, v)
                 self.assertTrue(v.startswith(dist_ver))
 
             if os.path.exists('/etc/redhat-release'):
                 d, v = f._get_distver_from_redhat_release()
+                print(d,v)
                 self.assertEqual(_os, d)
                 self.assertEqual(_ver, v)
                 self.assertTrue(v.startswith(dist_ver))
 
             if run(['lsb_release'])[0] == 0:
                 d, v = f._get_distver_from_lsb_release()
+                print(d,v)
                 self.assertEqual(_os, d)
                 self.assertEqual(_ver, v)
                 self.assertTrue(v.startswith(dist_ver))
 
             if os.path.exists('/etc/os-release'):
                 d, v = f._get_distver_from_os_release()
+                print(d,v)
                 self.assertEqual(_os, d)
                 # Note that (at least on centos), os_release is an
                 # imprecise version string
@@ -182,11 +187,12 @@ class Test_FileDownloader(unittest.TestCase):
                 self.assertTrue(v.startswith(dist_ver))
 
         elif _sys == 'darwin':
-            dist, ver = re.match('^([^0-9]+)(.*)', _norm).groups()
+            dist, dist_ver = re.match('^([^0-9]+)(.*)', _norm).groups()
             self.assertEqual(_os, 'macos')
             self.assertEqual(dist, 'macos')
-            self.assertIn('.', ver)
-            self.assertGreater(int(ver.split('.')[0]), 0)
+            self.assertNotIn('.', dist_ver)
+            self.assertGreater(int(dist_ver), 0)
+            self.assertEqual(_norm, _os+''.join(_ver.split('.')[:2]))
         elif _sys == 'windows':
             self.assertEqual(_os, 'win')
             self.assertEqual(_norm, _os+_ver)
