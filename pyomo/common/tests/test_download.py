@@ -161,21 +161,21 @@ class Test_FileDownloader(unittest.TestCase):
                 #print(d,v)
                 self.assertEqual(_os, d)
                 self.assertEqual(_ver, v)
-                self.assertTrue(v.startswith(dist_ver.replace('.','')))
+                self.assertTrue(v.replace('.','').startswith(dist_ver))
 
             if os.path.exists('/etc/redhat-release'):
                 d, v = f._get_distver_from_redhat_release()
                 #print(d,v)
                 self.assertEqual(_os, d)
                 self.assertEqual(_ver, v)
-                self.assertTrue(v.startswith(dist_ver.replace('.','')))
+                self.assertTrue(v.replace('.','').startswith(dist_ver))
 
             if run(['lsb_release'])[0] == 0:
                 d, v = f._get_distver_from_lsb_release()
                 #print(d,v)
                 self.assertEqual(_os, d)
                 self.assertEqual(_ver, v)
-                self.assertTrue(v.startswith(dist_ver.replace('.','')))
+                self.assertTrue(v.replace('.','').startswith(dist_ver))
 
             if os.path.exists('/etc/os-release'):
                 d, v = f._get_distver_from_os_release()
@@ -183,8 +183,8 @@ class Test_FileDownloader(unittest.TestCase):
                 self.assertEqual(_os, d)
                 # Note that (at least on centos), os_release is an
                 # imprecise version string
-                self.assertTrue(_ver.replace('.','').startswith(v))
-                self.assertTrue(v.startswith(dist_ver.replace('.','')))
+                self.assertTrue(_ver.startswith(v))
+                self.assertTrue(v.replace('.','').startswith(dist_ver))
 
         elif _sys == 'darwin':
             dist, dist_ver = re.match('^([^0-9]+)(.*)', _norm).groups()
