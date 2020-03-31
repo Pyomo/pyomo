@@ -121,13 +121,15 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
                 if obj not in vars_to_eliminate:
                     continue
                 if obj.lb is not None:
-                    constraints.append({'body': ComponentMap([(obj, 1)]),
+                    constraints.append({'body': generate_standard_repn(obj),
                                         'upper': None,
-                                        'lower': value(obj.lb)})
+                                        'lower': value(obj.lb),
+                                        'map': ComponentMap([(obj, 1)])})
                 if obj.ub is not None:
-                    constraints.append({'body': ComponentMap([(obj, -1)]),
+                    constraints.append({'body': generate_standard_repn(-obj),
                                         'upper': None,
-                                        'lower': -value(obj.ub)})
+                                        'lower': -value(obj.ub),
+                                        'map': ComponentMap([(obj, -1)])})
             else:
                 raise RuntimeError(
                     "Found active component %s of type %s. The "
@@ -143,7 +145,8 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
         # put the new constraints on the transformation block
         for cons in new_constraints:
             body = cons['body']
-            lhs = sum(coef*var for (coef, var) in body.items())
+            lhs = sum(coef*var for (coef, var) in zip(body.linear_coefs,
+                                                      body.linear_vars))
             lower = cons['lower']
             if type(lhs >= lower) is bool:
                 if lhs >= lower:
@@ -162,7 +165,7 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
         ub and a lb, it is transformed into two constraints. Otherwise it is
         flipped if it is <=. Each dictionary contains the keys 'lower', 'upper'
         and 'body' where, after the process, 'upper' will be None, 'lower' will
-        be a constant, and 'body' will contain a ComponentMap of var: coef.
+        be a constant, and 'body' will be the standard repn of the body.
         (The constant will be moved to the RHS).
         """
         body = constraint.body
@@ -185,7 +188,7 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
                 leq_side = {'lower': -cons_dict['upper'],
                             'upper': None,
                             'body': generate_standard_repn(-1.0*body)}
-                self._move_constant_and_map_body(leq_side)
+                self._move_constant_and_add_map(leq_side)
                 constraints_to_add.append(leq_side)
                 cons_dict['upper'] = None
 
@@ -195,22 +198,23 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
                 cons_dict['lower'] = -cons_dict['upper']
                 cons_dict['upper'] = None
                 cons_dict['body'] = generate_standard_repn(-1.0*body)
-        self._move_constant_and_map_body(cons_dict)
+        self._move_constant_and_add_map(cons_dict)
 
         return constraints_to_add
 
-    def _move_constant_and_map_body(self, cons_dict):
+    def _move_constant_and_add_map(self, cons_dict):
         """Takes constraint in dicionary form already in >= form, 
-        and moves the constant to the RHS, then makes body a ComponentMap
-        of var : coef
+        and moves the constant to the RHS
         """
-        constant = cons_dict['body'].constant
+        body = cons_dict['body']
+        constant = body.constant
         cons_dict['lower'] -= constant
-        cons_dict['body'].constant = 0
+        body.constant = 0
 
-        std_repn = cons_dict['body']
-        cons_dict['body'] = ComponentMap(zip(std_repn.linear_vars,
-                                             std_repn.linear_coefs))
+        # store a map of vars to coefficients. We can't use this in place of
+        # standard repn because determinism, but this will save a lot of linear
+        # time searches later.
+        cons_dict['map'] = ComponentMap(zip(body.linear_vars, body.linear_coefs))
 
     def _fourier_motzkin_elimination(self, constraints, vars_to_eliminate):
         """Performs FME on the constraint list in the argument 
@@ -220,11 +224,11 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
 
         # We only need to eliminate variables that actually appear in
         # this set of constraints... Revise our list.
-        vars_that_appear = ComponentSet()
+        vars_that_appear = []
         for cons in constraints:
-            for var, val in cons['body'].items():
+            for var in cons['body'].linear_vars:
                 if var in vars_to_eliminate:
-                    vars_that_appear.add(var)
+                    vars_that_appear.append(var)
 
         # we actually begin the recursion here
         while vars_that_appear:
@@ -241,8 +245,7 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
 
             while(constraints):
                 cons = constraints.pop()
-
-                leaving_var_coef = cons['body'].get(the_var)
+                leaving_var_coef = cons['map'].get(the_var)
                 if leaving_var_coef is None or leaving_var_coef == 0:
                     waiting_list.append(cons)
                     continue
@@ -276,8 +279,12 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
         There is no logic for flipping the equality, so this is just the 
         special case with a nonnegative scalar, which is all we need.
         """
-        for var, coef in cons['body'].items():
-            cons['body'][var] = coef*scalar
+        cons['body'].linear_coefs = [scalar*coef for coef in
+                                     cons['body'].linear_coefs]
+        # and update the map... (It isn't lovely that I am storing this in two
+        # places...)
+        for var, coef in cons['map'].items():
+            cons['map'][var] = coef*scalar
 
         # assume scalar >= 0 and constraint only has lower bound
         if cons['lower'] is not None:
@@ -287,19 +294,31 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
 
     def _add_linear_constraints(self, cons1, cons2):
         """Adds two >= constraints"""
-        ans = {'lower': None, 'upper': None, 'body': ComponentMap()}
-        all_vars = list(cons1['body'].keys()) + \
-                   list(ComponentSet(cons2['body'].keys()) - \
-                        ComponentSet(cons1['body'].keys()))
+        ans = {'lower': None, 'upper': None, 'body': None, 'map': ComponentMap()}
+
+        # This is not beautiful, but it needs to be both deterministic and
+        # account for the fact that Vars aren't hashable.
+        seen = ComponentSet()
+        all_vars = []
+        for v in cons1['body'].linear_vars:
+            all_vars.append(v)
+            seen.add(v)
+        for v in cons2['body'].linear_vars:
+            if v not in seen:
+                all_vars.append(v)
+        
+        expr = 0
         for var in all_vars:
-            cons1_coef = cons1['body'].get(var)
-            cons2_coef = cons2['body'].get(var)
+            cons1_coef = cons1['map'].get(var)
+            cons2_coef = cons2['map'].get(var)
             if cons2_coef is not None and cons1_coef is not None:
-                ans['body'][var] = cons1_coef + cons2_coef
+                ans['map'][var] = new_coef = cons1_coef + cons2_coef
             elif cons1_coef is not None:
-                ans['body'][var] = cons1_coef
+                ans['map'][var] = new_coef = cons1_coef
             elif cons2_coef is not None:
-                ans['body'][var] = cons2_coef
+                ans['map'][var] = new_coef = cons2_coef
+            expr += new_coef*var
+        ans['body'] = generate_standard_repn(expr)
 
         # upper is None, so we just deal with the constants here.
         cons1_lower = cons1['lower']
