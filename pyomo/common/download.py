@@ -172,7 +172,7 @@ class FileDownloader(object):
         if _os in _map:
             _os = _map[_os]
 
-        if _os in {'ubuntu','macos'}:
+        if _os in {'ubuntu','macos','win'}:
             return _os + ''.join(_ver.split('.')[:2])
         else:
             return _os + _ver.split('.')[0]
