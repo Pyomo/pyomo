@@ -1,47 +1,65 @@
 20 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
-    B : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
-    C : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
-        Virtual
-    D : Dim=0, Dimen=2, Size=3, Domain=D_domain, Ordered=False, Bounds=None
-        [('A1', 1), ('A2', 2), ('A3', 3)]
-    D_domain : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
-        Virtual
-    E : Dim=0, Dimen=3, Size=6, Domain=E_domain, Ordered=False, Bounds=None
-        [('A1', 1, 'A1'), ('A1', 1, 'A2'), ('A2', 2, 'A2'), ('A2', 2, 'A3'), ('A3', 3, 'A1'), ('A3', 3, 'A3')]
-    E_domain : Dim=0, Dimen=3, Size=27, Domain=None, Ordered=False, Bounds=None
-        Virtual
-    E_domain_index_0 : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
-        Virtual
-    F : Dim=1, Dimen=1, Size=9, Domain=None, ArraySize=3, Ordered=False, Bounds=None
-        Key : Members
-         A1 : [1, 3, 5]
-         A2 : [2, 4, 6]
-         A3 : [3, 5, 7]
-    G : Dim=2, Dimen=1, Size=0, Domain=None, ArraySize=0, Ordered=False, Bounds=None
-        Key : Members
-    G_index : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
-        Virtual
-    H : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['H1', 'H2', 'H3']
-    I : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
-        ['I1', 'I2', 'I3', 'I4']
-    J : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
-    K : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
-    T_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
-        Virtual
-    U_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
-        Virtual
-    x : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
-    y : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['A1', 'A2', 'A3']
-    z : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
-        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
+    B : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
+    C : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*B :    9 : {('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)}
+    D : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain   : Size : Members
+        None :     2 : D_domain :    3 : {('A1', 1), ('A2', 2), ('A3', 3)}
+    D_domain : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*B :    9 : {('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)}
+    E : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain   : Size : Members
+        None :     3 : E_domain :    6 : {('A1', 1, 'A1'), ('A1', 1, 'A2'), ('A2', 2, 'A2'), ('A2', 2, 'A3'), ('A3', 3, 'A1'), ('A3', 3, 'A3')}
+    E_domain : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain             : Size : Members
+        None :     3 : E_domain_index_0*A :   27 : {('A1', 1, 'A1'), ('A1', 1, 'A2'), ('A1', 1, 'A3'), ('A1', 2, 'A1'), ('A1', 2, 'A2'), ('A1', 2, 'A3'), ('A1', 3, 'A1'), ('A1', 3, 'A2'), ('A1', 3, 'A3'), ('A2', 1, 'A1'), ('A2', 1, 'A2'), ('A2', 1, 'A3'), ('A2', 2, 'A1'), ('A2', 2, 'A2'), ('A2', 2, 'A3'), ('A2', 3, 'A1'), ('A2', 3, 'A2'), ('A2', 3, 'A3'), ('A3', 1, 'A1'), ('A3', 1, 'A2'), ('A3', 1, 'A3'), ('A3', 2, 'A1'), ('A3', 2, 'A2'), ('A3', 2, 'A3'), ('A3', 3, 'A1'), ('A3', 3, 'A2'), ('A3', 3, 'A3')}
+    E_domain_index_0 : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*B :    9 : {('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)}
+    F : Size=3, Index=A, Ordered=Insertion
+        Key : Dimen : Domain : Size : Members
+         A1 :     1 :    Any :    3 : {1, 3, 5}
+         A2 :     1 :    Any :    3 : {2, 4, 6}
+         A3 :     1 :    Any :    3 : {3, 5, 7}
+    G : Size=0, Index=G_index, Ordered=Insertion
+        Key : Dimen : Domain : Size : Members
+    G_index : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*B :    9 : {('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)}
+    H : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'H1', 'H2', 'H3'}
+    I : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    4 : {'I1', 'I2', 'I3', 'I4'}
+    J : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')}
+    K : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')}
+    T_index : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*I :   12 : {('A1', 'I1'), ('A1', 'I2'), ('A1', 'I3'), ('A1', 'I4'), ('A2', 'I1'), ('A2', 'I2'), ('A2', 'I3'), ('A2', 'I4'), ('A3', 'I1'), ('A3', 'I2'), ('A3', 'I3'), ('A3', 'I4')}
+    U_index : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    I*A :   12 : {('I1', 'A1'), ('I1', 'A2'), ('I1', 'A3'), ('I2', 'A1'), ('I2', 'A2'), ('I2', 'A3'), ('I3', 'A1'), ('I3', 'A2'), ('I3', 'A3'), ('I4', 'A1'), ('I4', 'A2'), ('I4', 'A3')}
+    x : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
+    y : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'A1', 'A2', 'A3'}
+    z : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    Any :    3 : {('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')}
 
 18 Param Declarations
     M : Size=3, Index=K, Domain=Reals, Default=None, Mutable=False

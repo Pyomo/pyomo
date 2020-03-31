@@ -189,7 +189,7 @@ class PyomoDataPortal(unittest.TestCase):
         data = DataPortal(filename=os.path.abspath(example_dir+'A.tab'), set=model.A)
         self.assertEqual(set(data['A']), set(['A1', 'A2', 'A3']))
         instance = model.create_instance(data)
-        self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
 
     def test_tableA1_2(self):
         # Importing a single column of data
@@ -198,7 +198,7 @@ class PyomoDataPortal(unittest.TestCase):
         data = DataPortal()
         data.load(filename=os.path.abspath(example_dir+'A.tab'), set=model.A)
         instance = model.create_instance(data)
-        self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
 
     def test_tableA1_3(self):
         # Importing a single column of data
@@ -211,7 +211,7 @@ class PyomoDataPortal(unittest.TestCase):
         data.load(set=model.A)
         data.disconnect()
         instance = model.create_instance(data)
-        self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
 
     def test_md1(self):
         md = DataPortal()
@@ -798,7 +798,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(set=model.A, **self.create_options('A'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
 
     def test_tableB(self):
         # Importing an unordered set of numeric data
@@ -808,7 +808,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(set=model.B, **self.create_options('B'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.B.data(), set([1, 2, 3]))
+        self.assertEqual(set(instance.B.data()), set([1, 2, 3]))
 
     def test_tableC(self):
         # Importing a multi-column table, where all columns are
@@ -819,7 +819,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(set=model.C, **self.create_options('C'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.C.data(), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
+        self.assertEqual(set(instance.C.data()), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
 
     def test_tableD(self):
         # Importing a 2D array of data as a set.
@@ -829,7 +829,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(set=model.C, format='set_array', **self.create_options('D'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.C.data(), set([('A1',1), ('A2',2), ('A3',3)]))
+        self.assertEqual(set(instance.C.data()), set([('A1',1), ('A2',2), ('A3',3)]))
 
     def test_tableZ(self):
         # Importing a single parameter
@@ -850,7 +850,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(param=model.Y, **self.create_options('Y'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.Y.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
 
     def test_tableXW_1(self):
@@ -865,7 +865,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(param=(model.X, model.W), **self.create_options('XW'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
 
@@ -879,7 +879,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(param=(model.X, model.W), **self.create_options('XW'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
 
@@ -893,7 +893,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(index=model.A, param=(model.X, model.W), **self.create_options('XW'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
 
@@ -907,7 +907,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(select=('A', 'W', 'X'), index=model.B, param=(model.R, model.S), **self.create_options('XW'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.B.data(), set(['A1','A2','A3']))
+        self.assertEqual(set(instance.B.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.S.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.R.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
 
@@ -946,7 +946,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(param=model.S, **self.create_options('S'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.S.extract_values(), {'A1':3.3,'A3':3.5})
 
     def test_tablePO(self):
@@ -959,7 +959,7 @@ class TestTextPortal(unittest.TestCase):
         data = DataPortal()
         data.load(index=model.J, param=(model.P, model.O), **self.create_options('PO'))
         instance = model.create_instance(data)
-        self.assertEqual(instance.J.data(), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
+        self.assertEqual(set(instance.J.data()), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
         self.assertEqual(instance.P.extract_values(), {('A3', 'B3'): 4.5, ('A1', 'B1'): 4.3, ('A2', 'B2'): 4.4} )
         self.assertEqual(instance.O.extract_values(), {('A3', 'B3'): 5.5, ('A1', 'B1'): 5.3, ('A2', 'B2'): 5.4})
 
@@ -1121,7 +1121,7 @@ class LoadTests(object):
         model=AbstractModel()
         model.A = Set()
         instance = model.create_instance(currdir+'loadA1.dat')
-        self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
         os.remove(currdir+'loadA1.dat')
 
     def test_tableA2(self):
@@ -1150,7 +1150,7 @@ class LoadTests(object):
         model=AbstractModel()
         model.A = Set()
         instance = model.create_instance(currdir+'loadA3.dat')
-        self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
         os.remove(currdir+'loadA3.dat')
 
     def test_tableB1(self):
@@ -1162,7 +1162,7 @@ class LoadTests(object):
         model=AbstractModel()
         model.B = Set()
         instance = model.create_instance(currdir+'loadB.dat')
-        self.assertEqual(instance.B.data(), set([1, 2, 3]))
+        self.assertEqual(set(instance.B.data()), set([1, 2, 3]))
         os.remove(currdir+'loadB.dat')
 
     def test_tableC(self):
@@ -1175,7 +1175,7 @@ class LoadTests(object):
         model=AbstractModel()
         model.C = Set(dimen=2)
         instance = model.create_instance(currdir+'loadC.dat')
-        self.assertEqual(instance.C.data(), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
+        self.assertEqual(set(instance.C.data()), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
         os.remove(currdir+'loadC.dat')
 
     def test_tableD(self):
@@ -1187,7 +1187,7 @@ class LoadTests(object):
         model=AbstractModel()
         model.C = Set(dimen=2)
         instance = model.create_instance(currdir+'loadD.dat')
-        self.assertEqual(instance.C.data(), set([('A1',1), ('A2',2), ('A3',3)]))
+        self.assertEqual(set(instance.C.data()), set([('A1',1), ('A2',2), ('A3',3)]))
         os.remove(currdir+'loadD.dat')
 
     def test_tableZ(self):
@@ -1212,7 +1212,7 @@ class LoadTests(object):
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.Y = Param(model.A)
         instance = model.create_instance(currdir+'loadY.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.Y.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         os.remove(currdir+'loadY.dat')
 
@@ -1229,7 +1229,7 @@ class LoadTests(object):
         model.X = Param(model.A)
         model.W = Param(model.A)
         instance = model.create_instance(currdir+'loadXW.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
         os.remove(currdir+'loadXW.dat')
@@ -1260,7 +1260,7 @@ class LoadTests(object):
         model.X = Param(model.A)
         model.W = Param(model.A)
         instance = model.create_instance(currdir+'loadXW.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
         os.remove(currdir+'loadXW.dat')
@@ -1276,7 +1276,7 @@ class LoadTests(object):
         model.R = Param(model.B)
         model.S = Param(model.B)
         instance = model.create_instance(currdir+'loadXW.dat')
-        self.assertEqual(instance.B.data(), set(['A1','A2','A3']))
+        self.assertEqual(set(instance.B.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.R.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.S.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
         os.remove(currdir+'loadXW.dat')
@@ -1321,7 +1321,7 @@ class LoadTests(object):
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.S = Param(model.A)
         instance = model.create_instance(currdir+'loadS.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.S.extract_values(), {'A1':3.3,'A3':3.5})
         os.remove(currdir+'loadS.dat')
 
@@ -1336,7 +1336,7 @@ class LoadTests(object):
         model.P = Param(model.J)
         model.O = Param(model.J)
         instance = model.create_instance(currdir+'loadPO.dat')
-        self.assertEqual(instance.J.data(), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
+        self.assertEqual(set(instance.J.data()), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
         self.assertEqual(instance.P.extract_values(), {('A3', 'B3'): 4.5, ('A1', 'B1'): 4.3, ('A2', 'B2'): 4.4} )
         self.assertEqual(instance.O.extract_values(), {('A3', 'B3'): 5.5, ('A1', 'B1'): 5.3, ('A2', 'B2'): 5.4})
         os.remove(currdir+'loadPO.dat')
@@ -1370,7 +1370,7 @@ class TestXmlLoad(LoadTests, unittest.TestCase):
         model.X = Param(model.A)
         model.W = Param(model.A)
         instance = model.create_instance(currdir+'loadXW.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
         os.remove(currdir+'loadXW.dat')
@@ -1388,7 +1388,7 @@ class TestXmlLoad(LoadTests, unittest.TestCase):
         model.X = Param(model.A)
         model.W = Param(model.A)
         instance = model.create_instance(currdir+'loadXW.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
         os.remove(currdir+'loadXW.dat')
@@ -1438,7 +1438,7 @@ class TestTableCmd(unittest.TestCase):
         model=AbstractModel()
         model.A = Set()
         instance = model.create_instance(currdir+'loadA1.dat')
-        self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
         os.remove(currdir+'loadA1.dat')
 
     def test_tableA1_2(self):
@@ -1449,7 +1449,7 @@ class TestTableCmd(unittest.TestCase):
         model=AbstractModel()
         model.A = Set()
         instance = model.create_instance(currdir+'loadA1.dat')
-        self.assertEqual(instance.A.data(), set(['A1', 'A2', 'A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
         os.remove(currdir+'loadA1.dat')
 
     def test_tableB1_1(self):
@@ -1460,7 +1460,7 @@ class TestTableCmd(unittest.TestCase):
         model=AbstractModel()
         model.B = Set()
         instance = model.create_instance(currdir+'loadB.dat')
-        self.assertEqual(instance.B.data(), set([1, 2, 3]))
+        self.assertEqual(set(instance.B.data()), set([1, 2, 3]))
         os.remove(currdir+'loadB.dat')
 
     def test_tableB1_2(self):
@@ -1471,7 +1471,7 @@ class TestTableCmd(unittest.TestCase):
         model=AbstractModel()
         model.B = Set()
         instance = model.create_instance(currdir+'loadB.dat')
-        self.assertEqual(instance.B.data(), set([1, 2, 3]))
+        self.assertEqual(set(instance.B.data()), set([1, 2, 3]))
         os.remove(currdir+'loadB.dat')
 
     def test_tableC_1(self):
@@ -1483,7 +1483,7 @@ class TestTableCmd(unittest.TestCase):
         model=AbstractModel()
         model.C = Set(dimen=2)
         instance = model.create_instance(currdir+'loadC.dat')
-        self.assertEqual(instance.C.data(), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
+        self.assertEqual(set(instance.C.data()), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
         os.remove(currdir+'loadC.dat')
 
     def test_tableC_2(self):
@@ -1495,7 +1495,7 @@ class TestTableCmd(unittest.TestCase):
         model=AbstractModel()
         model.C = Set(dimen=2)
         instance = model.create_instance(currdir+'loadC.dat')
-        self.assertEqual(instance.C.data(), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
+        self.assertEqual(set(instance.C.data()), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
         os.remove(currdir+'loadC.dat')
 
     def test_tableZ(self):
@@ -1518,7 +1518,7 @@ class TestTableCmd(unittest.TestCase):
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.Y = Param(model.A)
         instance = model.create_instance(currdir+'loadY.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.Y.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         os.remove(currdir+'loadY.dat')
 
@@ -1531,7 +1531,7 @@ class TestTableCmd(unittest.TestCase):
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.Y = Param(model.A)
         instance = model.create_instance(currdir+'loadY.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.Y.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         os.remove(currdir+'loadY.dat')
 
@@ -1547,7 +1547,7 @@ class TestTableCmd(unittest.TestCase):
         model.X = Param(model.A)
         model.W = Param(model.A)
         instance = model.create_instance(currdir+'loadXW.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
         os.remove(currdir+'loadXW.dat')
@@ -1564,7 +1564,7 @@ class TestTableCmd(unittest.TestCase):
         model.X = Param(model.A)
         model.W = Param(model.A)
         instance = model.create_instance(currdir+'loadXW.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
         os.remove(currdir+'loadXW.dat')
@@ -1579,7 +1579,7 @@ class TestTableCmd(unittest.TestCase):
         model.X = Param(model.A)
         model.W = Param(model.A)
         instance = model.create_instance(currdir+'loadXW.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
         os.remove(currdir+'loadXW.dat')
@@ -1594,7 +1594,7 @@ class TestTableCmd(unittest.TestCase):
         model.X = Param(model.A)
         model.W = Param(model.A)
         instance = model.create_instance(currdir+'loadXW.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
         os.remove(currdir+'loadXW.dat')
@@ -1610,7 +1610,7 @@ class TestTableCmd(unittest.TestCase):
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.S = Param(model.A)
         instance = model.create_instance(currdir+'loadS.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.S.extract_values(), {'A1':3.3,'A3':3.5})
         os.remove(currdir+'loadS.dat')
 
@@ -1625,7 +1625,7 @@ class TestTableCmd(unittest.TestCase):
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.S = Param(model.A)
         instance = model.create_instance(currdir+'loadS.dat')
-        self.assertEqual(instance.A.data(), set(['A1','A2','A3','A4']))
+        self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.S.extract_values(), {'A1':3.3,'A3':3.5})
         os.remove(currdir+'loadS.dat')
 
@@ -1639,7 +1639,7 @@ class TestTableCmd(unittest.TestCase):
         model.P = Param(model.J)
         model.O = Param(model.J)
         instance = model.create_instance(currdir+'loadPO.dat')
-        self.assertEqual(instance.J.data(), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
+        self.assertEqual(set(instance.J.data()), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
         self.assertEqual(instance.P.extract_values(), {('A3', 'B3'): 4.5, ('A1', 'B1'): 4.3, ('A2', 'B2'): 4.4} )
         self.assertEqual(instance.O.extract_values(), {('A3', 'B3'): 5.5, ('A1', 'B1'): 5.3, ('A2', 'B2'): 5.4})
         os.remove(currdir+'loadPO.dat')
@@ -1654,7 +1654,7 @@ class TestTableCmd(unittest.TestCase):
         model.P = Param(model.J)
         model.O = Param(model.J)
         instance = model.create_instance(currdir+'loadPO.dat')
-        self.assertEqual(instance.J.data(), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
+        self.assertEqual(set(instance.J.data()), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
         self.assertEqual(instance.P.extract_values(), {('A3', 'B3'): 4.5, ('A1', 'B1'): 4.3, ('A2', 'B2'): 4.4} )
         self.assertEqual(instance.O.extract_values(), {('A3', 'B3'): 5.5, ('A1', 'B1'): 5.3, ('A2', 'B2'): 5.4})
         os.remove(currdir+'loadPO.dat')
@@ -1674,8 +1674,8 @@ class TestTableCmd(unittest.TestCase):
         model.A = Param(model.I)
         model.B = Param(model.J)
         instance = model.create_instance(currdir+'loadComplex.dat')
-        self.assertEqual(instance.J.data(), set([('J311', 'J321'), ('J312', 'J322'), ('J313', 'J323')]) )
-        self.assertEqual(instance.I.data(), set(['I1', 'I2', 'I3']))
+        self.assertEqual(set(instance.J.data()), set([('J311', 'J321'), ('J312', 'J322'), ('J313', 'J323')]) )
+        self.assertEqual(set(instance.I.data()), set(['I1', 'I2', 'I3']))
         self.assertEqual(instance.B.extract_values(), {('J311', 'J321'): 'B1', ('J312', 'J322'): 'B2', ('J313', 'J323'): 'B3'} )
         self.assertEqual(instance.A.extract_values(), {'I1': 'A1', 'I2': 'A2', 'I3': 'A3'})
         os.remove(currdir+'loadComplex.dat')
@@ -1696,8 +1696,8 @@ class TestTableCmd(unittest.TestCase):
         model.A = Param(model.J)
         model.B = Param(model.I)
         instance = model.create_instance(currdir+'loadComplex.dat')
-        self.assertEqual(instance.J.data(), set([('J311', 'J321'), ('J312', 'J322'), ('J313', 'J323')]) )
-        self.assertEqual(instance.I.data(), set(['I1', 'I2', 'I3']))
+        self.assertEqual(set(instance.J.data()), set([('J311', 'J321'), ('J312', 'J322'), ('J313', 'J323')]) )
+        self.assertEqual(set(instance.I.data()), set(['I1', 'I2', 'I3']))
         self.assertEqual(instance.A.extract_values(), {('J311', 'J321'): 'A1', ('J312', 'J322'): 'A2', ('J313', 'J323'): 'A3'} )
         self.assertEqual(instance.B.extract_values(), {'I1': 'B1', 'I2': 'B2', 'I3': 'B3'})
         os.remove(currdir+'loadComplex.dat')

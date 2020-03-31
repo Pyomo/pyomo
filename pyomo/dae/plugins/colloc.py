@@ -20,6 +20,7 @@ from pyomo.common.dependencies import numpy, numpy_available
 
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import Var, ConstraintList, Expression, Objective
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 
 from pyomo.dae.misc import generate_finite_elements
@@ -449,7 +450,7 @@ class Collocation_Discretization_Transformation(Transformation):
 
         for d in block.component_objects(DerivativeVar, descend_into=True):
             dsets = d.get_continuousset_list()
-            for i in set(dsets):
+            for i in ComponentSet(dsets):
                 if currentds is None or i.name == currentds:
                     oldexpr = d.get_derivative_expression()
                     loc = d.get_state_var()._contset[i]

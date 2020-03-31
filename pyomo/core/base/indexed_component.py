@@ -17,6 +17,7 @@ from pyomo.core.expr.numvalue import native_types
 from pyomo.core.base.indexed_component_slice import _IndexedComponent_slice
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
+from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 
 from six import PY3, itervalues, iteritems, string_types
@@ -25,9 +26,6 @@ if PY3:
     from collections.abc import Sequence as collections_Sequence
 else:
     from collections import Sequence as collections_Sequence
-
-
-UnindexedComponent_set = set([None])
 
 sequence_types = {tuple, list}
 def normalize_index(x):
@@ -51,21 +49,13 @@ def normalize_index(x):
         # Note that casting a tuple to a tuple is cheap (no copy, no
         # new object)
         x = tuple(x)
-    elif hasattr(x, '__iter__') and isinstance(x, collections_Sequence):
-        if isinstance(x, string_types):
-            # This is very difficult to get to: it would require a user
-            # creating a custom derived string type
-            return x
-        sequence_types.add(x.__class__)
-        x = tuple(x)
     else:
-        return x
+        x = (x,)
 
     x_len = len(x)
     i = 0
     while i < x_len:
-        _xi = x[i]
-        _xi_class = _xi.__class__
+        _xi_class = x[i].__class__
         if _xi_class in native_types:
             i += 1
         elif _xi_class in sequence_types:
@@ -73,10 +63,11 @@ def normalize_index(x):
             # Note that casting a tuple to a tuple is cheap (no copy, no
             # new object)
             x = x[:i] + tuple(x[i]) + x[i + 1:]
-        elif _xi_class is not tuple and isinstance(_xi, collections_Sequence):
-            if isinstance(_xi, string_types):
+        elif issubclass(_xi_class, collections_Sequence):
+            if issubclass(_xi_class, string_types):
                 # This is very difficult to get to: it would require a
                 # user creating a custom derived string type
+                native_types.add(_xi_class)
                 i += 1
             else:
                 sequence_types.add(_xi_class)
@@ -185,7 +176,7 @@ class IndexedComponent(Component):
     _DEFAULT_INDEX_CHECKING_ENABLED = True
 
     def __init__(self, *args, **kwds):
-        from pyomo.core.base.sets import process_setarg
+        from pyomo.core.base.set import process_setarg
         #
         kwds.pop('noruleinit', None)
         Component.__init__(self, **kwds)
@@ -267,7 +258,7 @@ class IndexedComponent(Component):
         """Return the dimension of the index"""
         if not self.is_indexed():
             return 0
-        return getattr(self._index, 'dimen', 0)
+        return self._index.dimen
 
     def __len__(self):
         """
@@ -283,7 +274,7 @@ class IndexedComponent(Component):
     def __iter__(self):
         """Iterate over the keys in the dictionary"""
 
-        if not getattr(self._index, 'concrete', True):
+        if hasattr(self._index, 'isfinite') and not self._index.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
             # data iterator.  Note that since we cannot check the length
@@ -318,7 +309,7 @@ You can silence this warning by one of three ways:
        where it is empty.
 """ % (self.name,) )
 
-            if not hasattr(self._index, 'ordered') or not self._index.ordered:
+            if not hasattr(self._index, 'isordered') or not self._index.isordered():
                 #
                 # If the index set is not ordered, then return the
                 # data iterator.  This is in an arbitrary order, which is
@@ -527,11 +518,12 @@ You can silence this warning by one of three ways:
 
         # This is only called through __{get,set,del}item__, which has
         # already trapped unhashable objects.
-        if idx in self._index:
+        validated_idx = self._index.get(idx, _NotFound)
+        if validated_idx is not _NotFound:
             # If the index is in the underlying index set, then return it
             #  Note: This check is potentially expensive (e.g., when the
             # indexing set is a complex set operation)!
-            return idx
+            return validated_idx
 
         if idx.__class__ is _IndexedComponent_slice:
             return idx
@@ -557,7 +549,7 @@ You can silence this warning by one of three ways:
         #
         if not self.is_indexed():
             raise KeyError(
-                "Cannot treat the scalar component '%s'"
+                "Cannot treat the scalar component '%s' "
                 "as an indexed component" % ( self.name, ))
         #
         # Raise an exception

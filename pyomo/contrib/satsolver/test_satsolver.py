@@ -4,7 +4,7 @@ import pyutilib.th as unittest
 from pyutilib.misc import import_file
 
 from pyomo.contrib.satsolver.satsolver import satisfiable, _z3_available
-from pyomo.core.kernel.set_types import PositiveIntegers, NonNegativeReals, Binary
+from pyomo.core.base.set_types import PositiveIntegers, NonNegativeReals, Binary
 from pyomo.environ import (
     ConcreteModel, Var, Constraint, Objective, sin, cos, tan, asin, acos, atan, sqrt, log,
     minimize)
