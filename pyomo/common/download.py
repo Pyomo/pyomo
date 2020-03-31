@@ -86,8 +86,7 @@ class FileDownloader(object):
     def _get_distver_from_redhat_release(self):
         # RHEL6 did not include /etc/os-release
         with open('/etc/redhat-release', 'rt') as FILE:
-            dist = FILE.readline().lower()
-            print(dist)
+            dist = FILE.readline().lower().strip()
             ver = ''
             for word in dist.split():
                 if re.match('^[0-9\.]+', word):
@@ -98,7 +97,7 @@ class FileDownloader(object):
     def _get_distver_from_lsb_release(self):
         rc, dist = run(['lsb_release', '-si'])
         rc, ver = run(['lsb_release', '-sr'])
-        return self._map_dist(dist.lower()), ver.strip()
+        return self._map_dist(dist.lower().strip()), ver.strip()
 
     def _get_distver_from_distro(self):
         return distro.id(), distro.version(best=True)
@@ -108,6 +107,7 @@ class FileDownloader(object):
         _map = {
             'centos': 'centos',
             'redhat': 'rhel',
+            'red hat': 'rhel', # RHEL6 reports 'red hat enterprise'
             'fedora': 'fedora',
             'debian': 'debian',
             'ubuntu': 'ubuntu',

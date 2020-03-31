@@ -195,7 +195,7 @@ class Test_FileDownloader(unittest.TestCase):
             self.assertEqual(_norm, _os+''.join(_ver.split('.')[:2]))
         elif _sys == 'windows':
             self.assertEqual(_os, 'win')
-            self.assertEqual(_norm, _os+_ver)
+            self.assertEqual(_norm, _os+_ver.split('.')[0])
         else:
             self.assertEqual(ans, '')
 
