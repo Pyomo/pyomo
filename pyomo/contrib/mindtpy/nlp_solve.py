@@ -35,7 +35,7 @@ def solve_NLP_subproblem(solve_data, config):
                        % (solve_data.nlp_iter,))
 
     # Set up NLP
-    TransformationFactory('core.fix_discrete').apply_to(fix_nlp)
+    TransformationFactory('core.fix_integer_vars').apply_to(fix_nlp)
 
     # restore original variable values
     for nlp_var, orig_val in zip(
@@ -196,7 +196,7 @@ def solve_NLP_feas(solve_data, config):
     MindtPy.MindtPy_feas_obj = Objective(
         expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]),
         sense=minimize)
-    TransformationFactory('core.fix_discrete').apply_to(fix_nlp)
+    TransformationFactory('core.fix_integer_vars').apply_to(fix_nlp)
 
     with SuppressInfeasibleWarning():
         feas_soln = SolverFactory(config.nlp_solver).solve(
