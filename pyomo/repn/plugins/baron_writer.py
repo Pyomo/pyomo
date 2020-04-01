@@ -29,8 +29,8 @@ from pyomo.core.base import (SortComponents,
                              SymbolMap,
                              ShortNameLabeler,
                              NumericLabeler,
-                             BooleanSet, Constraint,
-                             IntegerSet, Objective,
+                             Constraint,
+                             Objective,
                              Var, Param)
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.set_types import *

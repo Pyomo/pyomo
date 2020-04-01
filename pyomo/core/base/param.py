@@ -41,6 +41,46 @@ def _raise_modifying_immutable_error(obj, index):
         "declare the parameter as mutable [i.e., Param(mutable=True)]"
         % (name,))
 
+class _ImplicitAny(Any.__class__):
+    """An Any that issues a deprecation warning for non-Real values.
+
+    This is a helper class to implement the deprecation warnings for the
+    change of Param's implicit domain from Any to Reals.
+
+    """
+    def __new__(cls, **kwds):
+        return super(_ImplicitAny, cls).__new__(cls)
+
+    def __init__(self, owner, **kwds):
+        super(_ImplicitAny, self).__init__(**kwds)
+        self._owner = weakref_ref(owner)
+        self._component = weakref_ref(self)
+        self.construct()
+
+    def __getstate__(self):
+        state = super(_ImplicitAny, self).__getstate__()
+        state['_owner'] = None if self._owner is None else self._owner()
+        return state
+
+    def __setstate__(self, state):
+        _owner = state.pop('_owner')
+        super(_ImplicitAny, self).__setstate__(state)
+        self._owner = None if _owner is None else weakref_ref(_owner)
+
+    def __deepcopy__(self, memo):
+        return super(Any.__class__, self).__deepcopy__(memo)
+
+    def __contains__(self, val):
+        if val not in Reals:
+            deprecation_warning(
+                "The default domain for Param objects is 'Any'.  However, "
+                "we will be changing that default to 'Reals' in the "
+                "future.  If you really intend the domain of this Param (%s) "
+                "to be 'Any', you can suppress this warning by explicitly "
+                "specifying 'within=Any' to the Param constructor."
+                % ('Unknown' if self._owner is None else self._owner().name,),
+                version='5.6.9', remove_in='6.0')
+        return True
 
 class _NotValid(object):
     """A dummy type that is pickle-safe that we can use as the default

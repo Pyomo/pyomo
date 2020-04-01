@@ -1,4 +1,4 @@
-name: continuous-integration/github/pr/win
+name: GitHub CI (win)
 
 on:
   pull_request:

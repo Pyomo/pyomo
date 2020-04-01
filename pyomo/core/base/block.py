@@ -35,7 +35,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import *  # ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID
-from pyomo.core.base.sets import Set,  _SetDataBase
+from pyomo.core.base.set import Set, RangeSet, GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
@@ -46,41 +46,6 @@ from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt import WriterFactory
 
 logger = logging.getLogger('pyomo.core')
-
-
-# Monkey-patch for deepcopying weakrefs
-# Only required on Python <= 2.6
-#
-# TODO: can we verify that this is really needed? [JDS 7/8/14]
-if sys.version_info[0] == 2 and sys.version_info[1] <= 6:
-    copy._copy_dispatch[weakref.ref] = copy._copy_immutable
-    copy._deepcopy_dispatch[weakref.ref] = copy._deepcopy_atomic
-    copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
-
-    def dcwvd(self, memo):
-        """Deepcopy implementation for WeakValueDictionary class"""
-        from copy import deepcopy
-        new = self.__class__()
-        for key, wr in self.data.items():
-            o = wr()
-            if o is not None:
-                new[deepcopy(key, memo)] = o
-        return new
-    weakref.WeakValueDictionary.__copy__ = \
-        weakref.WeakValueDictionary.copy
-    weakref.WeakValueDictionary.__deepcopy__ = dcwvd
-
-    def dcwkd(self, memo):
-        """Deepcopy implementation for WeakKeyDictionary class"""
-        from copy import deepcopy
-        new = self.__class__()
-        for key, value in self.data.items():
-            o = key()
-            if o is not none:
-                new[o] = deepcopy(value, memo)
-        return new
-    weakref.WeakKeyDictionary.__copy__ = weakref.WeakKeyDictionary.copy
-    weakref.WeakKeyDictionary.__deepcopy__ = dcwkd
 
 
 class _generic_component_decorator(object):
@@ -821,7 +786,7 @@ class _BlockData(ActiveComponentData):
                or k in self._decl:
                 setattr(self, k, src_raw_dict[k])
 
-    def _add_temporary_set(self, val):
+    def _add_implicit_sets(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
         reviewed. [JDS 9/2014]"""
 
@@ -832,40 +797,24 @@ class _BlockData(ActiveComponentData):
         #
         if _component_sets is not None:
             for ctr, tset in enumerate(_component_sets):
-                if tset.parent_component()._name == "_unknown_":
-                    self._construct_temporary_set(
-                        tset,
-                        val.local_name + "_index_" + str(ctr)
-                    )
-        if isinstance(val._index, _SetDataBase) and \
-                val._index.parent_component().local_name == "_unknown_":
-            self._construct_temporary_set(val._index, val.local_name + "_index")
-        if isinstance(getattr(val, 'initialize', None), _SetDataBase) and \
-                val.initialize.parent_component().local_name == "_unknown_":
-            self._construct_temporary_set(val.initialize, val.local_name + "_index_init")
-        if getattr(val, 'domain', None) is not None and \
-           getattr(val.domain, 'local_name', None) == "_unknown_":
-            self._construct_temporary_set(val.domain, val.local_name + "_domain")
-
-    def _construct_temporary_set(self, obj, name):
-        """TODO: This method has known issues (see tickets) and needs to be
-        reviewed. [JDS 9/2014]"""
-        if type(obj) is tuple:
-            if len(obj) == 1:  # pragma:nocover
-                raise Exception(
-                    "Unexpected temporary set construction for set "
-                    "%s on block %s" % (name, self.name))
-            else:
-                tobj = obj[0]
-                for t in obj[1:]:
-                    tobj = tobj * t
-                self.add_component(name, tobj)
-                tobj.virtual = True
-                return tobj
-        elif isinstance(obj, Set):
-            self.add_component(name, obj)
-            return obj
-        raise Exception("BOGUS")
+                if tset.parent_component().parent_block() is None \
+                        and not isinstance(tset.parent_component(), GlobalSetBase):
+                    self.add_component("%s_index_%d" % (val.local_name, ctr), tset)
+        if getattr(val, '_index', None) is not None \
+                and isinstance(val._index, _SetDataBase) \
+                and val._index.parent_component().parent_block() is None \
+                and not isinstance(val._index.parent_component(), GlobalSetBase):
+            self.add_component("%s_index" % (val.local_name,), val._index.parent_component())
+        if getattr(val, 'initialize', None) is not None \
+                and isinstance(val.initialize, _SetDataBase) \
+                and val.initialize.parent_component().parent_block() is None \
+                and not isinstance(val.initialize.parent_component(), GlobalSetBase):
+            self.add_component("%s_index_init" % (val.local_name,), val.initialize.parent_component())
+        if getattr(val, 'domain', None) is not None \
+                and isinstance(val.domain, _SetDataBase) \
+                and val.domain.parent_block() is None \
+                and not isinstance(val.domain, GlobalSetBase):
+            self.add_component("%s_domain" % (val.local_name,), val.domain)
 
     def _flag_vars_as_stale(self):
         """
@@ -1027,8 +976,7 @@ component, use the block del_component() and add_component() methods.
         # kind of thing to an "update_parent()" method on the
         # components.
         #
-        if hasattr(val, '_index'):
-            self._add_temporary_set(val)
+        self._add_implicit_sets(val)
         #
         # Add the component to the underlying Component store
         #
@@ -1102,7 +1050,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         if getattr(_component, '_constructed', False):
             # NB: we don't have to construct the temporary / implicit
             # sets here: if necessary, that happens when
-            # _add_temporary_set() calls add_component().
+            # _add_implicit_sets() calls add_component().
             if id(self) in _BlockConstruction.data:
                 data = _BlockConstruction.data[id(self)].get(name, None)
             else:

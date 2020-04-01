@@ -15,7 +15,6 @@ Script to generate the installer for pyomo.
 import sys
 import os
 
-
 def read(*rnames):
     with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
         # Strip all leading badges up to, but not including the COIN-OR
@@ -43,13 +42,8 @@ requires = [
     'ply',
     'six>=1.4',
     ]
-if sys.version_info < (2, 7):
-    requires.append('argparse')
-    requires.append('unittest2')
-    requires.append('ordereddict')
 
 from setuptools import setup, find_packages
-import sys
 
 CYTHON_REQUIRED = "required"
 if 'develop' in sys.argv:

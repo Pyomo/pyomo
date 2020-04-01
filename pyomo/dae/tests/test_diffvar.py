@@ -32,7 +32,7 @@ class TestDerivativeVar(unittest.TestCase):
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0, 1))
         m.x = ContinuousSet(bounds=(5, 10))
-        m.s = Set()
+        m.s = Set(dimen=1)
         m.v = Var(m.t)
         m.dv = DerivativeVar(m.v)
         m.dv2 = DerivativeVar(m.v, wrt=(m.t, m.t))

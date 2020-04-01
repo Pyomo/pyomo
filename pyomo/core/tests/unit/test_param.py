@@ -729,11 +729,18 @@ class ArrayParam6(unittest.TestCase):
                 return 2+i
             return -(2+i)
         self.model.B = Param(B_index, [True,False], initialize=B_init)
-        try:
-            self.instance = self.model.create_instance()
-            self.fail("Expected ValueError because B_index returns a tuple")
-        except ValueError:
-            pass
+        # In the set rewrite, the following now works!
+        # try:
+        #     self.instance = self.model.create_instance()
+        #     self.fail("Expected ValueError because B_index returns a tuple")
+        # except ValueError:
+        #     pass
+        self.instance = self.model.create_instance()
+        self.assertEqual(set(self.instance.B.keys()),set([(0,0,0,True),(2,4,4,True),(0,0,0,False),(2,4,4,False)]))
+        self.assertEqual(self.instance.B[0,0,0,True],2)
+        self.assertEqual(self.instance.B[0,0,0,False],-2)
+        self.assertEqual(self.instance.B[2,4,4,True],4)
+        self.assertEqual(self.instance.B[2,4,4,False],-4)
 
     def test_index4(self):
         self.model.A = Set(initialize=range(0,4))
@@ -1043,7 +1050,7 @@ class TestIO(unittest.TestCase):
         self.model.A=Set()
         self.model.B=Param(self.model.A)
         self.instance = self.model.create_instance("param.dat")
-        self.assertEqual( self.instance.A.data(), set(['A','B','C']) )
+        self.assertEqual( set(self.instance.A.data()), set(['A','B','C']) )
 
     def test_io9(self):
         OUTPUT=open("param.dat","w")

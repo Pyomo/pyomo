@@ -1061,6 +1061,133 @@ class TestArc(unittest.TestCase):
 13 Declarations: x y z p1 p2 p3 a1 a2 a1_expanded a2_expanded p1_v_outsum p2_v_insum p3_v_insum
 """)
 
+    def test_extensive_no_splitfrac_expansion(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[1, 2, 3])
+
+        m.source = Block()
+        m.load1 = Block()
+        m.load2 = Block()
+
+        def source_block(b):
+            b.p_out = Var(b.model().time)
+            b.outlet = Port(initialize={'p': (b.p_out, Port.Extensive, {'include_splitfrac':False})})
+
+        def load_block(b):
+            b.p_in = Var(b.model().time)
+            b.inlet = Port(initialize={'p': (b.p_in, Port.Extensive, {'include_splitfrac':False})})
+
+        source_block(m.source)
+        load_block(m.load1)
+        load_block(m.load2)
+
+        m.cs1 = Arc(source=m.source.outlet, destination=m.load1.inlet)
+        m.cs2 = Arc(source=m.source.outlet, destination=m.load2.inlet)
+
+        TransformationFactory("network.expand_arcs").apply_to(m)
+
+        ref = """
+1 Set Declarations
+    time : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
+
+5 Block Declarations
+    cs1_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: p
+    cs2_expanded : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Declarations: p
+    load1 : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p_in : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Constraint Declarations
+            inlet_p_insum : Size=3, Index=time, Active=True
+                Key : Lower : Body                              : Upper : Active
+                  1 :   0.0 : cs1_expanded.p[1] - load1.p_in[1] :   0.0 :   True
+                  2 :   0.0 : cs1_expanded.p[2] - load1.p_in[2] :   0.0 :   True
+                  3 :   0.0 : cs1_expanded.p[3] - load1.p_in[3] :   0.0 :   True
+
+        1 Port Declarations
+            inlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None :    p :    3 : load1.p_in
+
+        3 Declarations: p_in inlet inlet_p_insum
+    load2 : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p_in : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Constraint Declarations
+            inlet_p_insum : Size=3, Index=time, Active=True
+                Key : Lower : Body                              : Upper : Active
+                  1 :   0.0 : cs2_expanded.p[1] - load2.p_in[1] :   0.0 :   True
+                  2 :   0.0 : cs2_expanded.p[2] - load2.p_in[2] :   0.0 :   True
+                  3 :   0.0 : cs2_expanded.p[3] - load2.p_in[3] :   0.0 :   True
+
+        1 Port Declarations
+            inlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None :    p :    3 : load2.p_in
+
+        3 Declarations: p_in inlet inlet_p_insum
+    source : Size=1, Index=None, Active=True
+        1 Var Declarations
+            p_out : Size=3, Index=time
+                Key : Lower : Value : Upper : Fixed : Stale : Domain
+                  1 :  None :  None :  None : False :  True :  Reals
+                  2 :  None :  None :  None : False :  True :  Reals
+                  3 :  None :  None :  None : False :  True :  Reals
+
+        1 Constraint Declarations
+            outlet_p_outsum : Size=3, Index=time, Active=True
+                Key : Lower : Body                                                    : Upper : Active
+                  1 :   0.0 : cs1_expanded.p[1] + cs2_expanded.p[1] - source.p_out[1] :   0.0 :   True
+                  2 :   0.0 : cs1_expanded.p[2] + cs2_expanded.p[2] - source.p_out[2] :   0.0 :   True
+                  3 :   0.0 : cs1_expanded.p[3] + cs2_expanded.p[3] - source.p_out[3] :   0.0 :   True
+
+        1 Port Declarations
+            outlet : Size=1, Index=None
+                Key  : Name : Size : Variable
+                None :    p :    3 : source.p_out
+
+        3 Declarations: p_out outlet outlet_p_outsum
+
+2 Arc Declarations
+    cs1 : Size=1, Index=None, Active=False
+        Key  : Ports                        : Directed : Active
+        None : (source.outlet, load1.inlet) :     True :  False
+    cs2 : Size=1, Index=None, Active=False
+        Key  : Ports                        : Directed : Active
+        None : (source.outlet, load2.inlet) :     True :  False
+
+8 Declarations: time source load1 load2 cs1 cs2 cs1_expanded cs2_expanded
+"""
+        os = StringIO()
+        m.pprint(ostream=os)
+        self.assertEqual(os.getvalue().strip(), ref.strip())
 
     def test_extensive_expansion(self):
         m = ConcreteModel()
@@ -1158,8 +1285,9 @@ class TestArc(unittest.TestCase):
         m.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """1 Set Declarations
-    comp : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['a', 'b', 'c']
+    comp : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'a', 'b', 'c'}
 
 16 Block Declarations
     feed : Size=1, Index=None, Active=True

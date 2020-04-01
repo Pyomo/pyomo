@@ -290,7 +290,6 @@ class Test(unittest.TestCase):
 
     # verifies that the use of lambda expressions as rules yields model instances
     # that are not pickle'able.
-    @unittest.skipIf(sys.version_info[:2] < (2,6), "Skipping test because the sparse_dict repn is not supported")
     def test_pickle3(self):
         def rule1(model):
             return (1,model.x+model.y[1],2)

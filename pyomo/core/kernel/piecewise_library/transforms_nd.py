@@ -22,7 +22,7 @@ import logging
 import collections
 
 from pyomo.core.kernel.block import block
-from pyomo.core.kernel.set_types import Binary
+from pyomo.core.kernel.set_types import IntegerSet
 from pyomo.core.kernel.variable import (variable,
                                         variable_dict,
                                         variable_tuple)
@@ -348,7 +348,7 @@ class piecewise_nd_cc(TransformedPiecewiseLinearFunctionND):
         lmbda = self.v['lambda'] = variable_tuple(
             variable(lb=0) for v in vertices)
         y = self.v['y'] = variable_tuple(
-            variable(domain=Binary) for s in simplices)
+            variable(domain_type=IntegerSet, lb=0, ub=1) for s in simplices)
         lmbda_tuple = tuple(lmbda)
 
         # create constraints

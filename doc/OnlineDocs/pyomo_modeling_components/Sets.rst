@@ -106,14 +106,17 @@ Note that the element number starts with 1 and not 0:
 .. doctest::
 
     >>> model.X.pprint()
-    X : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(1, 19)
-        [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
+    X : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :   10 : {1, 3, 5, 7, 9, 11, 13, 15, 17, 19}
     >>> model.Y.pprint()
-    Y : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(1, 19)
-        [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
+    Y : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :   10 : {1, 3, 5, 7, 9, 11, 13, 15, 17, 19}
     >>> model.Z.pprint()
-    Z : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(3, 21)
-        [3, 5, 7, 9, 11, 13, 15, 17, 19, 21]
+    Z : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :   10 : {3, 5, 7, 9, 11, 13, 15, 17, 19, 21}
 
 Additional information about iterators for set initialization is in the
 [PyomoBookII]_ book.

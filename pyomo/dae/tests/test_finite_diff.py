@@ -51,19 +51,19 @@ class TestFiniteDiff(unittest.TestCase):
         disc.apply_to(m, nfe=5)
          
         self.assertTrue(hasattr(m, 'dv1_disc_eq'))
-        self.assertTrue(len(m.dv1_disc_eq) == 5)
-        self.assertTrue(len(m.v1) == 6)
+        self.assertEqual(len(m.dv1_disc_eq), 5)
+        self.assertEqual(len(m.v1), 6)
 
         expected_disc_points = [0, 2.0, 4.0, 6.0, 8.0, 10]
         disc_info = m.t.get_discretization_info()
 
-        self.assertTrue(disc_info['scheme'] == 'BACKWARD Difference')
+        self.assertEqual(disc_info['scheme'], 'BACKWARD Difference')
 
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
-        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertIn(m.dv1, m._pyomo_dae_reclassified_derivativevars)
 
         output = \
 """\
@@ -88,12 +88,12 @@ dv1_disc_eq : Size=5, Index=t, Active=True
         disc.apply_to(m, nfe=2)
          
         self.assertTrue(hasattr(m, 'dv1dt2_disc_eq'))
-        self.assertTrue(len(m.dv1dt2_disc_eq) == 1)
-        self.assertTrue(len(m.v1) == 3)
+        self.assertEqual(len(m.dv1dt2_disc_eq), 1)
+        self.assertEqual(len(m.v1), 3)
 
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
-        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
-        self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertIn(m.dv1, m._pyomo_dae_reclassified_derivativevars)
+        self.assertIn(m.dv1dt2, m._pyomo_dae_reclassified_derivativevars)
 
         output = \
 """\
@@ -113,19 +113,19 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         disc.apply_to(m, nfe=5, scheme='FORWARD')
 
         self.assertTrue(hasattr(m, 'dv1_disc_eq'))
-        self.assertTrue(len(m.dv1_disc_eq) == 5)
-        self.assertTrue(len(m.v1) == 6)
+        self.assertEqual(len(m.dv1_disc_eq), 5)
+        self.assertEqual(len(m.v1), 6)
 
         expected_disc_points = [0, 2.0, 4.0, 6.0, 8.0, 10]
         disc_info = m.t.get_discretization_info()
 
-        self.assertTrue(disc_info['scheme'] == 'FORWARD Difference')
+        self.assertEqual(disc_info['scheme'], 'FORWARD Difference')
 
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
 
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
-        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertIn(m.dv1, m._pyomo_dae_reclassified_derivativevars)
 
         output = \
 """\
@@ -150,12 +150,12 @@ dv1_disc_eq : Size=5, Index=t, Active=True
         disc.apply_to(m, nfe=2, scheme='FORWARD')
 
         self.assertTrue(hasattr(m, 'dv1dt2_disc_eq'))
-        self.assertTrue(len(m.dv1dt2_disc_eq) == 1)
-        self.assertTrue(len(m.v1) == 3)
+        self.assertEqual(len(m.dv1dt2_disc_eq), 1)
+        self.assertEqual(len(m.v1), 3)
 
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
-        self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
-        self.assertTrue(m.dv1dt2 in m._pyomo_dae_reclassified_derivativevars)
+        self.assertIn(m.dv1, m._pyomo_dae_reclassified_derivativevars)
+        self.assertIn(m.dv1dt2, m._pyomo_dae_reclassified_derivativevars)
 
         output = \
 """\
@@ -175,13 +175,13 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         disc.apply_to(m, nfe=5, scheme='CENTRAL')
 
         self.assertTrue(hasattr(m, 'dv1_disc_eq'))
-        self.assertTrue(len(m.dv1_disc_eq) == 4)
-        self.assertTrue(len(m.v1) == 6)
+        self.assertEqual(len(m.dv1_disc_eq), 4)
+        self.assertEqual(len(m.v1), 6)
 
         expected_disc_points = [0, 2.0, 4.0, 6.0, 8.0, 10]
         disc_info = m.t.get_discretization_info()
 
-        self.assertTrue(disc_info['scheme'] == 'CENTRAL Difference')
+        self.assertEqual(disc_info['scheme'], 'CENTRAL Difference')
 
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
@@ -208,8 +208,8 @@ dv1_disc_eq : Size=4, Index=t, Active=True
         disc.apply_to(m, nfe=2, scheme='CENTRAL')
 
         self.assertTrue(hasattr(m, 'dv1dt2_disc_eq'))
-        self.assertTrue(len(m.dv1dt2_disc_eq) == 1)
-        self.assertTrue(len(m.v1) == 3)
+        self.assertEqual(len(m.dv1dt2_disc_eq), 1)
+        self.assertEqual(len(m.v1), 3)
 
         output = \
 """\
@@ -232,13 +232,13 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
 
         self.assertTrue(hasattr(m, 'dv1_disc_eq'))
         self.assertTrue(hasattr(m, 'dv2_disc_eq'))
-        self.assertTrue(len(m.dv2_disc_eq) == 15)
-        self.assertTrue(len(m.v2) == 18)
+        self.assertEqual(len(m.dv2_disc_eq), 15)
+        self.assertEqual(len(m.v2), 18)
 
         expected_disc_points = [0, 2.0, 4.0, 6.0, 8.0, 10]
         disc_info = m.t.get_discretization_info()
 
-        self.assertTrue(disc_info['scheme'] == 'BACKWARD Difference')
+        self.assertEqual(disc_info['scheme'], 'BACKWARD Difference')
 
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
@@ -256,9 +256,9 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
 
         self.assertTrue(hasattr(m, 'dv2dt_disc_eq'))
         self.assertTrue(hasattr(m, 'dv2dt2_disc_eq'))
-        self.assertTrue(len(m.dv2dt_disc_eq) == 6)
-        self.assertTrue(len(m.dv2dt2_disc_eq) == 6)
-        self.assertTrue(len(m.v2) == 9)
+        self.assertEqual(len(m.dv2dt_disc_eq), 6)
+        self.assertEqual(len(m.dv2dt2_disc_eq), 6)
+        self.assertEqual(len(m.v2), 9)
 
         expected_t_disc_points = [0, 5.0, 10]
         expected_t2_disc_points = [0, 2.5, 5]
@@ -285,15 +285,15 @@ dv1dt2_disc_eq : Size=1, Index=t, Active=True
         self.assertTrue(hasattr(m, 'dv1_disc_eq'))
         self.assertTrue(hasattr(m, 'dv2_disc_eq'))
         self.assertTrue(hasattr(m, 'dv3_disc_eq'))
-        self.assertTrue(len(m.dv2_disc_eq) == 15)
-        self.assertTrue(len(m.v2) == 18)
-        self.assertTrue(len(m.dv3_disc_eq) == 15)
-        self.assertTrue(len(m.v3) == 18)
+        self.assertEqual(len(m.dv2_disc_eq), 15)
+        self.assertEqual(len(m.v2), 18)
+        self.assertEqual(len(m.dv3_disc_eq), 15)
+        self.assertEqual(len(m.v3), 18)
 
         expected_disc_points = [0, 2.0, 4.0, 6.0, 8.0, 10]
         disc_info = m.t.get_discretization_info()
 
-        self.assertTrue(disc_info['scheme'] == 'BACKWARD Difference')
+        self.assertEqual(disc_info['scheme'], 'BACKWARD Difference')
 
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
