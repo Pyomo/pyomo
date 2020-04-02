@@ -176,36 +176,3 @@ class ScenarioCreator(object):
 
         bootstrap_thetas = self.pest.theta_est_bootstrap(numtomake, seed=seed)
         addtoSet.append_bootstrap(bootstrap_thetas)
-
-        
-if __name__ == "__main__":
-    # quick test using semibatch
-    import pyomo.contrib.parmest.examples.semibatch.semibatch as sb
-
-    # Vars to estimate in parmest
-    theta_names = ['k1', 'k2', 'E1', 'E2']
-
-    # Data, list of dictionaries
-    data = [] 
-    for exp_num in range(10):
-        fname = 'examples/semibatch/exp'+str(exp_num+1)+'.out'
-        with open(fname,'r') as infile:
-            d = json.load(infile)
-            data.append(d)
-
-    # Note, the model already includes a 'SecondStageCost' expression 
-    # for sum of squared error that will be used in parameter estimation
-
-    pest = parmest.Estimator(sb.generate_model, data, theta_names)
-    
-    scenmaker = ScenarioCreator(pest, "ipopt")
-
-    ####experimentscens = ScenarioSet("Experiments")
-    ####scenmaker.ScenariosFromExperiments(experimentscens)
-    ####experimentscens.write_csv("delme_exp_csv.csv")
-
-    bootscens = ScenarioSet("Bootstrap")
-    numtomake = 3
-    scenmaker.ScenariosFromBoostrap(bootscens, numtomake)
-    
-    bootscens.write_csv("delme_boot_csv.csv")

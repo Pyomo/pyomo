@@ -3,7 +3,7 @@
 import json
 import pyomo.contrib.parmest.parmest as parmest
 from semibatch import generate_model
-import pyomo.contrib.parmest.ScenarioCreator as sc
+import pyomo.contrib.parmest.scenariocreator as sc
 
 # Semibatch Vars to estimate in parmest
 theta_names = ['k1', 'k2', 'E1', 'E2']
