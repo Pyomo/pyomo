@@ -11,13 +11,12 @@ from pyomo.common.dependencies import (
 )
 imports_present = numpy_available & pandas_available & scipy_available
 
-
+uuid_available = True
 try:
-    import numpy as np
-    import pandas as pd
-    imports_not_present = False
+    import uuid
 except:
-    imports_not_present = True
+    uuid_available = False
+
 import pyutilib.th as unittest
 import os
 
@@ -85,11 +84,11 @@ class pamest_Scenario_creator_reactor_design(unittest.TestCase):
         self.assertAlmostEqual(k1val, 5.0/6.0, places=2)
 
         
+    @unittest.skipIf(not uuid_available, "The uuid module is not available")
     def test_no_csv_if_empty(self):
         # low level test of scenario sets
         # verify that nothing is written, but no errors with empty set
 
-        import uuid
         emptyset = sc.ScenarioSet("empty")
         tfile = uuid.uuid4().hex+".csv"
         emptyset.write_csv(tfile)
