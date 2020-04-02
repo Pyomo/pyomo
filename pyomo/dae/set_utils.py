@@ -133,8 +133,10 @@ def get_index_set_except(comp, *sets):
                 raise ValueError(msg)
         # Need to know the location of each set within comp's index_set
         # location will map:
-        #     location_in_comp_index_set -> location_in_sets
+        #     location in comp's projected sets -> location in input sets
         location = {}
+        # location should be well defined even for higher dimension sets
+        # because this maps between lists of sets, not lists of indices
         other_ind_sets = []
         for ind_loc, ind_set in enumerate(projection_sets):
             found_set = False
@@ -146,8 +148,8 @@ def get_index_set_except(comp, *sets):
             if not found_set:
                 other_ind_sets.append(ind_set)
     else:
-        # If index_set has no set_tuple, it must be a SimpleSet, and 
-        # len(sets) == 1 (because comp is indexed by every set in sets). 
+        # If index_set is not a SetProduct, only one set must have been
+        # provided, so len(sets) == 1
         # Location in sets and in comp's indexing set are the same.
         location = {0: 0}
         other_ind_sets = []
