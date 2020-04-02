@@ -12,7 +12,10 @@ Example
 -------
 
 This example is in the semibatch subdirectory of the examples directory in
-the file ``scencreate.py``
+the file ``scencreate.py``. It creates a csv file with scenarios that
+correspond one-to-one with the experiments used as input data. It also
+creates a few scenarios using the bootstrap methods and outputs prints the
+scenarios to the screen, accessing them via the ``ScensItator`` a ``print``
 
 .. literalinclude:: ../../../../pyomo/contrib/parmest/examples/semibatch/scencreate.py
    :language: python

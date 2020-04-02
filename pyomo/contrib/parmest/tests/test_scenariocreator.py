@@ -84,6 +84,20 @@ class pamest_Scenario_creator_reactor_design(unittest.TestCase):
         k1val = df.loc[5].at["k1"] 
         self.assertAlmostEqual(k1val, 5.0/6.0, places=2)
 
+        
+    def test_no_csv_if_empty(self):
+        # low level test of scenario sets
+        # verify that nothing is written, but no errors with empty set
+
+        import uuid
+        emptyset = sc.ScenarioSet("empty")
+        tfile = uuid.uuid4().hex+".csv"
+        emptyset.write_csv(tfile)
+        self.assertFalse(os.path.exists(tfile),
+                         "ScenarioSet wrote csv in spite of empty set")
+
+        
+
 
 @unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -119,7 +133,6 @@ class  pamest_Scenario_creator_semibatch(unittest.TestCase):
         scenmaker.ScenariosFromBoostrap(bootscens, numtomake, seed=1134)
         tval = bootscens.ScenarioNumber(0).ThetaVals["k1"]
         self.assertAlmostEqual(tval, 20.64, places=1)
-        
         
 if __name__ == '__main__':
     unittest.main()
