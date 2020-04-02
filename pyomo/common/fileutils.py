@@ -315,7 +315,7 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     lib = find_file(libname, cwd=cwd, ext=ext, pathlist=pathlist)
     if lib is not None:
         return lib
-    if libname.startswith('lib'):
+    if libname.startswith('lib') and _system() != 'windows':
         libname = libname[3:]
     libname_base, ext = os.path.splitext(libname)
     if ext.lower().startswith(('.so','.dll','.dylib')):
