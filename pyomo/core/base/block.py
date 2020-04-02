@@ -1391,15 +1391,14 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             else:
                 _items = tuple()
 
+            if active is not None and isinstance(comp, ActiveIndexedComponent):
+                _items = filter(lambda tup: tup[1].active == active, _items)
+
             if _sort_indices:
                 _items = sorted(_items, key=itemgetter(0))
-            if active is None or not isinstance(comp, ActiveIndexedComponent):
-                for idx, compData in _items:
-                    yield (name, idx), compData
-            else:
-                for idx, compData in _items:
-                    if compData.active == active:
-                        yield (name, idx), compData
+
+            for idx, compData in _items:
+                yield (name, idx), compData
 
     def all_components(self, *args, **kwargs):
         logger.warning(
