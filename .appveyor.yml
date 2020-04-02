@@ -132,8 +132,26 @@ install:
   #
   # Install GAMS
   #
-  - ps: Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe'
+  - ps: Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe'
   - windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
+  - "cd gams\apifiles\Python\"
+  - ps: >-
+    if($env:PYTHON_VERSION -eq 2.7) {
+          cd api
+          python setup.py -q install
+    }elseif($env:PYTHON_VERSION -eq 3.6) {
+          Write-Host ("PYTHON ${{matrix.python-version}}")
+          cd api_36
+          python setup.py -q install
+    }elseif($env:PYTHON_VERSION -eq 3.7) {
+          Write-Host ("PYTHON ${{matrix.python-version}}")
+          cd api_37
+          python setup.py -q install -noCheck
+    }else {
+          Write-Host ("########################################################################")
+          Write-Host ("WARNING: Python ${{matrix.python-version}}: GAMS Bindings not supported.")
+          Write-Host ("########################################################################")
+    }
   - "SET PATH=%cd%\\gams;%PATH%"
   #
   # Clone but don't install pyomo-model-libraries
