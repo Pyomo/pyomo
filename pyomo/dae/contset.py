@@ -38,7 +38,7 @@ class ContinuousSet(SortedSimpleSet):
         bounds : `tuple`
             The bounding points for the continuous domain. The bounds will
             be included as discrete points in the :py:class:`ContinuousSet`
-            but will not be used to restrict points added to the
+            and will be used to bound the points added to the
             :py:class:`ContinuousSet` through the 'initialize' argument,
             a data file, or the add() method
 

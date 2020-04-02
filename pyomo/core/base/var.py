@@ -98,11 +98,23 @@ class _VarData(ComponentData, NumericValue):
 
     def is_integer(self):
         """Returns True when the domain is a contiguous integer range."""
+        # optimization: Reals and Binary are the most common cases, so
+        # we will explicitly test that before generating the interval
+        if self.domain is Reals:
+            return False
+        elif self.domain is Binary:
+            return True
         _interval = self.domain.get_interval()
         return _interval is not None and _interval[2] == 1
 
     def is_binary(self):
         """Returns True when the domain is restricted to Binary values."""
+        # optimization: Reals and Binary are the most common cases, so
+        # we will explicitly test that before generating the interval
+        if self.domain is Reals:
+            return False
+        elif self.domain is Binary:
+            return True
         return self.domain.get_interval() == (0,1,1)
 
 # TODO?
@@ -119,8 +131,14 @@ class _VarData(ComponentData, NumericValue):
 
     def is_continuous(self):
         """Returns True when the domain is a continuous real range"""
-        # optimization: Binary is the most common case
-        return self.domain is Reals or self.domain.get_interval()[2] == 0
+        # optimization: Reals and Binary are the most common cases, so
+        # we will explicitly test that before generating the interval
+        if self.domain is Reals:
+            return True
+        elif self.domain is Binary:
+            return False
+        _interval = self.domain.get_interval()
+        return _interval is not None and _interval[2] == 0
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
@@ -371,7 +389,7 @@ class _GeneralVarData(_VarData):
     def domain(self, domain):
         """Set the domain for this variable."""
         # TODO: this should be migrated over to using a SetInitializer
-        # to handle the checkong / conversion of the argument to a
+        # to handle the checking / conversion of the argument to a
         # proper Pyomo Set and not use isinstance() of a private class.
         if isinstance(domain, _SetDataBase):
             self._domain = domain
@@ -406,6 +424,12 @@ class _GeneralVarData(_VarData):
     @ub.setter
     def ub(self, val):
         raise AttributeError("Assignment not allowed. Use the setub method")
+
+    def get_units(self):
+        """Return the units for this variable entry."""
+        # parent_component() returns self if this is scalar, or the owning
+        # component if not scalar
+        return self.parent_component()._units
 
     # fixed is an attribute
 
@@ -475,6 +499,8 @@ class Var(IndexedComponent):
             `index_set()` when constructing the Var (True) or just the
             variables returned by `initialize`/`rule` (False).  Defaults
             to True.
+        units (pyomo units expression, optional): Set the units corresponding                                                  
+            to the entries in this variable.
     """
 
     _ComponentDataClass = _GeneralVarData
@@ -497,7 +523,8 @@ class Var(IndexedComponent):
         domain = kwd.pop('domain', domain)
         bounds = kwd.pop('bounds', None)
         self._dense = kwd.pop('dense', True)
-
+        self._units = kwd.pop('units', None)
+        
         #
         # Initialize the base class
         #
@@ -566,6 +593,10 @@ class Var(IndexedComponent):
         """
         for index, new_value in iteritems(new_values):
             self[index].set_value(new_value, valid)
+
+    def get_units(self):
+        """Return the units expression for this Var."""
+        return self._units
 
     def construct(self, data=None):
         """Construct this component."""

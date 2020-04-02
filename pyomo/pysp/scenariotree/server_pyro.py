@@ -12,6 +12,8 @@ __all__ = ("ScenarioTreeServerPyro",
            "RegisterWorker")
 
 import os
+import six
+from six import iteritems
 import sys
 import socket
 import copy
@@ -23,22 +25,11 @@ try:
     import cPickle as pickle
 except:                                           #pragma:nocover
     import pickle
-try:
-    import dill
-    dill_available = True
-except ImportError:                               #pragma:nocover
-    dill_available = False
 
 import pyutilib.misc
 from pyutilib.misc import PauseGC
-from pyutilib.pyro import (TaskWorker,
-                           TaskWorkerServer,
-                           shutdown_pyro_components,
-                           TaskProcessingError,
-                           using_pyro4)
-if using_pyro4:                                    #pragma:nocover
-    import Pyro4
 
+from pyomo.common.dependencies import attempt_import, dill, dill_available
 from pyomo.common import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
@@ -60,12 +51,12 @@ from pyomo.pysp.scenariotree.tree_structure import \
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 
-import six
-from six import iteritems
+pyu_pyro = attempt_import('pyutilib.pyro', alt_names=['pyu_pyro'])[0]
+Pyro4 = attempt_import('Pyro4')[0]
 
 logger = logging.getLogger('pyomo.pysp')
 
-class ScenarioTreeServerPyro(TaskWorker):
+class ScenarioTreeServerPyro(pyu_pyro.TaskWorker):
 
     # Maps name to a registered worker class to instantiate
     _registered_workers = {}
@@ -89,7 +80,7 @@ class ScenarioTreeServerPyro(TaskWorker):
         kwds["caller_name"] = kwds["name"]
         self._modules_imported = kwds.pop('modules_imported', {})
 
-        TaskWorker.__init__(self, **kwds)
+        pyu_pyro.TaskWorker.__init__(self, **kwds)
         assert hasattr(self, "_bulk_task_collection")
         self._bulk_task_collection = True
         self._contiguous_task_processing = False
@@ -146,7 +137,7 @@ class ScenarioTreeServerPyro(TaskWorker):
             # The only reason we are go through this much
             # effort to deal with the serpent serializer
             # is because it is the default in Pyro4.
-            if using_pyro4 and \
+            if pyu_pyro.using_pyro4 and \
                (Pyro4.config.SERIALIZER == 'serpent'):
                 if six.PY3:
                     assert type(data) is dict
@@ -163,7 +154,8 @@ class ScenarioTreeServerPyro(TaskWorker):
                 % (self.WORKERNAME, sys.exc_info()[0].__name__))
             traceback.print_exception(*sys.exc_info())
             self._worker_error = True
-            return pickle.dumps(TaskProcessingError(traceback.format_exc()))
+            return pickle.dumps(pyu_pyro.TaskProcessingError(
+                traceback.format_exc()))
 
     def _process(self, data):
         data = pyutilib.misc.Bunch(**data)
@@ -360,12 +352,12 @@ def exec_scenariotreeserver(options):
 
     try:
         # spawn the daemon
-        TaskWorkerServer(ScenarioTreeServerPyro,
-                         host=options.pyro_host,
-                         port=options.pyro_port,
-                         verbose=options.verbose,
-                         modules_imported=modules_imported,
-                         mpi=mpi)
+        pyu_pyro.TaskWorkerServer(ScenarioTreeServerPyro,
+                                 host=options.pyro_host,
+                                 port=options.pyro_port,
+                                 verbose=options.verbose,
+                                 modules_imported=modules_imported,
+                                 mpi=mpi)
     except:
         # if an exception occurred, then we probably want to shut down
         # all Pyro components.  otherwise, the PH client may have

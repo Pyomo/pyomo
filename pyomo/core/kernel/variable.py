@@ -38,8 +38,7 @@ def _extract_domain_type_and_bounds(domain_type,
             domain_type = RealSet
         elif domain_step == 1:
             domain_type = IntegerSet
-        #else:
-        #    domain_type = None
+        # else: domain_type will remain None and generate an exception below
         if domain_lb is not None:
             if lb is not None:
                 raise ValueError(
@@ -301,11 +300,10 @@ class variable(IVariable):
 
     Examples:
         >>> import pyomo.kernel as pmo
-        >>> import pyomo.environ as pme
         >>> # A continuous variable with infinite bounds
         >>> x = pmo.variable()
         >>> # A binary variable
-        >>> x = pmo.variable(domain=pme.Binary)
+        >>> x = pmo.variable(domain=pmo.Binary)
         >>> # Also a binary variable
         >>> x = pmo.variable(domain_type=pmo.IntegerSet, lb=0, ub=1)
     """

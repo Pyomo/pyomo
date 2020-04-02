@@ -152,7 +152,7 @@ class Connector(IndexedComponent):
     @deprecated(
         "Use of pyomo.connectors is deprecated. "
         "Its functionality has been replaced by pyomo.network.",
-        version='TBD', remove_in='TBD',)
+        version='5.6.9')
     def __init__(self, *args, **kwd):
         kwd.setdefault('ctype', Connector)
         self._rule = kwd.pop('rule', None)
@@ -285,7 +285,7 @@ class ConnectorExpander(Plugin):
     @deprecated(
         "Use of pyomo.connectors is deprecated. "
         "Its functionality has been replaced by pyomo.network.",
-        version='TBD', remove_in='TBD', )
+        version='5.6.9')
     def apply(self, **kwds):
         instance = kwds.pop('instance')
         xform = TransformationFactory('core.expand_connectors')

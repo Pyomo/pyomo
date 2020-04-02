@@ -106,14 +106,14 @@ class DerivativeVar(Var):
                     if _dim is None:
                         raise DAE_Error(
                             "The variable %s is indexed by a Set (%s) with a "
-                            "non-fixed dimention.  A DerivativeVar may only be "
-                            "indexed by Sets with constant dimention"
+                            "non-fixed dimension.  A DerivativeVar may only be "
+                            "indexed by Sets with constant dimension"
                             % (sVar, s.name))
                     elif _dim is UnknownSetDimen:
                         raise DAE_Error(
                             "The variable %s is indexed by a Set (%s) with an "
-                            "unknown dimention.  A DerivativeVar may only be "
-                            "indexed by Sets with known constant dimention"
+                            "unknown dimension.  A DerivativeVar may only be "
+                            "indexed by Sets with known constant dimension"
                             % (sVar, s.name))
                     loc += s.dimen
             num_contset = len(sVar._contset)

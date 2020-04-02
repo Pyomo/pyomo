@@ -1,6 +1,9 @@
-name: continuous-integration/github/pr
+name: GitHub CI (unix)
 
 on:
+  push:
+    branches:
+      - master
   pull_request:
     branches:
       - master
@@ -12,11 +15,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-18.04]
+        os: [macos-latest, ubuntu-latest]
         include:
         - os: macos-latest
           TARGET: osx
-        - os: ubuntu-18.04
+        - os: ubuntu-latest
           TARGET: linux
         python-version: [3.5, 3.6, 3.7, 3.8]
 
@@ -26,23 +29,30 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install Pyomo dependencies
+
+    - name: Install dependencies
       run: |
         if hash brew; then
             echo "Install pre-dependencies for pyodbc..."
-            brew update 
-            brew install bash gcc
+            brew update
+            brew list bash || brew install bash
+            brew list gcc || brew install gcc
             brew link --overwrite gcc
-            brew install pkg-config
-            brew install unixodbc
-            brew install freetds 
+            brew list pkg-config || brew install pkg-config
+            brew list unixodbc || brew install unixodbc
+            brew list freetds || brew install freetds
         fi
+        echo ""
         echo "Upgrade pip..."
+        echo ""
         python -m pip install --upgrade pip
         echo ""
         echo "Install Pyomo dependencies..."
         echo ""
-        pip install cython numpy scipy ipython openpyxl sympy pyyaml pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql pyro4 pint pathos
+        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
+        pip install cython numpy scipy ipython openpyxl sympy pyyaml \
+            pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql \
+            pyro4 pint pathos coverage nose
         echo ""
         echo "Install CPLEX Community Edition..."
         echo ""
@@ -57,16 +67,27 @@ jobs:
         fi
         chmod +x gams_installer.exe
         ./gams_installer.exe -q -d gams
-        cd gams/*/apifiles/Python/
+        GAMS_DIR=`ls -d1 $(pwd)/gams/*/ | head -1`
+        export PATH=$PATH:$GAMS_DIR
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
+        export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
+        cd $GAMS_DIR/apifiles/Python/
         py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
         gams_ver=api
         for ver in api_*; do
             if test ${ver:4} -le $py_ver; then
                 gams_ver=$ver
-            fi  
+            fi
         done
         cd $gams_ver
         python setup.py -q install -noCheck
+        echo ""
+        echo "Pass key environment variables to subsequent steps"
+        echo ""
+        echo "::set-env name=PATH::$PATH"
+        echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH"
+        echo "::set-env name=DYLD_LIBRARY_PATH::$DYLD_LIBRARY_PATH"
+
     - name: Install Pyomo and extensions
       run: |
         echo "Clone Pyomo-model-libraries..."
@@ -79,17 +100,35 @@ jobs:
         echo "Install Pyomo..."
         echo ""
         python setup.py develop
-        echo ""
-        echo "Download and install extensions..."
-        echo ""
+
+    - name: Set up coverage tracking
+      run: |
+        WORKSPACE=`pwd`
+        COVERAGE_PROCESS_START=${WORKSPACE}/coveragerc
+        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_PROCESS_START"
+        cp ${WORKSPACE}/.coveragerc ${COVERAGE_PROCESS_START}
+        echo "data_file=${WORKSPACE}/.coverage" >> ${COVERAGE_PROCESS_START}
+        SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
+        if [ -z "$DISABLE_COVERAGE" ]; then
+            echo 'import coverage; coverage.process_startup()' \
+                > ${SITE_PACKAGES}/run_coverage_at_startup.pth
+        fi
+
+    - name: Download and install extensions
+      run: |
         pyomo download-extensions
         pyomo build-extensions
-    - name: Run nightly tests with test.pyomo
+
+    - name: Run Pyomo tests
       run: |
         echo "Run test.pyomo..."
-        GAMS_DIR=`ls -d1 $(pwd)/gams/*/ | head -1`
-        export PATH=$PATH:$GAMS_DIR
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
-        export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
-        pip install nose
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
+
+    - name: Upload coverage to codecov
+      env:
+        GITHUB_JOB_NAME: unix/${{ matrix.TARGET }}/py${{ matrix.python-version }}
+      run: |
+        find . -maxdepth 10 -name ".cov*"
+        coverage combine
+        coverage report -i
+        bash <(curl -s https://codecov.io/bash) -X gcov -n "$GITHUB_JOB_NAME"

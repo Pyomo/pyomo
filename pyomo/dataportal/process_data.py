@@ -18,7 +18,9 @@ from pyutilib.misc import quote_split, Options
 import pyutilib.common
 from pyutilib.misc import flatten
 
-from pyomo.dataportal.parse_datacmds import parse_data_commands
+from pyomo.dataportal.parse_datacmds import (
+    parse_data_commands, _re_number
+)
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 from pyomo.core.base.set import UnknownSetDimen
 
@@ -34,15 +36,19 @@ except:
     unicode = str
 try:
     long
-    numlist = (bool, int, float, long)
+    numlist = {bool, int, float, long}
 except:
-    numlist = (bool, int, float)
+    numlist = {bool, int, float}
 
 logger = logging.getLogger('pyomo.core')
 
 global Lineno
 global Filename
 
+_num_pattern = re.compile("^("+_re_number+")$")
+_str_false_values = {'False','false','FALSE'}
+_str_bool_values = {'True','true','TRUE'}
+_str_bool_values.update(_str_false_values)
 
 def _guess_set_dimen(index):
     d = 0
@@ -66,46 +72,41 @@ def _guess_set_dimen(index):
     return d
 
 def _process_token(token):
+    #print("TOKEN:", token, type(token))
     if type(token) is tuple:
         return tuple(_process_token(i) for i in token)
-    if type(token) in numlist:
+    elif type(token) in numlist:
         return token
-    if token in ('True','true','TRUE'):
-        return True
-    if token in ('False','false','FALSE'):
-        return False
-
-    if token[0] == '[' and token[-1] == ']':
+    elif token in _str_bool_values:
+        return token not in _str_false_values
+    elif token[0] == '"' and token[-1] == '"':
+        # Strip "flag" quotation characters
+        return token[1:-1]
+    elif token[0] == '[' and token[-1] == ']':
         vals = []
         token = token[1:-1]
         for item in token.split(","):
-            if item[0] == "'" or item[0] == '"':
+            if item[0] in '"\'' and item[0] == item[-1]:
                 vals.append( item[1:-1] )
-            try:
-                vals.append( int(item) )
-                continue
-            except:
-                pass
-            try:
-                vals.append( float(item) )
-                continue
-            except:
-                pass
-            vals.append( item )
+            elif _num_pattern.match(item):
+                _num = float(item)
+                if '.' in item:
+                    vals.append(_num)
+                else:
+                    _int = int(_num)
+                    vals.append(_int if _int == _num else _num)
+            else:
+                vals.append( item )
         return tuple(vals)
-
-    elif token[0] == "'" or token[0] == '"':
-        return token[1:-1]
-
-    try:
-        return int(token)
-    except:
-        pass
-    try:
-        return float(token)
-    except:
-        pass
-    return token
+    elif _num_pattern.match(token):
+        _num = float(token)
+        if '.' in token:
+            return _num
+        else:
+            _int = int(_num)
+            return _int if _int == _num else _num
+    else:
+        return token
 
 
 def _preprocess_data(cmd):
@@ -572,9 +573,6 @@ def _process_data_list(param_name, dim, cmd):
     generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
     if generate_debug_messages:
         logger.debug("process_data_list %d %s",dim,cmd)
-    # We will assume all unspecified sets are dimen==1
-    #if dim is UnknownSetDimen:
-    #    dim = 1
 
     if len(cmd) % (dim+1) != 0:
         msg = "Parameter '%s' defined with '%d' dimensions, " \

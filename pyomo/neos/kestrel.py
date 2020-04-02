@@ -26,6 +26,16 @@ import base64
 import tempfile
 import logging
 
+from pyomo.common.dependencies import attempt_import
+
+def _xmlrpclib_importer():
+    if six.PY2:
+        import xmlrpclib
+    else:
+        import xmlrpc.client as xmlrpclib
+    return xmlrpclib
+xmlrpclib = attempt_import('xmlrpclib', importer=_xmlrpclib_importer)[0]
+
 logger = logging.getLogger('pyomo.neos')
 
 class NEOS(object):
@@ -37,74 +47,76 @@ class NEOS(object):
     #urlscheme = 'http'
     #port = '3332'
 
+def ProxiedTransport():
+    if six.PY2:
+        from urlparse import urlparse
+        import httplib
+        # ProxiedTransport from Python 2.x documentation
+        # (https://docs.python.org/2/library/xmlrpclib.html)
+        class ProxiedTransport_PY2(xmlrpclib.Transport):
+            def set_proxy(self, proxy):
+                self.proxy = urlparse(proxy)
+                if not self.proxy.hostname:
+                    # User omitted scheme from the proxy; assume http
+                    self.proxy = urlparse('http://'+proxy)
 
-if sys.version_info[0] < 3:
-    from urlparse import urlparse
-    import httplib
-    import xmlrpclib
-    # ProxiedTransport from Python 2.x documentation
-    # (https://docs.python.org/2/library/xmlrpclib.html)
-    class ProxiedTransport(xmlrpclib.Transport):
-        def set_proxy(self, proxy):
-            self.proxy = urlparse(proxy)
-            if not self.proxy.hostname:
-                # User omitted scheme from the proxy; assume http
-                self.proxy = urlparse('http://'+proxy)
+            def make_connection(self, host):
+                target = urlparse(host)
+                if target.scheme:
+                    self.realhost = target.geturl()
+                else:
+                    self.realhost = '%s://%s' % (NEOS.scheme, target.geturl())
 
-        def make_connection(self, host):
-            target = urlparse(host)
-            if target.scheme:
-                self.realhost = target.geturl()
-            else:
-                self.realhost = '%s://%s' % (NEOS.scheme, target.geturl())
-
-            # Empirically, the connection class in Python 2.7 needs to
-            # match the PROXY connection scheme, and the final endpoint
-            # scheme needs to be specified in the POST below.
-            if self.proxy.scheme == 'https':
-                connClass = httplib.HTTPSConnection
-            else:
-                connClass = httplib.HTTPConnection
-            return connClass(self.proxy.hostname, self.proxy.port)
+                # Empirically, the connection class in Python 2.7 needs to
+                # match the PROXY connection scheme, and the final endpoint
+                # scheme needs to be specified in the POST below.
+                if self.proxy.scheme == 'https':
+                    connClass = httplib.HTTPSConnection
+                else:
+                    connClass = httplib.HTTPConnection
+                return connClass(self.proxy.hostname, self.proxy.port)
 
 
-        def send_request(self, connection, handler, request_body):
-            connection.putrequest(
-                "POST", '%s%s' % (self.realhost, handler))
+            def send_request(self, connection, handler, request_body):
+                connection.putrequest(
+                    "POST", '%s%s' % (self.realhost, handler))
 
-        def send_host(self, connection, host):
-            connection.putheader('Host', self.realhost)
+            def send_host(self, connection, host):
+                connection.putheader('Host', self.realhost)
 
-else: # Python 3.x
-    from urllib.parse import urlparse
-    import http.client as httplib
-    import xmlrpc.client as xmlrpclib
-    # ProxiedTransport from Python 3.x documentation
-    # (https://docs.python.org/3/library/xmlrpc.client.html)
-    class ProxiedTransport(xmlrpclib.Transport):
-        def set_proxy(self, host):
-            self.proxy = urlparse(host)
-            if not self.proxy.hostname:
-                # User omitted scheme from the proxy; assume http
-                self.proxy = urlparse('http://'+host)
+        return ProxiedTransport_PY2()
 
-        def make_connection(self, host):
-            scheme = urlparse(host).scheme
-            if not scheme:
-                scheme = NEOS.scheme
+    else: # Python 3.x
+        from urllib.parse import urlparse
+        import http.client as httplib
+        # ProxiedTransport from Python 3.x documentation
+        # (https://docs.python.org/3/library/xmlrpc.client.html)
+        class ProxiedTransport_PY3(xmlrpclib.Transport):
+            def set_proxy(self, host):
+                self.proxy = urlparse(host)
+                if not self.proxy.hostname:
+                    # User omitted scheme from the proxy; assume http
+                    self.proxy = urlparse('http://'+host)
 
-            # Empirically, the connection class in Python 3.x needs to
-            # match the final endpoint connection scheme, NOT the proxy
-            # scheme.  The set_tunnel host then should NOT have a scheme
-            # attached to it.
-            if scheme == 'https':
-                connClass = httplib.HTTPSConnection
-            else:
-                connClass = httplib.HTTPConnection
+            def make_connection(self, host):
+                scheme = urlparse(host).scheme
+                if not scheme:
+                    scheme = NEOS.scheme
 
-            connection = connClass(self.proxy.hostname, self.proxy.port)
-            connection.set_tunnel(host)
-            return connection
+                # Empirically, the connection class in Python 3.x needs to
+                # match the final endpoint connection scheme, NOT the proxy
+                # scheme.  The set_tunnel host then should NOT have a scheme
+                # attached to it.
+                if scheme == 'https':
+                    connClass = httplib.HTTPSConnection
+                else:
+                    connClass = httplib.HTTPConnection
+
+                connection = connClass(self.proxy.hostname, self.proxy.port)
+                connection.set_tunnel(host)
+                return connection
+
+        return ProxiedTransport_PY3()
 
 
 class kestrelAMPL:

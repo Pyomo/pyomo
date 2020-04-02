@@ -7,10 +7,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+from six.moves import zip_longest
 
 import pyutilib.th as unittest
+
 import pyomo.environ as pe
-from pyomo.util.components import rename_components
+import pyomo.kernel as pmo
+from pyomo.util.components import iter_component, rename_components
 
 class TestUtilComponents(unittest.TestCase):
 
@@ -45,6 +48,53 @@ class TestUtilComponents(unittest.TestCase):
         self.assertEquals(model.scaled_zcon.name, 'scaled_zcon')
         self.assertEquals(model.b.name, 'b')
         self.assertEquals(model.b.scaled_bz.name, 'b.scaled_bz')
+
+    def assertSameComponents(self, obj, other_obj):
+        for i, j in zip_longest(obj, other_obj):
+            self.assertEqual(id(i), id(j))
+
+    def test_iter_component_base(self):
+        model = pe.ConcreteModel()
+        model.x = pe.Var([1, 2, 3], initialize=0)
+        model.z = pe.Var(initialize=0)
+
+        def con_rule(m, i):
+            return m.x[i] + m.z == i
+
+        model.con = pe.Constraint([1, 2, 3], rule=con_rule)
+        model.zcon = pe.Constraint(expr=model.z >= model.x[2])
+
+        self.assertSameComponents(list(iter_component(model.x)), list(model.x.values()))
+        self.assertSameComponents(list(iter_component(model.z)), [model.z[None]])
+        self.assertSameComponents(
+            list(iter_component(model.con)), list(model.con.values())
+        )
+        self.assertSameComponents(list(iter_component(model.zcon)), [model.zcon[None]])
+
+    def test_iter_component_kernel(self):
+        model = pmo.block()
+        model.x = pmo.variable_list(pmo.variable(value=0) for _ in [1, 2, 3])
+        model.z = pmo.variable(value=0)
+
+        model.con = pmo.constraint_dict(
+            (i, pmo.constraint(expr=model.x[i - 1] + model.z == i)) for i in [1, 2, 3]
+        )
+        model.zcon = pmo.constraint(expr=model.z >= model.x[2])
+
+        model.param_t = pmo.parameter_tuple(pmo.parameter(value=36) for _ in [1, 2, 3])
+        model.param = pmo.parameter(value=42)
+
+        self.assertSameComponents(list(iter_component(model.x)), list(model.x))
+        self.assertSameComponents(list(iter_component(model.z)), [model.z])
+        self.assertSameComponents(
+            list(iter_component(model.con)), list(model.con.values())
+        )
+        self.assertSameComponents(list(iter_component(model.zcon)), [model.zcon])
+        self.assertSameComponents(
+            list(iter_component(model.param_t)), list(model.param_t)
+        )
+        self.assertSameComponents(list(iter_component(model.param)), [model.param])
+
 
 if __name__ == '__main__':
     # t = TestUtilComponents()

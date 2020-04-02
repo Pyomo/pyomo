@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition']
+__all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition', 'check_optimal_termination', 'assert_optimal_termination']
 
 from pyutilib.enum import Enum
 from pyomo.opt.results.container import MapContainer, ScalarType
@@ -67,6 +67,44 @@ TerminationCondition = Enum(
     'licensingProblems'        # Problem accessing solver license
     )
 
+
+def check_optimal_termination(results):
+    """
+    This function returns True if the termination condition for the solver
+    is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
+
+    Parameters
+    ----------
+    results : Pyomo results object returned from solver.solve
+
+    Returns
+    -------
+    `bool`
+    """
+    if results.solver.status == SolverStatus.ok and \
+       (results.solver.termination_condition == TerminationCondition.optimal
+        or results.solver.termination_condition == TerminationCondition.locallyOptimal
+        or results.solver.termination_condition == TerminationCondition.globallyOptimal):
+        return True
+    return False
+
+
+def assert_optimal_termination(results):
+    """
+    This function checks if the termination condition for the solver
+    is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
+    and it raises a RuntimeError exception if this is not true.
+
+    Parameters
+    ----------
+    results : Pyomo results object returned from solver.solve
+    """
+    if not check_optimal_termination(results):
+        msg  = 'Solver failed to return an optimal solution. ' \
+            'Solver status: {}, Termination condition: {}'.format(results.solver.status,
+                                                                  results.solver.termination_condition)
+        raise RuntimeError(msg)
+    
 
 class BranchAndBoundStats(MapContainer):
 
