@@ -1149,6 +1149,13 @@ class _FiniteSetMixin(object):
     def value(self):
         return set(self)
 
+    @property
+    @deprecated("The 'value_list' attribute is deprecated.  Use "
+                ".ordered_data() to retrieve the values from a finite set "
+                "in a deterministic order.", version='TBD')
+    def value_list(self):
+        return list(self.ordered_data())
+
     def sorted_data(self):
         return tuple(sorted_robust(self.data()))
 
