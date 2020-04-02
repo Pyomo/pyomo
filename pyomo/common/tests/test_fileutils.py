@@ -275,17 +275,9 @@ class TestFileUtils(unittest.TestCase):
             find_library(f_in_configbin)
         )
         # ... but only if include_PATH is true
-        if _system() == 'windows':
-            # Note that on Windows, ctypes.util.find_library *always*
-            # searches the PATH
-            self._check_file(
-                os.path.join(config_bindir, f_in_configbin),
-                find_library(f_in_configbin, include_PATH=False)
-            )
-        else:
-            self.assertIsNone(
-                find_library(f_in_configbin, include_PATH=False)
-            )
+        self.assertIsNone(
+            find_library(f_in_configbin, include_PATH=False)
+        )
         # And none of them if the pathlist is specified
         self.assertIsNone(
             find_library(f_in_configlib, pathlist=pathdir)
