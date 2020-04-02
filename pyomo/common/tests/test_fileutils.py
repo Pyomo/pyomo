@@ -244,7 +244,7 @@ class TestFileUtils(unittest.TestCase):
             os.path.join(pathdir, f_in_path),
             find_library(f_in_path)
         )
-        if _system == 'windows':
+        if _system() == 'windows':
             self._check_file(
                 os.path.join(pathdir, f_in_path),
                 find_library(f_in_path, include_PATH=False)
@@ -275,7 +275,7 @@ class TestFileUtils(unittest.TestCase):
             find_library(f_in_configbin)
         )
         # ... but only if include_PATH is true
-        if _system == 'windows':
+        if _system() == 'windows':
             # Note that on Windows, ctypes.util.find_library *always*
             # searches the PATH
             self._check_file(
