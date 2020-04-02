@@ -244,9 +244,17 @@ class TestFileUtils(unittest.TestCase):
             os.path.join(pathdir, f_in_path),
             find_library(f_in_path)
         )
-        self.assertIsNone(
-            find_library(f_in_path, include_PATH=False)
-        )
+        if _system == 'windows':
+            self._check_file(
+                os.path.join(pathdir, f_in_path),
+                find_library(f_in_path, include_PATH=False)
+            )
+        else:
+            # Note on windows, ctypes.util.find_library *always*
+            # searches the PATH
+            self.assertIsNone(
+                find_library(f_in_path, include_PATH=False)
+            )
         self._check_file(
             os.path.join(pathdir, f_in_path),
             find_library(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep)
@@ -267,9 +275,17 @@ class TestFileUtils(unittest.TestCase):
             find_library(f_in_configbin)
         )
         # ... but only if include_PATH is true
-        self.assertIsNone(
-            find_library(f_in_configbin, include_PATH=False)
-        )
+        if _system == 'windows':
+            # Note on windows, ctypes.util.find_library *always*
+            # searches the PATH
+            self._check_file(
+                os.path.join(config_bindir, f_in_configbin),
+                find_library(f_in_configbin, include_PATH=False)
+            )
+        else:
+            self.assertIsNone(
+                find_library(f_in_configbin, include_PATH=False)
+            )
         # And none of them if the pathlist is specified
         self.assertIsNone(
             find_library(f_in_configlib, pathlist=pathdir)
