@@ -311,7 +311,16 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     if include_PATH:
         pathlist.extend(_path())
     ext = _libExt.get(_system(), None)
-    return find_file(libname, cwd=cwd, ext=ext, pathlist=pathlist)
+    lib = find_file(libname, cwd=cwd, ext=ext, pathlist=pathlist)
+    if lib is not None:
+        return lib
+    if libname.startswith('lib'):
+        libname = libname[3:]
+    libname_base, ext = os.path.splitext(libname)
+    if ext.lower() in {'so','dll','dylib'}:
+        return ctypes.util.find_library(libname_base)
+    else:
+        return ctypes.util.find_library(libname)
 
 
 def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):

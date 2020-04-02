@@ -27,6 +27,7 @@ from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
     PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
 )
+from pyomo.common.download import FileDownloader
 
 try:
     samefile = os.path.samefile
@@ -275,6 +276,24 @@ class TestFileUtils(unittest.TestCase):
         self.assertIsNone(
             find_library(f_in_configbin, pathlist=pathdir)
         )
+
+        # Find a system library
+        if FileDownloader.get_sysinfo()[0] == 'windows':
+            a = find_library('ntdll')
+            self.assertIsNotNone(a)
+            self.assertTrue(os.path.exists(a))
+            b = find_library('ntdll.dll')
+            self.assertIsNotNone(b)
+            self.assertTrue(os.path.exists(b))
+            self.assertEqual(a,b)
+        else:
+            a = find_library('c')
+            self.assertIsNotNone(a)
+            self.assertTrue(os.path.exists(a))
+            b = find_library('libc.so')
+            self.assertIsNotNone(b)
+            self.assertTrue(os.path.exists(b))
+            self.assertEqual(a,b)
 
 
     def test_find_executable(self):
