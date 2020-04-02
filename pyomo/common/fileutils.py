@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import ctypes.util
 import glob
 import inspect
 import logging
@@ -317,7 +318,7 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     if libname.startswith('lib'):
         libname = libname[3:]
     libname_base, ext = os.path.splitext(libname)
-    if ext.lower() in {'so','dll','dylib'}:
+    if ext.lower().startswith(('.so','.dll','.dylib')):
         return ctypes.util.find_library(libname_base)
     else:
         return ctypes.util.find_library(libname)

@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import ctypes
 import logging
 import os
 import platform
@@ -278,22 +279,21 @@ class TestFileUtils(unittest.TestCase):
         )
 
         # Find a system library
+        _args = {'cwd':False, 'include_PATH':False, 'pathlist':[]}
         if FileDownloader.get_sysinfo()[0] == 'windows':
-            a = find_library('ntdll')
-            self.assertIsNotNone(a)
-            self.assertTrue(os.path.exists(a))
-            b = find_library('ntdll.dll')
-            self.assertIsNotNone(b)
-            self.assertTrue(os.path.exists(b))
-            self.assertEqual(a,b)
+            a = find_library('ntdll', **_args)
+            b = find_library('ntdll.dll', **_args)
         else:
-            a = find_library('c')
-            self.assertIsNotNone(a)
-            self.assertTrue(os.path.exists(a))
-            b = find_library('libc.so')
-            self.assertIsNotNone(b)
-            self.assertTrue(os.path.exists(b))
-            self.assertEqual(a,b)
+            a = find_library('c', **_args)
+            b = find_library('libc.so', **_args)
+        self.assertIsNotNone(a)
+        self.assertIsNotNone(b)
+        self.assertEqual(a,b)
+        # Verify that the library is loadable
+        a_lib = ctypes.cdll.LoadLibrary(a)
+        self.assertIsNotNone(a_lib)
+        b_lib = ctypes.cdll.LoadLibrary(b)
+        self.assertIsNotNone(b_lib)
 
 
     def test_find_executable(self):
