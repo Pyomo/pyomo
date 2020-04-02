@@ -250,7 +250,7 @@ class TestFileUtils(unittest.TestCase):
                 find_library(f_in_path, include_PATH=False)
             )
         else:
-            # Note on windows, ctypes.util.find_library *always*
+            # Note that on Windows, ctypes.util.find_library *always*
             # searches the PATH
             self.assertIsNone(
                 find_library(f_in_path, include_PATH=False)
@@ -276,7 +276,7 @@ class TestFileUtils(unittest.TestCase):
         )
         # ... but only if include_PATH is true
         if _system == 'windows':
-            # Note on windows, ctypes.util.find_library *always*
+            # Note that on Windows, ctypes.util.find_library *always*
             # searches the PATH
             self._check_file(
                 os.path.join(config_bindir, f_in_configbin),
