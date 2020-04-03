@@ -194,6 +194,23 @@ class TestFileUtils(unittest.TestCase):
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
         os.chdir(self.tmpdir)
 
+        # Find a system library (before we muck with the PATH)
+        _args = {'cwd':False, 'include_PATH':False, 'pathlist':[]}
+        if FileDownloader.get_sysinfo()[0] == 'windows':
+            a = find_library('ntdll', **_args)
+            b = find_library('ntdll.dll', **_args)
+        else:
+            a = find_library('c', **_args)
+            b = find_library('libc.so', **_args)
+        self.assertIsNotNone(a)
+        self.assertIsNotNone(b)
+        self.assertEqual(a,b)
+        # Verify that the library is loadable
+        a_lib = ctypes.cdll.LoadLibrary(a)
+        self.assertIsNotNone(a_lib)
+        b_lib = ctypes.cdll.LoadLibrary(b)
+        self.assertIsNotNone(b_lib)
+
         config.PYOMO_CONFIG_DIR = self.tmpdir
         config_libdir = os.path.join(self.tmpdir, 'lib')
         os.mkdir(config_libdir)
@@ -285,23 +302,6 @@ class TestFileUtils(unittest.TestCase):
         self.assertIsNone(
             find_library(f_in_configbin, pathlist=pathdir)
         )
-
-        # Find a system library
-        _args = {'cwd':False, 'include_PATH':False, 'pathlist':[]}
-        if FileDownloader.get_sysinfo()[0] == 'windows':
-            a = find_library('ntdll', **_args)
-            b = find_library('ntdll.dll', **_args)
-        else:
-            a = find_library('c', **_args)
-            b = find_library('libc.so', **_args)
-        self.assertIsNotNone(a)
-        self.assertIsNotNone(b)
-        self.assertEqual(a,b)
-        # Verify that the library is loadable
-        a_lib = ctypes.cdll.LoadLibrary(a)
-        self.assertIsNotNone(a_lib)
-        b_lib = ctypes.cdll.LoadLibrary(b)
-        self.assertIsNotNone(b_lib)
 
 
     def test_find_executable(self):
