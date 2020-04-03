@@ -199,17 +199,20 @@ class TestFileUtils(unittest.TestCase):
         if FileDownloader.get_sysinfo()[0] == 'windows':
             a = find_library('ntdll', **_args)
             b = find_library('ntdll.dll', **_args)
+            c = find_library('foo\\bar\\ntdll.dll', **_args)
         else:
             a = find_library('c', **_args)
             b = find_library('libc.so', **_args)
+            c = find_library('foo/bar/libc.so', **_args)
         self.assertIsNotNone(a)
         self.assertIsNotNone(b)
+        self.assertIsNotNone(c)
         self.assertEqual(a,b)
-        # Verify that the library is loadable
-        a_lib = ctypes.cdll.LoadLibrary(a)
-        self.assertIsNotNone(a_lib)
-        b_lib = ctypes.cdll.LoadLibrary(b)
-        self.assertIsNotNone(b_lib)
+        self.assertEqual(a,c)
+        # Verify that the library is loadable (they are all the same
+        # file, so only check one)
+        _lib = ctypes.cdll.LoadLibrary(a)
+        self.assertIsNotNone(_lib)
 
         config.PYOMO_CONFIG_DIR = self.tmpdir
         config_libdir = os.path.join(self.tmpdir, 'lib')
