@@ -320,12 +320,12 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     # Search 1: original filename (with extensions) in our paths
     lib = find_file(libname, cwd=cwd, ext=ext, pathlist=pathlist)
     if lib is None and not libname.startswith('lib'):
-        # Search 2: prpend 'lib' (with extensions) in our paths
+        # Search 2: prepend 'lib' (with extensions) in our paths
         lib = find_file('lib'+libname, cwd=cwd, ext=ext, pathlist=pathlist)
     if lib is not None:
         return lib
     # Search 3: use ctypes.util.find_library (which expects 'lib' and
-    # extension to be removed fro mthe name)
+    # extension to be removed from the name)
     if libname.startswith('lib') and _system() != 'windows':
         libname = libname[3:]
     libname_base, ext = os.path.splitext(os.path.basename(libname))
