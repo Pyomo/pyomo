@@ -50,21 +50,6 @@ class ScenarioSet(object):
         self._scens.append(scen)
 
         
-    def Concatwith(self, set1,  newname):
-        """ Concatenate a set to this set and return a new set 
-
-        Args: 
-            set1 (ScenarioSet): to append to this
-        Returns:
-            a new ScenarioSet
-        """
-        assert(isinstance(self._scens, list))
-        newlist = self._scens + set1._scens
-        retval = ScenarioSet(newname)
-        retval._scens = newlist
-        return retval
-
-
     def append_bootstrap(self, bootstrap_theta):
         """ Append a boostrap theta df to the scenario set; equally likely
 

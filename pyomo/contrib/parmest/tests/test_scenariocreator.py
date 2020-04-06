@@ -125,7 +125,6 @@ class  pamest_Scenario_creator_semibatch(unittest.TestCase):
 
         self.pest = parmest.Estimator(sb.generate_model, data, theta_names)
 
-    @unittest.skipIf(True, "Bootstrap is tested by semibatch_example")
     def test_semibatch_bootstrap(self):
 
         scenmaker = sc.ScenarioCreator(self.pest, "ipopt")
