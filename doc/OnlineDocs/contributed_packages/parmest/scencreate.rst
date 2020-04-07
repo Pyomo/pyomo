@@ -24,7 +24,7 @@ scenarios to the screen, accessing them via the ``ScensItator`` a ``print``
 API
 ---
 
-.. automodule:: pyomo.contrib.parmest.ScenarioCreator
+.. automodule:: pyomo.contrib.parmest.scenariocreator
     :members:
     :undoc-members:
     :show-inheritance:
