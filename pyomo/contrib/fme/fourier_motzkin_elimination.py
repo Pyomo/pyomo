@@ -14,7 +14,7 @@ from pyomo.core.base import (TransformationFactory, _VarData)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import _ConstraintData
-from pyomo.core.plugins.transform.hierarchy import LinearTransformation
+from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.repn.standard_repn import generate_standard_repn
@@ -32,17 +32,7 @@ def vars_to_eliminate_list(x):
     elif hasattr(x, '__iter__'):
         ans = ComponentSet()
         for i in x:
-            if isinstance(i, (Var, _VarData)):
-                # flatten indexed things
-                if i.is_indexed():
-                    for j in i.index_set():
-                        ans.add(i[j])
-                else:
-                    ans.add(i)
-            else:
-                raise ValueError(
-                    "Expected Var or list of Vars."
-                    "\n\tRecieved %s" % type(x))
+            ans.update(vars_to_eliminate_list(i))
         return ans
     else:
         raise ValueError(
@@ -52,7 +42,7 @@ def vars_to_eliminate_list(x):
 @TransformationFactory.register('contrib.fourier_motzkin_elimination',
                                 doc="Project out specified (continuous) "
                                 "variables from a linear model.")
-class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
+class Fourier_Motzkin_Elimination_Transformation(Transformation):
     """Project out specified variables from a linear model.
 
     This transformation requires the following keyword argument:
@@ -82,6 +72,8 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
     def __init__(self):
         """Initialize transformation object"""
         super(Fourier_Motzkin_Elimination_Transformation, self).__init__()
+        self.ctypes_not_to_transform = set((Block, Param, Objective, Set,
+                                        Expression, Suffix))
     
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
@@ -108,26 +100,23 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
                 descend_into=Block,
                 sort=SortComponents.deterministic,
                 active=True):
-            if obj.type() in (Block, _BlockData, Param, _ParamData, Objective,
-                              Set, Expression, Suffix):
+            if obj.type() in self.ctypes_not_to_transform:
                 continue
-            elif obj.type() in (Constraint, _ConstraintData):
+            elif obj.type() is Constraint:
                 cons_list = self._process_constraint(obj)
                 constraints.extend(cons_list)
                 obj.deactivate() # the truth will be on our transformation block
-            elif obj.type() in (Var, _VarData):
+            elif obj.type() is Var:
                 # variable bounds are constraints, but we only need them if this
                 # is a variable we are projecting out
                 if obj not in vars_to_eliminate:
                     continue
                 if obj.lb is not None:
                     constraints.append({'body': generate_standard_repn(obj),
-                                        'upper': None,
                                         'lower': value(obj.lb),
                                         'map': ComponentMap([(obj, 1)])})
                 if obj.ub is not None:
                     constraints.append({'body': generate_standard_repn(-obj),
-                                        'upper': None,
                                         'lower': -value(obj.ub),
                                         'map': ComponentMap([(obj, -1)])})
             else:
@@ -154,7 +143,7 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
                 else:
                     # This would actually make a lot of sense in this case...
                     #projected_constraints.add(Constraint.Infeasible)
-                    raise RuntimeError("Fourier-Motzkin found that model is "
+                    raise RuntimeError("Fourier-Motzkin found the model is "
                                        "infeasible!")
             else:
                 projected_constraints.add(lhs >= lower)
@@ -163,40 +152,31 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
         """Transforms a pyomo Constraint objective into a list of dictionaries
         representing only >= constraints. That is, if the constraint has both an
         ub and a lb, it is transformed into two constraints. Otherwise it is
-        flipped if it is <=. Each dictionary contains the keys 'lower', 'upper'
-        and 'body' where, after the process, 'upper' will be None, 'lower' will
-        be a constant, and 'body' will be the standard repn of the body.
-        (The constant will be moved to the RHS).
+        flipped if it is <=. Each dictionary contains the keys 'lower',
+        and 'body' where, after the process, 'lower' will be a constant, and 
+        'body' will be the standard repn of the body. (The constant will be 
+        moved to the RHS and we know that the upper bound is None after this).
         """
         body = constraint.body
         std_repn = generate_standard_repn(body)
-        # linear only!!
-        if not std_repn.is_linear():
-            raise RuntimeError("Found nonlinear constraint %s. The "
-                               "Fourier-Motzkin Elimination transformation "
-                               "can only be applied to linear models!"
-                               % constraint.name)
         cons_dict = {'lower': constraint.lower,
-                     'upper': constraint.upper,
                      'body': std_repn
                      }
+        upper = constraint.upper
         constraints_to_add = [cons_dict]
-        if cons_dict['upper'] is not None:
+        if upper is not None:
             # if it has both bounds
             if cons_dict['lower'] is not None:
                 # copy the constraint and flip
-                leq_side = {'lower': -cons_dict['upper'],
-                            'upper': None,
+                leq_side = {'lower': -upper,
                             'body': generate_standard_repn(-1.0*body)}
                 self._move_constant_and_add_map(leq_side)
                 constraints_to_add.append(leq_side)
-                cons_dict['upper'] = None
 
             # If it has only an upper bound, we just need to flip it
             else:
                 # just flip the constraint
-                cons_dict['lower'] = -cons_dict['upper']
-                cons_dict['upper'] = None
+                cons_dict['lower'] = -upper
                 cons_dict['body'] = generate_standard_repn(-1.0*body)
         self._move_constant_and_add_map(cons_dict)
 
@@ -226,7 +206,23 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
         # this set of constraints... Revise our list.
         vars_that_appear = []
         for cons in constraints:
-            for var in cons['body'].linear_vars:
+            std_repn = cons['body']
+            if not std_repn.is_linear():
+                # as long as none of vars_that_appear are in the nonlinear part,
+                # we are actually okay.
+                nonlinear_vars = ComponentSet(v for two_tuple in 
+                                        std_repn.quadratic_vars for
+                                        v in two_tuple)
+                nonlinear_vars.update(v for v in std_repn.nonlinear_vars)
+                for var in nonlinear_vars:
+                    if var in vars_to_eliminate:
+                        raise RuntimeError("Variable %s appears in a nonlinear "
+                                           "constraint. The Fourier-Motzkin "
+                                           "Elimination transformation can only "
+                                           "be used to eliminate variables "
+                                           "which only appear linearly." % 
+                                           var.name)
+            for var in std_repn.linear_vars:
                 if var in vars_to_eliminate:
                     vars_that_appear.append(var)
 
@@ -235,22 +231,20 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
             # first var we will project out
             the_var = vars_that_appear.pop()
 
-            # we are 'reorganizing' the constraints, we will map the coefficient
-            # of the_var from that constraint and the rest of the expression and
-            # sorting based on whether we have the_var <= other stuff or vice
-            # versa.
+            # we are 'reorganizing' the constraints, we sort based on the sign
+            # of the coefficient of the_var: This tells us whether we have
+            # the_var <= other stuff or vice versa.
             leq_list = []
             geq_list = []
             waiting_list = []
 
-            while(constraints):
-                cons = constraints.pop()
+            for cons in constraints:
                 leaving_var_coef = cons['map'].get(the_var)
                 if leaving_var_coef is None or leaving_var_coef == 0:
                     waiting_list.append(cons)
                     continue
 
-                # we know the constraints is a >= constraint, using that
+                # we know the constraint is a >= constraint, using that
                 # assumption below.
                 # NOTE: neither of the scalar multiplications below flip the
                 # constraint. So we are sure to have only geq constraints
@@ -264,13 +258,14 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
                         self._nonneg_scalar_multiply_linear_constraint(
                             cons, 1.0/leaving_var_coef))
 
+            constraints = waiting_list
             for leq in leq_list:
                 for geq in geq_list:
                     constraints.append(self._add_linear_constraints(leq, geq))
 
             # add back in the constraints that didn't have the variable we were
             # projecting out
-            constraints.extend(waiting_list)
+            #constraints.extend(waiting_list)
 
         return constraints
 
@@ -294,36 +289,24 @@ class Fourier_Motzkin_Elimination_Transformation(LinearTransformation):
 
     def _add_linear_constraints(self, cons1, cons2):
         """Adds two >= constraints"""
-        ans = {'lower': None, 'upper': None, 'body': None, 'map': ComponentMap()}
+        ans = {'lower': None, 'body': None, 'map': ComponentMap()}
 
-        # This is not beautiful, but it needs to be both deterministic and
-        # account for the fact that Vars aren't hashable.
-        seen = ComponentSet()
-        all_vars = []
-        for v in cons1['body'].linear_vars:
-            all_vars.append(v)
-            seen.add(v)
+        # Need this to be both deterministic and to account for the fact that
+        # Vars aren't hashable.
+        all_vars = list(cons1['body'].linear_vars)
+        seen = ComponentSet(all_vars)
         for v in cons2['body'].linear_vars:
             if v not in seen:
                 all_vars.append(v)
         
         expr = 0
         for var in all_vars:
-            cons1_coef = cons1['map'].get(var)
-            cons2_coef = cons2['map'].get(var)
-            if cons2_coef is not None and cons1_coef is not None:
-                ans['map'][var] = new_coef = cons1_coef + cons2_coef
-            elif cons1_coef is not None:
-                ans['map'][var] = new_coef = cons1_coef
-            elif cons2_coef is not None:
-                ans['map'][var] = new_coef = cons2_coef
-            expr += new_coef*var
+            coef = cons1['map'].get(var, 0) + cons2['map'].get(var, 0)
+            ans['map'][var] = coef
+            expr += coef*var
         ans['body'] = generate_standard_repn(expr)
 
-        # upper is None, so we just deal with the constants here.
-        cons1_lower = cons1['lower']
-        cons2_lower = cons2['lower']
-        if cons1_lower is not None and cons2_lower is not None:
-            ans['lower'] = cons1_lower + cons2_lower
+        # upper is None and lower exists, so this gets the constant
+        ans['lower'] = cons1['lower'] + cons2['lower']
 
         return ans

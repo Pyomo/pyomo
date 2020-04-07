@@ -1,1 +1,1 @@
-import pyomo.contrib.fme.plugins.fourier_motzkin_elimination
+import pyomo.contrib.fme.fourier_motzkin_elimination

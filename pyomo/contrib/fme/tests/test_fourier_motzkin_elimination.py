@@ -61,7 +61,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     def check_projected_constraints(self, m):
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # x - 0.01y <= 1
-        cons = constraints[4]
+        cons = constraints[1]
         self.assertEqual(value(cons.lower), -1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -75,7 +75,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(coefs[1], 0.01)
 
         # y <= 1000*(1 - u_1)
-        cons = constraints[5]
+        cons = constraints[2]
         self.assertEqual(value(cons.lower), -1000)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -88,7 +88,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(coefs[1], -1000)
 
         # -x + 0.01y + 1 <= 1000*(1 - u_2)
-        cons = constraints[6]
+        cons = constraints[3]
         self.assertEqual(value(cons.lower), -999)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -103,7 +103,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(coefs[2], -1000)
 
         # u_2 + 100u_1 >= 1
-        cons = constraints[2]
+        cons = constraints[6]
         self.assertEqual(value(cons.lower), 1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -162,7 +162,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         self.assertRaisesRegexp(
             RuntimeError,
-            "Fourier-Motzkin found that model is infeasible!",
+            "Fourier-Motzkin found the model is infeasible!",
             TransformationFactory('contrib.fourier_motzkin_elimination').\
             apply_to,
             m, 
@@ -176,7 +176,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         self.assertRaisesRegexp(
             RuntimeError,
-            "Fourier-Motzkin found that model is infeasible!",
+            "Fourier-Motzkin found the model is infeasible!",
             TransformationFactory('contrib.fourier_motzkin_elimination').\
             apply_to,
             m, 
@@ -190,10 +190,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         self.assertRaisesRegexp(
             RuntimeError,
-            "Found nonlinear constraint %s. The "
-            "Fourier-Motzkin Elimination transformation "
-            "can only be applied to linear models!"
-            % m.cons.name,
+            "Variable x appears in a nonlinear "
+            "constraint. The Fourier-Motzkin "
+            "Elimination transformation can only "
+            "be used to eliminate variables "
+            "which only appear linearly.",
             TransformationFactory('contrib.fourier_motzkin_elimination').\
             apply_to,
             m, 
@@ -335,8 +336,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[1], -1)
 
         # p[2] - p[1] <= 3*on.ind_var + 2*startup.ind_var
-        cons = constraints[54]
-        self.assertEqual(cons.lower, 0)
+        cons = constraints[56]
+        self.assertEqual(value(cons.lower), 0)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
         self.assertEqual(body.constant, 0)
@@ -352,7 +353,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[2], 2)
 
         # p[2] >= on.ind_var + startup.ind_var
-        cons = constraints[32]
+        cons = constraints[38]
         self.assertEqual(cons.lower, 0)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -367,7 +368,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[2], -1)
 
         # p[2] <= 10*on.ind_var + 2*startup.ind_var
-        cons = constraints[39]
+        cons = constraints[32]
         self.assertEqual(cons.lower, 0)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -382,7 +383,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[2], -1)
 
         # 1 <= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
-        cons = constraints[6]
+        cons = constraints[1]
         self.assertEqual(cons.lower, 1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -395,7 +396,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[1], 1)
 
         # 1 >= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
-        cons = constraints[7]
+        cons = constraints[2]
         self.assertEqual(cons.lower, -1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -408,7 +409,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[1], -1)
 
         # 1 <= on.ind_var + startup.ind_var + off.ind_var
-        cons = constraints[8]
+        cons = constraints[3]
         self.assertEqual(cons.lower, 1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -423,7 +424,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[2], 1)
 
         # 1 >= on.ind_var + startup.ind_var + off.ind_var
-        cons = constraints[9]
+        cons = constraints[4]
         self.assertEqual(cons.lower, -1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
