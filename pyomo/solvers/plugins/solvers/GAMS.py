@@ -466,9 +466,9 @@ class GAMSDirect(_GAMSSolver):
                 if obj.ctype is not IVariable:
                     continue
             else:
-                if obj.parent_component().type() is Objective:
+                if obj.parent_component().ctype() is Objective:
                     soln.objective[sym] = {'Value': objctvval}
-                if obj.parent_component().type() is not Var:
+                if obj.parent_component().ctype() is not Var:
                     continue
             rec = t1.out_db[sym].find_record()
             # obj.value = rec.level
@@ -939,9 +939,9 @@ class GAMSShell(_GAMSSolver):
                 if obj.ctype is not IVariable:
                     continue
             else:
-                if obj.parent_component().type() is Objective:
+                if obj.parent_component().ctype() is Objective:
                     soln.objective[sym] = {'Value': objctvval}
-                if obj.parent_component().type() is not Var:
+                if obj.parent_component().ctype() is not Var:
                     continue
             rec = model_soln[sym]
             # obj.value = float(rec[0])

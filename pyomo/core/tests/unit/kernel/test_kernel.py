@@ -193,7 +193,7 @@ class Test_kernel(unittest.TestCase):
                     pmo.block()]:
             ctype = obj.ctype
             self.assertIs(obj.__class__._ctype, ctype)
-            self.assertIs(obj.type(), ctype)
+            self.assertIs(obj.ctype(), ctype)
 
 if __name__ == "__main__":
     unittest.main()

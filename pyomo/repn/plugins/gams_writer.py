@@ -160,7 +160,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         if isinstance(comp, ICategorizedObject):
             return comp.ctype
         else:
-            return comp.type()
+            return comp.ctype()
 
 
 def expression_to_string(expr, treechecker, labeler=None, smap=None):

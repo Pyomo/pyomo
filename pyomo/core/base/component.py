@@ -382,15 +382,15 @@ class Component(_ComponentBase):
         _constructed    A boolean that is true if this component has been
                             constructed
         _parent         A weakref to the parent block that owns this component
-        _type           The class type for the derived subclass
+        _ctype          The class type for the derived subclass
     """
 
     def __init__ (self, **kwds):
         #
         # Get arguments
         #
-        self._type = kwds.pop('ctype', None)
-        self.doc   = kwds.pop('doc', None)
+        self._ctype = kwds.pop('ctype', None)
+        self.doc    = kwds.pop('doc', None)
         self._name  = kwds.pop('name', str(type(self).__name__))
         if kwds:
             raise ValueError(
@@ -399,7 +399,7 @@ class Component(_ComponentBase):
         #
         # Verify that ctype has been specified.
         #
-        if self._type is None:
+        if self._ctype is None:
             raise pyomo.common.DeveloperError(
                 "Must specify a component type for class %s!"
                 % ( type(self).__name__, ) )
@@ -461,9 +461,15 @@ class Component(_ComponentBase):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
+    def ctype(self):
+        """Return the class type for this component"""
+        return self._ctype
+
+    @deprecated("The Component .type() attribute has been renamed .ctype()."
+                version='TBD')
     def type(self):
         """Return the class type for this component"""
-        return self._type
+        return self.ctype()
 
     def construct(self, data=None):                     #pragma:nocover
         """API definition for constructing components"""
@@ -765,12 +771,18 @@ class ComponentData(_ComponentBase):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
-    def type(self):
+    def ctype(self):
         """Return the class type for this component"""
         _parent = self.parent_component()
         if _parent is None:
             return _parent
-        return _parent._type
+        return _parent._ctype
+
+    @deprecated("The Component .type() attribute has been renamed .ctype()."
+                version='TBD')
+    def type(self):
+        """Return the class type for this component"""
+        return self.ctype()
 
     def parent_component(self):
         """Returns the component associated with this object."""

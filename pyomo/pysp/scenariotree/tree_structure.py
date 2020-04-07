@@ -283,8 +283,8 @@ class ScenarioTreeNode(object):
                        self._stage._name,
                        scenario_instance.name))
 
-            if component_object.type() is not Block:
-                isVar = (component_object.type() is Var)
+            if component_object.ctype() is not Block:
+                isVar = (component_object.ctype() is Var)
                 if not derived:
                     if not isVar:
                         raise RuntimeError("The component=%s "
@@ -297,8 +297,8 @@ class ScenarioTreeNode(object):
                                               type(component_object)))
                 else:
                     if (not isVar) and \
-                       (component_object.type() is not Expression) and \
-                       (component_object.type() is not Objective):
+                       (component_object.ctype() is not Expression) and \
+                       (component_object.ctype() is not Objective):
                         raise RuntimeError("The derived component=%s "
                                            "associated with stage=%s "
                                            "is present in instance=%s "
@@ -448,14 +448,14 @@ class ScenarioTreeNode(object):
                                  % (cost_variable_name,
                                     self._stage._name,
                                     scenario_instance.name))
-            if not cost_variable.type() in [Var,Expression,Objective]:
+            if not cost_variable.ctype() in [Var,Expression,Objective]:
                 raise RuntimeError("The component=%s associated with stage=%s "
                                    "is present in model=%s but is not a "
                                    "variable or expression - type=%s"
                                    % (cost_variable_name,
                                       self._stage._name,
                                       scenario_instance.name,
-                                      cost_variable.type()))
+                                      cost_variable.ctype()))
             if cost_variable_index not in cost_variable:
                 raise RuntimeError("The index %s is not defined for cost "
                                    "variable=%s on model=%s"

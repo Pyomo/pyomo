@@ -48,17 +48,17 @@ class TestArc(unittest.TestCase):
         m = ConcreteModel()
         m.c1 = Arc([1, 2, 3])
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype(), Arc)
 
         m = AbstractModel()
         m.c1 = Arc([1, 2, 3])
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype(), Arc)
 
 
         inst = m.create_instance()
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype(), Arc)
 
     def test_with_scalar_ports(self):
         def rule(m):
@@ -173,10 +173,10 @@ class TestArc(unittest.TestCase):
         m.prt2 = Port(m.s)
         m.c1 = Arc(m.s, rule=rule1)
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype(), Arc)
         m.c2 = Arc(m.s, rule=rule2)
         self.assertEqual(len(m.c2), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype(), Arc)
 
         inst = m.create_instance()
         self.assertEqual(len(inst.c1), 5)

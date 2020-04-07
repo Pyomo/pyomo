@@ -407,7 +407,7 @@ class EmbeddedSP(object):
         # remove the parent blocks from this map
         keys_to_delete = []
         for var in self.variable_symbols:
-            if var.parent_component().type() is not Var:
+            if var.parent_component().ctype() is not Var:
                 keys_to_delete.append(var)
         for key in keys_to_delete:
             del self.variable_symbols[key]
