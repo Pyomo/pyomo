@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - master
+  push:
+    branches:
+      - add_baron
 
 jobs:
   pyomo-tests:
@@ -82,6 +85,11 @@ jobs:
         }
         conda list --show-channel-urls
         Write-Host ("")
+        Write-Host ("Installing BARON")
+        Write-Host ("")
+        Invoke-WebRequest -Uri 'https://www.minlp.com/downloads/xecs/baron/current/baron-win64.exe' -OutFile 'baron.exe'
+        Start-Process -FilePath 'baron.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\baron /NOICONS' -Wait
+        Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
         Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
@@ -116,26 +124,12 @@ jobs:
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
-        try
-        {
-            python3 setup.py develop
-        }
-        catch
-        {
-            python setup.py develop
-        }
+        python setup.py develop
         cd ..
         Write-Host ("")
         Write-Host ("Install Pyomo...")
         Write-Host ("")
-        try
-        {
-            python3 setup.py develop
-        }
-        catch
-        {
-            python setup.py develop
-        }
+        python setup.py develop
         Write-Host ("")
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
@@ -147,6 +141,6 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
-        $env:PATH += ';' + $(Get-Location).Path + "\gams"
+        $env:PATH += ';' + $(Get-Location).Path + "\gams" + ';' + $(Get-Location).Path + "\baron"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         Invoke-Expression $env:EXP
