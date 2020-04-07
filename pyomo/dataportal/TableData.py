@@ -106,7 +106,7 @@ class TableData(object):
         self._info = None
 
     def _set_data(self, headers, rows):
-        from pyomo.core.base.sets import Set
+        from pyomo.core.base.set import Set
         from pyomo.core.base.param import Param
 
         header_index = []

@@ -12,7 +12,6 @@ import os
 import pyutilib.th as unittest
 
 from pyomo.common.getGSL import find_GSL
-from pyomo.core.base import IntegerSet
 from pyomo.environ import *
 from pyomo.core.base.external import (PythonCallbackFunction,
                                       AMPLExternalFunction)

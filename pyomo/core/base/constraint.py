@@ -33,7 +33,7 @@ from pyomo.core.base.indexed_component import \
       _get_indexed_component_data_name, )
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
-from pyomo.core.base.sets import Set
+from pyomo.core.base.set import Set
 
 from six import StringIO, iteritems
 
@@ -1101,7 +1101,7 @@ class ConstraintList(IndexedConstraint):
 
     def __init__(self, **kwargs):
         """Constructor"""
-        args = (Set(),)
+        args = (Set(dimen=1),)
         if 'expr' in kwargs:
             raise ValueError(
                 "ConstraintList does not accept the 'expr' keyword")
@@ -1120,6 +1120,7 @@ class ConstraintList(IndexedConstraint):
         if self._constructed:
             return
         self._constructed=True
+        self.index_set().construct()
 
         assert self._init_expr is None
         _init_rule = self.rule

@@ -4,7 +4,7 @@ import textwrap
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.var import Var
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.set_types import Reals
+from pyomo.core.base.set_types import Reals
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
 
