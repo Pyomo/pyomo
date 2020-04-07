@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - add_baron
   pull_request:
     branches:
       - master
