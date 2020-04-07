@@ -49,7 +49,8 @@ class FileDownloader(object):
                     % (self.cacert,))
 
 
-    def get_sysinfo(self):
+    @classmethod
+    def get_sysinfo(cls):
         """Return a tuple (platform_name, bits) for the current system
 
         Returns
@@ -65,7 +66,8 @@ class FileDownloader(object):
         bits = 64 if sys.maxsize > 2**32 else 32
         return system, bits
 
-    def _get_distver_from_os_release(self):
+    @classmethod
+    def _get_distver_from_os_release(cls):
         dist = ''
         ver = ''
         with open('/etc/os-release', 'rt') as FILE:
@@ -81,9 +83,10 @@ class FileDownloader(object):
                         ver = val[1:-1]
                     else:
                         ver = val
-        return self._map_dist(dist), ver
+        return cls._map_dist(dist), ver
 
-    def _get_distver_from_redhat_release(self):
+    @classmethod
+    def _get_distver_from_redhat_release(cls):
         # RHEL6 did not include /etc/os-release
         with open('/etc/redhat-release', 'rt') as FILE:
             dist = FILE.readline().lower().strip()
@@ -92,17 +95,20 @@ class FileDownloader(object):
                 if re.match('^[0-9\.]+', word):
                     ver = word
                     break
-        return self._map_dist(dist), ver
+        return cls._map_dist(dist), ver
 
-    def _get_distver_from_lsb_release(self):
+    @classmethod
+    def _get_distver_from_lsb_release(cls):
         rc, dist = run(['lsb_release', '-si'])
         rc, ver = run(['lsb_release', '-sr'])
-        return self._map_dist(dist.lower().strip()), ver.strip()
+        return cls._map_dist(dist.lower().strip()), ver.strip()
 
-    def _get_distver_from_distro(self):
+    @classmethod
+    def _get_distver_from_distro(cls):
         return distro.id(), distro.version(best=True)
 
-    def _map_dist(self, dist):
+    @classmethod
+    def _map_dist(cls, dist):
         dist = dist.lower()
         _map = {
             'centos': 'centos',
@@ -117,19 +123,20 @@ class FileDownloader(object):
                 return _map[key]
         return dist
 
-    def _get_os_version(self):
-        _os = self.get_sysinfo()[0]
+    @classmethod
+    def _get_os_version(cls):
+        _os = cls.get_sysinfo()[0]
         if _os == 'linux':
             if distro_available:
-                dist, ver = self._get_distver_from_distro()
+                dist, ver = cls._get_distver_from_distro()
             elif os.path.exists('/etc/redhat-release'):
-                dist, ver = self._get_distver_from_redhat_release()
+                dist, ver = cls._get_distver_from_redhat_release()
             elif run(['lsb_release'])[0] == 0:
-                dist, ver = self._get_distver_from_lsb_release()
+                dist, ver = cls._get_distver_from_lsb_release()
             elif os.path.exists('/etc/os-release'):
                 # Note that (at least on centos), os_release is an
                 # imprecise version string
-                dist, ver = self._get_distver_from_os_release()
+                dist, ver = cls._get_distver_from_os_release()
             else:
                 dist, ver = '',''
             return dist, ver
@@ -140,7 +147,8 @@ class FileDownloader(object):
         else:
             return '', ''
 
-    def get_os_version(self, normalize=True):
+    @classmethod
+    def get_os_version(cls, normalize=True):
         """Return a standardized representation of the OS version
 
         This method was designed to help identify compatible binaries,
@@ -160,7 +168,7 @@ class FileDownloader(object):
 
         """
         if FileDownloader._os_version is None:
-            FileDownloader._os_version = self._get_os_version()
+            FileDownloader._os_version = cls._get_os_version()
 
         if not normalize:
             return FileDownloader._os_version
