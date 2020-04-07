@@ -114,6 +114,7 @@ jobs:
         Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
+
     - name: Install Pyomo and extensions
       shell: pwsh
       run: |
@@ -141,6 +142,7 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
-        $env:PATH += ';' + $(Get-Location).Path + "\gams" + ';' + $(Get-Location).Path + "\baron"
+        $env:PATH += ';' + $(Get-Location).Path + "\gams"
+        $env:PATH += ';' + $(Get-Location).Path + "\baron"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         Invoke-Expression $env:EXP
