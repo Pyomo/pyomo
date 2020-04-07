@@ -226,22 +226,22 @@ class _GeneralExpressionDataImpl(_ExpressionData):
     # an Expression for a Var
     def setlb(self, val):
         raise TypeError(
-            "Expressions cannot have bounds: %s"
+            "Component is an Expression and can not have bounds: %s"
             % (self.name))
 
     def setub(self, val):
         raise TypeError(
-            "Expressions cannot have bounds: %s"
+            "Component is an Expression and can not have bounds: %s"
             % (self.name))
 
     def fix(self, val):
         raise TypeError(
-            "Expressions cannot be fixed: %s"
+            "Component is an Expression and can not be fixed: %s"
             % (self.name))
 
     def unfix(self):
         raise TypeError(
-            "Expressions cannot be fixed: %s"
+            "Component is an Expression and can not be unfixed: %s"
             % (self.name))
 
 
@@ -553,20 +553,20 @@ class IndexedExpression(Expression):
     # an Expression for a Var
     def setlb(self, val):
         raise TypeError(
-            "Expressions cannot have bounds: %s"
+            "Component is an Expression and can not have bounds: %s"
             % (self.name))
 
     def setub(self, val):
         raise TypeError(
-            "Expressions cannot have bounds: %s"
+            "Component is an Expression and can not have bounds: %s"
             % (self.name))
 
     def fix(self, val):
         raise TypeError(
-            "Expressions cannot be fixed: %s"
+            "Component is an Expression and can not be fixed: %s"
             % (self.name))
 
     def unfix(self):
         raise TypeError(
-            "Expressions cannot be fixed: %s"
+            "Component is an Expression and can not be unfixed: %s"
             % (self.name))
