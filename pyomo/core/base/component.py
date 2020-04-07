@@ -465,7 +465,7 @@ class Component(_ComponentBase):
         """Return the class type for this component"""
         return self._ctype
 
-    @deprecated("The Component .type() attribute has been renamed .ctype()."
+    @deprecated("The Component .type() attribute has been renamed .ctype().",
                 version='TBD')
     def type(self):
         """Return the class type for this component"""
@@ -778,7 +778,7 @@ class ComponentData(_ComponentBase):
             return _parent
         return _parent._ctype
 
-    @deprecated("The Component .type() attribute has been renamed .ctype()."
+    @deprecated("The Component .type() attribute has been renamed .ctype().",
                 version='TBD')
     def type(self):
         """Return the class type for this component"""
