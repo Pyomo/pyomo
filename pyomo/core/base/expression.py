@@ -222,6 +222,29 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         """A boolean indicating whether this expression is fixed."""
         return self._expr.is_fixed()
 
+    # Define methods for common activities on Vars in case user mistakes
+    # an Expression for a Var
+    def setlb(self, val):
+        raise TypeError(
+            "Expressions cannot have bounds: %s"
+            % (self.name))
+
+    def setub(self, val):
+        raise TypeError(
+            "Expressions cannot have bounds: %s"
+            % (self.name))
+
+    def fix(self, val):
+        raise TypeError(
+            "Expressions cannot be fixed: %s"
+            % (self.name))
+
+    def unfix(self):
+        raise TypeError(
+            "Expressions cannot be fixed: %s"
+            % (self.name))
+
+
 class _GeneralExpressionData(_GeneralExpressionDataImpl,
                              ComponentData):
     """
@@ -526,3 +549,24 @@ class IndexedExpression(Expression):
         self._data[index] = cdata
         return cdata
 
+    # Define methods for common activities on Vars in case user mistakes
+    # an Expression for a Var
+    def setlb(self, val):
+        raise TypeError(
+            "Expressions cannot have bounds: %s"
+            % (self.name))
+
+    def setub(self, val):
+        raise TypeError(
+            "Expressions cannot have bounds: %s"
+            % (self.name))
+
+    def fix(self, val):
+        raise TypeError(
+            "Expressions cannot be fixed: %s"
+            % (self.name))
+
+    def unfix(self):
+        raise TypeError(
+            "Expressions cannot be fixed: %s"
+            % (self.name))
