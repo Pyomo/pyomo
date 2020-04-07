@@ -4,20 +4,28 @@ try:
     matplotlib.use('Agg')
 except:
     pass
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+    scipy, scipy_available,
+)
+imports_present = numpy_available & pandas_available & scipy_available
+
+uuid_available = True
 try:
-    import numpy as np
-    import pandas as pd
-    imports_not_present = False
+    import uuid
 except:
-    imports_not_present = True
+    uuid_available = False
+
 import pyutilib.th as unittest
 import os
 
 import pyomo.contrib.parmest.parmest as parmest
-import pyomo.contrib.parmest.ScenarioCreator as sc
+import pyomo.contrib.parmest.scenariocreator as sc
 import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
 import pyomo.environ as pyo
+import pyomo.contrib.parmest.examples.semibatch.scencreate as sbc
 
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
@@ -25,9 +33,9 @@ ipopt_available = SolverFactory('ipopt').available()
 testdir = os.path.dirname(os.path.abspath(__file__))
 
 
-@unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-class parmest_object_Tester_reactor_design(unittest.TestCase):
+class pamest_Scenario_creator_reactor_design(unittest.TestCase):
     
     def setUp(self):
         from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor_design_model
@@ -75,11 +83,27 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
         # March '20: all reactor_design experiments have the same theta values!
         k1val = df.loc[5].at["k1"] 
         self.assertAlmostEqual(k1val, 5.0/6.0, places=2)
+        tval = experimentscens.ScenarioNumber(0).ThetaVals["k1"]
+        self.assertAlmostEqual(tval, 5.0/6.0, places=2)
+
+        
+    @unittest.skipIf(not uuid_available, "The uuid module is not available")
+    def test_no_csv_if_empty(self):
+        # low level test of scenario sets
+        # verify that nothing is written, but no errors with empty set
+
+        emptyset = sc.ScenarioSet("empty")
+        tfile = uuid.uuid4().hex+".csv"
+        emptyset.write_csv(tfile)
+        self.assertFalse(os.path.exists(tfile),
+                         "ScenarioSet wrote csv in spite of empty set")
+
+        
 
 
-@unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-class parmest_object_Tester_semibatch(unittest.TestCase):
+class  pamest_Scenario_creator_semibatch(unittest.TestCase):
     
     def setUp(self):
         import pyomo.contrib.parmest.examples.semibatch.semibatch as sb
@@ -88,12 +112,12 @@ class parmest_object_Tester_semibatch(unittest.TestCase):
         # Vars to estimate in parmest
         theta_names = ['k1', 'k2', 'E1', 'E2']
 
-        fbase = os.path.join(testdir,"..","examples","semibatch")
+        self.fbase = os.path.join(testdir,"..","examples","semibatch")
         # Data, list of dictionaries
         data = [] 
         for exp_num in range(10):
             fname = "exp"+str(exp_num+1)+".out"
-            fullname = os.path.join(fbase, fname)
+            fullname = os.path.join(self.fbase, fname)
             with open(fullname,'r') as infile:
                 d = json.load(infile)
                 data.append(d)
@@ -102,17 +126,11 @@ class parmest_object_Tester_semibatch(unittest.TestCase):
         # for the sum of squared error that will be used in parameter estimation
 
         self.pest = parmest.Estimator(sb.generate_model, data, theta_names)
-        
-    def test_semibatch_bootstrap(self):
 
-        scenmaker = sc.ScenarioCreator(self.pest, "ipopt")
-        bootscens = sc.ScenarioSet("Bootstrap")
-        numtomake = 2
-        scenmaker.ScenariosFromBoostrap(bootscens, numtomake, seed=1134)
-        tval = bootscens.ScenarioNumber(0).ThetaVals["k1"]
-        # different versions of Ipopt result in different values, so no assert
-        #self.assertAlmostEqual(tval, 20.64, places=1)
-        
+
+    def test_semibatch_example(self):
+        # this is referenced in the documentation so at least look for smoke
+        sbc.main(self.fbase)
         
 if __name__ == '__main__':
     unittest.main()

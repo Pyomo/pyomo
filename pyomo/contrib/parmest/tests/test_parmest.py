@@ -13,12 +13,12 @@ try:
     matplotlib.use('Agg')
 except:
     pass
-try:
-    import numpy as np
-    import pandas as pd
-    imports_not_present = False
-except:
-    imports_not_present = True
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+    scipy, scipy_available,
+)
+imports_present = numpy_available & pandas_available & scipy_available
 
 import platform
 is_osx = platform.mac_ver()[0] != ''
@@ -49,7 +49,7 @@ class Object_from_string_Tester(unittest.TestCase):
         self.instance.IDX = pyo.Set(initialize=['a', 'b', 'c'])
         self.instance.x = pyo.Var(self.instance.IDX, initialize=1134)
         # TBD add a block
-        if not imports_not_present:
+        if imports_present:
             np.random.seed(1134)
         
     def tearDown(self):
@@ -205,7 +205,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         self.assertAlmostEqual(objval, 4.4675, places=2)
         
 
-@unittest.skipIf(imports_not_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class parmest_object_Tester_reactor_design(unittest.TestCase):
     
