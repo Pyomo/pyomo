@@ -81,7 +81,7 @@ jobs:
         echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH"
         echo "::set-env name=DYLD_LIBRARY_PATH::$DYLD_LIBRARY_PATH"
 
-    - name: Install Pyomo and extensions
+    - name: Install Pyomo and PyUtilib
       run: |
         echo "Clone Pyomo-model-libraries..."
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
