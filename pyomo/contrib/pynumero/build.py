@@ -36,7 +36,7 @@ def build_pynumero(user_args=[]):
                 '--config', cmake_config,
             ]
 
-            self.spawn(['cmake', project_dir] + cmake_args)
+            self.spawn(['cmake', '--debug-output', project_dir] + cmake_args)
             if not self.dry_run:
                 self.spawn(['cmake', '--build', '.'] + build_args)
                 self.spawn(['cmake', '--build', '.',
@@ -48,6 +48,7 @@ def build_pynumero(user_args=[]):
             super(CMakeExtension, self).__init__(name, sources=[])
             self.project_dir = os.path.join(this_file_dir(), name)
 
+    print("\n**** Building PyNumero libraries ****")
     package_config = {
         'name': 'pynumero_libraries',
         'packages': [],
@@ -57,7 +58,6 @@ def build_pynumero(user_args=[]):
     dist = distutils.core.Distribution(package_config)
     # install_dir = os.path.join(config.PYOMO_CONFIG_DIR, 'lib')
     # dist.get_command_obj('install_lib').install_dir = install_dir
-    print("\n**** Building PyNumero libraries ****")
     try:
         basedir = os.path.abspath(os.path.curdir)
         tmpdir = os.path.abspath(tempfile.mkdtemp())
