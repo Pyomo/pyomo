@@ -109,13 +109,13 @@ class _ComplementarityData(_BlockData):
         #
         if _e2[0] is None and _e2[2] is None:
             self.c = Constraint(expr=(None, _e2[1], None))
-            self.c._complemtarity_type = 3
+            self.c._complementarity_type = 3
         elif _e2[2] is None:
             self.c = Constraint(expr=_e2[0] <= _e2[1])
-            self.c._complemtarity_type = 1
+            self.c._complementarity_type = 1
         elif _e2[0] is None:
             self.c = Constraint(expr=- _e2[2] <= - _e2[1])
-            self.c._complemtarity_type = 1
+            self.c._complementarity_type = 1
         #
         if not _e1[0] is None and not _e1[2] is None:
             if not (_e1[0].__class__ in native_numeric_types or _e1[0].is_constant()):
