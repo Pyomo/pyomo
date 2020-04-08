@@ -149,6 +149,5 @@ jobs:
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';' + $(Get-Location).Path + "\gams"
         $env:PATH += ';' + $(Get-Location).Path + "\ipopt"
-        Invoke-Expression 'ipopt.exe -v'
-        #$env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
-        #Invoke-Expression $env:EXP
+        $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
+        Invoke-Expression $env:EXP
