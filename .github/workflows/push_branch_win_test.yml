@@ -20,6 +20,7 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
+
     - name: Install Pyomo dependencies
       shell: pwsh
       run: |
@@ -106,7 +107,8 @@ jobs:
         Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
-    - name: Install Pyomo and extensions
+
+    - name: Install Pyomo and PyUtilib
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
@@ -136,11 +138,15 @@ jobs:
         {
             python setup.py develop
         }
+
+    - name: Download and install extensions
+      shell: pwsh
+      run: |
         Write-Host ("")
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
-        Invoke-Expression "pyomo download-extensions"
-        Invoke-Expression "pyomo build-extensions"
+        Invoke-Expression "pyomo download-extensions" 2>&1 | Write-Host
+        Invoke-Expression "pyomo build-extensions" 2>&1 | Write-Host
 
     - name: Run nightly tests with test.pyomo
       shell: pwsh
