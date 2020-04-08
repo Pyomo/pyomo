@@ -289,7 +289,7 @@ bool AmplInterface::eval_f(double *const_x, int nx, double& f) {
    _ASSERT_(_p_asl);
    _ASSERT_(n_obj == 1 && "AMPL problem must have a single objective function");
 
-   int nerror = 1;
+   fint nerror = 1;
    double retval = objval(obj_no, (double *) const_x, &nerror);
 
    if (nerror != 0) {
@@ -305,7 +305,7 @@ bool AmplInterface::eval_deriv_f(double *const_x, double *deriv_f, int nx) {
    _ASSERT_(_p_asl);
    _ASSERT_(n_obj == 1 && "AMPL problem must have a single objective function");
 
-   int nerror = 1;
+   fint nerror = 1;
    objgrd(obj_no, (double *) const_x, deriv_f, &nerror);
 
    if (nerror != 0) {
@@ -325,7 +325,7 @@ bool AmplInterface::eval_g(double *const_x, int nx, double *g, int ng) {
    _ASSERT_(nx == n_var);
    _ASSERT_(ng == n_con);
 
-   int nerror = 1;
+   fint nerror = 1;
    conval((double *) const_x, g, &nerror);
    if (nerror != 0) {
       return false;
@@ -355,7 +355,7 @@ bool AmplInterface::eval_jac_g(double *const_x, int nx, double *jac_g_values, in
    _ASSERT_(nnz_jac_g == nzc);
    _ASSERT_(jac_g_values);
 
-   int nerror = 1;
+   fint nerror = 1;
    jacval((double *) const_x, jac_g_values, &nerror);
    if (nerror != 0) {
       return false;
