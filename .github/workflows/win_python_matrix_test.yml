@@ -92,8 +92,8 @@ jobs:
         $env:CWD=$(pwd)
         cd .\ipopt\idaes-ext-2.0.0\scripts
         pwd
-        Invoke-Expression '.\compile_libs.sh'
-        Invoke-Expression '.\compile_solvers.sh'
+        bash compile_libs.sh
+        bash compile_solvers.sh
         ls
         cd $env:CWD
         Write-Host ("")
