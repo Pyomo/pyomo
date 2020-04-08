@@ -15,6 +15,7 @@ jobs:
         python-version: [3.7] 
     steps:
     - uses: actions/checkout@v2
+
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
       uses: goanpeca/setup-miniconda@v1 # Using an action created by user goanpeca to set up different Python Miniconda environments
       with:
@@ -145,8 +146,8 @@ jobs:
         Write-Host ("")
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
-        Invoke-Expression "pyomo download-extensions" 2>&1 | Write-Host
-        Invoke-Expression "pyomo build-extensions" 2>&1 | Write-Host
+        Invoke-Expression "pyomo download-extensions"
+        Invoke-Expression "pyomo build-extensions"
 
     - name: Run nightly tests with test.pyomo
       shell: pwsh

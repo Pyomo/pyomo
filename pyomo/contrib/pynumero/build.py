@@ -36,11 +36,20 @@ def build_pynumero(user_args=[]):
                 '--config', cmake_config,
             ]
 
-            self.spawn(['cmake', project_dir] + cmake_args)
-            if not self.dry_run:
-                self.spawn(['cmake', '--build', '.'] + build_args)
-                self.spawn(['cmake', '--build', '.',
-                            '--target', 'install'] + build_args)
+            try:
+                # Redirect all stderr to stdout (to prevent powershell
+                # from inadvertently failing builds)
+                oldstderr = os.dup(sys.stderr.fileno())
+                os.dup2(sys.stdout.fileno(), sys.stderr.fileno())
+
+                self.spawn(['cmake', project_dir] + cmake_args)
+                if not self.dry_run:
+                    self.spawn(['cmake', '--build', '.'] + build_args)
+                    self.spawn(['cmake', '--build', '.',
+                                '--target', 'install'] + build_args)
+            finally:
+                # Restore stderr
+                os.dup2(oldstderr, sys.stderr.fileno())
 
     class CMakeExtension(Extension, object):
         def __init__(self, name):
