@@ -8,12 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-set(ASL_HEADERS "${PROJECT_SOURCE_DIR}/asl_interface/src" )
-ADD_EXECUTABLE(asl_test src/simple_test.cpp)
-TARGET_INCLUDE_DIRECTORIES( asl_test PUBLIC ${ASL_HEADERS} )
-#SET_PROPERTY(TARGET asl_test PROPERTY ENABLE_EXPORTS)
-TARGET_LINK_LIBRARIES( asl_test pynumero_ASL)
+from pyomo.common.extensions import ExtensionBuilderFactory
+from .build import build_pynumero
 
-INSTALL(TARGETS asl_test
-        DESTINATION bin
-       )
+def load():
+    ExtensionBuilderFactory.register('pynumero')(build_pynumero)
+
