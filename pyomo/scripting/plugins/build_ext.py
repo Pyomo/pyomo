@@ -26,14 +26,21 @@ class ExtensionBuilder(object):
         returncode = 0
         for target in ExtensionBuilderFactory:
             try:
-                ExtensionBuilderFactory(target)
-                result = ' OK '
+                ext = ExtensionBuilderFactory(target)
+                if hasattr(ext, 'skip') and ext.skip():
+                    result = 'SKIP'
+                elif hasattr(ext, '__call__'):
+                    ext()
+                    result = ' OK '
+                else:
+                    # Extension was a simple function and already ran
+                    result = ' OK '
             except SystemExit:
                 result = 'FAIL'
-                returncode = 1
+                returncode |= 2
             except:
                 result = 'FAIL'
-                returncode = 1
+                returncode |= 1
             results.append(result_fmt % (result, target))
         logger.info("Finished building Pyomo extensions.")
         logger.info(

@@ -30,16 +30,23 @@ class GroupDownloader(object):
         self.downloader.insecure = args.insecure
         for target in DownloadFactory:
             try:
-                DownloadFactory(target, downloader=self.downloader)
-                result = ' OK '
+                ext = DownloadFactory(target, downloader=self.downloader)
+                if hasattr(ext, 'skip') and ext.skip():
+                    result = 'SKIP'
+                elif hasattr(ext, '__call__'):
+                    ext()
+                    result = ' OK '
+                else:
+                    # Extension was a simple function and already ran
+                    result = ' OK '
             except SystemExit:
                 result = 'FAIL'
-                returncode = 1
+                returncode |= 2
                 if args.verbose:
                     traceback.print_exc()
             except:
                 result = 'FAIL'
-                returncode = 1
+                returncode |= 1
                 if args.verbose:
                     traceback.print_exc()
             results.append(result_fmt % (result, target))
