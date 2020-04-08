@@ -364,7 +364,7 @@ class CountedCallInitializer(InitializerBase):
         self._fcn = _indexed_init._fcn
         self._is_counted_rule = None
         self._scalar = not obj.is_indexed()
-        self._ctype = obj.ctype()
+        self._ctype = obj.ctype
         if self._scalar:
             self._is_counted_rule = True
 

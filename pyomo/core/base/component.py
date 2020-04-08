@@ -242,13 +242,12 @@ class _ComponentBase(object):
         ans.__setstate__(new_state)
         return ans
 
+    @deprecated("""The cname() method has been renamed to getname().
+    The preferred method of obtaining a component name is to use the
+    .name property, which returns the fully qualified component name.
+    The .local_name property will return the component name only within
+    the context of the immediate parent container.""", version='5.0')
     def cname(self, *args, **kwds):
-        logger.warning(
-            """DEPRECATED: The cname() method has been renamed to getname().
-The preferred method of obtaining a component name is to use the .name
-property, which returns the fully qualified component name.  The
-.local_name property will return the component name only within the
-context of the immediate parent container.""")
         return self.getname(*args, **kwds)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
@@ -461,15 +460,16 @@ class Component(_ComponentBase):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
+    @property
     def ctype(self):
         """Return the class type for this component"""
         return self._ctype
 
-    @deprecated("The Component .type() attribute has been renamed .ctype().",
-                version='TBD')
+    @deprecated("Component.type() method has been replaced by the "
+                ".ctype property.", version='TBD')
     def type(self):
         """Return the class type for this component"""
-        return self.ctype()
+        return self.ctype
 
     def construct(self, data=None):                     #pragma:nocover
         """API definition for constructing components"""
@@ -771,18 +771,19 @@ class ComponentData(_ComponentBase):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
+    @property
     def ctype(self):
         """Return the class type for this component"""
         _parent = self.parent_component()
         if _parent is None:
-            return _parent
+            return None
         return _parent._ctype
 
-    @deprecated("The Component .type() attribute has been renamed .ctype().",
-                version='TBD')
+    @deprecated("Component.type() method has been replaced by the "
+                ".ctype property.", version='TBD')
     def type(self):
         """Return the class type for this component"""
-        return self.ctype()
+        return self.ctype
 
     def parent_component(self):
         """Returns the component associated with this object."""

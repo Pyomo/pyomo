@@ -100,7 +100,7 @@ class DerivativeVar(Var):
                 sidx_sets = list(sVar.index_set().subsets())
                 loc = 0
                 for i, s in enumerate(sidx_sets):
-                    if s.ctype() is ContinuousSet:
+                    if s.ctype is ContinuousSet:
                         sVar._contset[s] = loc
                     _dim = s.dimen
                     if _dim is None:

@@ -117,7 +117,7 @@ def process_setarg(arg):
     elif isinstance(arg, IndexedComponent):
         raise TypeError("Cannot apply a Set operator to an "
                         "indexed %s component (%s)"
-                        % (arg.ctype().__name__, arg.name,))
+                        % (arg.ctype.__name__, arg.name,))
     elif isinstance(arg, Component):
         raise TypeError("Cannot apply a Set operator to a non-Set "
                         "%s component (%s)"

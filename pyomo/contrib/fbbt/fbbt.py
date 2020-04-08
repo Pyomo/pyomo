@@ -1404,14 +1404,14 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     max_iter: int
-        Used for Blocks only (i.e., comp.ctype() == Block). When performing FBBT on a Block, we first perform FBBT on
+        Used for Blocks only (i.e., comp.ctype == Block). When performing FBBT on a Block, we first perform FBBT on
         every constraint in the Block. We then attempt to identify which constraints to repeat FBBT on based on the
         improvement in variable bounds. If the bounds on a variable improve by more than improvement_tol, then FBBT
         is performed on the constraints using that Var. However, this algorithm is not guaranteed to converge, so
         max_iter limits the total number of times FBBT is performed to max_iter times the number of constraints
         in the Block.
     improvement_tol: float
-        Used for Blocks only (i.e., comp.ctype() == Block). When performing FBBT on a Block, we first perform FBBT on
+        Used for Blocks only (i.e., comp.ctype == Block). When performing FBBT on a Block, we first perform FBBT on
         every constraint in the Block. We then attempt to identify which constraints to repeat FBBT on based on the
         improvement in variable bounds. If the bounds on a variable improve by more than improvement_tol, then FBBT
         is performed on the constraints using that Var.
@@ -1435,7 +1435,7 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
     config.declare('improvement_tol', improvement_tol_config)
 
     new_var_bounds = ComponentMap()
-    if comp.ctype() == Constraint:
+    if comp.ctype == Constraint:
         if comp.is_indexed():
             for _c in comp.values():
                 _new_var_bounds = _fbbt_con(comp, config)
@@ -1443,7 +1443,7 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
         else:
             _new_var_bounds = _fbbt_con(comp, config)
             new_var_bounds.update(_new_var_bounds)
-    elif comp.ctype() in {Block, Disjunct}:
+    elif comp.ctype in {Block, Disjunct}:
         _new_var_bounds = _fbbt_block(comp, config)
         new_var_bounds.update(_new_var_bounds)
     else:
@@ -1482,7 +1482,7 @@ class BoundsManager(object):
         self._vars = ComponentSet()
         self._saved_bounds = list()
 
-        if comp.ctype() == Constraint:
+        if comp.ctype == Constraint:
             if comp.is_indexed():
                 for c in comp.values():
                     self._vars.update(identify_variables(c.body))

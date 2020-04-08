@@ -828,7 +828,7 @@ from solvers are immediately loaded into the original model instance.""")
 
             for component_name, component in iteritems(self.component_map()):
 
-                if component.ctype() is Model:
+                if component.ctype is Model:
                     continue
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
@@ -865,7 +865,7 @@ from solvers are immediately loaded into the original model instance.""")
         declaration = self.component(component_name)
 
         if component_name in modeldata._default:
-            if declaration.ctype() is not Set:
+            if declaration.ctype is not Set:
                 declaration.set_default(modeldata._default[component_name])
         data = None
 

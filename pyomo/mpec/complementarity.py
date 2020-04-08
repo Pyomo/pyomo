@@ -274,7 +274,7 @@ Error thrown for Complementarity "%s"
         # _pprint_callback if there are components (requires baseline
         # updates and a check that we do not break anything in the
         # Book).
-        _transformed = not issubclass(self.ctype(), Complementarity)
+        _transformed = not issubclass(self.ctype, Complementarity)
         def _conditional_block_printer(ostream, idx, data):
             if _transformed or len(data.component_map()):
                 self._pprint_callback(ostream, idx, data)

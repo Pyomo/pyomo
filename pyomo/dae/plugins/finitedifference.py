@@ -172,7 +172,7 @@ class Finite_Difference_Transformation(Transformation):
         tmpds = config.wrt
 
         if tmpds is not None:
-            if tmpds.ctype() is not ContinuousSet:
+            if tmpds.ctype is not ContinuousSet:
                 raise TypeError("The component specified using the 'wrt' "
                                 "keyword must be a continuous set")
             elif 'scheme' in tmpds.get_discretization_info():

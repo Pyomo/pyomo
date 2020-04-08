@@ -264,7 +264,7 @@ class PseudoMap(object):
         """
         if key in self._block._decl:
             x = self._block._decl_order[self._block._decl[key]]
-            if self._ctypes is None or x[0].ctype() in self._ctypes:
+            if self._ctypes is None or x[0].ctype in self._ctypes:
                 if self._active is None or x[0].active == self._active:
                     return x[0]
         msg = ""
@@ -332,7 +332,7 @@ class PseudoMap(object):
         # component matches those flags
         if key in self._block._decl:
             x = self._block._decl_order[self._block._decl[key]]
-            if self._ctypes is None or x[0].ctype() in self._ctypes:
+            if self._ctypes is None or x[0].ctype in self._ctypes:
                 return self._active is None or x[0].active == self._active
         return False
 
@@ -925,7 +925,7 @@ class _BlockData(ActiveComponentData):
         # component type that is suppressed.
         #
         _component = self.parent_component()
-        _type = val.ctype()
+        _type = val.ctype
         if _type in _component._suppress_ctypes:
             return
         #
@@ -1115,10 +1115,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         self._decl_order[idx] = (None, self._decl_order[idx][1])
 
         # Update the ctype linked lists
-        ctype_info = self._ctypes[obj.ctype()]
+        ctype_info = self._ctypes[obj.ctype]
         ctype_info[2] -= 1
         if ctype_info[2] == 0:
-            del self._ctypes[obj.ctype()]
+            del self._ctypes[obj.ctype]
 
         # Clear the _parent attribute
         obj._parent = None
@@ -1143,7 +1143,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         if obj is None:
             return
 
-        if obj.ctype() is new_ctype:
+        if obj.ctype is new_ctype:
             return
 
         name = obj.local_name
@@ -1159,15 +1159,15 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         idx = self._decl[name]
 
         # Update the ctype linked lists
-        ctype_info = self._ctypes[obj.ctype()]
+        ctype_info = self._ctypes[obj.ctype]
         ctype_info[2] -= 1
         if ctype_info[2] == 0:
-            del self._ctypes[obj.ctype()]
+            del self._ctypes[obj.ctype]
         elif ctype_info[0] == idx:
             ctype_info[0] = self._decl_order[idx][1]
         else:
             prev = None
-            tmp = self._ctypes[obj.ctype()][0]
+            tmp = self._ctypes[obj.ctype][0]
             while tmp < idx:
                 prev = tmp
                 tmp = self._decl_order[tmp][1]
@@ -1510,7 +1510,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # "descend_into" argument in public calling functions: callers
         # expect that the called thing will be iterated over.
         #
-        # if self.parent_component().ctype() not in ctype:
+        # if self.parent_component().ctype not in ctype:
         #    return ().__iter__()
 
         if traversal is None or \
