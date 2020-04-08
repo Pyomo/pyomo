@@ -47,15 +47,16 @@ _packages = [
 #
 _optional_packages = set([
     'pyomo.contrib.example',
-    'pyomo.contrib.preprocessing',
-    'pyomo.contrib.mindtpy',
-    'pyomo.contrib.gdpopt',
     'pyomo.contrib.gdpbb',
+    'pyomo.contrib.gdpopt',
     'pyomo.contrib.gdp_bounds',
-    'pyomo.contrib.trustregion',
+    'pyomo.contrib.mcpp',
+    'pyomo.contrib.mindtpy',
     'pyomo.contrib.multistart',
     'pyomo.contrib.petsc',
-    'pyomo.contrib.mcpp',
+    'pyomo.contrib.preprocessing',
+    'pyomo.contrib.pynumero',
+    'pyomo.contrib.trustregion',
 ])
 
 
