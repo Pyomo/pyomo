@@ -15,7 +15,7 @@ import tempfile
 from pyomo.common import config
 from pyomo.common.fileutils import this_file_dir
 
-def build_pynumero(user_args):
+def build_pynumero(user_args=[]):
     import distutils.core
     from setuptools import Extension
     from distutils.command.build_ext import build_ext
