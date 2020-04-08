@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import sys
 from six import iteritems
 
 from pyomo.common.extensions import ExtensionBuilderFactory
@@ -36,9 +37,17 @@ class ExtensionBuilder(object):
                     # Extension was a simple function and already ran
                     result = ' OK '
             except SystemExit:
+                _info = sys.exc_info()
+                _cls = str(_info[0].__name__ if _info[0] is not None
+                           else "NoneType") + ": "
+                logger.error(_cls + str(_info[1]))
                 result = 'FAIL'
                 returncode |= 2
             except:
+                _info = sys.exc_info()
+                _cls = str(_info[0].__name__ if _info[0] is not None
+                           else "NoneType") + ": "
+                logger.error(_cls + str(_info[1]))
                 result = 'FAIL'
                 returncode |= 1
             results.append(result_fmt % (result, target))
