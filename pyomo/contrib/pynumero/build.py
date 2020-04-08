@@ -36,7 +36,7 @@ def build_pynumero(user_args=[]):
                 '--config', cmake_config,
             ]
 
-            self.spawn(['cmake', '--debug-output', project_dir] + cmake_args)
+            self.spawn(['cmake', project_dir] + cmake_args)
             if not self.dry_run:
                 self.spawn(['cmake', '--build', '.'] + build_args)
                 self.spawn(['cmake', '--build', '.',
