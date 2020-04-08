@@ -46,13 +46,11 @@ jobs:
         $env:USING_MINICONDA = 1
         $env:ADDITIONAL_CF_PKGS="setuptools pip coverage sphinx_rtd_theme "
         $env:MINICONDA_EXTRAS=""
-        $env:MINICONDA_EXTRAS="numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn lapack blas "
+        $env:MINICONDA_EXTRAS="numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn  "
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk "
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
         Invoke-Expression $env:EXP
-        $env:GFORT = $env:CONDAFORGE + "-c msys2 m2w64-gcc-fortran"
-        Invoke-Expression $env:GFORT
         $env:CPLEX = $env:CONDAFORGE + "-c ibmdecisionoptimization cplex=12.10"
         Write-Host ("")
         Write-Host ("Try to install CPLEX...")
