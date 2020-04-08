@@ -1,6 +1,21 @@
-diff -Nru mp-3.1.0.orig/include/mp/format.h mp-3.1.0/include/mp/format.h
---- mp-3.1.0.orig/include/mp/format.h	2019-11-26 15:25:43.189613032 +0100
-+++ mp-3.1.0/include/mp/format.h	2019-11-26 15:26:12.409965676 +0100
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 523faa7..2523b22 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -388,9 +388,6 @@  ** Disable AMPL testing
+   enable_cxx11(benchmark)
+ endif ()
+ 
+-enable_testing()
+-add_subdirectory(test)
+-
+ install(DIRECTORY include/mp DESTINATION include)
+ install(TARGETS mp DESTINATION lib RUNTIME DESTINATION bin)
+ install(FILES LICENSE.rst DESTINATION share/mp)
+diff --git a/include/mp/format.h b/include/mp/format.h
+index c5d09b5..4f5f20e 100644
+--- a/include/mp/format.h
++++ b/include/mp/format.h
 @@ -1747,21 +1747,21 @@ from https://github.com/easybuilders/easybuild-easyconfigs/issues/9380
      typedef typename BasicWriter<Char>::CharPtr CharPtr;
      Char fill = internal::CharTraits<Char>::cast(spec_.fill());
