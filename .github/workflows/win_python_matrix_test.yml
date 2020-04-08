@@ -1,9 +1,6 @@
 name: GitHub CI (win)
 
 on:
-  push:
-    branches:
-      - idaes_ipopt
   pull_request:
     branches:
       - master
