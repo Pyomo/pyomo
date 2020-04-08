@@ -35,7 +35,7 @@ jobs:
         echo ""
         echo "Install conda packages"
         echo ""
-        conda install mpi4py ipopt
+        conda install mpi4py
         echo ""
         echo "Upgrade pip..."
         echo ""
