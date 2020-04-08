@@ -62,6 +62,7 @@ jobs:
         echo "Install IDAES Ipopt (Linux only)..."
         echo ""
         if [ ${{ matrix.TARGET }} == 'linux' ]; then
+            sudo apt-get install gfortran
             mkdir ipopt && cd ipopt
             wget -q https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-ubuntu1804-64.tar.gz -O ipopt.tar.gz
             tar -xzf ipopt.tar.gz
