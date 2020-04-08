@@ -62,14 +62,13 @@ jobs:
         echo "Install IDAES Ipopt (Linux only)..."
         echo ""
         if [ ${{ matrix.TARGET }} == 'linux' ]; then
-            CWD=$(pwd)
+            sudo apt-get install libopenblas-dev gfortran liblapack-dev
             mkdir ipopt && cd ipopt
-            wget -q https://github.com/IDAES/idaes-ext/archive/2.0.0.tar.gz -O ipopt.tar.gz
-            tar -xzf ipopt.tar.gz && cd idaes-ext-2.0.0
-            bash scripts/compile_solvers.sh
-            bash scripts/compile_libs.sh
-            cd CWD
-            export PATH=$PATH:$(pwd)/ipopt/idaes-ext-2.0.0
+            wget -q https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-ubuntu1804-64.tar.gz -O ipopt.tar.gz
+            tar -xzf ipopt.tar.gz
+            cd ..
+            export PATH=$PATH:$(pwd)/ipopt
+            ipopt -v
         fi
         echo ""
         echo "Install GAMS..."
