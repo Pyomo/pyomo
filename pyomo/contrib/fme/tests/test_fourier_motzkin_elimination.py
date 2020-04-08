@@ -16,6 +16,7 @@ import pyutilib.th as unittest
 from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
                         Binary, value, Block)
 from pyomo.core.base import TransformationFactory
+from pyomo.core.expr.current import log
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
@@ -437,3 +438,89 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[1], -1)
         self.assertIs(body.linear_vars[2], m.off.indicator_var)
         self.assertEqual(body.linear_coefs[2], -1)
+
+    def test_model_with_unrelated_nonlinear_expressions(self):
+        m = ConcreteModel()
+        m.x = Var([1, 2, 3], bounds=(0,3))
+        m.y = Var()
+        m.z = Var()
+
+        @m.Constraint([1,2])
+        def cons(m, i):
+            return m.x[i] <= m.y**i
+
+        m.cons2 = Constraint(expr=m.x[1] >= m.y)
+        m.cons3 = Constraint(expr=m.x[2] >= m.z - 3)
+        # This is vacuous, but I just want something that's not quadratic
+        m.cons4 = Constraint(expr=m.x[3] <= log(m.y + 1))
+
+        TransformationFactory('contrib.fourier_motzkin_elimination').\
+            apply_to(m, vars_to_eliminate=m.x)
+        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+
+        # 0 <= y <= 3
+        cons = constraints[6]
+        self.assertEqual(cons.lower, 0)
+        self.assertIs(cons.body, m.y)
+        cons = constraints[5]
+        self.assertEqual(cons.lower, -3)
+        body = generate_standard_repn(cons.body)
+        self.assertTrue(body.is_linear())
+        self.assertEqual(len(body.linear_vars), 1)
+        self.assertIs(body.linear_vars[0], m.y)
+        self.assertEqual(body.linear_coefs[0], -1)
+
+        # z <= y**2 + 3
+        cons = constraints[4]
+        self.assertEqual(cons.lower, -3)
+        body = generate_standard_repn(cons.body)
+        self.assertTrue(body.is_quadratic())
+        self.assertEqual(len(body.linear_vars), 1)
+        self.assertIs(body.linear_vars[0], m.z)
+        self.assertEqual(body.linear_coefs[0], -1)
+        self.assertEqual(len(body.quadratic_vars), 1)
+        self.assertEqual(body.quadratic_coefs[0], 1)
+        self.assertIs(body.quadratic_vars[0][0], m.y)
+        self.assertIs(body.quadratic_vars[0][1], m.y)
+
+        # z <= 6
+        cons = constraints[2]
+        self.assertEqual(cons.lower, -6)
+        body = generate_standard_repn(cons.body)
+        self.assertTrue(body.is_linear())
+        self.assertEqual(len(body.linear_vars), 1)
+        self.assertEqual(body.linear_coefs[0], -1)
+        self.assertIs(body.linear_vars[0], m.z)
+
+        # 0 <= ln(y+ 1)
+        cons = constraints[1]
+        self.assertEqual(cons.lower, 0)
+        body = generate_standard_repn(cons.body)
+        self.assertTrue(body.is_nonlinear())
+        self.assertFalse(body.is_quadratic())
+        self.assertEqual(len(body.linear_vars), 0)
+        self.assertEqual(body.nonlinear_expr.name, 'log')
+        self.assertEqual(len(body.nonlinear_expr.args[0].args), 2)
+        self.assertIs(body.nonlinear_expr.args[0].args[0], m.y)
+        self.assertEqual(body.nonlinear_expr.args[0].args[1], 1)
+
+        # 0 <= y**2
+        cons = constraints[3]
+        self.assertEqual(cons.lower, 0)
+        body = generate_standard_repn(cons.body)
+        self.assertTrue(body.is_quadratic())
+        self.assertEqual(len(body.quadratic_vars), 1)
+        self.assertEqual(body.quadratic_coefs[0], 1)
+        self.assertIs(body.quadratic_vars[0][0], m.y)
+        self.assertIs(body.quadratic_vars[0][1], m.y)
+
+        # check constraints valid for a selection of points (this is nonconvex,
+        # but anyway...)
+        pts = [#(sqrt(3), 6), Not numerically stable enough for this test
+               (1, 4), (3, 6), (3, 0), (0, 0), (2,6)]
+        for pt in pts:
+            m.y.fix(pt[0])
+            m.z.fix(pt[1])
+            for i in constraints:
+                self.assertLessEqual(value(constraints[i].lower),
+                                     value(constraints[i].body))

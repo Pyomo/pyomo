@@ -72,8 +72,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
     def __init__(self):
         """Initialize transformation object"""
         super(Fourier_Motzkin_Elimination_Transformation, self).__init__()
-        self.ctypes_not_to_transform = set((Block, Param, Objective, Set,
-                                        Expression, Suffix))
     
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
@@ -96,11 +94,13 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         # collect all of the constraints
         # NOTE that we are ignoring deactivated constraints
         constraints = []
+        ctypes_not_to_transform = set((Block, Param, Objective, Set, Expression,
+                                       Suffix))
         for obj in instance.component_data_objects(
                 descend_into=Block,
                 sort=SortComponents.deterministic,
                 active=True):
-            if obj.type() in self.ctypes_not_to_transform:
+            if obj.type() in ctypes_not_to_transform:
                 continue
             elif obj.type() is Constraint:
                 cons_list = self._process_constraint(obj)
@@ -135,7 +135,11 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         for cons in new_constraints:
             body = cons['body']
             lhs = sum(coef*var for (coef, var) in zip(body.linear_coefs,
-                                                      body.linear_vars))
+                                                      body.linear_vars)) + \
+                sum(coef*v1*v2 for (coef, (v1, v2)) in zip(body.quadratic_coefs,
+                                                           body.quadratic_vars))
+            if body.nonlinear_expr is not None:
+                lhs += body.nonlinear_expr
             lower = cons['lower']
             if type(lhs >= lower) is bool:
                 if lhs >= lower:
@@ -263,10 +267,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 for geq in geq_list:
                     constraints.append(self._add_linear_constraints(leq, geq))
 
-            # add back in the constraints that didn't have the variable we were
-            # projecting out
-            #constraints.extend(waiting_list)
-
         return constraints
 
     def _nonneg_scalar_multiply_linear_constraint(self, cons, scalar):
@@ -274,8 +274,11 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         There is no logic for flipping the equality, so this is just the 
         special case with a nonnegative scalar, which is all we need.
         """
-        cons['body'].linear_coefs = [scalar*coef for coef in
-                                     cons['body'].linear_coefs]
+        body = cons['body']
+        body.linear_coefs = [scalar*coef for coef in body.linear_coefs]
+        body.quadratic_coefs = [scalar*coef for coef in body.quadratic_coefs]
+        body.nonlinear_expr = scalar*body.nonlinear_expr if \
+                              body.nonlinear_expr is not None else None
         # and update the map... (It isn't lovely that I am storing this in two
         # places...)
         for var, coef in cons['map'].items():
@@ -290,12 +293,14 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
     def _add_linear_constraints(self, cons1, cons2):
         """Adds two >= constraints"""
         ans = {'lower': None, 'body': None, 'map': ComponentMap()}
+        cons1_body = cons1['body']
+        cons2_body = cons2['body']
 
         # Need this to be both deterministic and to account for the fact that
         # Vars aren't hashable.
-        all_vars = list(cons1['body'].linear_vars)
+        all_vars = list(cons1_body.linear_vars)
         seen = ComponentSet(all_vars)
-        for v in cons2['body'].linear_vars:
+        for v in cons2_body.linear_vars:
             if v not in seen:
                 all_vars.append(v)
         
@@ -304,6 +309,13 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             coef = cons1['map'].get(var, 0) + cons2['map'].get(var, 0)
             ans['map'][var] = coef
             expr += coef*var
+        # deal with nonlinear stuff if there is any
+        for cons in [cons1_body, cons2_body]:
+            if cons.nonlinear_expr is not None:
+                expr += cons.nonlinear_expr
+            expr += sum(coef*v1*v2 for (coef, (v1, v2)) in
+                        zip(cons.quadratic_coefs, cons.quadratic_vars)) 
+        
         ans['body'] = generate_standard_repn(expr)
 
         # upper is None and lower exists, so this gets the constant
