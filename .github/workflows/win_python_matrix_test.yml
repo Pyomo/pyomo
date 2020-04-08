@@ -89,9 +89,13 @@ jobs:
         Write-Host ("")
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/archive/2.0.0.zip' -OutFile 'ipopt.zip'
         Expand-Archive ipopt.zip
+        $env:CWD=$(pwd)
         cd .\ipopt\idaes-ext-2.0.0\scripts
+        pwd
         Invoke-Expression '.\compile_libs.sh'
         Invoke-Expression '.\compile_solvers.sh'
+        ls
+        cd $env:CWD
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
@@ -114,6 +118,7 @@ jobs:
           Write-Host ("WARNING: Python ${{matrix.python-version}}: GAMS Bindings not supported.")
           Write-Host ("########################################################################")
         }
+        cd $env:CWD
         Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
