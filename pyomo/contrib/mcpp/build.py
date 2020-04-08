@@ -86,12 +86,12 @@ def build_mcpp():
             filename = '.'.join([filename[0],filename[-1]])
             return filename
 
+    print("\n**** Building MCPP library ****")
     package_config = _generate_configuration()
     package_config['cmdclass'] = {'build_ext': _BuildWithoutPlatformInfo}
     dist = distutils.core.Distribution(package_config)
     install_dir = os.path.join(PYOMO_CONFIG_DIR, 'lib')
     dist.get_command_obj('install_lib').install_dir = install_dir
-    print("\n**** Building MCPP library ****")
     try:
         basedir = os.path.abspath(os.path.curdir)
         tmpdir = os.path.abspath(tempfile.mkdtemp())

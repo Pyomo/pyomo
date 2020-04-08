@@ -7,9 +7,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import sys
+
 import os
 import shutil
+import sys
 import tempfile
 
 from pyomo.common import config
