@@ -5877,4 +5877,4 @@ c : Size=3, Index=CHOICES, Active=True
         m.a = Set(initialize=a_rule, dimen=1)
         self.assertEqual(len(m.a), 0)
         m.b = Set(initialize=b_rule, dimen=2)
-        self.assertEqual(len(m.a), 0)
+        self.assertEqual(len(m.b), 0)
