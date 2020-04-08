@@ -21,6 +21,9 @@ MARK_AS_ADVANCED(BUILD_AMPLMP_IF_NEEDED)
 
 #OPTION(STATIC_LINK "STATIC_LINK" OFF)
 
+# If we build AMPLMP, then we will get a dependency on dlopen
+FIND_LIBRARY(DL_LIBRARY dl)
+
 # We need the ASL and HSL libraries.  We can get them from Ipopt,
 # AMPL/MP, or ASL (netlib)
 SET(IPOPT_DIR CACHE PATH "Path to compiled Ipopt installation")
@@ -65,7 +68,7 @@ FIND_LIBRARY(HSL_LIBRARY NAMES coinhsl libcoinhsl
 IF( BUILD_AMPLMP_IF_NEEDED AND (NOT ASL_LIBRARY OR NOT ASL_INCLUDE_DIR) )
     set_property(CACHE BUILD_AMPLMP PROPERTY VALUE ON)
 ENDIF()
-  
+
 IF( BUILD_AMPLMP )
   get_filename_component(ABS_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" ABSOLUTE)
   ExternalProject_Add(amplmp
@@ -104,7 +107,10 @@ set(PYNUMERO_ASL_SOURCES
 
 IF( BUILD_ASL )
   ADD_LIBRARY( pynumero_ASL SHARED ${PYNUMERO_ASL_SOURCES} )
-  TARGET_LINK_LIBRARIES( pynumero_ASL ${ASL_LIBRARY} )
+  TARGET_LINK_LIBRARIES( pynumero_ASL PUBLIC ${ASL_LIBRARY} )
+  if ( DL_LIBRARY )
+    TARGET_LINK_LIBRARIES( pynumero_ASL PUBLIC ${DL_LIBRARY} )
+  ENDIF()
   TARGET_INCLUDE_DIRECTORIES( pynumero_ASL
     PUBLIC ${ASL_INCLUDE_DIR}
     INTERFACE . )
