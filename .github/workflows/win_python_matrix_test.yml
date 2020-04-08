@@ -87,8 +87,8 @@ jobs:
         Write-Host ("")
         Write-Host ("Installing IDAES Ipopt")
         Write-Host ("")
-        New-Item -Path . -Name "ipopt" -ItemType "directory"
-        cd ipopt
+        New-Item -Path . -Name "solver_dir" -ItemType "directory"
+        cd solver_dir
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz' -OutFile 'ipopt1.tar.gz'
         Invoke-Expression 'tar -xzf ipopt1.tar.gz'
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt2.tar.gz'
@@ -148,6 +148,6 @@ jobs:
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';' + $(Get-Location).Path + "\gams"
-        $env:PATH += ';' + $(Get-Location).Path + "\ipopt"
+        $env:PATH += ';' + $(Get-Location).Path + "\solver_dir"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         Invoke-Expression $env:EXP
