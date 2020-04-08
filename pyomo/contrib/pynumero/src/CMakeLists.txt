@@ -77,6 +77,11 @@ IF( BUILD_AMPLMP )
     GIT_SUBMODULES thirdparty/gsl
     #GIT_SUBMODULES_RECURSE 0
     CMAKE_CACHE_ARGS -DCMAKE_INSTALL_PREFIX:STRING=${ABS_INSTALL_PREFIX}
+    # 3.1.0 needs to be patched to compile with recent compilers
+    # (notably ubuntu 18.04; see
+    # https://github.com/easybuilders/easybuild-easyconfigs/issues/9380
+    PATCH_COMMAND git apply
+       ${CMAKE_CURRENT_SOURCE_DIR}/amplmp-${AMPLMP_TAG}.patch
     )
   # Update the ASL paths (if necessary).  Since these do not (yet)
   # exist, we need to bypass find_path / find_library and explicitly set

@@ -1,0 +1,33 @@
+diff -Nru mp-3.1.0.orig/include/mp/format.h mp-3.1.0/include/mp/format.h
+--- mp-3.1.0.orig/include/mp/format.h	2019-11-26 15:25:43.189613032 +0100
++++ mp-3.1.0/include/mp/format.h	2019-11-26 15:26:12.409965676 +0100
+@@ -1747,21 +1747,21 @@ from https://github.com/easybuilders/easybuild-easyconfigs/issues/9380
+     typedef typename BasicWriter<Char>::CharPtr CharPtr;
+     Char fill = internal::CharTraits<Char>::cast(spec_.fill());
+     CharPtr out = CharPtr();
+-    const unsigned CHAR_WIDTH = 1;
+-    if (spec_.width_ > CHAR_WIDTH) {
++    const unsigned CHAR_WIDTH_AMPL_FORMAT_H = 1;
++    if (spec_.width_ > CHAR_WIDTH_AMPL_FORMAT_H) {
+       out = writer_.grow_buffer(spec_.width_);
+       if (spec_.align_ == ALIGN_RIGHT) {
+-        std::uninitialized_fill_n(out, spec_.width_ - CHAR_WIDTH, fill);
+-        out += spec_.width_ - CHAR_WIDTH;
++        std::uninitialized_fill_n(out, spec_.width_ - CHAR_WIDTH_AMPL_FORMAT_H, fill);
++        out += spec_.width_ - CHAR_WIDTH_AMPL_FORMAT_H;
+       } else if (spec_.align_ == ALIGN_CENTER) {
+         out = writer_.fill_padding(out, spec_.width_,
+-                                   internal::check(CHAR_WIDTH), fill);
++                                   internal::check(CHAR_WIDTH_AMPL_FORMAT_H), fill);
+       } else {
+-        std::uninitialized_fill_n(out + CHAR_WIDTH,
+-                                  spec_.width_ - CHAR_WIDTH, fill);
++        std::uninitialized_fill_n(out + CHAR_WIDTH_AMPL_FORMAT_H,
++                                  spec_.width_ - CHAR_WIDTH_AMPL_FORMAT_H, fill);
+       }
+     } else {
+-      out = writer_.grow_buffer(CHAR_WIDTH);
++      out = writer_.grow_buffer(CHAR_WIDTH_AMPL_FORMAT_H);
+     }
+     *out = internal::CharTraits<Char>::cast(value);
+   }
