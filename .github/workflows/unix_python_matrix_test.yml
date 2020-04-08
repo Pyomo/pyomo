@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - idaes_ipopt
   pull_request:
     branches:
       - master
@@ -68,7 +67,6 @@ jobs:
             tar -xzf ipopt.tar.gz
             cd ..
             export PATH=$PATH:$(pwd)/ipopt
-            ipopt -v
         fi
         echo ""
         echo "Install GAMS..."
