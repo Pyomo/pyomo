@@ -88,7 +88,7 @@ jobs:
         Write-Host ("Installing BARON")
         Write-Host ("")
         Invoke-WebRequest -Uri 'https://www.minlp.com/downloads/xecs/baron/current/baron-win64.exe' -OutFile 'baron.exe'
-        Start-Process -FilePath 'baron.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\baron /NOICONS' -Wait
+        Start-Process -FilePath 'baron.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\baron_solver /NOICONS' -Wait
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
@@ -143,6 +143,6 @@ jobs:
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';' + $(Get-Location).Path + "\gams"
-        $env:PATH += ';' + $(Get-Location).Path + "\baron"
+        $env:PATH += ';' + $(Get-Location).Path + "\baron_solver"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         Invoke-Expression $env:EXP
