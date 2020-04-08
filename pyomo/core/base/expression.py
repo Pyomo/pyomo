@@ -224,24 +224,28 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     # Define methods for common activities on Vars in case user mistakes
     # an Expression for a Var
-    def setlb(self, val):
+    def setlb(self, val=None):
         raise TypeError(
-            "Component is an Expression and can not have bounds: %s"
+            "Component is an Expression and can not have bounds: %s. "
+            "Use an inequality Constraint instead."
             % (self.name))
 
-    def setub(self, val):
+    def setub(self, val=None):
         raise TypeError(
-            "Component is an Expression and can not have bounds: %s"
+            "Component is an Expression and can not have bounds: %s. "
+            "Use an inequality Constraint instead."
             % (self.name))
 
-    def fix(self, val):
+    def fix(self, val=None):
         raise TypeError(
-            "Component is an Expression and can not be fixed: %s"
+            "Component is an Expression and can not be fixed: %s. "
+            "Use an equality Constraint instead."
             % (self.name))
 
     def unfix(self):
         raise TypeError(
-            "Component is an Expression and can not be unfixed: %s"
+            "Component is an Expression and can not be unfixed: %s. "
+            "Use an equality Constraint instead."
             % (self.name))
 
 
@@ -551,22 +555,26 @@ class IndexedExpression(Expression):
 
     # Define methods for common activities on Vars in case user mistakes
     # an Expression for a Var
-    def setlb(self, val):
+    def setlb(self, val=None):
         raise TypeError(
-            "Component is an Expression and can not have bounds: %s"
+            "Component is an Expression and can not have bounds: %s. "
+            "Use inequality Constraints instead."
             % (self.name))
 
-    def setub(self, val):
+    def setub(self, val=None):
         raise TypeError(
-            "Component is an Expression and can not have bounds: %s"
+            "Component is an Expression and can not have bounds: %s. "
+            "Use inequality Constraints instead."
             % (self.name))
 
-    def fix(self, val):
+    def fix(self, val=None):
         raise TypeError(
-            "Component is an Expression and can not be fixed: %s"
+            "Component is an Expression and can not be fixed: %s. "
+            "Use equality Constraints instead."
             % (self.name))
 
     def unfix(self):
         raise TypeError(
-            "Component is an Expression and can not be unfixed: %s"
+            "Component is an Expression and can not be unfixed: %s. "
+            "Use equality Constraints instead."
             % (self.name))
