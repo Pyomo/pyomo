@@ -89,10 +89,13 @@ jobs:
         Write-Host ("")
         Write-Host ("Installing IDAES Ipopt")
         Write-Host ("")
-        Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/archive/2.0.0.zip' -OutFile 'ipopt.zip'
-        Expand-Archive 'ipopt.zip'
-        $env:PATH += ';' + $(Get-Location).Path + "\ipopt"
-        ipopt -v
+        New-Item -Path . -Name "ipopt" -ItemType "directory"
+        cd ipopt
+        Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz' -OutFile 'ipopt.tar.gz'
+        Invoke-Expression 'tar -xzf ipopt.tar.gz'
+        Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt.tar.gz'
+        Invoke-Expression 'tar -xzf ipopt.tar.gz'
+        cd ..
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
