@@ -94,8 +94,13 @@ IF( BUILD_AMPLMP )
   IF(NOT ASL_INCLUDE_DIR OR NOT ASL_LIBRARY)
     set_property(CACHE ASL_INCLUDE_DIR PROPERTY VALUE
       "${ABS_INSTALL_PREFIX}/include/asl")
-    set_property(CACHE ASL_LIBRARY PROPERTY VALUE
-      "${ABS_INSTALL_PREFIX}/lib/libasl.a")
+    IF( WIN32 )
+      set_property(CACHE ASL_LIBRARY PROPERTY VALUE
+        "${ABS_INSTALL_PREFIX}/lib/asl.lib")
+    ELSE()
+      set_property(CACHE ASL_LIBRARY PROPERTY VALUE
+        "${ABS_INSTALL_PREFIX}/lib/libasl.a")
+    ENDIF()
   ENDIF()
 ENDIF()
 
