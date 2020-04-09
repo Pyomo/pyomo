@@ -16,19 +16,19 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Conda cache
+    - name: Conda package cache
       id: conda-cache
       uses: actions/cache@v1
       with:
         path: conda-cache
-        key: ${{matrix.python-version}}-${{ runner.os }}-conda
+        key: conda-${{runner.os}}-${{matrix.python-version}}
 
     - name: Download cache
       id: download-cache
       uses: actions/cache@v1
       with:
         path: download-cache
-        key: ${{ runner.os }}-download
+        key: download-${{runner.os}}
 
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
       uses: goanpeca/setup-miniconda@v1 # Using an action created by user goanpeca to set up different Python Miniconda environments
@@ -85,6 +85,7 @@ jobs:
         Write-Host ("Installing GAMS")
         Write-Host ("")
         if ( -not (Test-Path "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe")) {
+            New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\download-cache"
             Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe"
         }
         Start-Process -FilePath "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe" -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
