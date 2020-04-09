@@ -86,7 +86,7 @@ def build_pynumero(user_args=[]):
     finally:
         os.chdir(basedir)
         shutil.rmtree(tmpdir, onerror=handleReadonly)
-      sys.stdout.write("Installed PyNumero libraries to %s\n" % ( install_dir, ))
+    sys.stdout.write("Installed PyNumero libraries to %s\n" % ( install_dir, ))
 
 if __name__ == "__main__":
     build_pynumero(sys.argv[1:])
