@@ -65,6 +65,7 @@ jobs:
             echo "Install pre-dependencies for ipopt..."
             sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/pkg-cache \
                 install libopenblas-dev gfortran liblapack-dev
+            sudo chmod -R 777 ${GITHUB_WORKSPACE}/pkg-cache
         fi
         echo ""
         echo "Upgrade pip..."
