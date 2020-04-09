@@ -156,5 +156,5 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
-        $env:PATH += ';$env:BUILD_DIR\gams;$env:BUILD_DIR\solver_dir;"
-        test.pyomo -v --cat='nightly' pyomo $env:BUILD_DIR\pyomo-model-libraries
+        $env:PATH += ";$env:BUILD_DIR\gams;$env:BUILD_DIR\solver_dir"
+        test.pyomo -v --cat=nightly pyomo $env:BUILD_DIR\pyomo-model-libraries
