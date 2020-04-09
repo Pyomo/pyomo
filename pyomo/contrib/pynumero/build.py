@@ -75,8 +75,6 @@ def build_pynumero(user_args=[]):
         'cmdclass': {'build_ext': _CMakeBuild},
     }
     dist = distutils.core.Distribution(package_config)
-    # install_dir = os.path.join(config.PYOMO_CONFIG_DIR, 'lib')
-    # dist.get_command_obj('install_lib').install_dir = install_dir
     try:
         basedir = os.path.abspath(os.path.curdir)
         tmpdir = os.path.abspath(tempfile.mkdtemp())
