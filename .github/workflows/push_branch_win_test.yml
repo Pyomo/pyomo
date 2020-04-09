@@ -45,10 +45,10 @@ jobs:
         Write-Host ("")
         Write-Host ("Update conda, then force it to NOT update itself again...")
         Write-Host ("")
-        Invoke-Expression "conda config --set always_yes yes"
-        Invoke-Expression "conda config --set auto_update_conda false"
-        Invoke-Expression "conda config --remove-key pkgs_dirs"
-        Invoke-Expression "conda config --append pkgs_dirs $env:GITHUB_WORKSPACE\conda-cache"
+        conda config --set always_yes yes
+        conda config --set auto_update_conda false
+        conda config --remove-key pkgs_dirs
+        conda config --append pkgs_dirs $env:GITHUB_WORKSPACE\conda-cache
         conda info
         conda config --show-sources
         conda list --show-channel-urls
@@ -85,9 +85,9 @@ jobs:
         New-Item -Path . -Name "solver_dir" -ItemType "directory"
         cd solver_dir
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz' -OutFile 'ipopt1.tar.gz'
-        Invoke-Expression 'tar -xzf ipopt1.tar.gz'
+        tar -xzf ipopt1.tar.gz
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt2.tar.gz'
-        Invoke-Expression 'tar -xzf ipopt2.tar.gz'
+        tar -xzf ipopt2.tar.gz
         cd ..
         Write-Host ("")
         Write-Host ("Installing GAMS")
@@ -144,11 +144,11 @@ jobs:
         Write-Host ("")
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
-        Invoke-Expression "pyomo download-extensions"
+        pyomo download-extensions
         Write-Host ("")
         Write-Host "Pyomo build-extensions"
         Write-Host ("")
-        Invoke-Expression "pyomo build-extensions --parallel 2"
+        pyomo build-extensions --parallel 2
 
     - name: Run nightly tests with test.pyomo
       shell: pwsh
@@ -157,5 +157,4 @@ jobs:
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';$env:BUILD_DIR\gams;$env:BUILD_DIR\solver_dir;"
-        $env:EXP = "test.pyomo -v --cat='nightly' pyomo $env:BUILD_DIR\pyomo-model-libraries"
-        Invoke-Expression $env:EXP
+        test.pyomo -v --cat='nightly' pyomo $env:BUILD_DIR\pyomo-model-libraries
