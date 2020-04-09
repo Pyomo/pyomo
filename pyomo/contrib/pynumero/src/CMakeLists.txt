@@ -76,8 +76,10 @@ IF( BUILD_AMPLMP )
     GIT_REPOSITORY https://github.com/ampl/mp.git
     GIT_SHALLOW 1
     # We don't need *any* submodules, but leaving it as an empty string
-    # doesn't disable it as suggested by the documentation
-    GIT_SUBMODULES thirdparty/gsl
+    # doesn't disable it as suggested by the documentation.  A
+    # "workaround" from the web is to specify an existing directory that
+    # is *not* a submodule
+    GIT_SUBMODULES test
     #GIT_SUBMODULES_RECURSE 0
     CMAKE_CACHE_ARGS -DCMAKE_INSTALL_PREFIX:STRING=${ABS_INSTALL_PREFIX}
     # 3.1.0 needs to be patched to compile with recent compilers
