@@ -38,8 +38,8 @@ def build_pynumero(user_args=[]):
             cmake_config = 'Debug' if self.debug else 'Release'
             cmake_args = [
                 '-DCMAKE_INSTALL_PREFIX=' + config.PYOMO_CONFIG_DIR,
-                '-DCMAKE_BUILD_TYPE=' + cmake_config,
                 '-DBUILD_AMPLMP_IF_NEEDED=ON',
+                #'-DCMAKE_BUILD_TYPE=' + cmake_config,
             ] + user_args
 
             build_args = [
@@ -67,7 +67,7 @@ def build_pynumero(user_args=[]):
             super(CMakeExtension, self).__init__(name, sources=[])
             self.project_dir = os.path.join(this_file_dir(), name)
 
-    print("\n**** Building PyNumero libraries ****")
+    sys.stdout.write("\n**** Building PyNumero libraries ****\n")
     package_config = {
         'name': 'pynumero_libraries',
         'packages': [],
@@ -83,10 +83,10 @@ def build_pynumero(user_args=[]):
         os.chdir(tmpdir)
         dist.run_command('build_ext')
         install_dir = os.path.join(config.PYOMO_CONFIG_DIR, 'lib')
-        print("Installed PyNumero libraries to %s" % ( install_dir, ))
     finally:
         os.chdir(basedir)
         shutil.rmtree(tmpdir, onerror=handleReadonly)
+      sys.stdout.write("Installed PyNumero libraries to %s\n" % ( install_dir, ))
 
 if __name__ == "__main__":
     build_pynumero(sys.argv[1:])

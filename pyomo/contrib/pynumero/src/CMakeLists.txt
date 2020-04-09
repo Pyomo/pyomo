@@ -80,8 +80,8 @@ IF( BUILD_AMPLMP )
     # "workaround" from the web is to specify an existing directory that
     # is *not* a submodule
     GIT_SUBMODULES test
-    #GIT_SUBMODULES_RECURSE 0
     CMAKE_CACHE_ARGS -DCMAKE_INSTALL_PREFIX:STRING=${ABS_INSTALL_PREFIX}
+    UPDATE_DISCONNECTED TRUE
     # 3.1.0 needs to be patched to compile with recent compilers
     # (notably ubuntu 18.04; see
     # https://github.com/easybuilders/easybuild-easyconfigs/issues/9380

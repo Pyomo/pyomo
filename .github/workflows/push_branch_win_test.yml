@@ -134,6 +134,9 @@ jobs:
         Write-Host "Pyomo download-extensions"
         Write-Host ("")
         Invoke-Expression "pyomo download-extensions"
+        Write-Host ("")
+        Write-Host "Pyomo build-extensions"
+        Write-Host ("")
         Invoke-Expression "pyomo build-extensions"
 
     - name: Run nightly tests with test.pyomo
