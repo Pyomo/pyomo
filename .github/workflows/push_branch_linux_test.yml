@@ -42,9 +42,7 @@ jobs:
         if test "${{matrix.TARGET}}" == osx; then
             echo "Install pre-dependencies for pyodbc..."
             brew update
-            for pkg in bash gcc pkg-config unixodbc freetds; do
-                brew list $pkg || brew install $pkg
-            done
+            brew install bash gcc pkg-config unixodbc freetds
             brew link --overwrite gcc
             # Holding off installing anything for Ipopt until we know
             # what it requires
