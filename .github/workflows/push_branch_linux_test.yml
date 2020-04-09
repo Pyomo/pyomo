@@ -37,7 +37,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        if ${{matrix.TARGET}} == osx; then
+        if test "${{matrix.TARGET}}" == osx; then
             echo "Install pre-dependencies for pyodbc..."
             brew update
             for pkg in bash gcc pkg-config unixodbc freetds; do
@@ -70,7 +70,7 @@ jobs:
         echo ""
         echo "Install IDAES Ipopt..."
         echo ""
-        if ${{matrix.TARGET}} == osx; then
+        if test "${{matrix.TARGET}}" == osx; then
             echo "IDAES Ipopt not available on OSX"
         else
             IPOPT_TAR=${GITHUB_WORKSPACE}/download-cache/ipopt.tar.gz
@@ -91,7 +91,7 @@ jobs:
         GAMS_INSTALLER=${GITHUB_WORKSPACE}/download-cache/gams_installer.exe
         if test ! -e $GAMS_INSTALLER; then
             GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0
-            if ${{matrix.TARGET}} == osx; then
+            if test "${{matrix.TARGET}}" == osx; then
                 wget -q $GAMS_URL/macosx/osx_x64_64_sfx.exe -O $GAMS_INSTALLER
             else
                 wget -q $GAMS_URL/linux/linux_x64_64_sfx.exe -O $GAMS_INSTALLER
