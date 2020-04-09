@@ -44,10 +44,12 @@ jobs:
                 brew list $pkg || brew install $pkg
             done
             brew link --overwrite gcc
-            echo "Install pre-dependencies for ipopt..."
-            for pkg in openblas lapack gfortran; do
-                brew list $pkg || brew install $pkg
-            done
+            # Holding off installing anything for Ipopt until we know
+            # what it requires
+            #echo "Install pre-dependencies for ipopt..."
+            #for pkg in openblas lapack gfortran; do
+            #    brew list $pkg || brew install $pkg
+            #done
         else
             echo "Install pre-dependencies for ipopt..."
             sudo apt-get install libopenblas-dev gfortran liblapack-dev
