@@ -19,12 +19,12 @@ from pyomo.common import config
 from pyomo.common.fileutils import this_file_dir
 
 def handleReadonly(function, path, excinfo):
-  excvalue = excinfo[1]
-  if excvalue.errno == errno.EACCES:
-      os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
-      func(path)
-  else:
-      raise
+    excvalue = excinfo[1]
+    if excvalue.errno == errno.EACCES:
+        os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+        function(path)
+    else:
+        raise
 
 def build_pynumero(user_args=[]):
     import distutils.core
@@ -34,7 +34,7 @@ def build_pynumero(user_args=[]):
     class _CMakeBuild(build_ext, object):
         def run(self):
             project_dir = self.extensions[0].project_dir
-            
+
             cmake_config = 'Debug' if self.debug else 'Release'
             cmake_args = [
                 '-DCMAKE_INSTALL_PREFIX=' + config.PYOMO_CONFIG_DIR,
