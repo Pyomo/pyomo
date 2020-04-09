@@ -37,6 +37,8 @@ jobs:
 
     - name: Install dependencies
       run: |
+        # Ensure cache directories exist
+        mkdir -p ${GITHUB_WORKSPACE}/download-cache
         if test "${{matrix.TARGET}}" == osx; then
             echo "Install pre-dependencies for pyodbc..."
             brew update
@@ -75,9 +77,9 @@ jobs:
         if test "${{matrix.TARGET}}" == osx; then
             echo "IDAES Ipopt not available on OSX"
         else
+            echo "...downloading Ipopt"
             IPOPT_TAR=${GITHUB_WORKSPACE}/download-cache/ipopt.tar.gz
             if test ! -e $IPOPT_TAR; then
-                mkdir -p `dirname $IPOPT_TAR`
                 wget -q https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-ubuntu1804-64.tar.gz \
                     -O $IPOPT_TAR
             fi
