@@ -49,10 +49,11 @@ jobs:
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
         $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
         $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
-        $env:CPLEX = $env:CONDAFORGE + "-c ibmdecisionoptimization cplex=12.10"
+        Invoke-Expression $env:EXP
         Write-Host ("")
         Write-Host ("Try to install CPLEX...")
         Write-Host ("")
+        $env:CPLEX = $env:CONDAFORGE + "-c ibmdecisionoptimization cplex=12.10"
         try
         {
             Invoke-Expression $env:CPLEX
@@ -65,24 +66,6 @@ jobs:
             conda deactivate
             conda activate test
         }
-        Invoke-Expression $env:EXP
-        $env:PYNUMERO = $env:CONDAFORGE + " pynumero_libraries"
-        Write-Host ("")
-        Write-Host ("Try to install Pynumero_libraries...")
-        Write-Host ("")
-        try
-        {
-            Invoke-Expression $env:PYNUMERO
-        }
-        catch
-        {
-            Write-Host ("##############################################################################")
-            Write-Host ("WARNING: Python ${{matrix.python-version}}: Pynumero_libraries not available. ")
-            Write-Host ("##############################################################################")
-            conda deactivate
-            conda activate test 
-        }
-        conda list --show-channel-urls
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
@@ -105,6 +88,10 @@ jobs:
           Write-Host ("WARNING: Python ${{matrix.python-version}}: GAMS Bindings not supported.")
           Write-Host ("########################################################################")
         }
+        Write-Host ("")
+        Write-Host ("Conda package environment")
+        Write-Host ("")
+        conda list --show-channel-urls
         Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
