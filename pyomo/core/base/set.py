@@ -416,6 +416,8 @@ class TuplizeValuesInitializer(InitializerBase):
 
         if not isinstance(_val, collections_Sequence):
             _val = tuple(_val)
+        if len(_val) == 0:
+            return _val
         if isinstance(_val[0], tuple):
             return _val
         return self._tuplize(_val, parent, index)
