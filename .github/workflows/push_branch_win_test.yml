@@ -16,6 +16,20 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Conda cache
+      id: conda-cache
+      uses: actions/cache@v1
+      with:
+        path: conda-cache
+        key: ${{matrix.python-version}}-${{ runner.os }}-conda
+
+    - name: Download cache
+      id: download-cache
+      uses: actions/cache@v1
+      with:
+        path: download-cache
+        key: ${{ runner.os }}-download
+
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
       uses: goanpeca/setup-miniconda@v1 # Using an action created by user goanpeca to set up different Python Miniconda environments
       with:
@@ -33,6 +47,8 @@ jobs:
         Write-Host ("")
         Invoke-Expression "conda config --set always_yes yes"
         Invoke-Expression "conda config --set auto_update_conda false"
+        Invoke-Expression "conda config --remove-key pkgs_dirs"
+        Invoke-Expression "conda config --append pkgs_dirs $env:GITHUB_WORKSPACE\conda-cache"
         conda info
         conda config --show-sources
         conda list --show-channel-urls
@@ -40,23 +56,22 @@ jobs:
         Write-Host ("Setting Conda Env Vars... ")
         Write-Host ("")
         $env:CONDA_INSTALL = "conda install -q -y "
-        $env:ANACONDA = $env:CONDA_INSTALL + " -c anaconda "
-        $env:CONDAFORGE = $env:CONDA_INSTALL + " -c conda-forge --no-update-deps "
+        $env:ANACONDA = "$env:CONDA_INSTALL -c anaconda "
+        $env:CONDAFORGE = "$env:CONDA_INSTALL -c conda-forge --no-update-deps "
         $env:USING_MINICONDA = 1
-        $env:ADDITIONAL_CF_PKGS="setuptools pip coverage sphinx_rtd_theme "
-        $env:MINICONDA_EXTRAS=""
-        $env:MINICONDA_EXTRAS="numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx xlrd pandas matplotlib dill seaborn "
-        $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + "pymysql pyro4 pint pathos " + $env:MINICONDA_EXTRAS
-        $env:ADDITIONAL_CF_PKGS=$env:ADDITIONAL_CF_PKGS + " glpk ipopt"
-        $env:EXP = $env:CONDAFORGE + $env:ADDITIONAL_CF_PKGS
-        Invoke-Expression $env:EXP
+        $env:MINICONDA_EXTRAS="numpy scipy ipython openpyxl sympy pyodbc"
+        $env:MINICONDA_EXTRAS+=" pyyaml networkx xlrd pandas matplotlib"
+        $env:MINICONDA_EXTRAS+=" dill seaborn"
+        $env:ADDITIONAL_CF_PKGS="setuptools pip coverage sphinx_rtd_theme"
+        $env:ADDITIONAL_CF_PKGS+=" pymysql pyro4 pint pathos $env:MINICONDA_EXTRAS"
+        $env:ADDITIONAL_CF_PKGS+=" glpk ipopt"
+        Invoke-Expression "$env:CONDAFORGE $env:ADDITIONAL_CF_PKGS"
         Write-Host ("")
         Write-Host ("Try to install CPLEX...")
         Write-Host ("")
-        $env:CPLEX = $env:CONDAFORGE + "-c ibmdecisionoptimization cplex=12.10"
         try
         {
-            Invoke-Expression $env:CPLEX
+            Invoke-Expression "$env:CONDAFORGE -c ibmdecisionoptimization cplex=12.10"
         }
         catch
         {
@@ -69,20 +84,20 @@ jobs:
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
-        Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile 'windows_x64_64.exe'
-        Start-Process -FilePath 'windows_x64_64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
+        if ( -not (Test-Path "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe")) {
+            Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe"
+        }
+        Start-Process -FilePath "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe" -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
         cd gams\apifiles\Python\
         if(${{matrix.python-version}} -eq 2.7) {
           cd api
-          python setup.py -q install
+          python setup.py install
         }elseif(${{matrix.python-version}} -eq 3.6) {
-          Write-Host ("PYTHON ${{matrix.python-version}}")
           cd api_36
-          python setup.py -q install
+          python setup.py install
         }elseif(${{matrix.python-version}} -eq 3.7) {
-          Write-Host ("PYTHON ${{matrix.python-version}}")
           cd api_37
-          python setup.py -q install -noCheck
+          python setup.py install
         }else { 
           Write-Host ("########################################################################")
           Write-Host ("WARNING: Python ${{matrix.python-version}}: GAMS Bindings not supported.")
