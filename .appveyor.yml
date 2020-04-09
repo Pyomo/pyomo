@@ -115,7 +115,7 @@ install:
   #
   # Finally, add any solvers we want to the list
   #
-  - "SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% glpk ipopt"
+  - "SET ADDITIONAL_CF_PKGS=%ADDITIONAL_CF_PKGS% glpk "
   #
   # ...and install everything from conda-force in one go
   #
@@ -129,6 +129,17 @@ install:
   - "python -m pip install --upgrade pip"
   - "%PIP% --version"
   - "%PIP% install codecov"
+  #
+  # Install IDAES' Ipopt
+  #
+  - MKDIR idaes_ipopt
+  - cd idaes_ipopt
+  - ps: Start-FileDownload 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz'
+  - "tar -xzf idaes-solvers-windows-64.tar.gz"
+  - ps: Start-FileDownload 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz'
+  - "tar -xzf idaes-lib-windows-64.tar.gz"
+  - cd ..
+  - "SET PATH=%cd%\\idaes_ipopt;%PATH%"
   #
   # Install GAMS
   #
