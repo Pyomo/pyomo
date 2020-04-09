@@ -31,7 +31,7 @@ jobs:
         key: download-${{runner.os}}
 
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
-      uses: goanpeca/setup-miniconda@v1 # Using an action created by user goanpeca to set up different Python Miniconda environments
+      uses: goanpeca/setup-miniconda@v1
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
@@ -63,9 +63,9 @@ jobs:
         $env:MINICONDA_EXTRAS+=" pyyaml networkx xlrd pandas matplotlib"
         $env:MINICONDA_EXTRAS+=" dill seaborn"
         $env:ADDITIONAL_CF_PKGS="setuptools pip coverage sphinx_rtd_theme"
-        $env:ADDITIONAL_CF_PKGS+=" pymysql pyro4 pint pathos $env:MINICONDA_EXTRAS"
-        $env:ADDITIONAL_CF_PKGS+=" glpk ipopt"
-        Invoke-Expression "$env:CONDAFORGE $env:ADDITIONAL_CF_PKGS"
+        $env:ADDITIONAL_CF_PKGS+=" pymysql pyro4 pint pathos"
+        $env:ADDITIONAL_CF_PKGS+=" glpk"
+        Invoke-Expression "$env:CONDAFORGE $env:MINICONDA_EXTRAS $env:ADDITIONAL_CF_PKGS"
         Write-Host ("")
         Write-Host ("Try to install CPLEX...")
         Write-Host ("")
@@ -81,6 +81,16 @@ jobs:
             conda deactivate
             conda activate test
         }
+        Write-Host ("")
+        Write-Host ("Installing IDAES Ipopt")
+        Write-Host ("")
+        New-Item -Path . -Name "solver_dir" -ItemType "directory"
+        cd solver_dir
+        Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz' -OutFile 'ipopt1.tar.gz'
+        Invoke-Expression 'tar -xzf ipopt1.tar.gz'
+        Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt2.tar.gz'
+        Invoke-Expression 'tar -xzf ipopt2.tar.gz'
+        cd ..
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
@@ -123,26 +133,12 @@ jobs:
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
-        try
-        {
-            python3 setup.py develop
-        }
-        catch
-        {
-            python setup.py develop
-        }
+        python setup.py install
         cd ..
         Write-Host ("")
         Write-Host ("Install Pyomo...")
         Write-Host ("")
-        try
-        {
-            python3 setup.py develop
-        }
-        catch
-        {
-            python setup.py develop
-        }
+        python setup.py develop
 
     - name: Download and install extensions
       shell: pwsh
@@ -162,6 +158,6 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
-        $env:PATH += ';' + $(Get-Location).Path + "\gams"
-        $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
+        $env:PATH += ';$env:BUILD_DIR\gams;$env:BUILD_DIR\solver_dir;"
+        $env:EXP = "test.pyomo -v --cat='nightly' pyomo $env:BUILD_DIR\pyomo-model-libraries"
         Invoke-Expression $env:EXP
