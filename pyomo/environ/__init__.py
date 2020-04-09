@@ -47,6 +47,7 @@ _packages = [
 #
 _optional_packages = set([
     'pyomo.contrib.example',
+    'pyomo.contrib.fme',
     'pyomo.contrib.gdpbb',
     'pyomo.contrib.gdpopt',
     'pyomo.contrib.gdp_bounds',
