@@ -8,13 +8,23 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import errno
 import os
 import shutil
+import stat
 import sys
 import tempfile
 
 from pyomo.common import config
 from pyomo.common.fileutils import this_file_dir
+
+def handleReadonly(function, path, excinfo):
+  excvalue = excinfo[1]
+  if excvalue.errno == errno.EACCES:
+      os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+      func(path)
+  else:
+      raise
 
 def build_pynumero(user_args=[]):
     import distutils.core
@@ -76,7 +86,7 @@ def build_pynumero(user_args=[]):
         print("Installed PyNumero libraries to %s" % ( install_dir, ))
     finally:
         os.chdir(basedir)
-        shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir, onerror=handleReadonly)
 
 if __name__ == "__main__":
     build_pynumero(sys.argv[1:])
