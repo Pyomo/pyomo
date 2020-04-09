@@ -23,6 +23,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: OS package cache
+      id: pkg-cache
+      uses: actions/cache@v1
+      with:
+        path: pkg-cache
+        key: pkg-${{runner.os}}
+
     - name: Download cache
       id: download-cache
       uses: actions/cache@v1
@@ -39,10 +46,14 @@ jobs:
       run: |
         # Ensure cache directories exist
         mkdir -p ${GITHUB_WORKSPACE}/download-cache
+        mkdir -p ${GITHUB_WORKSPACE}/pkg-cache
         if test "${{matrix.TARGET}}" == osx; then
+            export HOMEBREW_CACHE=${GITHUB_WORKSPACE}/pkg-cache
             echo "Install pre-dependencies for pyodbc..."
             brew update
-            brew install bash gcc pkg-config unixodbc freetds
+            for pkg in bash gcc pkg-config unixodbc freetds; do
+                brew list $pkg || brew install $pkg
+            done
             brew link --overwrite gcc
             # Holding off installing anything for Ipopt until we know
             # what it requires
@@ -51,6 +62,9 @@ jobs:
             #    brew list $pkg || brew install $pkg
             #done
         else
+            sudo echo "" >> /etc/apt/apt.config
+            sudo echo "Dir::Cache ${GITHUB_WORKSPACE}/pkg-cache;" >> /etc/apt/apt.config
+            sudo echo "Dir::Cache::Archives archives/;" >> /etc/apt/apt.config
             echo "Install pre-dependencies for ipopt..."
             sudo apt-get install libopenblas-dev gfortran liblapack-dev
         fi
@@ -75,9 +89,9 @@ jobs:
         if test "${{matrix.TARGET}}" == osx; then
             echo "IDAES Ipopt not available on OSX"
         else
-            echo "...downloading Ipopt"
             IPOPT_TAR=${GITHUB_WORKSPACE}/download-cache/ipopt.tar.gz
             if test ! -e $IPOPT_TAR; then
+                echo "...downloading Ipopt"
                 wget -q https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-ubuntu1804-64.tar.gz \
                     -O $IPOPT_TAR
             fi
