@@ -13,13 +13,23 @@
 
 #include <iostream>
 
+#if defined(_WIN32) || defined(_WIN64)
+#  if defined(BUILDING_PYNUMERO_ASL)
+#    define PYNUMERO_ASL_EXPORT __declspec(dllexport)
+#  else
+#    define PYNUMERO_ASL_EXPORT __declspec(dllimport)
+#  endif
+#else
+#  define PYNUMERO_ASL_EXPORT
+#endif
+
 // Forward declaration for ASL structure
 struct ASL_pfgh;
 struct Option_Info;
 
 // This class provides the C++ side of the 
 // PyNumero interface to AMPL
-class AmplInterface {
+class PYNUMERO_ASL_EXPORT AmplInterface {
 public:
    AmplInterface();
    virtual ~AmplInterface();
@@ -123,7 +133,7 @@ protected:
 };
 
 // File-based specialization of AmplInterface
-class AmplInterfaceFile : public AmplInterface {
+class PYNUMERO_ASL_EXPORT AmplInterfaceFile : public AmplInterface {
 public:
    AmplInterfaceFile();
 
@@ -131,7 +141,7 @@ public:
 };
 
 // String-based specialization of AmplInterface
-class AmplInterfaceStr : public AmplInterface {
+class PYNUMERO_ASL_EXPORT AmplInterfaceStr : public AmplInterface {
 public:
     AmplInterfaceStr(char* nl, size_t size);
 

@@ -446,115 +446,142 @@ FILE* AmplInterfaceStr::open_nl(ASL_pfgh *asl, char* stub)
 
 }
 
-#if defined(_WIN32) || defined(_WIN64)
-#  define EXPORT __declspec(dllexport)
-#else
-#  define EXPORT
-#endif
-
 extern "C" {
-   EXPORT AmplInterface* EXTERNAL_AmplInterface_new_file(char *nlfilename) {
+   PYNUMERO_ASL_EXPORT AmplInterface*
+   EXTERNAL_AmplInterface_new_file(char *nlfilename) {
       AmplInterface* ans = new AmplInterfaceFile();
       ans->initialize(nlfilename);
       return ans;
    }
 
-   EXPORT AmplInterface* EXTERNAL_AmplInterface_new_str(char *nl, size_t size) {
+   PYNUMERO_ASL_EXPORT AmplInterface*
+   EXTERNAL_AmplInterface_new_str(char *nl, size_t size) {
       AmplInterface* ans = new AmplInterfaceStr(nl, size);
       ans->initialize("membuf.nl");
       return ans;
    }
 
-   EXPORT AmplInterface* EXTERNAL_AmplInterface_new(char *nlfilename) {
+   PYNUMERO_ASL_EXPORT AmplInterface*
+   EXTERNAL_AmplInterface_new(char *nlfilename) {
       return EXTERNAL_AmplInterface_new_file(nlfilename);
    }
 
-   EXPORT int EXTERNAL_AmplInterface_n_vars(AmplInterface *p_ai) {
+   PYNUMERO_ASL_EXPORT
+   int EXTERNAL_AmplInterface_n_vars(AmplInterface *p_ai) {
       return p_ai->get_n_vars();
    }
 
-   EXPORT int EXTERNAL_AmplInterface_n_constraints(AmplInterface *p_ai) {
+   PYNUMERO_ASL_EXPORT
+   int EXTERNAL_AmplInterface_n_constraints(AmplInterface *p_ai) {
       return p_ai->get_n_constraints();
    }
 
-   EXPORT int EXTERNAL_AmplInterface_nnz_jac_g(AmplInterface *p_ai) {
+   PYNUMERO_ASL_EXPORT
+   int EXTERNAL_AmplInterface_nnz_jac_g(AmplInterface *p_ai) {
       return p_ai->get_nnz_jac_g();
    }
 
-   EXPORT int EXTERNAL_AmplInterface_nnz_hessian_lag(AmplInterface *p_ai) {
+   PYNUMERO_ASL_EXPORT
+   int EXTERNAL_AmplInterface_nnz_hessian_lag(AmplInterface *p_ai) {
       return p_ai->get_nnz_hessian_lag();
    }
 
-   EXPORT void EXTERNAL_AmplInterface_x_lower_bounds(AmplInterface *p_ai, double *invec, int n) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_x_lower_bounds
+   ( AmplInterface *p_ai, double *invec, int n ) {
       p_ai->get_lower_bounds_x(invec, n);
    }
 
-   EXPORT void EXTERNAL_AmplInterface_x_upper_bounds(AmplInterface *p_ai, double *invec, int n) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_x_upper_bounds
+   ( AmplInterface *p_ai, double *invec, int n ) {
       p_ai->get_upper_bounds_x(invec, n);
    }
 
-   EXPORT void EXTERNAL_AmplInterface_g_lower_bounds(AmplInterface *p_ai, double *invec, int m) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_g_lower_bounds
+   ( AmplInterface *p_ai, double *invec, int m ) {
       p_ai->get_lower_bounds_g(invec, m);
    }
 
-   EXPORT void EXTERNAL_AmplInterface_g_upper_bounds(AmplInterface *p_ai, double *invec, int m) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_g_upper_bounds
+   ( AmplInterface *p_ai, double *invec, int m ) {
       p_ai->get_upper_bounds_g(invec, m);
    }
 
-   EXPORT void EXTERNAL_AmplInterface_get_init_x(AmplInterface *p_ai, double *invec, int n) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_get_init_x
+   ( AmplInterface *p_ai, double *invec, int n ) {
       p_ai->get_init_x(invec, n);
    }
 
-   EXPORT void EXTERNAL_AmplInterface_get_init_multipliers(AmplInterface *p_ai, double *invec, int n) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_get_init_multipliers
+   ( AmplInterface *p_ai, double *invec, int n ) {
       p_ai->get_init_multipliers(invec, n);
    }
 
-   EXPORT bool EXTERNAL_AmplInterface_eval_f(AmplInterface *p_ai, double *invec, int n, double& f) {
+   PYNUMERO_ASL_EXPORT
+   bool EXTERNAL_AmplInterface_eval_f
+   ( AmplInterface *p_ai, double *invec, int n, double& f ) {
       return p_ai->eval_f(invec, n, f);
    }
 
-   EXPORT bool EXTERNAL_AmplInterface_eval_deriv_f(AmplInterface *p_ai, double *const_x, double *deriv_f, int nx) {
+   PYNUMERO_ASL_EXPORT
+   bool EXTERNAL_AmplInterface_eval_deriv_f
+   ( AmplInterface *p_ai, double *const_x, double *deriv_f, int nx ) {
       return p_ai->eval_deriv_f(const_x, deriv_f, nx);
    }
 
-   EXPORT bool EXTERNAL_AmplInterface_eval_g(AmplInterface *p_ai, double *const_x, int nx, double *g, int ng) {
+   PYNUMERO_ASL_EXPORT
+   bool EXTERNAL_AmplInterface_eval_g
+   ( AmplInterface *p_ai, double *const_x, int nx, double *g, int ng ) {
       return p_ai->eval_g(const_x, nx, g, ng);
    }
 
-   EXPORT void EXTERNAL_AmplInterface_struct_jac_g(AmplInterface *p_ai, int *irow, int *jcol, int nnz_jac_g) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_struct_jac_g
+   ( AmplInterface *p_ai, int *irow, int *jcol, int nnz_jac_g ) {
       p_ai->struct_jac_g(irow, jcol, nnz_jac_g);
    }
 
-   EXPORT bool EXTERNAL_AmplInterface_eval_jac_g(AmplInterface *p_ai, double *const_x, int nx, double *jac_g_values,
-                                          int nnz_jac_g) {
+   PYNUMERO_ASL_EXPORT
+   bool EXTERNAL_AmplInterface_eval_jac_g
+   ( AmplInterface *p_ai, double *const_x, int nx, double *jac_g_values,
+     int nnz_jac_g ) {
       return p_ai->eval_jac_g(const_x, nx, jac_g_values, nnz_jac_g);
    }
 
-   EXPORT void EXTERNAL_AmplInterface_struct_hes_lag(AmplInterface *p_ai, int *irow, int *jcol,
-                                              int nnz_hes_lag) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_struct_hes_lag
+   ( AmplInterface *p_ai, int *irow, int *jcol, int nnz_hes_lag ) {
       p_ai->struct_hes_lag(irow, jcol, nnz_hes_lag);
    }
 
-   EXPORT bool EXTERNAL_AmplInterface_eval_hes_lag(AmplInterface *p_ai, double *const_x, int nx,
-                                            double *const_lam, int nc, double *hes_lag,
-                                            int nnz_hes_lag, double obj_factor) {
-      return p_ai->eval_hes_lag(const_x, nx, const_lam, nc, hes_lag, nnz_hes_lag, obj_factor);
+   PYNUMERO_ASL_EXPORT
+   bool EXTERNAL_AmplInterface_eval_hes_lag
+   ( AmplInterface *p_ai, double *const_x, int nx, double *const_lam,
+     int nc, double *hes_lag, int nnz_hes_lag, double obj_factor ) {
+      return p_ai->eval_hes_lag(const_x, nx, const_lam, nc, hes_lag,
+                                nnz_hes_lag, obj_factor);
    }
 
-   EXPORT void EXTERNAL_AmplInterface_finalize_solution(AmplInterface *p_ai,
-                                                 int ampl_solve_result_num,
-                                                 char* msg,
-                                                 double *const_x, int nx,
-                                                 double *const_lam, int nc) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_finalize_solution
+   ( AmplInterface *p_ai, int ampl_solve_result_num, char* msg,
+     double *const_x, int nx, double *const_lam, int nc ) {
       p_ai->finalize_solution(ampl_solve_result_num, msg,
                               const_x, nx, const_lam, nc);
    }
 
-   EXPORT void EXTERNAL_AmplInterface_free_memory(AmplInterface *p_ai) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_free_memory(AmplInterface *p_ai) {
       p_ai->~AmplInterface();
    }
 
-   EXPORT void EXTERNAL_AmplInterface_dummy(AmplInterface *p_ai) {
+   PYNUMERO_ASL_EXPORT
+   void EXTERNAL_AmplInterface_dummy(AmplInterface *p_ai) {
        std::cout<<"hola\n";
    }
 }
