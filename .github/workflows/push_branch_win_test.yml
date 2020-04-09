@@ -21,14 +21,14 @@ jobs:
       uses: actions/cache@v1
       with:
         path: conda-cache
-        key: conda-${{runner.os}}-${{matrix.python-version}}
+        key: conda-v1-${{runner.os}}-${{matrix.python-version}}
 
     - name: Download cache
       id: download-cache
       uses: actions/cache@v1
       with:
         path: download-cache
-        key: download-${{runner.os}}
+        key: download-v1-${{runner.os}}
 
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
       uses: goanpeca/setup-miniconda@v1
@@ -90,13 +90,14 @@ jobs:
         Write-Host ("")
         Write-Host ("Installing GAMS")
         Write-Host ("")
-        if ( -not (Test-Path "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe")) {
+        $GAMS_INSTALLER="$env:GITHUB_WORKSPACE\download-cache\gams_win64.exe"
+        if ( -not (Test-Path "$GAMS_INSTALLER")) {
             Write-Host ("...downloading GAMS")
             New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\download-cache"
-            Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe"
+            Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile "$GAMS_INSTALLER"
         }
         Write-Host ("...installing GAMS")
-        Start-Process -FilePath "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe" -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
+        Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
         cd gams\apifiles\Python\
         Write-Host ("...installing GAMS Python ${{matrix.python-version}} API")
         if(${{matrix.python-version}} -eq 2.7) {
