@@ -131,7 +131,7 @@ jobs:
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         git clone --quiet https://github.com/PyUtilib/pyutilib.git
         cd pyutilib
-        python setup.py install
+        python setup.py develop
         cd ..
         Write-Host ("")
         Write-Host ("Install Pyomo...")
