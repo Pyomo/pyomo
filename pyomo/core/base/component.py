@@ -66,10 +66,14 @@ def name(component, index=None, fully_qualified=False, relative_to=None):
         return base + _name_index_generator( index )
 
 
-@deprecated(msg="The cname() function has been renamed to name()", version='TBD', remove_in='TBD')
+@deprecated(msg="The cname() function has been renamed to name()",
+            version='5.6.9')
 def cname(*args, **kwds):
     return name(*args, **kwds)
 
+
+class CloneError(pyomo.common.errors.PyomoException):
+    pass
 
 class _ComponentBase(object):
     """A base class for Component and ComponentData
@@ -195,6 +199,8 @@ class _ComponentBase(object):
                     if paranoid:
                         saved_memo = dict(memo)
                     new_state[k] = deepcopy(v, memo)
+                except CloneError:
+                    raise
                 except:
                     if paranoid:
                         memo.clear()
@@ -217,6 +223,22 @@ class _ComponentBase(object):
                         "Unable to clone Pyomo component attribute.\n"
                         "%s '%s' contains an uncopyable field '%s' (%s)"
                         % ( what, self.name, k, type(v) ))
+                    # If this is an abstract model, then we are probably
+                    # in the middle of create_instance, and the model
+                    # that will eventually become the concrete model is
+                    # missing initialization data.  This is an
+                    # exceptional event worthy of a stronger (and more
+                    # informative) error.
+                    if not self.parent_component()._constructed:
+                        raise CloneError(
+                            "Uncopyable attribute (%s) encountered when "
+                            "cloning component %s on an abstract block.  "
+                            "The resulting instance is therefore "
+                            "missing data from the original abstract model "
+                            "and likely will not construct correctly.  "
+                            "Consider changing how you initialize this "
+                            "component or using a ConcreteModel."
+                            % ( k, self.name ))
         ans.__setstate__(new_state)
         return ans
 

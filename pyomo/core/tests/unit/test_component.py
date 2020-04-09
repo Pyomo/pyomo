@@ -10,17 +10,13 @@
 #
 # Unit Tests for components
 #
-
+from six import StringIO
 import pyutilib.th as unittest
 
 from pyomo.common import DeveloperError
 import pyomo.core.base._pyomo
 from pyomo.core.base.block import generate_cuid_names
 from pyomo.environ import *
-try:
-    from StringIO import StringIO  # python 2
-except ImportError:
-    from io import StringIO  # python 3
 
 
 class TestComponent(unittest.TestCase):
@@ -540,10 +536,16 @@ class TestComponentUID(unittest.TestCase):
 class TestEnviron(unittest.TestCase):
 
     def test_components(self):
-        self.assertTrue(set(x[0] for x in pyomo.core.base._pyomo.model_components()) >= set(['Set', 'Param', 'Var', 'Objective', 'Constraint']))
+        self.assertGreaterEqual(
+            set(x[0] for x in pyomo.core.base._pyomo.model_components()),
+            set(['Set', 'Param', 'Var', 'Objective', 'Constraint'])
+        )
 
     def test_sets(self):
-        self.assertTrue(set(x[0] for x in pyomo.core.base._pyomo.predefined_sets()) >= set(['Reals', 'Integers', 'Boolean']))
+        self.assertGreaterEqual(
+            set(x[0] for x in pyomo.core.base._pyomo.predefined_sets()),
+            set(['Reals', 'Integers', 'Boolean'])
+        )
 
 if __name__ == "__main__":
     unittest.main()

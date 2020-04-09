@@ -20,7 +20,7 @@ from pyomo.dataportal.factory import DataManagerFactory
 
 def detuplize(d, sort=False):
     #print("detuplize %s" % str(d))
-    if type(d) in (list,set):
+    if type(d) in (list,tuple,set):
         ans = []
         for item in d:
             if type(item) in (list,tuple,set):

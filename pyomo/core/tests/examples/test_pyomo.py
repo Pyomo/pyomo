@@ -86,7 +86,9 @@ class BaseTester(unittest.TestCase):
             os.remove(currdir+'results.jsn')
 
     def run_pyomo(self, cmd, root=None):
-        return pyutilib.subprocess.run('pyomo solve --solver=glpk --results-format=json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
+        cmd = 'pyomo solve --solver=glpk --results-format=json ' \
+              '--save-results=%s.jsn %s' % (root, cmd)
+        return pyutilib.subprocess.run(cmd, outfile=root+'.out')
 
 
 class TestJson(BaseTester):
@@ -99,7 +101,8 @@ class TestJson(BaseTester):
 
     def test1a_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' in a subprocess
-        self.run_pyomo(currdir+'pmedian.py pmedian.dat', root=currdir+'test1a')
+        self.run_pyomo('%s/pmedian.py %s/pmedian.dat' % (currdir,currdir),
+                       root=currdir+'test1a')
         self.assertMatchesJsonBaseline(currdir+"test1a.jsn", currdir+"test1.txt",tolerance=_diff_tol)
         os.remove(currdir+'test1a.out')
 

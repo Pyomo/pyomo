@@ -23,8 +23,8 @@ else:
 #
 _packages = [
     'pyomo.common',
-    'pyomo.opt',
     'pyomo.core',
+    'pyomo.opt',
     'pyomo.dataportal',
     'pyomo.duality',
     'pyomo.checker',
@@ -47,6 +47,7 @@ _packages = [
 #
 _optional_packages = set([
     'pyomo.contrib.example',
+    'pyomo.contrib.fme',
     'pyomo.contrib.preprocessing',
     'pyomo.contrib.mindtpy',
     'pyomo.contrib.gdpopt',

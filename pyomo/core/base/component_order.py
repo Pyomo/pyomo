@@ -11,8 +11,7 @@
 
 __all__ = ['items', 'display_items', 'display_name']
 
-from pyomo.core.base.sets import Set
-from pyomo.core.base.rangeset import RangeSet
+from pyomo.core.base.set import Set, RangeSet
 from pyomo.core.base.param import Param
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression

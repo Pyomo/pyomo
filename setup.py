@@ -15,7 +15,6 @@ Script to generate the installer for pyomo.
 import sys
 import os
 
-
 def read(*rnames):
     with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
         # Strip all leading badges up to, but not including the COIN-OR
@@ -38,18 +37,13 @@ def get_version():
     return _verInfo['__version__']
 
 requires = [
-    'PyUtilib>=5.7.4.dev0',
+    'PyUtilib>=5.8.1.dev0',
     'appdirs',
     'ply',
     'six>=1.4',
     ]
-if sys.version_info < (2, 7):
-    requires.append('argparse')
-    requires.append('unittest2')
-    requires.append('ordereddict')
 
 from setuptools import setup, find_packages
-import sys
 
 CYTHON_REQUIRED = "required"
 if 'develop' in sys.argv:
@@ -204,7 +198,7 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
 ERROR: setup() failed:
     %s
 Re-running setup() without the Cython modules
-""" % (e_info.message,))
+""" % (str(e_info),))
         ext_modules = []
         run_setup()
         print("""
@@ -213,4 +207,4 @@ WARNING: Installation completed successfully, but the attempt to cythonize
          optimizations and is not required for any Pyomo functionality.
          Cython returned the following error:
    "%s"
-""" % (e_info.message,))
+""" % (str(e_info),))

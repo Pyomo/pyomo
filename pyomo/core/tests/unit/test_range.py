@@ -14,7 +14,7 @@ import pyutilib.th as unittest
 
 from pyomo.core.base.range import (
     NumericRange as NR, NonNumericRange as NNR, RangeProduct as RP,
-    AnyRange,
+    AnyRange, RangeDifferenceError
 )
 from pyomo.core.base.set import (
     Any
@@ -23,6 +23,11 @@ from pyomo.core.base.set import (
 class TestNumericRange(unittest.TestCase):
     def test_init(self):
         a = NR(None, None, 0)
+        self.assertIsNone(a.start)
+        self.assertIsNone(a.end)
+        self.assertEqual(a.step, 0)
+
+        a = NR(-float('inf'), float('inf'), 0)
         self.assertIsNone(a.start)
         self.assertIsNone(a.end)
         self.assertEqual(a.step, 0)
@@ -408,6 +413,10 @@ class TestNumericRange(unittest.TestCase):
         self.assertFalse(NR(10, 0, -2).issubset(NR(10, 0, -4)))
         self.assertTrue(NR(10, 0, -2).issubset(NR(10, 0, -1)))
 
+        # Scalar-discrete
+        self.assertTrue(NR(5, 5, 0).issubset(NR(0, 10, 1)))
+        self.assertFalse(NR(15, 15, 0).issubset(NR(0, 10, 1)))
+
     def test_lcm(self):
         self.assertEqual(
             NR(None,None,0)._step_lcm((NR(0,1,0),)),
@@ -508,6 +517,10 @@ class TestNumericRange(unittest.TestCase):
             NR(None,0,0).range_difference([NR(-5,0,0,'[)')]),
             [NR(None,-5,0,'[)')],
         )
+        self.assertEqual(
+            NR(0,10,0).range_difference([NR(None,5,0,'[)')]),
+            [NR(5,10,0,'[]')],
+        )
         # Subtracting an open range from a closed range gives a closed
         # range
         self.assertEqual(
@@ -547,6 +560,12 @@ class TestNumericRange(unittest.TestCase):
         a = NR(0.25, None, 1)
         self.assertEqual(a.range_difference([NR(0.5, None, 1)]), [a])
 
+        # And the onee thing we don't support:
+        with self.assertRaisesRegex(
+                RangeDifferenceError, 'We do not support subtracting an '
+                'infinite discrete range \[0:None\] from an infinite '
+                'continuous range \[None..None\]'):
+            NR(None,None,0).range_difference([NR(0,None,1)])
 
     def test_range_intersection(self):
         self.assertEqual(
@@ -575,6 +594,10 @@ class TestNumericRange(unittest.TestCase):
         )
         self.assertEqual(
             NR(5,10,0).range_intersection([NR(0,4,0)]),
+            [],
+        )
+        self.assertEqual(
+            NR(0,4,0).range_intersection([NNR('a')]),
             [],
         )
 
@@ -650,6 +673,10 @@ class TestAnyRange(unittest.TestCase):
         )
         self.assertEqual(
             NR(0,None,1).range_difference([AnyRange()]),
+            []
+        )
+        self.assertEqual(
+            AnyRange().range_difference([AnyRange()]),
             []
         )
 

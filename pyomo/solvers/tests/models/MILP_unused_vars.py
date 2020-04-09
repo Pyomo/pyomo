@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, ConstraintList, Set, Integers, IntegerInterval, sum_product, Block
+from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, ConstraintList, Set, Integers, RangeSet, sum_product, Block
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -46,7 +46,7 @@ class MILP_unused_vars(_BaseTestModel):
             model.X_unused[i].stale = False
             model.X_unused_initialy_stale[i].stale = True
 
-        model.x = Var(within=IntegerInterval(bounds=(None,None)))
+        model.x = Var(within=RangeSet(None,None))
         model.x.stale = False
 
         model.x_initialy_stale = Var(within=Integers)
@@ -119,30 +119,30 @@ class MILP_unused_vars_kernel(MILP_unused_vars):
 
         model.s = [1,2]
 
-        model.x_unused = pmo.variable(domain=pmo.Integers)
+        model.x_unused = pmo.variable(domain=pmo.IntegerSet)
         model.x_unused.stale = False
 
-        model.x_unused_initialy_stale = pmo.variable(domain=pmo.Integers)
+        model.x_unused_initialy_stale = pmo.variable(domain=pmo.IntegerSet)
         model.x_unused_initialy_stale.stale = True
 
         model.X_unused = pmo.variable_dict(
-            (i, pmo.variable(domain=pmo.Integers)) for i in model.s)
+            (i, pmo.variable(domain=pmo.IntegerSet)) for i in model.s)
         model.X_unused_initialy_stale = pmo.variable_dict(
-            (i, pmo.variable(domain=pmo.Integers)) for i in model.s)
+            (i, pmo.variable(domain=pmo.IntegerSet)) for i in model.s)
         for i in model.s:
             model.X_unused[i].stale = False
             model.X_unused_initialy_stale[i].stale = True
 
-        model.x = pmo.variable(domain=pmo.IntegerInterval(bounds=(None,None)))
+        model.x = pmo.variable(domain=RangeSet(None,None))
         model.x.stale = False
 
-        model.x_initialy_stale = pmo.variable(domain=pmo.Integers)
+        model.x_initialy_stale = pmo.variable(domain=pmo.IntegerSet)
         model.x_initialy_stale.stale = True
 
         model.X = pmo.variable_dict(
-            (i, pmo.variable(domain=pmo.Integers)) for i in model.s)
+            (i, pmo.variable(domain=pmo.IntegerSet)) for i in model.s)
         model.X_initialy_stale = pmo.variable_dict(
-            (i, pmo.variable(domain=pmo.Integers)) for i in model.s)
+            (i, pmo.variable(domain=pmo.IntegerSet)) for i in model.s)
         for i in model.s:
             model.X[i].stale = False
             model.X_initialy_stale[i].stale = True

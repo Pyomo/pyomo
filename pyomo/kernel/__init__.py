@@ -89,6 +89,8 @@ from pyomo.core.kernel.piecewise_library.transforms_nd import \
 from pyomo.core.kernel.set_types import \
     (RealSet,
      IntegerSet,
+     BooleanSet)
+from pyomo.environ import (
      Reals,
      PositiveReals,
      NonPositiveReals,
@@ -104,8 +106,8 @@ from pyomo.core.kernel.set_types import \
      Boolean,
      Binary,
      RealInterval,
-     IntegerInterval)
-
+     IntegerInterval,
+)
 #
 # allow the use of standard kernel modeling components
 # as the ctype argument for the general iterator method

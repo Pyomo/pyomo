@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 try:
     import numpy as np
     import pandas as pd
@@ -15,8 +25,8 @@ except ImportError:
 
 def _get_variables(ax,columns):
     sps = ax.get_subplotspec()
-    nx = sps.get_geometry()[0]
-    ny = sps.get_geometry()[1]
+    nx = sps.get_geometry()[1]
+    ny = sps.get_geometry()[0]
     cell = sps.get_geometry()[2]
     xloc = int(np.mod(cell,nx))
     yloc = int(np.mod((cell-xloc)/nx, ny))
@@ -81,20 +91,19 @@ def _add_scatter(x,y,color,label,columns,theta_star):
     ax.scatter(theta_star[xvar], theta_star[yvar], c=color, s=35)
     
     
-def _add_rectangle_CI(x,y,color,label,columns,alpha):
+def _add_rectangle_CI(x,y,color,label,columns,lower_bound,upper_bound):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
+
+    xmin = lower_bound[xvar]
+    ymin = lower_bound[yvar]
+    xmax = upper_bound[xvar]
+    ymax = upper_bound[yvar]
     
-    tval = stats.t.ppf(1-(1-alpha)/2, len(x)-1) # Two-tail
-    xm = x.mean()
-    ym = y.mean()
-    xs = x.std()
-    ys = y.std()
-    
-    ax.plot([xm-tval*xs, xm+tval*xs], [ym-tval*ys, ym-tval*ys], color=color)
-    ax.plot([xm+tval*xs, xm+tval*xs], [ym-tval*ys, ym+tval*ys], color=color)
-    ax.plot([xm+tval*xs, xm-tval*xs], [ym+tval*ys, ym+tval*ys], color=color)
-    ax.plot([xm-tval*xs, xm-tval*xs], [ym+tval*ys, ym-tval*ys], color=color)
+    ax.plot([xmin, xmax], [ymin, ymin], color=color)
+    ax.plot([xmax, xmax], [ymin, ymax], color=color)
+    ax.plot([xmax, xmin], [ymax, ymax], color=color)
+    ax.plot([xmin, xmin], [ymax, ymin], color=color)
 
 
 def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
@@ -136,6 +145,7 @@ def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
 def _add_obj_contour(x,y,color,label,columns,data,theta_star):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
+
     try:
         X, Y, Z = _get_data_slice(xvar,yvar,columns,data,theta_star)
         
@@ -158,8 +168,11 @@ def _add_LR_contour(x,y,color,label,columns,data,theta_star,threshold):
     plt.tricontour(triang,Z,[threshold], colors='r')
 
 
-def _set_axis_limits(g, axis_limits, theta_vals):
+def _set_axis_limits(g, axis_limits, theta_vals, theta_star):
     
+    if theta_star is not None:
+        theta_vals = theta_vals.append(theta_star, ignore_index=True)
+        
     if axis_limits is None:
         axis_limits = {}
         for col in theta_vals.columns:
@@ -175,32 +188,39 @@ def _set_axis_limits(g, axis_limits, theta_vals):
             ax.set_xlim(axis_limits[xvar])
         else: # on diagonal
             ax.set_xlim(axis_limits[xvar])
-            
+
             
 def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[], 
-                  axis_limits=None, add_obj_contour=True, 
-                  add_legend=True, filename=None, return_scipy_distributions=False):
+                  axis_limits=None, title=None, add_obj_contour=True, 
+                  add_legend=True, filename=None):
     """
-    Plot pairwise relationship for theta values, and optionally confidence 
-    intervals and results from likelihood ratio tests
+    Plot pairwise relationship for theta values, and optionally alpha-level 
+    confidence intervals and objective value contours
     
     Parameters
     ----------
     theta_values: DataFrame, columns = variable names and (optionally) 'obj' and alpha values
-        Theta values and (optionally) an objective value and results from the 
-        likelihood ratio test
-    theta_star: dict, keys = variable names, optional
+        Theta values and (optionally) an objective value and results from 
+        leaveNout_bootstrap_test, likelihood_ratio_test, or 
+        confidence_region_test
+    theta_star: dict or Series, keys = variable names, optional
         Theta* (or other individual values of theta, also used to 
         slice higher dimensional contour intervals in 2D)
     alpha: float, optional
-        Confidence interval value
+        Confidence interval value, if an alpha value is given and the 
+        distributions list is empty, the data will be filtered by True/False 
+        values using the column name whose value equals alpha (see results from
+        leaveNout_bootstrap_test, likelihood_ratio_test, or 
+        confidence_region_test)
     distributions: list of strings, optional
-        Statistical distribution used for confidence intervals,  
+        Statistical distribution used to define a confidence region, 
         options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, and 
         'Rect' for rectangular.
 		Confidence interval is a 2D slice, using linear interpolation at theta*.
     axis_limits: dict, optional
         Axis limits in the format {variable: [min, max]}
+    title: string, optional
+        Plot title
     add_obj_contour: bool, optional
         Add a contour plot using the column 'obj' in theta_values.
         Contour plot is a 2D slice, using linear interpolation at theta*.
@@ -208,29 +228,35 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         Add a legend to the plot
     filename: string, optional
         Filename used to save the figure
-    return_scipy_distributions: bool, optional
-        Return the scipy distributions for MVN and KDE
-        
-    Returns
-    ----------
-    (mvn_dist, kde_dist): tuple
-        If return_scipy_distributions = True, return the MVN and KDE scipy 
-        distributions
     """
-
+    assert isinstance(theta_values, pd.DataFrame)
+    assert isinstance(theta_star, (type(None), dict, pd.Series, pd.DataFrame))
+    assert isinstance(alpha, (type(None), int, float))
+    assert isinstance(distributions, list)
+    assert set(distributions).issubset(set(['MVN', 'KDE', 'Rect']))
+    assert isinstance(axis_limits, (type(None), dict))
+    assert isinstance(title, (type(None), str))
+    assert isinstance(add_obj_contour, bool)
+    assert isinstance(filename, (type(None), str))
+    
     if len(theta_values) == 0:
         return('Empty data')    
     if isinstance(theta_star, dict):
         theta_star = pd.Series(theta_star)
-        
-    theta_names = [col for col in theta_values.columns if (col not in ['obj']) and (not isinstance(col, float))]
+    if isinstance(theta_star, pd.DataFrame):
+        theta_star = theta_star.loc[0,:]
     
-    filter_data_by_alpha = False
-    if (alpha is not None) and (alpha in theta_values.columns):
-        filter_data_by_alpha = True
+    theta_names = [col for col in theta_values.columns if (col not in ['obj']) 
+                        and (not isinstance(col, float)) and (not isinstance(col, int))]
+    
+    # Filter data by alpha
+    if (alpha in theta_values.columns) and (len(distributions) == 0):
         thetas = theta_values.loc[theta_values[alpha] == True, theta_names]
     else:
         thetas = theta_values[theta_names]
+    
+    if theta_star is not None:
+        theta_star = theta_star[theta_names]
     
     legend_elements = []
     
@@ -242,7 +268,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     # Plot filled contours using all theta values based on obj
     if 'obj' in theta_values.columns and add_obj_contour:
         g.map_offdiag(_add_obj_contour, columns=theta_names, data=theta_values, 
-            theta_star=theta_star)
+                      theta_star=theta_star)
         
     # Plot thetas
     g.map_offdiag(plt.scatter, s=10)
@@ -252,6 +278,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     # Plot theta*
     if theta_star is not None:
         g.map_offdiag(_add_scatter, color='k', columns=theta_names, theta_star=theta_star)
+        
         legend_elements.append(Line2D([0], [0], marker='o', color='w', label='theta*',
                                       markerfacecolor='k', markersize=6))
     
@@ -260,43 +287,38 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     if (alpha is not None) and (len(distributions) > 0):
         
         if theta_star is None:
-            print('theta* not defined, condifence interval slice is at mean value of theta')
+            print("""theta_star is not defined, confidence region slice will be 
+                  plotted at the mean value of theta""")
             theta_star = thetas.mean()
-            
-        if filter_data_by_alpha:
-            alpha = 1 # Data is already filtered by alpha
         
         mvn_dist = None
         kde_dist = None
         for i, dist in enumerate(distributions):
             if dist == 'Rect':
+                lb, ub = fit_rect_dist(thetas, alpha)
                 g.map_offdiag(_add_rectangle_CI, color=colors[i], columns=theta_names, 
-                            alpha=alpha)
+                            lower_bound=lb, upper_bound=ub)
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'MVN':
-                mvn_dist = stats.multivariate_normal(thetas.mean(), 
-                                        thetas.cov(), allow_singular=True)
+                mvn_dist = fit_mvn_dist(thetas)
                 Z = mvn_dist.pdf(thetas)
-                score = stats.scoreatpercentile(Z.transpose(), (1-alpha)*100) 
+                score = stats.scoreatpercentile(Z, (1-alpha)*100) 
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=mvn_dist, 
                             theta_star=theta_star)
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'KDE':
-                kde_dist = stats.gaussian_kde(thetas.transpose().values)
+                kde_dist = fit_kde_dist(thetas)
                 Z = kde_dist.pdf(thetas.transpose())
-                score = stats.scoreatpercentile(Z.transpose(), (1-alpha)*100) 
+                score = stats.scoreatpercentile(Z, (1-alpha)*100) 
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=kde_dist, 
                             theta_star=theta_star)
                 legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
             
-            else:
-                print('Invalid distribution')
-            
-    _set_axis_limits(g, axis_limits, thetas)
+    _set_axis_limits(g, axis_limits, thetas, theta_star)
     
     for ax in g.axes.flatten():
         ax.ticklabel_format(style='sci', scilimits=(-2,2), axis='both')
@@ -305,12 +327,208 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
             xvar, yvar, loc = _get_variables(ax, theta_names)
             if loc == (len(theta_names)-1,0):
                 ax.legend(handles=legend_elements, loc='best', prop={'size': 8})
+    if title:
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(title) 
+        
+    # Work in progress
+    # Plot lower triangle graphics in separate figures, useful for presentations
+    lower_triangle_only = False
+    if lower_triangle_only:
+        for ax in g.axes.flatten():
+            xvar, yvar, (xloc, yloc) = _get_variables(ax, theta_names)
+            if xloc < yloc: # lower triangle
+                ax.remove()
+                
+                ax.set_xlabel(xvar)
+                ax.set_ylabel(yvar)
+                
+                fig = plt.figure()
+                ax.figure=fig
+                fig.axes.append(ax)
+                fig.add_axes(ax)
+                
+                f, dummy = plt.subplots()
+                bbox = dummy.get_position()
+                ax.set_position(bbox) 
+                dummy.remove()
+                plt.close(f)
 
+                ax.tick_params(reset=True)
+                
+                if add_legend:
+                    ax.legend(handles=legend_elements, loc='best', prop={'size': 8})
+                
+        plt.close(g.fig)
+    
     if filename is None:
         plt.show()
     else:
         plt.savefig(filename)
         plt.close()
     
-    if return_scipy_distributions:
-        return mvn_dist, kde_dist
+
+def fit_rect_dist(theta_values, alpha):
+    """
+    Fit an alpha-level rectangular distribution to theta values
+    
+    Parameters
+    ----------
+    theta_values: DataFrame, columns = variable names
+        Theta values
+    alpha: float, optional
+        Confidence interval value
+    
+    Returns
+    ---------
+    tuple containing lower bound and upper bound for each variable
+    """
+    assert isinstance(theta_values, pd.DataFrame)
+    assert isinstance(alpha, (int, float))
+    
+    tval = stats.t.ppf(1-(1-alpha)/2, len(theta_values)-1) # Two-tail
+    m = theta_values.mean()
+    s = theta_values.std()
+    lower_bound = m-tval*s
+    upper_bound = m+tval*s
+    
+    return lower_bound, upper_bound
+    
+def fit_mvn_dist(theta_values):
+    """
+    Fit a multivariate normal distribution to theta values
+    
+    Parameters
+    ----------
+    theta_values: DataFrame, columns = variable names
+        Theta values
+    
+    Returns
+    ---------
+    scipy.stats.multivariate_normal distribution
+    """
+    assert isinstance(theta_values, pd.DataFrame)
+    
+    dist = stats.multivariate_normal(theta_values.mean(), 
+                                    theta_values.cov(), allow_singular=True)
+    return dist
+
+def fit_kde_dist(theta_values):
+    """
+    Fit a Gaussian kernel-density distribution to theta values
+    
+    Parameters
+    ----------
+    theta_values: DataFrame, columns = variable names
+        Theta values
+    
+    Returns
+    ---------
+    scipy.stats.gaussian_kde distribution
+    """
+    assert isinstance(theta_values, pd.DataFrame)
+
+    dist = stats.gaussian_kde(theta_values.transpose().values)
+    
+    return dist
+
+def _get_grouped_data(data1, data2, normalize, group_names):
+    if normalize:
+        data_median = data1.median()
+        data_std = data1.std()
+        data1 = (data1 - data_median)/data_std
+        data2 = (data2 - data_median)/data_std
+        
+    # Combine data1 and data2 to create a grouped histogram
+    data = pd.concat({group_names[0]: data1, 
+                    group_names[1]: data2})
+    data.reset_index(level=0, inplace=True)
+    data.rename(columns={'level_0': 'set'}, inplace=True)
+    
+    data = data.melt(id_vars='set', value_vars=data1.columns, var_name='columns')
+    
+    return data
+
+def grouped_boxplot(data1, data2, normalize=False, group_names=['data1', 'data2'],
+                    filename=None):
+    """
+    Plot a grouped boxplot to compare two datasets
+    
+    The datasets can be normalized by the median and standard deviation of data1.
+    
+    Parameters
+    ----------
+    data1: DataFrame, columns = variable names
+        Data set
+    data2: DataFrame, columns = variable names
+        Data set
+    normalize : bool, optional
+        Normalize both datasets by the median and standard deviation of data1
+    group_names : list, optional
+        Names used in the legend
+    filename: string, optional
+        Filename used to save the figure
+    """
+    assert isinstance(data1, pd.DataFrame)
+    assert isinstance(data2, pd.DataFrame)
+    assert isinstance(normalize, bool)
+    assert isinstance(group_names, list)
+    assert isinstance(filename, (type(None), str))
+        
+    data = _get_grouped_data(data1, data2, normalize, group_names)
+    
+    plt.figure()
+    sns.boxplot(data=data, hue='set', y='value', x='columns', 
+                order=data1.columns)
+
+    plt.gca().legend().set_title('')
+    plt.gca().set_xlabel('')
+    plt.gca().set_ylabel('')
+    
+    if filename is None:
+        plt.show()
+    else:
+        plt.savefig(filename)
+        plt.close()
+
+def grouped_violinplot(data1, data2, normalize=False, group_names=['data1', 'data2'],
+                       filename=None):
+    """
+    Plot a grouped violinplot to compare two datasets
+    
+    The datasets can be normalized by the median and standard deviation of data1.
+    
+    Parameters
+    ----------
+    data1: DataFrame, columns = variable names
+        Data set
+    data2: DataFrame, columns = variable names
+        Data set
+    normalize : bool, optional
+        Normalize both datasets by the median and standard deviation of data1
+    group_names : list, optional
+        Names used in the legend
+    filename: string, optional
+        Filename used to save the figure
+    """
+    assert isinstance(data1, pd.DataFrame)
+    assert isinstance(data2, pd.DataFrame)
+    assert isinstance(normalize, bool)
+    assert isinstance(group_names, list)
+    assert isinstance(filename, (type(None), str))
+    
+    data = _get_grouped_data(data1, data2, normalize, group_names)
+    
+    plt.figure()
+    sns.violinplot(data=data, hue='set', y='value', x='columns',
+                   order=data1.columns, split=True)
+    
+    plt.gca().legend().set_title('')
+    plt.gca().set_xlabel('')
+    plt.gca().set_ylabel('')
+    
+    if filename is None:
+        plt.show()
+    else:
+        plt.savefig(filename)
+        plt.close()

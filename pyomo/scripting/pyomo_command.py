@@ -10,18 +10,11 @@
 
 import sys
 import argparse
-try:
-    from pympler import muppy
-    from pympler.muppy import summary
-    from pympler import tracker
-    from pympler.asizeof import *
-    pympler_available = True
-except:
-    pympler_available = False
 
 from pyutilib.misc import Options, Container
 
 from pyomo.common import pyomo_command
+from pyomo.common.dependencies import pympler_available
 import pyomo.scripting.util
 from pyomo.core import ConcreteModel
 
@@ -260,7 +253,7 @@ def add_misc_group(parser):
         dest='profile',
         type=int,
         default=0)
-    if pympler_available is True:
+    if pympler_available:
         group.add_argument("--profile-memory",
                              help="If Pympler is available, report memory usage statistics for the generated instance and any associated processing steps. A value of 0 indicates disabled. A value of 1 forces the print of the total memory after major stages of the pyomo script. A value of 2 forces summary memory statistics after major stages of the pyomo script. A value of 3 forces detailed memory statistics during instance creation and various steps of preprocessing. Values equal to 4 and higher currently provide no additional information. Higher values automatically enable all functionality associated with lower values, e.g., 3 turns on detailed and summary statistics.",
                              action="store",

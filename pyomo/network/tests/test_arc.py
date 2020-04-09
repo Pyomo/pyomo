@@ -1163,8 +1163,9 @@ class TestArc(unittest.TestCase):
 
         ref = """
 1 Set Declarations
-    time : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
+    time : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
 
 5 Block Declarations
     cs1_expanded : Size=1, Index=None, Active=True
@@ -1359,8 +1360,9 @@ class TestArc(unittest.TestCase):
         m.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """1 Set Declarations
-    comp : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['a', 'b', 'c']
+    comp : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'a', 'b', 'c'}
 
 16 Block Declarations
     feed : Size=1, Index=None, Active=True
