@@ -90,14 +90,16 @@ jobs:
         echo ""
         GAMS_INSTALLER=${GITHUB_WORKSPACE}/download-cache/gams_installer.exe
         if test ! -e $GAMS_INSTALLER; then
+            echo "...downloading GAMS"
             GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0
             if test "${{matrix.TARGET}}" == osx; then
                 wget -q $GAMS_URL/macosx/osx_x64_64_sfx.exe -O $GAMS_INSTALLER
             else
                 wget -q $GAMS_URL/linux/linux_x64_64_sfx.exe -O $GAMS_INSTALLER
             fi
-            chmod +x gams_installer.exe
+            chmod +x $GAMS_INSTALLER
         fi
+        echo "...installing GAMS"
         $GAMS_INSTALLER -q -d gams
         GAMS_DIR=`ls -d1 $(pwd)/gams/*/ | head -1`
         export PATH=$PATH:$GAMS_DIR
@@ -112,6 +114,7 @@ jobs:
             fi
         done
         pushd $gams_ver
+        echo "...installing GAMS Python API"
         python setup.py -q install -noCheck
         popd
         popd

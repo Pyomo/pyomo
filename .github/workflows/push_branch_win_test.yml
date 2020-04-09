@@ -75,9 +75,7 @@ jobs:
         }
         catch
         {
-            Write-Host ("##########################################################################")
             Write-Host ("WARNING: CPLEX Community Edition is not available for Python ${{ matrix.python-version }}")
-            Write-Host ("##########################################################################")
             conda deactivate
             conda activate test
         }
@@ -95,12 +93,14 @@ jobs:
         Write-Host ("Installing GAMS")
         Write-Host ("")
         if ( -not (Test-Path "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe")) {
-            Write-Host ("Downloading GAMS")
+            Write-Host ("...downloading GAMS")
             New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\download-cache"
             Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe"
         }
+        Write-Host ("...installing GAMS")
         Start-Process -FilePath "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe" -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
         cd gams\apifiles\Python\
+        Write-Host ("...installing GAMS Python ${{matrix.python-version}} API")
         if(${{matrix.python-version}} -eq 2.7) {
           cd api
           python setup.py install
@@ -111,9 +111,7 @@ jobs:
           cd api_37
           python setup.py install
         }else { 
-          Write-Host ("########################################################################")
-          Write-Host ("WARNING: Python ${{matrix.python-version}}: GAMS Bindings not supported.")
-          Write-Host ("########################################################################")
+          Write-Host ("WARNING: GAMS Python bindings not available.")
         }
         Write-Host ("")
         Write-Host ("Conda package environment")
