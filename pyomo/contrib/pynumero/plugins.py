@@ -9,8 +9,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.extensions import ExtensionBuilderFactory
-from .build import build_pynumero
+from .build import PyNumeroBuilder
 
 def load():
-    ExtensionBuilderFactory.register('pynumero')(build_pynumero)
+    ExtensionBuilderFactory.register('pynumero')(PyNumeroBuilder)
 

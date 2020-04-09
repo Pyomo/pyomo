@@ -26,7 +26,7 @@ def handleReadonly(function, path, excinfo):
     else:
         raise
 
-def build_pynumero(user_args=[]):
+def build_pynumero(user_args=[], parallel=None):
     import distutils.core
     from setuptools import Extension
     from distutils.command.build_ext import build_ext
@@ -42,24 +42,29 @@ def build_pynumero(user_args=[]):
                 #'-DCMAKE_BUILD_TYPE=' + cmake_config,
             ] + user_args
 
-            build_args = [
-                '--config', cmake_config,
-            ]
-
             try:
                 # Redirect all stderr to stdout (to prevent powershell
                 # from inadvertently failing builds)
-                oldstderr = os.dup(sys.stderr.fileno())
+                old_stderr = os.dup(sys.stderr.fileno())
                 os.dup2(sys.stdout.fileno(), sys.stderr.fileno())
+                old_environ = dict(os.environ)
+                if parallel:
+                    # --parallel was only added in cmake 3.12.  Use an
+                    # environment variable so that we don't have to bump
+                    # the minimum cmake version.
+                    os.environ['CMAKE_BUILD_PARALLEL_LEVEL'] = str(parallel)
 
                 self.spawn(['cmake', project_dir] + cmake_args)
                 if not self.dry_run:
-                    self.spawn(['cmake', '--build', '.'] + build_args)
                     self.spawn(['cmake', '--build', '.',
-                                '--target', 'install'] + build_args)
+                                '--config', cmake_config])
+                    self.spawn(['cmake', '--build', '.',
+                                '--target', 'install',
+                                '--config', cmake_config])
             finally:
                 # Restore stderr
-                os.dup2(oldstderr, sys.stderr.fileno())
+                os.dup2(old_stderr, sys.stderr.fileno())
+                os.environ = old_environ
 
     class CMakeExtension(Extension, object):
         def __init__(self, name):
@@ -85,6 +90,11 @@ def build_pynumero(user_args=[]):
         os.chdir(basedir)
         shutil.rmtree(tmpdir, onerror=handleReadonly)
     sys.stdout.write("Installed PyNumero libraries to %s\n" % ( install_dir, ))
+
+
+class PyNumeroBuilder(object):
+    def __call__(self, parallel):
+        return build_pynumero(parallel=parallel)
 
 if __name__ == "__main__":
     build_pynumero(sys.argv[1:])

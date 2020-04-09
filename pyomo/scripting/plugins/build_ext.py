@@ -31,7 +31,7 @@ class ExtensionBuilder(object):
                 if hasattr(ext, 'skip') and ext.skip():
                     result = 'SKIP'
                 elif hasattr(ext, '__call__'):
-                    ext()
+                    ext(parallel=args.parallel)
                     result = ' OK '
                 else:
                     # Extension was a simple function and already ran
@@ -70,3 +70,11 @@ _parser = _extension_builder.create_parser(
         description='This builds all registered (compileable) extension modules'
     ))
 
+_parser.add_argument(
+    '-j', '--parallel',
+    action='store',
+    type=int,
+    dest='parallel',
+    default=None,
+    help="Build with this many processes/cores",
+    )
