@@ -117,7 +117,7 @@ jobs:
     - name: Download and install extensions
       run: |
         pyomo download-extensions
-        pyomo build-extensions
+        pyomo build-extensions --parallel 2
 
     - name: Run Pyomo tests
       run: |

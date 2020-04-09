@@ -154,7 +154,7 @@ jobs:
         Write-Host ("")
         Write-Host "Pyomo build-extensions"
         Write-Host ("")
-        Invoke-Expression "pyomo build-extensions"
+        Invoke-Expression "pyomo build-extensions --parallel 2"
 
     - name: Run nightly tests with test.pyomo
       shell: pwsh
