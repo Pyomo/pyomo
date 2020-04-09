@@ -62,6 +62,7 @@ jobs:
             #    brew list $pkg || brew install $pkg
             #done
         else
+            env | sort
             export APT_CONFIG=${GITHUB_WORKSPACE}/pkg-cache/apt.conf
             cp /etc/apt/apt.conf $APT_CONFIG
             echo "" >> $APT_CONFIG
