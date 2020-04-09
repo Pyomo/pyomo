@@ -1,4 +1,4 @@
-name: continuous-integration/github/pr
+name: GitHub CI (mpi)
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: mpi/${{ matrix.TARGET }}/py${{ matrix.python-version }}
+    name: ${{ matrix.TARGET }}/py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 1
@@ -64,7 +64,7 @@ jobs:
         export PATH=$PATH:$GAMS_DIR
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
         export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
-        cd gams/*/apifiles/Python/
+        cd $GAMS_DIR/apifiles/Python/
         py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
         gams_ver=api
         for ver in api_*; do
@@ -122,7 +122,10 @@ jobs:
             pyomo `pwd`/pyomo-model-libraries
 
     - name: Upload coverage to codecov
+      env:
+        GITHUB_JOB_NAME: mpi/${{ matrix.TARGET }}/py${{ matrix.python-version }}
       run: |
         find . -maxdepth 10 -name ".cov*"
         coverage combine
-        bash <(curl -s https://codecov.io/bash) -X gcov
+        coverage report -i
+        bash <(curl -s https://codecov.io/bash) -X gcov -n "$GITHUB_JOB_NAME"

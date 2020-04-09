@@ -1,9 +1,11 @@
 2 Set Declarations
     A : set A
-        Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
-    c3_index : Dim=0, Dimen=1, Size=1, Domain=None, Ordered=False, Bounds=None
-        [1]
+        Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
+    c3_index : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    1 :    {1,}
 
 2 Param Declarations
     B : param B

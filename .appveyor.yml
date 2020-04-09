@@ -132,8 +132,17 @@ install:
   #
   # Install GAMS
   #
-  - ps: Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/windows/windows_x64_64.exe'
+  - ps: Start-FileDownload 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe'
   - windows_x64_64.exe /SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS
+  - "SET cwd=%cd%"
+  - "cd gams\\apifiles\\Python"
+  - IF PYTHON_VERSION equ 2.7 (cd api \ python setup.py install )
+  - IF PYTHON_VERSION equ 3.6 (cd api_36 \ python setup.py install )
+  - IF PYTHON_VERSION equ 3.7 (cd api_37 \ python setup.py install )
+  - "cd %cwd%"
+  #
+  # Add GAMS to PATH
+  #
   - "SET PATH=%cd%\\gams;%PATH%"
   #
   # Clone but don't install pyomo-model-libraries

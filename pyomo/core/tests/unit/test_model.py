@@ -764,8 +764,10 @@ class Test(unittest.TestCase):
                 return sum(m.x[i] for i in m.I) >= 0
             m.c = Constraint( rule=c )
 
-        model = AbstractModel(rule=make_invalid)
-        self.assertRaises(RuntimeError, model.create_instance)
+        with self.assertRaisesRegexp(
+                ValueError, 'x\[1\]: The component has not been constructed.'):
+            model = AbstractModel(rule=make_invalid)
+            instance = model.create_instance()
 
         model = AbstractModel(rule=make)
         instance = model.create_instance()

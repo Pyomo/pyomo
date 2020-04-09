@@ -20,12 +20,12 @@ from six import itervalues, StringIO
 
 from pyomo.environ import *
 from pyomo.core.base.var import IndexedVar
-from pyomo.core.base.sets import _SetProduct, SetOf
+from pyomo.core.base.set import SetProduct, UnorderedSetOf
 from pyomo.core.base.indexed_component import (
     UnindexedComponent_set, IndexedComponent
 )
 from pyomo.core.base.reference import (
-    _ReferenceDict, _ReferenceSet, Reference, _get_base_sets
+    _ReferenceDict, _ReferenceSet, Reference
 )
 
 
@@ -387,7 +387,7 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.r.type(), Var)
         self.assertIsNot(m.r.index_set(), m.x.index_set())
         self.assertIs(m.x.index_set(), UnindexedComponent_set)
-        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.r), 1)
         self.assertTrue(m.r.is_indexed())
         self.assertIn(None, m.r)
@@ -401,7 +401,7 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.s.type(), Var)
         self.assertIsNot(m.s.index_set(), m.x.index_set())
         self.assertIs(m.x.index_set(), UnindexedComponent_set)
-        self.assertIs(type(m.s.index_set()), SetOf)
+        self.assertIs(type(m.s.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.s), 1)
         self.assertTrue(m.s.is_indexed())
         self.assertIn(None, m.s)
@@ -466,7 +466,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:])
 
         self.assertIs(m.r.type(), Var)
-        self.assertIs(type(m.r.index_set()), _SetProduct)
+        self.assertIsInstance(m.r.index_set(), SetProduct)
         self.assertIs(m.r.index_set().set_tuple[0], m.I)
         self.assertIs(m.r.index_set().set_tuple[1], m.J)
         self.assertEqual(len(m.r), 2*2)
@@ -491,7 +491,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:,:])
 
         self.assertIs(m.r.type(), Var)
-        self.assertIs(type(m.r.index_set()), _SetProduct)
+        self.assertIsInstance(m.r.index_set(), SetProduct)
         self.assertIs(m.r.index_set().set_tuple[0], m.I)
         self.assertIs(m.r.index_set().set_tuple[1], m.J)
         self.assertEqual(len(m.r), 2*2)
@@ -517,7 +517,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[3,:])
 
         self.assertIs(m.r.type(), Var)
-        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.r), 2*1)
         self.assertEqual(m.r[1,3].lb, 1)
         self.assertEqual(m.r[2,3].lb, 2)
@@ -540,7 +540,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:])
 
         self.assertIs(m.r.type(), Var)
-        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.r), 2*2)
         self.assertEqual(m.r[1,3].lb, 1)
         self.assertEqual(m.r[2,4].lb, 2)
@@ -563,7 +563,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:])
 
         self.assertIs(m.r.type(), Var)
-        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.r), 2*2)
         self.assertEqual(m.r[1,3].lb, 1)
         self.assertEqual(m.r[2,4].lb, 2)
@@ -586,7 +586,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:,:])
 
         self.assertIs(m.r.type(), Var)
-        self.assertIs(type(m.r.index_set()), SetOf)
+        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.r), 2*2*2)
         self.assertEqual(m.r[1,3,3].lb, 1)
         self.assertEqual(m.r[2,4,3].lb, 2)
@@ -606,10 +606,10 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:])
         self.assertEqual(len(m.r), 1)
         self.assertEqual(m.r.index_set().dimen, 2)
-        base_sets = list(_get_base_sets(m.r.index_set()))
+        base_sets = list(m.r.index_set().subsets())
         self.assertEqual(len(base_sets), 2)
-        self.assertIs(type(base_sets[0]), SetOf)
-        self.assertIs(type(base_sets[1]), SetOf)
+        self.assertIs(type(base_sets[0]), UnorderedSetOf)
+        self.assertIs(type(base_sets[1]), UnorderedSetOf)
 
     def test_ctype_detection(self):
         m = ConcreteModel()

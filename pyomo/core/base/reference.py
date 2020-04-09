@@ -10,7 +10,7 @@
 
 from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
-from pyomo.core.base.sets import SetOf, _SetProduct, _SetDataBase
+from pyomo.core.base.set import SetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set
@@ -347,14 +347,6 @@ class _ReferenceSet(collections_Set):
         )
 
 
-def _get_base_sets(_set):
-    if isinstance(_set, _SetProduct):
-        for subset in _set.set_tuple:
-            for _ in _get_base_sets(subset):
-                yield _
-    else:
-        yield _set
-
 def _identify_wildcard_sets(iter_stack, index):
     # if we have already decided that there isn't a comon index for the
     # slices, there is nothing more we can do.  Bail.
@@ -368,7 +360,7 @@ def _identify_wildcard_sets(iter_stack, index):
         if level is not None:
             offset = 0
             wildcard_sets = {}
-            for j,s in enumerate(_get_base_sets(level.component.index_set())):
+            for j,s in enumerate(level.component.index_set().subsets()):
                 if s is UnindexedComponent_set:
                     wildcard_sets[j] = s
                     offset += 1
