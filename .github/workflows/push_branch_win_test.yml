@@ -85,6 +85,7 @@ jobs:
         Write-Host ("Installing GAMS")
         Write-Host ("")
         if ( -not (Test-Path "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe")) {
+            Write-Host ("Downloading GAMS")
             New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\download-cache"
             Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile "$env:GITHUB_WORKSPACE\download-cache\windows_x64_64.exe"
         }
