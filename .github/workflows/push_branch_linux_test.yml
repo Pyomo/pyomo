@@ -62,9 +62,9 @@ jobs:
             #    brew list $pkg || brew install $pkg
             #done
         else
-            sudo echo "" >> /etc/apt/apt.config
-            sudo echo "Dir::Cache ${GITHUB_WORKSPACE}/pkg-cache;" >> /etc/apt/apt.config
-            sudo echo "Dir::Cache::Archives archives/;" >> /etc/apt/apt.config
+            sudo echo "" >> /etc/apt/apt.conf
+            sudo echo "Dir::Cache ${GITHUB_WORKSPACE}/pkg-cache;" >> /etc/apt/apt.conf
+            #sudo echo "Dir::Cache::Archives archives/;" >> /etc/apt/apt.conf
             echo "Install pre-dependencies for ipopt..."
             sudo apt-get install libopenblas-dev gfortran liblapack-dev
         fi
