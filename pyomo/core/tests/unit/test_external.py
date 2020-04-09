@@ -127,6 +127,7 @@ class TestAMPLExternalFunction(unittest.TestCase):
         DLL = find_GSL()
         if not DLL:
             self.skipTest("Could not find the amplgsl.dll library")
+        print(DLL)
         model = ConcreteModel()
         model.z_func = ExternalFunction(library=DLL, function="gsl_sf_gamma")
         model.x = Var(initialize=3, bounds=(1e-5,None))

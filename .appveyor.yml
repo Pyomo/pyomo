@@ -185,6 +185,10 @@ install:
   - "ipopt -v"
   - python --version
 
+
+  # Debugging Appveyor
+  - nosetests -v --nocapture pyomo.core.tests.unit.test_external
+
 build: off
 
 
