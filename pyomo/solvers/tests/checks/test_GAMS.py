@@ -339,9 +339,11 @@ class GAMSLogfileTestBase(unittest.TestCase):
         self.assertTrue(os.path.exists(self.logfile))
         with open(self.logfile) as f:
             logfile_contents = f.read()
+            print("LOGFILE:\n%s" % (logfile_contents,))
         self.assertIn(self.characteristic_output_string, logfile_contents)
 
     def _check_stdout(self, output_string, exists=True):
+        print("STDOUT:\n%s" % (output_string,))
         if exists:
             # Starting Compilation is outputted by the solver itself which in this
             # case should be printed to stdout and captured
