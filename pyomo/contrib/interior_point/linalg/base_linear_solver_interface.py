@@ -18,3 +18,9 @@ class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
     @abstractmethod
     def get_inertia(self):
         pass
+
+    def log_header(self):
+        pass
+
+    def log_info(self):
+        pass
