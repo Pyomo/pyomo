@@ -16,7 +16,7 @@ import sys
 import tempfile
 
 from pyomo.common import config
-from pyomo.common.fileutils import this_file_dir
+from pyomo.common.fileutils import this_file_dir, find_executable
 
 def handleReadonly(function, path, excinfo):
     excvalue = excinfo[1]
@@ -45,6 +45,8 @@ def build_pynumero(user_args=[], parallel=None):
             try:
                 # Redirect all stderr to stdout (to prevent powershell
                 # from inadvertently failing builds)
+                sys.stderr.flush()
+                sys.stdout.flush()
                 old_stderr = os.dup(sys.stderr.fileno())
                 os.dup2(sys.stdout.fileno(), sys.stderr.fileno())
                 old_environ = dict(os.environ)
@@ -54,7 +56,10 @@ def build_pynumero(user_args=[], parallel=None):
                     # the minimum cmake version.
                     os.environ['CMAKE_BUILD_PARALLEL_LEVEL'] = str(parallel)
 
-                self.spawn(['cmake', project_dir] + cmake_args)
+                cmake = find_executable('cmake')
+                if cmake is None:
+                    raise IOError("cmake not found in the system PATH")
+                self.spawn([cmake, project_dir] + cmake_args)
                 if not self.dry_run:
                     # Skip build and go straight to install: the build
                     # harness should take care of dependencies and this
@@ -62,11 +67,13 @@ def build_pynumero(user_args=[], parallel=None):
                     #
                     #self.spawn(['cmake', '--build', '.',
                     #            '--config', cmake_config])
-                    self.spawn(['cmake', '--build', '.',
+                    self.spawn([cmake, '--build', '.',
                                 '--target', 'install',
                                 '--config', cmake_config])
             finally:
                 # Restore stderr
+                sys.stderr.flush()
+                sys.stdout.flush()
                 os.dup2(old_stderr, sys.stderr.fileno())
                 os.environ = old_environ
 
