@@ -753,9 +753,11 @@ class GAMSShell(_GAMSSolver):
                 # If nothing was raised, or for all other cases, raise this
                 logger.error("GAMS encountered an error during solve. "
                              "Check listing file for details.")
-                logger.error("GAMS OUTPUT:\n\n%s" % (_,))
-                with open(lst_filename, 'r') as FILE:
-                    logger.error("GAMS LISTING:\n\n%s" % (FILE.read(),))
+                logger.error(_)
+                if os.path.exists(lst_filename):
+                    with open(lst_filename, 'r') as FILE:
+                        logger.error(
+                            "GAMS Listing file:\n\n%s" % (FILE.read(),))
                 raise RuntimeError("GAMS encountered an error during solve. "
                                    "Check listing file for details.")
 
