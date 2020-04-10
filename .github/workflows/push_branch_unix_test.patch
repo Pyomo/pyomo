@@ -1,0 +1,32 @@
+--- unix_python_matrix_test.yml	2020-04-10 09:36:48.625616329 -0600
++++ push_branch_unix_test.yml	2020-04-10 09:36:35.391525380 -0600
+@@ -1,11 +1,8 @@
+-name: GitHub CI (unix)
++name: GitHub Branch CI (unix)
+ 
+ on:
+   push:
+-    branches:
+-      - master
+-  pull_request:
+-    branches:
++    branches-ignore:
+       - master
+ 
+ jobs:
+@@ -21,7 +18,7 @@
+           TARGET: osx
+         - os: ubuntu-latest
+           TARGET: linux
+-        python-version: [3.5, 3.6, 3.7, 3.8]
++        python-version: [3.7]
+ 
+     steps:
+     - uses: actions/checkout@v2
+@@ -186,4 +183,5 @@
+         find . -maxdepth 10 -name ".cov*"
+         coverage combine
+         coverage report -i
+-        bash <(curl -s https://codecov.io/bash) -X gcov -n "$GITHUB_JOB_NAME"
++        # Disable coverage uploads on branches
++        # bash <(curl -s https://codecov.io/bash) -X gcov -n "$GITHUB_JOB_NAME"

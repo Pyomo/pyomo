@@ -1,0 +1,25 @@
+--- win_python_matrix_test.yml	2020-04-09 22:51:13.690583648 -0600
++++ push_branch_win_test.yml	2020-04-09 22:51:13.689583641 -0600
+@@ -1,11 +1,8 @@
+-name: GitHub CI (win)
++name: GitHub Branch CI (win)
+ 
+ on:
+   push:
+-    branches:
+-      - master
+-  pull_request:
+-    branches:
++    branches-ignore:
+       - master
+ 
+ jobs:
+@@ -15,7 +12,7 @@
+     strategy:
+       fail-fast: false # This flag causes all of the matrix to continue to run, even if one matrix option fails
+       matrix:
+-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8] 
++        python-version: [3.7] 
+     steps:
+     - uses: actions/checkout@v2
+ 
