@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 3.2)
+# It is possible that the minimum version could be as low as 3.0.  We
+# definitely need 3.0, as that added GIT_SUBMODULES to
+# ExternalProject_ADD, and without it the Ampl/MP checkout fails because
+# one of the submodules (gecode) is a private repository.
+
 PROJECT( pynumero )
 
 include(ExternalProject)
@@ -74,7 +79,6 @@ IF( BUILD_AMPLMP )
   ExternalProject_Add(amplmp
     GIT_TAG ${AMPLMP_TAG}
     GIT_REPOSITORY https://github.com/ampl/mp.git
-    GIT_SHALLOW 1
     # We don't need *any* submodules, but leaving it as an empty string
     # doesn't disable it as suggested by the documentation.  A
     # "workaround" from the web is to specify an existing directory that
