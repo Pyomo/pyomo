@@ -744,13 +744,18 @@ class GAMSShell(_GAMSSolver):
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
 
             if rc == 1 or rc == 127:
-                raise RuntimeError("Command 'gams' was not recognized")
+                raise IOError("Command 'gams' was not recognized")
             elif rc != 0:
                 if rc == 3:
                     # Execution Error
                     # Run check_expr_evaluation, which errors if necessary
                     check_expr_evaluation(model, symbolMap, 'shell')
                 # If nothing was raised, or for all other cases, raise this
+                logger.error("GAMS encountered an error during solve. "
+                             "Check listing file for details.")
+                logger.error("GAMS OUTPUT:\n\n%s" % (_,))
+                with open(lst_filename, 'r') as FILE:
+                    logger.error("GAMS LISTING:\n\n%s" % (FILE.read(),))
                 raise RuntimeError("GAMS encountered an error during solve. "
                                    "Check listing file for details.")
 
