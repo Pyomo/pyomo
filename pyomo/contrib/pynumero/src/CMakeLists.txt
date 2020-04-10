@@ -1,8 +1,7 @@
-cmake_minimum_required(VERSION 3.2)
-# It is possible that the minimum version could be as low as 3.0.  We
-# definitely need 3.0, as that added GIT_SUBMODULES to
-# ExternalProject_ADD, and without it the Ampl/MP checkout fails because
-# one of the submodules (gecode) is a private repository.
+cmake_minimum_required(VERSION 3.0)
+# CMake 3.0 added GIT_SUBMODULES to ExternalProject_ADD, and without it
+# the Ampl/MP checkout fails because one of the submodules (gecode) is a
+# private repository.
 
 PROJECT( pynumero )
 
