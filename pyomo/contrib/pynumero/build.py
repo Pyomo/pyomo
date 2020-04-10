@@ -63,7 +63,7 @@ def build_pynumero(user_args=[], parallel=None):
                 if not self.dry_run:
                     # Skip build and go straight to install: the build
                     # harness should take care of dependencies and this
-                    # will prevent repeatred builds in MSVS
+                    # will prevent repeated builds in MSVS
                     #
                     #self.spawn(['cmake', '--build', '.',
                     #            '--config', cmake_config])
