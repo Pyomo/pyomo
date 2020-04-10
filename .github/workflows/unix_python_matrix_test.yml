@@ -179,7 +179,7 @@ jobs:
         echo "Run test.pyomo..."
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
 
-    - name: Upload coverage to codecov
+    - name: Process code coverage report
       env:
         GITHUB_JOB_NAME: unix/${{ matrix.TARGET }}/py${{ matrix.python-version }}
       run: |

@@ -187,7 +187,7 @@ jobs:
         mpirun -np 3 --oversubscribe nosetests -v --eval-attr="mpi and (not fragile)" \
             pyomo `pwd`/pyomo-model-libraries
 
-    - name: Upload coverage to codecov
+    - name: Process code coverage report
       env:
         GITHUB_JOB_NAME: mpi/${{ matrix.TARGET }}/py${{ matrix.python-version }}
       run: |
