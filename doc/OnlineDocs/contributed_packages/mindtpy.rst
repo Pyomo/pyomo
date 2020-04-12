@@ -58,6 +58,32 @@ The solution may then be displayed by using the commands
 
   >>> SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt', tee=True)
 
+Single tree implementation
+---------------------------------------------
+
+MindtPy also supports single tree implementation of Outer Approximation (OA) algorithm, which is known as LP/NLP algorithm originally described in `Quesada & Grossmann`_.
+The LP/NLP algorithm in MindtPy is implemeted based on the LazyCallback function in commercial solvers.
+
+.. _Quesada & Grossmann: https://www.sciencedirect.com/science/article/abs/pii/0098135492800288
+
+
+.. Note::
+
+  Single tree implementation only supports Cplex now. To use LazyCallback function in CPLEX from Pyomo, the `Python API of CPLEX`_ solvers is required. This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be install on your computer.
+
+
+.. _Python API of CPLEX: https://www.ibm.com/support/knowledgecenter/SSSA5P_12.7.1/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html
+
+
+An example to call single tree is as follows.
+
+.. code::
+
+  >>> few
+
+
+
+
 MindtPy implementation and optional arguments
 ---------------------------------------------
 

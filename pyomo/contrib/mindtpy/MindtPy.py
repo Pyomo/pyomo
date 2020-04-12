@@ -216,14 +216,14 @@ class MindtPySolver(object):
         domain=bool
     ))
     CONFIG.declare("add_integer_cuts", ConfigValue(
-        default=False,
+        default=True,
         description="Add integer cuts (no-good cuts) to binary variables to disallow same integer solution again."
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
     ))
-    CONFIG.declare("lazy_callback", ConfigValue(
+    CONFIG.declare("single_tree", ConfigValue(
         default=False,
-        description="Use lazy callback in solving the MILP master problem.",
+        description="Use single tree implementation in solving the MILP master problem.",
         domain=bool
     ))
     CONFIG.declare("solution_pool", ConfigValue(
@@ -265,9 +265,12 @@ class MindtPySolver(object):
         config.set_value(kwds)
 
         # configration confirmation
-        if config.lazy_callback == True:
+        if config.single_tree == True:
             config.iteration_limit = 1
             config.add_slack = False
+            config.mip_solver = 'cplex_persistent'
+            config.logger.info(
+                "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
 
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()

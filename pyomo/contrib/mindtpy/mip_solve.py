@@ -28,7 +28,8 @@ try:
     from cplex.callbacks import LazyConstraintCallback
 except ImportError:
     print("Cplex python API is not found. Therefore, lp-nlp is not supported")
-'''Other solvers (e.g. Gurobi) are not supported yet'''
+    '''Other solvers (e.g. Gurobi) are not supported yet'''
+
 
 class LazyOACallback(LazyConstraintCallback):
     """Inherent class in Cplex to call Lazy callback."""
@@ -290,7 +291,7 @@ def solve_OA_master(solve_data, config):
     sign_adjust = 1 if main_objective.sense == minimize else -1
     if MindtPy.find_component('MindtPy_oa_obj') is not None:
         del MindtPy.MindtPy_oa_obj
-    
+
     if config.add_slack == True:
         if MindtPy.find_component('MindtPy_penalty_expr') is not None:
             del MindtPy.MindtPy_penalty_expr
@@ -310,34 +311,34 @@ def solve_OA_master(solve_data, config):
     getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-    with SuppressInfeasibleWarning():
-        masteropt = SolverFactory(config.mip_solver)
-        # determine if persistent solver is called.
-        if isinstance(masteropt, PersistentSolver):
-            masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
-        if config.lazy_callback == True:
-            # Configuration of lazy callback
-            lazyoa = masteropt._solver_model.register_callback(LazyOACallback)
-            # pass necessary data and parameters to lazyoa
-            lazyoa.master_mip = solve_data.mip
-            lazyoa.solve_data = solve_data
-            lazyoa.config = config
-            lazyoa.opt = masteropt
-            masteropt._solver_model.set_warning_stream(None)
-            masteropt._solver_model.set_log_stream(None)
-            masteropt._solver_model.set_error_stream(None)
-        master_mip_results = masteropt.solve(
-            solve_data.mip, **config.mip_solver_args)  # , tee=True)
+    # with SuppressInfeasibleWarning():
+    masteropt = SolverFactory(config.mip_solver)
+    # determine if persistent solver is called.
+    if isinstance(masteropt, PersistentSolver):
+        masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
+    if config.single_tree == True:
+        # Configuration of lazy callback
+        lazyoa = masteropt._solver_model.register_callback(LazyOACallback)
+        # pass necessary data and parameters to lazyoa
+        lazyoa.master_mip = solve_data.mip
+        lazyoa.solve_data = solve_data
+        lazyoa.config = config
+        lazyoa.opt = masteropt
+        masteropt._solver_model.set_warning_stream(None)
+        masteropt._solver_model.set_log_stream(None)
+        masteropt._solver_model.set_error_stream(None)
+    master_mip_results = masteropt.solve(
+        solve_data.mip, **config.mip_solver_args)  # , tee=True)
 
-        if config.lazy_callback == True:
-            if main_objective.sense == minimize:
-                solve_data.LB = max(
-                    master_mip_results.problem.lower_bound, solve_data.LB)
-                solve_data.LB_progress.append(solve_data.LB)
+    if config.single_tree == True:
+        if main_objective.sense == minimize:
+            solve_data.LB = max(
+                master_mip_results.problem.lower_bound, solve_data.LB)
+            solve_data.LB_progress.append(solve_data.LB)
 
-                solve_data.UB = min(
-                    master_mip_results.problem.upper_bound, solve_data.UB)
-                solve_data.UB_progress.append(solve_data.UB)
+            solve_data.UB = min(
+                master_mip_results.problem.upper_bound, solve_data.UB)
+            solve_data.UB_progress.append(solve_data.UB)
 
     if master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or

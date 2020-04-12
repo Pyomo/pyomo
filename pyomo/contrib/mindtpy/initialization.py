@@ -24,8 +24,9 @@ def MindtPy_initialize_master(solve_data, config):
     """
     m = solve_data.mip = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
+    m.dual.deactivate()
 
-    m.dual.activate()
+    # m.dual.activate()
 
     if config.strategy == 'OA':
         calc_jacobians(solve_data, config)  # preload jacobians
@@ -75,7 +76,7 @@ def init_rNLP(solve_data, config):
     config.logger.info(
         "NLP %s: Solve relaxed integrality" % (solve_data.nlp_iter,))
     MindtPy = m.MindtPy_utils
-    TransformationFactory('core.relax_integrality').apply_to(m)
+    TransformationFactory('core.relax_integer_vars').apply_to(m)
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
             m, **config.nlp_solver_args)
@@ -98,6 +99,10 @@ def init_rNLP(solve_data, config):
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+            # TODO check if value of the binary or integer varibles is 0/1 or integer value.
+            for var in solve_data.mip.component_data_objects(ctype=Var):
+                if var.domain.name == 'Integer' or var.domain.name == 'Binary':
+                    var.value = int(round(var.value))
     elif subprob_terminate_cond is tc.infeasible:
         # TODO fail? try something else?
         config.logger.info(
@@ -118,6 +123,7 @@ def init_max_binaries(solve_data, config):
 
     """
     m = solve_data.working_model.clone()
+    m.dual.deactivate()
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1
     config.logger.info(

@@ -37,11 +37,11 @@ class TestMindtPy(unittest.TestCase):
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       bound_tolerance=1E-5,
-                      lazy_callback=True)
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_lazy_OA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
@@ -52,11 +52,11 @@ class TestMindtPy(unittest.TestCase):
                       init_strategy='max_binary',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      lazy_callback=True)
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_lazy_OA_MINLP_simple(self):
         """Test the outer approximation decomposition algorithm."""
@@ -68,11 +68,11 @@ class TestMindtPy(unittest.TestCase):
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       obj_bound=10,
-                      lazy_callback=True)
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
+            self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
     def test_lazy_OA_MINLP2_simple(self):
         """Test the outer approximation decomposition algorithm."""
@@ -84,11 +84,11 @@ class TestMindtPy(unittest.TestCase):
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       obj_bound=10,
-                      lazy_callback=True)
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.cost.expr) - 6.00976) <= 1E-2)
+            self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
 
     def test_lazy_OA_MINLP3_simple(self):
         """Test the outer approximation decomposition algorithm."""
@@ -99,11 +99,11 @@ class TestMindtPy(unittest.TestCase):
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       obj_bound=10,
-                      lazy_callback=True)
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.cost.expr) - (-5.512)) <= 1E-2)
+            self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal(self):
         """Test the outer approximation decomposition algorithm."""
@@ -113,11 +113,11 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      lazy_callback=True)
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
-            self.assertTrue(abs(value(model.obj.expr) - 0.66555) <= 1E-2)
+            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     # TODO fix the bug with integer_to_binary
     # def test_OA_Proposal_with_int_cuts(self):

@@ -144,7 +144,8 @@ def process_objective(solve_data, config, move_linear_objective=False):
         if move_linear_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
-            config.logger.info("Objective is nonlinear. Moving it to constraint set.")
+            config.logger.info(
+                "Objective is nonlinear. Moving it to constraint set.")
 
         util_blk.objective_value = Var(domain=Reals, initialize=0)
         if mcpp_available():
@@ -206,8 +207,8 @@ def copy_var_list_values(from_list, to_list, config,
             # Check to see if this is just a tolerance issue
             if ignore_integrality \
                 and ('is not in domain Binary' in err_msg
-                or 'is not in domain Integers' in err_msg):
-               v_to.value = value(v_from, exception=False)
+                     or 'is not in domain Integers' in err_msg):
+                v_to.value = value(v_from, exception=False)
             elif 'is not in domain Binary' in err_msg and (
                     fabs(var_val - 1) <= config.integer_tolerance or
                     fabs(var_val) <= config.integer_tolerance):
