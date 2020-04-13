@@ -30,7 +30,7 @@ FIND_LIBRARY(DL_LIBRARY dl)
 
 # We need the ASL and HSL libraries.  We can get them from Ipopt,
 # AMPL/MP, or ASL (netlib)
-SET(IPOPT_DIR CACHE PATH "Path to compiled Ipopt installation")
+SET(IPOPT_DIR "" CACHE PATH "Path to compiled Ipopt installation")
 SET(AMPLMP_DIR "" CACHE PATH "Path to compiled AMPL/MP installation")
 #SET(ASL_NETLIB_DIR "" CACHE PATH "Path to compiled ASL (netlib) installation")
 
@@ -69,6 +69,9 @@ FIND_LIBRARY(HSL_LIBRARY NAMES coinhsl libcoinhsl
         "${PC_COINHSL_LIBRARY_DIRS}"
 )
 
+# If BUILD_AMPLMP_IF_NEEDED is set and we couldn't find / weren't
+# pointed to an ASL build, then we will forcibly enable the AMPLMP build
+# to provide the ASL.
 IF( BUILD_AMPLMP_IF_NEEDED AND (NOT ASL_LIBRARY OR NOT ASL_INCLUDE_DIR) )
     set_property(CACHE BUILD_AMPLMP PROPERTY VALUE ON)
 ENDIF()
@@ -85,9 +88,9 @@ IF( BUILD_AMPLMP )
     GIT_SUBMODULES test
     CMAKE_CACHE_ARGS -DCMAKE_INSTALL_PREFIX:STRING=${ABS_INSTALL_PREFIX}
     UPDATE_DISCONNECTED TRUE
-    # 3.1.0 needs to be patched to compile with recent compilers
-    # (notably ubuntu 18.04; see
-    # https://github.com/easybuilders/easybuild-easyconfigs/issues/9380
+    # 3.1.0 needs to be patched to compile with recent compilers,
+    # notably ubuntu 18.04.  The patch applies a backport of fmtlib/fmt
+    # abbefd7; see https://github.com/fmtlib/fmt/issues/398
     PATCH_COMMAND git apply
        ${CMAKE_CURRENT_SOURCE_DIR}/amplmp-${AMPLMP_TAG}.patch
     )
