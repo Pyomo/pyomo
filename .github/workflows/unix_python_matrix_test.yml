@@ -182,7 +182,7 @@ jobs:
 
     - name: Run Pyomo tests
       run: |
-        echo "Run test.pyomo..."
+        echo "Run Pyomo tests..."
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
 
     - name: Process code coverage report

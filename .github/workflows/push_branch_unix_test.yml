@@ -142,6 +142,8 @@ jobs:
 
     - name: Install Pyomo and PyUtilib
       run: |
+        export PYTHONWARNINGS="ignore::UserWarning"
+        echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
@@ -155,33 +157,37 @@ jobs:
 
     - name: Set up coverage tracking
       run: |
-        WORKSPACE=`pwd`
-        COVERAGE_PROCESS_START=${WORKSPACE}/coveragerc
+        COVERAGE_PROCESS_START=${GITHUB_WORKSPACE}/coveragerc
         echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_PROCESS_START"
-        cp ${WORKSPACE}/.coveragerc ${COVERAGE_PROCESS_START}
-        echo "data_file=${WORKSPACE}/.coverage" >> ${COVERAGE_PROCESS_START}
+        cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_PROCESS_START}
+        echo "data_file=${GITHUB_WORKSPACE}/.coverage" \
+            >> ${COVERAGE_PROCESS_START}
         SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
-        if [ -z "$DISABLE_COVERAGE" ]; then
-            echo 'import coverage; coverage.process_startup()' \
-                > ${SITE_PACKAGES}/run_coverage_at_startup.pth
-        fi
+        echo 'import coverage; coverage.process_startup()' \
+            > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
     - name: Download and install extensions
       run: |
+        echo ""
+        echo "Pyomo download-extensions"
+        echo ""
         pyomo download-extensions
+        echo ""
+        echo "Pyomo build-extensions"
+        echo ""
         pyomo build-extensions --parallel 2
 
     - name: Run Pyomo tests
       run: |
-        echo "Run test.pyomo..."
+        echo "Run Pyomo tests..."
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
 
     - name: Process code coverage report
       env:
-        GITHUB_JOB_NAME: unix/${{ matrix.TARGET }}/py${{ matrix.python-version }}
+        GITHUB_JOB_NAME: unix/${{matrix.TARGET}}/py${{matrix.python-version}}
       run: |
-        find . -maxdepth 10 -name ".cov*"
         coverage combine
         coverage report -i
+        curl --retry 8 -s https://codecov.io/bash -o codecov.sh
         # Disable coverage uploads on branches
-        # bash <(curl -s https://codecov.io/bash) -X gcov -n "$GITHUB_JOB_NAME"
+        #bash codecov.sh -X gcov -n "$GITHUB_JOB_NAME"
