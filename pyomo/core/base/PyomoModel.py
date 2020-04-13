@@ -47,7 +47,9 @@ from pyomo.core.base.numvalue import *
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.set import Set, UnknownSetDimen
 from pyomo.core.base.component import Component, ComponentUID
-from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
+from pyomo.core.base.plugin import (
+    ModelComponentFactory, TransformationFactory, UnknownTransformation,
+)
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 
 import pyomo.opt
@@ -933,7 +935,7 @@ TransformationFactory('%s').apply_to(model) to directly apply the
 transformation to the model instance.""" % (name,name,) )
 
         xfrm = TransformationFactory(name)
-        if xfrm is None:
+        if type(xfrm) is UnknownTransformation:
             raise ValueError("Unknown model transformation '%s'" % name)
         return xfrm.apply_to(self, **kwds)
 

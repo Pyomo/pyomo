@@ -276,14 +276,55 @@ class Transformation(object):
         return instance
 
 
-TransformationFactory = Factory('transformation type')
+class UnknownTransformation(Transformation):
+
+    def __init__(self, name, kwds):
+        self._target_name = name
+        self._kwds = kwds
+
+    def apply(self, *args, **kwds):
+        self._error('apply')
+    apply.__doc__ = Transformation.apply.__doc__
+
+    def apply_to(self, *args, **kwds):
+        self._error('apply_to')
+    apply_to.__doc__ = Transformation.apply_to.__doc__
+
+    def create_using(self, *args, **kwds):
+        self._error('create_using')
+    create_using.__doc__ = Transformation.create_using.__doc__
+
+    def _error(self, method_name):
+        raise RuntimeError("""Attempting to use an unavailable transformation.
+
+The TransformationFactory was unable to create "%s"
+and returned an UnknownTransformation object.  This error is raised at
+the point where the UnknownTransformation object was used as if it were
+valid (by calling method "%s").
+
+The original transformation was created with the following arguments:
+\t""" % ( self._target_name, method_name )
++ ( "\n\t".join("%s: %r" % i for i in sorted(self._kwds.items()))
+    if self._kwds else "{}" )
+)
+
+
+class TransformationFactoryClass(Factory):
+    def __call__(self, name=None, **kwds):
+        xfrm = super(TransformationFactoryClass, self).__call__(name, **kwds)
+        if xfrm is None:
+            return UnknownTransformation(name, kwds)
+        else:
+            return xfrm
+
+TransformationFactory = TransformationFactoryClass('transformation type')
 
 @deprecated(version='4.3.11323')
 def apply_transformation(*args, **kwds):
     if len(args) == 0:
         return list(TransformationFactory)
     xfrm = TransformationFactory(args[0])
-    if len(args) == 1 or xfrm is None:
+    if len(args) == 1 or type(xfrm) is UnknownTransformation:
         return xfrm
     tmp=(args[1],)
     return xfrm.apply(*tmp, **kwds)
