@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false # This flag causes all of the matrix to continue to run, even if one matrix option fails
       matrix:
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8] 
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v2
 
@@ -43,20 +43,20 @@ jobs:
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
-        Write-Host ("Current Enviroment variables: ")
+        echo "Current Enviroment variables: "
         gci env:Path | Sort Name
-        Write-Host ("")
-        Write-Host ("Update conda, then force it to NOT update itself again...")
-        Write-Host ("")
+        echo ""
+        echo "Update conda, then force it to NOT update itself again..."
+        echo ""
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $env:GITHUB_WORKSPACE\conda-cache
         conda info
         conda config --show-sources
         conda list --show-channel-urls
-        Write-Host ("")
-        Write-Host ("Setting Conda Env Vars... ")
-        Write-Host ("")
+        echo ""
+        echo "Setting Conda Env Vars... "
+        echo ""
         $CONDA_INSTALL = "conda install -q -y"
         $ANACONDA = "$CONDA_INSTALL -c anaconda"
         $CONDAFORGE = "$CONDA_INSTALL -c conda-forge --no-update-deps"
@@ -67,22 +67,22 @@ jobs:
         $ADDITIONAL_CF_PKGS+=" pymysql pyro4 pint pathos"
         $ADDITIONAL_CF_PKGS+=" glpk"
         Invoke-Expression "$CONDAFORGE $MINICONDA_EXTRAS $ADDITIONAL_CF_PKGS"
-        Write-Host ("")
-        Write-Host ("Try to install CPLEX...")
-        Write-Host ("")
+        echo ""
+        echo "Try to install CPLEX..."
+        echo ""
         try
         {
             Invoke-Expression "$CONDAFORGE -c ibmdecisionoptimization cplex=12.10"
         }
         catch
         {
-            Write-Host ("WARNING: CPLEX Community Edition is not available for Python ${{matrix.python-version}}")
+            echo "WARNING: CPLEX Community Edition is not available for Python ${{matrix.python-version}}"
             conda deactivate
             conda activate test
         }
-        Write-Host ("")
-        Write-Host ("Installing IDAES Ipopt")
-        Write-Host ("")
+        echo ""
+        echo "Installing IDAES Ipopt"
+        echo ""
         New-Item -Path . -Name "solver_dir" -ItemType "directory"
         cd solver_dir
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz' -OutFile 'ipopt1.tar.gz'
@@ -90,19 +90,19 @@ jobs:
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt2.tar.gz'
         tar -xzf ipopt2.tar.gz
         cd ..
-        Write-Host ("")
-        Write-Host ("Installing GAMS")
-        Write-Host ("")
+        echo ""
+        echo "Installing GAMS"
+        echo ""
         $GAMS_INSTALLER="$env:GITHUB_WORKSPACE\download-cache\gams_win64.exe"
         if ( -not (Test-Path "$GAMS_INSTALLER")) {
-            Write-Host ("...downloading GAMS")
+            echo "...downloading GAMS"
             New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\download-cache"
             Invoke-WebRequest -Uri 'https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/windows/windows_x64_64.exe' -OutFile "$GAMS_INSTALLER"
         }
-        Write-Host ("...installing GAMS")
+        echo "...installing GAMS"
         Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\gams /NOICONS' -Wait
         cd gams\apifiles\Python\
-        Write-Host ("...installing GAMS Python ${{matrix.python-version}} API")
+        echo "...installing GAMS Python ${{matrix.python-version}} API"
         if(${{matrix.python-version}} -eq 2.7) {
           cd api
           python setup.py install
@@ -112,32 +112,31 @@ jobs:
         }elseif(${{matrix.python-version}} -eq 3.7) {
           cd api_37
           python setup.py install
-        }else { 
-          Write-Host ("WARNING: GAMS Python bindings not available.")
+        }else {
+          echo "WARNING: GAMS Python bindings not available."
         }
-        Write-Host ("")
-        Write-Host ("Conda package environment")
-        Write-Host ("")
+        echo ""
+        echo "Conda package environment"
+        echo ""
         conda list --show-channel-urls
-        Write-Host ("")
-        Write-Host ("New Shell Environment: ")
+        echo ""
+        echo "New Shell Environment: "
         gci env: | Sort Name
 
     - name: Install Pyomo and PyUtilib
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
-        Write-Host ("")
-        Write-Host ("Clone model library and install PyUtilib...")
-        Write-Host ("")
+        echo ""
+        echo "Clone model library and install PyUtilib..."
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
-        git clone --quiet https://github.com/PyUtilib/pyutilib.git
-        cd pyutilib
-        python setup.py develop
-        cd ..
-        Write-Host ("")
-        Write-Host ("Install Pyomo...")
-        Write-Host ("")
+        echo ""
+        echo "Install PyUtilib..."
+        echo ""
+        pip install --quiet git+https://github.com/PyUtilib/pyutilib
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
         python setup.py develop
 
     - name: Set up coverage tracking
@@ -154,20 +153,20 @@ jobs:
     - name: Download and install extensions
       shell: pwsh
       run: |
-        Write-Host ("")
-        Write-Host "Pyomo download-extensions"
-        Write-Host ("")
+        echo ""
+        echo "Pyomo download-extensions"
+        echo ""
         pyomo download-extensions
-        Write-Host ("")
-        Write-Host "Pyomo build-extensions"
-        Write-Host ("")
+        echo ""
+        echo "Pyomo build-extensions"
+        echo ""
         pyomo build-extensions --parallel 2
 
     - name: Run nightly tests with test.pyomo
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
-        Write-Host "Setup and run nosetests"
+        echo "Setup and run nosetests"
         $PWD="$env:GITHUB_WORKSPACE"
         $env:PATH += ";$PWD\gams;$PWD\solver_dir"
         test.pyomo -v --cat=nightly pyomo $PWD\pyomo-model-libraries
