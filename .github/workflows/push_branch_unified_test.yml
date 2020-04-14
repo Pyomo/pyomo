@@ -150,9 +150,9 @@ jobs:
     - name: Install GAMS
       shell: pwsh
       run: |
-        $GAMS_DIR=packages/gams
+        $GAMS_DIR="packages/gams"
         $GAMS_INSTALLER="download-cache/gams_install.exe"
-        $URL=https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0
+        $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( -not (Test-Path "$GAMS_INSTALLER")) {
             echo "...downloading GAMS"
             if ( ${{matrix.TARGET}} -eq "win" ) {
@@ -174,7 +174,7 @@ jobs:
                 '-q -d $GAMS_DIR' -Wait
             mv $GAMS_DIR/*/* $GAMS_DIR/.
         }
-        $GAMS_DIR=$env:GITHUB_WORKSPACE/$GAMS_DIR
+        $GAMS_DIR="$env:GITHUB_WORKSPACE/$GAMS_DIR"
         echo "PATH: $GAMS_DIR"
         echo "::add-path::$GAMS_DIR"
         echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
