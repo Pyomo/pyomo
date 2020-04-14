@@ -155,9 +155,9 @@ jobs:
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( -not (Test-Path "$GAMS_INSTALLER")) {
             echo "...downloading GAMS"
-            if ( ${{matrix.TARGET}} -eq "win" ) {
+            if ( "${{matrix.TARGET}}" -eq "win" ) {
                 $URL = "$URL/windows/windows_x64_64.exe"
-            } elseif ( ${{matrix.TARGET}} -eq "osx" ) {
+            } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
                 $URL = "$URL/macosx/osx_x64_64_sfx.exe"
             } else {
                 $URL = "$URL/linux/linux_x64_64_sfx.exe"
@@ -166,7 +166,7 @@ jobs:
         }
         echo "...installing GAMS"
         mkdir -p $GAMS_DIR
-        if ( ${{matrix.TARGET}} -eq "win" ) {
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
             Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
                 '/SP- /NORESTART /DIR=$GAMS_DIR /NOICONS' -Wait
         } else {
