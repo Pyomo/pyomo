@@ -107,12 +107,12 @@ jobs:
             numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx 
             xlrd pandas matplotlib dill seaborn setuptools pip coverage
             sphinx_rtd_theme pymysql pyro4 pint pathos glpk mpi4py
-      shell: pwsh
+      shell: bash -l {0}
       run: |
-        mkdir -p $env:GITHUB_WORKSPACE/conda-cache
+        mkdir -p $GITHUB_WORKSPACE/conda-cache
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --prepend pkgs_dirs $env:GITHUB_WORKSPACE/conda-cache
+        conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/conda-cache
         conda info
         conda config --show-sources
         conda list --show-channel-urls
