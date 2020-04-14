@@ -162,11 +162,15 @@ jobs:
                 curl -sL $GAMS_URL/windows/windows_x64_64.exe -o $GAMS_INSTALLER
             fi
         fi
-        GAMS_DIR=packages/gams
+        GAMS_DIR=./packages/gams
         mkdir -p $GAMS_DIR
         echo "Installing GAMS"
         if test "${{matrix.TARGET}}" == win; then
-            $GAMS_INSTALLER /SP- /VERYSILENT /NORESTART /DIR=$GAMS_DIR /NOICONS
+            echo "running $GAMS_INSTALLER /SP- /VERYSILENT /NORESTART /NOICONS \
+                /DIR='$GAMS_DIR'"
+            $GAMS_INSTALLER /SP- /VERYSILENT /NORESTART /NOICONS \
+                /DIR="$GAMS_DIR"
+            echo "DONE"
         else
             chmod +x $GAMS_INSTALLER
             $GAMS_INSTALLER -q -d $GAMS_DIR
