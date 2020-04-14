@@ -13,7 +13,7 @@ from pyomo.kernel import ComponentSet
 from pyomo.core.base.set import SetProduct
 
 
-def is_explicitly_indexed_by(comp, *sets, expand_all_set_operators=False):
+def is_explicitly_indexed_by(comp, *sets, **kwargs):
     """
     Function for determining whether a pyomo component is indexed by a 
     set or group of sets.
@@ -34,6 +34,11 @@ def is_explicitly_indexed_by(comp, *sets, expand_all_set_operators=False):
             msg = ('Checking for explicit indexing by a SetProduct '
                   'is not supported')
             raise TypeError(msg)
+
+    expand_all_set_operators = kwargs.pop('expand_all_set_operators', False)
+    if kwargs:
+        keys = kwargs.keys()
+        raise ValueError('Unrecognized keyword arguments: %s' % str(keys))
 
     projected_subsets = comp.index_set().subsets(expand_all_set_operators=
                                                  expand_all_set_operators)
