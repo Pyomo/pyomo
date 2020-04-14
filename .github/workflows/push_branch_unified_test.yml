@@ -119,7 +119,6 @@ jobs:
         conda install -q -y -c conda-forge --no-update-deps $CONDA_PKGS
         conda install -q -y -c ibmdecisionoptimization --no-update-deps cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
-        conda install -q -y --no-update-deps mpi4py
 
     - name: Install ipopt
       shell: bash
