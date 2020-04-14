@@ -174,4 +174,4 @@ jobs:
         coverage report -i
         curl --retry 8 -s https://codecov.io/bash -o codecov.sh
         # Disable coverage uploads on branches
-        bash codecov.sh -X gcov -n "$GITHUB_JOB_NAME"
+        # bash codecov.sh -X gcov -n "$GITHUB_JOB_NAME"
