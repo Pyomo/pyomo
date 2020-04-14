@@ -35,10 +35,13 @@ class TestDaeSetUtils(unittest.TestCase):
         m.time = ContinuousSet(bounds=(0, 10))
         m.space = ContinuousSet(bounds=(0, 10))
         m.set = Set(initialize=['a', 'b', 'c'])
+        m.set2 = Set(initialize=[('a', 1), ('b', 2)])
         m.v = Var()
         m.v1 = Var(m.time)
         m.v2 = Var(m.time, m.space)
         m.v3 = Var(m.set, m.space, m.time)
+        m.v4 = Var(m.time, m.set2)
+        m.v5 = Var(m.set2, m.time, m.space)
 
         @m.Block()
         def b(b):
@@ -63,6 +66,15 @@ class TestDaeSetUtils(unittest.TestCase):
                 bl.v = Var()
                 bl.v1 = Var(m.set)
                 bl.v2 = Var(m.time)
+
+        @m.Block(m.set2, m.time)
+        def b3(b):
+            b.v = Var()
+            b.v1 = Var(m.space)
+
+            @b.Block(m.space)
+            def b(bb):
+                bb.v = Var(m.set)
 
         disc = TransformationFactory('dae.collocation')
         disc.apply_to(m, wrt=m.time, nfe=5, ncp=2, scheme='LAGRANGE-RADAU')
@@ -89,6 +101,34 @@ class TestDaeSetUtils(unittest.TestCase):
             m.b2[m.time[1], m.space[1]].b.v1, 
             m.space, stop_at=m.b2[m.time[1], m.space[1]]))
 
+        # Explicit indexing with multi-dimensional set:
+        self.assertTrue(is_explicitly_indexed_by(m.v4, m.time, m.set2))
+        self.assertTrue(is_explicitly_indexed_by(m.v5, m.time, m.set2, m.space))
+
+        # Implicit indexing with multi-dimensional set:
+        self.assertTrue(is_in_block_indexed_by(
+            m.b3['a', 1, m.time[1]].v, m.set2))
+        self.assertTrue(is_in_block_indexed_by(
+            m.b3['a', 1, m.time[1]].v, m.time))
+        self.assertTrue(is_in_block_indexed_by(
+            m.b3['a', 1, m.time[1]].v1[m.space[1]], m.set2))
+        self.assertFalse(is_in_block_indexed_by(
+            m.b3['a', 1, m.time[1]].v1[m.space[1]], m.space))
+        self.assertTrue(is_in_block_indexed_by(
+            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.set2))
+        self.assertTrue(is_in_block_indexed_by(
+            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.time))
+        self.assertTrue(is_in_block_indexed_by(
+            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.space))
+        self.assertFalse(is_in_block_indexed_by(
+            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.set))
+        self.assertFalse(is_in_block_indexed_by(
+            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.time,
+            stop_at=m.b3['b', 2, m.time[2]]))
+        self.assertFalse(is_in_block_indexed_by(
+            m.b3['b', 2, m.time[2]].b[m.space[2]].v['b'], m.time,
+            stop_at=m.b3))
+
 
     # Test get_index_set_except and _complete_index
     def test_get_index_set_except(self):
@@ -114,6 +154,7 @@ class TestDaeSetUtils(unittest.TestCase):
         m.set3 = Set(initialize=[('a', 1), ('b', 2)])
         m.v5 = Var(m.set3)
         m.v6 = Var(m.time, m.space, m.set3)
+        m.v7 = Var(m.set3, m.space, m.time)
 
         disc = TransformationFactory('dae.collocation')
         disc.apply_to(m, wrt=m.time, nfe=5, ncp=2, scheme='LAGRANGE-RADAU')
@@ -201,6 +242,19 @@ class TestDaeSetUtils(unittest.TestCase):
         self.assertTrue(m.space[1] in set_except)
         self.assertEqual(index_getter(m.space[1], ('b', 2), m.time[1]),
                 (m.time[1], m.space[1], 'b', 2))
+
+        info = get_index_set_except(m.v7, m.time)
+        set_except = info['set_except']
+        index_getter = info['index_getter']
+        self.assertIn(('a', 1, m.space[1]), set_except)
+        self.assertEqual(index_getter(('a', 1, m.space[1]), m.time[1]),
+                         ('a', 1, m.space[1], m.time[1]))
+
+        m.v8 = Var(m.time, m.set3, m.time)
+        with self.assertRaises(ValueError):
+            info = get_index_set_except(m.v8, m.time)
+        with self.assertRaises(ValueError):
+            info = get_index_set_except(m.v8, m.space)
 
 
 if __name__ == "__main__":
