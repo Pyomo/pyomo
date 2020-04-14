@@ -162,8 +162,9 @@ jobs:
                 curl -sL $GAMS_URL/windows/windows_x64_64.exe -o $GAMS_INSTALLER
             fi
         fi
-        GAMS_DIR=${GITHUB_WORKSPACE}/packages/gams
+        GAMS_DIR=packages/gams
         mkdir -p $GAMS_DIR
+        echo "Installing GAMS"
         if test "${{matrix.TARGET}}" == win; then
             $GAMS_INSTALLER /SP- /VERYSILENT /NORESTART /DIR=$GAMS_DIR /NOICONS
         else
@@ -171,21 +172,21 @@ jobs:
             $GAMS_INSTALLER -q -d $GAMS_DIR
         fi
         GAMS_VER=$(ls -d1 $GAMS_DIR/*/ | head -1)
-        echo "::add-path::$GAMS_VER"
-        export PATH=$PATH:$GAMS_DIR
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
-        export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
-
+        GAMS_PATH=${GITHUB_WORKSPACE}/$GAMS_VER
+        export PATH=$PATH:$GAMS_PATH
+        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_PATH
+        export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_PATH
+        #
         py_ver=$(python -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
-        if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
-            pushd $GAMS_DIR/apifiles/Python/api$py_ver
+        if test -e $GAMS_VER/apifiles/Python/api$py_ver; then
+            echo "Installing GAMS Python bindings"
+            pushd $GAMS_VER/apifiles/Python/api$py_ver
             python setup.py -q install
             popd
         fi
-        echo ""
-        echo "Pass key environment variables to subsequent steps"
-        echo ""
+        # Pass key environment variables to subsequent steps
+        echo "::add-path::$GAMS_PATH"
         echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH"
         echo "::set-env name=DYLD_LIBRARY_PATH::$DYLD_LIBRARY_PATH"
 
