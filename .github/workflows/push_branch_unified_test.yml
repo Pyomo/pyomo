@@ -65,7 +65,7 @@ jobs:
         export HOMEBREW_CACHE=${GITHUB_WORKSPACE}/pkg-cache
         echo "Install pre-dependencies for pyodbc..."
         brew update
-        for pkg in bash gcc pkg-config unixodbc freetds; do
+        for pkg in bash gcc pkg-config unixodbc freetds glpk; do
             brew list $pkg || brew install $pkg
         done
         brew link --overwrite gcc
@@ -76,7 +76,8 @@ jobs:
         mkdir -p ${GITHUB_WORKSPACE}/pkg-cache
         echo "Install pre-dependencies for ipopt..."
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/pkg-cache \
-            install libopenblas-dev gfortran liblapack-dev
+            install libopenblas-dev gfortran liblapack-dev \
+            python-glpk glpk-utils
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/pkg-cache
 
     - name: Set up Python ${{ matrix.python-version }}
@@ -159,6 +160,7 @@ jobs:
       shell: pwsh
       run: |
         $GAMS_DIR="packages/gams"
+        $GAMS_DIR="$env:GITHUB_WORKSPACE/$GAMS_DIR"
         $GAMS_INSTALLER="download-cache/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( -not (Test-Path "$GAMS_INSTALLER")) {
@@ -172,21 +174,20 @@ jobs:
             }
             Invoke-WebRequest -Uri "$URL" -OutFile "$GAMS_INSTALLER"
         }
-        #mkdir -p $GAMS_DIR
         echo "...installing GAMS"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
-                "/SP- /NORESTART /VERYSILENT /DIR=.\packages\gams /NOICONS" `
+                "/SP- /NORESTART /VERYSILENT /DIR=$GAMS_DIR /NOICONS" `
                 -Wait
         } else {
             chmod 777 $GAMS_INSTALLER
             Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
-                "-q -d packages/gams" -Wait
+                "-q -d $GAMS_DIR" -Wait
             mv $GAMS_DIR/*/* $GAMS_DIR/.
         }
         echo "PACKAGES GAMS:"
         ls packages/gams
-        $GAMS_DIR="$env:GITHUB_WORKSPACE/$GAMS_DIR"
+        #$GAMS_DIR="$env:GITHUB_WORKSPACE/$GAMS_DIR"
         echo "PATH: $GAMS_DIR"
         echo "::add-path::$GAMS_DIR"
         echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
