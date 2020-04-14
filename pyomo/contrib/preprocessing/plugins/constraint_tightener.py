@@ -1,5 +1,6 @@
 import logging
-import textwrap
+
+from six.moves import zip
 
 from pyomo.core import Constraint, value, TransformationFactory
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
@@ -31,27 +32,28 @@ class TightenContraintFromVars(IsomorphicTransformation):
             LB = UB = 0
             if repn.constant:
                 LB = UB = repn.constant
+
             # loop through each coefficent and variable pair
-            for i, coef in enumerate(repn.linear_coefs):
+            for var, coef in zip(repn.linear_vars, repn.linear_coefs):
                 # TODO: Rounding issues
                 # Calculate bounds using interval arithmetic
                 if coef >= 0:
-                    if repn.linear_vars[i].has_ub():
-                        UB = UB + coef * value(repn.linear_vars[i].ub)
+                    if var.has_ub():
+                        UB = UB + coef * value(var.ub)
                     else:
                         UB = float('Inf')
-                    if repn.linear_vars[i].has_lb():
-                        LB = LB + coef * value(repn.linear_vars[i].lb)
+                    if var.has_lb():
+                        LB = LB + coef * value(var.lb)
                     else:
                         LB = float('-Inf')
                 else:
                     # coef is negative, so signs switch
-                    if repn.linear_vars[i].has_lb():
-                        UB = UB + coef * value(repn.linear_vars[i].lb)
+                    if var.has_lb():
+                        UB = UB + coef * value(var.lb)
                     else:
                         UB = float('Inf')
-                    if repn.linear_vars[i].has_ub():
-                        LB = LB + coef * value(repn.linear_vars[i].ub)
+                    if var.has_ub():
+                        LB = LB + coef * value(var.ub)
                     else:
                         LB = float('-Inf')
 
