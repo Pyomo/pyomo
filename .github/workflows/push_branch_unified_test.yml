@@ -177,8 +177,8 @@ jobs:
         $GAMS_DIR=$env:GITHUB_WORKSPACE/$GAMS_DIR
         echo "PATH: $GAMS_DIR"
         echo "::add-path::$GAMS_DIR"
-        echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH:$GAMS_DIR"
-        echo "::set-env name=DYLD_LIBRARY_PATH::$DYLD_LIBRARY_PATH:$GAMS_DIR"
+        echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
+        echo "::set-env name=DYLD_LIBRARY_PATH::${env:DYLD_LIBRARY_PATH}:$GAMS_DIR"
 
     - name: Install GAMS Python bindings
       shell: bash
