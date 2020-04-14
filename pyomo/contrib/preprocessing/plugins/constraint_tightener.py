@@ -49,11 +49,11 @@ class TightenContraintFromVars(IsomorphicTransformation):
                     if repn.linear_vars[i].has_lb():
                         UB = UB + coef * value(repn.linear_vars[i].lb)
                     else:
-                        LB = float('-Inf')
+                        UB = float('Inf')
                     if repn.linear_vars[i].has_ub():
                         LB = LB + coef * value(repn.linear_vars[i].ub)
                     else:
-                        UB = float('Inf')
+                        LB = float('-Inf')
 
             # if inferred bound is tighter, replace bound
             new_ub = min(value(constr.upper), UB) if constr.has_ub() else UB
