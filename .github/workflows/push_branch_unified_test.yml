@@ -151,7 +151,7 @@ jobs:
       shell: pwsh
       run: |
         $GAMS_DIR="packages/gams"
-        $GAMS_INSTALLER="download-cache/gams_install.exe"
+        $GAMS_INSTALLER="download-cache\gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( -not (Test-Path "$GAMS_INSTALLER")) {
             echo "...downloading GAMS"
@@ -164,6 +164,9 @@ jobs:
             }
             Invoke-WebRequest -Uri "$URL" -OutFile "$GAMS_INSTALLER"
         }
+        ls
+        ls download-cache
+        ls packages
         echo "...installing GAMS"
         mkdir -p $GAMS_DIR
         if ( "${{matrix.TARGET}}" -eq "win" ) {
