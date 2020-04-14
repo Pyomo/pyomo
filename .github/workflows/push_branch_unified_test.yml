@@ -138,12 +138,12 @@ jobs:
                 curl -sL $URL/idaes-solvers-windows-64.tar.gz \
                     $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
             fi
-            ls -l $IPOPT_TAR
         fi
         IPOPT_DIR=${GITHUB_WORKSPACE}/packages/ipopt
         mkdir -p $IPOPT_DIR
         pushd $IPOPT_DIR
-        test -e $IPOPT_TAR && tar -xzif $IPOPT_TAR
+        TAR=../../download-cache/ipopt.tar.gz
+        test -e $TAR && tar -xzif $TAR
         popd
         echo "::add-path::$IPOPT_DIR"
 
