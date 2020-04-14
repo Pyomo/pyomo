@@ -93,12 +93,6 @@ class MindtPySolver(object):
             "covering problem (max_binary), and fix the initial value for "
             "the integer variables (initial_binary)"
     ))
-    CONFIG.declare("integer_cuts", ConfigValue(
-        default=True,
-        domain=bool,
-        description="Integer cuts",
-        doc="Add integer cuts after finding a feasible solution to the MINLP"
-    ))
     CONFIG.declare("max_slack", ConfigValue(
         default=1000.0,
         domain=PositiveFloat,
@@ -268,6 +262,7 @@ class MindtPySolver(object):
         if config.single_tree == True:
             config.iteration_limit = 1
             config.add_slack = False
+            config.add_integer_cuts = False
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
                 "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")

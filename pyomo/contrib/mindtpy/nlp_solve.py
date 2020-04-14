@@ -52,7 +52,8 @@ def solve_NLP_subproblem(solve_data, config):
                + (0 if c.lower is None else c.lower))
         sign_adjust = 1 if value(c.upper) is None else -1
         fix_nlp.tmp_duals[c] = sign_adjust * max(0,
-                                                 sign_adjust * (rhs - value(c.body)))
+                                                 sign_adjust*(rhs - value(c.body)))
+        pass
         # TODO check sign_adjust
     TransformationFactory('contrib.deactivate_trivial_constraints')\
         .apply_to(fix_nlp, tmp=True, ignore_infeasible=True)

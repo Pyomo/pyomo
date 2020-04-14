@@ -117,7 +117,7 @@ class LazyOACallback(LazyConstraintCallback):
                         or (linearize_inactive and constr.uslack() > 0):
 
                     pyomo_expr = sum(
-                        value(jacs[constr][var])*(var - var.value) for var in constr_vars)
+                        value(jacs[constr][var])*(var - var.value) for var in constr_vars) + value(constr.body)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                     self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
@@ -128,18 +128,17 @@ class LazyOACallback(LazyConstraintCallback):
                         or (linearize_violated and constr.lslack() < 0) \
                         or (linearize_inactive and constr.lslack() > 0):
                     pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
-                        opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars)
+                        opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) + value(constr.body)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                     self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                              sense="G",
-                             rhs=constr.lower.value+cplex_rhs)
+                             rhs=constr.lower.value + cplex_rhs)
 
     def handle_lazy_master_mip_feasible_sol(self, master_mip, solve_data, config, opt):
         """ This function is called during the branch and bound of master mip, more exactly when a feasible solution is found and LazyCallback is activated.
         Copy the result to working model and update upper or lower bound
         In LP-NLP, upper or lower bound are updated during solving the master problem
-        TODO: the name of this function might need to be changed, since the master problem is not solve to "optimality" in practice.
         """
         # proceed. Just need integer values
         MindtPy = master_mip.MindtPy_utils
@@ -154,12 +153,14 @@ class LazyOACallback(LazyConstraintCallback):
         # update the bound
         if main_objective.sense == minimize:
             solve_data.LB = max(
-                self.get_best_objective_value(),
+                self.get_objective_value(),
+                # self.get_best_objective_value(),
                 solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(
-                self.get_best_objective_value(),
+                self.get_objective_value(),
+                # self.get_best_objective_value(),
                 solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
@@ -235,7 +236,7 @@ class LazyOACallback(LazyConstraintCallback):
         elif config.strategy == 'OA':
             config.logger.info('Solving feasibility problem')
             if config.initial_feas:
-                config.initial_feas = False
+                # config.initial_feas = False
                 feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
                 # In OA algorithm, OA cuts are generated based on the solution of the subproblem
                 # We need to first copy the value of variables from the subproblem and then add cuts
@@ -327,20 +328,22 @@ def solve_OA_master(solve_data, config):
         masteropt._solver_model.set_warning_stream(None)
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
+        masteropt.options['timelimit'] = config.time_limit
     master_mip_results = masteropt.solve(
         solve_data.mip, **config.mip_solver_args)  # , tee=True)
 
-    if config.single_tree == True:
-        if main_objective.sense == minimize:
-            solve_data.LB = max(
-                master_mip_results.problem.lower_bound, solve_data.LB)
-            solve_data.LB_progress.append(solve_data.LB)
+    if master_mip_results.solver.termination_condition is tc.optimal:
+        if config.single_tree == True:
+            if main_objective.sense == minimize:
+                solve_data.LB = max(
+                    master_mip_results.problem.lower_bound, solve_data.LB)
+                solve_data.LB_progress.append(solve_data.LB)
 
-            solve_data.UB = min(
-                master_mip_results.problem.upper_bound, solve_data.UB)
-            solve_data.UB_progress.append(solve_data.UB)
+                solve_data.UB = min(
+                    master_mip_results.problem.upper_bound, solve_data.UB)
+                solve_data.UB_progress.append(solve_data.UB)
 
-    if master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
+    elif master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
@@ -356,6 +359,12 @@ def handle_master_mip_optimal(master_mip, solve_data, config, copy=True):
     MindtPy = master_mip.MindtPy_utils
     main_objective = next(
         master_mip.component_data_objects(Objective, active=True))
+    # check if the value of binary variable is valid
+    for var in MindtPy.variable_list:
+        if var.value == None:
+            config.logger.warning(
+                "Variables {} not initialized are set to it's lower bound when using the initial_binary initialization method".format(var.name))
+            var.value = 0  # nlp_var.bounds[0]
     copy_var_list_values(
         master_mip.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
@@ -419,7 +428,7 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
         'Problem may have no more feasible '
         'binary configurations.')
     if solve_data.mip_iter == 1:
-        config.logger.warn(
+        config.logger.warning(
             'MindtPy initialization may have generated poor '
             'quality cuts.')
     # set optimistic bound to infinity

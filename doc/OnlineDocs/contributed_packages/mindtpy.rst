@@ -69,7 +69,7 @@ The LP/NLP algorithm in MindtPy is implemeted based on the LazyCallback function
 
 .. Note::
 
-  Single tree implementation only supports Cplex now. To use LazyCallback function in CPLEX from Pyomo, the `Python API of CPLEX`_ solvers is required. This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be install on your computer.
+  Single tree implementation only supports Cplex now. To use LazyCallback function of CPLEX from Pyomo, the `Python API of CPLEX`_ solvers is required. This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be install on your computer.
 
 
 .. _Python API of CPLEX: https://www.ibm.com/support/knowledgecenter/SSSA5P_12.7.1/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html
@@ -79,7 +79,21 @@ An example to call single tree is as follows.
 
 .. code::
 
-  >>> few
+  >>> from pyomo.environ import *
+  >>> model = ConcreteModel()
+
+  >>> model.x = Var(bounds=(1.0, 10.0), initialize=5.0)
+  >>> model.y = Var(within=Binary)
+
+  >>> model.c1 = Constraint(expr=(model.x-3.0)**2 <= 50.0*(1-model.y))
+  >>> model.c2 = Constraint(expr=model.x*log(model.x)+5.0 <= 50.0*(model.y))
+  
+  >>> model.objective = Objective(expr=model.x, sense=minimize)
+
+  Solve the model using single tree implementation in MindtPy
+  >>> SolverFactory('mindtpy').solve(model, strategy='OA', 
+                                     mip_solver='cplex_persistent', nlp_solver='ipopt', single_tree=True)
+  >>> model.objective.display()
 
 
 
