@@ -138,7 +138,7 @@ jobs:
 
     - name: Set up coverage tracking
       run: |
-        $COVERAGE_PROCESS_START=${GITHUB_WORKSPACE}/coveragerc
+        $COVERAGE_PROCESS_START="${GITHUB_WORKSPACE}/coveragerc"
         echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_PROCESS_START"
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_PROCESS_START}
         echo "data_file=${GITHUB_WORKSPACE}/.coverage" \
