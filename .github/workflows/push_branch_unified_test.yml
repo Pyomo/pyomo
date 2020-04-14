@@ -30,6 +30,7 @@ jobs:
 
     - name: Conda package cache
       uses: actions/cache@v1
+      if: matrix.PYENV == 'conda'
       id: conda-cache
       with:
         path: conda-cache
@@ -76,7 +77,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Set up with Miniconda Python ${{ matrix.python-version }}
+    - name: Set up Miniconda Python ${{ matrix.python-version }}
       if: matrix.PYENV == 'conda'
       uses: goanpeca/setup-miniconda@v1
       with:
@@ -106,12 +107,12 @@ jobs:
             numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx 
             xlrd pandas matplotlib dill seaborn setuptools pip coverage
             sphinx_rtd_theme pymysql pyro4 pint pathos glpk mpi4py
-      shell: bash
+      shell: pwsh
       run: |
-        mkdir -p $GITHUB_WORKSPACE/conda-cache
+        mkdir -p $env:GITHUB_WORKSPACE/conda-cache
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --prepend pkgs_dirs $GITHUB_WORKSPACE\conda-cache
+        conda config --prepend pkgs_dirs $env:GITHUB_WORKSPACE/conda-cache
         conda info
         conda config --show-sources
         conda list --show-channel-urls
