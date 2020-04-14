@@ -208,7 +208,7 @@ jobs:
             ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
             echo "Installing GAMS Python bindings"
-            pushd $GAMS_VER/apifiles/Python/api$py_ver
+            pushd $GAMS_DIR/apifiles/Python/api$py_ver
             python setup.py -q install
             popd
         fi
