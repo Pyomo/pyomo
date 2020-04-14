@@ -136,50 +136,12 @@ jobs:
         echo ""
         python setup.py develop
 
-    - name: Set up coverage tracking 1
-      run: |
-        $COVERAGE_RC="$GITHUB_WORKSPACE\coveragerc"
-
-    - name: Set up coverage tracking 2
-      run: |
-        $COVERAGE_RC="$GITHUB_WORKSPACE\coveragerc"
-        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
-
-    - name: Set up coverage tracking 3
-      run: |
-        $COVERAGE_RC="$GITHUB_WORKSPACE\coveragerc"
-        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
-        ls
-        ls "${GITHUB_WORKSPACE}"
-        cp "${GITHUB_WORKSPACE}\.coveragerc" ${COVERAGE_RC}
-
-    - name: Set up coverage tracking 3a
-      run: |
-        $COVERAGE_RC="${GITHUB_WORKSPACE}/coveragerc"
-        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
-        cp "${GITHUB_WORKSPACE}/.coveragerc" ${COVERAGE_RC}
-
-    - name: Set up coverage tracking 4
-      run: |
-        $COVERAGE_RC="${GITHUB_WORKSPACE}/coveragerc"
-        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
-        cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
-        echo "data_file=${GITHUB_WORKSPACE}/.coverage" >> ${COVERAGE_RC}
-
-    - name: Set up coverage tracking 5
-      run: |
-        $COVERAGE_RC="${GITHUB_WORKSPACE}/coveragerc"
-        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
-        cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
-        echo "data_file=${GITHUB_WORKSPACE}/.coverage" >> ${COVERAGE_RC}
-        $SITE_PACKAGES=python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"
-
     - name: Set up coverage tracking
       run: |
-        $COVERAGE_RC="${GITHUB_WORKSPACE}/coveragerc"
+        $COVERAGE_RC="$env:GITHUB_WORKSPACE/coveragerc"
         echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
-        cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
-        echo "data_file=${GITHUB_WORKSPACE}/.coverage" >> ${COVERAGE_RC}
+        cp $env:GITHUB_WORKSPACE/.coveragerc ${COVERAGE_RC}
+        echo "data_file=$env:GITHUB_WORKSPACE/.coverage" >> ${COVERAGE_RC}
         $SITE_PACKAGES=python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"
         echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
