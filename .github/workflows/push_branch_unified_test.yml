@@ -106,7 +106,7 @@ jobs:
         CONDA_PKGS: >
             numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx 
             xlrd pandas matplotlib dill seaborn setuptools pip coverage
-            sphinx_rtd_theme pymysql pyro4 pint pathos glpk mpi4py
+            sphinx_rtd_theme pymysql pyro4 pint pathos glpk
       shell: bash -l {0}
       run: |
         mkdir -p $GITHUB_WORKSPACE/conda-cache
@@ -119,6 +119,7 @@ jobs:
         conda install -q -y -c conda-forge --no-update-deps $CONDA_PKGS
         conda install -q -y -c ibmdecisionoptimization --no-update-deps cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
+        conda install -q -y --no-update-deps mpi4py
 
     - name: Install ipopt
       shell: bash
