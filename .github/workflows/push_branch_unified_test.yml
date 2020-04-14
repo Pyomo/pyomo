@@ -121,7 +121,7 @@ jobs:
             || echo "WARNING: CPLEX Community Edition is not available"
 
     - name: Install ipopt
-      shell: bash
+      shell: bash -l {0}
       run: |
         # Ensure cache directories exist
         mkdir -p ${GITHUB_WORKSPACE}/download-cache
@@ -147,7 +147,7 @@ jobs:
         echo "::add-path::$IPOPT_DIR"
 
     - name: Install GAMS
-      shell: bash
+      shell: bash -l {0}
       run: |
         GAMS_INSTALLER=${GITHUB_WORKSPACE}/download-cache/gams_installer.exe
         if test ! -e $GAMS_INSTALLER; then
