@@ -76,8 +76,7 @@ jobs:
         mkdir -p ${GITHUB_WORKSPACE}/pkg-cache
         echo "Install pre-dependencies for ipopt..."
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/pkg-cache \
-            install libopenblas-dev gfortran liblapack-dev \
-            python-glpk glpk-utils
+            install libopenblas-dev gfortran liblapack-dev glpk-utils
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/pkg-cache
 
     - name: Set up Python ${{ matrix.python-version }}
