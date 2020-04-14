@@ -148,50 +148,50 @@ jobs:
         echo "::add-path::$IPOPT_DIR"
 
     - name: Install GAMS
+      shell: pwsh
+      run: |
+        $GAMS_DIR=packages/gams
+        $GAMS_INSTALLER="download-cache/gams_install.exe"
+        $URL=https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0
+        if ( -not (Test-Path "$GAMS_INSTALLER")) {
+            echo "...downloading GAMS"
+            if ( ${{matrix.TARGET}} -eq "win" ) {
+                $URL = "$URL/windows/windows_x64_64.exe"
+            } elseif ( ${{matrix.TARGET}} -eq "osx" ) {
+                $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+            } else {
+                $URL = "$URL/linux/linux_x64_64_sfx.exe"
+            }
+            Invoke-WebRequest -Uri "$URL" -OutFile "$GAMS_INSTALLER"
+        }
+        echo "...installing GAMS"
+        mkdir -p $GAMS_DIR
+        if ( ${{matrix.TARGET}} -eq "win" ) {
+            Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
+                '/SP- /NORESTART /DIR=$GAMS_DIR /NOICONS' -Wait
+        } else {
+            Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
+                '-q -d $GAMS_DIR' -Wait
+            mv $GAMS_DIR/*/* $GAMS_DIR/.
+        }
+        $GAMS_DIR=$env:GITHUB_WORKSPACE/$GAMS_DIR
+        echo "PATH: $GAMS_DIR"
+        echo "::add-path::$GAMS_DIR"
+        echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH:$GAMS_DIR"
+        echo "::set-env name=DYLD_LIBRARY_PATH::$DYLD_LIBRARY_PATH:$GAMS_DIR"
+
+    - name: Install GAMS Python bindings
       shell: bash
       run: |
-        GAMS_INSTALLER=./download-cache/gams_installer.exe
-        if test ! -e $GAMS_INSTALLER; then
-            echo "...downloading GAMS"
-            GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0
-            if test "${{matrix.TARGET}}" == osx; then
-                curl -L $GAMS_URL/macosx/osx_x64_64_sfx.exe -o $GAMS_INSTALLER
-            elif test "${{matrix.TARGET}}" == linux; then
-                curl -L $GAMS_URL/linux/linux_x64_64_sfx.exe -o $GAMS_INSTALLER
-            else
-                curl -L $GAMS_URL/windows/windows_x64_64.exe -o $GAMS_INSTALLER
-            fi
-        fi
-        GAMS_DIR=./packages/gams
-        mkdir -p $GAMS_DIR
-        echo "Installing GAMS"
-        chmod +x $GAMS_INSTALLER
-        if test "${{matrix.TARGET}}" == win; then
-            #$GAMS_INSTALLER /SP- /VERYSILENT /NORESTART /NOICONS /DIR=$GAMS_DIR
-            $GAMS_INSTALLER /SP- /NORESTART /NOICONS /DIR=$GAMS_DIR
-            echo "DONE"
-        else
-            $GAMS_INSTALLER -q -d $GAMS_DIR
-        fi
-        GAMS_VER=$(ls -d1 $GAMS_DIR/*/ | head -1)
-        GAMS_PATH=${GITHUB_WORKSPACE}/$GAMS_VER
-        echo "PATH: $GAMS_PATH"
-        export PATH=$PATH:$GAMS_PATH
-        export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_PATH
-        export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_PATH
-        #
+        $GAMS_DIR=packages/gams
         py_ver=$(python -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
-        if test -e $GAMS_VER/apifiles/Python/api$py_ver; then
+        if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
             echo "Installing GAMS Python bindings"
             pushd $GAMS_VER/apifiles/Python/api$py_ver
             python setup.py -q install
             popd
         fi
-        # Pass key environment variables to subsequent steps
-        echo "::add-path::$GAMS_PATH"
-        echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH"
-        echo "::set-env name=DYLD_LIBRARY_PATH::$DYLD_LIBRARY_PATH"
 
     - name: Install Pyomo and PyUtilib
       env:
