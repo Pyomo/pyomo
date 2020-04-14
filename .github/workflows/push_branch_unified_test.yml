@@ -133,9 +133,9 @@ jobs:
             if test "${{matrix.TARGET}}" == osx; then
                 echo "IDAES Ipopt not available on OSX"
             elif test "${{matrix.TARGET}}" == linux; then
-                curl -sL $URL/idaes-solvers-ubuntu1804-64.tar.gz > $IPOPT_TAR
+                curl -L $URL/idaes-solvers-ubuntu1804-64.tar.gz > $IPOPT_TAR
             else
-                curl -sL $URL/idaes-solvers-windows-64.tar.gz \
+                curl -L $URL/idaes-solvers-windows-64.tar.gz \
                     $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
             fi
         fi
@@ -155,22 +155,22 @@ jobs:
             echo "...downloading GAMS"
             GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0
             if test "${{matrix.TARGET}}" == osx; then
-                curl -sL $GAMS_URL/macosx/osx_x64_64_sfx.exe -o $GAMS_INSTALLER
+                curl -L $GAMS_URL/macosx/osx_x64_64_sfx.exe -o $GAMS_INSTALLER
             elif test "${{matrix.TARGET}}" == linux; then
-                curl -sL $GAMS_URL/linux/linux_x64_64_sfx.exe -o $GAMS_INSTALLER
+                curl -L $GAMS_URL/linux/linux_x64_64_sfx.exe -o $GAMS_INSTALLER
             else
-                curl -sL $GAMS_URL/windows/windows_x64_64.exe -o $GAMS_INSTALLER
+                curl -L $GAMS_URL/windows/windows_x64_64.exe -o $GAMS_INSTALLER
             fi
         fi
         GAMS_DIR=./packages/gams
         mkdir -p $GAMS_DIR
         echo "Installing GAMS"
+        chmod +x $GAMS_INSTALLER
         if test "${{matrix.TARGET}}" == win; then
             #$GAMS_INSTALLER /SP- /VERYSILENT /NORESTART /NOICONS /DIR=$GAMS_DIR
             $GAMS_INSTALLER /SP- /NORESTART /NOICONS /DIR=$GAMS_DIR
             echo "DONE"
         else
-            chmod +x $GAMS_INSTALLER
             $GAMS_INSTALLER -q -d $GAMS_DIR
         fi
         GAMS_VER=$(ls -d1 $GAMS_DIR/*/ | head -1)
