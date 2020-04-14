@@ -151,7 +151,7 @@ jobs:
       shell: pwsh
       run: |
         $GAMS_DIR="packages/gams"
-        $GAMS_INSTALLER="download-cache\gams_install.exe"
+        $GAMS_INSTALLER="download-cache/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( -not (Test-Path "$GAMS_INSTALLER")) {
             echo "...downloading GAMS"
@@ -164,19 +164,26 @@ jobs:
             }
             Invoke-WebRequest -Uri "$URL" -OutFile "$GAMS_INSTALLER"
         }
+        echo "PWD:"
         ls
+        echo "DOWNLOAD-CACHE:"
         ls download-cache
+        echo "PACKAGES:"
         ls packages
-        echo "...installing GAMS"
         mkdir -p $GAMS_DIR
+        echo "PACKAGES GAMS:"
+        ls packages/gams
+        echo "...installing GAMS"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
-                '/SP- /NORESTART /DIR=$GAMS_DIR /NOICONS' -Wait
+                '/SP- /NORESTART /DIR=packages\gams /NOICONS' -Wait
         } else {
             Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
-                '-q -d $GAMS_DIR' -Wait
+                "-q -d packages/gams" -Wait
             mv $GAMS_DIR/*/* $GAMS_DIR/.
         }
+        echo "PACKAGES GAMS:"
+        ls packages/gams
         $GAMS_DIR="$env:GITHUB_WORKSPACE/$GAMS_DIR"
         echo "PATH: $GAMS_DIR"
         echo "::add-path::$GAMS_DIR"
