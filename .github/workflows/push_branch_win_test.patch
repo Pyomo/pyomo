@@ -1,5 +1,5 @@
---- win_python_matrix_test.yml	2020-04-13 16:54:28.074769773 -0600
-+++ push_branch_win_test.yml	2020-04-13 17:06:17.443303309 -0600
+--- win_python_matrix_test.yml	2020-04-13 23:18:48.729409116 -0600
++++ push_branch_win_test.yml	2020-04-13 22:31:09.663612483 -0600
 @@ -1,11 +1,8 @@
 -name: GitHub CI (win)
 +name: GitHub Branch CI (win)
@@ -23,10 +23,9 @@
      steps:
      - uses: actions/checkout@v2
  
-@@ -178,4 +175,5 @@
+@@ -176,4 +173,5 @@
          coverage combine
          coverage report -i
          curl --retry 8 -s https://codecov.io/bash -o codecov.sh
--        bash codecov.sh -X gcov -n "$GITHUB_JOB_NAME"
 +        # Disable coverage uploads on branches
-+        #bash codecov.sh -X gcov -n "$GITHUB_JOB_NAME"
+         bash codecov.sh -X gcov -n "$GITHUB_JOB_NAME"
