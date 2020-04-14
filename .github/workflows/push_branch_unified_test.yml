@@ -172,20 +172,12 @@ jobs:
             }
             Invoke-WebRequest -Uri "$URL" -OutFile "$GAMS_INSTALLER"
         }
-        echo "PWD:"
-        ls
-        echo "DOWNLOAD-CACHE:"
-        ls download-cache
-        echo "PACKAGES:"
-        ls packages
-        rm -r $GAMS_DIR
-        mkdir -p $GAMS_DIR
-        echo "PACKAGES GAMS:"
-        ls packages/gams
+        #mkdir -p $GAMS_DIR
         echo "...installing GAMS"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
-                '/SP- /NORESTART /DIR=packages\gams /NOICONS' -Wait
+                "/SP- /NORESTART /VERYSILENT /DIR=.\packages\gams /NOICONS" `
+                -Wait
         } else {
             chmod 777 $GAMS_INSTALLER
             Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
