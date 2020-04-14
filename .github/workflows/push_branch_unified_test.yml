@@ -151,6 +151,7 @@ jobs:
       shell: pwsh
       run: |
         $GAMS_DIR="packages/gams"
+        rm -r $GAMS_DIR
         $GAMS_INSTALLER="download-cache/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( -not (Test-Path "$GAMS_INSTALLER")) {
@@ -178,6 +179,7 @@ jobs:
             Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
                 '/SP- /NORESTART /DIR=packages\gams /NOICONS' -Wait
         } else {
+            chmod 777 $GAMS_INSTALLER
             Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
                 "-q -d packages/gams" -Wait
             mv $GAMS_DIR/*/* $GAMS_DIR/.
