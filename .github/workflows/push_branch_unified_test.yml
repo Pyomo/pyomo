@@ -150,7 +150,7 @@ jobs:
     - name: Install GAMS
       shell: bash
       run: |
-        GAMS_INSTALLER=${GITHUB_WORKSPACE}/download-cache/gams_installer.exe
+        GAMS_INSTALLER=./download-cache/gams_installer.exe
         if test ! -e $GAMS_INSTALLER; then
             echo "...downloading GAMS"
             GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0
@@ -177,6 +177,7 @@ jobs:
         fi
         GAMS_VER=$(ls -d1 $GAMS_DIR/*/ | head -1)
         GAMS_PATH=${GITHUB_WORKSPACE}/$GAMS_VER
+        echo "PATH: $GAMS_PATH"
         export PATH=$PATH:$GAMS_PATH
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_PATH
         export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_PATH
