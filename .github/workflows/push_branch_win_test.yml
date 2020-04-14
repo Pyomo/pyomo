@@ -138,16 +138,16 @@ jobs:
 
     - name: Set up coverage tracking 1
       run: |
-        $COVERAGE_RC="${GITHUB_WORKSPACE}/coveragerc"
+        $COVERAGE_RC="$GITHUB_WORKSPACE\coveragerc"
 
     - name: Set up coverage tracking 2
       run: |
-        $COVERAGE_RC="${GITHUB_WORKSPACE}/coveragerc"
+        $COVERAGE_RC="$GITHUB_WORKSPACE\coveragerc"
         echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
 
     - name: Set up coverage tracking 3
       run: |
-        $COVERAGE_RC="${GITHUB_WORKSPACE}/coveragerc"
+        $COVERAGE_RC="$GITHUB_WORKSPACE\coveragerc"
         echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
         ls
         ls "${GITHUB_WORKSPACE}"
