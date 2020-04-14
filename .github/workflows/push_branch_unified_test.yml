@@ -136,6 +136,7 @@ jobs:
             else
                 wget -q -O $IPOPT_TAR $URL/idaes-solvers-windows-64.tar.gz \
                     $URL/idaes-lib-windows-64.tar.gz
+            fi
         fi
         IPOPT_DIR=${GITHUB_WORKSPACE}/packages/ipopt
         mkdir -p $IPOPT_DIR
