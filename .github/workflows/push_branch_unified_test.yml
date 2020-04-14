@@ -121,7 +121,7 @@ jobs:
             || echo "WARNING: CPLEX Community Edition is not available"
 
     - name: Install ipopt
-      shell: bash -l {0}
+      shell: bash
       run: |
         # Ensure cache directories exist
         mkdir -p ${GITHUB_WORKSPACE}/download-cache
@@ -133,10 +133,10 @@ jobs:
             if test "${{matrix.TARGET}}" == osx; then
                 echo "IDAES Ipopt not available on OSX"
             elif test "${{matrix.TARGET}}" == linux; then
-                wget -q -O $IPOPT_TAR $URL/idaes-solvers-ubuntu1804-64.tar.gz
+                curl -sL $URL/idaes-solvers-ubuntu1804-64.tar.gz > $IPOPT_TAR
             else
-                wget -q -O $IPOPT_TAR $URL/idaes-solvers-windows-64.tar.gz \
-                    $URL/idaes-lib-windows-64.tar.gz
+                curl -sL $URL/idaes-solvers-windows-64.tar.gz \
+                    $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
             fi
         fi
         IPOPT_DIR=${GITHUB_WORKSPACE}/packages/ipopt
@@ -147,18 +147,18 @@ jobs:
         echo "::add-path::$IPOPT_DIR"
 
     - name: Install GAMS
-      shell: bash -l {0}
+      shell: bash
       run: |
         GAMS_INSTALLER=${GITHUB_WORKSPACE}/download-cache/gams_installer.exe
         if test ! -e $GAMS_INSTALLER; then
             echo "...downloading GAMS"
             GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0
             if test "${{matrix.TARGET}}" == osx; then
-                wget -q -O $GAMS_INSTALLER $GAMS_URL/macosx/osx_x64_64_sfx.exe
+                curl -sL $GAMS_URL/macosx/osx_x64_64_sfx.exe -o $GAMS_INSTALLER
             elif test "${{matrix.TARGET}}" == linux; then
-                wget -q -O $GAMS_INSTALLER $GAMS_URL/linux/linux_x64_64_sfx.exe
+                curl -sL $GAMS_URL/linux/linux_x64_64_sfx.exe -o $GAMS_INSTALLER
             else
-                wget -q -O $GAMS_INSTALLER $GAMS_URL/windows/windows_x64_64.exe
+                curl -sL $GAMS_URL/windows/windows_x64_64.exe -o $GAMS_INSTALLER
             fi
         fi
         GAMS_DIR=${GITHUB_WORKSPACE}/packages/gams
