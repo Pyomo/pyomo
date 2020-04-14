@@ -166,10 +166,8 @@ jobs:
         mkdir -p $GAMS_DIR
         echo "Installing GAMS"
         if test "${{matrix.TARGET}}" == win; then
-            echo "running $GAMS_INSTALLER /SP- /VERYSILENT /NORESTART /NOICONS \
-                /DIR='$GAMS_DIR'"
-            $GAMS_INSTALLER /SP- /VERYSILENT /NORESTART /NOICONS \
-                /DIR="$GAMS_DIR"
+            #$GAMS_INSTALLER /SP- /VERYSILENT /NORESTART /NOICONS /DIR=$GAMS_DIR
+            $GAMS_INSTALLER /SP- /NORESTART /NOICONS /DIR=$GAMS_DIR
             echo "DONE"
         else
             chmod +x $GAMS_INSTALLER
