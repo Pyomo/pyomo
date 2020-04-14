@@ -20,9 +20,16 @@ class TightenContraintFromVars(IsomorphicTransformation):
     For now, this only operates on linear constraints.
 
     """
+    class _MissingArg(object):
+        pass
 
-    def _apply_to(self, instance):
-        for constr in instance.component_data_objects(
+    def _apply_to(self, model, rounding_ndigits=_MissingArg, **kwds):
+        """Apply the transformation.
+
+        Kwargs:
+            rounding_ndigits: if provided, passed to `builtins.round(..., rounding_ndigits)` for each of the new bounds.
+        """
+        for constr in model.component_data_objects(
                 ctype=Constraint, active=True, descend_into=True):
             repn = generate_standard_repn(constr.body)
             if not repn.is_linear():
@@ -35,7 +42,6 @@ class TightenContraintFromVars(IsomorphicTransformation):
 
             # loop through each coefficent and variable pair
             for var, coef in zip(repn.linear_vars, repn.linear_coefs):
-                # TODO: Rounding issues
                 # Calculate bounds using interval arithmetic
                 if coef >= 0:
                     if var.has_ub():
@@ -60,6 +66,11 @@ class TightenContraintFromVars(IsomorphicTransformation):
             # if inferred bound is tighter, replace bound
             new_ub = min(value(constr.upper), UB) if constr.has_ub() else UB
             new_lb = max(value(constr.lower), LB) if constr.has_lb() else LB
+
+            if rounding_ndigits is not self._MissingArg:
+                new_ub = round(new_ub, rounding_ndigits)
+                new_lb = round(new_lb, rounding_ndigits)
+
             constr.set_value((new_lb, constr.body, new_ub))
 
             if UB < LB:
