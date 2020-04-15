@@ -1127,9 +1127,12 @@ class _FiniteSetMixin(object):
         raise DeveloperError("Derived finite set class (%s) failed to "
                              "implement __len__" % (type(self).__name__,))
 
-    def __iter__(self):
+    def _iter_impl(self):
         raise DeveloperError("Derived finite set class (%s) failed to "
-                             "implement __iter__" % (type(self).__name__,))
+                             "implement _iter_impl" % (type(self).__name__,))
+
+    def __iter__(self):
+        return self._iter_impl()
 
     def __reversed__(self):
         return reversed(self.data())
@@ -1242,7 +1245,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
             return value
         return default
 
-    def __iter__(self):
+    def _iter_impl(self):
         return iter(self._values)
 
     def __len__(self):
@@ -1518,7 +1521,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __iter__(self):
+    def _iter_impl(self):
         """
         Return an iterator for the set.
         """
@@ -1661,13 +1664,13 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __iter__(self):
+    def _iter_impl(self):
         """
         Return an iterator for the set.
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).__iter__()
+        return super(_SortedSetData, self)._iter_impl()
 
     def __reversed__(self):
         if not self._is_sorted:
@@ -2252,7 +2255,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
     def __len__(self):
         return len(self._ref)
 
-    def __iter__(self):
+    def _iter_impl(self):
         return iter(self._ref)
 
     def __str__(self):
@@ -2411,7 +2414,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
                 i += 1
                 n = start + i*step
 
-    def __iter__(self):
+    def _iter_impl(self):
         # If there is only a single underlying range, then we will
         # iterate over it
         nIters = len(self._ranges) - 1
@@ -3119,7 +3122,7 @@ class SetUnion_InfiniteSet(SetUnion):
 class SetUnion_FiniteSet(_FiniteSetMixin, SetUnion_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0 = self._sets[0]
         return itertools.chain(
             set0,
@@ -3250,7 +3253,7 @@ class SetIntersection_InfiniteSet(SetIntersection):
 class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0, set1 = self._sets
         if not set0.isordered():
             if set1.isordered():
@@ -3355,7 +3358,7 @@ class SetDifference_InfiniteSet(SetDifference):
 class SetDifference_FiniteSet(_FiniteSetMixin, SetDifference_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0, set1 = self._sets
         return (_ for _ in set0 if _ not in set1)
 
@@ -3459,7 +3462,7 @@ class SetSymmetricDifference_FiniteSet(_FiniteSetMixin,
                                         SetSymmetricDifference_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0, set1 = self._sets
         return itertools.chain(
             (_ for _ in set0 if _ not in set1),
@@ -3732,7 +3735,7 @@ class SetProduct_InfiniteSet(SetProduct):
 class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         _iter = itertools.product(*self._sets)
         # Note: if all the member sets are simple 1-d sets, then there
         # is no need to call flatten_product.
@@ -3866,7 +3869,7 @@ class _EmptySet(_FiniteSetMixin, _SetData, Set):
     def __len__(self):
         return 0
 
-    def __iter__(self):
+    def _iter_impl(self):
         return iter(tuple())
 
     @property
