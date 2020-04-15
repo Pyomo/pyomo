@@ -5,6 +5,10 @@ on:
     branches-ignore:
       - master
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   pyomo-tests:
     name: ${{ matrix.TARGET }}/py${{ matrix.python-version }}
@@ -24,6 +28,7 @@ jobs:
           TARGET: win
           PYENV: conda
         python-version: [3.7]
+
 
     steps:
     - uses: actions/checkout@v2
@@ -96,6 +101,17 @@ jobs:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
 
+    # GitHub actions is very fragile when it comes to setting up various
+    # Python interpreters, expecially the setup-miniconda interface.
+    # Per the setup-miniconda documentation, it is important to always
+    # invoke bash as a login shell ('shell: bash -l {0}') so that the
+    # conda environment is properly activated.  Further, we have
+    # anecdotal evidence that subprocesses invoked through
+    # $(python -c ...) and `python -c ...` will not pick up the python
+    # activated by setup-python on OSX.  Our solution is to define a
+    # PYTHON_EXE environment variable that can be explicitly called
+    # within subprocess calls to reach the correct interpreter.
+
     - name: Install Python Packages (pip)
       if: matrix.PYENV == 'pip'
       env:
@@ -103,7 +119,6 @@ jobs:
             cython numpy scipy ipython openpyxl sympy pyyaml
             pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql
             pyro4 pint pathos coverage nose
-      shell: bash
       run: |
         python -m pip install --cache-dir cache/pip --upgrade pip
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
@@ -121,7 +136,6 @@ jobs:
             numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx 
             xlrd pandas matplotlib dill seaborn setuptools pip coverage
             sphinx_rtd_theme pymysql pyro4 pint pathos glpk
-      shell: bash -l {0}
       run: |
         mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
@@ -137,7 +151,6 @@ jobs:
             % (sys.executable,))'
 
     - name: Install Ipopt
-      shell: bash -l {0}
       run: |
         # Ensure cache directories exist
         mkdir -p ${GITHUB_WORKSPACE}/cache/download
@@ -165,7 +178,6 @@ jobs:
 
     - name: Install GAMS (bash)
       if: 0 == 1
-      shell: bash
       run: |
         GAMS_DIR="$GITHUB_WORKSPACE/packages/gams"
         GAMS_INSTALLER="cache/download/gams_install.exe"
@@ -235,21 +247,20 @@ jobs:
       # Note that bash *must* be called with '-l {0}' or the conda
       # environment will not be correctly set up
       if: 0 == 0
-      shell: bash -l {0}
       run: |
         GAMS_DIR="$GITHUB_WORKSPACE/packages/gams"
-        py_ver=`$PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
-            ;print(v if v != "_27" else "")'`
+        py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
+            ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
             echo "Installing GAMS Python bindings"
             pushd $GAMS_DIR/apifiles/Python/api$py_ver
-            python setup.py install
+            $PYTHON_EXE setup.py install
             popd
         fi
 
     - name: Install GAMS Python bindings
       if: 0 == 1
-      shell: python
+      shell: env.PYTHON_EXE {0}
       run: |
         import sys, os
         py_ver="_%s%s" % sys.version_info[:2]
@@ -273,17 +284,16 @@ jobs:
         echo ""
         echo "Install PyUtilib..."
         echo ""
-        pip install git+https://github.com/PyUtilib/pyutilib
+        $PYTHON_EXE -m pip install git+https://github.com/PyUtilib/pyutilib
         echo ""
         echo "Install Pyomo..."
         echo ""
-        python setup.py develop
+        $PYTHON_EXE setup.py develop
 
     - name: Set up coverage tracking
       # Note that bash *must* be called with '-l {0}' or the coverage
       # will be attached to the system python and not miniconda's
-      shell: bash -l {0}
-      if: 0 == 0
+      if: 0 == 1
       run: |
         if test "${{matrix.TARGET}}" == win; then
             COVERAGE_BASE=${GITHUB_WORKSPACE}\\.cover
@@ -295,8 +305,8 @@ jobs:
         echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
         echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
-        SITE_PACKAGES=`$PYTHON_EXE -c "from distutils.sysconfig import \
-            get_python_lib; print(get_python_lib())"`
+        SITE_PACKAGES=$($PYTHON_EXE -c "from distutils.sysconfig import \
+            get_python_lib; print(get_python_lib())")
         echo "SITE_PACKAGES: $SITE_PACKAGES"
         echo 'import coverage; coverage.process_startup()' \
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
@@ -306,8 +316,8 @@ jobs:
         cat ${COVERAGE_RC}
 
     - name: Set up coverage tracking (python driver)
-      if: 0 == 1
-      shell: python
+      if: 0 == 0
+      shell: env.PYTHON_EXE {0}
       run: |
         import os
         from os.path import join
@@ -354,6 +364,7 @@ jobs:
         ls
         coverage combine
         coverage report -i
+        coverage xml -i
         curl --retry 8 -s https://codecov.io/bash -o codecov.sh
         # Disable coverage uploads on branches
-        bash codecov.sh -X gcov -f '!cache/*'
+        bash codecov.sh -X gcov -f coverage.xml
