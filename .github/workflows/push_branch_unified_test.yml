@@ -262,6 +262,7 @@ jobs:
       # Note that bash *must* be called with '-l {0}' or the coverage
       # will be attached to the system python and not miniconda's
       shell: bash -l {0}
+      if: 0 == 1
       run: |
         if test "${{matrix.TARGET}}" == win; then
             COVERAGE_BASE=${GITHUB_WORKSPACE}\\.cover
@@ -282,6 +283,26 @@ jobs:
         cat ${SITE_PACKAGES}/run_coverage_at_startup.pth
         echo ".cover_rc:"
         cat ${COVERAGE_RC}
+
+    - name: Set up coverage tracking (python driver)
+      shell: python
+      run: |
+        from os.path import join
+        from distutils.sysconfig import get_python_lib
+        print("site_packages: %s" % (get_python_lib(),))
+        workspace = os.environ["GITHUB_WORKSPACE"]
+        rc = join(workspace, ".coveragerc")
+        data_file = join(workspace, ".coverage")
+        with open(join(workspace, "coveragerc"), "r") as FILE:
+            rc_base = FILE.read()
+        with open(rc, "w") as FILE:
+            FILE.write(rc_base)
+            FILE.write("data_file=%s\n" % (data_file,))
+        with open(join(get_python_lib(),
+                  "run_coverage_at_startup.pth"), "w") as FILE:
+            FILE.write("import coverage; coverage.process_startup()\n")
+        print("::set-env name=COVERAGE_RCFILE::%s" % rc)
+        print("::set-env name=COVERAGE_PROCESS_START::%s" % rc)
 
     - name: Download and install extensions
       run: |
