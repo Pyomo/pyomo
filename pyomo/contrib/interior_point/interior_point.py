@@ -15,7 +15,7 @@ class InteriorPointSolver(object):
     def __init__(self, linear_solver, max_iter=100, tol=1e-8, 
             regularize_kkt=False):
         self.linear_solver = linear_solver
-        self.max_iter = 100
+        self.max_iter = max_iter
         self.tol = tol
         self.regularize_kkt = regularize_kkt
 
@@ -294,6 +294,8 @@ class InteriorPointSolver(object):
         delta_x = cm * delta_x
         xl = cm * xl
     
+        #alpha = ((1 - tau) * (x - xl) + xl - x) / delta_x
+        # Why not reduce this?
         alpha = -tau * (x - xl) / delta_x
         if len(alpha) == 0:
             return 1
@@ -321,6 +323,7 @@ class InteriorPointSolver(object):
         delta_x = cm * delta_x
         xu = cm * xu
     
+        #alpha = (xu - (1 - tau) * (xu - x) - x) / delta_x
         alpha = tau * (xu - x) / delta_x
         if len(alpha) == 0:
             return 1
