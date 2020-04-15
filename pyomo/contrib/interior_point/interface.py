@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 import six
-from pyomo.contrib.pynumero.interfaces import pyomo_nlp
+from pyomo.contrib.pynumero.interfaces import pyomo_nlp, ampl_nlp
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
 from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
 import numpy as np
@@ -238,7 +238,11 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
 
 class InteriorPointInterface(BaseInteriorPointInterface):
     def __init__(self, pyomo_model):
-        self._nlp = pyomo_nlp.PyomoNLP(pyomo_model)
+        if type(pyomo_model) is str:
+            # Assume argument is the name of an nl file
+            self._nlp = ampl_nlp.AmplNLP(pyomo_model)
+        else:
+            self._nlp = pyomo_nlp.PyomoNLP(pyomo_model)
         lb = self._nlp.primals_lb()
         ub = self._nlp.primals_ub()
         self._primals_lb_compression_matrix = \
