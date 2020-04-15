@@ -287,6 +287,7 @@ jobs:
     - name: Set up coverage tracking (python driver)
       shell: python
       run: |
+        import os
         from os.path import join
         from distutils.sysconfig import get_python_lib
         print("site_packages: %s" % (get_python_lib(),))
@@ -299,7 +300,7 @@ jobs:
             FILE.write(rc_base)
             FILE.write("data_file=%s\n" % (data_file,))
         with open(join(get_python_lib(),
-                  "run_coverage_at_startup.pth"), "w") as FILE:
+                       "run_coverage_at_startup.pth"), "w") as FILE:
             FILE.write("import coverage; coverage.process_startup()\n")
         print("::set-env name=COVERAGE_RCFILE::%s" % rc)
         print("::set-env name=COVERAGE_PROCESS_START::%s" % rc)
