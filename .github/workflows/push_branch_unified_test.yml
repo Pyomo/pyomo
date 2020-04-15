@@ -284,6 +284,8 @@ jobs:
         echo "Pyomo build-extensions"
         echo ""
         pyomo build-extensions --parallel 2
+        ls
+        ls ..
 
     - name: Run Pyomo tests
       env:
@@ -295,7 +297,7 @@ jobs:
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/py${{matrix.python-version}}
       run: |
-        ls -al
+        ls
         coverage combine
         coverage report -i
         curl --retry 8 -s https://codecov.io/bash -o codecov.sh
