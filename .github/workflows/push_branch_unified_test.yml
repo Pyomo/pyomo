@@ -28,41 +28,45 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Conda package cache
-      uses: actions/cache@v1
-      if: matrix.PYENV == 'conda'
-      id: conda-cache
-      with:
-        path: conda-cache
-        key: conda-v1-${{runner.os}}-${{matrix.python-version}}
+    # Ideally we would cache the conda downloads; however, each cache is
+    # over 850MB, and with 5 python versions, that would consume 4.2 of
+    # the 5 GB GitHub allows.
+    #
+    #- name: Conda package cache
+    #  uses: actions/cache@v1
+    #  if: matrix.PYENV == 'conda'
+    #  id: conda-cache
+    #  with:
+    #    path: cache/conda
+    #    key: conda-v2-${{runner.os}}-${{matrix.python-version}}
 
     - name: Pip package cache
       uses: actions/cache@v1
       if: matrix.PYENV == 'pip'
       id: pip-cache
       with:
-        path: pip-cache
-        key: pip-v1-${{runner.os}}-${{matrix.python-version}}
+        path: cache/pip
+        key: pip-v2-${{runner.os}}-${{matrix.python-version}}
 
     - name: OS package cache
       uses: actions/cache@v1
-      id: pkg-cache
+      id: os-cache
       with:
-        path: pkg-cache
-        key: pkg-v1-${{runner.os}}
+        path: cache/os
+        key: pkg-v2-${{runner.os}}
 
     - name: Download cache
       uses: actions/cache@v1
       id: download-cache
       with:
-        path: download-cache
-        key: download-v1-${{runner.os}}
+        path: cache/download
+        key: download-v2-${{runner.os}}
 
     - name: Update OSX
       if: matrix.TARGET == 'osx'
       run: |
-        mkdir -p ${GITHUB_WORKSPACE}/pkg-cache
-        export HOMEBREW_CACHE=${GITHUB_WORKSPACE}/pkg-cache
+        mkdir -p ${GITHUB_WORKSPACE}/cache/os
+        export HOMEBREW_CACHE=${GITHUB_WORKSPACE}/cache/os
         echo "Install pre-dependencies for pyodbc..."
         brew update
         for pkg in bash gcc pkg-config unixodbc freetds glpk; do
@@ -73,11 +77,11 @@ jobs:
     - name: Update Linux
       if: matrix.TARGET == 'linux'
       run: |
-        mkdir -p ${GITHUB_WORKSPACE}/pkg-cache
+        mkdir -p ${GITHUB_WORKSPACE}/cache/os
         echo "Install pre-dependencies for ipopt..."
-        sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/pkg-cache \
+        sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils
-        sudo chmod -R 777 ${GITHUB_WORKSPACE}/pkg-cache
+        sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Set up Python ${{ matrix.python-version }}
       if: matrix.PYENV == 'pip'
@@ -101,10 +105,10 @@ jobs:
             pyro4 pint pathos coverage nose
       shell: bash
       run: |
-        python -m pip install --cache-dir pip-cache --upgrade pip
+        python -m pip install --cache-dir cache/pip --upgrade pip
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
-        pip install --cache-dir pip-cache $PIP_PKGS
-        pip install --cache-dir pip-cache cplex \
+        pip install --cache-dir cache/pip $PIP_PKGS
+        pip install --cache-dir cache/pip cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
 
     - name: Install Python packages (conda)
@@ -117,10 +121,10 @@ jobs:
             sphinx_rtd_theme pymysql pyro4 pint pathos glpk
       shell: bash -l {0}
       run: |
-        mkdir -p $GITHUB_WORKSPACE/conda-cache
+        mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/conda-cache
+        conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
         conda info
         conda config --show-sources
         conda list --show-channel-urls
@@ -128,13 +132,13 @@ jobs:
         conda install -q -y -c ibmdecisionoptimization --no-update-deps cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
 
-    - name: Install ipopt
+    - name: Install Ipopt
       shell: bash
       run: |
         # Ensure cache directories exist
-        mkdir -p ${GITHUB_WORKSPACE}/download-cache
+        mkdir -p ${GITHUB_WORKSPACE}/cache/download
         #
-        IPOPT_TAR=${GITHUB_WORKSPACE}/download-cache/ipopt.tar.gz
+        IPOPT_TAR=${GITHUB_WORKSPACE}/cache/download/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
             URL=https://github.com/IDAES/idaes-ext/releases/download/2.0.0
@@ -150,17 +154,49 @@ jobs:
         IPOPT_DIR=${GITHUB_WORKSPACE}/packages/ipopt
         mkdir -p $IPOPT_DIR
         pushd $IPOPT_DIR
-        TAR=../../download-cache/ipopt.tar.gz
+        TAR=../../cache/download/ipopt.tar.gz
         test -e $TAR && tar -xzif $TAR
         popd
         echo "::add-path::$IPOPT_DIR"
 
-    - name: Install GAMS
+    - name: Install GAMS (bash)
+      if: 0 == 0
+      shell: bash
+      run: |
+        GAMS_DIR="$GITHUB_WORKSPACE/packages/gams"
+        GAMS_INSTALLER="cache/download/gams_install.exe"
+        if test ! -e "$GAMS_INSTALLER"; then
+            echo "...downloading GAMS"
+            URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
+            if test "${{matrix.TARGET}}" == "win"; then
+                URL="$URL/windows/windows_x64_64.exe"
+            elif test "${{matrix.TARGET}}" == "osx"; then
+                URL="$URL/macosx/osx_x64_64_sfx.exe"
+            else
+                URL="$URL/linux/linux_x64_64_sfx.exe"
+            fi
+            curl -L "$URL" -o "$GAMS_INSTALLER"
+        }
+        echo "...installing GAMS"
+        if test "${{matrix.TARGET}}" == "win"; then
+            "$GAMS_INSTALLER" /SP- /NORESTART /VERYSILENT /NOICONS" \
+                /DIR=$GAMS_DIR
+        else
+            chmod 777 $GAMS_INSTALLER
+            "$GAMS_INSTALLER" -q -d $GAMS_DIR
+            mv $GAMS_DIR/*/* $GAMS_DIR/.
+        fi
+        echo "PATH: $GAMS_DIR"
+        echo "::add-path::$GAMS_DIR"
+        echo "::set-env name=LD_LIBRARY_PATH::${LD_LIBRARY_PATH}:$GAMS_DIR"
+        echo "::set-env name=DYLD_LIBRARY_PATH::${DYLD_LIBRARY_PATH}:$GAMS_DIR"
+
+    - name: Install GAMS (powershell)
+      if: 0 == 1
       shell: pwsh
       run: |
-        $GAMS_DIR="packages/gams"
-        $GAMS_DIR="$env:GITHUB_WORKSPACE/$GAMS_DIR"
-        $GAMS_INSTALLER="download-cache/gams_install.exe"
+        $GAMS_DIR="$env:GITHUB_WORKSPACE/packages/gams"
+        $GAMS_INSTALLER="cache/download/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( -not (Test-Path "$GAMS_INSTALLER")) {
             echo "...downloading GAMS"
@@ -184,9 +220,6 @@ jobs:
                 "-q -d $GAMS_DIR" -Wait
             mv $GAMS_DIR/*/* $GAMS_DIR/.
         }
-        echo "PACKAGES GAMS:"
-        ls packages/gams
-        #$GAMS_DIR="$env:GITHUB_WORKSPACE/$GAMS_DIR"
         echo "PATH: $GAMS_DIR"
         echo "::add-path::$GAMS_DIR"
         echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
@@ -195,7 +228,7 @@ jobs:
     - name: Install GAMS Python bindings
       shell: bash
       run: |
-        GAMS_DIR="packages/gams"
+        GAMS_DIR="$GITHUB_WORKSPACE/packages/gams"
         py_ver=$(python -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
@@ -215,7 +248,7 @@ jobs:
         echo ""
         echo "Install PyUtilib..."
         echo ""
-        pip install --quiet git+https://github.com/PyUtilib/pyutilib
+        pip install git+https://github.com/PyUtilib/pyutilib
         echo ""
         echo "Install Pyomo..."
         echo ""
@@ -225,6 +258,7 @@ jobs:
       shell: bash
       run: |
         COVERAGE_RC=${GITHUB_WORKSPACE}/coveragerc
+        echo "::set-env name=COVERAGE_RCFILE::$COVERAGE_RC"
         echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
         echo "data_file=${GITHUB_WORKSPACE}/.coverage" >> ${COVERAGE_RC}
@@ -254,8 +288,10 @@ jobs:
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/py${{matrix.python-version}}
       run: |
+        ls
         coverage combine
         coverage report -i
         curl --retry 8 -s https://codecov.io/bash -o codecov.sh
         # Disable coverage uploads on branches
-        bash codecov.sh -X gcov
+        bash codecov.sh -X gcov -f '!cache/*
+        ls
