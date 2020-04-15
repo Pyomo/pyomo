@@ -288,10 +288,10 @@ jobs:
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/py${{matrix.python-version}}
       run: |
-        ls
+        ls -al
         coverage combine
         coverage report -i
         curl --retry 8 -s https://codecov.io/bash -o codecov.sh
         # Disable coverage uploads on branches
-        bash codecov.sh -X gcov -f '!cache/*
-        ls
+        bash codecov.sh -X gcov -f '!cache/*'
+        ls -al
