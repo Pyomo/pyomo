@@ -160,7 +160,7 @@ jobs:
         echo "::add-path::$IPOPT_DIR"
 
     - name: Install GAMS (bash)
-      if: 0 == 0
+      if: 0 == 1
       shell: bash
       run: |
         GAMS_DIR="$GITHUB_WORKSPACE/packages/gams"
@@ -192,13 +192,15 @@ jobs:
         echo "::set-env name=DYLD_LIBRARY_PATH::${DYLD_LIBRARY_PATH}:$GAMS_DIR"
 
     - name: Install GAMS (powershell)
-      if: 0 == 1
+      # We install using Powershell because the GAMS installer hangs
+      # when launched from bash on Windows
+      if: 0 == 0
       shell: pwsh
       run: |
         $GAMS_DIR="$env:GITHUB_WORKSPACE/packages/gams"
         $GAMS_INSTALLER="cache/download/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
-        if ( -not (Test-Path "$GAMS_INSTALLER")) {
+        if (-not (Test-Path "$GAMS_INSTALLER" -PathType Leaf)) {
             echo "...downloading GAMS"
             if ( "${{matrix.TARGET}}" -eq "win" ) {
                 $URL = "$URL/windows/windows_x64_64.exe"
@@ -288,10 +290,8 @@ jobs:
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/py${{matrix.python-version}}
       run: |
-        ls -al
         coverage combine
         coverage report -i
         curl --retry 8 -s https://codecov.io/bash -o codecov.sh
         # Disable coverage uploads on branches
         bash codecov.sh -X gcov -f '!cache/*'
-        ls -al
