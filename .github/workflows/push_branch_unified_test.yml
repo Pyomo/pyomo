@@ -259,11 +259,16 @@ jobs:
     - name: Set up coverage tracking
       shell: bash
       run: |
-        COVERAGE_RC=${GITHUB_WORKSPACE}/coveragerc
+        if test "${{matrix.TARGET}}" == win; then
+            COVERAGE_BASE=${GITHUB_WORKSPACE}/.cover
+        else
+            COVERAGE_BASE=${GITHUB_WORKSPACE}\\.cover
+        fi
+        COVERAGE_RC=${COVERAGE_BASE}_rc
         echo "::set-env name=COVERAGE_RCFILE::$COVERAGE_RC"
         echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
-        echo "data_file=${GITHUB_WORKSPACE}/.coverage" >> ${COVERAGE_RC}
+        echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
         SITE_PACKAGES=$(python -c "from distutils.sysconfig import \
             get_python_lib; print(get_python_lib())")
         echo "SITE_PACKAGES: $SITE_PACKAGES"
@@ -271,7 +276,7 @@ jobs:
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
         echo "run_coverage_at_startup.pth:"
         cat ${SITE_PACKAGES}/run_coverage_at_startup.pth
-        echo "coveragerc:"
+        echo ".cover_rc:"
         cat ${COVERAGE_RC}
 
     - name: Download and install extensions
@@ -284,6 +289,7 @@ jobs:
         echo "Pyomo build-extensions"
         echo ""
         pyomo build-extensions --parallel 2
+        ls .cover*
         ls
         ls ..
 
