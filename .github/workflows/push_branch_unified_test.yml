@@ -168,9 +168,9 @@ jobs:
         if test ! -e "$GAMS_INSTALLER"; then
             echo "...downloading GAMS"
             URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
-            if test "${{matrix.TARGET}}" == "win"; then
+            if test "${{matrix.TARGET}}" == win; then
                 URL="$URL/windows/windows_x64_64.exe"
-            elif test "${{matrix.TARGET}}" == "osx"; then
+            elif test "${{matrix.TARGET}}" == osx; then
                 URL="$URL/macosx/osx_x64_64_sfx.exe"
             else
                 URL="$URL/linux/linux_x64_64_sfx.exe"
@@ -178,8 +178,8 @@ jobs:
             curl -L "$URL" -o "$GAMS_INSTALLER"
         fi
         echo "...installing GAMS"
-        if test "${{matrix.TARGET}}" == "win"; then
-            "$GAMS_INSTALLER" /SP- /NORESTART /VERYSILENT /NOICONS" \
+        if test "${{matrix.TARGET}}" == win; then
+            "$GAMS_INSTALLER" /SP- /NORESTART /VERYSILENT /NOICONS \
                 /DIR=$GAMS_DIR
         else
             chmod 777 $GAMS_INSTALLER
