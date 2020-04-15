@@ -176,7 +176,7 @@ jobs:
                 URL="$URL/linux/linux_x64_64_sfx.exe"
             fi
             curl -L "$URL" -o "$GAMS_INSTALLER"
-        }
+        fi
         echo "...installing GAMS"
         if test "${{matrix.TARGET}}" == "win"; then
             "$GAMS_INSTALLER" /SP- /NORESTART /VERYSILENT /NOICONS" \
