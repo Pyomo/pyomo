@@ -30,16 +30,15 @@ class TestDeprecatedModules(unittest.TestCase):
         self.assertEqual(log.getvalue(), "")
 
         log = StringIO()
-        with LoggingIntercept(log):
+        with LoggingIntercept(log, 'pyomo'):
             rs = force_load('pyomo.core.base.rangeset')
         self.assertIn("The pyomo.core.base.rangeset module is deprecated.",
                       log.getvalue().strip().replace('\n',' '))
         self.assertIs(RangeSet, rs.RangeSet)
 
-        # Run this twice to implicitly test the reload() implementation
-        # on Python 2.7
+        # Run this twice to implicitly test the force_load() implementation
         log = StringIO()
-        with LoggingIntercept(log):
+        with LoggingIntercept(log, 'pyomo'):
             rs = force_load('pyomo.core.base.rangeset')
         self.assertIn("The pyomo.core.base.rangeset module is deprecated.",
                       log.getvalue().strip().replace('\n',' '))
