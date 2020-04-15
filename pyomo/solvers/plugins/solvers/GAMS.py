@@ -738,7 +738,7 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            rc, _ = pyutilib.subprocess.run(command, tee=tee)
+            rc, txt = pyutilib.subprocess.run(command, tee=tee)
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
@@ -753,7 +753,7 @@ class GAMSShell(_GAMSSolver):
                 # If nothing was raised, or for all other cases, raise this
                 logger.error("GAMS encountered an error during solve. "
                              "Check listing file for details.")
-                logger.error(_)
+                logger.error(txt)
                 if os.path.exists(lst_filename):
                     with open(lst_filename, 'r') as FILE:
                         logger.error(
