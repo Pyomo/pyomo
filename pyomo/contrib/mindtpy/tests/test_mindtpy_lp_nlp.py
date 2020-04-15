@@ -11,7 +11,7 @@ from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
 from pyomo.environ import SolverFactory, value
 
-required_solvers = ('ipopt', 'glpk')  # 'cplex_persistent')
+required_solvers = ('ipopt', 'cplex_persistent')  # 'cplex_persistent')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -26,7 +26,9 @@ else:
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
-    def test_OA_8PP(self):
+    # lazy callback tests
+
+    def test_lazy_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
@@ -35,13 +37,14 @@ class TestMindtPy(unittest.TestCase):
                       init_strategy='rNLP',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      bound_tolerance=1E-5)
+                      bound_tolerance=1E-5,
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    def test_OA_8PP_init_max_binary(self):
+    def test_lazy_OA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
@@ -49,52 +52,14 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(model, strategy='OA',
                       init_strategy='max_binary',
                       mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0])
+                      nlp_solver=required_solvers[0],
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    # def test_PSC(self):
-    #     """Test the partial surrogate cuts decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
-    #         print('\n Solving problem with Partial Surrogate Cuts')
-    #         opt.solve(model, strategy='PSC',
-    #                   init_strategy='rNLP', mip_solver=required_solvers[1],
-    #                   nlp_solver=required_solvers[0])
-    #
-    #         # self.assertIs(results.solver.termination_condition,
-    #         #               TerminationCondition.optimal)
-    #         self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
-
-    # def test_GBD(self):
-    #     """Test the generalized Benders Decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
-    #         print('\n Solving problem with Generalized Benders Decomposition')
-    #         opt.solve(model, strategy='GBD',
-    #                   init_strategy='rNLP', mip_solver=required_solvers[1],
-    #                   nlp_solver=required_solvers[0])
-    #
-    #         # self.assertIs(results.solver.termination_condition,
-    #         #               TerminationCondition.optimal)
-    #         self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
-    #
-    # def test_ECP(self):
-    #     """Test the Extended Cutting Planes algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
-    #         print('\n Solving problem with Extended Cutting Planes')
-    #         opt.solve(model, strategy='ECP',
-    #                   init_strategy='rNLP', mip_solver=required_solvers[1],
-    #                   nlp_solver=required_solvers[0])
-    #
-    #         # self.assertIs(results.solver.termination_condition,
-    #         #               TerminationCondition.optimal)
-    #         self.assertTrue(fabs(value(model.cost.expr) - 68) <= 1E-2)
-
-    def test_OA_MINLP_simple(self):
+    def test_lazy_OA_MINLP_simple(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
@@ -103,13 +68,14 @@ class TestMindtPy(unittest.TestCase):
                       init_strategy='initial_binary',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      obj_bound=10)
+                      obj_bound=10,
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
-    def test_OA_MINLP2_simple(self):
+    def test_lazy_OA_MINLP2_simple(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
@@ -118,13 +84,14 @@ class TestMindtPy(unittest.TestCase):
                       init_strategy='initial_binary',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      obj_bound=10)
+                      obj_bound=10,
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
 
-    def test_OA_MINLP3_simple(self):
+    def test_lazy_OA_MINLP3_simple(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
@@ -132,26 +99,14 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(model, strategy='OA', init_strategy='initial_binary',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      obj_bound=10)
+                      obj_bound=10,
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
-    def test_OA_Proposal(self):
-        """Test the outer approximation decomposition algorithm."""
-        with SolverFactory('mindtpy') as opt:
-            model = ProposalModel()
-            print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0])
-
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
-            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
-
-    def test_OA_Proposal_with_int_cuts(self):
+    def test_lazy_OA_Proposal(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
@@ -159,9 +114,7 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      add_integer_cuts=True,
-                      integer_to_binary=True  # if we use lazy callback, we cannot set integer_to_binary True
-                      )
+                      single_tree=True)
 
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -173,50 +126,28 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving problem with Outer Approximation')
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0]
+                      nlp_solver=required_solvers[0],
+                      single_tree=True
                       )
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
-    # def test_PSC(self):
-    #     """Test the partial surrogate cuts decomposition algorithm."""
+    # TODO fix the bug with integer_to_binary
+    # def test_OA_Proposal_with_int_cuts(self):
+    #     """Test the outer approximation decomposition algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = SimpleMINLP()
-    #         print('\n Solving problem with Partial Surrogate Cuts')
-    #         opt.solve(model, strategy='PSC', init_strategy='initial_binary',
+    #         model = ProposalModel()
+    #         print('\n Solving problem with Outer Approximation')
+    #         opt.solve(model, strategy='OA',
     #                   mip_solver=required_solvers[1],
-    #                   nlp_solver=required_solvers[0])
-    #
+    #                   nlp_solver=required_solvers[0],
+    #                   add_integer_cuts=True,
+    #                   integer_to_binary=True,  # if we use lazy callback, we cannot set integer_to_binary True
+    #                   lazy_callback=True,
+    #                   iteration_limit=1)
+
     #         # self.assertIs(results.solver.termination_condition,
     #         #               TerminationCondition.optimal)
-    #         self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
-    #
-    # def test_GBD(self):
-    #     """Test the generalized Benders Decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = SimpleMINLP()
-    #         print('\n Solving problem with Generalized Benders Decomposition')
-    #         opt.solve(model, strategy='GBD', init_strategy='initial_binary',
-    #                   mip_solver=required_solvers[1],
-    #                   nlp_solver=required_solvers[0])
-    #
-    #         # self.assertIs(results.solver.termination_condition,
-    #         #               TerminationCondition.optimal)
-    #         self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
-    #
-    # def test_ECP(self):
-    #     """Test the Extended Cutting Planes algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = SimpleMINLP()
-    #         print('\n Solving problem with Extended Cutting Planes')
-    #         opt.solve(model, strategy='ECP', init_strategy='initial_binary',
-    #                   ECP_tolerance=1E-4,
-    #                   mip_solver=required_solvers[1],
-    #                   nlp_solver=required_solvers[0])
-    #
-    #         # self.assertIs(results.solver.termination_condition,
-    #         #               TerminationCondition.optimal)
-    #         self.assertTrue(abs(value(model.cost.expr) - 3.5) <= 1E-2)
-    #
+    #         self.assertAlmostEquals(value(model.obj.expr), 0.66555, places=2)
 
 
 if __name__ == "__main__":

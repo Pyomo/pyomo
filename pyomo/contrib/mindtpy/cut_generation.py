@@ -28,7 +28,7 @@ def add_objective_linearization(solve_data, config):
             expr=sign_adjust * sum(
                 value(MindtPy.jacs[obj][id(var)]) * (var - value(var))
                 for var in list(EXPR.identify_variables(obj.body))) +
-                 value(obj.body) <= 0)
+            value(obj.body) <= 0)
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
 
@@ -50,48 +50,190 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
         constr_vars = list(identify_variables(constr.body))
         jacs = solve_data.jacobians
 
-        # Equality constraint (makes the problem nonconvex)
-        if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
-            sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-            rhs = ((0 if constr.upper is None else constr.upper)
-                   + (0 if constr.lower is None else constr.lower))
-            rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
-            slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-            target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
-                expr=copysign(1, sign_adjust * dual_value)
-                     * (sum(value(jacs[constr][var]) * (var - value(var))
-                            for var in list(EXPR.identify_variables(constr.body)))
-                        + value(constr.body) - rhs)
-                     - slack_var <= 0)
-
-        else:  # Inequality constraint (possibly two-sided)
-            if constr.has_ub() \
-               and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
-                    or (linearize_violated and constr.uslack() < 0) \
-                    or (linearize_inactive and constr.uslack() > 0):
-                if use_slack_var:
-                    slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-
+        if config.add_slack == True:
+            # Equality constraint (makes the problem nonconvex)
+            if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
+                sign_adjust = -1 if solve_data.objective_sense == minimize else 1
+                rhs = ((0 if constr.upper is None else constr.upper)
+                       + (0 if constr.lower is None else constr.lower))
+                rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+                slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
                 target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
-                    expr=(sum(value(jacs[constr][var])*(var - var.value)
-                              for var in constr_vars)
-                          - (slack_var if use_slack_var else 0)
-                          <= constr.upper)
-                )
+                    expr=copysign(1, sign_adjust * dual_value)
+                    * (sum(value(jacs[constr][var]) * (var - value(var))
+                           for var in list(EXPR.identify_variables(constr.body)))
+                       + value(constr.body) - rhs)
+                    - slack_var <= 0)
 
-            if constr.has_lb() \
-               and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
-                    or (linearize_violated and constr.lslack() < 0) \
-                    or (linearize_inactive and constr.lslack() > 0):
-                if use_slack_var:
-                    slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+            else:  # Inequality constraint (possibly two-sided)
+                if constr.has_ub() \
+                    and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
+                        or (linearize_violated and constr.uslack() < 0) \
+                        or (linearize_inactive and constr.uslack() > 0):
+                    if use_slack_var:
+                        slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
+                    target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                        expr=(sum(value(jacs[constr][var])*(var - var.value)
+                                  for var in constr_vars)
+                              - (slack_var if use_slack_var else 0)
+                              <= constr.upper)
+                    )
+
+                if constr.has_lb() \
+                    and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
+                        or (linearize_violated and constr.lslack() < 0) \
+                        or (linearize_inactive and constr.lslack() > 0):
+                    if use_slack_var:
+                        slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+
+                    target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                        expr=(sum(value(jacs[constr][var])*(var - var.value)
+                                  for var in constr_vars)
+                              + (slack_var if use_slack_var else 0)
+                              >= constr.lower)
+                    )
+
+        if config.add_slack == False:
+            # Equality constraint (makes the problem nonconvex)
+            if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
+                sign_adjust = -1 if solve_data.objective_sense == minimize else 1
+                rhs = ((0 if constr.upper is None else constr.upper)
+                       + (0 if constr.lower is None else constr.lower))
+                rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+                # slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
                 target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
-                    expr=(sum(value(jacs[constr][var])*(var - var.value)
-                              for var in constr_vars)
-                          + (slack_var if use_slack_var else 0)
-                          >= constr.lower)
+                    expr=copysign(1, sign_adjust * dual_value)
+                    * (sum(value(jacs[constr][var]) * (var - value(var))
+                           for var in list(EXPR.identify_variables(constr.body)))
+                       + value(constr.body) - rhs) <= 0)
+
+            else:  # Inequality constraint (possibly two-sided)
+                if constr.has_ub() \
+                    and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
+                        or (linearize_violated and constr.uslack() < 0) \
+                        or (linearize_inactive and constr.uslack() > 0):
+                    # if use_slack_var:
+                    #     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+
+                    target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                        expr=(sum(value(jacs[constr][var])*(var - var.value)
+                                  for var in constr_vars)
+                              + value(constr.body)
+                              <= constr.upper)
+                    )
+
+                if constr.has_lb() \
+                    and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
+                        or (linearize_violated and constr.lslack() < 0) \
+                        or (linearize_inactive and constr.lslack() > 0):
+                    # if use_slack_var:
+                    #     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+
+                    target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                        expr=(sum(value(jacs[constr][var])*(var - var.value)
+                                  for var in constr_vars)
+                              + value(constr.body)
+                              >= constr.lower)
+                    )
+
+
+'''
+def add_outer_approximation_cuts(nlp_result, solve_data, config):
+    def add_oa_cuts(target_model, dual_values, solve_data, config,
+                    linearize_active=True,
+                    linearize_violated=True,
+                    linearize_inactive=False,
+                    use_slack_var=False):
+    """Add outer approximation cuts to the linear GDP model."""
+    with time_code(solve_data.timing, 'OA cut generation'):
+        m = solve_data.linear_GDP
+        GDPopt = m.GDPopt_utils
+        sign_adjust = -1 if solve_data.objective_sense == minimize else 1
+
+        # copy values over
+        for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
+            if val is not None and not var.fixed:
+                var.value = val
+
+        # TODO some kind of special handling if the dual is phenomenally small?
+        config.logger.debug('Adding OA cuts.')
+
+        counter = 0
+        if not hasattr(GDPopt, 'jacobians'):
+            GDPopt.jacobians = ComponentMap()
+        for constr, dual_value in zip(GDPopt.constraint_list,
+                                      nlp_result.dual_values):
+            if dual_value is None or constr.body.polynomial_degree() in (1, 0):
+                continue
+
+            # Determine if the user pre-specified that OA cuts should not be
+            # generated for the given constraint.
+            parent_block = constr.parent_block()
+            ignore_set = getattr(parent_block, 'GDPopt_ignore_OA', None)
+            config.logger.debug('Ignore_set %s' % ignore_set)
+            if (ignore_set and (constr in ignore_set or
+                                constr.parent_component() in ignore_set)):
+                config.logger.debug(
+                    'OA cut addition for %s skipped because it is in '
+                    'the ignore set.' % constr.name)
+                continue
+
+            config.logger.debug(
+                "Adding OA cut for %s with dual value %s"
+                % (constr.name, dual_value))
+
+            # Cache jacobians
+            jacobians = GDPopt.jacobians.get(constr, None)
+            if jacobians is None:
+                constr_vars = list(identify_variables(
+                    constr.body, include_fixed=False))
+                if len(constr_vars) >= 1000:
+                    mode = differentiate.Modes.reverse_numeric
+                else:
+                    mode = differentiate.Modes.sympy
+
+                jac_list = differentiate(
+                    constr.body, wrt_list=constr_vars, mode=mode)
+                jacobians = ComponentMap(zip(constr_vars, jac_list))
+                GDPopt.jacobians[constr] = jacobians
+
+            # Create a block on which to put outer approximation cuts.
+            oa_utils = parent_block.component('GDPopt_OA')
+            if oa_utils is None:
+                oa_utils = parent_block.GDPopt_OA = Block(
+                    doc="Block holding outer approximation cuts "
+                    "and associated data.")
+                oa_utils.GDPopt_OA_cuts = ConstraintList()
+                oa_utils.GDPopt_OA_slacks = VarList(
+                    bounds=(0, config.max_slack),
+                    domain=NonNegativeReals, initialize=0)
+
+            oa_cuts = oa_utils.GDPopt_OA_cuts
+            slack_var = oa_utils.GDPopt_OA_slacks.add()
+            rhs = value(constr.lower) if constr.has_lb(
+            ) else value(constr.upper)
+            try:
+                new_oa_cut = (
+                    copysign(1, sign_adjust * dual_value) * (
+                        value(constr.body) - rhs + sum(
+                            value(jacobians[var]) * (var - value(var))
+                            for var in jacobians)) - slack_var <= 0)
+                if new_oa_cut.polynomial_degree() not in (1, 0):
+                    for var in jacobians:
+                        print(var.name, value(jacobians[var]))
+                oa_cuts.add(expr=new_oa_cut)
+                counter += 1
+            except ZeroDivisionError:
+                config.logger.warning(
+                    "Zero division occured attempting to generate OA cut for constraint %s.\n"
+                    "Skipping OA cut generation for this constraint."
+                    % (constr.name,)
                 )
+                # Simply continue on to the next constraint.
+
+        config.logger.info('Added %s OA cuts' % counter)
+'''
 
 
 def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
@@ -140,14 +282,14 @@ def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_int
         slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
         MindtPy.MindtPy_linear_cuts.oa_cuts.add(
             expr=copysign(1, sign_adjust * dual_value)
-                 * (sum(value(jacs[constr][var]) * (var - value(var))
-                        for var in list(EXPR.identify_variables(constr.body)))
-                    + value(constr.body) - rhs)
-                 - slack_var <= 0)
+            * (sum(value(jacs[constr][var]) * (var - value(var))
+                   for var in list(EXPR.identify_variables(constr.body)))
+               + value(constr.body) - rhs)
+            - slack_var <= 0)
 
 
 def add_int_cut(var_values, solve_data, config, feasible=False):
-    if not config.integer_cuts:
+    if not config.add_integer_cuts:
         return
 
     config.logger.info("Adding integer cuts")
