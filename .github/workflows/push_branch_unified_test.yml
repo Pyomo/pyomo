@@ -9,6 +9,9 @@ defaults:
   run:
     shell: bash -l {0}
 
+env:
+  PYTHONWARNINGS: ignore::UserWarning
+
 jobs:
   pyomo-tests:
     name: ${{ matrix.TARGET }}/py${{ matrix.python-version }}
@@ -141,7 +144,6 @@ jobs:
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
       env:
-        PYTHONWARNINGS: ignore::UserWarning
         CONDA_PKGS: >
             numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx 
             xlrd pandas matplotlib dill seaborn setuptools pip coverage
@@ -172,9 +174,10 @@ jobs:
             if test "${{matrix.TARGET}}" == osx; then
                 echo "IDAES Ipopt not available on OSX"
             elif test "${{matrix.TARGET}}" == linux; then
-                curl -L $URL/idaes-solvers-ubuntu1804-64.tar.gz > $IPOPT_TAR
+                curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
+                    > $IPOPT_TAR
             else
-                curl -L $URL/idaes-solvers-windows-64.tar.gz \
+                curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
                     $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
             fi
         fi
@@ -186,41 +189,9 @@ jobs:
         popd
         echo "::add-path::$IPOPT_DIR"
 
-    - name: Install GAMS (bash)
-      if: 0 == 1
-      run: |
-        GAMS_DIR="$GITHUB_WORKSPACE/packages/gams"
-        GAMS_INSTALLER="cache/download/gams_install.exe"
-        if test ! -e "$GAMS_INSTALLER"; then
-            echo "...downloading GAMS"
-            URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
-            if test "${{matrix.TARGET}}" == win; then
-                URL="$URL/windows/windows_x64_64.exe"
-            elif test "${{matrix.TARGET}}" == osx; then
-                URL="$URL/macosx/osx_x64_64_sfx.exe"
-            else
-                URL="$URL/linux/linux_x64_64_sfx.exe"
-            fi
-            curl -L "$URL" -o "$GAMS_INSTALLER"
-        fi
-        echo "...installing GAMS"
-        if test "${{matrix.TARGET}}" == win; then
-            "$GAMS_INSTALLER" /SP- /NORESTART /VERYSILENT /NOICONS \
-                /DIR=$GAMS_DIR
-        else
-            chmod 777 $GAMS_INSTALLER
-            "$GAMS_INSTALLER" -q -d $GAMS_DIR
-            mv $GAMS_DIR/*/* $GAMS_DIR/.
-        fi
-        echo "PATH: $GAMS_DIR"
-        echo "::add-path::$GAMS_DIR"
-        echo "::set-env name=LD_LIBRARY_PATH::${LD_LIBRARY_PATH}:$GAMS_DIR"
-        echo "::set-env name=DYLD_LIBRARY_PATH::${DYLD_LIBRARY_PATH}:$GAMS_DIR"
-
-    - name: Install GAMS (powershell)
+    - name: Install GAMS
       # We install using Powershell because the GAMS installer hangs
       # when launched from bash on Windows
-      if: 0 == 0
       shell: pwsh
       run: |
         $GAMS_DIR="$env:GITHUB_WORKSPACE/packages/gams"
@@ -254,9 +225,6 @@ jobs:
         echo "::set-env name=DYLD_LIBRARY_PATH::${env:DYLD_LIBRARY_PATH}:$GAMS_DIR"
 
     - name: Install GAMS Python bindings
-      # Note that bash *must* be called with '-l {0}' or the conda
-      # environment will not be correctly set up
-      if: 0 == 0
       run: |
         GAMS_DIR="$GITHUB_WORKSPACE/packages/gams"
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
@@ -268,25 +236,7 @@ jobs:
             popd
         fi
 
-    - name: Install GAMS Python bindings
-      if: 0 == 1
-      shell: env.PYTHON_EXE {0}
-      run: |
-        import sys, os
-        py_ver="_%s%s" % sys.version_info[:2]
-        if py_ver == '_27':
-            py_ver = ''
-        gams_dir = os.path.join(
-            os.environ["GITHUB_WORKSPACE", 'packages', 'gams',
-            'apifiles', 'Python', 'api'+py_ver)
-        if os.path.exists(gams_dir):
-            print("Installing GAMS Python bindings from %s" % (gams_dir,))
-            os.chdir(gams_dir)
-            system("%s setup.py install" % (sys.executable,))
-
     - name: Install Pyomo and PyUtilib
-      env:
-        PYTHONWARNINGS: ignore::UserWarning
       run: |
         echo ""
         echo "Clone Pyomo-model-libraries..."
@@ -301,9 +251,6 @@ jobs:
         $PYTHON_EXE setup.py develop
 
     - name: Set up coverage tracking
-      # Note that bash *must* be called with '-l {0}' or the coverage
-      # will be attached to the system python and not miniconda's
-      if: 0 == 0
       run: |
         if test "${{matrix.TARGET}}" == win; then
             COVERAGE_BASE=${GITHUB_WORKSPACE}\\.cover
@@ -317,35 +264,9 @@ jobs:
         echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
         SITE_PACKAGES=$($PYTHON_EXE -c "from distutils.sysconfig import \
             get_python_lib; print(get_python_lib())")
-        echo "SITE_PACKAGES: $SITE_PACKAGES"
+        echo "Python site-packages: $SITE_PACKAGES"
         echo 'import coverage; coverage.process_startup()' \
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
-        echo "run_coverage_at_startup.pth:"
-        cat ${SITE_PACKAGES}/run_coverage_at_startup.pth
-        echo ".cover_rc:"
-        cat ${COVERAGE_RC}
-
-    - name: Set up coverage tracking (python driver)
-      if: 0 == 1
-      shell: python
-      run: |
-        import os
-        from os.path import join
-        from distutils.sysconfig import get_python_lib
-        print("python site_packages: %s" % (get_python_lib(),))
-        workspace = os.environ["GITHUB_WORKSPACE"]
-        rc = join(workspace, ".cover_rc")
-        data_file = join(workspace, ".coverage")
-        with open(join(workspace, ".coveragerc"), "r") as FILE:
-            rc_base = FILE.read()
-        with open(rc, "w") as FILE:
-            FILE.write(rc_base)
-            FILE.write("data_file=%s\n" % (data_file,))
-        with open(join(get_python_lib(),
-                       "run_coverage_at_startup.pth"), "w") as FILE:
-            FILE.write("import coverage; coverage.process_startup()\n")
-        print("::set-env name=COVERAGE_RCFILE::%s" % rc)
-        print("::set-env name=COVERAGE_PROCESS_START::%s" % rc)
 
     - name: Download and install extensions
       run: |
@@ -357,13 +278,8 @@ jobs:
         echo "Pyomo build-extensions"
         echo ""
         pyomo build-extensions --parallel 2
-        ls .cover*
-        ls
-        ls ..
 
     - name: Run Pyomo tests
-      env:
-        PYTHONWARNINGS: ignore::UserWarning
       run: |
         test.pyomo -v --cat="nightly" pyomo ./pyomo-model-libraries
 
@@ -371,7 +287,6 @@ jobs:
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/py${{matrix.python-version}}
       run: |
-        ls
         coverage combine
         coverage report -i
         coverage xml -i
