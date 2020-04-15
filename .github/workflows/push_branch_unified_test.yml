@@ -260,9 +260,9 @@ jobs:
       shell: bash
       run: |
         if test "${{matrix.TARGET}}" == win; then
-            COVERAGE_BASE=${GITHUB_WORKSPACE}/.cover
-        else
             COVERAGE_BASE=${GITHUB_WORKSPACE}\\.cover
+        else
+            COVERAGE_BASE=${GITHUB_WORKSPACE}/.cover
         fi
         COVERAGE_RC=${COVERAGE_BASE}_rc
         echo "::set-env name=COVERAGE_RCFILE::$COVERAGE_RC"
