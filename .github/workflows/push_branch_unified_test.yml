@@ -72,8 +72,10 @@ jobs:
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/cache/os
         export HOMEBREW_CACHE=${GITHUB_WORKSPACE}/cache/os
-        echo "Install pre-dependencies for pyodbc..."
         brew update
+        # Notes:
+        #  - install glpk
+        #  - pyodbc needs: gcc pkg-config unixodbc freetds
         for pkg in bash gcc pkg-config unixodbc freetds glpk; do
             brew list $pkg || brew install $pkg
         done
@@ -83,7 +85,9 @@ jobs:
       if: matrix.TARGET == 'linux'
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/cache/os
-        echo "Install pre-dependencies for ipopt..."
+        # Notes:
+        #  - install glpk
+        #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
@@ -105,15 +109,21 @@ jobs:
     # Python interpreters, expecially the setup-miniconda interface.
     # Per the setup-miniconda documentation, it is important to always
     # invoke bash as a login shell ('shell: bash -l {0}') so that the
-    # conda environment is properly activated.  Further, we have
-    # anecdotal evidence that subprocesses invoked through
-    # $(python -c ...) and `python -c ...` will not pick up the python
-    # activated by setup-python on OSX.  Our solution is to define a
-    # PYTHON_EXE environment variable that can be explicitly called
-    # within subprocess calls to reach the correct interpreter.
+    # conda environment is properly activated.  However, running within
+    # a login shell appears to foul up the link to python from
+    # setup-python.  Further, we have anecdotal evidence that
+    # subprocesses invoked through $(python -c ...) and `python -c ...`
+    # will not pick up the python activated by setup-python on OSX.
+    #
+    # Our solution is to define a PYTHON_EXE environment variable that
+    # can be explicitly called within subprocess calls to reach the
+    # correct interpreter.  Note that we must explicitly run nin a *non*
+    # login shell to set up the environment variable for the
+    # setup-python environments.
 
     - name: Install Python Packages (pip)
       if: matrix.PYENV == 'pip'
+      shell: bash
       env:
         PIP_PKGS: >
             cython numpy scipy ipython openpyxl sympy pyyaml
