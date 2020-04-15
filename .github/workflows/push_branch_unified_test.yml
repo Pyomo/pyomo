@@ -292,9 +292,9 @@ jobs:
         from distutils.sysconfig import get_python_lib
         print("site_packages: %s" % (get_python_lib(),))
         workspace = os.environ["GITHUB_WORKSPACE"]
-        rc = join(workspace, ".coveragerc")
+        rc = join(workspace, ".cover_rc")
         data_file = join(workspace, ".coverage")
-        with open(join(workspace, "coveragerc"), "r") as FILE:
+        with open(join(workspace, ".coveragerc"), "r") as FILE:
             rc_base = FILE.read()
         with open(rc, "w") as FILE:
             FILE.write(rc_base)
