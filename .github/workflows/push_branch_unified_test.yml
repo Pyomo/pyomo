@@ -293,7 +293,7 @@ jobs:
     - name: Set up coverage tracking
       # Note that bash *must* be called with '-l {0}' or the coverage
       # will be attached to the system python and not miniconda's
-      if: 0 == 1
+      if: 0 == 0
       run: |
         if test "${{matrix.TARGET}}" == win; then
             COVERAGE_BASE=${GITHUB_WORKSPACE}\\.cover
@@ -316,8 +316,8 @@ jobs:
         cat ${COVERAGE_RC}
 
     - name: Set up coverage tracking (python driver)
-      if: 0 == 0
-      shell: ${{env.PYTHON_EXE}} {0}
+      if: 0 == 1
+      shell: python
       run: |
         import os
         from os.path import join
