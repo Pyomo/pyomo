@@ -133,7 +133,7 @@ jobs:
             || echo "WARNING: CPLEX Community Edition is not available"
 
     - name: Install Ipopt
-      shell: bash
+      shell: bash -l {0}
       run: |
         # Ensure cache directories exist
         mkdir -p ${GITHUB_WORKSPACE}/cache/download
@@ -228,7 +228,9 @@ jobs:
         echo "::set-env name=DYLD_LIBRARY_PATH::${env:DYLD_LIBRARY_PATH}:$GAMS_DIR"
 
     - name: Install GAMS Python bindings
-      shell: bash
+      # Note that bash *must* be called with '-l {0}' or the conda
+      # environment will not be correctly set up
+      shell: bash -l {0}
       run: |
         GAMS_DIR="$GITHUB_WORKSPACE/packages/gams"
         py_ver=$(python -c 'import sys;v="_%s%s" % sys.version_info[:2] \
@@ -257,7 +259,9 @@ jobs:
         python setup.py develop
 
     - name: Set up coverage tracking
-      shell: bash
+      # Note that bash *must* be called with '-l {0}' or the coverage
+      # will be attached to the system python and not miniconda's
+      shell: bash -l {0}
       run: |
         if test "${{matrix.TARGET}}" == win; then
             COVERAGE_BASE=${GITHUB_WORKSPACE}\\.cover
