@@ -10,20 +10,17 @@
 
 import os
 import pyutilib.th as unittest
+import sys
 
+from importlib import import_module
 from six import StringIO, PY3
 
 from pyomo.common.log import LoggingIntercept
 
-if PY3:
-    from importlib import reload
-else:
-    import sys
-    from importlib import import_module
-    def reload(module):
-        if module in sys.modules:
-            del sys.modules[module]
-        return import_module(module)
+def force_load(module):
+    if module in sys.modules:
+        del sys.modules[module]
+    return import_module(module)
 
 class TestDeprecatedModules(unittest.TestCase):
     def test_rangeset(self):
@@ -34,7 +31,7 @@ class TestDeprecatedModules(unittest.TestCase):
 
         log = StringIO()
         with LoggingIntercept(log):
-            rs = reload('pyomo.core.base.rangeset')
+            rs = force_load('pyomo.core.base.rangeset')
         self.assertIn("The pyomo.core.base.rangeset module is deprecated.",
                       log.getvalue().strip().replace('\n',' '))
         self.assertIs(RangeSet, rs.RangeSet)
@@ -43,7 +40,7 @@ class TestDeprecatedModules(unittest.TestCase):
         # on Python 2.7
         log = StringIO()
         with LoggingIntercept(log):
-            rs = reload('pyomo.core.base.rangeset')
+            rs = force_load('pyomo.core.base.rangeset')
         self.assertIn("The pyomo.core.base.rangeset module is deprecated.",
                       log.getvalue().strip().replace('\n',' '))
         self.assertIs(RangeSet, rs.RangeSet)
