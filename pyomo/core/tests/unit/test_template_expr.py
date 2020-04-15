@@ -46,7 +46,7 @@ class ExpressionObjectTester(object):
         t.set_value(5)
         self.assertEqual(e(), 6)
         self.assertIs(e.resolve_template(), m.x[5])
-        t.set_value(None)
+        t.set_value()
 
         e = m.p[t,10]
         self.assertIs(type(e), EXPR.GetItemExpression)
@@ -58,7 +58,7 @@ class ExpressionObjectTester(object):
         t.set_value(5)
         self.assertEqual(e(), 510)
         self.assertIs(e.resolve_template(), m.p[5,10])
-        t.set_value(None)
+        t.set_value()
 
         e = m.p[5,t]
         self.assertIs(type(e), EXPR.GetItemExpression)
@@ -70,7 +70,7 @@ class ExpressionObjectTester(object):
         t.set_value(10)
         self.assertEqual(e(), 510)
         self.assertIs(e.resolve_template(), m.p[5,10])
-        t.set_value(None)
+        t.set_value()
 
     # TODO: Fixing this test requires fixing Set
     def _test_template_scalar_with_set(self):
@@ -86,7 +86,7 @@ class ExpressionObjectTester(object):
         t.set_value(5)
         self.assertRaises(TypeError, e)
         self.assertIs(e.resolve_template(), m.s[5])
-        t.set_value(None)
+        t.set_value()
 
     def test_template_operation(self):
         m = self.m

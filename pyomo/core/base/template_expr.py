@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -15,6 +15,8 @@ from pyomo.core.expr.numvalue import (
     NumericValue, native_numeric_types, as_numeric, value )
 import pyomo.core.base
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+
+class _NotSpecified(object): pass
 
 class IndexTemplate(NumericValue):
     """A "placeholder" for an index value in template expressions.
@@ -35,7 +37,7 @@ class IndexTemplate(NumericValue):
 
     def __init__(self, _set):
         self._set = _set
-        self._value = None
+        self._value = _NotSpecified
 
     def __getstate__(self):
         """
@@ -72,7 +74,7 @@ class IndexTemplate(NumericValue):
         """
         Return the value of this object.
         """
-        if self._value is None:
+        if self._value is _NotSpecified:
             if exception:
                 raise TemplateExpressionError(self)
             return None
@@ -109,12 +111,22 @@ class IndexTemplate(NumericValue):
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         return self.name
 
-    def set_value(self, value):
+    def set_value(self, *values):
         # It might be nice to check if the value is valid for the base
         # set, but things are tricky when the base set is not dimention
         # 1.  So, for the time being, we will just "trust" the user.
-        self._value = value
-
+        # After all, the actual Set will raise exceptions if the value
+        # is not present.
+        if not values:
+            self._value = _NotSpecified
+        elif self._index is not None:
+            if len(values) == 1:
+                self._value = values[0]
+            else:
+                raise ValueError("Passed multiple values %s to a scalar "
+                                 "IndexTemplate %s" % (values, self))
+        else:
+            self._value = values
 
 class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
 
@@ -139,7 +151,7 @@ def substitute_template_expression(expr, substituter, *args):
     _GetItemExpression nodes.
 
     Args:
-        substituter: method taking (expression, *args) and returning 
+        substituter: method taking (expression, *args) and returning
            the new object
         *args: these are passed directly to the substituter
 
