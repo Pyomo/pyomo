@@ -317,7 +317,7 @@ jobs:
 
     - name: Set up coverage tracking (python driver)
       if: 0 == 0
-      shell: env.PYTHON_EXE {0}
+      shell: ${{env.PYTHON_EXE}} {0}
       run: |
         import os
         from os.path import join
