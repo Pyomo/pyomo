@@ -134,15 +134,15 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             return False, None
 
         if node.is_component_type():
-            if self.ctype(node) not in valid_expr_ctypes_minlp:
+            if node.ctype not in valid_expr_ctypes_minlp:
                 # Make sure all components in active constraints
                 # are basic ctypes we know how to deal with.
                 raise RuntimeError(
                     "Unallowable component '%s' of type %s found in an active "
                     "constraint or objective.\nThe GAMS writer cannot export "
                     "expressions with this component type."
-                    % (node.name, self.ctype(node).__name__))
-            if self.ctype(node) is not Var:
+                    % (node.name, node.ctype.__name__))
+            if node.ctype is not Var:
                 # For these, make sure it's on the right model. We can check
                 # Vars later since they don't disappear from the expressions
                 self.treechecker(node)
@@ -155,12 +155,6 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 return True, label
 
         return True, ftoa(value(node))
-
-    def ctype(self, comp):
-        if isinstance(comp, ICategorizedObject):
-            return comp.ctype
-        else:
-            return comp.ctype
 
 
 def expression_to_string(expr, treechecker, labeler=None, smap=None):

@@ -147,10 +147,7 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             return False, None
 
         if node.is_component_type():
-            if isinstance(node, ICategorizedObject):
-                _ctype = node.ctype
-            else:
-                _ctype = node.ctype
+            _ctype = node.ctype
             if _ctype not in valid_expr_ctypes_minlp:
                 # Make sure all components in active constraints
                 # are basic ctypes we know how to deal with.
