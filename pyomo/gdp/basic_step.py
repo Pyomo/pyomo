@@ -44,9 +44,9 @@ def apply_basic_step(disjunctions_or_constraints):
     # Basic steps only apply to XOR'd disjunctions
     #
     disjunctions = list(obj for obj in disjunctions_or_constraints
-                        if obj.type() == Disjunction)
+                        if obj.ctype == Disjunction)
     constraints = list(obj for obj in disjunctions_or_constraints
-                       if obj.type() == Constraint)
+                       if obj.ctype == Constraint)
     for d in disjunctions:
         if not d.xor:
             raise ValueError(
