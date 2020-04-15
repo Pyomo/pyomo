@@ -236,7 +236,7 @@ jobs:
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
             echo "Installing GAMS Python bindings"
             pushd $GAMS_DIR/apifiles/Python/api$py_ver
-            python setup.py -q install
+            python setup.py install
             popd
         fi
 
@@ -246,7 +246,7 @@ jobs:
       run: |
         echo ""
         echo "Clone Pyomo-model-libraries..."
-        git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
+        git clone https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
         echo "Install PyUtilib..."
         echo ""
@@ -266,8 +266,11 @@ jobs:
         echo "data_file=${GITHUB_WORKSPACE}/.coverage" >> ${COVERAGE_RC}
         SITE_PACKAGES=$(python -c "from distutils.sysconfig import \
             get_python_lib; print(get_python_lib())")
+        echo "SITE_PACKAGES: $SITE_PACKAGES"
         echo 'import coverage; coverage.process_startup()' \
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
+        echo "run_coverage_at_startup.pth:"
+        cat ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
     - name: Download and install extensions
       run: |
@@ -290,6 +293,7 @@ jobs:
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/py${{matrix.python-version}}
       run: |
+        ls -al
         coverage combine
         coverage report -i
         curl --retry 8 -s https://codecov.io/bash -o codecov.sh
