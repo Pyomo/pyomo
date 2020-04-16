@@ -109,13 +109,13 @@ class _ComplementarityData(_BlockData):
         #
         if _e2[0] is None and _e2[2] is None:
             self.c = Constraint(expr=(None, _e2[1], None))
-            self.c._type = 3
+            self.c._complementarity_type = 3
         elif _e2[2] is None:
             self.c = Constraint(expr=_e2[0] <= _e2[1])
-            self.c._type = 1
+            self.c._complementarity_type = 1
         elif _e2[0] is None:
             self.c = Constraint(expr=- _e2[2] <= - _e2[1])
-            self.c._type = 1
+            self.c._complementarity_type = 1
         #
         if not _e1[0] is None and not _e1[2] is None:
             if not (_e1[0].__class__ in native_numeric_types or _e1[0].is_constant()):
@@ -274,7 +274,7 @@ Error thrown for Complementarity "%s"
         # _pprint_callback if there are components (requires baseline
         # updates and a check that we do not break anything in the
         # Book).
-        _transformed = not issubclass(self._type, Complementarity)
+        _transformed = not issubclass(self.ctype, Complementarity)
         def _conditional_block_printer(ostream, idx, data):
             if _transformed or len(data.component_map()):
                 self._pprint_callback(ostream, idx, data)

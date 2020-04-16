@@ -23,7 +23,7 @@ class RelaxIntegrality(RelaxIntegerVars):
     """
 
     @deprecated(
-        "core.relax_integrality is deprecated.  Use core.relax_integers",
+        "core.relax_integrality is deprecated.  Use core.relax_integer_vars",
         version='TBD')
     def __init__(self, **kwds):
         super(RelaxIntegrality, self).__init__(**kwds)

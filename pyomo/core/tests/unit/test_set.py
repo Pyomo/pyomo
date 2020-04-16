@@ -5862,3 +5862,19 @@ c : Size=3, Index=CHOICES, Active=True
 
         finally:
             normalize_index.flatten = _oldFlatten
+
+    def test_issue_1375(self):
+        def a_rule(m):
+            for i in range(0):
+                yield i
+
+        def b_rule(m):
+            for i in range(3):
+                for j in range(0):
+                    yield i, j
+
+        m = ConcreteModel()
+        m.a = Set(initialize=a_rule, dimen=1)
+        self.assertEqual(len(m.a), 0)
+        m.b = Set(initialize=b_rule, dimen=2)
+        self.assertEqual(len(m.b), 0)
