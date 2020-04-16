@@ -85,14 +85,20 @@ jobs:
         }
         conda list --show-channel-urls
         Write-Host ("")
+        Write-Host ("Installing BARON")
+        Write-Host ("")
+        Invoke-WebRequest -Uri 'https://www.minlp.com/downloads/xecs/baron/current/baron-win64.exe' -OutFile 'baron-win64.exe'
+        Start-Process -FilePath 'baron-win64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\bar_solver /NOICONS' -Wait
+        Write-Host ("")
         Write-Host ("Installing IDAES Ipopt")
         Write-Host ("")
-        New-Item -Path . -Name "solver_dir" -ItemType "directory"
+        New-Item -Path . -Name "ipopt_solver" -ItemType "directory"
         cd solver_dir
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz' -OutFile 'ipopt1.tar.gz'
         Invoke-Expression 'tar -xzf ipopt1.tar.gz'
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt2.tar.gz'
         Invoke-Expression 'tar -xzf ipopt2.tar.gz'
+        Remote-Item * -Include *.tar.gz
         cd ..
         Write-Host ("")
         Write-Host ("Installing GAMS")
@@ -117,6 +123,7 @@ jobs:
           Write-Host ("########################################################################")
         }
         cd $env:CWD
+        Remove-Item * -Include *.exe
         Write-Host ("")
         Write-Host ("New Shell Environment: ")
         gci env: | Sort Name
@@ -149,6 +156,7 @@ jobs:
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';' + $(Get-Location).Path + "\gams"
-        $env:PATH += ';' + $(Get-Location).Path + "\solver_dir"
+        $env:PATH += ';' + $(Get-Location).Path + "\ipopt_solver"
+        $env:PATH += ';' + $(Get-Location).Path + "\bar_solver"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         Invoke-Expression $env:EXP
