@@ -154,7 +154,6 @@ jobs:
         Write-Host "Setup and run nosetests"
         $env:BUILD_DIR = $(Get-Location).Path
         $env:PATH += ';' + $(Get-Location).Path + "\gams"
-        $env:PATH += ';' + $(Get-Location).Path + "\baron_solver"
         $env:PATH += ';' + $(Get-Location).Path + "\solver_dir"
         $env:EXP = "test.pyomo -v --cat='nightly' pyomo " + $env:BUILD_DIR + "\pyomo-model-libraries"
         Invoke-Expression $env:EXP
