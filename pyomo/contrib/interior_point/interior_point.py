@@ -223,6 +223,7 @@ class InteriorPointSolver(object):
                 err = linear_solver.try_factorization(reg_kkt_2)
                 linear_solver.log_info(include_error=False, 
                                        extra_fields=[reg_coef])
+                self.reg_coef = reg_coef
                 if (linear_solver.is_numerically_singular(err) or
                         linear_solver.get_inertia()[1] != desired_n_neg_evals):
                     reg_coef = reg_coef * factor_increase
