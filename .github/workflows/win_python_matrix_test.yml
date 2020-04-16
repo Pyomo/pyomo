@@ -85,11 +85,6 @@ jobs:
         }
         conda list --show-channel-urls
         Write-Host ("")
-        Write-Host ("Installing BARON")
-        Write-Host ("")
-        Invoke-WebRequest -Uri 'https://www.minlp.com/downloads/xecs/baron/current/baron-win64.exe' -OutFile 'baron.exe'
-        Start-Process -FilePath 'baron.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\baron_solver /NOICONS' -Wait
-        Write-Host ("")
         Write-Host ("Installing IDAES Ipopt")
         Write-Host ("")
         New-Item -Path . -Name "solver_dir" -ItemType "directory"
