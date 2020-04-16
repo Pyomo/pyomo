@@ -45,9 +45,9 @@ class TestRegularization(unittest.TestCase):
         # Perform one iteration of interior point algorithm
         x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=1)
 
-'''The exact regularization coefficient at which Mumps recognizes the matrix
-as non-singular appears to be non-deterministic...
-I have seen 1e-4, 1e-2, and 1e0'''
+# The exact regularization coefficient at which Mumps recognizes the matrix
+# as non-singular appears to be non-deterministic...
+# I have seen 1e-4, 1e-2, and 1e0
 #        # Expected regularization coefficient:
 #        self.assertAlmostEqual(ip_solver.reg_coef, 1e-2)
 
@@ -60,11 +60,11 @@ I have seen 1e-4, 1e-2, and 1e0'''
         self.assertEqual(n_null_evals, 0)
         self.assertEqual(n_neg_evals, desired_n_neg_evals)
 
-'''The following is buggy. When regularizing the KKT matrix in iteration 0, 
-I will sometimes exceed the max regularization coefficient.
-This happens even if I recreate linear_solver and ip_solver.
-Appears to be non-deterministic
-Using MUMPS 5.2.1'''
+# The following is buggy. When regularizing the KKT matrix in iteration 0, 
+# I will sometimes exceed the max regularization coefficient.
+# This happens even if I recreate linear_solver and ip_solver.
+# Appears to be non-deterministic
+# Using MUMPS 5.2.1
 #        # Now perform two iterations of the interior point algorithm.
 #        # Because of the way the solve routine is written, updates to the
 #        # interface's variables don't happen until the start of the next
