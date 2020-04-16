@@ -1132,9 +1132,11 @@ class GetItemExpression(ExpressionBase):
         return value(self._base.__getitem__( tuple(result) ))
 
     def _to_string(self, values, verbose, smap, compute_values):
+        values = tuple(_[1:-1] if _[0]=='(' and _[-1]==')' else _
+                       for _ in values)
         if verbose:
-            return "{0}({1})".format(self.getname(), values[0])
-        return "%s%s" % (self.getname(), values[0])
+            return "getitem(%s, %s)" % (self.getname(), ', '.join(values))
+        return "%s[%s]" % (self.getname(), ','.join(values))
 
     def resolve_template(self):                         # TODO: coverage
         return self._base.__getitem__(tuple(value(i) for i in self._args_))

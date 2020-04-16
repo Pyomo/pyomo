@@ -2089,7 +2089,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         t = IndexTemplate(m.I)
 
         e = m.x[t+m.P[t+1]] + 3
-        self.assertEqual("sum(x(sum({I}, P(sum({I}, 1)))), 3)", str(e))
+        self.assertEqual("sum(getitem(x, sum({I}, getitem(P, sum({I}, 1)))), 3)", str(e))
 
     def test_small_expression(self):
         #
@@ -2326,7 +2326,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         t = IndexTemplate(m.I)
 
         e = m.x[t+m.P[t+1]] + 3
-        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
+        self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e))
 
     def test_associativity_rules(self):
         m = ConcreteModel()
@@ -4002,7 +4002,7 @@ class TestCloneExpression(unittest.TestCase):
 
             e = m.x[t+m.P[t+1]] + 3
             e_ = e.clone()
-            self.assertEqual("x({I} + P({I} + 1)) + 3", str(e_))
+            self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e_))
             #
             total = counter.count - start
             self.assertEqual(total, 1)
@@ -5012,7 +5012,7 @@ class Test_pickle(unittest.TestCase):
         e = m.x[t+m.P[t+1]] + 3
         s = pickle.dumps(e)
         e_ = pickle.loads(s)
-        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
+        self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e))
 
     def test_abs(self):
         M = ConcreteModel()
