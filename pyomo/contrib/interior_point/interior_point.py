@@ -151,6 +151,7 @@ class InteriorPointSolver(object):
             delta = linear_solver.do_back_solve(rhs)
 
             # Log some relevant info from linear solver
+            # TODO: maybe move this call into the do_back_solve method
             linear_solver.log_info(_iter)
 
             interface.set_primal_dual_kkt_solution(delta)
