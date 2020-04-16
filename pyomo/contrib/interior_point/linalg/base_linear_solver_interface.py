@@ -22,5 +22,5 @@ class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
     def log_header(self):
         pass
 
-    def log_info(self):
+    def log_info(self, *dummy, **dummies):
         pass
