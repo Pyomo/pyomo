@@ -26,8 +26,6 @@ def MindtPy_initialize_master(solve_data, config):
     MindtPy = m.MindtPy_utils
     m.dual.deactivate()
 
-    # m.dual.activate()
-
     if config.strategy == 'OA':
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(

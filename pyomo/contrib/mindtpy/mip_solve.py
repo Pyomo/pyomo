@@ -31,7 +31,7 @@ except ImportError:
     '''Other solvers (e.g. Gurobi) are not supported yet'''
 
 
-class LazyOACallback(LazyConstraintCallback):
+class LazyOACallback_cplex(LazyConstraintCallback):
     """Inherent class in Cplex to call Lazy callback."""
 
     def copy_lazy_var_list_values(self, opt, from_list, to_list, config,
@@ -319,7 +319,8 @@ def solve_OA_master(solve_data, config):
         masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
     if config.single_tree == True:
         # Configuration of lazy callback
-        lazyoa = masteropt._solver_model.register_callback(LazyOACallback)
+        lazyoa = masteropt._solver_model.register_callback(
+            LazyOACallback_cplex)
         # pass necessary data and parameters to lazyoa
         lazyoa.master_mip = solve_data.mip
         lazyoa.solve_data = solve_data
