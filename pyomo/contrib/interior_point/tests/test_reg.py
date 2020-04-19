@@ -50,9 +50,10 @@ class TestRegularization(unittest.TestCase):
 # as non-singular appears to be non-deterministic...
 # I have seen 1e-4, 1e-2, and 1e0.
 # According to scipy, 1e-4 seems to be correct
+# MUMPS 5.3.1 seems to settle on 1e-2
 #        # Expected regularization coefficient:
-#        self.assertAlmostEqual(ip_solver.reg_coef, 1e-2)
-#
+        self.assertAlmostEqual(ip_solver.reg_coef, 1e-2)
+
         desired_n_neg_evals = (ip_solver.interface._nlp.n_eq_constraints() +
                                ip_solver.interface._nlp.n_ineq_constraints())
 
@@ -67,24 +68,25 @@ class TestRegularization(unittest.TestCase):
 # This happens even if I recreate linear_solver and ip_solver.
 # Appears to be non-deterministic
 # Using MUMPS 5.2.1
-#        # Now perform two iterations of the interior point algorithm.
-#        # Because of the way the solve routine is written, updates to the
-#        # interface's variables don't happen until the start of the next
-#        # next iteration, meaning that the interface has been unaffected
-#        # by the single iteration performed above.
-#        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=2)
-#
-#        # This will be the KKT matrix in iteration 1, without regularization
-#        kkt = interface.evaluate_primal_dual_kkt_matrix()
-#        linear_solver.do_symbolic_factorization(kkt)
-#        linear_solver.do_numeric_factorization(kkt)
-#
-#        # Assert that one iteration with regularization was enough to get us
-#        # out of the pointof singularity/incorrect inertia
-#        n_neg_evals = linear_solver.get_infog(12)
-#        n_null_evals = linear_solver.get_infog(28)
-#        self.assertEqual(n_null_evals, 0)
-#        self.assertEqual(n_neg_evals, desired_n_neg_evals)
+# Problem persists with MUMPS 5.3.1
+        # Now perform two iterations of the interior point algorithm.
+        # Because of the way the solve routine is written, updates to the
+        # interface's variables don't happen until the start of the next
+        # next iteration, meaning that the interface has been unaffected
+        # by the single iteration performed above.
+        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=2)
+
+        # This will be the KKT matrix in iteration 1, without regularization
+        kkt = interface.evaluate_primal_dual_kkt_matrix()
+        linear_solver.do_symbolic_factorization(kkt)
+        linear_solver.do_numeric_factorization(kkt)
+
+        # Assert that one iteration with regularization was enough to get us
+        # out of the pointof singularity/incorrect inertia
+        n_neg_evals = linear_solver.get_infog(12)
+        n_null_evals = linear_solver.get_infog(28)
+        self.assertEqual(n_null_evals, 0)
+        self.assertEqual(n_neg_evals, desired_n_neg_evals)
 
 
     @unittest.skipIf(not asl_available, 'asl is not available')
@@ -142,6 +144,7 @@ class TestRegularization(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    # 
     test_reg = TestRegularization()
     test_reg.test_regularize_mumps()
     test_reg.test_regularize_scipy()
