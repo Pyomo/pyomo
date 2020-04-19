@@ -59,6 +59,8 @@ class InteriorPointSolver(object):
         max_reg_coef = kwargs.pop('max_reg_coef', 1e10)
         reg_factor_increase = kwargs.pop('reg_factor_increase', 1e2)
 
+        self.base_eq_reg_coef = -1e-8
+
         self.set_interface(interface)
 
         t0 = time.time()
@@ -144,15 +146,17 @@ class InteriorPointSolver(object):
             if not regularize_kkt:
                 self.factorize_linear_system(kkt)
             else:
+                eq_reg_coef = self.base_eq_reg_coef*\
+                              self.interface._barrier**(1/4)
                 self.factorize_with_regularization(kkt,
+                        eq_reg_coef=eq_reg_coef,
                         max_reg_coef=max_reg_coef,
                         factor_increase=reg_factor_increase)
 
             delta = linear_solver.do_back_solve(rhs)
 
             # Log some relevant info from linear solver
-            # TODO: maybe move this call into the do_back_solve method
-            linear_solver.log_info(_iter)
+            linear_solver.log_info(iter_no=_iter)
 
             interface.set_primal_dual_kkt_solution(delta)
             alpha_primal_max, alpha_dual_max = \
@@ -185,6 +189,7 @@ class InteriorPointSolver(object):
 
 
     def factorize_with_regularization(self, kkt,
+                                      eq_reg_coef=1e-8,
                                       max_reg_coef=1e10,
                                       factor_increase=1e2):
         linear_solver = self.linear_solver
@@ -198,7 +203,8 @@ class InteriorPointSolver(object):
         if linear_solver.is_numerically_singular(err):
             self.logger.info(' KKT matrix is numerically singular. '
                              'Regularizing equality gradient...')
-            reg_kkt_1 = self.interface.regularize_equality_gradient(kkt)
+            reg_kkt_1 = self.interface.regularize_equality_gradient(kkt,
+                                       eq_reg_coef)
             err = linear_solver.try_factorization(reg_kkt_1)
 
         if (linear_solver.is_numerically_singular(err) or
@@ -224,12 +230,12 @@ class InteriorPointSolver(object):
                 err = linear_solver.try_factorization(reg_kkt_2)
                 linear_solver.log_info(include_error=False, 
                                        extra_fields=[reg_coef])
-                self.reg_coef = reg_coef
                 if (linear_solver.is_numerically_singular(err) or
                         linear_solver.get_inertia()[1] != desired_n_neg_evals):
                     reg_coef = reg_coef * factor_increase
                 else:
                     # Success
+                    self.reg_coef = reg_coef
                     break
 
             if reg_coef > max_reg_coef:
