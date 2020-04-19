@@ -613,7 +613,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
     def get_ineq_ub_compressed(self):
         return self._ineq_ub_compressed
 
-    def regularize_equality_gradient(self, kkt):
+    def regularize_equality_gradient(self, kkt, coef):
         # Not technically regularizing the equality gradient ...
         # Replace this with a regularize_diagonal_block function?
         # Then call with kkt matrix and the value of the perturbation?
@@ -621,7 +621,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         # Use a constant perturbation to regularize the equality constraint
         # gradient
         kkt = kkt.copy()
-        reg_coef = -1e-8*self._barrier**(1/4)
+        reg_coef = coef
         ptb = (reg_coef *
                scipy.sparse.identity(self._nlp.n_eq_constraints(), 
                                      format='coo'))
