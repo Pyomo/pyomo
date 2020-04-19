@@ -16,11 +16,15 @@ class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
         pass
 
     @abstractmethod
+    def is_numerically_singular(self, err=None, raise_if_not=True):
+        pass
+
+    @abstractmethod
     def get_inertia(self):
         pass
 
-    def log_header(self):
+    def log_header(self, **kwargs):
         pass
 
-    def log_info(self, *dummy, **dummies):
+    def log_info(self, **kwargs):
         pass
