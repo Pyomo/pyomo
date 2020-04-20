@@ -177,6 +177,7 @@ if test -z "$MODE" -o "$MODE" == test; then
         # Note, that the PWD should still be $WORKSPACE/pyomo
         #
         coverage combine || exit 1
+        coverage report -i
         export OS=`uname`
         if test -z "$CODECOV_TOKEN"; then
             coverage xml
