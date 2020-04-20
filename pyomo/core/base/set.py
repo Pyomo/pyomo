@@ -1132,6 +1132,14 @@ class _FiniteSetMixin(object):
                              "implement _iter_impl" % (type(self).__name__,))
 
     def __iter__(self):
+        """Iterate over the finite set
+
+        Note: derived classes should NOT reimplement this method, and
+        should instead overload _iter_impl.  The expression template
+        system relies on being able to replace this method for all Sets
+        during template generation.
+
+        """
         return self._iter_impl()
 
     def __reversed__(self):

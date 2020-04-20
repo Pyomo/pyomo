@@ -10,6 +10,8 @@
 
 import copy
 import logging
+from six import iteritems
+
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (
     NumericValue, native_numeric_types, as_numeric, value )
@@ -33,11 +35,13 @@ class IndexTemplate(NumericValue):
        _set: the Set from which this IndexTemplate can take values
     """
 
-    __slots__ = ('_set', '_value')
+    __slots__ = ('_set', '_value', '_index', '_id')
 
-    def __init__(self, _set):
+    def __init__(self, _set, index=0, _id=None):
         self._set = _set
         self._value = _NotSpecified
+        self._index = index
+        self._id = _id
 
     def __getstate__(self):
         """
@@ -106,7 +110,13 @@ class IndexTemplate(NumericValue):
         return self.getname()
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
-        return "{"+self._set.getname(fully_qualified, name_buffer, relative_to)+"}"
+        if self._id is not None:
+            return "_%s" % (self._id,)
+
+        _set_name = self._set.getname(fully_qualified, name_buffer, relative_to)
+        if self._index is not None and self._set.dimen != 1:
+            _set_name += "(%s)" % (self._index,)
+        return "{"+_set_name+"}"
 
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         return self.name
@@ -243,3 +253,153 @@ def substitute_template_with_value(expr):
         return as_numeric(expr())
     else:
         return expr.resolve_template()
+
+
+
+class mock_globals(object):
+    """Implement custom context for a user-specified function.
+
+    This class implements a custom context that injects user-specified
+    attributes into the globals() context before calling a function (and
+    then cleans up the global context after the function returns).
+
+    Parameters
+    ----------
+        fcn : function
+            The function whose globals context will be overridden
+        overrides : dict
+            A dict mapping {name: object} that will be injected into the
+            `fcn` globals() context.
+    """
+    __slots__ = ('_data',)
+
+    def __init__(self, fcn, overrides):
+        self._data = fcn, overrides
+
+    def __call__(self, *args, **kwds):
+        fcn, overrides = self._data
+        _old = {}
+        try:
+            for name, val in iteritems(overrides):
+                if name in fcn.__globals__:
+                    _old[name] = fcn.__globals__[name]
+            fcn.__globals__[name] = val
+
+            return fcn(*args, **kwds)
+        finally:
+            for name, val in iteritems(overrides):
+                if name in _old:
+                    fcn.__globals__[name] = _old[name]
+                else:
+                    del fcn.__globals__[name]
+
+
+class _set_iterator_template_generator(object):
+    """Replacement iterator that returns IndexTemplates
+
+    In order to generate template expressions, we hijack the normal Set
+    iteration mechanisms so that this iterator is returned instead of
+    the usual iterator.  This iterator will return IndexTemplate
+    object(s) instead of the actual Set items the first time next() is
+    called.
+    """
+    def __init__(self, _set, context):
+        self._set = _set
+        self.context = context
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        # Prevent context from ever being called more than once
+        if self.context is None:
+            raise StopIteration()
+
+        context, self.context = self.context, None
+        _set = self._set
+        d = _set.dimen
+        if d is None:
+            idx = (IndexTemplate(_set, None, context.next_id()),)
+        else:
+            idx = tuple(
+                IndexTemplate(_set, i, context.next_id()) for i in range(d)
+            )
+        context.cache.append(idx)
+        if len(idx) == 1:
+            return idx[0]
+        else:
+            return idx
+
+    next = __next__
+
+class _template_iter_context(object):
+    """Manage the iteration context when generating templatized rules
+
+    This class manages the context tracking when generating templatized
+    rules.  It has two methods (`sum_template` and `get_iter`) that
+    replace standard functions / methods (`sum` and
+    :py:meth:`_FiniteSetMixin.__iter__`, respectively).  It also tracks
+    unique identifiers for IndexTemplate objects and their groupings
+    within `sum()` generators.
+    """
+    def __init__(self):
+        self.cache = []
+        self._id = 0
+
+    def get_iter(self, _set):
+        return _set_iterator_template_generator(_set, self)
+
+    def npop_cache(self, n):
+        result = self.cache[-n:]
+        self.cache[-n:] = []
+        return result
+
+    def next_id(self):
+        self._id += 1
+        return self._id
+
+    def sum_template(self, generator):
+        init_cache = len(self.cache)
+        expr = next(generator)
+        final_cache = len(self.cache)
+        return EXPR.TemplateSumExpression(
+            (expr,), self.npop_cache(final_cache-init_cache)
+        )
+
+def templatize_rule(block, rule, index_set):
+    context = _template_iter_context()
+    try:
+        # Override Set iteration to return IndexTemplates
+        _old_iter = pyomo.core.base.set._FiniteSetMixin.__iter__
+        pyomo.core.base.set._FiniteSetMixin.__iter__ = \
+            lambda x: context.get_iter(x)
+        # Override sum with our sum
+        _old_sum = __builtins__['sum']
+        __builtins__['sum'] = context.sum_template
+        # Get the index templates needed for calling the rule
+        if index_set is not None:
+            if not index_set.isfinite():
+                raise TemplateExpressionError(
+                    None,
+                    "Cannot templatize rule with non-finite indexing set")
+            indices = iter(index_set).next()
+            context.cache.pop()
+        else:
+            indices = ()
+        if type(indices) is not tuple:
+            indices = (indices,)
+        # Call the rule, returning the template expression and the
+        # top-level IndexTemplaed generated when calling the rule.
+        #
+        # TBD: Should this just return a "FORALL()" expression node that
+        # behaves similarly to the GetItemExpression node?
+        return rule(block, *indices), indices
+    finally:
+        pyomo.core.base.set._FiniteSetMixin.__iter__ = _old_iter
+        __builtins__['sum'] = _old_sum
+        if len(context.cache):
+            raise TemplateExpressionError(
+                None,
+                "Explicit iteration (for loops) over Sets is not supported by "
+                "template expressions.  Encountered loop over %s"
+                % (context.cache[-1][0]._set,))

@@ -19,6 +19,7 @@ logger = logging.getLogger('pyomo.core')
 
 from pyutilib.math.util import isclose
 from pyomo.common.deprecation import deprecated
+from pyomo.common.error import DeveloperError
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -1095,7 +1096,7 @@ class GetItemExpression(ExpressionBase):
         if any(arg.is_potentially_variable() for arg in self._args_
                if arg.__class__ not in nonpyomo_leaf_types):
             return True
-        for x in itervalues(self._base):
+        for x in itervalues(self._base._data):
             if x.__class__ not in nonpyomo_leaf_types \
                and x.is_potentially_variable():
                 return True
@@ -1140,6 +1141,62 @@ class GetItemExpression(ExpressionBase):
 
     def resolve_template(self):                         # TODO: coverage
         return self._base.__getitem__(tuple(value(i) for i in self._args_))
+
+
+class TemplateSumExpression(ExpressionBase):
+    """
+    Expression to represent an unexpanded sum over one or more sets.
+    """
+    __slots__ = ('_iters',)
+    PRECEDENCE = 1
+
+    def _precedence(self):  #pragma: no cover
+        return TemplateSumExpression.PRECEDENCE
+
+    def __init__(self, args, _iters):
+        """Construct an expression with an operation and a set of arguments"""
+        self._args_ = args
+        self._iters = _iters
+
+    def nargs(self):
+        return len(self._args_)
+
+    def create_node_with_local_data(self, args):
+        return self.__class__(args, self._iters)
+
+    def __getstate__(self):
+        state = super(TemplateSumExpression, self).__getstate__()
+        for i in GetItemExpression.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    def getname(self, *args, **kwds):
+        return "SUM"
+
+    def is_potentially_variable(self):
+        if any(arg.is_potentially_variable() for arg in self._args_
+               if arg.__class__ not in nonpyomo_leaf_types):
+            return True
+        return False
+
+    def _is_fixed(self, values):
+        return all(values)
+
+    def _compute_polynomial_degree(self, result):       # TODO: coverage
+        return result[0]
+
+    def _apply_operation(self, result):                 # TODO: coverage
+        raise DeveloperError("not supported")
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        ans = ''
+        for iterGroup in self._iters:
+            ans += ' for %s in %s' % (','.join(str(i) for i in iterGroup),
+                                      iterGroup[0]._set)
+        val = values[0]
+        if val[0]=='(' and val[-1]==')':
+            val = val[1:-1]
+        return "SUM(%s%s)" % (val, ans)
 
 
 class Expr_ifExpression(ExpressionBase):
