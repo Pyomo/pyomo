@@ -1,9 +1,6 @@
 name: GitHub CI (win)
 
 on:
-  push:
-    branches:
-      - add_gjh_asl_json
   pull_request:
     branches:
       - master
@@ -93,16 +90,6 @@ jobs:
         Invoke-Expression 'tar -xzf ipopt1.tar.gz'
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt2.tar.gz'
         Invoke-Expression 'tar -xzf ipopt2.tar.gz'
-        cd ..
-        Write-Host ("")
-        Write-Host ("Installing GJH_ASL_JSON")
-        Write-Host ("")
-        Invoke-WebRequest -Uri 'https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master' -OutFile 'gjh_asl_json.zip'
-        Expand-Archive -Path 'gjh_asl_json.zip' -DestinationPath '.\gjh_solver'
-        cd \gjh_solver\Thirdparty
-        Invoke-Expression './get.ASL'
-        cd ..
-        Invoke-Expression "make"
         cd ..
         Write-Host ("")
         Write-Host ("Installing GAMS")
