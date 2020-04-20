@@ -36,7 +36,7 @@ jobs:
         echo ""
         echo "Install BARON..."
         echo ""
-        if hash brew; then
+        if [ ${{ matrix.TARGET }} == 'osx' ]; then
             wget -q https://www.minlp.com/downloads/xecs/baron/current/baron-osx64.zip -O baron_installer.zip
         else
             wget -q https://www.minlp.com/downloads/xecs/baron/current/baron-lin64.zip -O baron_installer.zip
