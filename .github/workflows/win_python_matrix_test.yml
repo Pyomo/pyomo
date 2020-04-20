@@ -93,11 +93,12 @@ jobs:
         Write-Host ("Installing IDAES Ipopt")
         Write-Host ("")
         New-Item -Path . -Name "ipopt_solver" -ItemType "directory"
-        cd solver_dir
+        cd ipopt_solver
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz' -OutFile 'ipopt1.tar.gz'
         Invoke-Expression 'tar -xzf ipopt1.tar.gz'
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt2.tar.gz'
         Invoke-Expression 'tar -xzf ipopt2.tar.gz'
+        Remove-Item *.tar.gz -Force
         cd ..
         Write-Host ("")
         Write-Host ("Installing GAMS")
