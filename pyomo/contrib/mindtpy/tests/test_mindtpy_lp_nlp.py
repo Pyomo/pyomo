@@ -11,8 +11,9 @@ from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
 from pyomo.environ import SolverFactory, value
 
-required_solvers = ('ipopt', 'cplex_persistent')  # 'cplex_persistent')
-if all(SolverFactory(s).available() for s in required_solvers):
+required_solvers = ('ipopt', 'cplex_persistent')
+required_solvers_temp = ('ipopt', 'cplex')
+if all(SolverFactory(s).available() for s in required_solvers_temp):
     subsolvers_available = True
 else:
     subsolvers_available = False
