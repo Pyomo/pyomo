@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - add_gjh_asl_json
   pull_request:
     branches:
       - master
