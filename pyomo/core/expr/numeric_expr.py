@@ -19,7 +19,7 @@ logger = logging.getLogger('pyomo.core')
 
 from pyutilib.math.util import isclose
 from pyomo.common.deprecation import deprecated
-from pyomo.common.error import DeveloperError
+from pyomo.common.errors import DeveloperError
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -1089,6 +1089,11 @@ class GetItemExpression(ExpressionBase):
             state[i] = getattr(self, i)
         return state
 
+    def __getattr__(self, attr):
+        if attr.startswith('__') and attr.endswith('__'):
+            raise AttributeError()
+        return GetAttrExpression((self, attr))
+
     def getname(self, *args, **kwds):
         return self._base.getname(*args, **kwds)
 
@@ -1097,15 +1102,15 @@ class GetItemExpression(ExpressionBase):
                if arg.__class__ not in nonpyomo_leaf_types):
             return True
         for x in itervalues(self._base._data):
-            if x.__class__ not in nonpyomo_leaf_types \
-               and x.is_potentially_variable():
+            if hasattr(x, 'is_potentially_variable') and \
+               x.is_potentially_variable():
                 return True
         return False
 
     def is_fixed(self):
         if any(self._args_):
             for x in itervalues(self._base):
-                if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
+                if hasattr(x, 'is_fixed') and not x.is_fixed():
                     return False
         return True
 
@@ -1141,6 +1146,47 @@ class GetItemExpression(ExpressionBase):
 
     def resolve_template(self):                         # TODO: coverage
         return self._base.__getitem__(tuple(value(i) for i in self._args_))
+
+
+class GetAttrExpression(ExpressionBase):
+    """
+    Expression to call :func:`__getattr__` on the base object.
+    """
+    __slots__ = ()
+    PRECEDENCE = 1
+
+    def _precedence(self):  #pragma: no cover
+        return GetAttrExpression.PRECEDENCE
+
+    def nargs(self):
+        return len(self._args_)
+
+    def __getattr__(self, attr):
+        if attr.startswith('__') and attr.endswith('__'):
+            raise AttributeError()
+        return GetAttrExpression((self, attr))
+
+    def __getitem__(self, *idx):
+        return GetItemExpression(idx, base=self)
+
+    def getname(self, *args, **kwds):
+        return 'getattr'
+
+    def _compute_polynomial_degree(self, result):       # TODO: coverage
+        if result[1] != 0:
+            return None
+        return result[0]
+
+    def _apply_operation(self, result):                 # TODO: coverage
+        return getattr(result[0], result[1])
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        if verbose:
+            return "getitem(%s, %s)" % values
+        return "%s.%s" % values
+
+    def resolve_template(self):                         # TODO: coverage
+        return self._apply_operation(self._args_)
 
 
 class TemplateSumExpression(ExpressionBase):

@@ -23,7 +23,7 @@ from pyomo.core.base.template_expr import (
 
 import six
 
-class ExpressionObjectTester(object):
+class ExpressionObjectTester(unittest.TestCase):
     def setUp(self):
         self.m = m = ConcreteModel()
         m.I = RangeSet(1,9)
@@ -73,7 +73,7 @@ class ExpressionObjectTester(object):
         t.set_value()
 
     # TODO: Fixing this test requires fixing Set
-    def _test_template_scalar_with_set(self):
+    def test_template_scalar_with_set(self):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.s[t]
@@ -253,18 +253,6 @@ class ExpressionObjectTester(object):
                          E_base.arg(-1).arg(0).arg(1))
         self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
-
-
-class TestTemplate_expressionObjects\
-      ( ExpressionObjectTester, unittest.TestCase ):
-
-    def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        ExpressionObjectTester.setUp(self)
-
-    @unittest.expectedFailure
-    def test_template_scalar_with_set(self):
-        self._test_template_scalar_with_set()
 
 
 class TestTemplateSubstitution(unittest.TestCase):
