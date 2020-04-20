@@ -208,12 +208,12 @@ class ConvexHull_Transformation(Transformation):
                                knownBlocks=knownBlocks):
                 raise GDP_Error("Target %s is not a component on instance %s!"
                                 % (t.name, instance.name))
-            elif t.type() is Disjunction:
+            elif t.ctype is Disjunction:
                 if t.parent_component() is t:
                     self._transformDisjunction(t, transBlock)
                 else:
                     self._transformDisjunctionData(t, transBlock, t.index())
-            elif t.type() in (Block, Disjunct):
+            elif t.ctype in (Block, Disjunct):
                 if t.parent_component() is t:
                     self._transformBlock(t, transBlock)
                 else:
@@ -625,12 +625,12 @@ class ConvexHull_Transformation(Transformation):
         for name, obj in list(iteritems(block.component_map())):
             if hasattr(obj, 'active') and not obj.active:
                 continue
-            handler = self.handlers.get(obj.type(), None)
+            handler = self.handlers.get(obj.ctype, None)
             if not handler:
                 if handler is None:
                     raise GDP_Error(
                         "No chull transformation handler registered "
-                        "for modeling components of type %s" % obj.type() )
+                        "for modeling components of type %s" % obj.ctype )
                 continue
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator
