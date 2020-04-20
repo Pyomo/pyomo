@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - master
-  push:
-    branches:
-      - add_baron
 
 jobs:
   pyomo-tests:
