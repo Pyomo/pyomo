@@ -33,7 +33,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        if hash brew; then
+        if [ ${{ matrix.TARGET }} == 'osx' ]; then
             echo "Install pre-dependencies for pyodbc..."
             brew update
             brew list bash || brew install bash
@@ -86,7 +86,7 @@ jobs:
         echo ""
         echo "Install GAMS..."
         echo ""
-        if hash brew; then
+        if [ ${{ matrix.TARGET }} == 'osx' ]; then
             wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/macosx/osx_x64_64_sfx.exe -O gams_installer.exe
         else
             wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/linux/linux_x64_64_sfx.exe -O gams_installer.exe
