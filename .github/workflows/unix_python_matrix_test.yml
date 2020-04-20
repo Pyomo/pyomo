@@ -58,6 +58,18 @@ jobs:
         echo ""
         pip install cplex || echo "CPLEX Community Edition is not available for ${{ matrix.python-version }}"
         echo ""
+        echo "Install BARON..."
+        echo ""
+        if [ ${{ matrix.TARGET }} == 'osx' ]; then
+            wget -q https://www.minlp.com/downloads/xecs/baron/current/baron-osx64.zip -O baron_installer.zip
+        else
+            wget -q https://www.minlp.com/downloads/xecs/baron/current/baron-lin64.zip -O baron_installer.zip
+        fi
+        unzip -q baron_installer.zip
+        mv baron-* baron-dir
+        BARON_DIR=$(pwd)/baron-dir
+        export PATH=$PATH:$BARON_DIR
+        echo ""
         echo "Install IDAES Ipopt (Linux only)..."
         echo ""
         if [ ${{ matrix.TARGET }} == 'linux' ]; then
