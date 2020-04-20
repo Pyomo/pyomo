@@ -13,7 +13,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Set, value
 import pyomo.core.expr.current as EXPR
-from pyomo.core.base.template_expr import (
+from pyomo.core.expr.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
     substitute_template_expression, 

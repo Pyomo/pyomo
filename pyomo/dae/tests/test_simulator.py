@@ -29,7 +29,7 @@ from pyomo.dae.simulator import (
     _check_viewsumexpression, 
     substitute_pyomo2casadi,
 )
-from pyomo.core.base.template_expr import (
+from pyomo.core.expr.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
 )

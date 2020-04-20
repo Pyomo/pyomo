@@ -10,15 +10,200 @@
 
 import copy
 import logging
-from six import iteritems
+from six import iteritems, itervalues
 
-from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import (
-    NumericValue, native_numeric_types, as_numeric, value )
-import pyomo.core.base
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.core.expr.numvalue import (
+    NumericValue, native_numeric_types, nonpyomo_leaf_types,
+    as_numeric, value,
+)
+from pyomo.core.expr.numeric_expr import ExpressionBase
+from pyomo.core.expr.visitor import ExpressionReplacementVisitor
 
 class _NotSpecified(object): pass
+
+class GetItemExpression(ExpressionBase):
+    """
+    Expression to call :func:`__getitem__` on the base object.
+    """
+    __slots__ = ('_base',)
+    PRECEDENCE = 1
+
+    def _precedence(self):  #pragma: no cover
+        return GetItemExpression.PRECEDENCE
+
+    def __init__(self, args, base=None):
+        """Construct an expression with an operation and a set of arguments"""
+        self._args_ = args
+        self._base = base
+
+    def nargs(self):
+        return len(self._args_)
+
+    def create_node_with_local_data(self, args):
+        return self.__class__(args, self._base)
+
+    def __getstate__(self):
+        state = super(GetItemExpression, self).__getstate__()
+        for i in GetItemExpression.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    def __getattr__(self, attr):
+        if attr.startswith('__') and attr.endswith('__'):
+            raise AttributeError()
+        return GetAttrExpression((self, attr))
+
+    def getname(self, *args, **kwds):
+        return self._base.getname(*args, **kwds)
+
+    def is_potentially_variable(self):
+        if any(arg.is_potentially_variable() for arg in self._args_
+               if arg.__class__ not in nonpyomo_leaf_types):
+            return True
+        for x in itervalues(self._base._data):
+            if hasattr(x, 'is_potentially_variable') and \
+               x.is_potentially_variable():
+                return True
+        return False
+
+    def is_fixed(self):
+        if any(self._args_):
+            for x in itervalues(self._base):
+                if hasattr(x, 'is_fixed') and not x.is_fixed():
+                    return False
+        return True
+
+    def _is_fixed(self, values):
+        for x in itervalues(self._base):
+            if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
+                return False
+        return True
+
+    def _compute_polynomial_degree(self, result):       # TODO: coverage
+        if any(x != 0 for x in result):
+            return None
+        ans = 0
+        for x in itervalues(self._base):
+            if x.__class__ in nonpyomo_leaf_types:
+                continue
+            tmp = x.polynomial_degree()
+            if tmp is None:
+                return None
+            elif tmp > ans:
+                ans = tmp
+        return ans
+
+    def _apply_operation(self, result):                 # TODO: coverage
+        return value(self._base.__getitem__( tuple(result) ))
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        values = tuple(_[1:-1] if _[0]=='(' and _[-1]==')' else _
+                       for _ in values)
+        if verbose:
+            return "getitem(%s, %s)" % (self.getname(), ', '.join(values))
+        return "%s[%s]" % (self.getname(), ','.join(values))
+
+    def resolve_template(self):                         # TODO: coverage
+        return self._base.__getitem__(tuple(value(i) for i in self._args_))
+
+
+class GetAttrExpression(ExpressionBase):
+    """
+    Expression to call :func:`__getattr__` on the base object.
+    """
+    __slots__ = ()
+    PRECEDENCE = 1
+
+    def _precedence(self):  #pragma: no cover
+        return GetAttrExpression.PRECEDENCE
+
+    def nargs(self):
+        return len(self._args_)
+
+    def __getattr__(self, attr):
+        if attr.startswith('__') and attr.endswith('__'):
+            raise AttributeError()
+        return GetAttrExpression((self, attr))
+
+    def __getitem__(self, *idx):
+        return GetItemExpression(idx, base=self)
+
+    def getname(self, *args, **kwds):
+        return 'getattr'
+
+    def _compute_polynomial_degree(self, result):       # TODO: coverage
+        if result[1] != 0:
+            return None
+        return result[0]
+
+    def _apply_operation(self, result):                 # TODO: coverage
+        return getattr(result[0], result[1])
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        if verbose:
+            return "getitem(%s, %s)" % values
+        return "%s.%s" % values
+
+    def resolve_template(self):                         # TODO: coverage
+        return self._apply_operation(self._args_)
+
+
+class TemplateSumExpression(ExpressionBase):
+    """
+    Expression to represent an unexpanded sum over one or more sets.
+    """
+    __slots__ = ('_iters',)
+    PRECEDENCE = 1
+
+    def _precedence(self):  #pragma: no cover
+        return TemplateSumExpression.PRECEDENCE
+
+    def __init__(self, args, _iters):
+        """Construct an expression with an operation and a set of arguments"""
+        self._args_ = args
+        self._iters = _iters
+
+    def nargs(self):
+        return len(self._args_)
+
+    def create_node_with_local_data(self, args):
+        return self.__class__(args, self._iters)
+
+    def __getstate__(self):
+        state = super(TemplateSumExpression, self).__getstate__()
+        for i in GetItemExpression.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
+    def getname(self, *args, **kwds):
+        return "SUM"
+
+    def is_potentially_variable(self):
+        if any(arg.is_potentially_variable() for arg in self._args_
+               if arg.__class__ not in nonpyomo_leaf_types):
+            return True
+        return False
+
+    def _is_fixed(self, values):
+        return all(values)
+
+    def _compute_polynomial_degree(self, result):       # TODO: coverage
+        return result[0]
+
+    def _apply_operation(self, result):                 # TODO: coverage
+        raise DeveloperError("not supported")
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        ans = ''
+        for iterGroup in self._iters:
+            ans += ' for %s in %s' % (','.join(str(i) for i in iterGroup),
+                                      iterGroup[0]._set)
+        val = values[0]
+        if val[0]=='(' and val[-1]==')':
+            val = val[1:-1]
+        return "SUM(%s%s)" % (val, ans)
+
 
 class IndexTemplate(NumericValue):
     """A "placeholder" for an index value in template expressions.
@@ -138,7 +323,7 @@ class IndexTemplate(NumericValue):
         else:
             self._value = values
 
-class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
+class ReplaceTemplateExpression(ExpressionReplacementVisitor):
 
     def __init__(self, substituter, *args):
         super(ReplaceTemplateExpression, self).__init__()
@@ -146,7 +331,7 @@ class ReplaceTemplateExpression(EXPR.ExpressionReplacementVisitor):
         self.substituter_args = args
 
     def visiting_potential_leaf(self, node):
-        if type(node) is EXPR.GetItemExpression or type(node) is IndexTemplate:
+        if type(node) is GetItemExpression or type(node) is IndexTemplate:
             return True, self.substituter(node, *self.substituter_args)
 
         return super(
@@ -227,6 +412,7 @@ def substitute_getitem_with_param(expr, _map):
     new Param.  For example, this method will create expressions
     suitable for passing to DAE integrators
     """
+    import pyomo.core.base.param
     if type(expr) is IndexTemplate:
         return expr
 
@@ -362,11 +548,12 @@ class _template_iter_context(object):
         init_cache = len(self.cache)
         expr = next(generator)
         final_cache = len(self.cache)
-        return EXPR.TemplateSumExpression(
+        return TemplateSumExpression(
             (expr,), self.npop_cache(final_cache-init_cache)
         )
 
 def templatize_rule(block, rule, index_set):
+    import pyomo.core.base.set
     context = _template_iter_context()
     try:
         # Override Set iteration to return IndexTemplates
