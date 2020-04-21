@@ -56,12 +56,12 @@ class Alias(Component):
             self._aliased_object = weakref.ref(obj)
         ctype = Alias
         if isinstance(obj, Component):
-            ctype = obj.type()
+            ctype = obj.ctype
         else:
             if not isinstance(obj, ComponentData):
                 raise TypeError("Aliased object must be an "
                                 "instance of Component or ComponentData")
-            ctype = obj.parent_component().type()
+            ctype = obj.parent_component().ctype
         Component.__init__(self, ctype=ctype)
 
     @property

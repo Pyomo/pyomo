@@ -22,12 +22,12 @@ from pyutilib.misc import Options
 import copy, logging, time
 from six import iteritems, itervalues
 
-try:
-    import networkx as nx
-    import numpy
-    imports_available = True
-except ImportError:
-    imports_available = False
+from pyomo.common.dependencies import (
+    networkx as nx, networkx_available,
+    numpy, numpy_available,
+)
+
+imports_available = networkx_available & numpy_available
 
 logger = logging.getLogger('pyomo.network')
 
@@ -148,9 +148,6 @@ class SequentialDecomposition(FOQUSGraph):
 
     def __init__(self, **kwds):
         """Pass kwds to update the options attribute after setting defaults"""
-        if not imports_available:
-            raise ImportError("This class requires numpy and networkx")
-
         self.cache = {}
         options = self.options = Options()
         # defaults

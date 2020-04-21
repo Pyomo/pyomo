@@ -19,21 +19,12 @@ try:
     guppy_available = True
 except ImportError:
     guppy_available = False
-try:
-    from pympler.muppy import muppy
-    from pympler.muppy import summary
-    from pympler.muppy import tracker
-    from pympler.asizeof import *
-    pympler_available = True
-except ImportError:
-    pympler_available = False
-except AttributeError:
-    pympler_available = False
 
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.misc import import_file
 
 from pyomo.common import pyomo_command
+from pyomo.common.dependencies import pympler_available
 from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
 from pyomo.core.base import maximize, minimize, Var, Suffix
 from pyomo.opt.base import SolverFactory

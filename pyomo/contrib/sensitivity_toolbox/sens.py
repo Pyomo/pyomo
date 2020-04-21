@@ -74,7 +74,7 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
                         "length of perturbList")
 
     for pp in paramSubList:
-        if pp.type() is not Param:
+        if pp.ctype is not Param:
             raise ValueError("paramSubList argument is expecting a list of Params")
 
     for pp in paramSubList:
@@ -83,7 +83,7 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
 
         
     for pp in perturbList:
-        if pp.type() is not Param:
+        if pp.ctype is not Param:
             raise ValueError("perturbList argument is expecting a list of Params")
     #Add model block to compartmentalize all sipopt data
     b=Block()

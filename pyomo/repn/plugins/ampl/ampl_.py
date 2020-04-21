@@ -1829,14 +1829,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
             else:
                 _parent = v.parent_block()
                 while _parent is not None and _parent is not model:
-                    if _parent.type() is not model.type():
+                    if _parent.ctype is not model.type():
                         _errors.append(
                             "Variable '%s' exists within %s '%s', "
                             "but is used by an active "
                             "expression.  Currently variables "
                             "must be reachable through a tree "
                             "of active Blocks."
-                            % (v.name, _parent.type().__name__,
+                            % (v.name, _parent.ctype.__name__,
                                _parent.name))
                     if not _parent.active:
                         _errors.append(
@@ -1845,7 +1845,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             "an active expression.  Currently "
                             "variables must be reachable through "
                             "a tree of active Blocks."
-                            % (v.name, _parent.type().__name__,
+                            % (v.name, _parent.ctype.__name__,
                                _parent.name))
                     _parent = _parent.parent_block()
 
