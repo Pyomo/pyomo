@@ -1,10 +1,13 @@
-import numpy as np
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.opt import check_optimal_termination
-import interface as ip_interface
-from scipy_interface import ScipyInterface
-    
-def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e-6):
+from pyomo.common.dependencies import attempt_import
+import pyomo.contrib.interior_point.interface as ip_interface
+from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
+
+np, numpy_available = attempt_import('numpy', 'Interior point requires numpy', minimum_version='1.13.0')
+
+# Todo: This function currently used IPOPT for the initial solve - should accept solver
+def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e-6, tee=False):
     """
     This function computes the inverse of the reduced Hessian of a problem at the
     solution. This function first solves the problem with Ipopt and then generates
@@ -28,6 +31,9 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     bound_tolerance : float
        The tolerance to use when checking if the variables are too close to their bound.
        If they are too close, then the routine will exit without a reduced hessian.
+    tee : bool
+       This flag is sent to the tee option of the solver. If true, then the solver
+       log is output to the console.
     """
     m = model
 
@@ -35,23 +41,23 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     # so the reduced hessian kkt system is setup correctly from
     # the ipopt solution
     if not hasattr(m, 'ipopt_zL_out'):
-        m.ipopt_zL_out = pe.Suffix(direction=pe.Suffix.IMPORT)
+        m.ipopt_zL_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     if not hasattr(m, 'ipopt_zU_out'):
-        m.ipopt_zU_out = pe.Suffix(direction=pe.Suffix.IMPORT)
+        m.ipopt_zU_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
     if not hasattr(m, 'ipopt_zL_in'):
-        m.ipopt_zL_in = pe.Suffix(direction=pe.Suffix.EXPORT)
+        m.ipopt_zL_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
     if not hasattr(m, 'ipopt_zU_in'):
-        m.ipopt_zU_in = pe.Suffix(direction=pe.Suffix.EXPORT)
+        m.ipopt_zU_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
     if not hasattr(m, 'dual'):
-        m.dual = pe.Suffix(direction=pe.Suffix.IMPORT_EXPORT)
+        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
 
     # create the ipopt solver
-    solver = pe.SolverFactory('ipopt')
+    solver = pyo.SolverFactory('ipopt')
     # set options to prevent bounds relaxation (and 0 slacks)
     solver.options['bound_relax_factor']=0
     solver.options['honor_original_bounds']='no'
     # solve the problem
-    status = solver.solve(m, tee=True)
+    status = solver.solve(m, tee=tee)
     if not check_optimal_termination(status):
         return status, None
 
@@ -60,10 +66,10 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     estimated_mu = list()
     for v in m.ipopt_zL_out:
         if v.has_lb():
-            estimated_mu.append((pe.value(v) - v.lb)*m.ipopt_zL_out[v])
+            estimated_mu.append((pyo.value(v) - v.lb)*m.ipopt_zL_out[v])
     for v in m.ipopt_zU_out:
         if v.has_ub():
-            estimated_mu.append((v.ub - pe.value(v))*m.ipopt_zU_out[v])
+            estimated_mu.append((v.ub - pyo.value(v))*m.ipopt_zU_out[v])
     if len(estimated_mu) == 0:
         mu = 10**-8.6
     else:
@@ -84,8 +90,8 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
 
     # check that none of the independent variables are at their bounds
     for v in ind_vardatas:
-        if (v.has_lb() and pe.value(v) - v.lb <= bound_tolerance) or \
-           (v.has_ub() and v.ub - pe.value(b) <= bound_tolerance):
+        if (v.has_lb() and pyo.value(v) - v.lb <= bound_tolerance) or \
+           (v.has_ub() and v.ub - pyo.value(b) <= bound_tolerance):
                 raise ValueError("Independent variable: {} has a solution value that is near"
                                  " its bound (according to tolerance). The reduced hessian"
                                  " computation does not support this at this time. All"
