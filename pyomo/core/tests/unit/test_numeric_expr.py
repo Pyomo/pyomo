@@ -5233,6 +5233,25 @@ class TestDirect_LinearExpression(unittest.TestCase):
         self.assertTrue(is_fixed(m.c1.body))
         self.assertEqual(polynomial_degree(m.c1.body), 0)
 
+    def test_LinearExpression_is_fixed(self):
+        m = ConcreteModel()
+        m.S = RangeSet(2)
+        m.var_1 = Var(initialize=0)
+        m.var_2 = Var(initialize=0)
+        m.var_3 = Var(m.S, initialize=0)
+
+        def con_rule(model):
+            from collections import defaultdict
+            return model.var_1 - (model.var_2 + sum_product(defaultdict(lambda: 1 / 6), model.var_3)) <= 0
+
+        m.c1 = Constraint(rule=con_rule)
+
+        m.var_1.fix(1)
+        m.var_2.fix(1)
+
+        self.assertFalse(is_fixed(m.c1.body))
+        self.assertEqual(polynomial_degree(m.c1.body), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

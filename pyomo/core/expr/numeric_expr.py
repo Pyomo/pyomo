@@ -1368,13 +1368,16 @@ class LinearExpression(ExpressionBase):
     def is_constant(self):
         return len(self.linear_vars) == 0
 
-    def is_fixed(self):
+    def _is_fixed(self, values=None):
         if len(self.linear_vars) == 0:
             return True
         for v in self.linear_vars:
             if not v.fixed:
                 return False
         return True
+
+    def is_fixed(self):
+        return self._is_fixed()
 
     def _to_string(self, values, verbose, smap, compute_values):
         tmp = []
