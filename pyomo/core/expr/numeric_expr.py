@@ -1369,12 +1369,7 @@ class LinearExpression(ExpressionBase):
         return len(self.linear_vars) == 0
 
     def _is_fixed(self, values=None):
-        if len(self.linear_vars) == 0:
-            return True
-        for v in self.linear_vars:
-            if not v.fixed:
-                return False
-        return True
+        return all(v.fixed for v in self.linear_vars)
 
     def is_fixed(self):
         return self._is_fixed()
