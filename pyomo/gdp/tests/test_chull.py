@@ -16,7 +16,7 @@ from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import *
 import pyomo.gdp.tests.models as models
-import common_tests as ct
+import pyomo.gdp.tests.common_tests as ct
 
 import pyomo.opt
 linear_solvers = pyomo.opt.check_available_solvers(
@@ -1303,7 +1303,9 @@ class TestErrors(unittest.TestCase):
         ct.check_linear_coef(self, repn, disjunct1.indicator_var_4, 1)
         self.assertEqual(repn.constant, 0)
 
-        # but the disaggregation constraints are going to force them to 0
+        # but the disaggregation constraints are going to force them to 0 (which
+        # will in turn force the outer disjunct indicator variable to 0, which
+        # is what we want)
         d3_ind_dis = transBlock.disaggregationConstraints[1]
         self.assertEqual(d3_ind_dis.lower, 0)
         self.assertEqual(d3_ind_dis.upper, 0)

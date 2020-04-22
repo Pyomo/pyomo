@@ -18,7 +18,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
 
 import pyomo.gdp.tests.models as models
-import common_tests as ct
+import pyomo.gdp.tests.common_tests as ct
 
 import random
 import sys
