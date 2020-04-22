@@ -14,8 +14,10 @@ import pyutilib.th as unittest
 from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Set, value
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.template_expr import (
-    IndexTemplate, 
+    IndexTemplate,
+    TemplateExpressionError,
     _GetItemIndexer,
+    resolve_template,
     substitute_template_expression, 
     substitute_getitem_with_param,
     substitute_template_with_value,
@@ -33,6 +35,17 @@ class ExpressionObjectTester(unittest.TestCase):
         m.p = Param(m.I, m.J, initialize=lambda m,i,j: 100*i+j)
         m.s = Set(m.I, initialize=lambda m,i:range(i))
 
+    def test_IndexTemplate(self):
+        m = self.m
+        i = IndexTemplate(m.I)
+        with self.assertRaisesRegex(
+                TemplateExpressionError,
+                "Evaluating uninitialized IndexTemplate"):
+            value(i)
+
+        i.set_value(5)
+        self.assertEqual(value(i), 5)
+
     def test_template_scalar(self):
         m = self.m
         t = IndexTemplate(m.I)
@@ -44,8 +57,10 @@ class ExpressionObjectTester(unittest.TestCase):
         self.assertFalse(e.is_fixed())
         self.assertEqual(e.polynomial_degree(), 1)
         t.set_value(5)
-        self.assertEqual(e(), 6)
-        self.assertIs(e.resolve_template(), m.x[5])
+        v = e()
+        self.assertIn(type(v), (int, float))
+        self.assertEqual(v, 6)
+        self.assertIs(resolve_template(e), m.x[5])
         t.set_value()
 
         e = m.p[t,10]
@@ -56,8 +71,10 @@ class ExpressionObjectTester(unittest.TestCase):
         self.assertTrue(e.is_fixed())
         self.assertEqual(e.polynomial_degree(), 0)
         t.set_value(5)
-        self.assertEqual(e(), 510)
-        self.assertIs(e.resolve_template(), m.p[5,10])
+        v = e()
+        self.assertIn(type(v), (int, float))
+        self.assertEqual(v, 510)
+        self.assertIs(resolve_template(e), m.p[5,10])
         t.set_value()
 
         e = m.p[5,t]
@@ -68,11 +85,12 @@ class ExpressionObjectTester(unittest.TestCase):
         self.assertTrue(e.is_fixed())
         self.assertEqual(e.polynomial_degree(), 0)
         t.set_value(10)
-        self.assertEqual(e(), 510)
-        self.assertIs(e.resolve_template(), m.p[5,10])
+        v = e()
+        self.assertIn(type(v), (int, float))
+        self.assertEqual(v, 510)
+        self.assertIs(resolve_template(e), m.p[5,10])
         t.set_value()
 
-    # TODO: Fixing this test requires fixing Set
     def test_template_scalar_with_set(self):
         m = self.m
         t = IndexTemplate(m.I)
@@ -84,8 +102,9 @@ class ExpressionObjectTester(unittest.TestCase):
         self.assertTrue(e.is_fixed())
         self.assertEqual(e.polynomial_degree(), 0)
         t.set_value(5)
-        self.assertRaises(TypeError, e)
-        self.assertIs(e.resolve_template(), m.s[5])
+        v = e()
+        self.assertIs(v, m.s[5])
+        self.assertIs(resolve_template(e), m.s[5])
         t.set_value()
 
     def test_template_operation(self):
@@ -112,6 +131,32 @@ class ExpressionObjectTester(unittest.TestCase):
         self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
         self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
         self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+
+
+    def test_block_templates(self):
+        m = ConcreteModel()
+        m.T = RangeSet(3)
+        @m.Block(m.T)
+        def b(b, i):
+            b.x = Var(initialize=i)
+
+            @b.Block(m.T)
+            def bb(bb, j):
+                bb.I =RangeSet(i*j)
+                bb.y = Var(bb.I, initialize=lambda m,i:i)
+        t = IndexTemplate(m.T)
+        e = m.b[t].x
+        self.assertIs(type(e), EXPR.GetAttrExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(type(e.arg(0)), EXPR.GetItemExpression)
+        self.assertIs(e.arg(0)._base, m.b)
+        self.assertEqual(e.arg(0).nargs(), 1)
+        self.assertIs(e.arg(0).arg(0), t)
+        t.set_value(2)
+        v = e()
+        self.assertIn(type(v), (int, float))
+        self.assertEqual(v, 2)
+        self.assertIs(resolve_template(e), m.b[2].x)
 
 
     def test_template_name(self):

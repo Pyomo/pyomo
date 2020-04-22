@@ -14,11 +14,13 @@ from six import iteritems, itervalues
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import (
-    NumericValue, native_numeric_types, nonpyomo_leaf_types,
+    NumericValue, native_numeric_types, native_types, nonpyomo_leaf_types,
     as_numeric, value,
 )
 from pyomo.core.expr.numeric_expr import ExpressionBase
-from pyomo.core.expr.visitor import ExpressionReplacementVisitor
+from pyomo.core.expr.visitor import (
+    ExpressionReplacementVisitor, StreamBasedExpressionVisitor
+)
 
 class _NotSpecified(object): pass
 
@@ -29,7 +31,7 @@ class GetItemExpression(ExpressionBase):
     __slots__ = ('_base',)
     PRECEDENCE = 1
 
-    def _precedence(self):  #pragma: no cover
+    def _precedence(self):
         return GetItemExpression.PRECEDENCE
 
     def __init__(self, args, base=None):
@@ -67,20 +69,15 @@ class GetItemExpression(ExpressionBase):
                 return True
         return False
 
-    def is_fixed(self):
-        if any(self._args_):
-            for x in itervalues(self._base):
-                if hasattr(x, 'is_fixed') and not x.is_fixed():
-                    return False
-        return True
-
     def _is_fixed(self, values):
+        if not all(values):
+            return False
         for x in itervalues(self._base):
-            if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
+            if hasattr(x, 'is_fixed') and not x.is_fixed():
                 return False
         return True
 
-    def _compute_polynomial_degree(self, result):       # TODO: coverage
+    def _compute_polynomial_degree(self, result):
         if any(x != 0 for x in result):
             return None
         ans = 0
@@ -94,8 +91,11 @@ class GetItemExpression(ExpressionBase):
                 ans = tmp
         return ans
 
-    def _apply_operation(self, result):                 # TODO: coverage
-        return value(self._base.__getitem__( tuple(result) ))
+    def _apply_operation(self, result):
+        obj = self._base.__getitem__( tuple(result) )
+        if isinstance(obj, NumericValue):
+            obj = value(obj)
+        return obj
 
     def _to_string(self, values, verbose, smap, compute_values):
         values = tuple(_[1:-1] if _[0]=='(' and _[-1]==')' else _
@@ -104,8 +104,8 @@ class GetItemExpression(ExpressionBase):
             return "getitem(%s, %s)" % (self.getname(), ', '.join(values))
         return "%s[%s]" % (self.getname(), ','.join(values))
 
-    def resolve_template(self):                         # TODO: coverage
-        return self._base.__getitem__(tuple(value(i) for i in self._args_))
+    def _resolve_template(self, args):
+        return self._base.__getitem__(args)
 
 
 class GetAttrExpression(ExpressionBase):
@@ -115,7 +115,7 @@ class GetAttrExpression(ExpressionBase):
     __slots__ = ()
     PRECEDENCE = 1
 
-    def _precedence(self):  #pragma: no cover
+    def _precedence(self):
         return GetAttrExpression.PRECEDENCE
 
     def nargs(self):
@@ -132,21 +132,25 @@ class GetAttrExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'getattr'
 
-    def _compute_polynomial_degree(self, result):       # TODO: coverage
+    def _compute_polynomial_degree(self, result):
         if result[1] != 0:
             return None
         return result[0]
 
-    def _apply_operation(self, result):                 # TODO: coverage
-        return getattr(result[0], result[1])
+    def _apply_operation(self, result):
+        assert len(result) == 2
+        obj = getattr(result[0], result[1])
+        if isinstance(obj, NumericValue):
+            obj = value(obj)
+        return obj
 
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "getitem(%s, %s)" % values
         return "%s.%s" % values
 
-    def resolve_template(self):                         # TODO: coverage
-        return self._apply_operation(self._args_)
+    def _resolve_template(self, args):
+        return getattr(*args)
 
 
 class TemplateSumExpression(ExpressionBase):
@@ -156,16 +160,16 @@ class TemplateSumExpression(ExpressionBase):
     __slots__ = ('_iters',)
     PRECEDENCE = 1
 
-    def _precedence(self):  #pragma: no cover
+    def _precedence(self):
         return TemplateSumExpression.PRECEDENCE
 
     def __init__(self, args, _iters):
-        """Construct an expression with an operation and a set of arguments"""
+        assert len(args) == 1
         self._args_ = args
         self._iters = _iters
 
     def nargs(self):
-        return len(self._args_)
+        return 1
 
     def create_node_with_local_data(self, args):
         return self.__class__(args, self._iters)
@@ -188,11 +192,31 @@ class TemplateSumExpression(ExpressionBase):
     def _is_fixed(self, values):
         return all(values)
 
-    def _compute_polynomial_degree(self, result):       # TODO: coverage
+    def _compute_polynomial_degree(self, result):
+        if None in result:
+            return None
         return result[0]
 
-    def _apply_operation(self, result):                 # TODO: coverage
-        raise DeveloperError("not supported")
+    def _set_iter_vals(vals):
+        for i, iterGroup in enumerate(self._iters):
+            if len(iterGroup) == 1:
+                iterGroup[0].set_value(val[i])
+            else:
+                for j, v in enumerate(val):
+                    iterGroup[j].set_value(v)
+
+    def _get_iter_vals(vals):
+        return tuple(tuple(x._value for x in ig) for ig in self._iters)
+
+    def _apply_operation(self, result):
+        ans = 0
+        _init_vals = self._get_iter_vals()
+        _sets = tuple(iterGroup[0]._set for iterGroup in self._iters)
+        for val in itertools.product(*_sets):
+            self._set_iter_vals(val)
+            ans += value(self._args_[0])
+        self._set_iter_vals(_init_vals)
+        return ans
 
     def _to_string(self, values, verbose, smap, compute_values):
         ans = ''
@@ -203,6 +227,16 @@ class TemplateSumExpression(ExpressionBase):
         if val[0]=='(' and val[-1]==')':
             val = val[1:-1]
         return "SUM(%s%s)" % (val, ans)
+
+    def _resolve_template(self, args):
+        _init_vals = self._get_iter_vals()
+        _sets = tuple(iterGroup[0]._set for iterGroup in self._iters)
+        ans = []
+        for val in itertools.product(*_sets):
+            self._set_iter_vals(val)
+            ans.append(resolve_template(self._args_[0]))
+        self._set_iter_vals(_init_vals)
+        return SumExpression(ans)
 
 
 class IndexTemplate(NumericValue):
@@ -265,7 +299,8 @@ class IndexTemplate(NumericValue):
         """
         if self._value is _NotSpecified:
             if exception:
-                raise TemplateExpressionError(self)
+                raise TemplateExpressionError(
+                    self, "Evaluating uninitialized IndexTemplate")
             return None
         else:
             return self._value
@@ -322,6 +357,37 @@ class IndexTemplate(NumericValue):
                                  "IndexTemplate %s" % (values, self))
         else:
             self._value = values
+
+
+def resolve_template(expr):
+    """Resolve a template into a concrete expression
+
+    This takes a template expression and returns the concrete equivalent
+    by substituting the current values of all IndexTemplate objects and
+    resolving (evaluating and removing) all GetItemExpression,
+    GetAttrExpression, and TemplateSumExpression expression nodes.
+
+    """
+    def beforeChild(node, child):
+        # Efficiency: do not decend into leaf nodes.
+        if type(child) in native_types or not child.is_expression_type():
+            return False, child
+        else:
+            return True, None
+
+    def exitNode(node, args):
+        if hasattr(node, '_resolve_template'):
+            return node._resolve_template(args)
+        if len(args) == node.nargs() and all(
+                a is b for a,b in zip(node.args, args)):
+            return node
+        return node.create_node_with_local_data(args)
+
+    return StreamBasedExpressionVisitor(
+        beforeChild=beforeChild,
+        exitNode=exitNode,
+    ).walk_expression(expr)
+
 
 class ReplaceTemplateExpression(ExpressionReplacementVisitor):
 
@@ -431,14 +497,14 @@ def substitute_template_with_value(expr):
 
     This substituter will replace all _GetItemExpression / IndexTemplate
     nodes with the actual _ComponentData based on the current value of
-    the IndexTamplate(s)
+    the IndexTemplate(s)
 
     """
 
     if type(expr) is IndexTemplate:
         return as_numeric(expr())
     else:
-        return expr.resolve_template()
+        return resolve_template(expr)
 
 
 
@@ -500,8 +566,8 @@ class _set_iterator_template_generator(object):
         # Prevent context from ever being called more than once
         if self.context is None:
             raise StopIteration()
-
         context, self.context = self.context, None
+
         _set = self._set
         d = _set.dimen
         if d is None:
