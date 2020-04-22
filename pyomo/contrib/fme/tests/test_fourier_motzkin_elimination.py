@@ -22,9 +22,6 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
 import random
 
-# DEBUG
-from nose.tools import set_trace
-
 class TestFourierMotzkinElimination(unittest.TestCase):
     def setUp(self):
         # will need this so we know transformation block names in the test that
