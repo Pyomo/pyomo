@@ -390,21 +390,15 @@ class ConvexHull_Transformation(Transformation):
                         varOrder.append(var)
                         varOrder_set.add(var)
 
-        # We will only disaggregate variables that
-        #  1) appear in multiple disjuncts, or
-        #  2) are not contained in this disjunct, or
-        # [ESJ 10/18/2019]: I think this is going to happen implicitly 
-        # because we will just move them out of the danger zone:
-        #  3) are not themselves disaggregated variables
+        # We will disaggregate all variables which are not themselves
+        # disaggregated variables. (Because the only other case where a variable
+        # should not be disaggregated is if it only appears in one disjunct in
+        # the whole model, which is not something we detect.)
         varSet = []
-        localVars = ComponentMap((d,[]) for d in obj.disjuncts)
         for var in varOrder:
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
             if len(disjuncts) > 1:
                 varSet.append(var)
-            # var lives in exactly one disjunct (in this disjunction)
-            elif self._contained_in(var, disjuncts[0]):
-                localVars[disjuncts[0]].append(var)
             elif self._contained_in(var, transBlock):
                 # There is nothing to do here: these are already
                 # disaggregated vars that can/will be forced to 0 when
@@ -418,8 +412,7 @@ class ConvexHull_Transformation(Transformation):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
-            self._transform_disjunct(disjunct, transBlock, varSet,
-                                     localVars[disjunct])
+            self._transform_disjunct(disjunct, transBlock, varSet)
         orConstraint.add(index, (or_expr, 1))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
@@ -462,7 +455,7 @@ class ConvexHull_Transformation(Transformation):
         # deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, transBlock, varSet, localVars):
+    def _transform_disjunct(self, obj, transBlock, varSet):
         # deactivated should only come from the user
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -558,45 +551,12 @@ class ConvexHull_Transformation(Transformation):
 
             relaxationBlock._bigMConstraintMap[disaggregatedVar] = bigmConstraint
             
-        for var in localVars:
-            lb = var.lb
-            ub = var.ub
-            if lb is None or ub is None:
-                raise GDP_Error("Variables that appear in disjuncts must be "
-                                "bounded in order to use the chull "
-                                "transformation! Missing bound for %s."
-                                % (var.name))
-            if value(lb) > 0:
-                var.setlb(0)
-            if value(ub) < 0:
-                var.setub(0)
-
-            # naming conflicts are possible here since this is a bunch
-            # of variables from different blocks coming together, so we
-            # get a unique name
-            conName = unique_component_name(
-                relaxationBlock,
-                var.getname(fully_qualified=False, name_buffer=NAME_BUFFER
-                        ) + "_bounds"
-            )
-            bigmConstraint = Constraint(transBlock.lbub)
-            relaxationBlock.add_component(conName, bigmConstraint)
-            
-            # These are the constraints for the variables we didn't disaggregate
-            # since they are local to a single disjunct
-            bigmConstraint.add('lb', obj.indicator_var*lb <= var)
-            bigmConstraint.add('ub', var <= obj.indicator_var*ub)
-
-            relaxationBlock._bigMConstraintMap[var] = bigmConstraint
-            
         var_substitute_map = dict((id(v), newV) for v, newV in iteritems(
             relaxationBlock._disaggregatedVarMap['disaggregatedVar']))
         zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in \
                                    iteritems(
                                        relaxationBlock._disaggregatedVarMap[
                                            'disaggregatedVar']))
-        zero_substitute_map.update((id(v), ZeroConstant)
-                                   for v in localVars)
 
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, var_substitute_map,
@@ -954,16 +914,8 @@ class ConvexHull_Transformation(Transformation):
                             (original_var.name, disjunction.name))
 
     def get_var_bounds_constraint(self, v):
-        # There are two cases here: 1) if v is a disaggregated variable: get the
-        # indicator*lb <= it <= indicator*ub constraint for it. Or 2) v could
-        # have been local to one disjunct in the disjunction. This means that we
-        # have the same constraint stored in the same map but we have to get to
-        # it differently because the variable is declared on a disjunct, not on
-        # a transformation block.
+        # This can only go well if v is a disaggregated var
         transBlock = v.parent_block()
-        # If this is a local variable (not disaggregated) we have the wrong block
-        if hasattr(transBlock, "_transformation_block"):
-            transBlock = transBlock._transformation_block()
         try:
             return transBlock._bigMConstraintMap[v]
         except:
