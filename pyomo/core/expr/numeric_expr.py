@@ -1366,7 +1366,7 @@ class LinearExpression(ExpressionBase):
         return 'sum'
 
     def _compute_polynomial_degree(self, result):
-        return 1 if len(self.linear_vars) > 0 else 0
+        return 1 if not self.is_fixed() else 0
 
     def is_constant(self):
         return len(self.linear_vars) == 0
