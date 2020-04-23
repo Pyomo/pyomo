@@ -35,6 +35,9 @@ jobs:
         package-path: ''
         pip-wheel-args: '--no-deps'
     - name: Uploading to TestPyPi
+      env:
+        TWINE_USERNAME: ${{ secrets.T_PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.T_PYPI_PASSWORD }}
       run: |
         twine upload --repository-url https://test.pypi.org/legacy/ wheelhouse/*-manylinux*.whl 
   osx:
@@ -63,6 +66,9 @@ jobs:
         python setup.py  --with-cython sdist --format=gztar bdist_wheel
         
     - name: Uploading to TestPyPi
+      env:
+        TWINE_USERNAME: ${{ secrets.T_PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.T_PYPI_PASSWORD }}
       run: |
         twine upload --repository-url https://test.pypi.org/legacy/ dist/* 
 
