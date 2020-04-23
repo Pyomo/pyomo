@@ -67,22 +67,34 @@ jobs:
         ls -la dist/
 
 
-  # windows:
-  #   name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [windows-latest]
-  #       include:
-  #       - os: windows-latest
-  #         TARGET: win
-  #       python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #   - name: Set up Python ${{ matrix.python-version }} with Miniconda
-  #     uses: goanpeca/setup-miniconda@v1
-  #     with:
-  #       auto-update-conda: true
-  #       python-version: ${{ matrix.python-version }}
+  windows:
+    name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        include:
+        - os: windows-latest
+          TARGET: win
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+      steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }} with Miniconda
+        uses: goanpeca/setup-miniconda@v1
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          Invoke-Expression "conda install -q -y -c anaconda -c conda-forge --no-update-deps setuptools twine wheel cython"
+      - name: Build Windows Python wheels
+        shell: pwsh
+        run: |
+          Invoke-Expression "python setup.py  --with-cython sdist --format=gztar bdist_wheel"
+      - name: Checking wheels
+        shell: pwsh
+        run: |
+          gci -Path .\dist
 
