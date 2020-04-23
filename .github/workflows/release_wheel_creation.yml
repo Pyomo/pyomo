@@ -34,9 +34,9 @@ jobs:
         build-requirements: 'cython'
         package-path: ''
         pip-wheel-args: '--no-deps'
-    - name: Checking wheels
+    - name: Uploading to TestPyPi
       run: |
-        ls -la /github/workspace/wheelhouse/
+        twine upload --repository-url https://test.pypi.org/legacy/ wheelhouse/*-manylinux*.whl 
   osx:
     name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
     runs-on: ${{ matrix.os }}
@@ -64,7 +64,7 @@ jobs:
         
     - name: Uploading to TestPyPi
       run: |
-        twine upload wheelhouse/*-manylinux*.whl 
+        twine upload --repository-url https://test.pypi.org/legacy/ dist/* 
 
 
   windows:
@@ -77,7 +77,7 @@ jobs:
         include:
         - os: windows-latest
           TARGET: win
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        python-version: [ 3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
