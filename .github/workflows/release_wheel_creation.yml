@@ -1,1 +1,77 @@
-name: Pyomo Release Distribution Creationon:  push:    branches:      - wheel_creationjobs:  manylinux:    name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation    runs-on: ${{ matrix.os }}    strategy:      fail-fast: false      matrix:        os: [ubuntu-latest]        - os: ubuntu-latest          TARGET: manylinux        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]    steps:    - uses: actions/checkout@v2    - name: Set up Python ${{ matrix.python-version }}      uses: actions/setup-python@v1      with:        python-version: ${{ matrix.python-version }}    - name: Install dependencies      run: |        python -m pip install --upgrade pip        pip install twine wheel setuptools    - name: Build manylinux Python wheels      uses: RalfG/python-wheels-manylinux-build@v0.2.2-manylinux2010_x86_64      with:        python-versions: 'cp27-cp27mu cp35-cp35m cp36-cp36m cp37-cp37m cp38-cp38'        build-requirements: 'cython'        package-path: ''        pip-wheel-args: '--no-deps'    - name: Checking wheels      run: |        ls -la wheelhouse/  # macos:  #   name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation  #   runs-on: ${{ matrix.os }}  #   strategy:  #     fail-fast: false  #     matrix:  #       os: [macos-latest]  #       include:  #       - os: macos-latest  #         TARGET: osx  #       python-version: [2.7, 3.5, 3.6, 3.7, 3.8]  #   steps:  #   - uses: actions/checkout@v2  #   - name: Set up Python ${{ matrix.python-version }}  #     uses: actions/setup-python@v1  #     with:  #       python-version: ${{ matrix.python-version }}  # windows:  #   name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation  #   runs-on: ${{ matrix.os }}  #   strategy:  #     fail-fast: false  #     matrix:  #       os: [windows-latest]  #       include:  #       - os: windows-latest  #         TARGET: win  #       python-version: [2.7, 3.5, 3.6, 3.7, 3.8]  #   steps:  #   - uses: actions/checkout@v2  #   - name: Set up Python ${{ matrix.python-version }} with Miniconda  #     uses: goanpeca/setup-miniconda@v1  #     with:  #       auto-update-conda: true  #       python-version: ${{ matrix.python-version }}
+name: Pyomo Release Distribution Creation
+
+on:
+  push:
+    branches:
+      - wheel_creation
+
+jobs:
+  manylinux:
+    name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        include:
+        - os: ubuntu-latest
+          TARGET: manylinux
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine wheel setuptools
+    - name: Build manylinux Python wheels
+      uses: RalfG/python-wheels-manylinux-build@v0.2.2-manylinux2010_x86_64
+      with:
+        python-versions: 'cp27-cp27mu cp35-cp35m cp36-cp36m cp37-cp37m cp38-cp38'
+        build-requirements: 'cython'
+        package-path: ''
+        pip-wheel-args: '--no-deps'
+    - name: Checking wheels
+      run: |
+        ls -la wheelhouse/
+
+  # macos:
+  #   name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [macos-latest]
+  #       include:
+  #       - os: macos-latest
+  #         TARGET: osx
+  #       python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Set up Python ${{ matrix.python-version }}
+  #     uses: actions/setup-python@v1
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+
+  # windows:
+  #   name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [windows-latest]
+  #       include:
+  #       - os: windows-latest
+  #         TARGET: win
+  #       python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Set up Python ${{ matrix.python-version }} with Miniconda
+  #     uses: goanpeca/setup-miniconda@v1
+  #     with:
+  #       auto-update-conda: true
+  #       python-version: ${{ matrix.python-version }}
+
