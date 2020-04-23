@@ -5222,7 +5222,7 @@ class TestDirect_LinearExpression(unittest.TestCase):
         m.var_3 = Var(m.S, initialize=0)
 
         def con_rule(model):
-            return model.var_1 - (model.var_2 + sum_product(defaultdict(lambda: 1 / 6), model.var_3)) <= 0
+            return model.var_1 - (model.var_2 + sum_product(defaultdict(lambda: 6), model.var_3)) <= 0
 
         m.c1 = Constraint(rule=con_rule)
 
@@ -5241,7 +5241,7 @@ class TestDirect_LinearExpression(unittest.TestCase):
         m.var_3 = Var(m.S, initialize=0)
 
         def con_rule(model):
-            return model.var_1 - (model.var_2 + sum_product(defaultdict(lambda: 1 / 6), model.var_3)) <= 0
+            return model.var_1 - (model.var_2 + sum_product(defaultdict(lambda: 6), model.var_3)) <= 0
 
         m.c1 = Constraint(rule=con_rule)
 
