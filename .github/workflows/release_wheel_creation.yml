@@ -88,10 +88,12 @@ jobs:
     - name: Install dependencies
       shell: pwsh
       run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
         Invoke-Expression "conda install -q -y -c anaconda -c conda-forge --no-update-deps setuptools twine wheel cython"
     - name: Build Windows Python wheels
       shell: pwsh
       run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
         Invoke-Expression "python setup.py  --with-cython sdist --format=gztar bdist_wheel"
     - name: Checking wheels
       shell: pwsh
