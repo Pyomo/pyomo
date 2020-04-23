@@ -62,9 +62,9 @@ jobs:
       run: |
         python setup.py  --with-cython sdist --format=gztar bdist_wheel
         
-    - name: Checking wheels
+    - name: Uploading to TestPyPi
       run: |
-        ls -la dist/
+        twine upload wheelhouse/*-manylinux*.whl 
 
 
   windows:
@@ -80,16 +80,16 @@ jobs:
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }} with Miniconda
-      uses: goanpeca/setup-miniconda@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
       with:
-        auto-update-conda: true
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
-        Invoke-Expression "conda install -q -y -c anaconda -c conda-forge --no-update-deps setuptools twine wheel cython"
+        Invoke-Expression "python -m pip install --upgrade pip"
+        Invoke-Expression "pip install setuptools twine wheel cython"
     - name: Build Windows Python wheels
       shell: pwsh
       run: |
