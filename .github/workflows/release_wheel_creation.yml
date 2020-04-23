@@ -33,7 +33,7 @@ jobs:
         python-versions: 'cp27-cp27mu cp35-cp35m cp36-cp36m cp37-cp37m cp38-cp38'
         build-requirements: 'cython'
         package-path: ''
-        pip-wheel-args: ''
+        pip-wheel-args: '--no-deps'
     - name: Checking wheels
       run: |
         ls -la /github/workspace/wheelhouse/
@@ -60,7 +60,11 @@ jobs:
         pip install twine wheel setuptools cython
     - name: Build OSX Python wheels
       run: |
-        python setup.py  --with-cython sdist --dist-dir='/github/workspace/wheelhouse' --format=gztar bdist_wheel
+        python setup.py  --with-cython sdist --format=gztar bdist_wheel
+        
+    - name: Checking wheels
+      run: |
+        ls -la dist/
 
 
   # windows:
