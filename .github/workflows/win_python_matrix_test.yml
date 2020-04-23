@@ -80,15 +80,21 @@ jobs:
             conda deactivate
             conda activate test
         }
-        echo ""
-        echo "Installing IDAES Ipopt"
-        echo ""
-        New-Item -Path . -Name "solver_dir" -ItemType "directory"
-        cd solver_dir
+        Write-Host ("")
+        Write-Host ("Installing BARON")
+        Write-Host ("")
+        Invoke-WebRequest -Uri 'https://www.minlp.com/downloads/xecs/baron/current/baron-win64.exe' -OutFile 'baron-win64.exe'
+        Start-Process -FilePath 'baron-win64.exe' -ArgumentList '/SP- /VERYSILENT /NORESTART /DIR=.\bar_solver /NOICONS' -Wait
+        Write-Host ("")
+        Write-Host ("Installing IDAES Ipopt")
+        Write-Host ("")
+        New-Item -Path . -Name "ipopt_solver" -ItemType "directory"
+        cd ipopt_solver
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz' -OutFile 'ipopt1.tar.gz'
         tar -xzf ipopt1.tar.gz
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt2.tar.gz'
         tar -xzf ipopt2.tar.gz
+        Remove-Item *.tar.gz -Force
         cd ..
         echo ""
         echo "Installing GAMS"
@@ -166,7 +172,7 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         echo "Setup and run nosetests"
         $PWD="$env:GITHUB_WORKSPACE"
-        $env:PATH += ";$PWD\gams;$PWD\solver_dir"
+        $env:PATH += ";$PWD\gams;$PWD\ipopt_dir;$PWD\bar_solver"
         test.pyomo -v --cat=nightly pyomo $PWD\pyomo-model-libraries
 
     - name: Process code coverage report

@@ -242,13 +242,12 @@ class _ComponentBase(object):
         ans.__setstate__(new_state)
         return ans
 
+    @deprecated("""The cname() method has been renamed to getname().
+    The preferred method of obtaining a component name is to use the
+    .name property, which returns the fully qualified component name.
+    The .local_name property will return the component name only within
+    the context of the immediate parent container.""", version='5.0')
     def cname(self, *args, **kwds):
-        logger.warning(
-            """DEPRECATED: The cname() method has been renamed to getname().
-The preferred method of obtaining a component name is to use the .name
-property, which returns the fully qualified component name.  The
-.local_name property will return the component name only within the
-context of the immediate parent container.""")
         return self.getname(*args, **kwds)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
@@ -382,15 +381,15 @@ class Component(_ComponentBase):
         _constructed    A boolean that is true if this component has been
                             constructed
         _parent         A weakref to the parent block that owns this component
-        _type           The class type for the derived subclass
+        _ctype          The class type for the derived subclass
     """
 
     def __init__ (self, **kwds):
         #
         # Get arguments
         #
-        self._type = kwds.pop('ctype', None)
-        self.doc   = kwds.pop('doc', None)
+        self._ctype = kwds.pop('ctype', None)
+        self.doc    = kwds.pop('doc', None)
         self._name  = kwds.pop('name', str(type(self).__name__))
         if kwds:
             raise ValueError(
@@ -399,7 +398,7 @@ class Component(_ComponentBase):
         #
         # Verify that ctype has been specified.
         #
-        if self._type is None:
+        if self._ctype is None:
             raise pyomo.common.DeveloperError(
                 "Must specify a component type for class %s!"
                 % ( type(self).__name__, ) )
@@ -461,9 +460,16 @@ class Component(_ComponentBase):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
+    @property
+    def ctype(self):
+        """Return the class type for this component"""
+        return self._ctype
+
+    @deprecated("Component.type() method has been replaced by the "
+                ".ctype property.", version='TBD')
     def type(self):
         """Return the class type for this component"""
-        return self._type
+        return self.ctype
 
     def construct(self, data=None):                     #pragma:nocover
         """API definition for constructing components"""
@@ -765,12 +771,19 @@ class ComponentData(_ComponentBase):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
-    def type(self):
+    @property
+    def ctype(self):
         """Return the class type for this component"""
         _parent = self.parent_component()
         if _parent is None:
-            return _parent
-        return _parent._type
+            return None
+        return _parent._ctype
+
+    @deprecated("Component.type() method has been replaced by the "
+                ".ctype property.", version='TBD')
+    def type(self):
+        """Return the class type for this component"""
+        return self.ctype
 
     def parent_component(self):
         """Returns the component associated with this object."""

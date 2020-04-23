@@ -527,7 +527,7 @@ def Reference(reference, ctype=_NotSpecified):
         ctypes = set((1,2))
     index = []
     for obj in _iter:
-        ctypes.add(obj.type())
+        ctypes.add(obj.ctype)
         if not isinstance(obj, ComponentData):
             # This object is not a ComponentData (likely it is a pure
             # IndexedComponent container).  As the Reference will treat
