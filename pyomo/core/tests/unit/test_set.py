@@ -5449,10 +5449,24 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             tmp = m.J.value
+        self.assertIs(type(tmp), set)
         self.assertEqual(tmp, set([1,3,2]))
         self.assertRegexpMatches(
             output.getvalue(),
             "^DEPRECATED: The 'value' attribute is deprecated.  Use .data\(\)")
+
+    def test_value_list_attr(self):
+        m = ConcreteModel()
+        m.J = Set(ordered=True, initialize=[1,3,2])
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            tmp = m.J.value_list
+        self.assertIs(type(tmp), list)
+        self.assertEqual(tmp, list([1,3,2]))
+        self.assertRegexpMatches(
+            output.getvalue().replace('\n',' '),
+            "^DEPRECATED: The 'value_list' attribute is deprecated.  "
+            "Use .ordered_data\(\)")
 
     def test_check_values(self):
         m = ConcreteModel()
@@ -5848,3 +5862,19 @@ c : Size=3, Index=CHOICES, Active=True
 
         finally:
             normalize_index.flatten = _oldFlatten
+
+    def test_issue_1375(self):
+        def a_rule(m):
+            for i in range(0):
+                yield i
+
+        def b_rule(m):
+            for i in range(3):
+                for j in range(0):
+                    yield i, j
+
+        m = ConcreteModel()
+        m.a = Set(initialize=a_rule, dimen=1)
+        self.assertEqual(len(m.a), 0)
+        m.b = Set(initialize=b_rule, dimen=2)
+        self.assertEqual(len(m.b), 0)

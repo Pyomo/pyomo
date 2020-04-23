@@ -117,7 +117,7 @@ def process_setarg(arg):
     elif isinstance(arg, IndexedComponent):
         raise TypeError("Cannot apply a Set operator to an "
                         "indexed %s component (%s)"
-                        % (arg.type().__name__, arg.name,))
+                        % (arg.ctype.__name__, arg.name,))
     elif isinstance(arg, Component):
         raise TypeError("Cannot apply a Set operator to a non-Set "
                         "%s component (%s)"
@@ -416,6 +416,8 @@ class TuplizeValuesInitializer(InitializerBase):
 
         if not isinstance(_val, collections_Sequence):
             _val = tuple(_val)
+        if len(_val) == 0:
+            return _val
         if isinstance(_val[0], tuple):
             return _val
         return self._tuplize(_val, parent, index)
@@ -1148,6 +1150,13 @@ class _FiniteSetMixin(object):
                 "retrieve the values in a finite set.", version='TBD')
     def value(self):
         return set(self)
+
+    @property
+    @deprecated("The 'value_list' attribute is deprecated.  Use "
+                ".ordered_data() to retrieve the values from a finite set "
+                "in a deterministic order.", version='TBD')
+    def value_list(self):
+        return list(self.ordered_data())
 
     def sorted_data(self):
         return tuple(sorted_robust(self.data()))

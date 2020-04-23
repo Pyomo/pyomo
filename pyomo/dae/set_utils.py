@@ -11,7 +11,6 @@
 from collections import Counter
 from pyomo.kernel import ComponentSet
 from pyomo.core.base.set import SetProduct
-import pdb
 
 
 def is_explicitly_indexed_by(comp, *sets, **kwargs):
@@ -20,8 +19,10 @@ def is_explicitly_indexed_by(comp, *sets, **kwargs):
     set or group of sets.
 
     Args:
-        comp : some Pyomo component, possibly indexed
+        comp : Some Pyomo component, possibly indexed
         sets : Pyomo Sets to check indexing by
+        expand_all_set_operators : Whether or not to expand all set operators
+                                   in the subsets method
 
     Returns:
         A bool that is True if comp is directly indexed by every set in sets.
@@ -35,6 +36,9 @@ def is_explicitly_indexed_by(comp, *sets, **kwargs):
             raise TypeError(msg)
 
     expand_all_set_operators = kwargs.pop('expand_all_set_operators', False)
+    if kwargs:
+        keys = kwargs.keys()
+        raise ValueError('Unrecognized keyword arguments: %s' % str(keys))
 
     projected_subsets = comp.index_set().subsets(expand_all_set_operators=
                                                  expand_all_set_operators)
