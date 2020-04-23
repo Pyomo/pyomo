@@ -60,7 +60,7 @@ jobs:
         pip install twine wheel setuptools cython
     - name: Build OSX Python wheels
       run: |
-        python setup.py --dist-dir='/github/workspace/wheelhouse' --with-cython sdist --format=gztar bdist_wheel
+        python setup.py  --with-cython sdist --dist-dir='/github/workspace/wheelhouse' --format=gztar bdist_wheel
 
 
   # windows:
