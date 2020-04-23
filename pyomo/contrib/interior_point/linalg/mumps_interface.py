@@ -7,7 +7,8 @@ import logging
 
 class MumpsInterface(LinearSolverInterface):
     def __init__(self, par=1, comm=None, cntl_options=None, icntl_options=None,
-                 log_filename=None, allow_reallocation=False):
+                 log_filename=None, allow_reallocation=False,
+                 max_allocation_iterations=5):
         self._mumps = MumpsCentralizedAssembledLinearSolver(sym=2,
                                                             par=par,
                                                             comm=comm)
@@ -48,7 +49,7 @@ class MumpsInterface(LinearSolverInterface):
         self.allow_reallocation = allow_reallocation
         self._prev_allocation = None
         # Max number of reallocations per iteration:
-        self.max_num_realloc = 5
+        self.max_num_realloc = max_allocation_iterations
         # TODO: Should probably set more reallocation options here,
         #       and allow the user to specify them.
         #       (e.g. max memory usage)
