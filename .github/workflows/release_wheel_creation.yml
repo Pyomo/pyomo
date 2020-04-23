@@ -102,6 +102,9 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Invoke-Expression "python setup.py  --with-cython sdist --format=gztar bdist_wheel"
     - name: Checking wheels
+      env:
+        TWINE_USERNAME: ${{ secrets.T_PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.T_PYPI_PASSWORD }}
       shell: pwsh
       run: |
-        gci -Path .\dist
+        Invoke-Expression "twine upload --repository-url https://test.pypi.org/legacy/ dist/* "
