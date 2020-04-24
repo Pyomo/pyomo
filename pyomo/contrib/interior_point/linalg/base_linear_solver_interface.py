@@ -23,7 +23,11 @@ class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
     def get_inertia(self):
         pass
 
-    @abstractmethod
     def set_outer_iteration_number(self, num):
         pass
 
+    def set_regularization_switch(self, reg_switch):
+        pass
+
+    def set_reg_coef(self, reg_coef):
+        pass

@@ -29,11 +29,15 @@ class MumpsInterface(LinearSolverInterface):
         for k, v in icntl_options.items():
             self.set_icntl(k, v)
 
+        
+        self.error_level = self._mumps.mumps.id.icntl[10]
+        self.log_error = bool(self.error_level)
+
         self._dim = None
 
         self.logger = logging.getLogger('mumps')
-        self.logger.propagate = False
         if log_filename:
+            self.logger.propagate = False
             self.log_switch = True 
             open(log_filename, 'w').close()
             self.logger.setLevel(logging.DEBUG)
@@ -46,13 +50,61 @@ class MumpsInterface(LinearSolverInterface):
             # propagate ERROR to the console, but I can't figure
             # out how to disable console logging otherwise
 
+        self.log_header(include_error=self.log_error)
+
         self.allow_reallocation = allow_reallocation
         self._prev_allocation = None
         # Max number of reallocations per iteration:
         self.max_num_realloc = max_allocation_iterations
-        # TODO: Should probably set more reallocation options here,
-        #       and allow the user to specify them.
-        #       (e.g. max memory usage)
+
+        # When logging linear solver info, it is useful to know what iteration
+        # of the "outer algorithm" we're in so linear solver/IP solver info
+        # can be compared
+        self.outer_iteration_number = 0
+
+        # Need to know whether we are in a regularization iteration so we know
+        # what into to save/log
+        self.regularization_switch = False
+
+        # Want to know what regularization coefficient was used to construct
+        # our matrix so we can log it next to the matrix's info.
+        self.reg_coef = None
+
+    def set_outer_iteration_number(self, iter_no):
+        if type(iter_no) is not int:
+            raise ValueError(
+                'outer iteration number must be an int')
+        self.outer_iteration_number = iter_no
+
+    def set_regularization_switch(self, switch_val):
+        if type(switch_val) is not bool:
+            raise ValueError(
+                'regularization switch must be a bool')
+        if self.regularization_switch == False and switch_val == True:
+            # What's the best way to do this? - want to have a context
+            # for regularization in the linear solver, triggered by the
+            # context in the IP solver. Define a context for regularization
+            # in this module, then call __enter__ and __exit__ in IP solver's
+            # context manager? That assumes existance of such a context
+            # manager here. Could this be done at the base class level?
+            self.logger.debug('- - -Entering regularization- - -')
+            self.log_header(include_error=False,
+                    extra_fields=['reg_coef'])
+            # This logs info about the solve just before regularization
+            # which otherwise wouldn't be logged.
+            self.log_info(include_error=False)
+        elif self.regularization_switch == True and switch_val == False:
+            self.logger.debug('- - -Exiting regularization- - -')
+        self.regularization_switch = switch_val
+
+    def set_reg_coef(self, reg_coef):
+        self.reg_coef = float(reg_coef)
+
+    def set_log_error(self, log_error):
+        if type(log_error) is not bool:
+            raise ValueError(
+                'log_error must be a bool')
+        self.log_error = log_error
 
     def do_symbolic_factorization(self, matrix):
         if not isspmatrix_coo(matrix):
@@ -117,12 +169,16 @@ class MumpsInterface(LinearSolverInterface):
         return new_allocation
 
     def try_factorization(self, kkt):
+        error = None
         try:
             self.do_symbolic_factorization(kkt)
             self.do_numeric_factorization(kkt)
         except RuntimeError as err:
-            return err
-        return None
+            error = err
+        finally:
+            if self.regularization_switch:
+                self.log_regularization_info()
+        return error
 
     def is_numerically_singular(self, err=None, raise_if_not=True):
         num_sing_err = True
@@ -142,6 +198,8 @@ class MumpsInterface(LinearSolverInterface):
             return False
 
     def do_back_solve(self, rhs):
+        self.log_info(iter_no=self.outer_iteration_number,
+                      include_error=self.log_error)
         return self._mumps.do_back_solve(rhs)
 
     def get_inertia(self):
@@ -240,4 +298,8 @@ class MumpsInterface(LinearSolverInterface):
             log_string += '{' + str(i) + ':<15.3e}'
 
         self.logger.debug(log_string.format(*fields))
+
+    def log_regularization_info(self):
+        self.log_info(include_error=False,
+                extra_fields=[self.reg_coef])
 
