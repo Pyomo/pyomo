@@ -25,10 +25,6 @@ linear_solvers = pyomo.opt.check_available_solvers(
 import random
 from six import iteritems, iterkeys
 
-# DEBUG
-from nose.tools import set_trace
-
-
 EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
 class CommonTests:
@@ -271,6 +267,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_disjunct_mapping(self, 'chull')
 
     def test_transformed_constraint_mappings(self):
+        # ESJ: Letting bigm and chull test their own constraint mappings
+        # because, though the paradigm is the same, chull doesn't always create
+        # a transformed constraint when it can instead accomplish an x == 0
+        # constraint by fixing the disaggregated variable.
         m = models.makeTwoTermDisj_Nonlinear()
         chull = TransformationFactory('gdp.chull')
         chull.apply_to(m)
@@ -608,6 +608,13 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             chull.get_transformed_constraint,
             m.b.simpledisj1.c[1])
 
+class MultiTermDisj(unittest.TestCase, CommonTests):
+    def test_xor_constraint(self):
+        ct.check_three_term_xor_constraint(self, 'chull')
+
+    def test_create_using(self):
+        m = models.makeThreeTermIndexedDisj()
+        self.diff_apply_to_and_create_using(m)
 
 class IndexedDisjunction(unittest.TestCase, CommonTests):
     def setUp(self):
@@ -679,6 +686,9 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
     def test_xor_constraints(self):
         ct.check_indexed_xor_constraints(self, 'chull')
 
+    def test_xor_constraints_with_targets(self):
+        ct.check_indexed_xor_constraints_with_targets(self, 'chull')
+
     def test_create_using(self):
         m = models.makeTwoTermMultiIndexedDisjunction()
         ct.diff_apply_to_and_create_using(self, m, 'gdp.chull')
@@ -686,11 +696,23 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
     def test_deactivated_constraints(self):
         ct.check_constraints_deactivated_indexedDisjunction(self, 'chull')
 
+    def test_deactivated_disjuncts(self):
+        ct.check_deactivated_disjuncts(self, 'chull')
+
+    def test_deactivated_disjunctions(self):
+        ct.check_deactivated_disjunctions(self, 'chull')
+
+    def test_partial_deactivate_indexed_disjunction(self):
+        ct.check_partial_deactivate_indexed_disjunction(self, 'chull')
+
     def test_disjunction_data_target(self):
         ct.check_disjunction_data_target(self, 'chull')
 
     def test_disjunction_data_target_any_index(self):
         ct.check_disjunction_data_target_any_index(self, 'chull')
+
+    def test_targets_with_container_as_arg(self):
+        ct.check_targets_with_container_as_arg(self, 'chull')
     
     def check_trans_block_disjunctions_of_disjunct_datas(self, m):
         transBlock1 = m.component("_pyomo_gdp_chull_relaxation")
@@ -865,59 +887,14 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertFalse(model.disjunctionList[0].active)
 
     def test_disjunction_and_disjuncts_indexed_by_any(self):
-        model = ConcreteModel()
-        model.x = Var(bounds=(-100, 100))
-
-        model.firstTerm = Disjunct(Any)
-        model.secondTerm = Disjunct(Any)
-        model.disjunctionList = Disjunction(Any)
-
-        model.obj = Objective(expr=model.x)
-        
-        for i in range(2):
-            model.firstTerm[i].cons = Constraint(expr=model.x == 2*i)
-            model.secondTerm[i].cons = Constraint(expr=model.x >= i + 2)
-            model.disjunctionList[i] = [model.firstTerm[i], model.secondTerm[i]]
-
-            TransformationFactory('gdp.chull').apply_to(model)
-
-            if i == 0:
-                self.check_first_iteration(model)
-
-            if i == 1:
-                self.check_second_iteration(model)
+        ct.check_disjunction_and_disjuncts_indexed_by_any(self, 'chull')
 
     def test_iteratively_adding_disjunctions_transform_container(self):
         ct.check_iteratively_adding_disjunctions_transform_container(self,
                                                                      'chull')
 
     def test_iteratively_adding_disjunctions_transform_model(self):
-        # Same as above, but transforming whole model in every iteration
-        model = ConcreteModel()
-        model.x = Var(bounds=(-100, 100))
-        model.disjunctionList = Disjunction(Any)
-        model.obj = Objective(expr=model.x)
-        for i in range(2):
-            firstTermName = "firstTerm[%s]" % i
-            model.add_component(firstTermName, Disjunct())
-            model.component(firstTermName).cons = Constraint(
-                expr=model.x == 2*i)
-            secondTermName = "secondTerm[%s]" % i
-            model.add_component(secondTermName, Disjunct())
-            model.component(secondTermName).cons = Constraint(
-                expr=model.x >= i + 2)
-            model.disjunctionList[i] = [model.component(firstTermName),
-                                        model.component(secondTermName)]
-
-            # we're lazy and we just transform the model (and in
-            # theory we are transforming at every iteration because we are
-            # solving at every iteration)
-            TransformationFactory('gdp.chull').apply_to(model)
-            if i == 0:
-                self.check_first_iteration(model)
-
-            if i == 1:
-                self.check_second_iteration(model)
+        ct.check_iteratively_adding_disjunctions_transform_model(self, 'chull')
 
     def test_iteratively_adding_to_indexed_disjunction_on_block(self):
         ct.check_iteratively_adding_to_indexed_disjunction_on_block(self,
@@ -1006,51 +983,45 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
         for v, cons in consmap:
             disCons = chull.get_disaggregation_constraint(v, m.disjunction)
             self.assertIs(disCons, cons)
-    
+
+class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
+    def test_error_for_same_disjunct_in_multiple_disjunctions(self):
+        ct.check_error_for_same_disjunct_in_multiple_disjunctions(self, 'chull')
 
 class NestedDisjunction(unittest.TestCase, CommonTests):
     def setUp(self):
         # set seed so we can test name collisions predictably
         random.seed(666)
 
+    def test_disjuncts_inactive(self):
+        ct.check_disjuncts_inactive_nested(self, 'chull')
+
     def test_deactivated_disjunct_leaves_nested_disjuncts_active(self):
-        m = models.makeNestedDisjunctions_FlatDisjuncts()
-        m.d1.deactivate()
-        # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
-        # transformation of Disjuncts to Blocks
-        TransformationFactory('gdp.chull').apply_to(m, targets=[m])
+        ct.check_deactivated_disjunct_leaves_nested_disjunct_active(self,
+                                                                    'chull')
 
-        self.assertFalse(m.d1.active)
-        self.assertTrue(m.d1.indicator_var.fixed)
-        self.assertEqual(m.d1.indicator_var.value, 0)
+    def test_mappings_between_disjunctions_and_xors(self):
+        # For the sake of not second-guessing anyone, we will let the inner
+        # disjunction points to its original XOR constraint. This constraint
+        # itself will be transformed by the outer disjunction, so if you want to
+        # find what it became you will have to follow the map to the transformed
+        # version. (But this behaves the same as bigm)
+        ct.check_mappings_between_disjunctions_and_xors(self, 'chull')
 
-        self.assertFalse(m.d2.active)
-        self.assertFalse(m.d2.indicator_var.fixed)
+    def test_disjunct_targets_inactive(self):
+        ct.check_disjunct_targets_inactive(self, 'chull')
 
-        self.assertTrue(m.d3.active)
-        self.assertFalse(m.d3.indicator_var.fixed)
+    def test_disjunct_only_targets_transformed(self):
+        ct.check_disjunct_only_targets_transformed(self, 'chull')
 
-        self.assertTrue(m.d4.active)
-        self.assertFalse(m.d4.indicator_var.fixed)
+    def test_disjunctData_targets_inactive(self):
+        ct.check_disjunctData_targets_inactive(self, 'chull')
 
-        m = models.makeNestedDisjunctions_NestedDisjuncts()
-        m.d1.deactivate()
-        # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
-        # transformation of Disjuncts to Blocks
-        TransformationFactory('gdp.chull').apply_to(m, targets=[m])
+    def test_disjunctData_only_targets_transformed(self):
+        ct.check_disjunctData_only_targets_transformed(self, 'chull')
 
-        self.assertFalse(m.d1.active)
-        self.assertTrue(m.d1.indicator_var.fixed)
-        self.assertEqual(m.d1.indicator_var.value, 0)
-
-        self.assertFalse(m.d2.active)
-        self.assertFalse(m.d2.indicator_var.fixed)
-
-        self.assertTrue(m.d1.d3.active)
-        self.assertFalse(m.d1.d3.indicator_var.fixed)
-
-        self.assertTrue(m.d1.d4.active)
-        self.assertFalse(m.d1.d4.indicator_var.fixed)
+    def test_disjunction_target_err(self):
+        ct.check_disjunction_target_err(self, 'chull')
 
     @unittest.skipIf(not linear_solvers, "No linear solver available")
     def test_relaxation_feasibility(self):
@@ -1089,6 +1060,12 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         m = models.makeNestedDisjunctions_FlatDisjuncts()
         self.diff_apply_to_and_create_using(m)
 
+    # TODO: test disjunct mappings: This is not the same as bigm because you
+    # don't move these blocks around in chull the way you do in bigm.
+
+    # And I think it is worth it to go through a full test case for this and
+    # actually make sure of the transformed constraints too.
+    
 class TestSpecialCases(unittest.TestCase):
     def test_warn_for_untransformed(self):
         m = models.makeDisjunctionsOnIndexedBlock()
@@ -1206,9 +1183,7 @@ class TestSpecialCases(unittest.TestCase):
 
 class RangeSetOnDisjunct(unittest.TestCase):
     def test_RangeSet(self):
-        m = models.makeDisjunctWithRangeSet()
-        TransformationFactory('gdp.chull').apply_to(m)
-        self.assertIsInstance(m.d1.s, RangeSet)
+        ct.check_RangeSet(self, 'chull')
 
 class TransformABlock(unittest.TestCase, CommonTests):
     def test_transformation_simple_block(self):
@@ -1235,6 +1210,17 @@ class TransformABlock(unittest.TestCase, CommonTests):
     def test_create_using(self):
         m = models.makeTwoTermDisjOnBlock()
         ct.diff_apply_to_and_create_using(self, m, 'gdp.chull')
+
+class DisjOnBlock(unittest.TestCase, CommonTests):
+    # when the disjunction is on a block, we want all of the stuff created by
+    # the transformation to go on that block also so that solving the block
+    # maintains its meaning
+    
+    def test_xor_constraint_added(self):
+        ct.check_xor_constraint_added(self, 'chull')
+
+    def test_trans_block_created(self):
+        ct.check_trans_block_created(self, 'chull')
 
 class TestErrors(unittest.TestCase):
     def setUp(self):
@@ -1326,3 +1312,17 @@ class TestErrors(unittest.TestCase):
         ct.check_linear_coef(self, repn, disjunct1.indicator_var_4, -1)
         ct.check_linear_coef(self, repn,
                              transBlock.relaxedDisjuncts[1].indicator_var_9, -1)
+
+class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
+    def test_activeInnerDisjunction_err(self):
+        ct.check_activeInnerDisjunction_err(self, 'chull')
+# TODO
+# class BlocksOnDisjuncts(unittest.TestCase):
+#     def setUp(self):
+#         # set seed so we can test name collisions predictably
+#         random.seed(666)
+    
+#     def test_transformed_constraint_nameConflicts(self):
+#         pass
+#         # you'll have to do your own here and for the next one. Because chull
+#         # makes more stuff, so those bigm tests aren't general!
