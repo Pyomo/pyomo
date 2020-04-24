@@ -34,12 +34,11 @@ jobs:
   #       build-requirements: 'cython'
   #       package-path: ''
   #       pip-wheel-args: '--no-deps'
-  #   - name: Uploading to TestPyPi
-  #     env:
-  #       TWINE_USERNAME: ${{ secrets.T_PYPI_USERNAME }}
-  #       TWINE_PASSWORD: ${{ secrets.T_PYPI_PASSWORD }}
-  #     run: |
-  #       twine upload --repository-url https://test.pypi.org/legacy/ wheelhouse/*-manylinux*.whl 
+  #   - name: Upload artifact
+  #     uses: actions/upload-artifact@v1
+  #     with:
+  #       name: manylinux-wheels
+  #       path: wheelhouse/*.whl
   osx:
     name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
     runs-on: ${{ matrix.os }}
@@ -50,7 +49,7 @@ jobs:
         include:
         - os: macos-latest
           TARGET: osx
-        python-version: [pypy2, pypy3]
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -65,12 +64,11 @@ jobs:
       run: |
         python setup.py  --with-cython sdist --format=gztar bdist_wheel
         
-    - name: Uploading to TestPyPi
-      env:
-        TWINE_USERNAME: ${{ secrets.T_PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.T_PYPI_PASSWORD }}
-      run: |
-        twine upload --repository-url https://test.pypi.org/legacy/ dist/* 
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: osx-wheels
+        path: dist/*.whl
 
 
   windows:
@@ -83,7 +81,7 @@ jobs:
         include:
         - os: windows-latest
           TARGET: win
-        python-version: [pypy2, pypy3]
+        python-version: [ 3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -101,10 +99,8 @@ jobs:
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Invoke-Expression "python setup.py  --with-cython sdist --format=gztar bdist_wheel"
-    - name: Checking wheels
-      env:
-        TWINE_USERNAME: ${{ secrets.T_PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.T_PYPI_PASSWORD }}
-      shell: pwsh
-      run: |
-        Invoke-Expression "twine upload --repository-url https://test.pypi.org/legacy/ dist/*.whl "
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: win-wheels
+        path: dist/*.whl
