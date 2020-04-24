@@ -24,9 +24,9 @@ from pyomo.core import (
     Any, RangeSet, Reals, value
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.disjunct import _DisjunctData, SimpleDisjunct
-from pyomo.gdp.util import clone_without_expression_components, target_list, \
-    is_child_of
+from pyomo.gdp.util import (clone_without_expression_components, target_list, 
+                            is_child_of, get_src_disjunction, get_src_constraint,
+                            get_transformed_constraint, get_src_disjunct)
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from six import iteritems, iterkeys
@@ -814,68 +814,17 @@ class ConvexHull_Transformation(Transformation):
         # deactivate now that we have transformed
         obj.deactivate()
 
-    # TODO: Move these methods should be in util, some of them. They are the
-    # same as bigm. (But I'll wait for the bigm PR to stabilize rather than
-    # inviting annoying merge conflicts..)
     def get_src_disjunct(self, transBlock):
-        if not hasattr(transBlock, '_srcDisjunct') or \
-           not type(transBlock._srcDisjunct) is weakref_ref:
-            raise GDP_Error("Block %s doesn't appear to be a transformation "
-                            "block for a disjunct. No source disjunct found." 
-                            % transBlock.name)
-        return transBlock._srcDisjunct()
+        return get_src_disjunct(transBlock)
 
     def get_src_disjunction(self, xor_constraint):
-        m = xor_constraint.model()
-        for disjunction in m.component_data_objects(Disjunction):
-            if disjunction._algebraic_constraint:
-                if disjunction._algebraic_constraint() is xor_constraint:
-                    return disjunction
-        raise GDP_Error("It appears that %s is not an XOR or OR constraint "
-                        "resulting from transforming a Disjunction."
-                        % xor_constraint.name)
+        return get_src_disjunction(xor_constraint)
 
     def get_src_constraint(self, transformedConstraint):
-        transBlock = transformedConstraint.parent_block()
-        # This should be our block, so if it's not, the user messed up and gave
-        # us the wrong thing. If they happen to also have a _constraintMap then
-        # the world is really against us.
-        if not hasattr(transBlock, "_constraintMap"):
-            raise GDP_Error("Constraint %s is not a transformed constraint" 
-                            % transformedConstraint.name)
-        return transBlock._constraintMap['srcConstraints'][transformedConstraint]
-
-    # TODO: This needs to go to util because I think it gets used in bigm too
-    def _get_parent_disjunct(self, obj, err_message):
-        # We are going to have to traverse up until we find the disjunct that
-        # obj lives on
-        parent = obj.parent_block()
-        while not type(parent) in (_DisjunctData, SimpleDisjunct):
-            parent = parent.parent_block()
-            if parent is None:
-                raise GDP_Error(err_message)
-        return parent
+        return get_src_constraint(transformedConstraint)
 
     def get_transformed_constraint(self, srcConstraint):
-        disjunct = self._get_parent_disjunct(
-            srcConstraint,                     
-            "Constraint %s is not on a disjunct and so was not "
-            "transformed" % srcConstraint.name)
-        transBlock = disjunct._transformation_block
-        if transBlock is None:
-            raise GDP_Error("Constraint %s is on a disjunct which has not been "
-                            "transformed" % srcConstraint.name)
-        # if it's not None, it's the weakref we wanted.
-        transBlock = transBlock()
-        if hasattr(transBlock, "_constraintMap") and not \
-           transBlock._constraintMap['transformedConstraints'].\
-           get(srcConstraint) is None:
-            return transBlock._constraintMap['transformedConstraints'][
-                srcConstraint]
-        raise GDP_Error("Constraint %s has not been transformed." 
-                        % srcConstraint.name)
-
-    ## Beginning here, these are unique to chull
+        return get_transformed_constraint(srcConstraint)
 
     def get_disaggregated_var(self, v, disjunct):
         # Retrieve the disaggregated var corresponding to the specified disjunct
@@ -922,13 +871,6 @@ class ConvexHull_Transformation(Transformation):
             raise GDP_Error("Either %s is not a disaggregated variable, or "
                             "the disjunction that disaggregates it has not "
                             "been properly transformed." % v.name)
-
-    # I don't think we need this. look for the only variable not named
-    # 'indicator_var'! If we ever need to be efficient, we can do the reverse
-    # map.
-    # def get_var_from_bounds_constraint(self, cons):
-    #     transBlock = cons.parent_block()
-    #     return transBlock._bigMConstraintMap['srcVar'][cons]
 
     # TODO: These maps actually get used in cuttingplanes. It will be worth
     # making sure that the ones that are called there are on the more efficient

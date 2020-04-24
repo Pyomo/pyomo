@@ -19,6 +19,7 @@ from pyomo.common.log import LoggingIntercept
 
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
+from pyomo.gdp.util import _get_constraint_transBlock
 
 import random
 import sys
