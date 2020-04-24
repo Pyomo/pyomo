@@ -6,40 +6,40 @@ on:
       - wheel_creation
 
 jobs:
-  manylinux:
-    name: ${{ matrix.TARGET }}/wheel_creation
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        include:
-        - os: ubuntu-latest
-          TARGET: manylinux
-        python-version: [3.7]
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install twine wheel setuptools
-    - name: Build manylinux Python wheels
-      uses: RalfG/python-wheels-manylinux-build@v0.2.2-manylinux2010_x86_64
-      with:
-        python-versions: 'cp27-cp27mu cp35-cp35m cp36-cp36m cp37-cp37m cp38-cp38'
-        build-requirements: 'cython'
-        package-path: ''
-        pip-wheel-args: '--no-deps'
-    - name: Uploading to TestPyPi
-      env:
-        TWINE_USERNAME: ${{ secrets.T_PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.T_PYPI_PASSWORD }}
-      run: |
-        twine upload --repository-url https://test.pypi.org/legacy/ wheelhouse/*-manylinux*.whl 
+  # manylinux:
+  #   name: ${{ matrix.TARGET }}/wheel_creation
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       os: [ubuntu-latest]
+  #       include:
+  #       - os: ubuntu-latest
+  #         TARGET: manylinux
+  #       python-version: [3.7]
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Set up Python ${{ matrix.python-version }}
+  #     uses: actions/setup-python@v1
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+  #   - name: Install dependencies
+  #     run: |
+  #       python -m pip install --upgrade pip
+  #       pip install twine wheel setuptools
+  #   - name: Build manylinux Python wheels
+  #     uses: RalfG/python-wheels-manylinux-build@v0.2.2-manylinux2010_x86_64
+  #     with:
+  #       python-versions: 'cp27-cp27mu cp35-cp35m cp36-cp36m cp37-cp37m cp38-cp38'
+  #       build-requirements: 'cython'
+  #       package-path: ''
+  #       pip-wheel-args: '--no-deps'
+  #   - name: Uploading to TestPyPi
+  #     env:
+  #       TWINE_USERNAME: ${{ secrets.T_PYPI_USERNAME }}
+  #       TWINE_PASSWORD: ${{ secrets.T_PYPI_PASSWORD }}
+  #     run: |
+  #       twine upload --repository-url https://test.pypi.org/legacy/ wheelhouse/*-manylinux*.whl 
   osx:
     name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
     runs-on: ${{ matrix.os }}
@@ -50,7 +50,7 @@ jobs:
         include:
         - os: macos-latest
           TARGET: osx
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        python-version: [pypy2, pypy3]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -83,7 +83,7 @@ jobs:
         include:
         - os: windows-latest
           TARGET: win
-        python-version: [ 3.6, 3.7, 3.8]
+        python-version: [pypy2, pypy3]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -107,4 +107,4 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.T_PYPI_PASSWORD }}
       shell: pwsh
       run: |
-        Invoke-Expression "twine upload --repository-url https://test.pypi.org/legacy/ dist/* "
+        Invoke-Expression "twine upload --repository-url https://test.pypi.org/legacy/ dist/*.whl "
