@@ -49,7 +49,7 @@ jobs:
         include:
         - os: macos-latest
           TARGET: osx
-        python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
+        python-version: [ 2.7, 3.5, 3.6, 3.7, 3.8 ]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -67,8 +67,8 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
-        name: osx-wheels
-        path: dist/*.whl
+        name: osx-wheel
+        path: dist
 
 
   windows:
@@ -81,7 +81,7 @@ jobs:
         include:
         - os: windows-latest
           TARGET: win
-        python-version: [ 3.6, 3.7, 3.8]
+        python-version: [ 3.6, 3.7, 3.8 ]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -102,5 +102,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
-        name: win-wheels
-        path: dist/*.whl
+        name: win-wheel
+        path: dist
