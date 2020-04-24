@@ -9,6 +9,44 @@ import time
 ip_logger = logging.getLogger('interior_point')
 
 
+class RegularizationContext(object):
+    def __init__(self, logger, linear_solver):
+        # Any reason to pass in a logging level here?
+        # ^ So the "regularization log" can have its own outlvl
+        self.logger = logger
+        self.linear_solver = linear_solver
+
+    def __enter__(self):
+        self.logger.debug('KKT matrix has incorrect inertia. '
+                         'Regularizing Hessian...')
+        self.linear_solver.set_regularization_switch(True)
+        self.log_header()
+        return self
+
+    def __exit__(self, et, ev, tb):
+        self.logger.debug('Exiting regularization.')
+        self.linear_solver.set_regularization_switch(False)
+        # Will this swallow exceptions in this context?
+
+    def log_header(self):
+        self.logger.debug('{_iter:<10}{reg_iter:<10}{reg_coef:<10}{singular:<10}{neg_eig:<10}'.format(
+            _iter='Iter',
+            reg_iter='reg_iter',
+            reg_coef='reg_coef',
+            singular='singular',
+            neg_eig='neg_eig'))
+
+    def log_info(self, _iter, reg_iter, coef, inertia):
+        singular = bool(inertia[2])
+        n_neg = inertia[1]
+        self.logger.debug('{_iter:<10}{reg_iter:<10}{reg_coef:<10.2e}{singular:<10}{neg_eig:<10}'.format(
+            _iter=_iter,
+            reg_iter=reg_iter,
+            reg_coef=coef,
+            singular=str(singular),
+            neg_eig=n_neg))
+
+
 class InteriorPointSolver(object):
     '''Class for creating interior point solvers with different options
     '''
@@ -20,6 +58,10 @@ class InteriorPointSolver(object):
         self.regularize_kkt = regularize_kkt
 
         self.logger = logging.getLogger('interior_point')
+        self._iter = 0
+        self.regularization_context = RegularizationContext(
+                self.logger,
+                self.linear_solver)
 
 
     def set_linear_solver(self, linear_solver):
@@ -96,13 +138,10 @@ class InteriorPointSolver(object):
                                         alpha_p='Prim Step Size',
                                         alpha_d='Dual Step Size',
                                         time='Elapsed Time (s)'))
-        
-        # Write header line to linear solver log
-        # Every linear_solver should /have/ a log_header method. Whether it
-        # does anything is another question.
-        linear_solver.log_header()
 
         for _iter in range(max_iter):
+            self._iter = _iter
+
             interface.set_primals(primals)
             interface.set_slacks(slacks)
             interface.set_duals_eq(duals_eq)
@@ -143,6 +182,7 @@ class InteriorPointSolver(object):
             rhs = interface.evaluate_primal_dual_kkt_rhs()
 
             # Factorize linear system, with or without regularization:
+            linear_solver.set_outer_iteration_number(_iter)
             if not regularize_kkt:
                 self.factorize_linear_system(kkt)
             else:
@@ -154,9 +194,6 @@ class InteriorPointSolver(object):
                         factor_increase=reg_factor_increase)
 
             delta = linear_solver.do_back_solve(rhs)
-
-            # Log some relevant info from linear solver
-            linear_solver.log_info(iter_no=_iter)
 
             interface.set_primal_dual_kkt_solution(delta)
             alpha_primal_max, alpha_dual_max = \
@@ -193,6 +230,9 @@ class InteriorPointSolver(object):
                                       max_reg_coef=1e10,
                                       factor_increase=1e2):
         linear_solver = self.linear_solver
+        logger = self.logger
+        _iter = self._iter
+        regularization_context = self.regularization_context
         desired_n_neg_evals = (self.interface._nlp.n_eq_constraints() + 
                                self.interface._nlp.n_ineq_constraints())
 
@@ -201,54 +241,46 @@ class InteriorPointSolver(object):
 
         err = linear_solver.try_factorization(kkt)
         if linear_solver.is_numerically_singular(err):
-            self.logger.info(' KKT matrix is numerically singular. '
+            # No context manager for "equality gradient regularization,"
+            # as this is pretty simple
+            self.logger.debug('KKT matrix is numerically singular. '
                              'Regularizing equality gradient...')
             reg_kkt_1 = self.interface.regularize_equality_gradient(kkt,
                                        eq_reg_coef)
             err = linear_solver.try_factorization(reg_kkt_1)
 
+        inertia = linear_solver.get_inertia()
         if (linear_solver.is_numerically_singular(err) or
-                linear_solver.get_inertia()[1] != desired_n_neg_evals):
+                inertia[1] != desired_n_neg_evals):
 
-            self.logger.info(' KKT matrix has incorrect inertia.. '
-                             'Regularizing Hessian...')
+            with regularization_context as reg_con:
 
-            # Every linear_solver should have an interface to a logger
-            # like this:
-            # Should probably use a context manager to properly log regularization
-            # iterations...
-            linear_solver.logger.info(' Regularizing Hessian')
-            linear_solver.log_header(include_error=False,
-                                     extra_fields=['Coefficient'])
-            linear_solver.log_info(include_error=False)
+                reg_iter = 0
+                reg_con.log_info(_iter, reg_iter, 0e0, inertia)
 
-            while reg_coef <= max_reg_coef:
-                # Construct new regularized KKT matrix
-                reg_kkt_2 = self.interface.regularize_hessian(reg_kkt_1, 
-                                                              reg_coef)
+                while reg_coef <= max_reg_coef:
+                    # Construct new regularized KKT matrix
+                    reg_kkt_2 = self.interface.regularize_hessian(reg_kkt_1, 
+                                                                  reg_coef)
+                    reg_iter += 1
+                    linear_solver.set_reg_coef(reg_coef)
+    
+                    err = linear_solver.try_factorization(reg_kkt_2)
+                    inertia = linear_solver.get_inertia()
+                    reg_con.log_info(_iter, reg_iter, reg_coef, inertia)
 
-                err = linear_solver.try_factorization(reg_kkt_2)
-                linear_solver.log_info(include_error=False, 
-                                       extra_fields=[reg_coef])
-                if (linear_solver.is_numerically_singular(err) or
-                        linear_solver.get_inertia()[1] != desired_n_neg_evals):
-                    reg_coef = reg_coef * factor_increase
-                else:
-                    # Success
-                    self.reg_coef = reg_coef
-                    break
-
+                    if (linear_solver.is_numerically_singular(err) or
+                            inertia[1] != desired_n_neg_evals):
+                        reg_coef = reg_coef * factor_increase
+                    else:
+                        # Success
+                        self.reg_coef = reg_coef
+                        break
+    
             if reg_coef > max_reg_coef:
                 raise RuntimeError(
                     'Regularization coefficient has exceeded maximum. '
                     'At this point IPOPT would enter feasibility restoration.')
-
-            linear_solver.logger.info(' Exiting regularization')
-
-                # Should log more info about regularization:
-                #   - null pivot tolerance
-                #   - "how far" the factorization got before failing
-
 
     def process_init(self, x, lb, ub):
         if np.any((ub - lb) < 0):
