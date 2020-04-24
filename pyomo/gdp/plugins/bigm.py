@@ -27,7 +27,9 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (target_list, is_child_of, get_src_disjunction,
                             get_src_constraint, get_transformed_constraint,
-                            _get_constraint_transBlock, get_src_disjunct)
+                            _get_constraint_transBlock, get_src_disjunct,
+                            _warn_for_active_disjunction,
+                            _warn_for_active_disjunct)
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
@@ -35,7 +37,6 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
-import sys
 
 
 logger = logging.getLogger('pyomo.gdp.bigm')
@@ -514,47 +515,11 @@ class BigM_Transformation(Transformation):
 
     def _warn_for_active_disjunction(self, disjunction, disjunct, bigMargs,
                                      arg_list, suffix_list):
-        # this should only have gotten called if the disjunction is active
-        assert disjunction.active
-        problemdisj = disjunction
-        if disjunction.is_indexed():
-            for i in sorted(iterkeys(disjunction)):
-                if disjunction[i].active:
-                    # a _DisjunctionData is active, we will yell about
-                    # it specifically.
-                    problemdisj = disjunction[i]
-                    break
-
-        parentblock = problemdisj.parent_block()
-        # the disjunction should only have been active if it wasn't transformed
-        assert problemdisj.algebraic_constraint is None
-        _probDisjName = problemdisj.getname(
-            fully_qualified=True, name_buffer=NAME_BUFFER)
-        raise GDP_Error("Found untransformed disjunction %s in disjunct %s! "
-                        "The disjunction must be transformed before the "
-                        "disjunct. If you are using targets, put the "
-                        "disjunction before the disjunct in the list."
-                        % (_probDisjName, disjunct.name))
+        _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER)
 
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
                                   arg_list, suffix_list):
-        assert innerdisjunct.active
-        problemdisj = innerdisjunct
-        if innerdisjunct.is_indexed():
-            for i in sorted(iterkeys(innerdisjunct)):
-                if innerdisjunct[i].active:
-                    # This is shouldn't be true, we will complain about it.
-                    problemdisj = innerdisjunct[i]
-                    break
-
-        raise GDP_Error("Found active disjunct {0} in disjunct {1}! "
-                        "Either {0} "
-                        "is not in a disjunction or the disjunction it is in "
-                        "has not been transformed. "
-                        "{0} needs to be deactivated "
-                        "or its disjunction transformed before {1} can be "
-                        "transformed.".format(problemdisj.name,
-                                              outerdisjunct.name))
+        _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
     def _transform_block_on_disjunct(self, block, disjunct, bigMargs, arg_list,
                                      suffix_list):

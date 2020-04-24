@@ -19,6 +19,7 @@ from copy import deepcopy
 from pyomo.core.base.component import _ComponentBase, ComponentUID
 from pyomo.opt import TerminationCondition, SolverStatus
 from pyomo.common.deprecation import deprecation_warning
+from six import iterkeys
 import sys
 
 _acceptable_termination_conditions = set([
@@ -239,3 +240,43 @@ def get_transformed_constraint(srcConstraint):
             srcConstraint]
     raise GDP_Error("Constraint %s has not been transformed." 
                     % srcConstraint.name)
+
+def _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER):
+    # this should only have gotten called if the disjunction is active
+    assert disjunction.active
+    problemdisj = disjunction
+    if disjunction.is_indexed():
+        for i in sorted(iterkeys(disjunction)):
+            if disjunction[i].active:
+                # a _DisjunctionData is active, we will yell about
+                # it specifically.
+                problemdisj = disjunction[i]
+                break
+
+    parentblock = problemdisj.parent_block()
+    # the disjunction should only have been active if it wasn't transformed
+    assert problemdisj.algebraic_constraint is None
+    _probDisjName = problemdisj.getname(
+        fully_qualified=True, name_buffer=NAME_BUFFER)
+    raise GDP_Error("Found untransformed disjunction %s in disjunct %s! "
+                    "The disjunction must be transformed before the "
+                    "disjunct. If you are using targets, put the "
+                    "disjunction before the disjunct in the list."
+                    % (_probDisjName, disjunct.name))
+
+def _warn_for_active_disjunct(innerdisjunct, outerdisjunct):
+    assert innerdisjunct.active
+    problemdisj = innerdisjunct
+    if innerdisjunct.is_indexed():
+        for i in sorted(iterkeys(innerdisjunct)):
+            if innerdisjunct[i].active:
+                # This shouldn't be true, we will complain about it.
+                problemdisj = innerdisjunct[i]
+                break
+
+    raise GDP_Error("Found active disjunct {0} in disjunct {1}! Either {0} "
+                    "is not in a disjunction or the disjunction it is in "
+                    "has not been transformed. {0} needs to be deactivated "
+                    "or its disjunction transformed before {1} can be "
+                    "transformed.".format(problemdisj.name,
+                                          outerdisjunct.name))
