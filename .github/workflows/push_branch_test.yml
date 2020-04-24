@@ -49,11 +49,11 @@ jobs:
         echo "Install IDAES Ipopt..."
         echo ""
         sudo apt-get install libopenblas-dev gfortran liblapack-dev
-        mkdir ipopt && cd ipopt
+        mkdir ipopt_solver && cd ipopt_solver
         wget -q https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-ubuntu1804-64.tar.gz -O ipopt.tar.gz
         tar -xzf ipopt.tar.gz
         cd ..
-        export PATH=$PATH:$(pwd)/ipopt
+        export PATH=$PATH:$(pwd)/ipopt_solver
         echo ""
         echo "Install GAMS..."
         echo ""
