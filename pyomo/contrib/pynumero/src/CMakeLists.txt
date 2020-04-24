@@ -49,6 +49,7 @@ ENDIF()
 # finally automatically located installations (e.g., from pkg-config)
 FIND_PATH(ASL_INCLUDE_DIR asl_pfgh.h
   HINTS "${CMAKE_INSTALL_PREFIX}/include"
+        "${IPOPT_DIR}/include/coin-or/asl"
         "${IPOPT_DIR}/include/coin/ThirdParty"
         "${AMPLMP_DIR}/include"
         "${PC_COINASL_INCLUDEDIR}"
