@@ -31,11 +31,19 @@ class ScipyInterface(LinearSolverInterface):
             self._inertia = (pos_eig, neg_eigh, zero_eig)
 
     def try_factorization(self, matrix):
+        error = None
         try:
             self.do_numeric_factorization(matrix)
         except RuntimeError as err:
-            return err
-        return None
+            error = err
+        finally:
+            if self.compute_inertia:
+                eig = eigvals(matrix.toarray())
+                pos_eig = np.count_nonzero((eig > 0))
+                neg_eigh = np.count_nonzero((eig < 0))
+                zero_eig = np.count_nonzero(eig == 0)
+                self._inertia = (pos_eig, neg_eigh, zero_eig)
+        return error
 
     def is_numerically_singular(self, err=None, raise_if_not=True):
         if err:
