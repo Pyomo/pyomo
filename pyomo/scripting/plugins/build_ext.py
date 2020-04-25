@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import sys
 from six import iteritems
 
 from pyomo.common.extensions import ExtensionBuilderFactory
@@ -26,14 +27,29 @@ class ExtensionBuilder(object):
         returncode = 0
         for target in ExtensionBuilderFactory:
             try:
-                ExtensionBuilderFactory(target)
-                result = ' OK '
+                ext = ExtensionBuilderFactory(target)
+                if hasattr(ext, 'skip') and ext.skip():
+                    result = 'SKIP'
+                elif hasattr(ext, '__call__'):
+                    ext(parallel=args.parallel)
+                    result = ' OK '
+                else:
+                    # Extension was a simple function and already ran
+                    result = ' OK '
             except SystemExit:
+                _info = sys.exc_info()
+                _cls = str(_info[0].__name__ if _info[0] is not None
+                           else "NoneType") + ": "
+                logger.error(_cls + str(_info[1]))
                 result = 'FAIL'
-                returncode = 1
+                returncode |= 2
             except:
+                _info = sys.exc_info()
+                _cls = str(_info[0].__name__ if _info[0] is not None
+                           else "NoneType") + ": "
+                logger.error(_cls + str(_info[1]))
                 result = 'FAIL'
-                returncode = 1
+                returncode |= 1
             results.append(result_fmt % (result, target))
         logger.info("Finished building Pyomo extensions.")
         logger.info(
@@ -54,3 +70,11 @@ _parser = _extension_builder.create_parser(
         description='This builds all registered (compileable) extension modules'
     ))
 
+_parser.add_argument(
+    '-j', '--parallel',
+    action='store',
+    type=int,
+    dest='parallel',
+    default=None,
+    help="Build with this many processes/cores",
+    )
