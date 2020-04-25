@@ -299,8 +299,10 @@ class ConvexHull_Transformation(Transformation):
         orC = Constraint(disjunction.index_set()) if \
               disjunction.is_indexed() else Constraint()
         transBlock.add_component( 
-            unique_component_name(transBlock, disjunction.name + '_xor'),
-            orC)
+            unique_component_name(transBlock,
+                                  disjunction.getname(fully_qualified=True,
+                                                      name_buffer=NAME_BUFFER) +\
+                                  '_xor'), orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
 
         return orC
