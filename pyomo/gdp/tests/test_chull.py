@@ -470,17 +470,6 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                          (m.disj3, "x_5"), (m.disj4, "x_8")):
             self.check_name_collision_disaggregated_vars(m, disj, nm)
 
-    def test_target_not_a_component_err(self):
-        decoy = ConcreteModel()
-        decoy.block = Block()
-        m = models.makeTwoSimpleDisjunctions()
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Target block is not a component on instance unknown!",
-            TransformationFactory('gdp.chull').apply_to,
-            m,
-            targets=[decoy.block])
-
     def test_do_not_transform_user_deactivated_disjuncts(self):
         ct.check_user_deactivated_disjuncts(self, 'chull')
 
@@ -910,6 +899,9 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
     def test_target_not_a_component_err(self):
         ct.check_target_not_a_component_error(self, 'chull')
 
+    def test_targets_cannot_be_cuids(self):
+        ct.check_targets_cannot_be_cuids(self, 'chull')
+
 class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
     # There are a couple tests for targets above, but since I had the patience
     # to make all these for bigm also, I may as well reap the benefits here too.
@@ -930,7 +922,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         ct.check_disjData_only_targets_transformed(self, 'chull')
 
     def test_indexedBlock_targets_inactive(self):
-        ct.check_indexedDisj_targets_inactive(self, 'chull')
+        ct.check_indexedBlock_targets_inactive(self, 'chull')
 
     def test_indexedBlock_only_targets_transformed(self):
         ct.check_indexedBlock_only_targets_transformed(self, 'chull')
@@ -1002,9 +994,9 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
     def test_mappings_between_disjunctions_and_xors(self):
         # For the sake of not second-guessing anyone, we will let the inner
-        # disjunction points to its original XOR constraint. This constraint
+        # disjunction point to its original XOR constraint. This constraint
         # itself will be transformed by the outer disjunction, so if you want to
-        # find what it became you will have to follow the map to the transformed
+        # find what it became you will have to follow its map to the transformed
         # version. (But this behaves the same as bigm)
         ct.check_mappings_between_disjunctions_and_xors(self, 'chull')
 
@@ -1067,54 +1059,6 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
     # actually make sure of the transformed constraints too.
     
 class TestSpecialCases(unittest.TestCase):
-    def test_warn_for_untransformed(self):
-        m = models.makeDisjunctionsOnIndexedBlock()
-        def innerdisj_rule(d, flag):
-            m = d.model()
-            if flag:
-                d.c = Constraint(expr=m.a[1] <= 2)
-            else:
-                d.c = Constraint(expr=m.a[1] >= 65)
-        m.disjunct1[1,1].innerdisjunct = Disjunct([0,1], rule=innerdisj_rule)
-        m.disjunct1[1,1].innerdisjunction = Disjunction([0],
-            rule=lambda a,i: [m.disjunct1[1,1].innerdisjunct[0],
-                              m.disjunct1[1,1].innerdisjunct[1]])
-        # This test relies on the order that the component objects of
-        # the disjunct get considered. In this case, the disjunct
-        # causes the error, but in another world, it could be the
-        # disjunction, which is also active.
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Found active disjunct disjunct1\[1,1\].innerdisjunct\[0\] "
-            "in disjunct disjunct1\[1,1\]!.*",
-            TransformationFactory('gdp.chull').create_using,
-            m,
-            targets=[m.disjunction1[1]])
-        #
-        # we will make that disjunction come first now...
-        #
-        tmp = m.disjunct1[1,1].innerdisjunct
-        m.disjunct1[1,1].del_component(tmp)
-        m.disjunct1[1,1].add_component('innerdisjunct', tmp)
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Found untransformed disjunction disjunct1\[1,1\]."
-            "innerdisjunction\[0\] in disjunct disjunct1\[1,1\]!.*",
-            TransformationFactory('gdp.chull').create_using,
-            m,
-            targets=[m.disjunction1[1]])
-        # Deactivating the disjunction will allow us to get past it back
-        # to the Disjunct (after we realize there are no active
-        # DisjunctionData within the active Disjunction)
-        m.disjunct1[1,1].innerdisjunction[0].deactivate()
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Found active disjunct disjunct1\[1,1\].innerdisjunct\[0\] "
-            "in disjunct disjunct1\[1,1\]!.*",
-            TransformationFactory('gdp.chull').create_using,
-            m,
-            targets=[m.disjunction1[1]])
-
     def test_local_vars(self):
         m = ConcreteModel()
         m.x = Var(bounds=(5,100))

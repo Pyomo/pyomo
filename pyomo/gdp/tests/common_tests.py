@@ -464,7 +464,6 @@ def check_target_not_a_component_error(self, transformation):
         m,
         targets=[decoy.block])
 
-# [ESJ 08/22/2019] This is a test for when targets can no longer be CUIDs
 def check_targets_cannot_be_cuids(self, transformation):
     m = models.makeTwoTermDisj()
     self.assertRaisesRegexp(
@@ -477,47 +476,6 @@ def check_targets_cannot_be_cuids(self, transformation):
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
         targets=[ComponentUID(m.disjunction)])
-
-# test that cuid targets still work for now. This and the next test should
-# go away when the above comes in.
-def check_cuid_targets_still_work_for_now(self, transformation):
-    m = models.makeTwoSimpleDisjunctions()
-    trans = TransformationFactory('gdp.%s' % transformation)
-    trans.apply_to(
-        m,
-        targets=[ComponentUID(m.disjunction1)])
-
-    disjBlock = m.component("_pyomo_gdp_%s_relaxation" % transformation).\
-                relaxedDisjuncts
-    # only two disjuncts relaxed
-    self.assertEqual(len(disjBlock), 2)
-    self.assertIsInstance(disjBlock[0].component("disjunct1[0].c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock[1].component("disjunct1[1].c"),
-                          Constraint)
-
-    pairs = [
-        (0, 0),
-        (1, 1)
-    ]
-    for i, j in pairs:
-        self.assertIs(disjBlock[i], m.disjunct1[j].transformation_block())
-        self.assertIs(trans.get_src_disjunct(disjBlock[i]), m.disjunct1[j])
-
-    self.assertIsNone(m.disjunct2[0].transformation_block)
-    self.assertIsNone(m.disjunct2[1].transformation_block)
-
-def check_cuid_target_error_still_works_for_now(self, transformation):
-    m = models.makeTwoSimpleDisjunctions()
-    m2 = ConcreteModel()
-    m2.oops = Block()
-    self.assertRaisesRegexp(
-        GDP_Error,
-        "Target %s is not a component on the instance!" % 
-        ComponentUID(m2.oops),
-        TransformationFactory('gdp.%s' % transformation).apply_to,
-        m,
-        targets=ComponentUID(m2.oops))
 
 def check_indexedDisj_targets_inactive(self, transformation):
     m = models.makeDisjunctionsOnIndexedBlock()

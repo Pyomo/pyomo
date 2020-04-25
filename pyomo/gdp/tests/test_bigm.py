@@ -1310,7 +1310,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
         ct.check_disjData_only_targets_transformed(self, 'bigm')
 
     def test_indexedBlock_targets_inactive(self):
-        ct.check_indexedDisj_targets_inactive(self, 'bigm')
+        ct.check_indexedBlock_targets_inactive(self, 'bigm')
 
     def test_indexedBlock_only_targets_transformed(self):
         ct.check_indexedBlock_only_targets_transformed(self, 'bigm')
