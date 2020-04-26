@@ -10,6 +10,10 @@ from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
 from pyomo.environ import SolverFactory, value
+from pyomo.environ import *
+from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
+from pyomo.solvers.tests.models.QCP_simple import QCP_simple
+from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 
 required_solvers = ('ipopt', 'glpk')  # 'cplex_persistent')
 if all(SolverFactory(s).available() for s in required_solvers):
@@ -176,6 +180,113 @@ class TestMindtPy(unittest.TestCase):
                       nlp_solver=required_solvers[0]
                       )
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    # the following tests are used to improve code coverage
+    def test_OA_OnlineDocExample2(self):
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print('\n Solving problem with Outer Approximation')
+            opt.solve(model, strategy='OA',
+                      iteration_limit=1,
+                      mip_solver=required_solvers[1],
+                      nlp_solver=required_solvers[0]
+                      )
+            # self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    def test_OA_OnlineDocExample3(self):
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print('\n Solving problem with Outer Approximation')
+            opt.solve(model, strategy='OA',
+                      time_limit=1,
+                      mip_solver=required_solvers[1],
+                      nlp_solver=required_solvers[0]
+                      )
+
+    def test_OA_LP(self):
+        with SolverFactory('mindtpy') as opt:
+            m_class = LP_unbounded()
+            m_class._generate_model()
+            model = m_class.model
+            print('\n Solving problem with Outer Approximation')
+            opt.solve(model, strategy='OA',
+                      mip_solver=required_solvers[1],
+                      nlp_solver=required_solvers[0],
+                      )
+
+    def test_OA_QCP(self):
+        with SolverFactory('mindtpy') as opt:
+            m_class = QCP_simple()
+            m_class._generate_model()
+            model = m_class.model
+            print('\n Solving problem with Outer Approximation')
+            opt.solve(model, strategy='OA',
+                      mip_solver=required_solvers[1],
+                      nlp_solver=required_solvers[0],
+                      )
+
+    def test_OA_Proposal_maximize(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            model.obj.sense = maximize
+            print('\n Solving problem with Outer Approximation')
+            opt.solve(model, strategy='OA',
+                      mip_solver=required_solvers[1],
+                      nlp_solver=required_solvers[0],
+                      #   mip_solver_args={'timelimit': 0.9}
+                      )
+
+    # def test_OA_Proposal_exceed_iteration_limit(self):
+    #     """Test the outer approximation decomposition algorithm."""
+    #     with SolverFactory('mindtpy') as opt:
+    #         model = ProposalModel()
+    #         print('\n Solving problem with Outer Approximation')
+    #         opt.solve(model, strategy='OA',
+    #                   mip_solver=required_solvers[1],
+    #                   nlp_solver=required_solvers[0]
+    #                   )
+
+    def test_OA_8PP_add_slack(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving problem with Outer Approximation')
+            opt.solve(model, strategy='OA',
+                      init_strategy='rNLP',
+                      mip_solver=required_solvers[1],
+                      nlp_solver=required_solvers[0],
+                      bound_tolerance=1E-5,
+                      add_slack=True)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_OA_MINLP_simple_add_slack(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP()
+            print('\n Solving problem with Outer Approximation')
+            opt.solve(model, strategy='OA',
+                      init_strategy='initial_binary',
+                      mip_solver=required_solvers[1],
+                      nlp_solver=required_solvers[0],
+                      obj_bound=10,
+                      add_slack=True)
+
+            # self.assertIs(results.solver.termination_condition,
+            #               TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
+
+    # def test_OA_OnlineDocExample4(self):
+    #     with SolverFactory('mindtpy') as opt:
+    #         m = ConcreteModel()
+    #         m.x = Var(within=Binary)
+    #         m.y = Var(within=Reals)
+    #         m.o = Objective(expr=m.x*m.y)
+    #         print('\n Solving problem with Outer Approximation')
+    #         opt.solve(m, strategy='OA',
+    #                   mip_solver=required_solvers[1],
+    #                   nlp_solver=required_solvers[0],
+    #                   )
 
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""

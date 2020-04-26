@@ -217,16 +217,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         dual_values = list(fix_nlp.dual[c]
                            for c in fix_nlp.MindtPy_utils.constraint_list)
 
-        if config.strategy == 'PSC' or config.strategy == 'GBD':
-            for var in fix_nlp.component_data_objects(ctype=Var, descend_into=True):
-                fix_nlp.ipopt_zL_out[var] = 0
-                fix_nlp.ipopt_zU_out[var] = 0
-                if var.ub is not None and abs(var.ub - value(var)) < config.bound_tolerance:
-                    fix_nlp.ipopt_zL_out[var] = 1
-                elif var.lb is not None and abs(value(var) - var.lb) < config.bound_tolerance:
-                    fix_nlp.ipopt_zU_out[var] = -1
-
-        elif config.strategy == 'OA':
+        if config.strategy == 'OA':
             config.logger.info('Solving feasibility problem')
             if config.initial_feas:
                 # config.initial_feas = False

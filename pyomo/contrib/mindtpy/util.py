@@ -41,6 +41,7 @@ def model_is_valid(solve_data, config):
         prob.number_of_integer_variables == 0 and
             prob.number_of_disjunctions == 0):
         config.logger.info('Problem has no discrete decisions.')
+        obj = next(m.component_data_objects(ctype=Objective, active=True))
         if (any(c.body.polynomial_degree() not in (1, 0) for c in MindtPy.constraint_list) or
                 obj.expr.polynomial_degree() not in (1, 0)):
             config.logger.info(
@@ -53,7 +54,7 @@ def model_is_valid(solve_data, config):
             config.logger.info(
                 "Your model is an LP (linear program). "
                 "Using LP solver %s to solve." % config.mip_solver)
-            mipopt = SolverFactory(config.mip)
+            mipopt = SolverFactory(config.mip_solver)
             if isinstance(mipopt, PersistentSolver):
                 mipopt.set_instance(solve_data.original_model)
 
