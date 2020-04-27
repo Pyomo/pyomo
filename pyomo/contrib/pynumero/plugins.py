@@ -7,20 +7,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.contrib.pynumero.sparse import BlockVector
-import numpy as np
 
-__all__ = ['norm']
+from pyomo.common.extensions import ExtensionBuilderFactory
+from .build import PyNumeroBuilder
 
-
-def norm(x, ord=None):
-
-    f = np.linalg.norm
-    if isinstance(x, np.ndarray):
-        return f(x, ord=ord)
-    elif isinstance(x, BlockVector):
-        flat_x = x.flatten()
-        return f(flat_x, ord=ord)
-    else:
-        raise NotImplementedError()
+def load():
+    ExtensionBuilderFactory.register('pynumero')(PyNumeroBuilder)
 

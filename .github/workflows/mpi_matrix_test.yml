@@ -51,6 +51,18 @@ jobs:
         echo ""
         pip install cplex || echo "CPLEX Community Edition is not available for ${{ matrix.python-version }}"
         echo ""
+        echo "Install BARON..."
+        echo ""
+        if [ ${{ matrix.TARGET }} == 'osx' ]; then
+            wget -q https://www.minlp.com/downloads/xecs/baron/current/baron-osx64.zip -O baron_installer.zip
+        else
+            wget -q https://www.minlp.com/downloads/xecs/baron/current/baron-lin64.zip -O baron_installer.zip
+        fi
+        unzip -q baron_installer.zip
+        mv baron-* baron-dir
+        BARON_DIR=$(pwd)/baron-dir
+        export PATH=$PATH:$BARON_DIR
+        echo ""
         echo "Install IDAES Ipopt..."
         echo ""
         sudo apt-get install libopenblas-dev gfortran liblapack-dev
@@ -60,9 +72,21 @@ jobs:
         cd ..
         export PATH=$PATH:$(pwd)/ipopt
         echo ""
+        echo "Install GJH_ASL_JSON..."
+        echo ""
+        wget -q "https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master" -O gjh_asl_json.zip
+        unzip -q gjh_asl_json.zip
+        rm -rf gjh_asl_json.zip
+        cd gjh_asl_json-master/Thirdparty
+        ./get.ASL
+        cd ..
+        make
+        export PATH=$PATH:$(pwd)/bin
+        cd ..
+        echo ""
         echo "Install GAMS..."
         echo ""
-        if hash brew; then
+        if [ ${{ matrix.TARGET }} == 'osx' ]; then
             wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/macosx/osx_x64_64_sfx.exe -O gams_installer.exe
         else
             wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/linux/linux_x64_64_sfx.exe -O gams_installer.exe
