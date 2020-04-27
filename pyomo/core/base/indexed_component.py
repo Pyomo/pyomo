@@ -627,7 +627,7 @@ You can silence this warning by one of three ways:
                     # templatized expression.
                     #
                     from pyomo.core.expr import current as EXPR
-                    return EXPR.GetItemExpression(tuple(idx), self)
+                    return EXPR.GetItemExpression((self,) + tuple(idx))
 
                 except EXPR.NonConstantExpressionError:
                     #

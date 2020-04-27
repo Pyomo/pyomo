@@ -25,7 +25,7 @@ from pyomo.core.expr.template_expr import (
 
 import six
 
-class ExpressionObjectTester(unittest.TestCase):
+class TestTemplateExpressions(unittest.TestCase):
     def setUp(self):
         self.m = m = ConcreteModel()
         m.I = RangeSet(1,9)
@@ -35,6 +35,12 @@ class ExpressionObjectTester(unittest.TestCase):
         m.p = Param(m.I, m.J, initialize=lambda m,i,j: 100*i+j)
         m.s = Set(m.I, initialize=lambda m,i:range(i))
 
+    def test_nonTemplates(self):
+        m = self.m
+        self.assertIs(resolve_template(m.x[1]), m.x[1])
+        e = m.x[1] + m.x[2]
+        self.assertIs(resolve_template(e), e)
+
     def test_IndexTemplate(self):
         m = self.m
         i = IndexTemplate(m.I)
@@ -43,19 +49,22 @@ class ExpressionObjectTester(unittest.TestCase):
                 "Evaluating uninitialized IndexTemplate"):
             value(i)
 
+        self.assertEqual(str(i), "{I}")
+
         i.set_value(5)
         self.assertEqual(value(i), 5)
+        self.assertIs(resolve_template(i), 5)
 
     def test_template_scalar(self):
         m = self.m
         t = IndexTemplate(m.I)
         e = m.x[t]
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.x)
-        self.assertEqual(tuple(e.args), (t,))
+        self.assertEqual(e.args, (m.x, t))
         self.assertFalse(e.is_constant())
         self.assertFalse(e.is_fixed())
         self.assertEqual(e.polynomial_degree(), 1)
+        self.assertEqual(str(e), "x[{I}]")
         t.set_value(5)
         v = e()
         self.assertIn(type(v), (int, float))
@@ -65,11 +74,11 @@ class ExpressionObjectTester(unittest.TestCase):
 
         e = m.p[t,10]
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.p)
-        self.assertEqual(tuple(e.args), (t,10))
+        self.assertEqual(e.args, (m.p,t,10))
         self.assertFalse(e.is_constant())
         self.assertTrue(e.is_fixed())
         self.assertEqual(e.polynomial_degree(), 0)
+        self.assertEqual(str(e), "p[{I},10]")
         t.set_value(5)
         v = e()
         self.assertIn(type(v), (int, float))
@@ -79,11 +88,11 @@ class ExpressionObjectTester(unittest.TestCase):
 
         e = m.p[5,t]
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.p)
-        self.assertEqual(tuple(e.args), (5,t))
+        self.assertEqual(e.args, (m.p,5,t))
         self.assertFalse(e.is_constant())
         self.assertTrue(e.is_fixed())
         self.assertEqual(e.polynomial_degree(), 0)
+        self.assertEqual(str(e), "p[5,{I}]")
         t.set_value(10)
         v = e()
         self.assertIn(type(v), (int, float))
@@ -96,11 +105,11 @@ class ExpressionObjectTester(unittest.TestCase):
         t = IndexTemplate(m.I)
         e = m.s[t]
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.s)
-        self.assertEqual(tuple(e.args), (t,))
+        self.assertEqual(e.args, (m.s,t))
         self.assertFalse(e.is_constant())
         self.assertTrue(e.is_fixed())
         self.assertEqual(e.polynomial_degree(), 0)
+        self.assertEqual(str(e), "s[{I}]")
         t.set_value(5)
         v = e()
         self.assertIs(v, m.s[5])
@@ -112,11 +121,12 @@ class ExpressionObjectTester(unittest.TestCase):
         t = IndexTemplate(m.I)
         e = m.x[t+m.P[5]]
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(e.arg(0).arg(1), m.P[5])
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(e.arg(1).arg(1), m.P[5])
+        self.assertEqual(str(e), "x[{I} + P[5]]")
 
 
     def test_nested_template_operation(self):
@@ -124,13 +134,14 @@ class ExpressionObjectTester(unittest.TestCase):
         t = IndexTemplate(m.I)
         e = m.x[t+m.P[t+1]]
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
+        self.assertEqual(str(e), "x[{I} + P[{I} + 1]]")
 
 
     def test_block_templates(self):
@@ -149,14 +160,26 @@ class ExpressionObjectTester(unittest.TestCase):
         self.assertIs(type(e), EXPR.GetAttrExpression)
         self.assertEqual(e.nargs(), 2)
         self.assertIs(type(e.arg(0)), EXPR.GetItemExpression)
-        self.assertIs(e.arg(0)._base, m.b)
-        self.assertEqual(e.arg(0).nargs(), 1)
-        self.assertIs(e.arg(0).arg(0), t)
+        self.assertIs(e.arg(0).arg(0), m.b)
+        self.assertEqual(e.arg(0).nargs(), 2)
+        self.assertIs(e.arg(0).arg(1), t)
+        self.assertEqual(str(e), "b[{T}].x")
         t.set_value(2)
         v = e()
         self.assertIn(type(v), (int, float))
         self.assertEqual(v, 2)
         self.assertIs(resolve_template(e), m.b[2].x)
+        t.set_value()
+
+        e = m.b[t].bb[t].y[1]
+        self.assertIs(type(e), EXPR.GetItemExpression)
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(str(e), "b[{T}].bb[{T}].y[1]")
+        t.set_value(2)
+        v = e()
+        self.assertIn(type(v), (int, float))
+        self.assertEqual(v, 1)
+        self.assertIs(resolve_template(e), m.b[2].bb[2].y[1])
 
 
     def test_template_name(self):
@@ -175,52 +198,52 @@ class ExpressionObjectTester(unittest.TestCase):
         t = IndexTemplate(m.I)
 
         E = m.x[t+m.P[t+1]] + m.P[1]
-        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
+        self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(0)
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
         E = m.P[1] + m.x[t+m.P[t+1]]
-        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
+        self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(1)
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
         E = m.x[t+m.P[t+1]] + 1
-        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
+        self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(0)
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
         E = 1 + m.x[t+m.P[t+1]]
-        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
+        self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(E.nargs()-1)
         self.assertIs(type(e), EXPR.GetItemExpression)
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
 
     def test_clone(self):
@@ -229,21 +252,21 @@ class ExpressionObjectTester(unittest.TestCase):
 
         E_base = m.x[t+m.P[t+1]] + m.P[1]
         E = E_base.clone()
-        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
+        self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(0)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertIs(type(e.arg(0).arg(1)),
-                      type(E_base.arg(0).arg(0).arg(1)))
-        self.assertIsNot(e.arg(0).arg(1),
-                         E_base.arg(0).arg(0).arg(1))
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)),
+                      type(E_base.arg(0).arg(1).arg(1)))
+        self.assertIsNot(e.arg(1).arg(1),
+                         E_base.arg(0).arg(1).arg(1))
+        self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
         E_base = m.P[1] + m.x[t+m.P[t+1]]
         E = E_base.clone()
@@ -251,53 +274,53 @@ class ExpressionObjectTester(unittest.TestCase):
         e = E.arg(1)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertIs(type(e.arg(0).arg(1)),
-                      type(E_base.arg(1).arg(0).arg(1)))
-        self.assertIsNot(e.arg(0).arg(1),
-                         E_base.arg(1).arg(0).arg(1))
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)),
+                      type(E_base.arg(1).arg(1).arg(1)))
+        self.assertIsNot(e.arg(1).arg(1),
+                         E_base.arg(1).arg(1).arg(1))
+        self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
         E_base = m.x[t+m.P[t+1]] + 1
         E = E_base.clone()
-        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
+        self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(0)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertIs(type(e.arg(0).arg(1)),
-                      type(E_base.arg(0).arg(0).arg(1)))
-        self.assertIsNot(e.arg(0).arg(1),
-                         E_base.arg(0).arg(0).arg(1))
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)),
+                      type(E_base.arg(0).arg(1).arg(1)))
+        self.assertIsNot(e.arg(1).arg(1),
+                         E_base.arg(0).arg(1).arg(1))
+        self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
         E_base = 1 + m.x[t+m.P[t+1]]
         E = E_base.clone()
-        self.assertTrue(isinstance(E, EXPR.SumExpressionBase))
+        self.assertIsInstance(E, EXPR.SumExpressionBase)
         e = E.arg(-1)
         self.assertIs(type(e), EXPR.GetItemExpression)
         self.assertIsNot(e, E_base.arg(0))
-        self.assertIs(e._base, m.x)
-        self.assertEqual(e.nargs(), 1)
-        self.assertTrue(isinstance(e.arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(0), t)
-        self.assertIs(type(e.arg(0).arg(1)), EXPR.GetItemExpression)
-        self.assertIs(type(e.arg(0).arg(1)),
-                      type(E_base.arg(-1).arg(0).arg(1)))
-        self.assertIsNot(e.arg(0).arg(1),
-                         E_base.arg(-1).arg(0).arg(1))
-        self.assertTrue(isinstance(e.arg(0).arg(1).arg(0), EXPR.SumExpressionBase))
-        self.assertIs(e.arg(0).arg(1).arg(0).arg(0), t)
+        self.assertEqual(e.nargs(), 2)
+        self.assertIs(e.arg(0), m.x)
+        self.assertIsInstance(e.arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(0), t)
+        self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
+        self.assertIs(type(e.arg(1).arg(1)),
+                      type(E_base.arg(-1).arg(1).arg(1)))
+        self.assertIsNot(e.arg(1).arg(1),
+                         E_base.arg(-1).arg(1).arg(1))
+        self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
+        self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
 
 
 class TestTemplateSubstitution(unittest.TestCase):
@@ -329,24 +352,24 @@ class TestTemplateSubstitution(unittest.TestCase):
         self.assertEqual( len(_map), 3 )
 
         idx1 = _GetItemIndexer( m.x[t,1] )
-        self.assertIs( idx1._base, m.x )
         self.assertEqual( idx1.nargs(), 2 )
-        self.assertIs( idx1.arg(0), t )
-        self.assertEqual( idx1.arg(1), 1 )
+        self.assertIs( idx1.arg(0), m.x )
+        self.assertIs( idx1.arg(1), t )
+        self.assertEqual( idx1.arg(2), 1 )
         self.assertIn( idx1, _map )
 
         idx2 = _GetItemIndexer( m.dxdt[t,2] )
-        self.assertIs( idx2._base, m.dxdt )
         self.assertEqual( idx2.nargs(), 2 )
-        self.assertIs( idx2.arg(0), t )
-        self.assertEqual( idx2.arg(1), 2 )
+        self.assertIs( idx2.arg(0), m.dxdt )
+        self.assertIs( idx2.arg(1), t )
+        self.assertEqual( idx2.arg(2), 2 )
         self.assertIn( idx2, _map )
 
         idx3 = _GetItemIndexer( m.x[t,3] )
-        self.assertIs( idx3._base, m.x )
         self.assertEqual( idx3.nargs(), 2 )
-        self.assertIs( idx3.arg(0), t )
-        self.assertEqual( idx3.arg(1), 3 )
+        self.assertIs( idx3.arg(0), m.x )
+        self.assertIs( idx3.arg(1), t )
+        self.assertEqual( idx3.arg(2), 3 )
         self.assertIn( idx3, _map )
 
         self.assertFalse( idx1 == idx2 )

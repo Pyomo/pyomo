@@ -630,10 +630,7 @@ class ExternalFunctionExpression(ExpressionBase):
         return self._fcn.getname(*args, **kwds)
 
     def _compute_polynomial_degree(self, result):
-        # If the expression is constant, then
-        # this is detected earlier.  Hence, we can safely
-        # return None.
-        return None
+        return 0 if all(arg == 0 for arg in result) else None
 
     def _apply_operation(self, result):
         return self._fcn.evaluate( result )
@@ -1103,11 +1100,13 @@ class Expr_ifExpression(ExpressionBase):
 
     def _is_fixed(self, args):
         assert(len(args) == 3)
-        if args[0]: #self._if.is_constant():
+        if args[0]: # self._if.is_fixed():
+            if args[1] and args[2]:
+                return True
             if value(self._if):
-                return args[1] #self._then.is_constant()
+                return args[1] # self._then.is_fixed()
             else:
-                return args[2] #self._else.is_constant()
+                return args[2] # self._else.is_fixed()
         else:
             return False
 
@@ -1129,6 +1128,8 @@ class Expr_ifExpression(ExpressionBase):
     def _compute_polynomial_degree(self, result):
         _if, _then, _else = result
         if _if == 0:
+            if _then == _else:
+                return _then
             try:
                 return _then if value(self._if) else _else
             except ValueError:
@@ -1574,23 +1575,20 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 
 def _process_arg(obj):
-    try:
-        if obj.is_parameter_type() and not obj._component()._mutable and obj._constructed:
-            # Return the value of an immutable SimpleParam or ParamData object
-            return obj()
-
-        elif obj.__class__ is NumericConstant:
-            return obj.value
-
-        return obj
-    except AttributeError:
-        if obj.is_indexed():
-            raise TypeError(
-                    "Argument for expression is an indexed numeric "
-                    "value\nspecified without an index:\n\t%s\nIs this "
-                    "value defined over an index that you did not specify?"
-                    % (obj.name, ) )
-        raise
+    # Note: caller is responsible for filtering out native types and
+    # expressions.
+    if obj.is_numeric_type() and obj.is_constant():
+        # Resolve constants (e.g., immutable scalar Params & NumericConstants)
+        return value(obj)
+    # User assistance: provide a helpful exception when using an indexed
+    # object in an expression
+    if obj.is_component_type() and obj.is_indexed():
+        raise TypeError(
+            "Argument for expression is an indexed numeric "
+            "value\nspecified without an index:\n\t%s\nIs this "
+            "value defined over an index that you did not specify?"
+            % (obj.name, ) )
+    return obj
 
 
 #@profile

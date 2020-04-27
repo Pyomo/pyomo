@@ -28,28 +28,17 @@ class GetItemExpression(ExpressionBase):
     """
     Expression to call :func:`__getitem__` on the base object.
     """
-    __slots__ = ('_base',)
     PRECEDENCE = 1
 
     def _precedence(self):
         return GetItemExpression.PRECEDENCE
 
-    def __init__(self, args, base=None):
+    def __init__(self, args):
         """Construct an expression with an operation and a set of arguments"""
         self._args_ = args
-        self._base = base
 
     def nargs(self):
         return len(self._args_)
-
-    def create_node_with_local_data(self, args):
-        return self.__class__(args, self._base)
-
-    def __getstate__(self):
-        state = super(GetItemExpression, self).__getstate__()
-        for i in GetItemExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
 
     def __getattr__(self, attr):
         if attr.startswith('__') and attr.endswith('__'):
@@ -57,32 +46,30 @@ class GetItemExpression(ExpressionBase):
         return GetAttrExpression((self, attr))
 
     def getname(self, *args, **kwds):
-        return self._base.getname(*args, **kwds)
+        return self._args_[0].getname(*args, **kwds)
 
     def is_potentially_variable(self):
-        if any(arg.is_potentially_variable() for arg in self._args_
-               if arg.__class__ not in nonpyomo_leaf_types):
+        _false = lambda: False
+        if any( getattr(arg, 'is_potentially_variable', _false)()
+                for arg in self._args_ ):
             return True
-        for x in itervalues(self._base._data):
-            if hasattr(x, 'is_potentially_variable') and \
-               x.is_potentially_variable():
-                return True
-        return False
+        return any( getattr(x, 'is_potentially_variable', _false)()
+                    for x in itervalues(self._args_[0]) )
 
     def _is_fixed(self, values):
-        if not all(values):
+        if not all(values[1:]):
             return False
-        for x in itervalues(self._base):
-            if hasattr(x, 'is_fixed') and not x.is_fixed():
-                return False
-        return True
+        _true = lambda: True
+        return all( getattr(x, 'is_fixed', _true)()
+                    for x in itervalues(self._args_[0]) )
 
     def _compute_polynomial_degree(self, result):
-        if any(x != 0 for x in result):
+        if any(x != 0 for x in result[1:]):
             return None
         ans = 0
-        for x in itervalues(self._base):
-            if x.__class__ in nonpyomo_leaf_types:
+        for x in itervalues(self._args_[0]):
+            if x.__class__ in nonpyomo_leaf_types \
+               or not hasattr(x, 'polynomial_degree'):
                 continue
             tmp = x.polynomial_degree()
             if tmp is None:
@@ -92,8 +79,8 @@ class GetItemExpression(ExpressionBase):
         return ans
 
     def _apply_operation(self, result):
-        obj = self._base.__getitem__( tuple(result) )
-        if isinstance(obj, NumericValue):
+        obj = result[0].__getitem__( tuple(result[1:]) )
+        if obj.__class__ not in nonpyomo_leaf_types and obj.is_numeric_type():
             obj = value(obj)
         return obj
 
@@ -101,11 +88,11 @@ class GetItemExpression(ExpressionBase):
         values = tuple(_[1:-1] if _[0]=='(' and _[-1]==')' else _
                        for _ in values)
         if verbose:
-            return "getitem(%s, %s)" % (self.getname(), ', '.join(values))
-        return "%s[%s]" % (self.getname(), ','.join(values))
+            return "getitem(%s, %s)" % (values[0], ', '.join(values[1:]))
+        return "%s[%s]" % (values[0], ','.join(values[1:]))
 
     def _resolve_template(self, args):
-        return self._base.__getitem__(args)
+        return args[0].__getitem__(tuple(args[1:]))
 
 
 class GetAttrExpression(ExpressionBase):
@@ -127,7 +114,7 @@ class GetAttrExpression(ExpressionBase):
         return GetAttrExpression((self, attr))
 
     def __getitem__(self, *idx):
-        return GetItemExpression(idx, base=self)
+        return GetItemExpression((self,) + idx)
 
     def getname(self, *args, **kwds):
         return 'getattr'
@@ -140,17 +127,23 @@ class GetAttrExpression(ExpressionBase):
     def _apply_operation(self, result):
         assert len(result) == 2
         obj = getattr(result[0], result[1])
-        if isinstance(obj, NumericValue):
+        if obj.is_numeric_type():
             obj = value(obj)
         return obj
 
     def _to_string(self, values, verbose, smap, compute_values):
+        assert len(values) == 2
         if verbose:
             return "getitem(%s, %s)" % values
-        return "%s.%s" % values
+        # Note that the string argument for getattr comes quoted, so we
+        # need to remove the quotes.
+        attr = values[1]
+        if attr[0] in '\"\'' and attr[0] == attr[-1]:
+            attr = attr[1:-1]
+        return "%s.%s" % (values[0], attr)
 
     def _resolve_template(self, args):
-        return getattr(*args)
+        return getattr(*tuple(args))
 
 
 class TemplateSumExpression(ExpressionBase):
@@ -176,7 +169,7 @@ class TemplateSumExpression(ExpressionBase):
 
     def __getstate__(self):
         state = super(TemplateSumExpression, self).__getstate__()
-        for i in GetItemExpression.__slots__:
+        for i in TemplateSumExpression.__slots__:
             state[i] = getattr(self, i)
         return state
 
@@ -305,6 +298,10 @@ class IndexTemplate(NumericValue):
         else:
             return self._value
 
+    def _resolve_template(self, args):
+        assert not args
+        return self()
+
     def is_fixed(self):
         """
         Returns True because this value is fixed.
@@ -371,6 +368,8 @@ def resolve_template(expr):
     def beforeChild(node, child):
         # Efficiency: do not decend into leaf nodes.
         if type(child) in native_types or not child.is_expression_type():
+            if hasattr(child, '_resolve_template'):
+                return False, child._resolve_template([])
             return False, child
         else:
             return True, None
@@ -384,6 +383,7 @@ def resolve_template(expr):
         return node.create_node_with_local_data(args)
 
     return StreamBasedExpressionVisitor(
+        initializeWalker=lambda x: beforeChild(None, x),
         beforeChild=beforeChild,
         exitNode=exitNode,
     ).walk_expression(expr)
@@ -428,10 +428,10 @@ class _GetItemIndexer(object):
     # ever appears in an expression for a single index
 
     def __init__(self, expr):
-        self._base = expr._base
+        self._base = expr.arg(0)
         self._args = []
         _hash = [ id(self._base) ]
-        for x in expr.args:
+        for x in expr.args[1:]:
             try:
                 logging.disable(logging.CRITICAL)
                 val = value(x)
@@ -456,6 +456,14 @@ class _GetItemIndexer(object):
 
     def arg(self, i):
         return self._args[i]
+
+    @property
+    def base(self):
+        return self._base
+
+    @property
+    def args(self):
+        return self._args
 
     def __hash__(self):
         return hash(self._hash)
@@ -486,9 +494,8 @@ def substitute_getitem_with_param(expr, _map):
     if _id not in _map:
         _map[_id] = pyomo.core.base.param.Param(mutable=True)
         _map[_id].construct()
-        _args = []
         _map[_id]._name = "%s[%s]" % (
-            expr._base.name, ','.join(str(x) for x in _id._args) )
+            _id._base.name, ','.join(str(x) for x in _id.args) )
     return _map[_id]
 
 
