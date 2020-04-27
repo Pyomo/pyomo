@@ -495,7 +495,7 @@ def substitute_getitem_with_param(expr, _map):
         _map[_id] = pyomo.core.base.param.Param(mutable=True)
         _map[_id].construct()
         _map[_id]._name = "%s[%s]" % (
-            _id._base.name, ','.join(str(x) for x in _id.args) )
+            _id.base.name, ','.join(str(x) for x in _id.args) )
     return _map[_id]
 
 
