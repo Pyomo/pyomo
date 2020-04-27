@@ -3429,10 +3429,19 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,1,0)
         self.assertEqual(expr.polynomial_degree(), 0)
         #
+        # A nonconstant expression has degree if both arguments have the
+        # same degree, as long as the IF is fixed (even if it is not
+        # defined)
+        #
+        expr = Expr_if(m.e,m.a,0)
+        self.assertEqual(expr.polynomial_degree(), 0)
+        expr = Expr_if(m.e,5*m.b,1+m.b)
+        self.assertEqual(expr.polynomial_degree(), 1)
+        #
         # A nonconstant expression has degree None because
         # m.e is an uninitialized parameter
         #
-        expr = Expr_if(m.e,m.a,0)
+        expr = Expr_if(m.e,m.b,0)
         self.assertEqual(expr.polynomial_degree(), None)
 
 

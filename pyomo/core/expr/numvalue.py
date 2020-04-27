@@ -532,7 +532,36 @@ numeric types using the following functions:
         return retval
 
 
-class NumericValue(object):
+
+class PyomoModelingObject(object):
+    __slots__ = ()
+
+    def is_component_type(self):
+        """Return True if this class is a Pyomo component"""
+        return False
+
+    def is_numeric_type(self):
+        """Return True if this class is a Pyomo numeric object"""
+        return False
+
+    def is_parameter_type(self):
+        """Return False unless this class is a parameter object"""
+        return False
+
+    def is_variable_type(self):
+        """Return False unless this class is a variable object"""
+        return False
+
+    def is_expression_type(self):
+        """Return True if this numeric value is an expression"""
+        return False
+
+    def is_named_expression_type(self):
+        """Return True if this numeric value is a named expression"""
+        return False
+
+
+class NumericValue(PyomoModelingObject):
     """
     This is the base class for numeric values used in Pyomo.
     """
@@ -614,6 +643,10 @@ class NumericValue(object):
             "DEPRECATED: The cname() method has been renamed to getname()." )
         return self.getname(*args, **kwds)
 
+    def is_numeric_type(self):
+        """Return True if this class is a Pyomo numeric object"""
+        return True
+
     def is_constant(self):
         """Return True if this numeric value is a constant value"""
         return False
@@ -622,28 +655,8 @@ class NumericValue(object):
         """Return True if this is a non-constant value that has been fixed"""
         return False
 
-    def is_parameter_type(self):
-        """Return False unless this class is a parameter object"""
-        return False
-
-    def is_variable_type(self):
-        """Return False unless this class is a variable object"""
-        return False
-
     def is_potentially_variable(self):
         """Return True if variables can appear in this expression"""
-        return True
-
-    def is_named_expression_type(self):
-        """Return True if this numeric value is a named expression"""
-        return False
-
-    def is_expression_type(self):
-        """Return True if this numeric value is an expression"""
-        return False
-
-    def is_component_type(self):
-        """Return True if this class is a Pyomo component"""
         return False
 
     def is_relational(self):
@@ -1023,9 +1036,6 @@ class NumericConstant(NumericValue):
 
     def is_fixed(self):
         return True
-
-    def is_potentially_variable(self):
-        return False
 
     def _compute_polynomial_degree(self, result):
         return 0

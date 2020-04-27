@@ -890,13 +890,15 @@ class _EvaluationVisitor(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             return True, node
 
-        if node.is_variable_type():
-            return True, value(node)
+        if node.is_expression_type():
+            return False, None
 
-        if not node.is_expression_type():
+        if node.is_numeric_type():
             return True, value(node)
+        else:
+            return True, node
 
-        return False, None
+
 
 
 class FixedExpressionError(Exception):
@@ -926,22 +928,33 @@ class _EvaluateConstantExpressionVisitor(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             return True, node
 
-        if node.is_parameter_type():
-            if node._component()._mutable:
-                raise FixedExpressionError()
-            return True, value(node)
+        if node.is_expression_type():
+            return False, None
 
+        if node.is_numeric_type():
+            # Get the object value.  This will also cause templates to
+            # raise TemplateExpressionErrors
+            try:
+                val = value(node)
+            except TemplateExpressionError:
+                raise
+            except:
+                # Uninitialized Var/Param objects should be given the
+                # opportunity to map the error to a NonConstant / Fixed
+                # expression error
+                if not node.is_fixed():
+                    raise NonConstantExpressionError()
+                if not node.is_constant():
+                    raise FixedExpressionError()
+                raise
 
-        if node.is_variable_type():
-            if node.fixed:
-                raise FixedExpressionError()
-            else:
+            if not node.is_fixed():
                 raise NonConstantExpressionError()
+            if not node.is_constant():
+                raise FixedExpressionError()
+            return True, val
 
-        if not node.is_expression_type():
-            return True, value(node)
-
-        return False, None
+        return True, node
 
 
 def evaluate_expression(exp, exception=True, constant=False):
@@ -1164,13 +1177,16 @@ class _PolynomialDegreeVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in nonpyomo_leaf_types or not node.is_potentially_variable():
+        if node.__class__ in nonpyomo_leaf_types:
             return True, 0
 
-        if not node.is_expression_type():
-            return True, 0 if node.is_fixed() else 1
+        if node.is_expression_type():
+            return False, None
 
-        return False, None
+        if node.is_numeric_type():
+            return True, 0 if node.is_fixed() else 1
+        else:
+            return True, node
 
 
 def polynomial_degree(node):
@@ -1209,13 +1225,16 @@ class _IsFixedVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in nonpyomo_leaf_types or not node.is_potentially_variable():
+        if node.__class__ in nonpyomo_leaf_types:
             return True, True
 
-        elif not node.is_expression_type():
+        elif node.is_expression_type():
+            return False, None
+
+        elif node.is_numeric_type():
             return True, node.is_fixed()
 
-        return False, None
+        return True, node
 
 
 def _expression_is_fixed(node):
@@ -1288,15 +1307,18 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             return True, str(node)
 
+        if node.is_expression_type():
+            return False, None
+
         if node.is_variable_type():
             if not node.fixed:
                 return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=False)
             return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
 
-        if not node.is_expression_type():
+        if hasattr(node, 'to_string'):
             return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
-
-        return False, None
+        else:
+            return True, str(node)
 
 
 def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False):
