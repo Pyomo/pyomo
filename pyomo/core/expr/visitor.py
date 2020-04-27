@@ -49,6 +49,7 @@ class StreamBasedExpressionVisitor(object):
     through callback functions as the traversal enters and leaves nodes
     in the tree:
 
+      initializeWalker(expr) -> walk, result
       enterNode(N1) -> args, data
       {for N2 in args:}
         beforeChild(N1, N2) -> descend, child_result
@@ -58,10 +59,20 @@ class StreamBasedExpressionVisitor(object):
         acceptChildResult(N1, data, child_result) -> data
         afterChild(N1, N2) -> None
       exitNode(N1, data) -> N1_result
+      finalizeWalker(result) -> result
 
     Individual event callbacks match the following signatures:
 
-    args, data = enterNode(self, node):
+   walk, result = initializeWalker(self, expr):
+
+        initializeWalker() is called to set the walker up and perform
+        any preliminary processing on the root node.  The method returns
+        a flag indicating if the tree should be walked and a result.  If
+        `walk` is True, then result is ignored.  If `walk` is False,
+        then `result` is returned as the final result from the walker,
+        bypassing all other callbacks (including finalizeResult).
+
+   args, data = enterNode(self, node):
 
         enterNode() is called when the walker first enters a node (from
         above), and is passed the node being entered.  It is expected to
@@ -132,7 +143,7 @@ class StreamBasedExpressionVisitor(object):
     # derived classes or specified as callback functions to the class
     # constructor:
     client_methods = ('enterNode','exitNode','beforeChild','afterChild',
-                      'acceptChildResult','finalizeResult')
+                      'acceptChildResult','initializeWalker','finalizeResult')
     def __init__(self, **kwds):
         # This is slightly tricky: We want derived classes to be able to
         # override the "None" defaults here, and for keyword arguments
@@ -165,6 +176,10 @@ class StreamBasedExpressionVisitor(object):
         # (ptr).  The beginning of the list is indicated by a None
         # parent pointer.
         #
+        if self.initializeWalker is not None:
+            walk, result = self.initializeWalker(expr)
+            if not walk:
+                return result
         if self.enterNode is not None:
             tmp = self.enterNode(expr)
             if tmp is None:
