@@ -14,6 +14,7 @@ import tempfile
 
 from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file_dir, find_dir
+from pyomo.common.download import FileDownloader
 
 def _generate_configuration():
     # defer the import until use (this eventually imports pkg_resources,
@@ -85,12 +86,12 @@ def build_mcpp():
             filename = '.'.join([filename[0],filename[-1]])
             return filename
 
+    print("\n**** Building MCPP library ****")
     package_config = _generate_configuration()
     package_config['cmdclass'] = {'build_ext': _BuildWithoutPlatformInfo}
     dist = distutils.core.Distribution(package_config)
     install_dir = os.path.join(PYOMO_CONFIG_DIR, 'lib')
     dist.get_command_obj('install_lib').install_dir = install_dir
-    print("**** Building library ****")
     try:
         basedir = os.path.abspath(os.path.curdir)
         tmpdir = os.path.abspath(tempfile.mkdtemp())
@@ -101,6 +102,13 @@ def build_mcpp():
     finally:
         os.chdir(basedir)
         shutil.rmtree(tmpdir)
+
+class MCPPBuilder(object):
+    def __call__(self, parallel):
+        return build_mcpp()
+
+    def skip(self):
+        return FileDownloader.get_sysinfo()[0] == 'windows'
 
 
 if __name__ == "__main__":

@@ -867,9 +867,9 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
     for c,v in zip(exp.linear_coefs, exp.linear_vars):
         if v.fixed:
             if compute_values:
-                ans.constant += multiplier*v.value
+                ans.constant += multiplier * value(c) * value(v)
             else:
-                ans.constant += multiplier*v
+                ans.constant += multiplier * c * v
         else:
             id_ = id(v)
             if id_ in idMap[None]:
