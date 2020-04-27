@@ -27,7 +27,7 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
     @abstractmethod
     def init_duals_primals_lb(self):
         pass
-    
+
     @abstractmethod
     def init_duals_primals_ub(self):
         pass
@@ -35,11 +35,11 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
     @abstractmethod
     def init_duals_slacks_lb(self):
         pass
-    
+
     @abstractmethod
     def init_duals_slacks_ub(self):
         pass
-    
+
     @abstractmethod
     def set_primals(self, primals):
         pass
@@ -71,7 +71,7 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
     @abstractmethod
     def set_duals_slacks_ub(self, duals):
         pass
-    
+
     @abstractmethod
     def get_primals(self):
         pass
@@ -260,10 +260,33 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         self._ineq_lb_compressed = self._ineq_lb_compression_matrix * ineq_lb
         self._ineq_ub_compressed = self._ineq_ub_compression_matrix * ineq_ub
         self._slacks = self.init_slacks()
-        self._duals_primals_lb = np.ones(self._primals_lb_compression_matrix.shape[0])
-        self._duals_primals_ub = np.ones(self._primals_ub_compression_matrix.shape[0])
-        self._duals_slacks_lb = np.ones(self._ineq_lb_compression_matrix.shape[0])
-        self._duals_slacks_ub = np.ones(self._ineq_ub_compression_matrix.shape[0])
+
+        # set the init_duals_primals_lb/ub from ipopt_zL_out, ipopt_zU_out if available
+        # need to compress them as well and initialize the duals_primals_lb/ub 
+        self._init_duals_primals_lb, self._init_duals_primals_ub =\
+            self._get_full_duals_primals_bounds()
+        self._init_duals_primals_lb = self._primals_lb_compression_matrix * self._init_duals_primals_lb
+        self._init_duals_primals_ub = self._primals_ub_compression_matrix * self._init_duals_primals_ub
+        self._duals_primals_lb = self._init_duals_primals_lb.copy()
+        self._duals_primals_ub = self._init_duals_primals_ub.copy()
+
+        # set the init_duals_slacks_lb/ub from the init_duals_ineq
+        # need to be compressed and set according to their sign
+        # (-) value indicates it the upper is active, while (+) indicates
+        # that lower is active
+        self._init_duals_slacks_lb = self._nlp.init_duals_ineq().copy()
+        self._init_duals_slacks_lb = self._ineq_lb_compression_matrix * \
+            self._init_duals_slacks_lb
+        self._init_duals_slacks_lb[self._init_duals_slacks_lb < 0] = 0
+        self._init_duals_slacks_ub = self._nlp.init_duals_ineq().copy()
+        self._init_duals_slacks_ub = self._ineq_ub_compression_matrix * \
+            self._init_duals_slacks_ub
+        self._init_duals_slacks_ub[self._init_duals_slacks_ub > 0] = 0
+        self._init_duals_slacks_ub = -1.0*self._init_duals_slacks_ub
+
+        self._duals_slacks_lb = self._init_duals_slacks_lb.copy()
+        self._duals_slacks_ub = self._init_duals_slacks_ub.copy()
+
         self._delta_primals = None
         self._delta_slacks = None
         self._delta_duals_eq = None
@@ -285,17 +308,17 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         return self._nlp.init_duals_ineq()
 
     def init_duals_primals_lb(self):
-        return np.ones(self._primals_lb_compressed.size)
+        return self._init_duals_primals_lb
 
     def init_duals_primals_ub(self):
-        return np.ones(self._primals_ub_compressed.size)
+        return self._init_duals_primals_ub
 
     def init_duals_slacks_lb(self):
-        return np.ones(self._ineq_lb_compressed.size)
+        return self._init_duals_slacks_lb
 
     def init_duals_slacks_ub(self):
-        return np.ones(self._ineq_ub_compressed.size)
-    
+        return self._init_duals_slacks_ub
+
     def set_primals(self, primals):
         self._nlp.set_primals(primals)
 
@@ -319,7 +342,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
 
     def set_duals_slacks_ub(self, duals):
         self._duals_slacks_ub = duals
-    
+
     def get_primals(self):
         return self._nlp.get_primals()
 
@@ -358,6 +381,9 @@ class InteriorPointInterface(BaseInteriorPointInterface):
 
     def set_barrier_parameter(self, barrier):
         self._barrier = barrier
+
+    def pyomo_nlp(self):
+        return self._nlp
 
     def evaluate_primal_dual_kkt_matrix(self):
         hessian = self._nlp.evaluate_hessian_lag()
@@ -638,3 +664,32 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         kkt.set_block(0, 0, hess)
         return kkt
 
+    def _get_full_duals_primals_bounds(self):
+        full_duals_primals_lb = None
+        full_duals_primals_ub = None
+        # Check in case _nlp was constructed as an AmplNLP (from an nl file)
+        if (hasattr(self._nlp, 'pyomo_model') and 
+            hasattr(self._nlp, 'get_pyomo_variables')):
+            pyomo_model = self._nlp.pyomo_model()
+            pyomo_variables = self._nlp.get_pyomo_variables()
+            if hasattr(pyomo_model,'ipopt_zL_out'):
+                zL_suffix = pyomo_model.ipopt_zL_out 
+                full_duals_primals_lb = np.empty(self._nlp.n_primals())
+                for i,v in enumerate(pyomo_variables):
+                    if v in zL_suffix:
+                        full_duals_primals_lb[i] = zL_suffix[v]
+
+            if hasattr(pyomo_model,'ipopt_zU_out'):
+                zU_suffix = pyomo_model.ipopt_zU_out 
+                full_duals_primals_ub = np.empty(self._nlp.n_primals())
+                for i,v in enumerate(pyomo_variables):
+                    if v in zU_suffix:
+                        full_duals_primals_ub[i] = zU_suffix[v]
+
+        if full_duals_primals_lb is None:
+            full_duals_primals_lb = np.ones(self._nlp.n_primals())
+
+        if full_duals_primals_ub is None:
+            full_duals_primals_ub = np.ones(self._nlp.n_primals())
+
+        return full_duals_primals_lb, full_duals_primals_ub    

@@ -5,7 +5,7 @@ from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
 import logging
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 # Supposedly this sets the root logger's level to INFO.
 # But when linear_solver.logger logs with debug, 
 # it gets propagated to a mysterious root logger with
