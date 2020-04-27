@@ -1001,29 +1001,18 @@ def evaluate_expression(exp, exception=True, constant=False):
     try:
         return visitor.dfs_postorder_stack(exp)
 
-    except NonConstantExpressionError:  #pragma: no cover
-        if exception:
-            raise
-        return None
-
-    except FixedExpressionError:        #pragma: no cover
-        if exception:
-            raise
-        return None
-
-    except TemplateExpressionError:     #pragma: no cover
-        if exception:
-            raise
-        return None
-
-    except ValueError:
-        if exception:
-            raise
-        return None
-
-    except TypeError:
-        # This can be raised in Python3 when evaluating a operation
-        # returns a complex number (e.g., sqrt(-1))
+    except ( TemplateExpressionError, ValueError, TypeError,
+             NonConstantExpressionError, FixedExpressionError ):
+        # Errors that we want to be able to suppress:
+        #
+        #   TemplateExpressionError: raised when generating expression
+        #      templates
+        #   FixedExpressionError, NonConstantExpressionError: raised
+        #      when processing expressions that are expected to be fixed
+        #      (e.g., indices)
+        #   ValueError: "standard" expression value errors
+        #   TypeError: This can be raised in Python3 when evaluating a
+        #      operation returns a complex number (e.g., sqrt(-1))
         if exception:
             raise
         return None
