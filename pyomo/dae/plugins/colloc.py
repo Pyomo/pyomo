@@ -20,6 +20,7 @@ from pyomo.common.dependencies import numpy, numpy_available
 
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import Var, ConstraintList, Expression, Objective
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 
 from pyomo.dae.misc import generate_finite_elements
@@ -373,7 +374,7 @@ class Collocation_Discretization_Transformation(Transformation):
         tmpds = config.wrt
 
         if tmpds is not None:
-            if tmpds.type() is not ContinuousSet:
+            if tmpds.ctype is not ContinuousSet:
                 raise TypeError("The component specified using the 'wrt' "
                                 "keyword must be a continuous set")
             elif 'scheme' in tmpds.get_discretization_info():
@@ -449,7 +450,7 @@ class Collocation_Discretization_Transformation(Transformation):
 
         for d in block.component_objects(DerivativeVar, descend_into=True):
             dsets = d.get_continuousset_list()
-            for i in set(dsets):
+            for i in ComponentSet(dsets):
                 if currentds is None or i.name == currentds:
                     oldexpr = d.get_derivative_expression()
                     loc = d.get_state_var()._contset[i]
@@ -557,7 +558,7 @@ class Collocation_Discretization_Transformation(Transformation):
         if contset is None:
             raise TypeError("A continuous set must be specified using the "
                             "keyword 'contset'")
-        if contset.type() is not ContinuousSet:
+        if contset.ctype is not ContinuousSet:
             raise TypeError("The component specified using the 'contset' "
                             "keyword must be a ContinuousSet")
         ds = contset
@@ -577,7 +578,7 @@ class Collocation_Discretization_Transformation(Transformation):
 
         if var is None:
             raise TypeError("A variable must be specified")
-        if var.type() is not Var:
+        if var.ctype is not Var:
             raise TypeError("The component specified using the 'var' keyword "
                             "must be a variable")
 

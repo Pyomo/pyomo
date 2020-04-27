@@ -211,7 +211,7 @@ class _ArcData(ActiveComponentData):
                     "containing exactly 2 Ports.")
             for p in ports:
                 try:
-                    if p.type() is not Port:
+                    if p.ctype is not Port:
                         raise ValueError(msg +
                             "found object '%s' in 'ports' not "
                             "of type Port." % p.name)
@@ -230,7 +230,7 @@ class _ArcData(ActiveComponentData):
                     "for directed Arc.")
             for p, side in [(source, "source"), (destination, "destination")]:
                 try:
-                    if p.type() is not Port:
+                    if p.ctype is not Port:
                         raise ValueError(msg +
                             "%s object '%s' not of type Port." % (p.name, side))
                     elif p.is_indexed():

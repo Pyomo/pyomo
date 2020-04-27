@@ -49,9 +49,14 @@ class _ImplicitAny(Any.__class__):
     change of Param's implicit domain from Any to Reals.
 
     """
+    def __new__(cls, **kwds):
+        return super(_ImplicitAny, cls).__new__(cls)
+
     def __init__(self, owner, **kwds):
         super(_ImplicitAny, self).__init__(**kwds)
         self._owner = weakref_ref(owner)
+        self._component = weakref_ref(self)
+        self.construct()
 
     def __getstate__(self):
         state = super(_ImplicitAny, self).__getstate__()
@@ -62,6 +67,9 @@ class _ImplicitAny(Any.__class__):
         _owner = state.pop('_owner')
         super(_ImplicitAny, self).__setstate__(state)
         self._owner = None if _owner is None else weakref_ref(_owner)
+
+    def __deepcopy__(self, memo):
+        return super(Any.__class__, self).__deepcopy__(memo)
 
     def __contains__(self, val):
         if val not in Reals:
@@ -158,6 +166,9 @@ class _ParamData(ComponentData, NumericValue):
         """Set the value for this variable."""
         self.set_value(val)
 
+    def get_units(self):
+        """Return the units for this ParamData"""
+        return self.parent_component()._units
 
     def is_fixed(self):
         """
@@ -230,6 +241,8 @@ class Param(IndexedComponent):
         initialize  
             A dictionary or rule for setting up this parameter with existing 
             model data
+        unit: pyomo unit expression                                                                                            
+            An expression containing the units for the parameter
     """
 
     DefaultMutable = False
@@ -251,6 +264,9 @@ class Param(IndexedComponent):
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
         self._default_val   = kwd.pop('default', _NotValid )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
+        self._units         = kwd.pop('units', None)                                                                           
+        if self._units is not None:                                                                                            
+            self._mutable = True
         #
         if 'repn' in kwd:
             logger.error(
@@ -1025,7 +1041,10 @@ class SimpleParam(_ParamData, Param):
         """
         return self._constructed and not self._mutable
 
-
+    def get_units(self):
+        """Return the units expression for this parameter"""
+        return self._units
+    
 class IndexedParam(Param):
 
     def __call__(self, exception=True):

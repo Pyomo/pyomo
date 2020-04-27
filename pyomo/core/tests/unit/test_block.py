@@ -2154,12 +2154,15 @@ class TestBlock(unittest.TestCase):
         buf = StringIO()
         m.pprint(ostream=buf)
         ref = """3 Set Declarations
-    a1_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(4, 5)
-        [5, 4]
-    a3_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(6, 7)
-        [6, 7]
-    a_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
+    a1_IDX : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {5, 4}
+    a3_IDX : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {6, 7}
+    a_index : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
 
 3 Block Declarations
     a : Size=3, Index=a_index, Active=True
@@ -2358,7 +2361,7 @@ class TestBlock(unittest.TestCase):
             return m.x[1]**2 <= 0
 
         self.assertTrue(hasattr(model, 'scalar_constraint'))
-        self.assertIs(model.scalar_constraint._type, Constraint)
+        self.assertIs(model.scalar_constraint.ctype, Constraint)
         self.assertEqual(len(model.scalar_constraint), 1)
         self.assertIs(type(scalar_constraint), types.FunctionType)
 
@@ -2367,7 +2370,7 @@ class TestBlock(unittest.TestCase):
             return m.x[i]**2 <= 0
 
         self.assertTrue(hasattr(model, 'vector_constraint'))
-        self.assertIs(model.vector_constraint._type, Constraint)
+        self.assertIs(model.vector_constraint.ctype, Constraint)
         self.assertEqual(len(model.vector_constraint), 3)
         self.assertIs(type(vector_constraint), types.FunctionType)
 

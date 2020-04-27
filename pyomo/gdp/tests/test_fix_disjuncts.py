@@ -25,8 +25,8 @@ class TestFixDisjuncts(unittest.TestCase):
         self.assertTrue(m.d1.active)
         self.assertTrue(m.d2.indicator_var.fixed)
         self.assertFalse(m.d2.active)
-        self.assertEqual(m.d1.type(), Block)
-        self.assertEqual(m.d2.type(), Block)
+        self.assertEqual(m.d1.ctype, Block)
+        self.assertEqual(m.d2.ctype, Block)
         self.assertTrue(m.d2.c.active)
 
     def test_xor_not_sum_to_1(self):

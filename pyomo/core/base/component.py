@@ -72,6 +72,9 @@ def cname(*args, **kwds):
     return name(*args, **kwds)
 
 
+class CloneError(pyomo.common.errors.PyomoException):
+    pass
+
 class _ComponentBase(object):
     """A base class for Component and ComponentData
 
@@ -196,6 +199,8 @@ class _ComponentBase(object):
                     if paranoid:
                         saved_memo = dict(memo)
                     new_state[k] = deepcopy(v, memo)
+                except CloneError:
+                    raise
                 except:
                     if paranoid:
                         memo.clear()
@@ -218,16 +223,31 @@ class _ComponentBase(object):
                         "Unable to clone Pyomo component attribute.\n"
                         "%s '%s' contains an uncopyable field '%s' (%s)"
                         % ( what, self.name, k, type(v) ))
+                    # If this is an abstract model, then we are probably
+                    # in the middle of create_instance, and the model
+                    # that will eventually become the concrete model is
+                    # missing initialization data.  This is an
+                    # exceptional event worthy of a stronger (and more
+                    # informative) error.
+                    if not self.parent_component()._constructed:
+                        raise CloneError(
+                            "Uncopyable attribute (%s) encountered when "
+                            "cloning component %s on an abstract block.  "
+                            "The resulting instance is therefore "
+                            "missing data from the original abstract model "
+                            "and likely will not construct correctly.  "
+                            "Consider changing how you initialize this "
+                            "component or using a ConcreteModel."
+                            % ( k, self.name ))
         ans.__setstate__(new_state)
         return ans
 
+    @deprecated("""The cname() method has been renamed to getname().
+    The preferred method of obtaining a component name is to use the
+    .name property, which returns the fully qualified component name.
+    The .local_name property will return the component name only within
+    the context of the immediate parent container.""", version='5.0')
     def cname(self, *args, **kwds):
-        logger.warning(
-            """DEPRECATED: The cname() method has been renamed to getname().
-The preferred method of obtaining a component name is to use the .name
-property, which returns the fully qualified component name.  The
-.local_name property will return the component name only within the
-context of the immediate parent container.""")
         return self.getname(*args, **kwds)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
@@ -361,15 +381,15 @@ class Component(_ComponentBase):
         _constructed    A boolean that is true if this component has been
                             constructed
         _parent         A weakref to the parent block that owns this component
-        _type           The class type for the derived subclass
+        _ctype          The class type for the derived subclass
     """
 
     def __init__ (self, **kwds):
         #
         # Get arguments
         #
-        self._type = kwds.pop('ctype', None)
-        self.doc   = kwds.pop('doc', None)
+        self._ctype = kwds.pop('ctype', None)
+        self.doc    = kwds.pop('doc', None)
         self._name  = kwds.pop('name', str(type(self).__name__))
         if kwds:
             raise ValueError(
@@ -378,7 +398,7 @@ class Component(_ComponentBase):
         #
         # Verify that ctype has been specified.
         #
-        if self._type is None:
+        if self._ctype is None:
             raise pyomo.common.DeveloperError(
                 "Must specify a component type for class %s!"
                 % ( type(self).__name__, ) )
@@ -440,9 +460,16 @@ class Component(_ComponentBase):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
+    @property
+    def ctype(self):
+        """Return the class type for this component"""
+        return self._ctype
+
+    @deprecated("Component.type() method has been replaced by the "
+                ".ctype property.", version='TBD')
     def type(self):
         """Return the class type for this component"""
-        return self._type
+        return self.ctype
 
     def construct(self, data=None):                     #pragma:nocover
         """API definition for constructing components"""
@@ -744,12 +771,19 @@ class ComponentData(_ComponentBase):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
-    def type(self):
+    @property
+    def ctype(self):
         """Return the class type for this component"""
         _parent = self.parent_component()
         if _parent is None:
-            return _parent
-        return _parent._type
+            return None
+        return _parent._ctype
+
+    @deprecated("Component.type() method has been replaced by the "
+                ".ctype property.", version='TBD')
+    def type(self):
+        """Return the class type for this component"""
+        return self.ctype
 
     def parent_component(self):
         """Returns the component associated with this object."""
