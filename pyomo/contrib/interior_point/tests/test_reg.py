@@ -49,8 +49,10 @@ class TestRegularization(unittest.TestCase):
 # The exact regularization coefficient at which Mumps recognizes the matrix
 # as non-singular appears to be non-deterministic...
 # I have seen 1e-4, 1e-2, and 1e0.
-# According to scipy, 1e-4 seems to be correct
+# According to scipy, 1e-4 seems to be correct, although Numpy's eigenvalue
+# routine is probably not as accurate as MUMPS
 # MUMPS 5.3.1 seems to settle on 1e-2
+# According to MA57, 1e-4 (or lower) is sufficient.
 #        # Expected regularization coefficient:
         self.assertAlmostEqual(ip_solver.reg_coef, 1e-2)
 
