@@ -172,9 +172,9 @@ class TestIsFixedCallCount(unittest.TestCase):
         with unittest.mock.patch(
             "pyomo.solvers.plugins.solvers.cplex_direct.is_fixed", wraps=is_fixed
         ) as mock_is_fixed:
-            mock_is_fixed.assert_not_called()
+            self.assertEqual(mock_is_fixed.call_count, 0)
             self._opt.add_constraint(self._model.c2)
-            mock_is_fixed.assert_called_once()
+            self.assertEqual(mock_is_fixed.call_count, 1)
 
     def test_skip_trivial_and_call_count_for_unfixed_con_is_two(self):
         self.setup(skip_trivial_constraints=True)
@@ -184,7 +184,7 @@ class TestIsFixedCallCount(unittest.TestCase):
         with unittest.mock.patch(
             "pyomo.solvers.plugins.solvers.cplex_direct.is_fixed", wraps=is_fixed
         ) as mock_is_fixed:
-            mock_is_fixed.assert_not_called()
+            self.assertEqual(mock_is_fixed.call_count, 0)
             self._opt.add_constraint(self._model.c2)
             self.assertEqual(mock_is_fixed.call_count, 2)
 
@@ -197,7 +197,7 @@ class TestIsFixedCallCount(unittest.TestCase):
         with unittest.mock.patch(
             "pyomo.solvers.plugins.solvers.cplex_direct.is_fixed", wraps=is_fixed
         ) as mock_is_fixed:
-            mock_is_fixed.assert_not_called()
+            self.assertEqual(mock_is_fixed.call_count, 0)
             self._opt.add_constraint(self._model.c2)
             self.assertEqual(mock_is_fixed.call_count, 3)
 
@@ -210,9 +210,9 @@ class TestIsFixedCallCount(unittest.TestCase):
         with unittest.mock.patch(
             "pyomo.solvers.plugins.solvers.cplex_direct.is_fixed", wraps=is_fixed
         ) as mock_is_fixed:
-            mock_is_fixed.assert_not_called()
+            self.assertEqual(mock_is_fixed.call_count, 0)
             self._opt.add_constraint(self._model.c2)
-            mock_is_fixed.assert_called_once()
+            self.assertEqual(mock_is_fixed.call_count, 1)
 
     def test_dont_skip_trivial_and_call_count_for_unfixed_con_is_one(self):
         self.setup(skip_trivial_constraints=False)
@@ -222,9 +222,9 @@ class TestIsFixedCallCount(unittest.TestCase):
         with unittest.mock.patch(
             "pyomo.solvers.plugins.solvers.cplex_direct.is_fixed", wraps=is_fixed
         ) as mock_is_fixed:
-            mock_is_fixed.assert_not_called()
+            self.assertEqual(mock_is_fixed.call_count, 0)
             self._opt.add_constraint(self._model.c2)
-            mock_is_fixed.assert_called_once()
+            self.assertEqual(mock_is_fixed.call_count, 1)
 
 
 if __name__ == "__main__":
