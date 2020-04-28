@@ -37,13 +37,22 @@ class DegreeError(ValueError):
 
 
 class _CplexExpr(object):
-    def __init__(self):
-        self.variables = []
-        self.coefficients = []
-        self.offset = 0
-        self.q_variables1 = []
-        self.q_variables2 = []
-        self.q_coefficients = []
+    def __init__(
+        self,
+        variables,
+        coefficients,
+        offset=None,
+        q_variables1=None,
+        q_variables2=None,
+        q_coefficients=None,
+    ):
+        self.variables = variables
+        self.coefficients = coefficients
+        self.offset = offset or 0.
+        self.q_variables1 = q_variables1 or []
+        self.q_variables2 = q_variables2 or []
+        self.q_coefficients = q_coefficients or []
+
 
 def _is_numeric(x):
     try:
@@ -203,29 +212,36 @@ class CPLEXDirect(DirectSolver):
         return Bunch(rc=None, log=None)
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
-        referenced_vars = ComponentSet()
-
         degree = repn.polynomial_degree()
-        if (degree is None) or (degree > max_degree):
-            raise DegreeError('CPLEXDirect does not support expressions of degree {0}.'.format(degree))
+        if degree is None or degree > max_degree:
+            raise DegreeError(
+                "CPLEXDirect does not support expressions of degree {0}.".format(degree)
+            )
 
-        new_expr = _CplexExpr()
-        if len(repn.linear_vars) > 0:
-            referenced_vars.update(repn.linear_vars)
-            new_expr.variables.extend(self._pyomo_var_to_ndx_map[i] for i in repn.linear_vars)
-            new_expr.coefficients.extend(repn.linear_coefs)
+        referenced_vars = ComponentSet(repn.linear_vars)
 
+        q_coefficients = []
+        q_variables1 = []
+        q_variables2 = []
         for i, v in enumerate(repn.quadratic_vars):
             x, y = v
-            new_expr.q_coefficients.append(repn.quadratic_coefs[i])
-            new_expr.q_variables1.append(self._pyomo_var_to_ndx_map[x])
-            new_expr.q_variables2.append(self._pyomo_var_to_ndx_map[y])
+            q_coefficients.append(repn.quadratic_coefs[i])
+            q_variables1.append(self._pyomo_var_to_ndx_map[x])
+            q_variables2.append(self._pyomo_var_to_ndx_map[y])
             referenced_vars.add(x)
             referenced_vars.add(y)
 
-        new_expr.offset = repn.constant
-
-        return new_expr, referenced_vars
+        return (
+            _CplexExpr(
+                variables=[self._pyomo_var_to_ndx_map[var] for var in repn.linear_vars],
+                coefficients=repn.linear_coefs,
+                offset=repn.constant,
+                q_variables1=q_variables1,
+                q_variables2=q_variables2,
+                q_coefficients=q_coefficients,
+            ),
+            referenced_vars,
+        )
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
         if max_degree == 2:
