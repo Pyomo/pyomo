@@ -26,6 +26,8 @@ from pyomo.core.kernel.component_map import ComponentMap
 
 currdir = dirname(abspath(__file__)) + os.sep
 
+ipopt_available = SolverFactory('ipopt').available()
+
 
 def make_model():
     m = ConcreteModel()
@@ -119,7 +121,7 @@ class TestDaeInitCond(unittest.TestCase):
         self.assertNotIn(m.fs.con2[m.space[1]], inconsistent)
 
 
-    # TODO: How to skip if solver (IPOPT) is not available?
+    @unittest.skipIf(not ipopt_available, 'ipopt is not available')
     def test_solve_consistent_initial_conditions(self):
         m = make_model()
         solver = SolverFactory('ipopt')
