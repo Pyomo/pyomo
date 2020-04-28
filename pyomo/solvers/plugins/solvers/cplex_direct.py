@@ -62,6 +62,77 @@ def _is_numeric(x):
     return True
 
 
+class _VariableData(object):
+    def __init__(self, solver_model):
+        self._solver_model = solver_model
+        self.lb = []
+        self.ub = []
+        self.types = []
+        self.names = []
+
+    def add(self, lb, ub, type_, name):
+        self.lb.append(lb)
+        self.ub.append(ub)
+        self.types.append(type_)
+        self.names.append(name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *excinfo):
+        self._solver_model.variables.add(
+            lb=self.lb, ub=self.ub, types=self.types, names=self.names
+        )
+
+
+class _LinearConstraintData(object):
+    def __init__(self, solver_model):
+        self._solver_model = solver_model
+        self.lin_expr = []
+        self.senses = []
+        self.rhs = []
+        self.range_values = []
+        self.names = []
+
+    def add(self, cplex_expr, sense, rhs, range_values, name):
+        self.lin_expr.append([cplex_expr.variables, cplex_expr.coefficients])
+        self.senses.append(sense)
+        self.rhs.append(rhs)
+        self.range_values.append(range_values)
+        self.names.append(name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *excinfo):
+        self._solver_model.linear_constraints.add(
+            lin_expr=self.lin_expr,
+            senses=self.senses,
+            rhs=self.rhs,
+            range_values=self.range_values,
+            names=self.names,
+        )
+
+
+class nullcontext(object):
+    """Context manager that does no additional processing.
+    Used as a stand-in for a normal context manager, when a particular
+    block of code is only sometimes used with a normal context manager:
+    cm = optional_cm if condition else nullcontext()
+    with cm:
+        # Perform operation, using optional_cm if condition is True
+    """
+
+    def __init__(self, enter_result=None):
+        self.enter_result = enter_result
+
+    def __enter__(self):
+        return self.enter_result
+
+    def __exit__(self, *excinfo):
+        pass
+
+
 @SolverFactory.register('cplex_direct', doc='Direct python interface to CPLEX')
 class CPLEXDirect(DirectSolver):
 
@@ -248,7 +319,7 @@ class CPLEXDirect(DirectSolver):
 
         return cplex_expr, referenced_vars
 
-    def _add_var(self, var):
+    def _add_var(self, var, cplex_var_data=None):
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._cplex_vtype_from_var(var)
         if var.has_lb():
@@ -260,7 +331,14 @@ class CPLEXDirect(DirectSolver):
         else:
             ub = self._cplex.infinity
 
-        self._solver_model.variables.add(lb=[lb], ub=[ub], types=[vtype], names=[varname])
+
+        ctx = (
+            _VariableData(self._solver_model)
+            if cplex_var_data is None
+            else nullcontext(cplex_var_data)
+        )
+        with ctx as cplex_var_data:
+            cplex_var_data.add(lb=lb, ub=ub, type_=vtype, name=varname)
 
         self._pyomo_var_to_solver_var_map[var] = varname
         self._solver_var_to_pyomo_var_map[varname] = var
@@ -303,7 +381,49 @@ class CPLEXDirect(DirectSolver):
                             "by overwriting its bounds in the CPLEX instance."
                             % (var.name, self._pyomo_model.name,))
 
-    def _add_constraint(self, con):
+    def _add_block(self, block):
+        with _VariableData(self._solver_model) as cplex_var_data:
+            for var in block.component_data_objects(
+                ctype=pyomo.core.base.var.Var, descend_into=True, active=True, sort=True
+            ):
+                self._add_var(var, cplex_var_data)
+
+        with _LinearConstraintData(self._solver_model) as cplex_lin_con_data:
+            for sub_block in block.block_data_objects(descend_into=True, active=True):
+                for con in sub_block.component_data_objects(
+                    ctype=pyomo.core.base.constraint.Constraint,
+                    descend_into=False,
+                    active=True,
+                    sort=True,
+                ):
+                    if not con.has_lb() and not con.has_ub():
+                        assert not con.equality
+                        continue  # non-binding, so skip
+
+                    self._add_constraint(con, cplex_lin_con_data)
+
+                for con in sub_block.component_data_objects(
+                    ctype=pyomo.core.base.sos.SOSConstraint,
+                    descend_into=False,
+                    active=True,
+                    sort=True,
+                ):
+                    self._add_sos_constraint(con)
+
+                obj_counter = 0
+                for obj in sub_block.component_data_objects(
+                    ctype=pyomo.core.base.objective.Objective,
+                    descend_into=False,
+                    active=True,
+                ):
+                    obj_counter += 1
+                    if obj_counter > 1:
+                        raise ValueError(
+                            "Solver interface does not support multiple objectives."
+                        )
+                    self._set_objective(obj)
+
+    def _add_constraint(self, con, cplex_lin_con_data=None):
         if not con.active:
             return None
 
@@ -314,12 +434,12 @@ class CPLEXDirect(DirectSolver):
 
         if con._linear_canonical_form:
             cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(
-                con.canonical_form(),
-                self._max_constraint_degree)
+                con.canonical_form(), self._max_constraint_degree
+            )
         else:
             cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(
-                con.body,
-                self._max_constraint_degree)
+                con.body, self._max_constraint_degree
+            )
 
         if con.has_lb():
             if not is_fixed(con.lower):
@@ -330,39 +450,39 @@ class CPLEXDirect(DirectSolver):
                 raise ValueError("Upper bound of constraint {0} "
                                  "is not constant.".format(con))
 
+        range_ = 0.0
         if con.equality:
-            my_sense = 'E'
-            my_rhs = [value(con.lower) - cplex_expr.offset]
-            my_range = []
+            sense = "E"
+            rhs = value(con.lower) - cplex_expr.offset
         elif con.has_lb() and con.has_ub():
-            my_sense = 'R'
+            sense = "R"
             lb = value(con.lower)
             ub = value(con.upper)
-            my_rhs = [ub - cplex_expr.offset]
-            my_range = [lb - ub]
+            rhs = ub - cplex_expr.offset
+            range_ = lb - ub
             self._range_constraints.add(con)
         elif con.has_lb():
-            my_sense = 'G'
-            my_rhs = [value(con.lower) - cplex_expr.offset]
-            my_range = []
+            sense = "G"
+            rhs = value(con.lower) - cplex_expr.offset
         elif con.has_ub():
-            my_sense = 'L'
-            my_rhs = [value(con.upper) - cplex_expr.offset]
-            my_range = []
+            sense = "L"
+            rhs = value(con.upper) - cplex_expr.offset
         else:
-            raise ValueError("Constraint does not have a lower "
-                             "or an upper bound: {0} \n".format(con))
+            raise ValueError(
+                "Constraint does not have a lower "
+                "or an upper bound: {0} \n".format(con)
+            )
 
         if len(cplex_expr.q_coefficients) == 0:
-            self._solver_model.linear_constraints.add(
-                lin_expr=[[cplex_expr.variables,
-                           cplex_expr.coefficients]],
-                senses=my_sense,
-                rhs=my_rhs,
-                range_values=my_range,
-                names=[conname])
+            ctx = (
+                _LinearConstraintData(self._solver_model)
+                if cplex_lin_con_data is None
+                else nullcontext(cplex_lin_con_data)
+            )
+            with ctx as cplex_lin_con_data:
+                cplex_lin_con_data.add(cplex_expr, sense, rhs, range_, conname)
         else:
-            if my_sense == 'R':
+            if sense == 'R':
                 raise ValueError("The CPLEXDirect interface does not "
                                  "support quadratic range constraints: "
                                  "{0}".format(con))
@@ -372,8 +492,8 @@ class CPLEXDirect(DirectSolver):
                 quad_expr=[cplex_expr.q_variables1,
                            cplex_expr.q_variables2,
                            cplex_expr.q_coefficients],
-                sense=my_sense,
-                rhs=my_rhs[0],
+                sense=sense,
+                rhs=rhs,
                 name=conname)
 
         for var in referenced_vars:
