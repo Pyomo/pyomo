@@ -2,8 +2,8 @@ name: Pyomo Release Distribution Creation
 
 on:
   push:
-    branches:
-      - wheel_creation
+    tags:
+    - '*'
 
 jobs:
   manylinux:
