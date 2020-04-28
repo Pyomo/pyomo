@@ -291,6 +291,7 @@ class CPLEXDirectTests(unittest.TestCase):
 @unittest.skipIf(not unittest.mock_available, "'mock' is not available")
 @unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
 class TestIsFixedCallCount(unittest.TestCase):
+    """ Tests for PR#1402 (669e7b2b) """
     def setup(self, skip_trivial_constraints):
         m = ConcreteModel()
         m.x = Var()
