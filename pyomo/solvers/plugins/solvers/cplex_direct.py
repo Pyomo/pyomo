@@ -602,13 +602,13 @@ class CPLEXDirect(DirectSolver):
                 soln_constraints = soln.constraint
 
                 var_names = self._solver_model.variables.get_names()
-                var_names = list(set(var_names).intersection(set(self._pyomo_var_to_solver_var_map.values())))
-                var_vals = self._solver_model.solution.get_values(var_names)
-                for i, name in enumerate(var_names):
+                assert set(var_names) == set(self._pyomo_var_to_solver_var_map.values())
+                var_vals = self._solver_model.solution.get_values()
+                for name, val in zip(var_names, var_vals):
                     pyomo_var = self._solver_var_to_pyomo_var_map[name]
                     if self._referenced_variables[pyomo_var] > 0:
                         pyomo_var.stale = False
-                        soln_variables[name] = {"Value":var_vals[i]}
+                        soln_variables[name] = {"Value": val}
 
                 if extract_reduced_costs:
                     reduced_costs = self._solver_model.solution.get_reduced_costs(var_names)
@@ -696,18 +696,18 @@ class CPLEXDirect(DirectSolver):
                     self._solver_model.MIP_starts.effort_level.auto)
 
     def _load_vars(self, vars_to_load=None):
-        var_map = self._pyomo_var_to_solver_var_map
-        ref_vars = self._referenced_variables
+        var_map = self._pyomo_var_to_ndx_map
         if vars_to_load is None:
+            vals = self._solver_model.solution.get_values()
             vars_to_load = var_map.keys()
+        else:
+            cplex_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
+            vals = self._solver_model.solution.get_values(cplex_vars_to_load)
 
-        cplex_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
-        vals = self._solver_model.solution.get_values(cplex_vars_to_load)
-
-        for i, pyomo_var in enumerate(vars_to_load):
-            if ref_vars[pyomo_var] > 0:
+        for pyomo_var, val in zip(vars_to_load, vals):
+            if self._referenced_variables[pyomo_var] > 0:
                 pyomo_var.stale = False
-                pyomo_var.value = vals[i]
+                pyomo_var.value = val
 
     def _load_rc(self, vars_to_load=None):
         if not hasattr(self._pyomo_model, 'rc'):
