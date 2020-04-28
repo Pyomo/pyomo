@@ -331,6 +331,9 @@ class CPLEXDirect(DirectSolver):
         else:
             ub = self._cplex.infinity
 
+        if var.is_fixed():
+            lb = value(var)
+            ub = value(var)
 
         ctx = (
             _VariableData(self._solver_model)
@@ -345,10 +348,6 @@ class CPLEXDirect(DirectSolver):
         self._pyomo_var_to_ndx_map[var] = self._ndx_count
         self._ndx_count += 1
         self._referenced_variables[var] = 0
-
-        if var.is_fixed():
-            self._solver_model.variables.set_lower_bounds(varname, var.value)
-            self._solver_model.variables.set_upper_bounds(varname, var.value)
 
     def _set_instance(self, model, kwds={}):
         self._pyomo_var_to_ndx_map = ComponentMap()
@@ -441,14 +440,15 @@ class CPLEXDirect(DirectSolver):
                 con.body, self._max_constraint_degree
             )
 
-        if con.has_lb():
-            if not is_fixed(con.lower):
-                raise ValueError("Lower bound of constraint {0} "
-                                 "is not constant.".format(con))
-        if con.has_ub():
-            if not is_fixed(con.upper):
-                raise ValueError("Upper bound of constraint {0} "
-                                 "is not constant.".format(con))
+        if con.has_lb() and not is_fixed(con.lower):
+            raise ValueError(
+                "Lower bound of constraint {0} is not constant.".format(con)
+            )
+
+        if con.has_ub() and not is_fixed(con.upper):
+            raise ValueError(
+                "Upper bound of constraint {0} is not constant.".format(con)
+            )
 
         range_ = 0.0
         if con.equality:
