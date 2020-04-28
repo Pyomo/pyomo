@@ -453,7 +453,6 @@ class CPLEXDirect(DirectSolver):
             self._objective = None
 
         self._solver_model.objective.set_linear([(i, 0.0) for i in range(len(self._pyomo_var_to_solver_var_map.values()))])
-        self._solver_model.objective.set_quadratic([[[0], [0]] for i in self._pyomo_var_to_solver_var_map.keys()])
 
         if obj.active is False:
             raise ValueError('Cannot add inactive objective to solver.')
