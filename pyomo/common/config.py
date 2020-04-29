@@ -168,4 +168,3 @@ class ConfigEnum(enum.Enum):
         else:
             # Handles enum or integer inputs
             return cls(arg)
-

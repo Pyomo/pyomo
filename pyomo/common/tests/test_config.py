@@ -350,5 +350,3 @@ class TestConfig(unittest.TestCase):
             TestEnum.ITEM_TWO), TestEnum.ITEM_TWO)
         self.assertEqual(TestEnum.from_enum_or_string('ITEM_ONE'),
                 TestEnum.ITEM_ONE)
-
-
