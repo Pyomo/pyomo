@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 from pyomo.core.base import Block, Var, Reference
 from pyomo.core.base.block import SubclassOf
-from pyomo.core.base.indexed_component_slice import _IndexedComponent_slice
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 
 
 def generate_time_only_slices(obj, time):
@@ -49,7 +49,7 @@ def generate_time_only_slices(obj, time):
     tmp_sliced = {i: slice(None) for i in regular_idx}
     tmp_fixed = {time_idx: time.first()}
     tmp_ellipsis = ellipsis_idx
-    _slice = _IndexedComponent_slice(
+    _slice = IndexedComponent_slice(
         obj, tmp_fixed, tmp_sliced, tmp_ellipsis
     )
     # For each combination of regular indices, we can generate a single
@@ -62,7 +62,7 @@ def generate_time_only_slices(obj, time):
             (i, val) if i<time_idx else (i+1, val)
             for i,val in enumerate(key)
         )
-        yield _IndexedComponent_slice(obj, time_fixed, time_sliced, None)
+        yield IndexedComponent_slice(obj, time_fixed, time_sliced, None)
 
 
 def generate_time_indexed_block_slices(block, time):
