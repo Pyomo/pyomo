@@ -81,12 +81,12 @@ def generate_time_indexed_block_slices(block, time):
         for sub_b in b.component_objects(Block, descend_into=False):
             _name = sub_b.local_name
             for idx in sub_b:
-                queue.append(_slice.duplicate().component(_name)[idx])
+                queue.append(_slice.component(_name)[idx])
         # Any Vars must be mapped to slices and returned
         for v in b.component_objects(Var, descend_into=False):
             _name = v.local_name
             for idx in v:
-                yield _slice.duplicate().component(_name)[idx]
+                yield _slice.component(_name)[idx]
         
 
 def flatten_dae_variables(model, time):

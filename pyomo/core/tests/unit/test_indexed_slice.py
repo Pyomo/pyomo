@@ -233,7 +233,7 @@ class TestComponentSlices(unittest.TestCase):
         _slice = self.m.b[...].c[...].x[:]
         with self.assertRaisesRegexp(
                 AttributeError, ".*VarData' object has no attribute 'bogus'"):
-            _slice.duplicate().bogus = 0
+            _slice.bogus = 0
         # but disabling the exception flag will run without error
         _slice.attribute_errors_generate_exceptions = False
         # This doesn't do anything ... simply not raising an exception
@@ -253,12 +253,12 @@ class TestComponentSlices(unittest.TestCase):
             _IndexedComponent_slice.del_attribute,
             _slice._call_stack[-1][1] )
         # call the iterator to delete the attributes
-        list(_slice.duplicate())
+        list(_slice)
         self.assertEqual(sum(list(1 if hasattr(x,'foo') else 0
                                   for x in self.m.b[:,:].c[:,:].x)), 0)
         # calling the iterator again will raise an exception
         with self.assertRaisesRegexp(AttributeError, 'foo'):
-            list(_slice.duplicate())
+            list(_slice)
         # but disabling the exception flag will run without error
         _slice.attribute_errors_generate_exceptions = False
         # This doesn't do anything ... simply not raising an exception
@@ -284,7 +284,7 @@ class TestComponentSlices(unittest.TestCase):
         with self.assertRaisesRegexp(
                 KeyError, "Index 'bogus' is not valid for indexed "
                 "component 'b\[1,4\]\.c\[1,4\]\.x'"):
-            _slice.duplicate()['bogus'] = 0
+            _slice['bogus'] = 0
         # but disabling the exception flag will run without error
         _slice.key_errors_generate_exceptions = False
         # This doesn't do anything ... simply not raising an exception
@@ -337,7 +337,7 @@ class TestComponentSlices(unittest.TestCase):
         with self.assertRaisesRegexp(
                 KeyError, "Index 'bogus' is not valid for indexed "
                 "component 'b\[2,4\]\.c\[1,4\]\.x'"):
-            del _slice.duplicate()['bogus']
+            del _slice['bogus']
         # but disabling the exception flag will run without error
         _slice.key_errors_generate_exceptions = False
         # This doesn't do anything ... simply not raising an exception
@@ -513,6 +513,40 @@ class TestComponentSlices(unittest.TestCase):
             self.assertIsNot(x, y)
             self.assertIs(x.model(), m)
             self.assertIs(y.model(), n)
+
+    def test_hash_eqality(self):
+        m = self.m
+        a = m.b[1,:].c[:,...,4].x
+        b = m.b[1,:].c[1,...,:].x
+        self.assertNotEqual(a, b)
+        self.assertNotEqual(a, m)
+
+        self.assertEqual(a, a)
+        self.assertEqual(a, m.b[1,:].c[:,...,4].x)
+
+        _set = set([a,b])
+        self.assertEqual(len(_set), 2)
+        _set.add(m.b[1,:].c[:,...,4].x)
+        self.assertEqual(len(_set), 2)
+        _set.add(m.b[1,:].c[:,4].x)
+        self.assertEqual(len(_set), 3)
+
+    def test_duplicate(self):
+        m = self.m
+        a = m.b[1,:].c[:,...,4]
+
+        b = a.x
+        self.assertIs(a._call_stack, b._call_stack)
+        self.assertEqual(a._len+1, b._len)
+
+        c = a.y
+        self.assertEqual(a._len+1, c._len)
+        self.assertIsNot(a._call_stack, c._call_stack)
+
+        b1 = b.duplicate()
+        self.assertIsNot(a._call_stack, b1._call_stack)
+        self.assertEqual(a._len+1, b1._len)
+        self.assertEqual(hash(b), hash(b1))
 
 if __name__ == "__main__":
     unittest.main()
