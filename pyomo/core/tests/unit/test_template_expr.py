@@ -11,13 +11,16 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Set, value
+from pyomo.environ import (
+    ConcreteModel, AbstractModel, RangeSet, Param, Var, Set, value,
+)
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.template_expr import (
     IndexTemplate,
     TemplateExpressionError,
     _GetItemIndexer,
     resolve_template,
+    templatize_constraint,
     substitute_template_expression, 
     substitute_getitem_with_param,
     substitute_template_with_value,
@@ -128,7 +131,6 @@ class TestTemplateExpressions(unittest.TestCase):
         self.assertIs(e.arg(1).arg(1), m.P[5])
         self.assertEqual(str(e), "x[{I} + P[5]]")
 
-
     def test_nested_template_operation(self):
         m = self.m
         t = IndexTemplate(m.I)
@@ -142,7 +144,6 @@ class TestTemplateExpressions(unittest.TestCase):
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
         self.assertEqual(str(e), "x[{I} + P[{I} + 1]]")
-
 
     def test_block_templates(self):
         m = ConcreteModel()
@@ -181,7 +182,6 @@ class TestTemplateExpressions(unittest.TestCase):
         self.assertEqual(v, 1)
         self.assertIs(resolve_template(e), m.b[2].bb[2].y[1])
 
-
     def test_template_name(self):
         m = self.m
         t = IndexTemplate(m.I)
@@ -191,7 +191,6 @@ class TestTemplateExpressions(unittest.TestCase):
 
         E = m.x[t+m.P[1+t]**2.]**2. + m.P[1]
         self.assertEqual( str(E), "x[{I} + P[1 + {I}]**2.0]**2.0 + P[1]")
-
 
     def test_template_in_expression(self):
         m = self.m
@@ -244,7 +243,6 @@ class TestTemplateExpressions(unittest.TestCase):
         self.assertIs(type(e.arg(1).arg(1)), EXPR.GetItemExpression)
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
-
 
     def test_clone(self):
         m = self.m
@@ -321,6 +319,49 @@ class TestTemplateExpressions(unittest.TestCase):
                          E_base.arg(-1).arg(1).arg(1))
         self.assertIsInstance(e.arg(1).arg(1).arg(1), EXPR.SumExpressionBase)
         self.assertIs(e.arg(1).arg(1).arg(1).arg(0), t)
+
+
+class TestTemplatizeRule(unittest.TestCase):
+    def test_simple_rule(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.x = Var(m.I)
+        @m.Constraint(m.I)
+        def c(m, i):
+            return m.x[i] <= 0
+
+        template, indices = templatize_constraint(m.c)
+        self.assertEqual(len(indices), 1)
+        self.assertIs(indices[0]._set, m.I)
+        self.assertEqual(str(template), "x[_1]  <=  0.0")
+        # Test that the RangeSet iterator was put back
+        self.assertEqual(list(m.I), list(range(1,4)))
+        # Evaluate the template
+        indices[0].set_value(2)
+        self.assertEqual(str(resolve_template(template)), 'x[2]  <=  0.0')
+
+    def test_simple_abstract_rule(self):
+        m = AbstractModel()
+        m.I = RangeSet(3)
+        m.x = Var(m.I)
+        @m.Constraint(m.I)
+        def c(m, i):
+            return m.x[i] <= 0
+
+        # Note: the constraint can be abstract, but the Set/Var must
+        # have been constructed (otherwise accessing the Set raises an
+        # exception)
+
+        with self.assertRaisesRegex(
+                ValueError, ".*has not been constructed"):
+            template, indices = templatize_constraint(m.c)
+
+        m.I.construct()
+        m.x.construct()
+        template, indices = templatize_constraint(m.c)
+        self.assertEqual(len(indices), 1)
+        self.assertIs(indices[0]._set, m.I)
+        self.assertEqual(str(template), "x[_1]  <=  0.0")
 
 
 class TestTemplateSubstitution(unittest.TestCase):

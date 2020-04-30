@@ -108,7 +108,7 @@ except:
 #: like numpy.
 #:
 #: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
-native_types = set([ bool, str, type(None) ])
+native_types = set([ bool, str, type(None), slice ])
 if PY3:
     native_types.add(bytes)
     native_boolean_types.add(bytes)

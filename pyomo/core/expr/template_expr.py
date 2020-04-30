@@ -10,6 +10,7 @@
 
 import copy
 import logging
+import sys
 from six import iteritems, itervalues
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
@@ -21,6 +22,8 @@ from pyomo.core.expr.numeric_expr import ExpressionBase
 from pyomo.core.expr.visitor import (
     ExpressionReplacementVisitor, StreamBasedExpressionVisitor
 )
+
+logger = logging.getLogger(__name__)
 
 class _NotSpecified(object): pass
 
@@ -53,21 +56,39 @@ class GetItemExpression(ExpressionBase):
         if any( getattr(arg, 'is_potentially_variable', _false)()
                 for arg in self._args_ ):
             return True
+        base = self._args_[0]
+        if base.is_expression_type():
+            base = value(base)
+        # TODO: fix value iteration when generating templates
+        #
+        # There is a nasty problem here: we want to iterate over all the
+        # members of the base and see if *any* of them are potentially
+        # variable.  Unfortunately, this method is called during
+        # expression generation, and we *could* be generating a
+        # template.  When that occurs, iterating over the base will
+        # yield a new IndexTemplate (which will in turn raise an
+        # exception because IndexTemplates are not constant).  The real
+        # solution is probably to re-think how we define
+        # is_potentially_variable, but for now we will only handle
+        # members that are explicitly stored in the _data dict.  Not
+        # general (because a Component could implement a non-standard
+        # storage scheme), but as of now [30 Apr 20], there are no known
+        # Components where this assumption will cause problems.
         return any( getattr(x, 'is_potentially_variable', _false)()
-                    for x in itervalues(self._args_[0]) )
+                    for x in itervalues(getattr(base, '_data', {})) )
 
     def _is_fixed(self, values):
         if not all(values[1:]):
             return False
         _true = lambda: True
         return all( getattr(x, 'is_fixed', _true)()
-                    for x in itervalues(self._args_[0]) )
+                    for x in itervalues(values[0]) )
 
     def _compute_polynomial_degree(self, result):
         if any(x != 0 for x in result[1:]):
             return None
         ans = 0
-        for x in itervalues(self._args_[0]):
+        for x in itervalues(result[0]):
             if x.__class__ in nonpyomo_leaf_types \
                or not hasattr(x, 'polynomial_degree'):
                 continue
@@ -80,7 +101,12 @@ class GetItemExpression(ExpressionBase):
 
     def _apply_operation(self, result):
         obj = result[0].__getitem__( tuple(result[1:]) )
-        if obj.__class__ not in nonpyomo_leaf_types and obj.is_numeric_type():
+        if obj.__class__ in nonpyomo_leaf_types:
+            return obj
+        # Note that because it is possible (likely) that the result
+        # could be an IndexedComponent_slice object, must test "is
+        # True", as the slice will return a list of values.
+        if obj.is_numeric_type() is True:
             obj = value(obj)
         return obj
 
@@ -127,7 +153,12 @@ class GetAttrExpression(ExpressionBase):
     def _apply_operation(self, result):
         assert len(result) == 2
         obj = getattr(result[0], result[1])
-        if obj.is_numeric_type():
+        if obj.__class__ in nonpyomo_leaf_types:
+            return obj
+        # Note that because it is possible (likely) that the result
+        # could be an IndexedComponent_slice object, must test "is
+        # True", as the slice will return a list of values.
+        if obj.is_numeric_type() is True:
             obj = value(obj)
         return obj
 
@@ -625,14 +656,16 @@ class _template_iter_context(object):
             (expr,), self.npop_cache(final_cache-init_cache)
         )
 
+
 def templatize_rule(block, rule, index_set):
     import pyomo.core.base.set
     context = _template_iter_context()
+    internal_error = None
     try:
         # Override Set iteration to return IndexTemplates
         _old_iter = pyomo.core.base.set._FiniteSetMixin.__iter__
         pyomo.core.base.set._FiniteSetMixin.__iter__ = \
-            lambda x: context.get_iter(x)
+            lambda x: context.get_iter(x).__iter__()
         # Override sum with our sum
         _old_sum = __builtins__['sum']
         __builtins__['sum'] = context.sum_template
@@ -649,17 +682,29 @@ def templatize_rule(block, rule, index_set):
         if type(indices) is not tuple:
             indices = (indices,)
         # Call the rule, returning the template expression and the
-        # top-level IndexTemplaed generated when calling the rule.
+        # top-level IndexTemplate(s) generated when calling the rule.
         #
         # TBD: Should this just return a "FORALL()" expression node that
         # behaves similarly to the GetItemExpression node?
         return rule(block, *indices), indices
+    except:
+        internal_error = sys.exc_info()
+        raise
     finally:
         pyomo.core.base.set._FiniteSetMixin.__iter__ = _old_iter
         __builtins__['sum'] = _old_sum
+        if internal_error is not None:
+            logger.error("The following exception was raised when "
+                         "templatizing the rule '%s':\n\t%s"
+                         % (rule.__name__, internal_error[1]))
         if len(context.cache):
             raise TemplateExpressionError(
                 None,
-                "Explicit iteration (for loops) over Sets is not supported by "
-                "template expressions.  Encountered loop over %s"
+                "Explicit iteration (for loops) over Sets is not supported "
+                "by template expressions.  Encountered loop over %s"
                 % (context.cache[-1][0]._set,))
+    return None, indices
+
+
+def templatize_constraint(con):
+    return templatize_rule(con.parent_block(), con.rule, con.index_set())
