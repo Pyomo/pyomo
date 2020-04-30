@@ -237,9 +237,6 @@ class IndexedComponent_slice(object):
             return list( i for i in ans )
 
     def __hash__(self):
-        print self._call_stack[:self._len]
-        tmp = tuple(_freeze(x) for x in self._call_stack[:self._len])
-        print tmp
         return hash(tuple(_freeze(x) for x in self._call_stack[:self._len]))
 
     def __eq__(self, other):
