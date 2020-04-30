@@ -6,14 +6,18 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-from pyomo.core.base import Constraint, Param, value, Suffix, Block
+from pyomo.core.base import Constraint, Param, Var, value, Suffix, Block
 
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import NumericValue, native_numeric_types
+from pyomo.core.expr.numvalue import (
+    NumericValue, native_numeric_types, nonpyomo_leaf_types,
+)
 from pyomo.core.expr.template_expr import IndexTemplate, _GetItemIndexer
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.reference import Reference
 
 from six import iterkeys, itervalues
 
@@ -204,6 +208,49 @@ def _check_viewsumexpression(expr, i):
 
     return None
 
+
+class new_Pyomo2Scipy_Visitor(EXPR.StreamBasedExpressionVisitor):
+    def __init__(self, template_map=None):
+        super(new_Pyomo2Scipy_Visitor, self).__init__()
+        self.template_map = template_map if template_map is not None else {}
+
+    def beforeChild(self, node, child):
+        if child.__class__ in nonpyomo_leaf_types:
+            return False, child
+        elif child.is_expression_type():
+            return True, None
+        elif child.is_numeric_type():
+            return False, value(child)
+        else:
+            return False, child
+
+    def enterNode(self, node):
+        return node.args, [False]
+
+    def acceptChildResult(self, node, data, child_result):
+        i = len(data) - 1
+        if child_result.__class__ is IndexedComponent_slice:
+            if not hasattr(node, '_resolve_template'):
+                if child_result not in self.template_map:
+                    _slice = Reference(child_result, ctype=Var)
+                    _param = Param(
+                        mutable=True,
+                        name="p%s" % (len(self.template_map),),
+                    )
+                    _param.construct()
+                    self.template_map[child_result] = (_slice, _param)
+                child_result = self.template_map[child_result][1]
+        data[0] |= (child_result is not node.arg(i))
+        data.append(child_result)
+        return data
+
+    def exitNode(self, node, data):
+        if hasattr(node, '_resolve_template'):
+            return node._apply_operation(data[1:])
+        elif data[0]:
+            return node.create_node_with_local_data(tuple(data[1:]))
+        else:
+            return node
 
 class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
     """
