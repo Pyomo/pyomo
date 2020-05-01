@@ -399,15 +399,32 @@ class ConvexHull_Transformation(Transformation):
         # should not be disaggregated is if it only appears in one disjunct in
         # the whole model, which is not something we detect.)
         varSet = []
+        localVars = ComponentMap((d,[]) for d in obj.disjuncts)
         for var in varOrder:
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
+            # ESJ TODO: this check is a moot point though maybe still worthwhile
+            # because if this is true and we do the Suffix thing and someone
+            # thinks that var is local, we could at least throw an error in the
+            # easy case where they are wrong. (also so that the next elif isn't
+            # wrong in that case)
             if len(disjuncts) > 1:
                 varSet.append(var)
-            elif self._contained_in(var, transBlock):
-                # There is nothing to do here: these are already
-                # disaggregated vars that can/will be forced to 0 when
-                # their disjunct is not active.
-                pass
+            elif self._is_disaggregated_var(var):
+                # this is a variable that we created while transforming an inner
+                # disjunction. We know therefore that it is truly local and need
+                # not be disaggregated again. NOTE that this assumes someone
+                # didn't do something like transforming an inner disjunction
+                # with chull, adding constraints outside of this disjunct that
+                # involved the disaggregated variables and is now transforming
+                # that model. If they did that, then this is wrong. We should be
+                # disaggregating again. But it seems insane to me to
+                # double-disaggregate *always* in order to account for that
+                # case. Perhaps though we should implement a Suffix on the
+                # Disjunct which will allow a user to promise something is truly
+                # local. Then we can use it to make the promise to ourselves,
+                # and if they break that promise, they can update it
+                # accordingly?
+                localVars[disjuncts[0]].append(var)
             else:
                 varSet.append(var)
 
@@ -416,7 +433,8 @@ class ConvexHull_Transformation(Transformation):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
-            self._transform_disjunct(disjunct, transBlock, varSet)
+            self._transform_disjunct(disjunct, transBlock, varSet,
+                                     localVars[disjunct])
         orConstraint.add(index, (or_expr, 1))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
@@ -459,7 +477,7 @@ class ConvexHull_Transformation(Transformation):
         # deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, transBlock, varSet):
+    def _transform_disjunct(self, obj, transBlock, varSet, localVars):
         # deactivated should only come from the user
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -554,6 +572,34 @@ class ConvexHull_Transformation(Transformation):
                     'ub', disaggregatedVar <= obj.indicator_var*ub)
 
             relaxationBlock._bigMConstraintMap[disaggregatedVar] = bigmConstraint
+
+        for var in localVars:
+            lb = var.lb
+            ub = var.ub
+            if lb is None or ub is None:
+                raise GDP_Error("Variables that appear in disjuncts must be "
+                                "bounded in order to use the chull "
+                                "transformation! Missing bound for %s."
+                                % (var.name))
+            if value(lb) > 0:
+                var.setlb(0)
+            if value(ub) < 0:
+                var.setub(0)
+
+            # naming conflicts are possible here since this is a bunch
+            # of variables from different blocks coming together, so we
+            # get a unique name
+            conName = unique_component_name(
+                relaxationBlock,
+                var.getname(fully_qualified=False, name_buffer=NAME_BUFFER) + \
+                "_bounds")
+            bigmConstraint = Constraint(transBlock.lbub)
+            relaxationBlock.add_component(conName, bigmConstraint)
+            if lb:
+                bigmConstraint.add('lb', obj.indicator_var*lb <= var)
+            if ub:
+                bigmConstraint.add('ub', var <= obj.indicator_var*ub)
+            relaxationBlock._bigMConstraintMap[var] = bigmConstraint
             
         var_substitute_map = dict((id(v), newV) for v, newV in iteritems(
             relaxationBlock._disaggregatedVarMap['disaggregatedVar']))
@@ -561,6 +607,7 @@ class ConvexHull_Transformation(Transformation):
                                    iteritems(
                                        relaxationBlock._disaggregatedVarMap[
                                            'disaggregatedVar']))
+        zero_substitute_map.update((id(v), ZeroConstant) for v in localVars)
 
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, var_substitute_map,
@@ -718,8 +765,7 @@ class ConvexHull_Transformation(Transformation):
                         # variable.
                         # Also TODO: I guess this should be a list if c is a
                         # constraintData... If we go for this system at all.
-                        constraintMap[
-                            'transformedConstraints'][c] = v[0]
+                        constraintMap['transformedConstraints'][c] = v[0]
                         # also an open question whether this makes sense:
                         constraintMap['srcConstraints'][v[0]] = c
                         continue
@@ -811,6 +857,17 @@ class ConvexHull_Transformation(Transformation):
             raise GDP_Error("%s does not appear to be a disaggregated variable"
                             % disaggregated_var.name)
         return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
+
+    def _is_disaggregated_var(self, var):
+        """ Returns True if var is a disaggregated variable, False otherwise.
+        This is used so that we can avoid double-disaggregating.
+        """
+        parent = var.parent_block()
+        if hasattr(parent, "_disaggregatedVarMap") and 'srcVar' in \
+           parent._disaggregatedVarMap:
+            return var in parent._disaggregatedVarMap['srcVar']
+
+        return False
 
     # retrieves the disaggregation constraint for original_var resulting from
     # transforming disjunction
