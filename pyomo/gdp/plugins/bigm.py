@@ -26,7 +26,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (target_list, is_child_of, get_src_disjunction,
-                            get_src_constraint, get_transformed_constraint,
+                            get_src_constraint, get_transformed_constraints,
                             _get_constraint_transBlock, get_src_disjunct,
                             _warn_for_active_disjunction,
                             _warn_for_active_disjunct)
@@ -564,12 +564,16 @@ class BigM_Transformation(Transformation):
                 # non-concrete set (like an Any).  We will give up on
                 # strict index verification and just blindly proceed.
                 newConstraint = Constraint(Any)
+            # we map the container of the original to the container of the
+            # transformed constraint. Don't do this if obj is a SimpleConstraint
+            # because we will treat that like a _ConstraintData and map to a
+            # list of transformed _ConstraintDatas
+            constraintMap['transformedConstraints'][obj] = newConstraint
         else:
             newConstraint = Constraint(disjunctionRelaxationBlock.lbub)
         transBlock.add_component(name, newConstraint)
-        # add mapping of original constraint to transformed constraint
+        # add mapping of transformed constraint to original constraint
         constraintMap['srcConstraints'][newConstraint] = obj
-        constraintMap['transformedConstraints'][obj] = newConstraint
 
         for i in sorted(iterkeys(obj)):
             c = obj[i]
@@ -647,12 +651,24 @@ class BigM_Transformation(Transformation):
                                     "because M is not defined." % name)
                 M_expr = M[0] * (1 - disjunct.indicator_var)
                 newConstraint.add(i_lb, c.lower <= c. body - M_expr)
+                constraintMap[
+                    'transformedConstraints'][c] = [newConstraint[i_lb]]
+                constraintMap['srcConstraints'][newConstraint[i_lb]] = c
             if c.upper is not None:
                 if M[1] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint %s "
                                     "because M is not defined." % name)
                 M_expr = M[1] * (1 - disjunct.indicator_var)
                 newConstraint.add(i_ub, c.body - M_expr <= c.upper)
+                transformed = constraintMap['transformedConstraints'].get(c)
+                if transformed is not None:
+                    constraintMap['transformedConstraints'][
+                        c].append(newConstraint[i_ub])
+                else:
+                    constraintMap[
+                        'transformedConstraints'][c] = [newConstraint[i_ub]]
+                constraintMap['srcConstraints'][newConstraint[i_ub]] = c
+
             # deactivate because we relaxed
             c.deactivate()
 
@@ -766,8 +782,8 @@ class BigM_Transformation(Transformation):
     def get_src_constraint(self, transformedConstraint):
         return get_src_constraint(transformedConstraint)
 
-    def get_transformed_constraint(self, srcConstraint):
-        return get_transformed_constraint(srcConstraint)
+    def get_transformed_constraints(self, srcConstraint):
+        return get_transformed_constraints(srcConstraint)
 
     def get_src_disjunction(self, xor_constraint):
         return get_src_disjunction(xor_constraint)

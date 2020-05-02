@@ -26,7 +26,7 @@ from pyomo.core import (
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (clone_without_expression_components, target_list,
                             is_child_of, get_src_disjunction,
-                            get_src_constraint, get_transformed_constraint,
+                            get_src_constraint, get_transformed_constraints,
                             get_src_disjunct, _warn_for_active_disjunction,
                             _warn_for_active_disjunct)
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
@@ -692,9 +692,12 @@ class ConvexHull_Transformation(Transformation):
         else:
             newConstraint = Constraint(transBlock.lbub)
         relaxationBlock.add_component(name, newConstraint)
+        # map the containers:
         # add mapping of original constraint to transformed constraint
-        constraintMap['transformedConstraints'][obj] = newConstraint
-        # add mapping of transformed constraint back to original constraint
+        if obj.is_indexed():
+            constraintMap['transformedConstraints'][obj] = newConstraint
+        # add mapping of transformed constraint container back to original
+        # constraint container (or SimpleConstraint)
         constraintMap['srcConstraints'][newConstraint] = obj
 
         for i in sorted(iterkeys(obj)):
@@ -756,30 +759,36 @@ class ConvexHull_Transformation(Transformation):
                         # that structure, the disaggregated variable
                         # will also be fixed to 0.
                         v[0].fix(0)
-                        # ESJ: TODO: I'm not sure what to do here... It is
-                        # reasonable to ask where the transformed constraint
-                        # is. The answer is the bounds of the disaggregated
-                        # variable... For now I think I will make that the
-                        # answer, but this is a bit wacky because usually the
-                        # answer to the question is a constraint, not a
-                        # variable.
-                        # Also TODO: I guess this should be a list if c is a
-                        # constraintData... If we go for this system at all.
-                        constraintMap['transformedConstraints'][c] = v[0]
-                        # also an open question whether this makes sense:
+                        # ESJ: If you ask where the transformed constraint is,
+                        # the answer is nowhere. Really, it is in the bounds of
+                        # this variable, so I'm going to return
+                        # it. Alternatively we could return an empty list, but I
+                        # think I like this better.
+                        constraintMap['transformedConstraints'][c] = [v[0]]
+                        # Reverse map also (this is strange)
                         constraintMap['srcConstraints'][v[0]] = c
                         continue
                     newConsExpr = expr - (1-y)*h_0 == c.lower*y
 
                 if obj.is_indexed():
                     newConstraint.add((i, 'eq'), newConsExpr)
-                    # map the constraintData (we mapped the container above)
+                    # map the _ConstraintDatas (we mapped the container above)
                     constraintMap[
                         'transformedConstraints'][c] = [newConstraint[i,'eq']]
                     constraintMap['srcConstraints'][newConstraint[i,'eq']] = c
-
                 else:
                     newConstraint.add('eq', newConsExpr)
+                    # map to the _ConstraintData (And yes, for
+                    # SimpleConstraints, this is overwriting the map to the
+                    # container we made above, and that is what I want to
+                    # happen. SimpleConstraints will map to lists. For
+                    # IndexedConstraints, we can map the container to the
+                    # container, but more importantly, we are mapping the
+                    # _ConstraintDatas to each other above)
+                    constraintMap[
+                        'transformedConstraints'][c] = [newConstraint['eq']]
+                    constraintMap['srcConstraints'][newConstraint['eq']] = c
+
                 continue
 
             if c.lower is not None:
@@ -795,12 +804,14 @@ class ConvexHull_Transformation(Transformation):
 
                 if obj.is_indexed():
                     newConstraint.add((i, 'lb'), newConsExpr)
-                    # map the constraintData (we mapped the container above)
                     constraintMap[
                         'transformedConstraints'][c] = [newConstraint[i,'lb']]
                     constraintMap['srcConstraints'][newConstraint[i,'lb']] = c
                 else:
                     newConstraint.add('lb', newConsExpr)
+                    constraintMap[
+                        'transformedConstraints'][c] = [newConstraint['lb']]
+                    constraintMap['srcConstraints'][newConstraint['lb']] = c
 
             if c.upper is not None:
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -815,16 +826,24 @@ class ConvexHull_Transformation(Transformation):
 
                 if obj.is_indexed():
                     newConstraint.add((i, 'ub'), newConsExpr)
-                    # map the constraintData (we mapped the container above)
+                    # map (have to account for fact we might have created list
+                    # above
                     transformed = constraintMap['transformedConstraints'].get(c)
-                    if not transformed is None:
+                    if transformed is not None:
                         transformed.append(newConstraint[i,'ub'])
                     else:
-                        constraintMap['transformedConstraints'][c] = \
-                                                        [newConstraint[i,'ub']]
+                        constraintMap['transformedConstraints'][
+                            c] = [newConstraint[i,'ub']]
                     constraintMap['srcConstraints'][newConstraint[i,'ub']] = c
                 else:
                     newConstraint.add('ub', newConsExpr)
+                    transformed = constraintMap['transformedConstraints'].get(c)
+                    if transformed is not None:
+                        transformed.append(newConstraint['ub'])
+                    else:
+                        constraintMap['transformedConstraints'][
+                            c] = [newConstraint['ub']]
+                    constraintMap['srcConstraints'][newConstraint['ub']] = c
 
         # deactivate now that we have transformed
         obj.deactivate()
@@ -838,8 +857,8 @@ class ConvexHull_Transformation(Transformation):
     def get_src_constraint(self, transformedConstraint):
         return get_src_constraint(transformedConstraint)
 
-    def get_transformed_constraint(self, srcConstraint):
-        return get_transformed_constraint(srcConstraint)
+    def get_transformed_constraints(self, srcConstraint):
+        return get_transformed_constraints(srcConstraint)
 
     def get_disaggregated_var(self, v, disjunct):
         # Retrieve the disaggregated var corresponding to the specified disjunct

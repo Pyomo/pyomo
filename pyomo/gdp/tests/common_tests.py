@@ -1097,7 +1097,7 @@ def check_retrieving_nondisjunctive_components(self, transformation):
         GDP_Error,
         "Constraint b.global_cons is not on a disjunct and so was not "
         "transformed",
-        trans.get_transformed_constraint,
+        trans.get_transformed_constraints,
         m.b.global_cons)
 
     self.assertRaisesRegexp(
@@ -1148,7 +1148,7 @@ def check_ask_for_transformed_constraint_from_untransformed_disjunct(
         GDP_Error,
         "Constraint disjunct\[2,b\].cons_b is on a disjunct which has "
         "not been transformed",
-        trans.get_transformed_constraint,
+        trans.get_transformed_constraints,
         m.disjunct[2, 'b'].cons_b)
 
 def check_error_for_same_disjunct_in_multiple_disjunctions(self, transformation):

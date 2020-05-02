@@ -12,7 +12,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 from pyomo.gdp import *
-from pyomo.core.base import constraint
+from pyomo.core.base import constraint, _ConstraintData
 from pyomo.core.expr import current as EXPR
 from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
@@ -24,6 +24,9 @@ import random
 import sys
 
 from six import iteritems, StringIO
+
+# DEBUG
+from nose.tools import set_trace
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
@@ -75,6 +78,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_disjunct_mapping(self, 'bigm')
 
     def test_disjunct_and_constraint_maps(self):
+        """Tests the actual data structures used to store the maps."""
         # ESJ: Note that despite outward appearances, this test really is unique
         # to bigm. Because chull handles the a == 0 constraint by fixing the
         # disaggregated variable rather than creating a transformed constraint.
@@ -107,26 +111,45 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIsInstance(transformedConstraints2, ComponentMap)
         self.assertEqual(len(transformedConstraints2), 2)
         # check constraint dict has right mapping
-        self.assertIs(transformedConstraints2[oldblock[1].c1],
-                      disjBlock[1].component(oldblock[1].c1.name))
-        self.assertIs(transformedConstraints2[oldblock[1].c2],
-                      disjBlock[1].component(oldblock[1].c2.name))
-        self.assertIs(transformedConstraints1[oldblock[0].c],
-                      disjBlock[0].component(oldblock[0].c.name))
+        c1_list = transformedConstraints2[oldblock[1].c1]
+        self.assertEqual(len(c1_list), 2)
+        # this is an equality, so we have both lb and ub
+        self.assertIs(c1_list[0],
+                      disjBlock[1].component(oldblock[1].c1.name)['lb'])
+        self.assertIs(c1_list[1],
+                      disjBlock[1].component(oldblock[1].c1.name)['ub'])
+        c2_list = transformedConstraints2[oldblock[1].c2]
+        # just ub
+        self.assertEqual(len(c2_list), 1)
+        self.assertIs(c2_list[0],
+                      disjBlock[1].component(oldblock[1].c2.name)['ub'])
+        c_list = transformedConstraints1[oldblock[0].c]
+        # just lb
+        self.assertEqual(len(c_list), 1)
+        self.assertIs(c_list[0],
+                      disjBlock[0].component(oldblock[0].c.name)['lb'])
 
         # transformed -> original
         srcdict1 = constraintdict1['srcConstraints']
         self.assertIsInstance(srcdict1, ComponentMap)
-        self.assertEqual(len(srcdict1), 1)
+        self.assertEqual(len(srcdict1), 2)
+        self.assertIs(srcdict1[disjBlock[0].component(oldblock[0].c.name)],
+                      oldblock[0].c)
+        self.assertIs(srcdict1[disjBlock[0].component(oldblock[0].c.name)['lb']],
+                      oldblock[0].c)
         srcdict2 = constraintdict2['srcConstraints']
         self.assertIsInstance(srcdict2, ComponentMap)
-        self.assertEqual(len(srcdict2), 2)
+        self.assertEqual(len(srcdict2), 5)
         self.assertIs(srcdict2[disjBlock[1].component("d[1].c1")],
+                      oldblock[1].c1)
+        self.assertIs(srcdict2[disjBlock[1].component("d[1].c1")['lb']],
+                      oldblock[1].c1)
+        self.assertIs(srcdict2[disjBlock[1].component("d[1].c1")['ub']],
                       oldblock[1].c1)
         self.assertIs(srcdict2[disjBlock[1].component("d[1].c2")],
                       oldblock[1].c2)
-        self.assertIs(srcdict1[disjBlock[0].component("d[0].c")],
-                      oldblock[0].c)
+        self.assertIs(srcdict2[disjBlock[1].component("d[1].c2")['ub']],
+                      oldblock[1].c2)
 
     def test_new_block_nameCollision(self):
         ct.check_transformation_block_name_collision(self, 'bigm')
@@ -479,9 +502,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         # we just need to make sure that constraint was transformed correctly,
         # which just means that the M values were correct.
-        transformedC = bigm.get_transformed_constraint(m.disj2.cons)
-        lb = transformedC['lb']
-        ub = transformedC['ub']
+        transformedC = bigm.get_transformed_constraints(m.disj2.cons)
+        self.assertEqual(len(transformedC), 2)
+        lb = transformedC[0]
+        ub = transformedC[1]
         repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         ct.check_linear_coef(self, repn, m.disj2.indicator_var, -2)
@@ -633,9 +657,36 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
             self.assertIs(transformedDisjunct,
                           srcDisjunct.transformation_block())
 
-            self.assertIs(bigm.get_transformed_constraint(srcDisjunct.c),
-                          disjBlock[dest].component(srcDisjunct.c.name))
-            
+            transformed = bigm.get_transformed_constraints(srcDisjunct.c)
+            if src[0]:
+                # equality
+                self.assertEqual(len(transformed), 2)
+                self.assertIsInstance(transformed[0], _ConstraintData)
+                self.assertIsInstance(transformed[1], _ConstraintData)
+                self.assertIs(
+                    transformed[0],
+                    disjBlock[dest].component(srcDisjunct.c.name)['lb'])
+                self.assertIs(
+                    transformed[1],
+                    disjBlock[dest].component(srcDisjunct.c.name)['ub'])
+                # check reverse maps from the _ConstraintDatas
+                self.assertIs(bigm.get_src_constraint(
+                    disjBlock[dest].component(srcDisjunct.c.name)['lb']),
+                              srcDisjunct.c)
+                self.assertIs(bigm.get_src_constraint(
+                    disjBlock[dest].component(srcDisjunct.c.name)['ub']),
+                              srcDisjunct.c)
+            else:
+                # >= 
+                self.assertEqual(len(transformed), 1)
+                self.assertIsInstance(transformed[0], _ConstraintData)
+                self.assertIs(
+                    transformed[0],
+                    disjBlock[dest].component(srcDisjunct.c.name)['lb'])
+                self.assertIs(bigm.get_src_constraint(
+                    disjBlock[dest].component(srcDisjunct.c.name)['lb']),
+                              srcDisjunct.c)
+            # check reverse map from the container
             self.assertIs(bigm.get_src_constraint(
                 disjBlock[dest].component(srcDisjunct.c.name)),
                 srcDisjunct.c)
@@ -664,37 +715,28 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
     def test_trans_block_created(self):
         ct.check_trans_block_created(self, 'bigm')
 
-    def add_disj_not_on_block(self, m):
-        def simpdisj_rule(disjunct):
-            m = disjunct.model()
-            disjunct.c = Constraint(expr=m.a >= 3)
-        m.simpledisj = Disjunct(rule=simpdisj_rule)
-        def simpledisj2_rule(disjunct):
-            m = disjunct.model()
-            disjunct.c = Constraint(expr=m.a <= 3.5)
-        m.simpledisj2 = Disjunct(rule=simpledisj2_rule)
-        m.disjunction2 = Disjunction(expr=[m.simpledisj, m.simpledisj2])
-        return m
-
     def checkFirstDisjMs(self, model, disj1c1lb, disj1c1ub, disj1c2):
         bigm = TransformationFactory('gdp.bigm')
 
-        c1 = bigm.get_transformed_constraint(model.b.disjunct[0].c)
+        c1 = bigm.get_transformed_constraints(model.b.disjunct[0].c)
         self.assertEqual(len(c1), 2)
-        repn = generate_standard_repn(c1['lb'].body)
+        lb = c1[0]
+        ub = c1[1]
+        repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1lb)
         ct.check_linear_coef(
             self, repn, model.b.disjunct[0].indicator_var, disj1c1lb)
-        repn = generate_standard_repn(c1['ub'].body)
+        repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1ub)
         ct.check_linear_coef(
             self, repn, model.b.disjunct[0].indicator_var, disj1c1ub)
 
-        c2 = bigm.get_transformed_constraint(model.b.disjunct[1].c)
+        c2 = bigm.get_transformed_constraints(model.b.disjunct[1].c)
         self.assertEqual(len(c2), 1)
-        repn = generate_standard_repn(c2['ub'].body)
+        ub = c2[0]
+        repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c2)
         ct.check_linear_coef(
@@ -704,17 +746,19 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         bigm = TransformationFactory('gdp.bigm')
         self.checkFirstDisjMs(model, disj1c1lb, disj1c1ub, disj1c2)
 
-        c = bigm.get_transformed_constraint(model.simpledisj.c)
+        c = bigm.get_transformed_constraints(model.simpledisj.c)
         self.assertEqual(len(c), 1)
-        repn = generate_standard_repn(c['lb'].body)
+        lb = c[0]
+        repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c1)
         ct.check_linear_coef(
             self, repn, model.simpledisj.indicator_var, disj2c1)
 
-        c = bigm.get_transformed_constraint(model.simpledisj2.c)
+        c = bigm.get_transformed_constraints(model.simpledisj2.c)
         self.assertEqual(len(c), 1)
-        repn = generate_standard_repn(c['ub'].body)
+        ub = c[0]
+        repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c2)
         ct.check_linear_coef(
@@ -724,7 +768,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisjOnBlock()
         # adding something that's not on the block so that I know that only
         # the stuff on the block was changed
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         m.b.BigM = Suffix(direction=Suffix.LOCAL)
         m.b.BigM[None] = 34
         bigm = TransformationFactory('gdp.bigm')
@@ -749,7 +793,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_block_M_arg(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         bigms = {m.b: 100, m.b.disjunct[1].c: 13}
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m, bigM=bigms)
@@ -771,7 +815,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_disjunct_M_arg(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         bigm = TransformationFactory('gdp.bigm')
         bigms = {m.b: 100, m.b.disjunct[1]: 13}
         bigm.apply_to(m, bigM=bigms)
@@ -793,7 +837,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_block_M_arg_with_default(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         bigm = TransformationFactory('gdp.bigm')
         bigms = {m.b: 100, m.b.disjunct[1].c: 13, None: 34}
         bigm.apply_to(m, bigM=bigms)
@@ -815,7 +859,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_model_M_arg(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
             TransformationFactory('gdp.bigm').apply_to(
@@ -828,7 +872,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_model_M_arg_overrides_None(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
             TransformationFactory('gdp.bigm').apply_to(
@@ -844,7 +888,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_warning_for_crazy_bigm_args(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         out = StringIO()
         bigM = ComponentMap({m: 100, m.b.disjunct[1].c: 13})
         # this is silly
@@ -859,7 +903,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_use_above_scope_m_value(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         bigM = ComponentMap({m: 100, m.b.disjunct[1].c: 13})
         out = StringIO()
         # transform just the block. We expect to use the M value specified on
@@ -871,7 +915,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_unused_arguments_transform_block(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
 
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = 1e6
@@ -899,7 +943,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_suffix_M_simple_disj(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         m.simpledisj.BigM = Suffix(direction=Suffix.LOCAL)
         m.simpledisj.BigM[None] = 45
         m.BigM = Suffix(direction=Suffix.LOCAL)
@@ -944,7 +988,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
     def test_suffix_M_constraintKeyOnSimpleDisj(self):
         m = models.makeTwoTermDisjOnBlock()
-        m = self.add_disj_not_on_block(m)
+        m = models.add_disj_not_on_block(m)
         m.simpledisj.BigM = Suffix(direction=Suffix.LOCAL)
         m.simpledisj.BigM[None] = 45
         m.simpledisj.BigM[m.simpledisj.c] = 87
@@ -995,53 +1039,65 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m)
 
-        indexedCons = bigm.get_transformed_constraint(m.b.simpledisj1.c)
-        self.assertEqual(len(indexedCons), 2)
-        self.assertIsInstance(indexedCons[2, 'lb'],
-                              constraint._GeneralConstraintData)
-        self.assertIsInstance(indexedCons[2, 'ub'],
-                              constraint._GeneralConstraintData)
-
+        # the real test: This wasn't transformed
         self.assertRaisesRegexp(
             GDP_Error,
             "Constraint b.simpledisj1.c\[1\] has not been transformed.",
-            bigm.get_transformed_constraint,
+            bigm.get_transformed_constraints,
             m.b.simpledisj1.c[1])
+
+        # and the rest of the container was transformed
+        cons_list = bigm.get_transformed_constraints(m.b.simpledisj1.c[2])
+        self.assertEqual(len(cons_list), 2)
+        lb = cons_list[0]
+        ub = cons_list[1]
+        self.assertIsInstance(lb, constraint._GeneralConstraintData)
+        self.assertIsInstance(ub, constraint._GeneralConstraintData)
 
     def checkMs(self, m, disj1c1lb, disj1c1ub, disj1c2lb, disj1c2ub, disj2c1ub,
                 disj2c2ub):
         bigm = TransformationFactory('gdp.bigm')
-        c = bigm.get_transformed_constraint(m.b.simpledisj1.c)
-        self.assertEqual(len(c), 4)
-        repn = generate_standard_repn(c[1, 'lb'].body)
+        c = bigm.get_transformed_constraints(m.b.simpledisj1.c[1])
+        self.assertEqual(len(c), 2)
+        lb = c[0]
+        ub = c[1]
+        repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1lb)
         ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c1lb)
-        repn = generate_standard_repn(c[1, 'ub'].body)
+        repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c1ub)
         ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c1ub)
-        repn = generate_standard_repn(c[2, 'lb'].body)
+        c = bigm.get_transformed_constraints(m.b.simpledisj1.c[2])
+        self.assertEqual(len(c), 2)
+        lb = c[0]
+        ub = c[1]
+        repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c2lb)
         ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c2lb)
-        repn = generate_standard_repn(c[2, 'ub'].body)
+        repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj1c2ub)
         ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c2ub)
 
-        c = bigm.get_transformed_constraint(m.b.simpledisj2.c)
-        self.assertEqual(len(c), 2)
-        repn = generate_standard_repn(c[1, 'ub'].body)
+        c = bigm.get_transformed_constraints(m.b.simpledisj2.c[1])
+        self.assertEqual(len(c), 1)
+        ub = c[0]
+        repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c1ub)
         ct.check_linear_coef(
             self, repn, m.b.simpledisj2.indicator_var, disj2c1ub)
-        repn = generate_standard_repn(c[2, 'ub'].body)
+        c = bigm.get_transformed_constraints(m.b.simpledisj2.c[2])
+        self.assertEqual(len(c), 1)
+        ub = c[0]
+        repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, -disj2c2ub)
         ct.check_linear_coef(
@@ -1149,37 +1205,47 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
 
     def checkMs(self, model, c11lb, c12lb, c21lb, c21ub, c22lb, c22ub):
         bigm = TransformationFactory('gdp.bigm')
-        c = bigm.get_transformed_constraint(model.disjunct[0].c)
-        self.assertEqual(len(c), 2)
-        repn = generate_standard_repn(c[1, 'lb'].body)
+        c = bigm.get_transformed_constraints(model.disjunct[0].c[1])
+        self.assertEqual(len(c), 1)
+        lb = c[0]
+        repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c11lb)
         ct.check_linear_coef(self, repn, model.disjunct[0].indicator_var, c11lb)
-        repn = generate_standard_repn(c[2, 'lb'].body)
+        c = bigm.get_transformed_constraints(model.disjunct[0].c[2])
+        self.assertEqual(len(c), 1)
+        lb = c[0]
+        repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c12lb)
         ct.check_linear_coef(self, repn, model.disjunct[0].indicator_var, c12lb)
 
-        c = bigm.get_transformed_constraint(model.disjunct[1].c)
-        self.assertEqual(len(c), 4)
-        repn = generate_standard_repn(c[1, 'lb'].body)
+        c = bigm.get_transformed_constraints(model.disjunct[1].c[1])
+        self.assertEqual(len(c), 2)
+        lb = c[0]
+        ub = c[1]
+        repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c21lb)
         ct.check_linear_coef(self, repn, model.disjunct[1].indicator_var, c21lb)
-        repn = generate_standard_repn(c[1, 'ub'].body)
+        repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c21ub)
         ct.check_linear_coef(self, repn, model.disjunct[1].indicator_var, c21ub)
-        repn = generate_standard_repn(c[2, 'lb'].body)
+        c = bigm.get_transformed_constraints(model.disjunct[1].c[2])
+        self.assertEqual(len(c), 2)
+        lb = c[0]
+        ub = c[1]
+        repn = generate_standard_repn(lb.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c22lb)
         ct.check_linear_coef(self, repn, model.disjunct[1].indicator_var, c22lb)
-        repn = generate_standard_repn(c[2, 'ub'].body)
+        repn = generate_standard_repn(ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(repn.constant, -c22ub)

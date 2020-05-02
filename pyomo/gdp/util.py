@@ -224,14 +224,21 @@ def _get_constraint_transBlock(constraint):
 
     return transBlock
 
-def get_transformed_constraint(srcConstraint):
+def get_transformed_constraints(srcConstraint):
     """Return the transformed version of srcConstraint
 
     Parameters
     ----------
-    srcConstraint: Constraint, which must be in the subtree of a
-                   transformed Disjunct
+    srcConstraint: SimpleConstraint or _ConstraintData, which must be in 
+    the subtree of a transformed Disjunct
     """
+    if srcConstraint.is_indexed():
+        raise GDP_Error("Argument to get_transformed_constraint should be "
+                        "a SimpleConstraint or _ConstraintData. (If you "
+                        "want the container for all transformed constraints "
+                        "from an IndexedDisjunction, this is the parent "
+                        "component of a transformed constraint originating "
+                        "from any of its _ComponentDatas.)")
     transBlock = _get_constraint_transBlock(srcConstraint)
 
     if hasattr(transBlock, "_constraintMap") and transBlock._constraintMap[
