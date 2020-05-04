@@ -19,6 +19,7 @@ except:
 
 import pyutilib.th as unittest
 import os
+import sys
 
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.scenariocreator as sc
