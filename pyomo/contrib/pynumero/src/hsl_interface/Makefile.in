@@ -1,0 +1,32 @@
+OUTC = -o
+OUTF = -o
+RM = /bin/rm -f
+CP = /bin/cp
+CC = gcc
+CL = gcc
+FC = gfortran
+FL = gfortran
+AR = ar vr
+LIBLAPACK = -llapack
+LIBBLAS = -lblas
+LIBGFORTRAN = -lgfortran
+
+CCFLAGS = -Wall -g -c -fPIC
+CLFLAGS = -Wall -g -shared
+FCFLAGS = 
+FLFLAGS =
+
+OPTFC = -O2
+OPTFL = -O2
+OPTCC = -O2
+OPTCL = -O2
+
+INSTALLDIR = $${HOME}/.pyomo
+
+METISDIR = /home/robert/python/pyomo-dev/pyomo/contrib/pynumero/cmake/third_party/Metis/metis-4.0.3
+COINHSLDIR =#/home/robert/python/pyomo-dev/pyomo/contrib/pynumero/cmake/third_party/HSL/coinhsl/.libs
+MA27DIR = /home/robert/python/pyomo-dev/pyomo/contrib/pynumero/cmake/third_party/HSL/ma27-1.0.0/src
+MA57DIR = /home/robert/python/pyomo-dev/pyomo/contrib/pynumero/cmake/third_party/HSL/ma57-3.10.0/lib
+MA97DIR =
+
+LIBCOINHSL = -L$(COINHSLDIR) -lcoinhsl
