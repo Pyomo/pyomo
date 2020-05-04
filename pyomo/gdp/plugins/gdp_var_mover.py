@@ -161,9 +161,9 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
         # Disjunct, before raising a warning.
         parent_block = disjunct.parent_block()
         while parent_block is not None:
-            if parent_block.type() is Block and not parent_block.active:
+            if parent_block.ctype is Block and not parent_block.active:
                 return False
-            elif (parent_block.type() is Disjunct and not parent_block.active
+            elif (parent_block.ctype is Disjunct and not parent_block.active
                   and parent_block.indicator_var.value == 0
                   and parent_block.indicator_var.fixed):
                 return False

@@ -2361,7 +2361,7 @@ class TestBlock(unittest.TestCase):
             return m.x[1]**2 <= 0
 
         self.assertTrue(hasattr(model, 'scalar_constraint'))
-        self.assertIs(model.scalar_constraint._type, Constraint)
+        self.assertIs(model.scalar_constraint.ctype, Constraint)
         self.assertEqual(len(model.scalar_constraint), 1)
         self.assertIs(type(scalar_constraint), types.FunctionType)
 
@@ -2370,7 +2370,7 @@ class TestBlock(unittest.TestCase):
             return m.x[i]**2 <= 0
 
         self.assertTrue(hasattr(model, 'vector_constraint'))
-        self.assertIs(model.vector_constraint._type, Constraint)
+        self.assertIs(model.vector_constraint.ctype, Constraint)
         self.assertEqual(len(model.vector_constraint), 3)
         self.assertIs(type(vector_constraint), types.FunctionType)
 
