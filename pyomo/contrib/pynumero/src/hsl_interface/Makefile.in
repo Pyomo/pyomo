@@ -23,10 +23,10 @@ OPTCL = -O2
 
 INSTALLDIR = $${HOME}/.pyomo
 
-METISDIR = /home/robert/python/pyomo-dev/pyomo/contrib/pynumero/cmake/third_party/Metis/metis-4.0.3
-COINHSLDIR =#/home/robert/python/pyomo-dev/pyomo/contrib/pynumero/cmake/third_party/HSL/coinhsl/.libs
-MA27DIR = /home/robert/python/pyomo-dev/pyomo/contrib/pynumero/cmake/third_party/HSL/ma27-1.0.0/src
-MA57DIR = /home/robert/python/pyomo-dev/pyomo/contrib/pynumero/cmake/third_party/HSL/ma57-3.10.0/lib
+METISDIR =
+COINHSLDIR =
+MA27DIR =
+MA57DIR =
 MA97DIR =
 
 LIBCOINHSL = -L$(COINHSLDIR) -lcoinhsl
