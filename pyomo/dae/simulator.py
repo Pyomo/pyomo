@@ -214,7 +214,7 @@ class new_Pyomo2Scipy_Visitor(EXPR.StreamBasedExpressionVisitor):
         super(new_Pyomo2Scipy_Visitor, self).__init__()
         self.template_map = template_map if template_map is not None else {}
 
-    def beforeChild(self, node, child):
+    def beforeChild(self, node, child, child_idx):
         if child.__class__ in nonpyomo_leaf_types:
             return False, child
         elif child.is_expression_type():
@@ -227,7 +227,7 @@ class new_Pyomo2Scipy_Visitor(EXPR.StreamBasedExpressionVisitor):
     def enterNode(self, node):
         return node.args, [False]
 
-    def acceptChildResult(self, node, data, child_result):
+    def acceptChildResult(self, node, data, child_result, child_idx):
         i = len(data) - 1
         if child_result.__class__ is IndexedComponent_slice:
             if not hasattr(node, '_resolve_template'):

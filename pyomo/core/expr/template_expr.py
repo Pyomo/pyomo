@@ -396,11 +396,11 @@ def resolve_template(expr):
     GetAttrExpression, and TemplateSumExpression expression nodes.
 
     """
-    def beforeChild(node, child):
+    def beforeChild(node, child, child_idx):
         # Efficiency: do not decend into leaf nodes.
         if type(child) in native_types or not child.is_expression_type():
             if hasattr(child, '_resolve_template'):
-                return False, child._resolve_template([])
+                return False, child._resolve_template(())
             return False, child
         else:
             return True, None
@@ -414,7 +414,7 @@ def resolve_template(expr):
         return node.create_node_with_local_data(args)
 
     return StreamBasedExpressionVisitor(
-        initializeWalker=lambda x: beforeChild(None, x),
+        initializeWalker=lambda x: beforeChild(None, x, None),
         beforeChild=beforeChild,
         exitNode=exitNode,
     ).walk_expression(expr)

@@ -94,10 +94,11 @@ class StreamBasedExpressionVisitor(object):
         this node.  If not specified, the default action is to return
         the data object from enterNode().
 
-    descend, child_result = beforeChild(self, node, child):
+    descend, child_result = beforeChild(self, node, child, child_idx):
 
         beforeChild() is called by a node for every child before
-        entering the child node.  The node and child nodes are passed as
+        entering the child node.  The node, child node, and child index
+        (position in the args list from enterNode()) are passed as
         arguments.  beforeChild should return a tuple (descend,
         child_result).  If descend is False, the child node will not be
         entered and the value returned to child_result will be passed to
@@ -105,24 +106,25 @@ class StreamBasedExpressionVisitor(object):
         equivalent to (True, None).  The default behavior if not
         specified is equivalent to (True, None).
 
-    data = acceptChildResult(self, node, data, child_result):
+    data = acceptChildResult(self, node, data, child_result, child_idx):
 
         acceptChildResult() is called for each child result being
         returned to a node.  This callback is responsible for recording
         the result for later processing or passing up the tree.  It is
-        passed the node, the result data structure (see enterNode()),
-        and the child result.  The data structure (possibly modified or
-        replaced) must be returned.  If acceptChildResult is not
-        specified, it does nothing if data is None, otherwise it calls
-        data.append(result).
+        passed the node, result data structure (see enterNode()), child
+        result, and the child index (position in args from enterNode()).
+        The data structure (possibly modified or replaced) must be
+        returned.  If acceptChildResult is not specified, it does
+        nothing if data is None, otherwise it calls data.append(result).
 
-    afterChild(self, node, child):
+    afterChild(self, node, child, child_idx):
 
         afterChild() is called by a node for every child node
         immediately after processing the node is complete before control
-        moves to the next child or up to the parent node.  The node and
-        child node are passed, and nothing is returned.  If afterChild
-        is not specified, no action takes place.
+        moves to the next child or up to the parent node.  The node,
+        child node, an child index (position in args from enterNode())
+        are passed, and nothing is returned.  If afterChild is not
+        specified, no action takes place.
 
     finalizeResult(self, result):
 
@@ -196,29 +198,31 @@ class StreamBasedExpressionVisitor(object):
             else:
                 args = expr.args
         node = expr
-        child_idx = 0
-        ptr = (None, node, args, len(args), data, child_idx)
+        # Note that because we increment child_idx just before fetching
+        # the child node, it must be initialized to -1, and ptr[3] must
+        # always be *one less than* the number of arguments
+        child_idx = -1
+        ptr = (None, node, args, len(args)-1, data, child_idx)
 
         while 1:
             if child_idx < ptr[3]:
-                # This node still has children to process
-                child = ptr[2][child_idx]
                 # Increment the child index pointer here for
                 # consistency.  Note that this means that for the bulk
-                # of the time, 'child_idx' is actually the index of the
-                # *next* child to be processed, and will not match the
-                # value of ptr[5].  This provides a modest performance
+                # of the time, 'child_idx' will not match the value of
+                # ptr[5].  This provides a modest performance
                 # improvement, as we only have to recreate the ptr tuple
                 # just before we descend further into the tree (i.e., we
                 # avoid recreating the tuples for the special case where
                 # beforeChild indicates that we should not descend
                 # further).
                 child_idx += 1
+                # This node still has children to process
+                child = ptr[2][child_idx]
 
                 # Notify this node that we are about to descend into a
                 # child.
                 if self.beforeChild is not None:
-                    tmp = self.beforeChild(node, child)
+                    tmp = self.beforeChild(node, child, child_idx)
                     if tmp is None:
                         descend = True
                         child_result = None
@@ -230,13 +234,13 @@ class StreamBasedExpressionVisitor(object):
                         # we will move along
                         if self.acceptChildResult is not None:
                             data = self.acceptChildResult(
-                                node, data, child_result)
+                                node, data, child_result, child_idx)
                         elif data is not None:
                             data.append(child_result)
                         # And let the node know that we are done with a
                         # child node
                         if self.afterChild is not None:
-                            self.afterChild(node, child)
+                            self.afterChild(node, child, child_idx)
                         # Jump to the top to continue processing the
                         # next child node
                         continue
@@ -268,8 +272,8 @@ class StreamBasedExpressionVisitor(object):
                     else:
                         args = child.args
                 node = child
-                child_idx = 0
-                ptr = (ptr, node, args, len(args), data, child_idx)
+                child_idx = -1
+                ptr = (ptr, node, args, len(args)-1, data, child_idx)
 
             else:
                 # We are done with this node.  Call exitNode to compute
@@ -296,13 +300,14 @@ class StreamBasedExpressionVisitor(object):
 
                 # We need to alert the node to accept the child's result:
                 if self.acceptChildResult is not None:
-                    data = self.acceptChildResult(node, data, node_result)
+                    data = self.acceptChildResult(
+                        node, data, node_result, child_idx)
                 elif data is not None:
                     data.append(node_result)
 
                 # And let the node know that we are done with a child node
                 if self.afterChild is not None:
-                    self.afterChild(node, child)
+                    self.afterChild(node, child, child_idx)
 
 
 class SimpleExpressionVisitor(object):
@@ -879,7 +884,7 @@ def sizeof_expression(expr):
     """
     def enter(node):
         return None, 1
-    def accept(node, data, child_result):
+    def accept(node, data, child_result, child_idx):
         return data + child_result
     return StreamBasedExpressionVisitor(
         enterNode=enter,

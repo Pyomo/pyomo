@@ -277,7 +277,7 @@ class SMT_visitor(StreamBasedExpressionVisitor):
             raise NotImplementedError(str(type(node)) + " expression not handled by z3 interface")
         return ans
 
-    def beforeChild(self, node, child):
+    def beforeChild(self, node, child, child_idx):
         if type(child) in nonpyomo_leaf_types:
             # This means the child is POD
             # i.e., int, float, string
