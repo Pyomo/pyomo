@@ -1432,6 +1432,8 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
     
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):
+        """ checks that if nothing is marked as local, we assume it is all 
+        global. We disaggregate everything to be safe."""
         m = ConcreteModel()
         m.x = Var(bounds=(5,100))
         m.y = Var(bounds=(0,100))
@@ -1497,6 +1499,41 @@ class TestSpecialCases(unittest.TestCase):
         self.assertEqual(rd.z_bounds['lb'].body(), -11)
         self.assertEqual(rd.z_bounds['ub'].body(), 9)
 
+    def test_local_var_suffix(self):
+        chull = TransformationFactory('gdp.chull')
+
+        model = ConcreteModel()
+        model.x = Var(bounds=(5,100))
+        model.y = Var(bounds=(0,100))
+        model.d1 = Disjunct()
+        model.d1.c = Constraint(expr=model.y >= model.x)
+        model.d2 = Disjunct()
+        model.d2.z = Var(bounds=(-9, -7))
+        model.d2.c = Constraint(expr=model.y >= model.d2.z)
+        model.disj = Disjunction(expr=[model.d1, model.d2])
+        
+        # we don't declare z local
+        m = chull.create_using(model)
+        self.assertEqual(m.d2.z.lb, -9)
+        self.assertEqual(m.d2.z.ub, -7)
+        self.assertIsInstance(m.d2.transformation_block().component("z"), Var)
+        self.assertIs(m.d2.transformation_block().z, 
+                      chull.get_disaggregated_var(m.d2.z, m.d2))
+
+        # we do declare z local
+        model.d2.LocalVars = Suffix(direction=Suffix.LOCAL)
+        model.d2.LocalVars[model.d2] = [model.d2.z]
+
+        m = chull.create_using(model)
+
+        # make sure we did not disaggregate z
+        self.assertEqual(m.d2.z.lb, -9)
+        self.assertEqual(m.d2.z.ub, 0)
+        # it is its own disaggregated variable
+        self.assertIs(chull.get_disaggregated_var(m.d2.z, m.d2), m.d2.z)
+        # it does not exist on the transformation block
+        self.assertIsNone(m.d2.transformation_block().component("z"))
+        
 class RangeSetOnDisjunct(unittest.TestCase):
     def test_RangeSet(self):
         ct.check_RangeSet(self, 'chull')

@@ -181,6 +181,34 @@ class ConvexHull_Transformation(Transformation):
             Block:       self._transform_block_on_disjunct,
             }
 
+    def _add_local_vars(self, block, local_var_dict):
+        localVars = block.component('LocalVars')
+        if type(localVars) is Suffix:
+            for disj, var_list in iteritems(localVars):
+                if local_var_dict.get(disj) is None:
+                    local_var_dict[disj] = ComponentSet(var_list)
+                else:
+                    local_var_dict[disj].update(var_list)
+
+    def _get_local_var_suffixes(self, block, local_var_dict):
+        # You can specify suffixes on any block (dijuncts included). This method
+        # starts from a Disjunct (presumably) and checks for a LocalVar suffixes
+        # going up the tree, adding them into the dictionary that is the second
+        # argument.
+
+        # first look beneath where we are (there could be Blocks on this
+        # disjunct)
+        for b in block.component_data_objects(Block, descend_into=(Block),
+                                              active=True,
+                                              sort=SortComponents.deterministic):
+            self._add_local_vars(b, local_var_dict)
+        # now traverse upwards and get what's above
+        while block is not None:
+            self._add_local_vars(block, local_var_dict)
+            block = block.parent_block()
+
+        return local_var_dict
+
     def _apply_to(self, instance, **kwds):
         assert not NAME_BUFFER
         try:
@@ -188,7 +216,6 @@ class ConvexHull_Transformation(Transformation):
         finally:
             # Clear the global name buffer now that we are done
             NAME_BUFFER.clear()
-
 
     def _apply_to_impl(self, instance, **kwds):
         self._config = self.CONFIG(kwds.pop('options', {}))
@@ -371,6 +398,7 @@ class ConvexHull_Transformation(Transformation):
         varOrder_set = ComponentSet()
         varOrder = []
         varsByDisjunct = ComponentMap()
+        localVarsByDisjunct = ComponentMap()
         for disjunct in obj.disjuncts:
             disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
             for cons in disjunct.component_data_objects(
@@ -394,37 +422,31 @@ class ConvexHull_Transformation(Transformation):
                         varOrder.append(var)
                         varOrder_set.add(var)
 
-        # We will disaggregate all variables which are not themselves
-        # disaggregated variables. (Because the only other case where a variable
-        # should not be disaggregated is if it only appears in one disjunct in
-        # the whole model, which is not something we detect.)
+            # check for LocalVars Suffix
+            localVarsByDisjunct = self._get_local_var_suffixes(
+                disjunct, localVarsByDisjunct)
+
+        # We will disaggregate all variables which are not explicitly declared
+        # as being local. Note however, that we do declare our own disaggregated
+        # variables as local, so they will not be re-disaggregated.
         varSet = []
-        localVars = ComponentMap((d,[]) for d in obj.disjuncts)
+        # values of localVarsByDisjunct are ComponentSets, so we need this for
+        # determinism (we iterate through the localVars later)
+        localVars = []
         for var in varOrder:
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
-            # ESJ TODO: this check is a moot point though maybe still worthwhile
-            # because if this is true and we do the Suffix thing and someone
-            # thinks that var is local, we could at least throw an error in the
-            # easy case where they are wrong. (also so that the next elif isn't
-            # wrong in that case)
+            # clearly not local if used in more than one disjunct 
             if len(disjuncts) > 1:
+                # TODO: Is this okay though? It means I will silently do the
+                # right thing if you told me to do the wrong thing. But is it
+                # worth the effort to check that here?
                 varSet.append(var)
-            elif self._is_disaggregated_var(var):
-                # this is a variable that we created while transforming an inner
-                # disjunction. We know therefore that it is truly local and need
-                # not be disaggregated again. NOTE that this assumes someone
-                # didn't do something like transforming an inner disjunction
-                # with chull, adding constraints outside of this disjunct that
-                # involved the disaggregated variables and is now transforming
-                # that model. If they did that, then this is wrong. We should be
-                # disaggregating again. But it seems insane to me to
-                # double-disaggregate *always* in order to account for that
-                # case. Perhaps though we should implement a Suffix on the
-                # Disjunct which will allow a user to promise something is truly
-                # local. Then we can use it to make the promise to ourselves,
-                # and if they break that promise, they can update it
-                # accordingly?
-                localVars[disjuncts[0]].append(var)
+            
+            elif localVarsByDisjunct.get(disjuncts[0]) is not None:
+                if var in localVarsByDisjunct[disjuncts[0]]:
+                    localVars.append(var)
+                else:
+                    varSet.append(var)
             else:
                 varSet.append(var)
 
@@ -433,8 +455,7 @@ class ConvexHull_Transformation(Transformation):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
-            self._transform_disjunct(disjunct, transBlock, varSet,
-                                     localVars[disjunct])
+            self._transform_disjunct(disjunct, transBlock, varSet, localVars)
         orConstraint.add(index, (or_expr, 1))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
@@ -531,6 +552,19 @@ class ConvexHull_Transformation(Transformation):
         obj._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._srcDisjunct = weakref_ref(obj)
 
+        # add Suffix to the relaxation block that disaggregated variables are
+        # local (in case this is nested in another Disjunct)
+        local_var_set = None
+        parent_disjunct = obj.parent_block()
+        while parent_disjunct is not None:
+            if parent_disjunct.ctype is Disjunct:
+                break
+            parent_disjunct = parent_disjunct.parent_block()
+        if parent_disjunct is not None:
+            localVarSuffix = relaxationBlock.LocalVars = Suffix(
+                direction=Suffix.LOCAL)
+            local_var_set = localVarSuffix[parent_disjunct] = ComponentSet()
+
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
         for var in varSet:
@@ -554,6 +588,10 @@ class ConvexHull_Transformation(Transformation):
             )
             relaxationBlock.add_component( disaggregatedVarName,
                                            disaggregatedVar)
+            # mark this as local because we won't re-disaggregate if this is a
+            # nested disjunction
+            if local_var_set is not None:
+                local_var_set.add(disaggregatedVar)
             # store the mappings from variables to their disaggregated selves on
             # the transformation block.
             relaxationBlock._disaggregatedVarMap['disaggregatedVar'][
@@ -585,6 +623,10 @@ class ConvexHull_Transformation(Transformation):
                 var.setlb(0)
             if value(ub) < 0:
                 var.setub(0)
+
+            # map it to itself
+            relaxationBlock._disaggregatedVarMap['disaggregatedVar'][var] = var
+            relaxationBlock._disaggregatedVarMap['srcVar'][var] = var
 
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
@@ -665,7 +707,6 @@ class ConvexHull_Transformation(Transformation):
             self._transform_block_components( block[i], disjunct,
                                               var_substitute_map,
                                               zero_substitute_map)
-
 
     def _transform_constraint(self, obj, disjunct, var_substitute_map,
                           zero_substitute_map):
@@ -877,16 +918,16 @@ class ConvexHull_Transformation(Transformation):
                             % disaggregated_var.name)
         return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
 
-    def _is_disaggregated_var(self, var):
-        """ Returns True if var is a disaggregated variable, False otherwise.
-        This is used so that we can avoid double-disaggregating.
-        """
-        parent = var.parent_block()
-        if hasattr(parent, "_disaggregatedVarMap") and 'srcVar' in \
-           parent._disaggregatedVarMap:
-            return var in parent._disaggregatedVarMap['srcVar']
+    # def _is_disaggregated_var(self, var):
+    #     """ Returns True if var is a disaggregated variable, False otherwise.
+    #     This is used so that we can avoid double-disaggregating.
+    #     """
+    #     parent = var.parent_block()
+    #     if hasattr(parent, "_disaggregatedVarMap") and 'srcVar' in \
+    #        parent._disaggregatedVarMap:
+    #         return var in parent._disaggregatedVarMap['srcVar']
 
-        return False
+    #     return False
 
     # retrieves the disaggregation constraint for original_var resulting from
     # transforming disjunction
