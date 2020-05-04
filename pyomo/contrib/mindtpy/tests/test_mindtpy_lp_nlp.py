@@ -10,10 +10,10 @@ from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
 from pyomo.environ import SolverFactory, value
+from pyomo.opt import TerminationCondition
 
 required_solvers = ('ipopt', 'cplex_persistent')
-required_solvers_temp = ('ipopt', 'cplex')
-if all(SolverFactory(s).available() for s in required_solvers_temp):
+if all(SolverFactory(s).available(False) for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False
@@ -34,15 +34,15 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      init_strategy='rNLP',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      bound_tolerance=1E-5,
-                      single_tree=True)
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                bound_tolerance=1E-5,
+                                single_tree=True)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_lazy_OA_8PP_init_max_binary(self):
@@ -50,14 +50,14 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      init_strategy='max_binary',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      single_tree=True)
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='max_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                single_tree=True)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_lazy_OA_MINLP_simple(self):
@@ -65,15 +65,15 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      init_strategy='initial_binary',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      obj_bound=10,
-                      single_tree=True)
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10,
+                                single_tree=True)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
     def test_lazy_OA_MINLP2_simple(self):
@@ -81,15 +81,15 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      init_strategy='initial_binary',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      obj_bound=10,
-                      single_tree=True)
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10,
+                                single_tree=True)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
 
     def test_lazy_OA_MINLP3_simple(self):
@@ -97,14 +97,14 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA', init_strategy='initial_binary',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      obj_bound=10,
-                      single_tree=True)
+            results = opt.solve(model, strategy='OA', init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10,
+                                single_tree=True)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal(self):
@@ -112,24 +112,27 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      single_tree=True)
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                single_tree=True)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_OA_OnlineDocExample(self):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      single_tree=True
-                      )
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                single_tree=True
+                                )
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     # TODO fix the bug with integer_to_binary

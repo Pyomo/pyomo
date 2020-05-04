@@ -99,7 +99,7 @@ def init_rNLP(solve_data, config):
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
             # TODO check if value of the binary or integer varibles is 0/1 or integer value.
             for var in solve_data.mip.component_data_objects(ctype=Var):
-                if var.domain.name == 'Integer' or var.domain.name == 'Binary':
+                if var.is_integer():
                     var.value = int(round(var.value))
     elif subprob_terminate_cond is tc.infeasible:
         # TODO fail? try something else?

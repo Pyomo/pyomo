@@ -14,6 +14,7 @@ from pyomo.environ import *
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
+from pyomo.opt import TerminationCondition
 
 required_solvers = ('ipopt', 'glpk')  # 'cplex_persistent')
 if all(SolverFactory(s).available() for s in required_solvers):
@@ -35,14 +36,14 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      init_strategy='rNLP',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      bound_tolerance=1E-5)
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                bound_tolerance=1E-5)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_OA_8PP_init_max_binary(self):
@@ -50,13 +51,13 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      init_strategy='max_binary',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0])
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='max_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     # def test_PSC(self):
@@ -103,14 +104,14 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      init_strategy='initial_binary',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      obj_bound=10)
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
     def test_OA_MINLP2_simple(self):
@@ -118,14 +119,14 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      init_strategy='initial_binary',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      obj_bound=10)
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
 
     def test_OA_MINLP3_simple(self):
@@ -133,13 +134,13 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA', init_strategy='initial_binary',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      obj_bound=10)
+            results = opt.solve(model, strategy='OA', init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_OA_Proposal(self):
@@ -147,12 +148,12 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0])
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_OA_Proposal_with_int_cuts(self):
@@ -160,15 +161,15 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      add_integer_cuts=True,
-                      integer_to_binary=True  # if we use lazy callback, we cannot set integer_to_binary True
-                      )
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_integer_cuts=True,
+                                integer_to_binary=True  # if we use lazy callback, we cannot set integer_to_binary True
+                                )
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_OA_OnlineDocExample(self):
@@ -182,7 +183,7 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     # the following tests are used to improve code coverage
-    def test_OA_OnlineDocExample2(self):
+    def test_iteration_limit(self):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print('\n Solving problem with Outer Approximation')
@@ -193,7 +194,7 @@ class TestMindtPy(unittest.TestCase):
                       )
             # self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
-    def test_OA_OnlineDocExample3(self):
+    def test_time_limit(self):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print('\n Solving problem with Outer Approximation')
@@ -203,7 +204,7 @@ class TestMindtPy(unittest.TestCase):
                       nlp_solver=required_solvers[0]
                       )
 
-    def test_OA_LP(self):
+    def test_LP_case(self):
         with SolverFactory('mindtpy') as opt:
             m_class = LP_unbounded()
             m_class._generate_model()
@@ -214,7 +215,7 @@ class TestMindtPy(unittest.TestCase):
                       nlp_solver=required_solvers[0],
                       )
 
-    def test_OA_QCP(self):
+    def test_QCP_case(self):
         with SolverFactory('mindtpy') as opt:
             m_class = QCP_simple()
             m_class._generate_model()
@@ -225,7 +226,7 @@ class TestMindtPy(unittest.TestCase):
                       nlp_solver=required_solvers[0],
                       )
 
-    def test_OA_Proposal_maximize(self):
+    def test_maximize_obj(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
@@ -236,18 +237,9 @@ class TestMindtPy(unittest.TestCase):
                       nlp_solver=required_solvers[0],
                       #   mip_solver_args={'timelimit': 0.9}
                       )
+            self.assertAlmostEqual(value(model.obj.expr), 14.83, places=1)
 
-    # def test_OA_Proposal_exceed_iteration_limit(self):
-    #     """Test the outer approximation decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = ProposalModel()
-    #         print('\n Solving problem with Outer Approximation')
-    #         opt.solve(model, strategy='OA',
-    #                   mip_solver=required_solvers[1],
-    #                   nlp_solver=required_solvers[0]
-    #                   )
-
-    def test_OA_8PP_add_slack(self):
+    def test_rNLP_add_slack(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
@@ -260,7 +252,7 @@ class TestMindtPy(unittest.TestCase):
                       add_slack=True)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    def test_OA_MINLP_simple_add_slack(self):
+    def test_initial_binary_add_slack(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()

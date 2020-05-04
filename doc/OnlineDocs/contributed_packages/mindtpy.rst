@@ -92,7 +92,7 @@ An example to call single tree is as follows.
 
   Solve the model using single tree implementation in MindtPy
   >>> SolverFactory('mindtpy').solve(model, strategy='OA', 
-                                     mip_solver='cplex_persistent', nlp_solver='ipopt', single_tree=True)
+  ...                                mip_solver='cplex_persistent', nlp_solver='ipopt', single_tree=True)
   >>> model.objective.display()
 
 

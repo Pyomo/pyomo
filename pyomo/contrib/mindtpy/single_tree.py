@@ -14,14 +14,8 @@ from math import fabs
 from pyomo.repn import generate_standard_repn
 import logging
 from pyomo.common.dependencies import attempt_import
-
-cplex, cplex_available = attempt_import('cplex')
-if cplex_available:
-    from cplex.callbacks import LazyConstraintCallback
-else:
-    logging.warning(
-        "Cplex python API is not found. Therefore, lp-nlp is not supported")
-    # Other solvers (e.g. Gurobi) are not supported yet
+import cplex
+from cplex.callbacks import LazyConstraintCallback
 
 
 class LazyOACallback_cplex(LazyConstraintCallback):
@@ -41,35 +35,23 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             if skip_fixed and v_to.is_fixed():
                 continue  # Skip fixed variables.
             try:
-                v_to.set_value(self.get_values(
-                    opt._pyomo_var_to_solver_var_map[v_from]))
+                v_val = self.get_values(
+                    opt._pyomo_var_to_solver_var_map[v_from])
+                v_to.set_value(v_val)
                 if skip_stale:
                     v_to.stale = False
-            except ValueError as err:
-                err_msg = getattr(err, 'message', str(err))
-                # get the value of current feasible solution
-                # self.get_value() is an inherent function from Cplex
-                var_val = self.get_values(
-                    opt._pyomo_var_to_solver_var_map[v_from])
-                rounded_val = int(round(var_val))
-                # Check to see if this is just a tolerance issue
-                if ignore_integrality \
-                    and ('is not in domain Binary' in err_msg
-                         or 'is not in domain Integers' in err_msg):
-                    v_to.value = self.get_values(
-                        opt._pyomo_var_to_solver_var_map[v_from])
-                elif 'is not in domain Binary' in err_msg and (
-                        fabs(var_val - 1) <= config.integer_tolerance or
-                        fabs(var_val) <= config.integer_tolerance):
-                    v_to.set_value(rounded_val)
-                # TODO What about PositiveIntegers etc?
-                elif 'is not in domain Integers' in err_msg and (
-                        fabs(var_val - rounded_val) <= config.integer_tolerance):
-                    v_to.set_value(rounded_val)
-                # Value is zero, but shows up as slightly less than zero.
-                elif 'is not in domain NonNegativeReals' in err_msg and (
-                        fabs(var_val) <= config.zero_tolerance):
-                    v_to.set_value(0)
+            except ValueError:
+                # Snap the value to the bounds
+                if v_to.lb is not None and v_val < v_to.lb and v_to.lb - v_val <= config.zero_tolerance:
+                    v_to.set_value(v_to.lb)
+                elif v_to.ub is not None and v_val > v_to.ub and v_val - v_to.ub <= config.zero_tolerance:
+                    v_to.set_value(v_to.ub)
+                # ... or the nearest integer
+                elif v_to.is_integer():
+                    rounded_val = int(round(v_val))
+                    if (ignore_integrality or fabs(v_val - rounded_val) <= config.integer_tolerance) \
+                            and rounded_val in v_to.domain:
+                        v_to.set_value(rounded_val)
                 else:
                     raise
 
@@ -230,6 +212,20 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 self.add_lazy_oa_cuts(
                     solve_data.mip, dual_values, solve_data, config, opt)
 
+    def handle_lazy_NLP_subproblem_other_termination(self, fix_nlp, termination_condition,
+                                                     solve_data, config):
+        """Case that fix-NLP is neither optimal nor infeasible (i.e. max_iterations)"""
+        if termination_condition is tc.maxIterations:
+            # TODO try something else? Reinitialize with different initial value?
+            config.logger.info(
+                'NLP subproblem failed to converge within iteration limit.')
+            var_values = list(
+                v.value for v in fix_nlp.MindtPy_utils.variable_list)
+        else:
+            raise ValueError(
+                'MindtPy unable to handle NLP subproblem termination '
+                'condition of {}'.format(termination_condition))
+
     def __call__(self):
         solve_data = self.solve_data
         config = self.config
@@ -253,5 +249,5 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             self.handle_lazy_NLP_subproblem_infeasible(
                 fix_nlp, solve_data, config, opt)
         else:
-            # TODO
-            pass
+            self.handle_lazy_NLP_subproblem_other_termination(fix_nlp, fix_nlp_result.solver.termination_condition,
+                                                              solve_data, config)

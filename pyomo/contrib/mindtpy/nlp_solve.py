@@ -28,8 +28,6 @@ def solve_NLP_subproblem(solve_data, config):
 
     fix_nlp = solve_data.working_model.clone()
     MindtPy = fix_nlp.MindtPy_utils
-    main_objective = next(
-        fix_nlp.component_data_objects(Objective, active=True))
     solve_data.nlp_iter += 1
     config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
                        % (solve_data.nlp_iter,))
@@ -46,15 +44,25 @@ def solve_NLP_subproblem(solve_data, config):
 
     MindtPy.MindtPy_linear_cuts.deactivate()
     fix_nlp.tmp_duals = ComponentMap()
+    # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
+    # The values of the duals are computed as follows: (Complementary Slackness)
+    #
+    # | constraint | c_leq | status at x1 | tmp_dual  |
+    # |------------|-------|--------------|-----------|
+    # | g(x) <= b  | -1    | g(x1) <= b   | 0         |
+    # | g(x) <= b  | -1    | g(x1) > b    | b - g(x1) |
+    # | g(x) >= b  | +1    | g(x1) >= b   | 0         |
+    # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1) |
+
     for c in fix_nlp.component_data_objects(ctype=Constraint, active=True,
                                             descend_into=True):
         rhs = ((0 if c.upper is None else c.upper)
                + (0 if c.lower is None else c.lower))
-        sign_adjust = 1 if value(c.upper) is None else -1
-        fix_nlp.tmp_duals[c] = sign_adjust * max(
-            0, sign_adjust*(rhs - value(c.body)))
-        pass
-        # TODO check sign_adjust
+        rhs = c.upper if c.has_lb() and c.has_ub() else rhs
+        c_leq = 1 if value(c.upper) is None else -1
+        fix_nlp.tmp_duals[c] = c_leq * max(
+            0, c_leq*(rhs - value(c.body)))
+
     TransformationFactory('contrib.deactivate_trivial_constraints')\
         .apply_to(fix_nlp, tmp=True, ignore_infeasible=True)
     # Solve the NLP
@@ -130,9 +138,10 @@ def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
     for c in fix_nlp.component_data_objects(ctype=Constraint):
         rhs = ((0 if c.upper is None else c.upper)
                + (0 if c.lower is None else c.lower))
-        sign_adjust = 1 if value(c.upper) is None else -1
-        fix_nlp.dual[c] = (sign_adjust
-                           * max(0, sign_adjust * (rhs - value(c.body))))
+        rhs = c.upper if c.has_lb() and c.has_ub() else rhs
+        c_leq = 1 if value(c.upper) is None else -1
+        fix_nlp.dual[c] = (c_leq
+                           * max(0, c_leq * (rhs - value(c.body))))
     dual_values = list(fix_nlp.dual[c]
                        for c in fix_nlp.MindtPy_utils.constraint_list)
 
@@ -220,13 +229,12 @@ def solve_NLP_feas(solve_data, config):
     duals = [0 for _ in MindtPy.constraint_list]
 
     for i, constr in enumerate(MindtPy.constraint_list):
-        # TODO rhs only works if constr.upper and constr.lower do not both have values.
-        # Sometimes you might have 1 <= expr <= 1. This would give an incorrect rhs of 2.
         rhs = ((0 if constr.upper is None else constr.upper)
                + (0 if constr.lower is None else constr.lower))
-        sign_adjust = 1 if value(constr.upper) is None else -1
-        duals[i] = sign_adjust * max(
-            0, sign_adjust * (rhs - value(constr.body)))
+        rhs = constr.upper if constr.has_lb() and constr.has_ub() else rhs
+        c_leq = 1 if value(constr.upper) is None else -1
+        duals[i] = c_leq * max(
+            0, c_leq * (rhs - value(constr.body)))
 
     if value(MindtPy.MindtPy_feas_obj.expr) == 0:
         raise ValueError(
