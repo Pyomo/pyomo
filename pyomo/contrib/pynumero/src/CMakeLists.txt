@@ -139,31 +139,10 @@ IF( BUILD_ASL )
   ENDIF()
 ENDIF()
 
-set(PYNUMERO_MA27_SOURCES
-  "ma27Interface.cpp"
-  "ma27Interface.hpp"
-)
-
-IF( BUILD_MA27 )
-  ADD_LIBRARY( pynumero_MA27 SHARED ${PYNUMERO_MA27_SOURCES} )
-  TARGET_LINK_LIBRARIES( pynumero_MA27 ${HSL_LIBRARY} )
-  SET_TARGET_PROPERTIES( pynumero_MA27 PROPERTIES ENABLE_EXPORTS 1 )
-  INSTALL(TARGETS pynumero_MA27 LIBRARY DESTINATION lib
-    RUNTIME DESTINATION lib )
-ENDIF()
-
-set(PYNUMERO_MA57_SOURCES
-  "ma57Interface.cpp"
-  "ma57Interface.hpp"
-)
-
-IF( BUILD_MA57 )
-  ADD_LIBRARY( pynumero_MA57 SHARED ${PYNUMERO_MA57_SOURCES} )
-  TARGET_LINK_LIBRARIES( pynumero_MA57 ${HSL_LIBRARY} )
-  SET_TARGET_PROPERTIES( pynumero_MA57 PROPERTIES ENABLE_EXPORTS 1 )
-  INSTALL(TARGETS pynumero_MA57 LIBRARY DESTINATION lib
-    RUNTIME DESTINATION lib )
-ENDIF()
+#
+# build hsl interfaces
+#
+add_subdirectory(hsl_interface)
 
 #
 # build the tests for the interfaces
