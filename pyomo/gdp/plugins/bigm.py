@@ -326,21 +326,14 @@ class BigM_Transformation(Transformation):
         else:
             transBlock = self._add_transformation_block(obj.parent_block())
 
-        # If this is an IndexedDisjunction, we have to create the XOR constraint
-        # here because we want its index to match the disjunction. In any case,
-        # we might as well.
-        xorConstraint = self._add_xor_constraint(obj, transBlock)
-
         # relax each of the disjunctionDatas
         for i in sorted(iterkeys(obj)):
-            self._transform_disjunctionData(obj[i], bigM, i, xorConstraint,
-                                            transBlock)
+            self._transform_disjunctionData(obj[i], bigM, i, transBlock)
 
         # deactivate so the writers don't scream
         obj.deactivate()
 
-    def _transform_disjunctionData(self, obj, bigM, index, xorConstraint=None,
-                                   transBlock=None):
+    def _transform_disjunctionData(self, obj, bigM, index, transBlock=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction 
         # We won't have these arguments if this got called straight from
@@ -357,9 +350,9 @@ class BigM_Transformation(Transformation):
                              parent_block()
             else:
                 transBlock = self._add_transformation_block(obj.parent_block())
-        if xorConstraint is None:
-            xorConstraint = self._add_xor_constraint(obj.parent_component(),
-                                                     transBlock)
+        # create or fetch the xor constraint
+        xorConstraint = self._add_xor_constraint(obj.parent_component(),
+                                                 transBlock)
 
         xor = obj.xor
         or_expr = 0
