@@ -187,6 +187,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def test_do_not_transform_userDeactivated_disjuncts(self):
         ct.check_user_deactivated_disjuncts(self, 'bigm')
 
+    def test_improperly_deactivated_disjuncts(self):
+        ct.check_improperly_deactivated_disjuncts(self, 'bigm')
+
     def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
         ct.check_do_not_transform_userDeactivated_indexedDisjunction(self,
                                                                      'bigm')
@@ -1751,9 +1754,12 @@ class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
     def test_activeInnerDisjunction_err(self):
         ct.check_activeInnerDisjunction_err(self, 'bigm')
 
-class RangeSetOnDisjunct(unittest.TestCase):
+class UntransformableObjectsOnDisjunct(unittest.TestCase):
     def test_RangeSet(self):
         ct.check_RangeSet(self, 'bigm')
+
+    def test_Expression(self):
+        ct.check_Expression(self, 'bigm')
 
 class TransformABlock(unittest.TestCase):
     def test_transformation_simple_block(self):

@@ -85,8 +85,31 @@ def check_user_deactivated_disjuncts(self, transformation):
 
     rBlock = m.component("_pyomo_gdp_%s_relaxation" % transformation)
     disjBlock = rBlock.relaxedDisjuncts
+    self.assertEqual(len(disjBlock), 1)
     self.assertIs(disjBlock[0], m.d[1].transformation_block())
     self.assertIs(transform.get_src_disjunct(disjBlock[0]), m.d[1])
+
+def check_improperly_deactivated_disjuncts(self, transformation):
+    m = models.makeTwoTermDisj()
+    m.d[0].deactivate()
+    self.assertEqual(value(m.d[0].indicator_var), 0)
+    self.assertTrue(m.d[0].indicator_var.is_fixed())
+    m.d[0].indicator_var.fix(1)
+    self.assertRaisesRegexp(
+        GDP_Error,
+        "The disjunct d\[0\] is deactivated, but the "
+        "indicator_var is fixed to 1. This makes no sense.",
+        TransformationFactory('gdp.%s' % transformation).apply_to,
+        m)
+
+def check_indexed_disjunction_not_transformed(self, m, transformation):
+    # no transformation block, nothing transformed
+    self.assertIsNone(m.component("_pyomo_gdp_%s_transformation" 
+                                  % transformation))
+    for idx in m.disjunct:
+        self.assertIsNone(m.disjunct[idx].transformation_block)
+    for idx in m.disjunction:
+        self.assertIsNone(m.disjunction[idx].algebraic_constraint)
 
 def check_do_not_transform_userDeactivated_indexedDisjunction(self,
                                                               transformation):
@@ -95,15 +118,12 @@ def check_do_not_transform_userDeactivated_indexedDisjunction(self,
     m.disjunction.deactivate()
     for idx in m.disjunct:
         m.disjunct[idx].deactivate()
-    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    directly = TransformationFactory('gdp.%s' % transformation).create_using(m)
+    check_indexed_disjunction_not_transformed(self, directly, transformation)
 
-    # no transformation block, nothing transformed
-    self.assertIsNone(m.component("_pyomo_gdp_%s_transformation" 
-                                  % transformation))
-    for idx in m.disjunct:
-        self.assertIsNone(m.disjunct[idx].transformation_block)
-    for idx in m.disjunction:
-        self.assertIsNone(m.disjunction[idx].algebraic_constraint)
+    targets = TransformationFactory('gdp.%s' % transformation).create_using(
+        m, targets=(m.disjunction))
+    check_indexed_disjunction_not_transformed(self, targets, transformation)
 
 def check_disjunction_deactivated(self, transformation):
     m = models.makeTwoTermDisj()
@@ -1397,9 +1417,15 @@ def check_disjunctData_only_targets_transformed(self, transformation):
         self.assertIs(m.disjunct[1].innerdisjunct[i].transformation_block(),
                       disjBlock[j])
 
-# random
+# checks for handling of benign types that could be on disjuncts we're
+# transforming
 
 def check_RangeSet(self, transformation):
     m = models.makeDisjunctWithRangeSet()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
     self.assertIsInstance(m.d1.s, RangeSet)
+
+def check_Expression(self, transformation):
+    m = models.makeDisjunctWithExpression()
+    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    self.assertIsInstance(m.d1.e, Expression)

@@ -490,6 +490,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def test_do_not_transform_user_deactivated_disjuncts(self):
         ct.check_user_deactivated_disjuncts(self, 'chull')
 
+    def test_improperly_deactivated_disjuncts(self):
+        ct.check_improperly_deactivated_disjuncts(self, 'chull')
+
     def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
         ct.check_do_not_transform_userDeactivated_indexedDisjunction(self,
                                                                      'chull')
@@ -1534,9 +1537,12 @@ class TestSpecialCases(unittest.TestCase):
         # it does not exist on the transformation block
         self.assertIsNone(m.d2.transformation_block().component("z"))
         
-class RangeSetOnDisjunct(unittest.TestCase):
+class UntransformableObjectsOnDisjunct(unittest.TestCase):
     def test_RangeSet(self):
         ct.check_RangeSet(self, 'chull')
+
+    def test_Expression(self):
+        ct.check_Expression(self, 'chull')
 
 class TransformABlock(unittest.TestCase, CommonTests):
     def test_transformation_simple_block(self):
@@ -1669,13 +1675,123 @@ class TestErrors(unittest.TestCase):
 class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
     def test_activeInnerDisjunction_err(self):
         ct.check_activeInnerDisjunction_err(self, 'chull')
-# TODO
-# class BlocksOnDisjuncts(unittest.TestCase):
-#     def setUp(self):
-#         # set seed so we can test name collisions predictably
-#         random.seed(666)
-    
-#     def test_transformed_constraint_nameConflicts(self):
-#         pass
-#         # you'll have to do your own here and for the next one. Because chull
-#         # makes more stuff, so those bigm tests aren't general!
+
+class BlocksOnDisjuncts(unittest.TestCase):
+    def setUp(self):
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def makeModel(self):
+        # I'm going to multi-task and also check some types of constraints 
+        # whose expressions need to be tested
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 5))
+        m.y = Var(bounds=(0, 9))
+        m.disj1 = Disjunct()
+        m.disj1.add_component("b.any_index", Constraint(expr=m.x >= 1.5))
+        m.disj1.b = Block()
+        m.disj1.b.any_index = Constraint(Any)
+        m.disj1.b.any_index['local'] = m.x <= 2
+        m.disj1.b.LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.disj1.b.LocalVars[m.disj1] = [m.x]
+        m.disj1.b.any_index['nonlin-ub'] = m.y**2 <= 4
+        m.disj2 = Disjunct()
+        m.disj2.non_lin_lb = Constraint(expr=log(1 + m.y) >= 1)
+        m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+        return m
+
+    def test_transformed_constraint_name_conflict(self):
+        m = self.makeModel()
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        transBlock = m.disj1.transformation_block()
+        self.assertIsInstance(transBlock.component("disj1.b.any_index"),
+                              Constraint)
+        self.assertIsInstance(transBlock.component("disj1.b.any_index_4"),
+                              Constraint)
+        xformed = chull.get_transformed_constraints(
+            m.disj1.component("b.any_index"))
+        self.assertEqual(len(xformed), 1)
+        self.assertIs(xformed[0], 
+                      transBlock.component("disj1.b.any_index")['lb'])
+
+        xformed = chull.get_transformed_constraints(m.disj1.b.any_index['local'])
+        self.assertEqual(len(xformed), 1)
+        self.assertIs(xformed[0], 
+                      transBlock.component("disj1.b.any_index_4")[
+                          ('local','ub')])
+        xformed = chull.get_transformed_constraints(
+            m.disj1.b.any_index['nonlin-ub'])
+        self.assertEqual(len(xformed), 1)
+        self.assertIs(xformed[0], 
+                      transBlock.component("disj1.b.any_index_4")[
+                          ('nonlin-ub','ub')])
+
+    def test_local_var_handled_correctly(self):
+        m = self.makeModel()
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        # test the local variable was handled correctly.
+        self.assertIs(chull.get_disaggregated_var(m.x, m.disj1), m.x)
+        self.assertEqual(m.x.lb, 0)
+        self.assertEqual(m.x.ub, 5)
+        self.assertIsNone(m.disj1.transformation_block().component("x"))
+        self.assertIsInstance(m.disj1.transformation_block().component("y"),
+                              Var)
+
+    # this doesn't require the block, I'm just coopting this test to make sure
+    # of some nonlinear expressions.
+    def test_transformed_constraints(self):
+        m = self.makeModel()
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        # test the transformed nonlinear constraints
+        nonlin_ub_list = chull.get_transformed_constraints(
+            m.disj1.b.any_index['nonlin-ub'])
+        self.assertEqual(len(nonlin_ub_list), 1)
+        cons = nonlin_ub_list[0]
+        self.assertEqual(cons.index(), ('nonlin-ub', 'ub'))
+        self.assertIs(cons.ctype, Constraint)
+        self.assertIsNone(cons.lower)
+        self.assertEqual(value(cons.upper), 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertEqual(str(repn.nonlinear_expr),
+                         "(0.9999*disj1.indicator_var + 0.0001)*"
+                         "(_pyomo_gdp_chull_relaxation.relaxedDisjuncts[0].y/"
+                         "(0.9999*disj1.indicator_var + 0.0001))**2")
+        self.assertEqual(len(repn.nonlinear_vars), 2)
+        self.assertIs(repn.nonlinear_vars[0], m.disj1.indicator_var)
+        self.assertIs(repn.nonlinear_vars[1], 
+                      chull.get_disaggregated_var(m.y, m.disj1))
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], m.disj1.indicator_var)
+        self.assertEqual(repn.linear_coefs[0], -4)
+        
+        nonlin_lb_list = chull.get_transformed_constraints(m.disj2.non_lin_lb)
+        self.assertEqual(len(nonlin_lb_list), 1)
+        cons = nonlin_lb_list[0]
+        self.assertEqual(cons.index(), 'lb')
+        self.assertIs(cons.ctype, Constraint)
+        self.assertIsNone(cons.lower)
+        self.assertEqual(value(cons.upper), 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertEqual(str(repn.nonlinear_expr),
+                         "- ((0.9999*disj2.indicator_var + 0.0001)*"
+                         "log(1 + "
+                         "_pyomo_gdp_chull_relaxation.relaxedDisjuncts[1].y/"
+                         "(0.9999*disj2.indicator_var + 0.0001)))")
+        self.assertEqual(len(repn.nonlinear_vars), 2)
+        self.assertIs(repn.nonlinear_vars[0], m.disj2.indicator_var)
+        self.assertIs(repn.nonlinear_vars[1], 
+                      chull.get_disaggregated_var(m.y, m.disj2))
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], m.disj2.indicator_var)
+        self.assertEqual(repn.linear_coefs[0], 1)

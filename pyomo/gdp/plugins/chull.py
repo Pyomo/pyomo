@@ -281,19 +281,6 @@ class ConvexHull_Transformation(Transformation):
 
         return transBlock
 
-    # Note that this is very similar to the is_child_of function in util, but it
-    # differs in that we are only interested in looking through the block
-    # structure, rather than all the components.
-    def _contained_in(self, var, block):
-        "Return True if a var is in the subtree rooted at block"
-        while var is not None:
-            if var.parent_component() is block:
-                return True
-            var = var.parent_block()
-            if var is block:
-                return True
-        return False
-
     def _transform_block(self, obj):
         for i in sorted(iterkeys(obj)):
             self._transform_blockData(obj[i])
@@ -335,6 +322,8 @@ class ConvexHull_Transformation(Transformation):
         return orC
 
     def _transform_disjunction(self, obj):
+        # NOTE: this check is actually necessary because it's possible we go
+        # straight to this function when we use targets.
         if not obj.active:
             return
 
@@ -358,7 +347,6 @@ class ConvexHull_Transformation(Transformation):
         obj.deactivate()
 
     def _transform_disjunctionData(self, obj, index, transBlock=None):
-        # TODO: This should've been a bug, I think?? Make sure it's tested...
         if not obj.active:
             return
         # Convex hull doesn't work if this is an or constraint. So if
@@ -465,11 +453,9 @@ class ConvexHull_Transformation(Transformation):
             disaggregatedExpr = 0
             for disjunct in obj.disjuncts:
                 if disjunct._transformation_block is None:
-                    if not disjunct.indicator_var.is_fixed() \
-                            or value(disjunct.indicator_var) != 0:
-                        raise RuntimeError(
-                            "GDP chull: disjunct was not relaxed, but "
-                            "does not appear to be correctly deactivated.")
+                    # Because we called _transform_disjunct in the loop above,
+                    # we know that if this isn't transformed it is because it
+                    # was cleanly deactivated, and we can just skip it.
                     continue
 
                 disaggregatedVar = disjunct._transformation_block().\
@@ -666,13 +652,11 @@ class ConvexHull_Transformation(Transformation):
         # anyway, and nothing will get double-bigm-ed. (If an untransformed
         # disjunction is lurking here, we will catch it below).
         
-        # Look through the component map of block and transform
-        # everything we have a handler for. Yell if we don't know how
-        # to handle it.
-        for name, obj in list(iteritems(block.component_map())):
-            # Note: This means non-ActiveComponent types cannot have handlers
-            if not hasattr(obj, 'active') or not obj.active:
-                continue
+        # Look through the component map of block and transform everything we
+        # have a handler for. Yell if we don't know how to handle it. (Note that
+        # because we only iterate through active components, this means
+        # non-ActiveComponent types cannot have handlers.)
+        for obj in block.component_objects(active=True, descend_into=False):
             handler = self.handlers.get(obj.ctype, None)
             if not handler:
                 if handler is None:
@@ -725,6 +709,8 @@ class ConvexHull_Transformation(Transformation):
         if obj.is_indexed():
             try:
                 newConstraint = Constraint(obj.index_set(), transBlock.lbub)
+            # ESJ TODO: John, is this except block still reachable in the
+            # post-set-rewrite universe? I can't figure out how to test it...
             except:
                 # The original constraint may have been indexed by a
                 # non-concrete set (like an Any).  We will give up on
@@ -791,6 +777,9 @@ class ConvexHull_Transformation(Transformation):
 
             if c.equality:
                 if NL:
+                    # ESJ TODO: This can't happen right? This is the only
+                    # obvious case where someone has messed up, but this has to
+                    # be nonconvex, right? Shouldn't we tell them?
                     newConsExpr = expr == c.lower*y
                 else:
                     v = list(EXPR.identify_variables(expr))
@@ -918,17 +907,6 @@ class ConvexHull_Transformation(Transformation):
                             % disaggregated_var.name)
         return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
 
-    # def _is_disaggregated_var(self, var):
-    #     """ Returns True if var is a disaggregated variable, False otherwise.
-    #     This is used so that we can avoid double-disaggregating.
-    #     """
-    #     parent = var.parent_block()
-    #     if hasattr(parent, "_disaggregatedVarMap") and 'srcVar' in \
-    #        parent._disaggregatedVarMap:
-    #         return var in parent._disaggregatedVarMap['srcVar']
-
-    #     return False
-
     # retrieves the disaggregation constraint for original_var resulting from
     # transforming disjunction
     def get_disaggregation_constraint(self, original_var, disjunction):
@@ -957,11 +935,3 @@ class ConvexHull_Transformation(Transformation):
             raise GDP_Error("Either %s is not a disaggregated variable, or "
                             "the disjunction that disaggregates it has not "
                             "been properly transformed." % v.name)
-
-    # TODO: These maps actually get used in cuttingplanes. It will be worth
-    # making sure that the ones that are called there are on the more efficient
-    # side...
-
-    # TODO: This is not a relaxation, I would love to not be using that word in
-    # the code... And I need a convention for distinguishing between the
-    # disjunct transBlocks and the parent blocks of those.
