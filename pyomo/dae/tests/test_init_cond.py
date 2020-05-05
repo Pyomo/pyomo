@@ -18,7 +18,8 @@ from six import StringIO
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.core.base import *
+from pyomo.environ import SolverFactory
 from pyomo.common.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.init_cond import *
