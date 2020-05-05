@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import copy
+import itertools
 import logging
 import sys
 from six import iteritems, itervalues
@@ -18,7 +19,7 @@ from pyomo.core.expr.numvalue import (
     NumericValue, native_numeric_types, native_types, nonpyomo_leaf_types,
     as_numeric, value,
 )
-from pyomo.core.expr.numeric_expr import ExpressionBase
+from pyomo.core.expr.numeric_expr import ExpressionBase, SumExpression
 from pyomo.core.expr.visitor import (
     ExpressionReplacementVisitor, StreamBasedExpressionVisitor
 )
@@ -47,6 +48,12 @@ class GetItemExpression(ExpressionBase):
         if attr.startswith('__') and attr.endswith('__'):
             raise AttributeError()
         return GetAttrExpression((self, attr))
+
+    def __iter__(self):
+        return iter(value(self))
+
+    def __len__(self):
+        return len(value(self))
 
     def getname(self, *args, **kwds):
         return self._args_[0].getname(*args, **kwds)
@@ -142,6 +149,12 @@ class GetAttrExpression(ExpressionBase):
     def __getitem__(self, *idx):
         return GetItemExpression((self,) + idx)
 
+    def __iter__(self):
+        return iter(value(self))
+
+    def __len__(self):
+        return len(value(self))
+
     def getname(self, *args, **kwds):
         return 'getattr'
 
@@ -165,7 +178,7 @@ class GetAttrExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         assert len(values) == 2
         if verbose:
-            return "getitem(%s, %s)" % values
+            return "getattr(%s, %s)" % tuple(values)
         # Note that the string argument for getattr comes quoted, so we
         # need to remove the quotes.
         attr = values[1]
@@ -177,11 +190,87 @@ class GetAttrExpression(ExpressionBase):
         return getattr(*tuple(args))
 
 
+class _TemplateSumExpression_argList(object):
+    """A virtual list to represent the expanded SumExpression args
+
+    This class implements a "virtual args list" for
+    TemplateSumExpressions without actually generating the expanded
+    expression.  It can be accessed either in "one-pass" without
+    generating a list of template argument values (more efficient), or
+    as a random-access list (where it will have to create the full list
+    of argument values (less efficient).
+
+    The instance can be used as a context manager to both lock the
+    IndexTemplate values within this context and to restore their original
+    values upon exit.
+
+    It is (intentionally) not iterable.
+
+    """
+    def __init__(self, TSE):
+        self._tse = TSE
+        self._i = 0
+        self._init_vals = None
+        self._iter = self._get_iter()
+        self._lock = None
+
+    def __len__(self):
+        return self._tse.nargs()
+
+    def __getitem__(self, i):
+        if self._i == i:
+            self._set_iter_vals(next(self._iter))
+            self._i += 1
+        elif self._i is not None:
+            # Switch to random-access mode.  If we have already
+            # retrieved one of the indices, then we need to regenerate
+            # the iterator from scratch.
+            self._iter = list(self._get_iter() if self._i else self._iter)
+            self._set_iter_vals(self._iter[i])
+        else:
+            self._set_iter_vals(self._iter[i])
+        return self._tse._local_args_[0]
+
+    def __enter__(self):
+        self._lock = self
+        self._lock_iters()
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self._unlock_iters()
+        self._lock = None
+
+    def _get_iter(self):
+        # Note: by definition, all _set pointers within an itergroup
+        # point to the same Set
+        _sets = tuple(iterGroup[0]._set for iterGroup in self._tse._iters)
+        return itertools.product(*_sets)
+
+    def _lock_iters(self):
+        self._init_vals = tuple(
+            tuple(
+                it.lock(self._lock) for it in iterGroup
+            ) for iterGroup in self._tse._iters )
+
+    def _unlock_iters(self):
+        self._set_iter_vals(self._init_vals)
+        for iterGroup in self._tse._iters:
+            for it in iterGroup:
+                it.unlock(self._lock)
+
+    def _set_iter_vals(self, val):
+        for i, iterGroup in enumerate(self._tse._iters):
+            if len(iterGroup) == 1:
+                iterGroup[0].set_value(val[i], self._lock)
+            else:
+                for j, v in enumerate(val[i]):
+                    iterGroup[j].set_value(v, self._lock)
+
+
 class TemplateSumExpression(ExpressionBase):
     """
     Expression to represent an unexpanded sum over one or more sets.
     """
-    __slots__ = ('_iters',)
+    __slots__ = ('_iters', '_local_args_')
     PRECEDENCE = 1
 
     def _precedence(self):
@@ -193,7 +282,24 @@ class TemplateSumExpression(ExpressionBase):
         self._iters = _iters
 
     def nargs(self):
-        return 1
+        # Note: by definition, all _set pointers within an itergroup
+        # point to the same Set
+        ans = 1
+        for iterGroup in self._iters:
+            ans *= len(iterGroup[0]._set)
+        return ans
+
+    @property
+    def args(self):
+        return _TemplateSumExpression_argList(self)
+
+    @property
+    def _args_(self):
+        return _TemplateSumExpression_argList(self)
+
+    @_args_.setter
+    def _args_(self, args):
+        self._local_args_ = args
 
     def create_node_with_local_data(self, args):
         return self.__class__(args, self._iters)
@@ -208,7 +314,7 @@ class TemplateSumExpression(ExpressionBase):
         return "SUM"
 
     def is_potentially_variable(self):
-        if any(arg.is_potentially_variable() for arg in self._args_
+        if any(arg.is_potentially_variable() for arg in self._local_args_
                if arg.__class__ not in nonpyomo_leaf_types):
             return True
         return False
@@ -221,46 +327,28 @@ class TemplateSumExpression(ExpressionBase):
             return None
         return result[0]
 
-    def _set_iter_vals(vals):
-        for i, iterGroup in enumerate(self._iters):
-            if len(iterGroup) == 1:
-                iterGroup[0].set_value(val[i])
-            else:
-                for j, v in enumerate(val):
-                    iterGroup[j].set_value(v)
-
-    def _get_iter_vals(vals):
-        return tuple(tuple(x._value for x in ig) for ig in self._iters)
-
     def _apply_operation(self, result):
-        ans = 0
-        _init_vals = self._get_iter_vals()
-        _sets = tuple(iterGroup[0]._set for iterGroup in self._iters)
-        for val in itertools.product(*_sets):
-            self._set_iter_vals(val)
-            ans += value(self._args_[0])
-        self._set_iter_vals(_init_vals)
-        return ans
+        return sum(result)
 
     def _to_string(self, values, verbose, smap, compute_values):
         ans = ''
-        for iterGroup in self._iters:
-            ans += ' for %s in %s' % (','.join(str(i) for i in iterGroup),
-                                      iterGroup[0]._set)
         val = values[0]
-        if val[0]=='(' and val[-1]==')':
+        if val[0]=='(' and val[-1]==')' and _balanced_parens(val[1:-1]):
             val = val[1:-1]
-        return "SUM(%s%s)" % (val, ans)
+        iterStrGenerator = (
+            ( ', '.join(str(i) for i in iterGroup),
+              iterGroup[0]._set.to_string(verbose=verbose) )
+            for iterGroup in self._iters
+        )
+        if verbose:
+            iterStr = ', '.join('iter(%s, %s)' % x for x in iterStrGenerator)
+            return 'templatesum(%s, %s)' % (val, iterStr)
+        else:
+            iterStr = ' '.join('for %s in %s' % x for x in iterStrGenerator)
+            return 'SUM(%s %s)' % (val, iterStr)
 
     def _resolve_template(self, args):
-        _init_vals = self._get_iter_vals()
-        _sets = tuple(iterGroup[0]._set for iterGroup in self._iters)
-        ans = []
-        for val in itertools.product(*_sets):
-            self._set_iter_vals(val)
-            ans.append(resolve_template(self._args_[0]))
-        self._set_iter_vals(_init_vals)
-        return SumExpression(ans)
+        return SumExpression(args)
 
 
 class IndexTemplate(NumericValue):
@@ -278,13 +366,14 @@ class IndexTemplate(NumericValue):
        _set: the Set from which this IndexTemplate can take values
     """
 
-    __slots__ = ('_set', '_value', '_index', '_id')
+    __slots__ = ('_set', '_value', '_index', '_id', '_lock')
 
     def __init__(self, _set, index=0, _id=None):
         self._set = _set
         self._value = _NotSpecified
         self._index = index
         self._id = _id
+        self._lock = None
 
     def __getstate__(self):
         """
@@ -324,7 +413,8 @@ class IndexTemplate(NumericValue):
         if self._value is _NotSpecified:
             if exception:
                 raise TemplateExpressionError(
-                    self, "Evaluating uninitialized IndexTemplate")
+                    self, "Evaluating uninitialized IndexTemplate (%s)"
+                    % (self,))
             return None
         else:
             return self._value
@@ -369,15 +459,22 @@ class IndexTemplate(NumericValue):
     def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
         return self.name
 
-    def set_value(self, *values):
+    def set_value(self, values=_NotSpecified, lock=None):
         # It might be nice to check if the value is valid for the base
         # set, but things are tricky when the base set is not dimention
         # 1.  So, for the time being, we will just "trust" the user.
         # After all, the actual Set will raise exceptions if the value
         # is not present.
-        if not values:
+        if lock is not self._lock:
+            raise RuntimeError(
+                "The TemplateIndex %s is currently locked by %s and "
+                "cannot be set through lock %s" % (self, self._lock, lock))
+        if values is _NotSpecified:
             self._value = _NotSpecified
-        elif self._index is not None:
+            return
+        if type(values) is not tuple:
+            values = (values,)
+        if self._index is not None:
             if len(values) == 1:
                 self._value = values[0]
             else:
@@ -385,6 +482,15 @@ class IndexTemplate(NumericValue):
                                  "IndexTemplate %s" % (values, self))
         else:
             self._value = values
+
+    def lock(self, lock):
+        assert self._lock is None
+        self._lock = lock
+        return self._value
+
+    def unlock(self, lock):
+        assert self._lock is lock
+        self._lock = None
 
 
 def resolve_template(expr):
@@ -608,7 +714,7 @@ class _set_iterator_template_generator(object):
 
         _set = self._set
         d = _set.dimen
-        if d is None:
+        if d is None or type(d) is not int:
             idx = (IndexTemplate(_set, None, context.next_id()),)
         else:
             idx = tuple(
@@ -663,9 +769,16 @@ def templatize_rule(block, rule, index_set):
     internal_error = None
     try:
         # Override Set iteration to return IndexTemplates
-        _old_iter = pyomo.core.base.set._FiniteSetMixin.__iter__
-        pyomo.core.base.set._FiniteSetMixin.__iter__ = \
-            lambda x: context.get_iter(x).__iter__()
+        _old_iters = (
+            pyomo.core.base.set._FiniteSetMixin.__iter__,
+            GetItemExpression.__iter__,
+            GetAttrExpression.__iter__,
+        )
+        pyomo.core.base.set._FiniteSetMixin.__iter__ \
+            = GetItemExpression.__iter__ \
+            = GetAttrExpression.__iter__ \
+            = lambda x: context.get_iter(x).__iter__()
+
         # Override sum with our sum
         _old_sum = __builtins__['sum']
         __builtins__['sum'] = context.sum_template
@@ -675,8 +788,12 @@ def templatize_rule(block, rule, index_set):
                 raise TemplateExpressionError(
                     None,
                     "Cannot templatize rule with non-finite indexing set")
-            indices = iter(index_set).next()
-            context.cache.pop()
+            indices = next(iter(index_set))
+            try:
+                context.cache.pop()
+            except IndexError:
+                assert indices is None
+                indices = ()
         else:
             indices = ()
         if type(indices) is not tuple:
@@ -691,13 +808,15 @@ def templatize_rule(block, rule, index_set):
         internal_error = sys.exc_info()
         raise
     finally:
-        pyomo.core.base.set._FiniteSetMixin.__iter__ = _old_iter
+        pyomo.core.base.set._FiniteSetMixin.__iter__, \
+            GetItemExpression.__iter__, \
+            GetAttrExpression.__iter__ = _old_iters
         __builtins__['sum'] = _old_sum
-        if internal_error is not None:
-            logger.error("The following exception was raised when "
-                         "templatizing the rule '%s':\n\t%s"
-                         % (rule.__name__, internal_error[1]))
         if len(context.cache):
+            if internal_error is not None:
+                logger.error("The following exception was raised when "
+                             "templatizing the rule '%s':\n\t%s"
+                             % (rule.__name__, internal_error[1]))
             raise TemplateExpressionError(
                 None,
                 "Explicit iteration (for loops) over Sets is not supported "

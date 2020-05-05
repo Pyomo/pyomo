@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -21,7 +21,7 @@ from pyomo.core.expr.template_expr import (
     _GetItemIndexer,
     resolve_template,
     templatize_constraint,
-    substitute_template_expression, 
+    substitute_template_expression,
     substitute_getitem_with_param,
     substitute_template_with_value,
 )
@@ -362,6 +362,192 @@ class TestTemplatizeRule(unittest.TestCase):
         self.assertEqual(len(indices), 1)
         self.assertIs(indices[0]._set, m.I)
         self.assertEqual(str(template), "x[_1]  <=  0.0")
+
+    def test_simple_sum_rule(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.J = RangeSet(3)
+        m.x = Var(m.I,m.J)
+        @m.Constraint(m.I)
+        def c(m, i):
+            return sum(m.x[i,j] for j in m.J) <= 0
+
+        template, indices = templatize_constraint(m.c)
+        self.assertEqual(len(indices), 1)
+        self.assertIs(indices[0]._set, m.I)
+        self.assertEqual(
+            template.to_string(verbose=True),
+            "templatesum(getitem(x, _1, _2), iter(_2, J))  <=  0.0"
+        )
+        self.assertEqual(
+            str(template),
+            "SUM(x[_1,_2] for _2 in J)  <=  0.0"
+        )
+        # Evaluate the template
+        indices[0].set_value(2)
+        self.assertEqual(
+            str(resolve_template(template)),
+            'x[2,1] + x[2,2] + x[2,3]  <=  0.0'
+        )
+
+    def test_nested_sum_rule(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.J = RangeSet(3)
+        m.K = Set(m.I, initialize={1:[10], 2:[10,20], 3:[10,20,30]})
+        m.x = Var(m.I,m.J,[10,20,30])
+        @m.Constraint()
+        def c(m):
+            return sum( sum(m.x[i,j,k] for k in m.K[i])
+                        for j in m.J for i in m.I) <= 0
+
+        template, indices = templatize_constraint(m.c)
+        self.assertEqual(len(indices), 0)
+        self.assertEqual(
+            template.to_string(verbose=True),
+            "templatesum("
+            "templatesum(getitem(x, _2, _1, _3), iter(_3, getitem(K, _2))), "
+            "iter(_1, J), iter(_2, I))  <=  0.0"
+        )
+        self.assertEqual(
+            str(template),
+            "SUM(SUM(x[_2,_1,_3] for _3 in K[_2]) "
+            "for _1 in J for _2 in I)  <=  0.0"
+        )
+        # Evaluate the template
+        self.assertEqual(
+            str(resolve_template(template)),
+            'x[1,1,10] + '
+            '(x[2,1,10] + x[2,1,20]) + '
+            '(x[3,1,10] + x[3,1,20] + x[3,1,30]) + '
+            '(x[1,2,10]) + '
+            '(x[2,2,10] + x[2,2,20]) + '
+            '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
+            '(x[1,3,10]) + '
+            '(x[2,3,10] + x[2,3,20]) + '
+            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0.0'
+        )
+
+    def test_multidim_nested_sum_rule(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.J = RangeSet(3)
+        m.JI = m.J*m.I
+        m.K = Set(m.I, initialize={1:[10], 2:[10,20], 3:[10,20,30]})
+        m.x = Var(m.I,m.J,[10,20,30])
+        @m.Constraint()
+        def c(m):
+            return sum( sum(m.x[i,j,k] for k in m.K[i])
+                        for j,i in m.JI) <= 0
+
+        template, indices = templatize_constraint(m.c)
+        self.assertEqual(len(indices), 0)
+        self.assertEqual(
+            template.to_string(verbose=True),
+            "templatesum("
+            "templatesum(getitem(x, _2, _1, _3), iter(_3, getitem(K, _2))), "
+            "iter(_1, _2, JI))  <=  0.0"
+        )
+        self.assertEqual(
+            str(template),
+            "SUM(SUM(x[_2,_1,_3] for _3 in K[_2]) "
+            "for _1, _2 in JI)  <=  0.0"
+        )
+        # Evaluate the template
+        self.assertEqual(
+            str(resolve_template(template)),
+            'x[1,1,10] + '
+            '(x[2,1,10] + x[2,1,20]) + '
+            '(x[3,1,10] + x[3,1,20] + x[3,1,30]) + '
+            '(x[1,2,10]) + '
+            '(x[2,2,10] + x[2,2,20]) + '
+            '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
+            '(x[1,3,10]) + '
+            '(x[2,3,10] + x[2,3,20]) + '
+            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0.0'
+        )
+
+    def test_multidim_nested_sum_rule(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.J = RangeSet(3)
+        m.JI = m.J*m.I
+        m.K = Set(m.I, initialize={1:[10], 2:[10,20], 3:[10,20,30]})
+        m.x = Var(m.I,m.J,[10,20,30])
+        @m.Constraint()
+        def c(m):
+            return sum( sum(m.x[i,j,k] for k in m.K[i])
+                        for j,i in m.JI) <= 0
+
+        template, indices = templatize_constraint(m.c)
+        self.assertEqual(len(indices), 0)
+        self.assertEqual(
+            template.to_string(verbose=True),
+            "templatesum("
+            "templatesum(getitem(x, _2, _1, _3), iter(_3, getitem(K, _2))), "
+            "iter(_1, _2, JI))  <=  0.0"
+        )
+        self.assertEqual(
+            str(template),
+            "SUM(SUM(x[_2,_1,_3] for _3 in K[_2]) "
+            "for _1, _2 in JI)  <=  0.0"
+        )
+        # Evaluate the template
+        self.assertEqual(
+            str(resolve_template(template)),
+            'x[1,1,10] + '
+            '(x[2,1,10] + x[2,1,20]) + '
+            '(x[3,1,10] + x[3,1,20] + x[3,1,30]) + '
+            '(x[1,2,10]) + '
+            '(x[2,2,10] + x[2,2,20]) + '
+            '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
+            '(x[1,3,10]) + '
+            '(x[2,3,10] + x[2,3,20]) + '
+            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0.0'
+        )
+
+    def test_multidim_nested_getattr_sum_rule(self):
+        m = ConcreteModel()
+        m.I = RangeSet(3)
+        m.J = RangeSet(3)
+        m.JI = m.J*m.I
+        m.K = Set(m.I, initialize={1:[10], 2:[10,20], 3:[10,20,30]})
+        m.x = Var(m.I,m.J,[10,20,30])
+        @m.Block(m.I)
+        def b(b, i):
+            b.K = RangeSet(10, 10*i, 10)
+        @m.Constraint()
+        def c(m):
+            return sum( sum(m.x[i,j,k] for k in m.b[i].K)
+                        for j,i in m.JI) <= 0
+
+        template, indices = templatize_constraint(m.c)
+        self.assertEqual(len(indices), 0)
+        self.assertEqual(
+            template.to_string(verbose=True),
+            "templatesum("
+            "templatesum(getitem(x, _2, _1, _3), "
+            "iter(_3, getattr(getitem(b, _2), 'K'))), "
+            "iter(_1, _2, JI))  <=  0.0"
+        )
+        self.assertEqual(
+            str(template),
+            "SUM(SUM(x[_2,_1,_3] for _3 in b[_2].K) "
+            "for _1, _2 in JI)  <=  0.0"
+        )
+        # Evaluate the template
+        self.assertEqual(
+            str(resolve_template(template)),
+            'x[1,1,10] + '
+            '(x[2,1,10] + x[2,1,20]) + '
+            '(x[3,1,10] + x[3,1,20] + x[3,1,30]) + '
+            '(x[1,2,10]) + '
+            '(x[2,2,10] + x[2,2,20]) + '
+            '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
+            '(x[1,3,10]) + '
+            '(x[2,3,10] + x[2,3,20]) + '
+            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0.0'
+        )
 
 
 class TestTemplateSubstitution(unittest.TestCase):
