@@ -197,6 +197,8 @@ class StreamBasedExpressionVisitor(object):
                 args = ()
             else:
                 args = expr.args
+        if hasattr(args, '__enter__'):
+            args.__enter__()
         node = expr
         # Note that because we increment child_idx just before fetching
         # the child node, it must be initialized to -1, and ptr[3] must
@@ -271,6 +273,8 @@ class StreamBasedExpressionVisitor(object):
                         args = ()
                     else:
                         args = child.args
+                if hasattr(args, '__enter__'):
+                    args.__enter__()
                 node = child
                 child_idx = -1
                 ptr = (ptr, node, args, len(args)-1, data, child_idx)
@@ -278,6 +282,8 @@ class StreamBasedExpressionVisitor(object):
             else:
                 # We are done with this node.  Call exitNode to compute
                 # any result
+                if hasattr(ptr[2], '__exit__'):
+                    ptr[2].__exit__(None, None, None)
                 if self.exitNode is not None:
                     node_result = self.exitNode(node, data)
                 else:
