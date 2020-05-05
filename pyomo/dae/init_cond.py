@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import Constraint, Block, value
+from pyomo.core.base import Constraint, Block, value
 from pyomo.kernel import ComponentSet, ComponentMap
 from pyomo.dae.set_utils import (is_explicitly_indexed_by, get_index_set_except,
         is_in_block_indexed_by)
@@ -34,10 +34,10 @@ def deactivate_model_at(b, cset, pts, allow_skip=True, suppress_warnings=False):
         A dictionary mapping points in pts to lists of
         component data that have been deactivated there
     """
-    if not type(pts) is list:
+    if type(pts) is not list:
         pts = [pts]
     for pt in pts:
-        if not pt in cset:
+        if pt not in cset:
             msg = str(pt) + ' is not in ContinuousSet ' + cset.name
             raise ValueError(msg)
     deactivated = {pt: [] for pt in pts}
