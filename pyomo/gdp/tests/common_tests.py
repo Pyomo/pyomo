@@ -9,6 +9,7 @@ import random
 # utitility functions
 
 def check_linear_coef(self, repn, var, coef):
+    # utility used to check a variable-coefficient pair in a standard_repn
     var_id = None
     for i,v in enumerate(repn.linear_vars):
         if v is var:
@@ -17,6 +18,8 @@ def check_linear_coef(self, repn, var, coef):
     self.assertEqual(repn.linear_coefs[var_id], coef)
 
 def diff_apply_to_and_create_using(self, model, transformation):
+    # compares the pprint from the transformed model after using both apply_to
+    # and create_using to make sure the two do the same thing
     modelcopy = TransformationFactory(transformation).create_using(model)
     modelcopy_buf = StringIO()
     modelcopy.pprint(ostream=modelcopy_buf)
@@ -31,6 +34,9 @@ def diff_apply_to_and_create_using(self, model, transformation):
     self.assertMultiLineEqual(modelcopy_output, model_output)
 
 def check_relaxation_block(self, m, name, numdisjuncts):
+    # utility for checking the transformation block (this method is generic to
+    # bigm and chull though there is more on the chull transformation block, and
+    # the lbub set differs between the two
     transBlock = m.component(name)
     self.assertIsInstance(transBlock, Block)
     self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
@@ -75,6 +81,7 @@ def checkb0TargetsTransformed(self, m, transformation):
 # active status checks
 
 def check_user_deactivated_disjuncts(self, transformation):
+    # check that we do not transform a deactivated DisjunctData
     m = models.makeTwoTermDisj()
     m.d[0].deactivate()
     transform = TransformationFactory('gdp.%s' % transformation) 
@@ -90,6 +97,8 @@ def check_user_deactivated_disjuncts(self, transformation):
     self.assertIs(transform.get_src_disjunct(disjBlock[0]), m.d[1])
 
 def check_improperly_deactivated_disjuncts(self, transformation):
+    # check that if a Disjunct is deactivated but its indicator variable is not
+    # fixed to 0, we express our confusion.
     m = models.makeTwoTermDisj()
     m.d[0].deactivate()
     self.assertEqual(value(m.d[0].indicator_var), 0)
@@ -113,6 +122,7 @@ def check_indexed_disjunction_not_transformed(self, m, transformation):
 
 def check_do_not_transform_userDeactivated_indexedDisjunction(self,
                                                               transformation):
+    # check that we do not transform a deactivated disjunction
     m = models.makeTwoTermIndexedDisjunction()
     # If you truly want to transform nothing, deactivate everything
     m.disjunction.deactivate()
@@ -126,6 +136,7 @@ def check_do_not_transform_userDeactivated_indexedDisjunction(self,
     check_indexed_disjunction_not_transformed(self, targets, transformation)
 
 def check_disjunction_deactivated(self, transformation):
+    # check that we deactivate disjunctions after we transform them
     m = models.makeTwoTermDisj()
     TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=(m,))
 
@@ -134,6 +145,7 @@ def check_disjunction_deactivated(self, transformation):
     self.assertFalse(oldblock.active)
 
 def check_disjunctDatas_deactivated(self, transformation):
+    # check that we deactivate disjuncts after we transform them
     m = models.makeTwoTermDisj()
     TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=(m,))
 
@@ -142,6 +154,7 @@ def check_disjunctDatas_deactivated(self, transformation):
     self.assertFalse(oldblock.disjuncts[1].active)
 
 def check_deactivated_constraints(self, transformation):
+    # test that we deactivate constraints after we transform them
     m = models.makeTwoTermDisj()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
     oldblock = m.component("d")
@@ -159,6 +172,8 @@ def check_deactivated_constraints(self, transformation):
     self.assertFalse(oldc.active)
 
 def check_deactivated_disjuncts(self, transformation):
+    # another test that we deactivated transformed Disjuncts, but this one
+    # includes a SimpleDisjunct as well
     m = models.makeTwoTermMultiIndexedDisjunction()
     TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=(m,))
     # all the disjuncts got transformed, so all should be deactivated
@@ -167,6 +182,8 @@ def check_deactivated_disjuncts(self, transformation):
     self.assertFalse(m.disjunct.active)
 
 def check_deactivated_disjunctions(self, transformation):
+    # another test that we deactivated transformed Disjunctions, but including a
+    # SimpleDisjunction
     m = models.makeTwoTermMultiIndexedDisjunction()
     TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=(m,))
 
@@ -178,6 +195,8 @@ def check_deactivated_disjunctions(self, transformation):
 
 def check_do_not_transform_twice_if_disjunction_reactivated(self,
                                                             transformation):
+    # test that if an already-transformed disjunction is reactivated, we will
+    # not retransform it in a subsequent call to the transformation.
     m = models.makeTwoTermDisj()
     # this is a hack, but just diff the pprint from this and from calling
     # the transformation again.
@@ -208,6 +227,7 @@ def check_do_not_transform_twice_if_disjunction_reactivated(self,
         m)
 
 def check_constraints_deactivated_indexedDisjunction(self, transformation):
+    # check that we deactivate transformed constraints
     m = models.makeTwoTermMultiIndexedDisjunction()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
     
@@ -265,6 +285,8 @@ def check_transformation_block_name_collision(self, transformation):
 # XOR constraints
 
 def check_indicator_vars(self, transformation):
+    # particularly paranoid test checking that the indicator_vars are intact
+    # after transformation
     m = models.makeTwoTermDisj()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
     oldblock = m.component("d")
@@ -278,6 +300,7 @@ def check_indicator_vars(self, transformation):
     self.assertTrue(oldblock[1].indicator_var.is_binary())
 
 def check_xor_constraint(self, transformation):
+    # verify xor constraint for a SimpleDisjunction
     m = models.makeTwoTermDisj()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
     # make sure we created the xor constraint and put it on the relaxation
@@ -297,6 +320,7 @@ def check_xor_constraint(self, transformation):
     self.assertEqual(xor.upper, 1)
 
 def check_indexed_xor_constraints(self, transformation):
+    # verify xor constraint for an IndexedDisjunction
     m = models.makeTwoTermMultiIndexedDisjunction()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
 
@@ -316,6 +340,8 @@ def check_indexed_xor_constraints(self, transformation):
         self.assertEqual(xor[i].upper, 1)
 
 def check_indexed_xor_constraints_with_targets(self, transformation):
+    # check that when we use targets to specfy some DisjunctionDatas in an
+    # IndexedDisjunction, the xor constraint is indexed correctly
     m = models.makeTwoTermIndexedDisjunction_BoundedVars()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
@@ -337,7 +363,8 @@ def check_indexed_xor_constraints_with_targets(self, transformation):
         check_linear_coef(self, repn, m.disjunct[i, 1].indicator_var, 1)
 
 def check_three_term_xor_constraint(self, transformation):
-    # check that the xor constraint has all the indicator variables...
+    # check that the xor constraint has all the indicator variables from a
+    # three-term disjunction
     m = models.makeThreeTermIndexedDisj()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
 
@@ -367,6 +394,7 @@ def check_three_term_xor_constraint(self, transformation):
 # mappings
 
 def check_xor_constraint_mapping(self, transformation):
+    # test that we correctly map between disjunctions and XOR constraints
     m = models.makeTwoTermDisj()
     trans = TransformationFactory('gdp.%s' % transformation)
     trans.apply_to(m)
@@ -379,6 +407,8 @@ def check_xor_constraint_mapping(self, transformation):
 
 
 def check_xor_constraint_mapping_two_disjunctions(self, transformation):
+    # test that we correctly map between disjunctions and xor constraints when
+    # we have multiple SimpleDisjunctions (probably redundant with the above)
     m = models.makeDisjunctionOfDisjunctDatas()
     trans = TransformationFactory('gdp.%s' % transformation)
     trans.apply_to(m)
@@ -396,6 +426,8 @@ def check_xor_constraint_mapping_two_disjunctions(self, transformation):
                    transBlock2.disjunction2_xor)
 
 def check_disjunct_mapping(self, transformation):
+    # check that we correctly map between Disjuncts and their transformation
+    # blocks
     m = models.makeTwoTermDisj_Nonlinear()
     trans = TransformationFactory('gdp.%s' % transformation)
     trans.apply_to(m)
@@ -412,6 +444,7 @@ def check_disjunct_mapping(self, transformation):
 # targets
 
 def check_only_targets_inactive(self, transformation):
+    # test that we only transform targets (by checking active status)
     m = models.makeTwoSimpleDisjunctions()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
@@ -431,6 +464,7 @@ def check_only_targets_inactive(self, transformation):
     self.assertTrue(m.disjunct2.active)
 
 def check_only_targets_get_transformed(self, transformation):
+    # test that we only transform targets (by checking the actual components)
     m = models.makeTwoSimpleDisjunctions()
     trans = TransformationFactory('gdp.%s' % transformation)
     trans.apply_to(
@@ -461,6 +495,8 @@ def check_only_targets_get_transformed(self, transformation):
     self.assertIsNone(m.disjunct2[1].transformation_block)
 
 def check_targets_with_container_as_arg(self, transformation):
+    # check that we can giv a Disjunction as the argument to the transformation
+    # and use targets to specify a DisjunctionData to transform
     m = models.makeTwoTermIndexedDisjunction()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m.disjunction,
@@ -474,6 +510,7 @@ def check_targets_with_container_as_arg(self, transformation):
                   transBlock.disjunction_xor)
 
 def check_target_not_a_component_error(self, transformation):
+    # test error message for crazy targets
     decoy = ConcreteModel()
     decoy.block = Block()
     m = models.makeTwoSimpleDisjunctions()
@@ -485,6 +522,7 @@ def check_target_not_a_component_error(self, transformation):
         targets=[decoy.block])
 
 def check_targets_cannot_be_cuids(self, transformation):
+    # check that we scream if targets are cuids
     m = models.makeTwoTermDisj()
     self.assertRaisesRegexp(
         ValueError,
@@ -498,6 +536,7 @@ def check_targets_cannot_be_cuids(self, transformation):
         targets=[ComponentUID(m.disjunction)])
 
 def check_indexedDisj_targets_inactive(self, transformation):
+    # check that targets are deactivated (when target is IndexedDisjunction)
     m = models.makeDisjunctionsOnIndexedBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
@@ -519,6 +558,8 @@ def check_indexedDisj_targets_inactive(self, transformation):
     self.assertTrue(m.b[1].disjunct1.active)
 
 def check_indexedDisj_only_targets_transformed(self, transformation):
+    # check that only the targets are transformed (with IndexedDisjunction as
+    # target)
     m = models.makeDisjunctionsOnIndexedBlock()
     trans = TransformationFactory('gdp.%s' % transformation)
     trans.apply_to(
@@ -552,6 +593,8 @@ def check_indexedDisj_only_targets_transformed(self, transformation):
         self.assertIs(disjBlock[j], m.disjunct1[i].transformation_block())
 
 def check_warn_for_untransformed(self, transformation):
+    # Check that we complain if we find an untransformed Disjunct inside of
+    # another Disjunct we are transforming
     m = models.makeDisjunctionsOnIndexedBlock()
     def innerdisj_rule(d, flag):
         m = d.model()
@@ -600,6 +643,7 @@ def check_warn_for_untransformed(self, transformation):
         targets=[m.disjunction1[1]])
 
 def check_disjData_targets_inactive(self, transformation):
+    # check targets deactivated with DisjunctionData is the target
     m = models.makeDisjunctionsOnIndexedBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
@@ -630,6 +674,7 @@ def check_disjData_targets_inactive(self, transformation):
     self.assertIsNone(m.b[1].disjunct1._transformation_block)
 
 def check_disjData_only_targets_transformed(self, transformation):
+    # check that targets are transformed when DisjunctionData is the target
     m = models.makeDisjunctionsOnIndexedBlock()
     trans = TransformationFactory('gdp.%s' % transformation)
     trans.apply_to(
@@ -657,6 +702,7 @@ def check_disjData_only_targets_transformed(self, transformation):
         self.assertIs(trans.get_src_disjunct(disjBlock[j]), m.disjunct1[i])
 
 def check_indexedBlock_targets_inactive(self, transformation):
+    # check that targets are deactivated when target is an IndexedBlock
     m = models.makeDisjunctionsOnIndexedBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
@@ -679,6 +725,7 @@ def check_indexedBlock_targets_inactive(self, transformation):
     self.assertFalse(m.b[1].disjunct1.active)
 
 def check_indexedBlock_only_targets_transformed(self, transformation):
+    # check that targets are transformed when target is an IndexedBlock
     m = models.makeDisjunctionsOnIndexedBlock()
     trans = TransformationFactory('gdp.%s' % transformation)
     trans.apply_to(
@@ -727,6 +774,7 @@ def check_indexedBlock_only_targets_transformed(self, transformation):
             self.assertIs(trans.get_src_disjunct(disjBlock[j]), original[i])
 
 def check_blockData_targets_inactive(self, transformation):
+    # test that BlockData target is deactivated
     m = models.makeDisjunctionsOnIndexedBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
@@ -735,6 +783,7 @@ def check_blockData_targets_inactive(self, transformation):
     checkb0TargetsInactive(self, m)
 
 def check_blockData_only_targets_transformed(self, transformation):
+    # test that BlockData target is transformed
     m = models.makeDisjunctionsOnIndexedBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
@@ -742,6 +791,11 @@ def check_blockData_only_targets_transformed(self, transformation):
     checkb0TargetsTransformed(self, m, transformation)
 
 def check_do_not_transform_deactivated_targets(self, transformation):
+    # test that if a deactivated component is given as a target, we don't
+    # transform it. (This is actually an important test because it is the only
+    # reason to check active status at the beginning of many of the methods in
+    # the transformation like _transform_disjunct and _transform_disjunction. In
+    # the absence of targets, those checks wouldn't be necessary.)
     m = models.makeDisjunctionsOnIndexedBlock()
     m.b[1].deactivate()
     TransformationFactory('gdp.%s' % transformation).apply_to(
@@ -752,6 +806,9 @@ def check_do_not_transform_deactivated_targets(self, transformation):
     checkb0TargetsTransformed(self, m, transformation)
 
 def check_disjunction_data_target(self, transformation):
+    # test that if we transform DisjunctionDatas one at a time, we get what we
+    # expect in terms of using the same transformation block and the indexing of
+    # the xor constraint.
     m = models.makeThreeTermIndexedDisj()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m, targets=[m.disjunction[2]])
@@ -777,6 +834,8 @@ def check_disjunction_data_target(self, transformation):
     self.assertEqual(len(transBlock.relaxedDisjuncts), 6)
 
 def check_disjunction_data_target_any_index(self, transformation):
+    # check the same as the above, but that it still works when the Disjunction
+    # is indexed by Any.
     m = ConcreteModel()
     m.x = Var(bounds=(-100, 100))
     m.disjunct3 = Disjunct(Any)
@@ -797,9 +856,12 @@ def check_disjunction_data_target_any_index(self, transformation):
             check_relaxation_block(self, m, "_pyomo_gdp_%s_relaxation" %
                                    transformation, 4)
 
-# tests that we treat disjunctions on blocks correctly
+# tests that we treat disjunctions on blocks correctly (the main issue here is
+# that if you were to solve that block post-transformation that you would have
+# the whole transformed model)
 
 def check_xor_constraint_added(self, transformation):
+    # test we put the xor on the transformation block
     m = models.makeTwoTermDisjOnBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
 
@@ -808,6 +870,8 @@ def check_xor_constraint_added(self, transformation):
         component('b.disjunction_xor'), Constraint)
 
 def check_trans_block_created(self, transformation):
+    # check we put the transformation block on the parent block of the
+    # disjunction
     m = models.makeTwoTermDisjOnBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
 
@@ -821,10 +885,14 @@ def check_trans_block_created(self, transformation):
     self.assertIsNone(m.component('_pyomo_gdp_%s_relaxation' % transformation))
 
 
-# disjunction generation tests
+# disjunction generation tests: These all suppose that you are doing some sort
+# of column and constraint generation algorithm, but you are in fact generating
+# Disjunctions and retransforming the model after each addition.
 
 def check_iteratively_adding_to_indexed_disjunction_on_block(self,
                                                              transformation):
+    # check that we can iteratively add to an IndexedDisjunction and transform
+    # the block it lives on
     m = ConcreteModel()
     m.b = Block()
     m.b.x = Var(bounds=(-100, 100))
@@ -871,17 +939,14 @@ def check_simple_disjunction_of_disjunct_datas(self, transformation):
     self.assertIsInstance( transBlock2.component("disjunction2_xor"),
                            Constraint)
 
-# these tests have different checks for what ends up on the model, but they have
-# the same structure
+# these tests have different checks for what ends up on the model between bigm
+# and chull, but they have the same structure
 def check_iteratively_adding_disjunctions_transform_container(self,
                                                               transformation):
-    # If you are iteratively adding Disjunctions to an IndexedDisjunction,
-    # then if you are lazy about what you transform, you might shoot
-    # yourself in the foot because if the whole IndexedDisjunction gets
-    # deactivated by the first transformation, the new DisjunctionDatas
-    # don't get transformed. Interestingly, this isn't what happens. We
-    # deactivate the container and then still transform what's inside. I
-    # don't think we should deactivate the container at all, maybe?
+    # Check that we can play the same game with iteratively adding Disjunctions,
+    # but this time just specify the IndexedDisjunction as the argument. Note
+    # that the success of this depends on our rebellion regarding the active
+    # status of containers.
     model = ConcreteModel()
     model.x = Var(bounds=(-100, 100))
     model.disjunctionList = Disjunction(Any)
@@ -910,6 +975,8 @@ def check_iteratively_adding_disjunctions_transform_container(self,
             self.check_second_iteration(model)
 
 def check_disjunction_and_disjuncts_indexed_by_any(self, transformation):
+    # check that we can play the same game when the Disjuncts also are indexed
+    # by Any
     model = ConcreteModel()
     model.x = Var(bounds=(-100, 100))
 
@@ -1245,7 +1312,8 @@ def check_activeInnerDisjunction_err(self, transformation):
                  m.disjunction])
 
 
-# nested disjunctions
+# nested disjunctions: chull and bigm have very different handling for nested
+# disjunctions, but these tests check *that* everything is transformed, not how
 
 def check_disjuncts_inactive_nested(self, transformation):
     m = models.makeNestedDisjunctions()
