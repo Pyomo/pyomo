@@ -18,7 +18,7 @@ def MindtPy_iteration_loop(solve_data, config):
     while solve_data.mip_iter < config.iteration_limit:
 
         # if we don't use lazy callback, i.e. LP_NLP
-        if config.single_tree == False:
+        if config.single_tree is False:
             config.logger.info(
                 '---MindtPy Master Iteration %s---'
                 % solve_data.mip_iter)
@@ -93,7 +93,7 @@ def MindtPy_iteration_loop(solve_data, config):
                     config.strategy = 'OA'
 
         # if we use lazycallback, i.e. LP_NLP
-        elif config.single_tree == True:
+        elif config.single_tree is True:
             config.logger.info(
                 '---MindtPy Master Iteration %s---'
                 % solve_data.mip_iter)

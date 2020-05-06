@@ -144,6 +144,6 @@ class EightProcessFlowsheet(ConcreteModel):
 
         """Bound definitions"""
         # x (flow) upper bounds
-        x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 18: 1.4, 19: 2, 21: 2, 25: 3}
+        x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
         for i, x_ub in iteritems(x_ubs):
             X[i].setub(x_ub)

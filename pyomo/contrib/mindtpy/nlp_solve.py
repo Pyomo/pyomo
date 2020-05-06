@@ -44,7 +44,7 @@ def solve_NLP_subproblem(solve_data, config):
 
     MindtPy.MindtPy_linear_cuts.deactivate()
     fix_nlp.tmp_duals = ComponentMap()
-    # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
+    # tmp_duals are the value of the dual variables stored before using deactivate trivial constraints
     # The values of the duals are computed as follows: (Complementary Slackness)
     #
     # | constraint | c_leq | status at x1 | tmp_dual  |

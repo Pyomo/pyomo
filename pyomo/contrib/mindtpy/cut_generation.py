@@ -50,7 +50,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
         constr_vars = list(identify_variables(constr.body))
         jacs = solve_data.jacobians
 
-        if config.add_slack == True:
+        if config.add_slack is True:
             # Equality constraint (makes the problem nonconvex)
             if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
                 sign_adjust = -1 if solve_data.objective_sense == minimize else 1
