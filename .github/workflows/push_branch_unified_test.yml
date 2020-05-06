@@ -282,7 +282,7 @@ jobs:
         if test -e "$GJH_DIR"; then
             exit 0
         fi
-        $INSTALLER="${env:DOWNLOAD_DIR}/gjh_asl_json.zip"
+        INSTALLER="${env:DOWNLOAD_DIR}/gjh_asl_json.zip"
         URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
         curl --retry 8 -L $URL > $INSTALLER
         mkdir ${env:DOWNLOAD_DIR}/gjh-build
