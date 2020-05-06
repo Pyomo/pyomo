@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -79,7 +80,7 @@ void alloc_iw_b(struct MA27_struct* ma27, int l) {
 }
 void alloc_a(struct MA27_struct* ma27, int l) {
 	ma27->LA = l;
-	ma27->A = (int*)malloc(l*sizeof(double));
+	ma27->A = (double*)malloc(l*sizeof(double));
 	if (ma27->A == NULL) { abort_bad_memory(1); }
 	ma27->A_allocated = true;
 }
