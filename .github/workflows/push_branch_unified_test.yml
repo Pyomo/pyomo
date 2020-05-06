@@ -197,10 +197,6 @@ jobs:
             curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
                 > "$IPOPT_TAR"
         else
-            curl --retry 8 -L $URL/idaes-lib-windows-64.tar.gz \
-                $URL/idaes-lib-windows-64.tar.gz > "$IPOPT_TAR"
-            tar -xzif "$IPOPT_TAR"
-            rm "$IPOPT_TAR"
             curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
                 $URL/idaes-lib-windows-64.tar.gz > "$IPOPT_TAR"
         fi
@@ -256,7 +252,7 @@ jobs:
     - name: Install BARON
       shell: pwsh
       run: |
-        $BARON_DIR="$env:TPL_DIR/baron"
+        $BARON_DIR="${env:TPL_DIR}/baron"
         echo "::add-path::$BARON_DIR"
         if (Test-Path -Path "$BARON_DIR") {
             exit 0
