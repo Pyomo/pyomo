@@ -315,29 +315,3 @@ void free_memory(struct MA57_struct* ma57) {
 	}
 	free(ma57);
 }
-
-int main() {
-	
-	struct MA57_struct* ma57 = new_MA57_struct();
-
-	printf("ICNTL[0]: %i\n", get_icntl(ma57, 0));
-	printf("ICNTL[1]: %i\n", get_icntl(ma57, 1));
-	printf("ICNTL[2]: %i\n", get_icntl(ma57, 2));
-	printf("ICNTL[3]: %i\n", get_icntl(ma57, 3));
-
-	// Set print level
-	set_icntl(ma57, 4, 3);
-	printf("ICNTL[4]: %i\n", get_icntl(ma57, 4));
-
-	int N = 5, NE = 7;
-	int IRN[7] = { 1, 1, 2, 2, 3, 3, 5 };
-	int JCN[7] = { 1, 2, 3, 5, 3, 4, 5 };
-	double A[7] = { 2., 3., 4., 6., 1., 5., 1. };
-	double RHS[5] = { 8., 45., 31., 15., 17. };
-
-	do_symbolic_factorization(ma57, N, NE, IRN, JCN);
-	do_numeric_factorization(ma57, N, NE, A);
-	do_backsolve(ma57, N, RHS);
-	free_memory(ma57);
-}
-
