@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -31,7 +30,7 @@ struct MA27_struct {
 
 struct MA27_struct* new_MA27_struct(void){
 
-	struct MA27_struct* ma27 = malloc(sizeof(struct MA27_struct));
+	struct MA27_struct* ma27 = (struct MA27_struct *)malloc(sizeof(struct MA27_struct));
 	if (ma27 == NULL) { abort_bad_memory(1); }
 
 	ma27id_(ma27->ICNTL, ma27->CNTL);
@@ -68,22 +67,20 @@ int get_info(struct MA27_struct* ma27, int i) {
 // Functions for allocating WORK/FACT arrays:
 void alloc_iw_a(struct MA27_struct* ma27, int l) {
 	ma27->LIW_a = l;
-	ma27->IW_a = malloc(l*sizeof(int));
+	ma27->IW_a = (int*)malloc(l*sizeof(int));
 	if (ma27->IW_a == NULL) { abort_bad_memory(1); }
 	ma27->IW_a_allocated = true;
 }
 void alloc_iw_b(struct MA27_struct* ma27, int l) {
 	ma27->LIW_b = l;
-	ma27->IW_b = malloc(l*sizeof(int));
+	ma27->IW_b = (int*)malloc(l*sizeof(int));
 	if (ma27->IW_b == NULL) { abort_bad_memory(1); }
 	ma27->IW_b_allocated = true;
 }
 void alloc_a(struct MA27_struct* ma27, int l) {
 	ma27->LA = l;
-	//ma27->A = realloc(A, l*sizeof(double));
-	ma27->A = malloc(l*sizeof(double));
+	ma27->A = (int*)malloc(l*sizeof(double));
 	if (ma27->A == NULL) { abort_bad_memory(1); }
-	//memcpy(ma27->A, A, NZ*sizeof(double));
 	ma27->A_allocated = true;
 }
 
@@ -96,10 +93,10 @@ void do_symbolic_factorization(struct MA27_struct* ma27, int N, int NZ,
 		alloc_iw_a(ma27, size);
 	}
 
-	ma27->IKEEP = malloc(3*N*sizeof(int));
+	ma27->IKEEP = (int*)malloc(3*N*sizeof(int));
 	if (ma27->IKEEP == NULL) { abort_bad_memory(1); }
 	ma27->IKEEP_allocated = true;
-	ma27->IW1 = malloc(2*N*sizeof(int));
+	ma27->IW1 = (int*)malloc(2*N*sizeof(int));
 	if (ma27->IW1 == NULL) { abort_bad_memory(1); }
 
 	ma27ad_(&N, 
@@ -141,7 +138,7 @@ void do_numeric_factorization(struct MA27_struct* ma27, int N, int NZ,
 		alloc_iw_b(ma27, size);
 	}
 
-	ma27->IW1 = malloc(N*sizeof(int));
+	ma27->IW1 = (int*)malloc(N*sizeof(int));
 	if (ma27->IW1 == NULL) { abort_bad_memory(1); }
 
 	ma27bd_(&N, 
@@ -165,9 +162,9 @@ void do_numeric_factorization(struct MA27_struct* ma27, int N, int NZ,
 
 void do_backsolve(struct MA27_struct* ma27, int N, double* RHS) {
 
-	ma27->W = malloc(ma27->MAXFRT*sizeof(double));
+	ma27->W = (double*)malloc(ma27->MAXFRT*sizeof(double));
 	if (ma27->W == NULL) { abort_bad_memory(1); }
-	ma27->IW1 = malloc(ma27->NSTEPS*sizeof(int));
+	ma27->IW1 = (int*)malloc(ma27->NSTEPS*sizeof(int));
 	if (ma27->IW1 == NULL) { abort_bad_memory(1); }
   
 	ma27cd_(

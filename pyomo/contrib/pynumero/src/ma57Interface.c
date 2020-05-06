@@ -25,7 +25,7 @@ struct MA57_struct {
 
 struct MA57_struct* new_MA57_struct(void){
 
-	struct MA57_struct* ma57 = malloc(sizeof(struct MA57_struct));
+	struct MA57_struct* ma57 = (struct MA57_struct*)malloc(sizeof(struct MA57_struct));
 	if (ma57 == NULL) { abort_bad_memory(1); }
 
 	ma57id_(ma57->CNTL, ma57->ICNTL);
@@ -66,25 +66,25 @@ double get_rinfo(struct MA57_struct* ma57, int i) {
 // Functions for allocating WORK/FACT arrays:
 void alloc_keep(struct MA57_struct* ma57, int l) {
 	ma57->LKEEP = l;
-	ma57->KEEP = malloc(l*sizeof(int));
+	ma57->KEEP = (int*)malloc(l*sizeof(int));
 	if (ma57->KEEP == NULL) { abort_bad_memory(1); }
 	ma57->KEEP_allocated = true;
 }
 void alloc_work(struct MA57_struct* ma57, int l) {
 	ma57->LWORK = l;
-	ma57->WORK = malloc(l*sizeof(double));
+	ma57->WORK = (double*)malloc(l*sizeof(double));
 	if (ma57->WORK == NULL) { abort_bad_memory(1); }
 	ma57->WORK_allocated = true;
 }
 void alloc_fact(struct MA57_struct* ma57, int l) {
 	ma57->LFACT = l;
-	ma57->FACT = malloc(l*sizeof(double));
+	ma57->FACT = (double*)malloc(l*sizeof(double));
 	if (ma57->FACT == NULL) { abort_bad_memory(1); }
 	ma57->FACT_allocated = true;
 }
 void alloc_ifact(struct MA57_struct* ma57, int l) {
 	ma57->LIFACT = l;
-	ma57->IFACT = malloc(l*sizeof(int));
+	ma57->IFACT = (int*)malloc(l*sizeof(int));
 	if (ma57->IFACT == NULL) { abort_bad_memory(1); }
 	ma57->IFACT_allocated = true;
 }
@@ -115,7 +115,7 @@ void do_symbolic_factorization(struct MA57_struct* ma57, int N, int NE,
 	}
 
 	// This is a hard requirement, no need to give the user the option to change
-	ma57->IWORK = malloc(5*N*sizeof(int));
+	ma57->IWORK = (int*)malloc(5*N*sizeof(int));
 	if (ma57->IWORK == NULL) { abort_bad_memory(1); }
 	
 	ma57ad_(&N, &NE, IRN, JCN, 
@@ -142,7 +142,7 @@ void do_numeric_factorization(struct MA57_struct* ma57, int N, int NE,
 	}
 
 	// Again, length of IWORK is a hard requirement
-	ma57->IWORK = malloc(N*sizeof(int));
+	ma57->IWORK = (int*)malloc(N*sizeof(int));
 	if (ma57->IWORK == NULL) { abort_bad_memory(1); }
 
 	ma57bd_(&N, &NE, A, 
@@ -178,7 +178,7 @@ void do_backsolve(struct MA57_struct* ma57, int N, double* RHS) {
 	}
 
 	// IWORK should always be length N
-	ma57->IWORK = malloc(N*sizeof(int));
+	ma57->IWORK = (int*)malloc(N*sizeof(int));
 	if (ma57->IWORK == NULL) { abort_bad_memory(1); }
   
 	ma57cd_(
@@ -227,7 +227,7 @@ void do_iterative_refinement(struct MA57_struct* ma57, int N, int NE,
 		alloc_work(ma57, size);
 	}
 
-	ma57->IWORK = malloc(N*sizeof(int));
+	ma57->IWORK = (int*)malloc(N*sizeof(int));
 	if (ma57->IWORK == NULL) { abort_bad_memory(1); }
 
 	ma57dd_(
@@ -262,11 +262,11 @@ void do_reallocation(struct MA57_struct* ma57, int N, double realloc_factor, int
 	// MA57 seems to require that both LNEW and LINEW are larger than the old
 	// values, regardless of which is being reallocated (set by IC)
 	int LNEW = (int)(realloc_factor*ma57->LFACT);
-	double* NEWFAC = malloc(LNEW*sizeof(double));
+	double* NEWFAC = (double*)malloc(LNEW*sizeof(double));
 	if (NEWFAC == NULL) { abort_bad_memory(1); }
 
 	int LINEW = (int)(realloc_factor*ma57->LIFACT);
-	int* NEWIFC = malloc(LINEW*sizeof(int));
+	int* NEWIFC = (int*)malloc(LINEW*sizeof(int));
 	if (NEWIFC == NULL) { abort_bad_memory(1); }
 
 	ma57ed_(
