@@ -16,6 +16,8 @@ asl_available = AmplInterface.available()
 from pyomo.contrib.interior_point.interior_point import InteriorPointSolver
 from pyomo.contrib.interior_point.interface import InteriorPointInterface
 
+from scipy.sparse import coo_matrix
+
 
 class TestReallocation(unittest.TestCase):
     @unittest.skipIf(not asl_available, 'asl is not available')
@@ -61,8 +63,26 @@ class TestReallocation(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             # Should be Mumps error: -9
             x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=5)
+            
+
+    @unittest.skipIf(not mumps_available, 'mumps is not available')
+    def test_reallocate_matrix_only(self):
+        irn = np.array([0,1,2,3,4,5,6,7,8,9,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9])
+        jcn = np.array([0,1,2,3,4,5,6,7,8,9,1,9,2,8,3,7,4,6,5,4,6,4,7,3,8,2,9,1,0,1])
+        ent = np.array([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,
+                        1.,3.,5.,7.,9.,2.,4.,6.,8.,1.,
+                        1.1,2.2,3.3,4.4,5.5,6.6,7.7,8.8,9.9,0.1])
+
+        matrix = coo_matrix((ent, (irn, jcn)), shape=(10,10))
+
+        linear_solver = mumps_interface.MumpsInterface()
+        linear_solver.do_symbolic_factorization(matrix)
+        linear_solver.do_numeric_factorization(matrix)
+
+        import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
     test_realloc = TestReallocation()
     test_realloc.test_reallocate_memory()
+    test_realloc.test_reallocate_matrix_only()
