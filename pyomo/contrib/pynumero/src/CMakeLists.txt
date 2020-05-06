@@ -151,7 +151,7 @@ ENDIF()
 # build hsl interfaces
 #
 set(PYNUMERO_MA27_SOURCES
-  "ma27Interface.c"
+  "ma27Interface.cpp"
 )
 
 IF( BUILD_MA27 )
@@ -163,7 +163,7 @@ IF( BUILD_MA27 )
 ENDIF()
 
 set(PYNUMERO_MA57_SOURCES
-  "ma57Interface.c"
+  "ma57Interface.cpp"
 )
 
 IF( BUILD_MA57 )
