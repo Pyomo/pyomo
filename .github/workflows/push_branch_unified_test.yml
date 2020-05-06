@@ -200,7 +200,7 @@ jobs:
             curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
                 $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
         fi
-        tar -xzif $IPOPT_TAR
+        tar -xzi - < $IPOPT_TAR
 
     - name: Install GAMS
       # We install using Powershell because the GAMS installer hangs
@@ -315,6 +315,10 @@ jobs:
         echo "Install Pyomo..."
         echo ""
         $PYTHON_EXE setup.py develop
+        echo ""
+        echo "Set custom PYOMO_CONFIG_DIR"
+        echo ""
+        echo "::set-env name=PYOMO_CONFIG_DIR::${GITHUB_WORKSPACE}/config"
 
     - name: Set up coverage tracking
       run: |
