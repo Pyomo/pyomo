@@ -114,6 +114,8 @@ class _LinearConstraintData(object):
         )
 
 
+# `nullcontext()` is part of the standard library as of Py3.7
+# This is verbatim from `cpython/Lib/contextlib.py`
 class nullcontext(object):
     """Context manager that does no additional processing.
     Used as a stand-in for a normal context manager, when a particular
