@@ -32,11 +32,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        # Ensure cache directories exist
-        mkdir -p ${GITHUB_WORKSPACE}/download-cache
-        mkdir -p ${GITHUB_WORKSPACE}/pkg-cache
-        if test "${{matrix.TARGET}}" == osx; then
-            export HOMEBREW_CACHE=${GITHUB_WORKSPACE}/pkg-cache
+        if [ ${{ matrix.TARGET }} == 'osx' ]; then
             echo "Install pre-dependencies for pyodbc..."
             brew update
             brew list bash || brew install bash
@@ -74,7 +70,7 @@ jobs:
         BARON_DIR=$(pwd)/baron-dir
         export PATH=$PATH:$BARON_DIR
         echo ""
-        echo "Install IDAES Ipopt..."
+        echo "Install IDAES Ipopt (Linux only)..."
         echo ""
         if [ ${{ matrix.TARGET }} == 'linux' ]; then
             sudo apt-get install libopenblas-dev gfortran liblapack-dev
@@ -99,16 +95,10 @@ jobs:
         echo ""
         echo "Install GAMS..."
         echo ""
-        GAMS_INSTALLER=${GITHUB_WORKSPACE}/download-cache/gams_installer.exe
-        if test ! -e $GAMS_INSTALLER; then
-            echo "...downloading GAMS"
-            GAMS_URL=https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0
-            if test "${{matrix.TARGET}}" == osx; then
-                wget -q $GAMS_URL/macosx/osx_x64_64_sfx.exe -O $GAMS_INSTALLER
-            else
-                wget -q $GAMS_URL/linux/linux_x64_64_sfx.exe -O $GAMS_INSTALLER
-            fi
-            chmod +x $GAMS_INSTALLER
+        if [ ${{ matrix.TARGET }} == 'osx' ]; then
+            wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/macosx/osx_x64_64_sfx.exe -O gams_installer.exe
+        else
+            wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/linux/linux_x64_64_sfx.exe -O gams_installer.exe
         fi
         chmod +x gams_installer.exe
         ./gams_installer.exe -q -d gams
@@ -135,8 +125,6 @@ jobs:
 
     - name: Install Pyomo and extensions
       run: |
-        export PYTHONWARNINGS="ignore::UserWarning"
-        echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
@@ -150,36 +138,32 @@ jobs:
 
     - name: Set up coverage tracking
       run: |
-        COVERAGE_PROCESS_START=${GITHUB_WORKSPACE}/coveragerc
+        WORKSPACE=`pwd`
+        COVERAGE_PROCESS_START=${WORKSPACE}/coveragerc
         echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_PROCESS_START"
-        cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_PROCESS_START}
-        echo "data_file=${GITHUB_WORKSPACE}/.coverage" \
-            >> ${COVERAGE_PROCESS_START}
+        cp ${WORKSPACE}/.coveragerc ${COVERAGE_PROCESS_START}
+        echo "data_file=${WORKSPACE}/.coverage" >> ${COVERAGE_PROCESS_START}
         SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
-        echo 'import coverage; coverage.process_startup()' \
-            > ${SITE_PACKAGES}/run_coverage_at_startup.pth
+        if [ -z "$DISABLE_COVERAGE" ]; then
+            echo 'import coverage; coverage.process_startup()' \
+                > ${SITE_PACKAGES}/run_coverage_at_startup.pth
+        fi
 
     - name: Download and install extensions
       run: |
-        echo ""
-        echo "Pyomo download-extensions"
-        echo ""
         pyomo download-extensions
-        echo ""
-        echo "Pyomo build-extensions"
-        echo ""
-        pyomo build-extensions --parallel 2
+        pyomo build-extensions
 
     - name: Run Pyomo tests
       run: |
-        echo "Run Pyomo tests..."
+        echo "Run test.pyomo..."
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
 
     - name: Upload coverage to codecov
       env:
-        GITHUB_JOB_NAME: unix/${{matrix.TARGET}}/py${{matrix.python-version}}
+        GITHUB_JOB_NAME: unix/${{ matrix.TARGET }}/py${{ matrix.python-version }}
       run: |
+        find . -maxdepth 10 -name ".cov*"
         coverage combine
         coverage report -i
-        curl --retry 8 -s https://codecov.io/bash -o codecov.sh
-        bash codecov.sh -X gcov -n "$GITHUB_JOB_NAME"
+        bash <(curl -s https://codecov.io/bash) -X gcov -n "$GITHUB_JOB_NAME"
