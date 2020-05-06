@@ -49,6 +49,7 @@ ENDIF()
 # finally automatically located installations (e.g., from pkg-config)
 FIND_PATH(ASL_INCLUDE_DIR asl_pfgh.h
   HINTS "${CMAKE_INSTALL_PREFIX}/include"
+        "${IPOPT_DIR}/include/coin-or/asl"
         "${IPOPT_DIR}/include/coin/ThirdParty"
         "${AMPLMP_DIR}/include"
         "${PC_COINASL_INCLUDEDIR}"
@@ -129,7 +130,8 @@ IF( BUILD_ASL )
     INTERFACE . )
   TARGET_COMPILE_DEFINITIONS( pynumero_ASL PRIVATE BUILDING_PYNUMERO_ASL )
   SET_TARGET_PROPERTIES( pynumero_ASL PROPERTIES ENABLE_EXPORTS 1 )
-  INSTALL(TARGETS pynumero_ASL LIBRARY DESTINATION lib )
+  INSTALL( TARGETS pynumero_ASL LIBRARY DESTINATION lib
+    RUNTIME DESTINATION lib )
   IF( BUILD_AMPLMP )
     # If we are building AMPL/MP, it is possible that we are linking
     # against it, so we will add the appropriate dependency
@@ -146,7 +148,8 @@ IF( BUILD_MA27 )
   ADD_LIBRARY( pynumero_MA27 SHARED ${PYNUMERO_MA27_SOURCES} )
   TARGET_LINK_LIBRARIES( pynumero_MA27 ${HSL_LIBRARY} )
   SET_TARGET_PROPERTIES( pynumero_MA27 PROPERTIES ENABLE_EXPORTS 1 )
-  INSTALL(TARGETS pynumero_MA27 LIBRARY DESTINATION lib )
+  INSTALL(TARGETS pynumero_MA27 LIBRARY DESTINATION lib
+    RUNTIME DESTINATION lib )
 ENDIF()
 
 set(PYNUMERO_MA57_SOURCES
@@ -158,7 +161,8 @@ IF( BUILD_MA57 )
   ADD_LIBRARY( pynumero_MA57 SHARED ${PYNUMERO_MA57_SOURCES} )
   TARGET_LINK_LIBRARIES( pynumero_MA57 ${HSL_LIBRARY} )
   SET_TARGET_PROPERTIES( pynumero_MA57 PROPERTIES ENABLE_EXPORTS 1 )
-  INSTALL(TARGETS pynumero_MA57 LIBRARY DESTINATION lib )
+  INSTALL(TARGETS pynumero_MA57 LIBRARY DESTINATION lib
+    RUNTIME DESTINATION lib )
 ENDIF()
 
 #

@@ -12,16 +12,26 @@ penalty.
 PyNumero libraries
 ==================
 
-Pynumero relies on C/C++ extensions for expensive computing operations.
-If you installed Pyomo through Anaconda, then the redistributable
-interfaces (pynumero_ASL) are already present on your system.
-Otherwise, you can build the extensions locally one of two ways:
+PyNumero relies on C/C++ extensions for expensive computing operations.
+
+If you installed Pyomo using Anaconda (from conda-forge), then you can
+obtain precompiled versions of the redistributable interfaces
+(pynumero_ASL) using conda.  Through Pyomo 5.6.9 these libraries are
+available by installing the `pynumero_libraries` package from
+conda-forge.  Beginning in Pyomo 5.7, the redistributable pynumero
+libraries are included in the pyomo conda-forge package.
+
+If you are not using conda or want to build the nonredistributable
+interfaces, you can build the extensions locally one of three ways:
 
 1. By running the `build.py` Python script in this directory.  This
 script will automatically drive the `cmake` build harness to compile the
 libraries and install them into your local Pyomo configuration
 directory.
-2. By manually running cmake to build the libraries.  You will need to
+2. By running `pyomo build-extensions`.  This will build all registered
+Pyomo binary extensions, including PyNumero (using the `build.py` script
+from option 1).
+3. By manually running cmake to build the libraries.  You will need to
 ensure that the libraries are then installed into a location that Pyomo
 (and PyNumero) can find them (e.g., in the Pyomo configuration
 directory, or in a common system location, or in a location included in

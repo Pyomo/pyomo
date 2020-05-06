@@ -1,9 +1,6 @@
 name: GitHub CI (win)
 
 on:
-  push:
-    branches:
-      - master
   pull_request:
     branches:
       - master
@@ -18,27 +15,11 @@ jobs:
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8]
     steps:
     - uses: actions/checkout@v2
-
-    - name: Conda package cache
-      id: conda-cache
-      uses: actions/cache@v1
-      with:
-        path: conda-cache
-        key: conda-v1-${{runner.os}}-${{matrix.python-version}}
-
-    - name: Download cache
-      id: download-cache
-      uses: actions/cache@v1
-      with:
-        path: download-cache
-        key: download-v1-${{runner.os}}
-
     - name: Set up Python ${{ matrix.python-version }} with Miniconda
-      uses: goanpeca/setup-miniconda@v1
+      uses: goanpeca/setup-miniconda@v1 # Using an action created by user goanpeca to set up different Python Miniconda environments
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
-
     - name: Install Pyomo dependencies
       shell: pwsh
       run: |
@@ -72,7 +53,7 @@ jobs:
         echo ""
         try
         {
-            Invoke-Expression "$CONDAFORGE -c ibmdecisionoptimization cplex=12.10"
+            Invoke-Expression $env:CPLEX
         }
         catch
         {
@@ -80,6 +61,23 @@ jobs:
             conda deactivate
             conda activate test
         }
+        $env:PYNUMERO = $env:CONDAFORGE + " pynumero_libraries"
+        Write-Host ("")
+        Write-Host ("Try to install Pynumero_libraries...")
+        Write-Host ("")
+        try
+        {
+            Invoke-Expression $env:PYNUMERO
+        }
+        catch
+        {
+            Write-Host ("##############################################################################")
+            Write-Host ("WARNING: Python ${{matrix.python-version}}: Pynumero_libraries not available. ")
+            Write-Host ("##############################################################################")
+            conda deactivate
+            conda activate test 
+        }
+        conda list --show-channel-urls
         Write-Host ("")
         Write-Host ("Installing BARON")
         Write-Host ("")
@@ -91,7 +89,7 @@ jobs:
         New-Item -Path . -Name "ipopt_solver" -ItemType "directory"
         cd ipopt_solver
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-windows-64.tar.gz' -OutFile 'ipopt1.tar.gz'
-        tar -xzf ipopt1.tar.gz
+        Invoke-Expression 'tar -xzf ipopt1.tar.gz'
         Invoke-WebRequest -Uri 'https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-lib-windows-64.tar.gz' -OutFile 'ipopt2.tar.gz'
         tar -xzf ipopt2.tar.gz
         Remove-Item *.tar.gz -Force
@@ -111,11 +109,13 @@ jobs:
         echo "...installing GAMS Python ${{matrix.python-version}} API"
         if(${{matrix.python-version}} -eq 2.7) {
           cd api
-          python setup.py install
+          python setup.py -q install
         }elseif(${{matrix.python-version}} -eq 3.6) {
+          Write-Host ("PYTHON ${{matrix.python-version}}")
           cd api_36
-          python setup.py install
+          python setup.py -q install
         }elseif(${{matrix.python-version}} -eq 3.7) {
+          Write-Host ("PYTHON ${{matrix.python-version}}")
           cd api_37
           python setup.py install
         }else {
@@ -172,7 +172,7 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         echo "Setup and run nosetests"
         $PWD="$env:GITHUB_WORKSPACE"
-        $env:PATH += ";$PWD\gams;$PWD\ipopt_dir;$PWD\bar_solver"
+        $env:PATH += ";$PWD\gams;$PWD\ipopt_solver;$PWD\bar_solver"
         test.pyomo -v --cat=nightly pyomo $PWD\pyomo-model-libraries
 
     - name: Process code coverage report

@@ -9,40 +9,25 @@ on:
       - master
 
 jobs:
-  pyomo-mpi-tests:
+  build:
     name: ${{ matrix.TARGET }}/py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      max-parallel: 1
       matrix:
         os: [ubuntu-latest]
+        python-version: [3.7]
         include:
         - os: ubuntu-latest
           TARGET: linux
-        python-version: [3.7]
 
     steps:
     - uses: actions/checkout@v2
-
-    - name: OS package cache
-      id: pkg-cache
-      uses: actions/cache@v1
-      with:
-        path: pkg-cache
-        key: pkg-v1-${{runner.os}}
-
-    - name: Download cache
-      id: download-cache
-      uses: actions/cache@v1
-      with:
-        path: download-cache
-        key: download-v1-${{runner.os}}
-
     - name: Setup conda environment
       uses: s-weigand/setup-conda@v1
       with:
-        python-version: ${{ matrix.python-version }}
         update-conda: true
+        python-version: ${{ matrix.python-version }}
         conda-channels: anaconda, conda-forge
 
     - name: Install dependencies
@@ -81,7 +66,6 @@ jobs:
         echo ""
         echo "Install Pyomo dependencies..."
         echo ""
-        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         pip install cython numpy scipy ipython openpyxl sympy pyyaml \
             pyodbc networkx xlrd pandas matplotlib dill seaborn pymysql \
             pyro4 pint pathos coverage nose
@@ -104,21 +88,12 @@ jobs:
         echo ""
         echo "Install IDAES Ipopt..."
         echo ""
-        if test "${{matrix.TARGET}}" == osx; then
-            echo "IDAES Ipopt not available on OSX"
-        else
-            IPOPT_TAR=${GITHUB_WORKSPACE}/download-cache/ipopt.tar.gz
-            if test ! -e $IPOPT_TAR; then
-                echo "...downloading Ipopt"
-                wget -q https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-ubuntu1804-64.tar.gz \
-                    -O $IPOPT_TAR
-            fi
-            mkdir -p ${GITHUB_WORKSPACE}/bin
-            pushd ${GITHUB_WORKSPACE}/bin
-            tar -xzf $IPOPT_TAR
-            popd
-        fi
-        export PATH=${GITHUB_WORKSPACE}/bin:$PATH
+        sudo apt-get install libopenblas-dev gfortran liblapack-dev
+        mkdir ipopt && cd ipopt
+        wget -q https://github.com/IDAES/idaes-ext/releases/download/2.0.0/idaes-solvers-ubuntu1804-64.tar.gz -O ipopt.tar.gz
+        tar -xzf ipopt.tar.gz
+        cd ..
+        export PATH=$PATH:$(pwd)/ipopt
         echo ""
         echo "Install GJH_ASL_JSON..."
         echo ""
@@ -145,13 +120,13 @@ jobs:
             fi
             chmod +x $GAMS_INSTALLER
         fi
-        echo "...installing GAMS"
-        $GAMS_INSTALLER -q -d gams
+        chmod +x gams_installer.exe
+        ./gams_installer.exe -q -d gams
         GAMS_DIR=`ls -d1 $(pwd)/gams/*/ | head -1`
         export PATH=$PATH:$GAMS_DIR
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR
         export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR
-        pushd $GAMS_DIR/apifiles/Python/
+        cd $GAMS_DIR/apifiles/Python/
         py_ver=$(python -c 'import sys;print("%s%s" % sys.version_info[:2])')
         gams_ver=api
         for ver in api_*; do
@@ -159,11 +134,8 @@ jobs:
                 gams_ver=$ver
             fi
         done
-        pushd $gams_ver
-        echo "...installing GAMS Python API"
+        cd $gams_ver
         python setup.py -q install -noCheck
-        popd
-        popd
         echo ""
         echo "Pass key environment variables to subsequent steps"
         echo ""
@@ -171,7 +143,7 @@ jobs:
         echo "::set-env name=LD_LIBRARY_PATH::$LD_LIBRARY_PATH"
         echo "::set-env name=DYLD_LIBRARY_PATH::$DYLD_LIBRARY_PATH"
 
-    - name: Install Pyomo and PyUtilib
+    - name: Install Pyomo and extensions
       run: |
         export PYTHONWARNINGS="ignore::UserWarning"
         echo ""
@@ -218,7 +190,7 @@ jobs:
             --eval-attr="mpi and (not fragile)" \
             pyomo `pwd`/pyomo-model-libraries
 
-    - name: Process code coverage report
+    - name: Upload coverage to codecov
       env:
         GITHUB_JOB_NAME: mpi/${{matrix.TARGET}}/py${{matrix.python-version}}
       run: |
