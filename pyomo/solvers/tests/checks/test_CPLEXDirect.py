@@ -24,7 +24,7 @@ from pyomo.solvers.plugins.solvers.cplex_direct import (_CplexExpr,
                                                         _LinearConstraintData,
                                                         _VariableData)
 
-from pyomo.solvers.plugins.solvers.cplex_direct import nullcontext
+from pyomo.solvers.plugins.solvers.cplex_direct import nullcontext, _VariableData, _LinearConstraintData, _CplexExpr
 
 try:
     import cplex
@@ -824,6 +824,75 @@ class NullcontextTestCase(unittest.TestCase):
         c = C()
         with nullcontext(c) as c_in:
             self.assertIs(c_in, c)
+
+
+@unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
+class TestDataContainers(unittest.TestCase):
+    def test_variable_data(self):
+        solver_model = cplex.Cplex()
+        with _VariableData(solver_model) as var_data:
+            var_data.add(
+                lb=0, ub=1, type_=solver_model.variables.type.binary, name="var1"
+            )
+            var_data.add(
+                lb=0, ub=10, type_=solver_model.variables.type.integer, name="var2"
+            )
+            var_data.add(
+                lb=-cplex.infinity,
+                ub=cplex.infinity,
+                type_=solver_model.variables.type.continuous,
+                name="var3",
+            )
+
+            self.assertEqual(solver_model.variables.get_num(), 0)
+        self.assertEqual(solver_model.variables.get_num(), 3)
+
+    def test_constraint_data(self):
+        solver_model = cplex.Cplex()
+
+        solver_model.variables.add(
+            lb=[-cplex.infinity, -cplex.infinity, -cplex.infinity],
+            ub=[cplex.infinity, cplex.infinity, cplex.infinity],
+            types=[
+                solver_model.variables.type.continuous,
+                solver_model.variables.type.continuous,
+                solver_model.variables.type.continuous,
+            ],
+            names=["var1", "var2", "var3"],
+        )
+
+        with _LinearConstraintData(solver_model) as con_data:
+            con_data.add(
+                cplex_expr=_CplexExpr(variables=[0, 1], coefficients=[10, 100]),
+                sense="L",
+                rhs=0,
+                range_values=0,
+                name="c1",
+            )
+            con_data.add(
+                cplex_expr=_CplexExpr(variables=[0], coefficients=[-30]),
+                sense="G",
+                rhs=1,
+                range_values=0,
+                name="c2",
+            )
+            con_data.add(
+                cplex_expr=_CplexExpr(variables=[1], coefficients=[80]),
+                sense="E",
+                rhs=2,
+                range_values=0,
+                name="c3",
+            )
+            con_data.add(
+                cplex_expr=_CplexExpr(variables=[2], coefficients=[50]),
+                sense="R",
+                rhs=3,
+                range_values=10,
+                name="c4",
+            )
+
+            self.assertEqual(solver_model.linear_constraints.get_num(), 0)
+        self.assertEqual(solver_model.linear_constraints.get_num(), 4)
 
 
 if __name__ == "__main__":
