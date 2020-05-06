@@ -186,19 +186,19 @@ jobs:
             exit 0
         fi
         echo "...downloading Ipopt"
-        IPOPT_TAR=${GITHUB_WORKSPACE}/cache/download/ipopt.tar.gz
+        IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         URL=https://github.com/IDAES/idaes-ext/releases/download/2.0.0
-        mkdir -p "$IPOPT_DIR"
-        cd "$IPOPT_DIR"
+        mkdir $IPOPT_DIR
+        cd $IPOPT_DIR
         if test "${{matrix.TARGET}}" == osx; then
             echo "IDAES Ipopt not available on OSX"
             exit 0
         elif test "${{matrix.TARGET}}" == linux; then
             curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
-                > "$IPOPT_TAR"
+                > $IPOPT_TAR
         else
             curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
-                $URL/idaes-lib-windows-64.tar.gz > "$IPOPT_TAR"
+                $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
         fi
         tar -xzif $IPOPT_TAR
 
@@ -214,7 +214,7 @@ jobs:
         if (Test-Path -Path "$GAMS_DIR") {
             exit 0
         }
-        $INSTALLER="cache/download/gams_install.exe"
+        $INSTALLER="${env:DOWNLOAD_DIR}/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         echo "...downloading GAMS"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -257,16 +257,15 @@ jobs:
         if (Test-Path -Path "$BARON_DIR") {
             exit 0
         }
-        $INSTALLER="cache/download/"
         $URL="https://www.minlp.com/downloads/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
-            $INSTALLER += "baron_install.exe"
+            $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
             $URL += "baron-win64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
-            $INSTALLER += "baron_install.zip"
+            $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.zip"
             $URL += "baron-osx64.zip"
         } else {
-            $INSTALLER += "baron_install.zip"
+            $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.zip"
             $URL += "baron-lin64.zip"
         }
         if (-not (Test-Path "$BARON_INSTALLER" -PathType Leaf)) {
