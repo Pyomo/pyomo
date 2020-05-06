@@ -14,7 +14,7 @@ PyNumero libraries
 
 PyNumero relies on C/C++ extensions for expensive computing operations.
 
-If you installed Pyomo using Anaconda (from conda-forge), then you can
+If you installed Pyomo using conda (from conda-forge), then you can
 obtain precompiled versions of the redistributable interfaces
 (pynumero_ASL) using conda.  Through Pyomo 5.6.9 these libraries are
 available by installing the `pynumero_libraries` package from
@@ -27,7 +27,20 @@ interfaces, you can build the extensions locally one of three ways:
 1. By running the `build.py` Python script in this directory.  This
 script will automatically drive the `cmake` build harness to compile the
 libraries and install them into your local Pyomo configuration
-directory.
+directory. Cmake options may be specified in the command. For example,
+
+    python build.py -DBUILD_ASL=ON
+
+If you have compiled Ipopt, and you would like to link against the
+libraries built with Ipopt, you can. For example,
+
+    python build.py -DBUILD_ASL=ON -DBUILD_MA27=ON -DIPOPT_DIR=<path_to_ipopt_build>/lib/
+
+If you do so, you will likely need to update an environment variable
+for the path to shared libraries. For example, on Linux,
+
+    export LD_LIBRARY_PATH=<path_to_ipopt_build>/lib/
+
 2. By running `pyomo build-extensions`.  This will build all registered
 Pyomo binary extensions, including PyNumero (using the `build.py` script
 from option 1).
@@ -48,4 +61,6 @@ Prerequisites
      this library)
 
 2. `pynumero_MA27`:
-   - *TODO*
+   - cmake
+   - a C/C++ compiler
+   - MA27 library

@@ -139,9 +139,11 @@ IF( BUILD_ASL )
   ENDIF()
 ENDIF()
 
+#
+# build hsl interfaces
+#
 set(PYNUMERO_MA27_SOURCES
-  "ma27Interface.cpp"
-  "ma27Interface.hpp"
+  "ma27Interface.c"
 )
 
 IF( BUILD_MA27 )
@@ -153,8 +155,7 @@ IF( BUILD_MA27 )
 ENDIF()
 
 set(PYNUMERO_MA57_SOURCES
-  "ma57Interface.cpp"
-  "ma57Interface.hpp"
+  "ma57Interface.c"
 )
 
 IF( BUILD_MA57 )

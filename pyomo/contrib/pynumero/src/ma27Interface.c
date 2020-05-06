@@ -204,39 +204,3 @@ void free_memory(struct MA27_struct* ma27) {
 	}
 	free(ma27);
 }
-
-int main() {
-	
-	struct MA27_struct* ma27 = new_MA27_struct();
-
-	printf("ICNTL[1-1]: %i\n", get_icntl(ma27, 0));
-	printf("ICNTL[2-1]: %i\n", get_icntl(ma27, 1));
-	printf("ICNTL[3-1]: %i\n", get_icntl(ma27, 2));
-	printf("ICNTL[4-1]: %i\n", get_icntl(ma27, 3));
-
-	// Set print level
-	set_icntl(ma27, 2, 2);
-	printf("ICNTL[3-1]: %i\n", get_icntl(ma27, 2));
-
-	int N = 5, NZ = 7;
-	int IRN[7] = { 1, 1, 2, 2, 3, 3, 5 };
-	int ICN[7] = { 1, 2, 3, 5, 3, 4, 5 };
-	double* A = malloc(NZ*sizeof(double));
-	if (A == NULL) { abort_bad_memory(1); }
-//	A = { 2., 3., 4., 6., 1., 5., 1. };
-	A[0] = 2.;
-	A[1] = 3.;
-	A[2] = 4.;
-	A[3] = 6.;
-	A[4] = 1.;
-	A[5] = 5.;
-	A[6] = 1.;
-	double RHS[5] = { 8., 45., 31., 15., 17. };
-
-	do_symbolic_factorization(ma27, N, NZ, IRN, ICN);
-	do_numeric_factorization(ma27, N, NZ, IRN, ICN, A);
-	do_backsolve(ma27, N, RHS);
-	free_memory(ma27);
-	free(A);
-}
-
