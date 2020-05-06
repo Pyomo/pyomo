@@ -33,6 +33,8 @@ FIND_LIBRARY(DL_LIBRARY dl)
 SET(IPOPT_DIR "" CACHE PATH "Path to compiled Ipopt installation")
 SET(AMPLMP_DIR "" CACHE PATH "Path to compiled AMPL/MP installation")
 #SET(ASL_NETLIB_DIR "" CACHE PATH "Path to compiled ASL (netlib) installation")
+SET(MA27_OBJECT "" CACHE FILEPATH 
+	"Path to compiled ma27d.o object. Must be compiled with -fPIC.")
 
 # Use pkg-config to get the ASL/HSL directories from the Ipopt/COIN-OR build
 FIND_PACKAGE(PkgConfig)
@@ -63,11 +65,13 @@ FIND_LIBRARY(ASL_LIBRARY NAMES coinasl asl
         "${PC_COINASL_LIBDIR}"
         "${PC_COINASL_LIBRARY_DIRS}"
 )
-FIND_LIBRARY(HSL_LIBRARY NAMES coinhsl libcoinhsl
+FIND_LIBRARY(MA27_LIBRARY NAMES coinhsl libcoinhsl ma27 libma27
   HINTS "${CMAKE_INSTALL_PREFIX}/lib"
         "${IPOPT_DIR}/lib"
         "${PC_COINHSL_LIBDIR}"
         "${PC_COINHSL_LIBRARY_DIRS}"
+	"${MA27_DIR}"
+	"${MA27_DIR}/lib"
 )
 FIND_LIBRARY(MA57_LIBRARY NAMES coinhsl libcoinhsl ma57 libma57
   HINTS "${CMAKE_INSTALL_PREFIX}/lib"
@@ -75,7 +79,7 @@ FIND_LIBRARY(MA57_LIBRARY NAMES coinhsl libcoinhsl ma57 libma57
         "${PC_COINHSL_LIBDIR}"
         "${PC_COINHSL_LIBRARY_DIRS}"
 	"${MA57_DIR}"
-	"${MA57_DIR}/.libs"
+	"${MA57_DIR}/lib"
 )
 
 # If BUILD_AMPLMP_IF_NEEDED is set and we couldn't find / weren't
@@ -156,7 +160,11 @@ set(PYNUMERO_MA27_SOURCES
 
 IF( BUILD_MA27 )
   ADD_LIBRARY( pynumero_MA27 SHARED ${PYNUMERO_MA27_SOURCES} )
-  TARGET_LINK_LIBRARIES( pynumero_MA27 ${HSL_LIBRARY} )
+  IF( MA27_OBJECT )
+    TARGET_LINK_LIBRARIES( pynumero_MA27 ${MA27_OBJECT} )
+  ELSE()
+    TARGET_LINK_LIBRARIES( pynumero_MA27 ${MA27_LIBRARY} )
+  ENDIF()
   SET_TARGET_PROPERTIES( pynumero_MA27 PROPERTIES ENABLE_EXPORTS 1 )
   INSTALL(TARGETS pynumero_MA27 LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib )
@@ -168,7 +176,7 @@ set(PYNUMERO_MA57_SOURCES
 
 IF( BUILD_MA57 )
   ADD_LIBRARY( pynumero_MA57 SHARED ${PYNUMERO_MA57_SOURCES} )
-  TARGET_LINK_LIBRARIES( pynumero_MA57 ${HSL_LIBRARY} )
+  TARGET_LINK_LIBRARIES( pynumero_MA57 ${MA57_LIBRARY} )
   SET_TARGET_PROPERTIES( pynumero_MA57 PROPERTIES ENABLE_EXPORTS 1 )
   INSTALL(TARGETS pynumero_MA57 LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib )
