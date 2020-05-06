@@ -70,6 +70,13 @@ jobs:
         path: cache/download
         key: download-v2-${{runner.os}}
 
+    - name: TPL Package cache
+      uses: actions/cache@v1
+      id: tpl-cache
+      with:
+        path: cache/tpl
+        key: tpl-v0-${{runner.os}}
+
     - name: Update OSX
       if: matrix.TARGET == 'osx'
       run: |
@@ -145,7 +152,7 @@ jobs:
       if: matrix.PYENV == 'conda'
       env:
         CONDA_PKGS: >
-            numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx 
+            numpy scipy ipython openpyxl sympy pyodbc pyyaml networkx
             xlrd pandas matplotlib dill seaborn setuptools pip coverage
             sphinx_rtd_theme pymysql pyro4 pint pathos glpk
       run: |
@@ -162,71 +169,81 @@ jobs:
         python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
             % (sys.executable,))'
 
+    - name: Setup TPL package directories
+      run: |
+        TPL_DIR="${GITHUB_WORKSPACE}/cache/tpl"
+        mkdir -p "$TPL_DIR"
+        DOWNLOAD_DIR="${GITHUB_WORKSPACE}/cache/download"
+        mkdir -p "$DOWNLOAD_DIR"
+        echo "::set-env name=TPL_DIR::$TPL_DIR"
+        echo "::set-env name=DOWNLOAD_DIR::$DOWNLOAD_DIR"
+
     - name: Install Ipopt
       run: |
-        # Ensure cache directories exist
-        mkdir -p ${GITHUB_WORKSPACE}/cache/download
-        #
-        IPOPT_TAR=${GITHUB_WORKSPACE}/cache/download/ipopt.tar.gz
-        if test ! -e $IPOPT_TAR; then
-            echo "...downloading Ipopt"
-            URL=https://github.com/IDAES/idaes-ext/releases/download/2.0.0
-            if test "${{matrix.TARGET}}" == osx; then
-                echo "IDAES Ipopt not available on OSX"
-            elif test "${{matrix.TARGET}}" == linux; then
-                curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
-                    > $IPOPT_TAR
-            else
-                curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
-                    $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
-            fi
-        fi
-        IPOPT_DIR=${GITHUB_WORKSPACE}/packages/ipopt
-        mkdir -p $IPOPT_DIR
-        pushd $IPOPT_DIR
-        TAR=../../cache/download/ipopt.tar.gz
-        test -e $TAR && tar -xzif $TAR
-        popd
+        IPOPT_DIR=$TPL_DIR/ipopt
         echo "::add-path::$IPOPT_DIR"
+        if test -e $IPOPT_DIR; then
+            exit 0
+        fi
+        echo "...downloading Ipopt"
+        IPOPT_TAR=${GITHUB_WORKSPACE}/cache/download/ipopt.tar.gz
+        URL=https://github.com/IDAES/idaes-ext/releases/download/2.0.0
+        mkdir -p "$IPOPT_DIR"
+        cd "$IPOPT_DIR"
+        if test "${{matrix.TARGET}}" == osx; then
+            echo "IDAES Ipopt not available on OSX"
+            exit 0
+        elif test "${{matrix.TARGET}}" == linux; then
+            curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
+                > "$IPOPT_TAR"
+        else
+            curl --retry 8 -L $URL/idaes-lib-windows-64.tar.gz \
+                $URL/idaes-lib-windows-64.tar.gz > "$IPOPT_TAR"
+            tar -xzif "$IPOPT_TAR"
+            rm "$IPOPT_TAR"
+            curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
+                $URL/idaes-lib-windows-64.tar.gz > "$IPOPT_TAR"
+        fi
+        tar -xzif $IPOPT_TAR
 
     - name: Install GAMS
       # We install using Powershell because the GAMS installer hangs
       # when launched from bash on Windows
       shell: pwsh
       run: |
-        $GAMS_DIR="$env:GITHUB_WORKSPACE/packages/gams"
-        $GAMS_INSTALLER="cache/download/gams_install.exe"
-        $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
-        if (-not (Test-Path "$GAMS_INSTALLER" -PathType Leaf)) {
-            echo "...downloading GAMS"
-            if ( "${{matrix.TARGET}}" -eq "win" ) {
-                $URL = "$URL/windows/windows_x64_64.exe"
-            } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
-                $URL = "$URL/macosx/osx_x64_64_sfx.exe"
-            } else {
-                $URL = "$URL/linux/linux_x64_64_sfx.exe"
-            }
-            Invoke-WebRequest -Uri "$URL" -OutFile "$GAMS_INSTALLER"
-        }
-        echo "...installing GAMS"
-        if ( "${{matrix.TARGET}}" -eq "win" ) {
-            Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
-                "/SP- /NORESTART /VERYSILENT /DIR=$GAMS_DIR /NOICONS" `
-                -Wait
-        } else {
-            chmod 777 $GAMS_INSTALLER
-            Start-Process -FilePath "$GAMS_INSTALLER" -ArgumentList `
-                "-q -d $GAMS_DIR" -Wait
-            mv $GAMS_DIR/*/* $GAMS_DIR/.
-        }
-        echo "PATH: $GAMS_DIR"
+        $GAMS_DIR="${env:TPL_DIR}/gams"
         echo "::add-path::$GAMS_DIR"
         echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
         echo "::set-env name=DYLD_LIBRARY_PATH::${env:DYLD_LIBRARY_PATH}:$GAMS_DIR"
+        if (Test-Path -Path "$GAMS_DIR") {
+            exit 0
+        }
+        $INSTALLER="cache/download/gams_install.exe"
+        $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
+        echo "...downloading GAMS"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            $URL = "$URL/windows/windows_x64_64.exe"
+        } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
+            $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+        } else {
+            $URL = "$URL/linux/linux_x64_64_sfx.exe"
+        }
+        Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+        echo "...installing GAMS"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            Start-Process -FilePath "$INSTALLER" -ArgumentList `
+                "/SP- /NORESTART /VERYSILENT /DIR=$GAMS_DIR /NOICONS" `
+                -Wait
+        } else {
+            chmod 777 $INSTALLER
+            Start-Process -FilePath "$INSTALLER" -ArgumentList `
+                "-q -d $GAMS_DIR" -Wait
+            mv $GAMS_DIR/*/* $GAMS_DIR/.
+        }
 
     - name: Install GAMS Python bindings
       run: |
-        GAMS_DIR="$GITHUB_WORKSPACE/packages/gams"
+        GAMS_DIR="$TPL_DIR/gams"
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
@@ -235,6 +252,60 @@ jobs:
             $PYTHON_EXE setup.py install
             popd
         fi
+
+    - name: Install BARON
+      shell: pwsh
+      run: |
+        $BARON_DIR="$env:TPL_DIR/baron"
+        echo "::add-path::$BARON_DIR"
+        if (Test-Path -Path "$BARON_DIR") {
+            exit 0
+        }
+        $INSTALLER="cache/download/"
+        $URL="https://www.minlp.com/downloads/xecs/baron/current/"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            $INSTALLER += "baron_install.exe"
+            $URL += "baron-win64.exe"
+        } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
+            $INSTALLER += "baron_install.zip"
+            $URL += "baron-osx64.zip"
+        } else {
+            $INSTALLER += "baron_install.zip"
+            $URL += "baron-lin64.zip"
+        }
+        if (-not (Test-Path "$BARON_INSTALLER" -PathType Leaf)) {
+            echo "...downloading BARON"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+        }
+        echo "...installing BARON"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            Start-Process -FilePath "$INSTALLER" -ArgumentList `
+                "/SP- /NORESTART /VERYSILENT /DIR=$BARON_DIR /NOICONS" `
+                -Wait
+        } else {
+            unzip -q $INSTALLER
+            mv baron-* $BARON_DIR
+        }
+
+    - name: Install GJH_ASL_JSON
+      run: |
+        GJH_DIR="$TPL_DIR/gjh"
+        echo "::add-path::$GJH_DIR"
+        if test -e "$GJH_DIR"; then
+            exit 0
+        fi
+        URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
+        wget -q "$URL" -O gjh_asl_json.zip
+        unzip -q gjh_asl_json.zip
+        rm -f gjh_asl_json.zip
+        cd gjh_asl_json-master/Thirdparty
+        ./get.ASL
+        cd ..
+        make
+        mv $(pwd)/bin "$GJH_DIR"
+        cd ..
+        rm -rf gjh_asl_json-master
+        echo "::add-path::$GJH_DIR"
 
     - name: Install Pyomo and PyUtilib
       run: |
