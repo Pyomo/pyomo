@@ -63,13 +63,6 @@ jobs:
         path: cache/os
         key: pkg-v2-${{runner.os}}
 
-    - name: Download cache
-      uses: actions/cache@v1
-      id: download-cache
-      with:
-        path: cache/download
-        key: download-v2-${{runner.os}}
-
     - name: TPL Package cache
       uses: actions/cache@v1
       id: tpl-cache
@@ -200,7 +193,7 @@ jobs:
             curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
                 $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
         fi
-        tar -xzi - < $IPOPT_TAR
+        tar -xzi < $IPOPT_TAR
 
     - name: Install GAMS
       # We install using Powershell because the GAMS installer hangs
