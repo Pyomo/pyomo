@@ -25,8 +25,6 @@ import sys
 
 from six import iteritems, StringIO
 
-# DEBUG
-from nose.tools import set_trace
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
@@ -1749,6 +1747,27 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertIsInstance(
             disjBlock[1].component("evil[1].b.c_4"), Constraint)
 
+    def test_pick_up_bigm_suffix_on_block(self):
+        m = models.makeTwoTermDisj_BlockOnDisj()
+        m.evil[1].b.BigM = Suffix(direction=Suffix.LOCAL)
+        m.evil[1].b.BigM[m.evil[1].b.c] = 2000
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+        
+        # check that the m value got used
+        cons_list = bigm.get_transformed_constraints(m.evil[1].b.c)
+        ub = cons_list[1]
+        self.assertEqual(ub.index(), 'ub')
+        self.assertEqual(ub.upper, 0)
+        self.assertIsNone(ub.lower)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, -2000)
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertIs(repn.linear_vars[0], m.x)
+        self.assertEqual(repn.linear_coefs[0], 1)
+        self.assertIs(repn.linear_vars[1], m.evil[1].indicator_var)
+        self.assertEqual(repn.linear_coefs[1], 2000)
 
 class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
     def test_activeInnerDisjunction_err(self):

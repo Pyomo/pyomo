@@ -149,11 +149,21 @@ class BigM_Transformation(Transformation):
         # SimpleBlocks. Though it is possible at this point to stick them
         # on whatever components you want, we won't pick them up.
         suffix_list = []
+        # first descend into the subblocks here to see if anything is there
+        for b in block.component_data_objects(Block, descend_into=(Block),
+                                              active=True,
+                                              sort=SortComponents.deterministic):
+            bigm = b.component('BigM')
+            if type(bigm) is Suffix:
+                suffix_list.append(bigm)
+
+        # now go searching above the disjunct in the tree
         while block is not None:
             bigm = block.component('BigM')
             if type(bigm) is Suffix:
                 suffix_list.append(bigm)
             block = block.parent_block()
+
         return suffix_list
 
     def _get_bigm_arg_list(self, bigm_args, block):
@@ -547,16 +557,8 @@ class BigM_Transformation(Transformation):
         name = unique_component_name(transBlock, cons_name)
 
         if obj.is_indexed():
-            try:
-                newConstraint = Constraint(obj.index_set(),
-                                           disjunctionRelaxationBlock.lbub)
-            # HACK: We get burned by #191 here... When #1319 is merged we
-            # can revist this and I think stop catching the AttributeError.
-            except (TypeError, AttributeError):
-                # The original constraint may have been indexed by a
-                # non-concrete set (like an Any).  We will give up on
-                # strict index verification and just blindly proceed.
-                newConstraint = Constraint(Any)
+            newConstraint = Constraint(obj.index_set(),
+                                       disjunctionRelaxationBlock.lbub)
             # we map the container of the original to the container of the
             # transformed constraint. Don't do this if obj is a SimpleConstraint
             # because we will treat that like a _ConstraintData and map to a
