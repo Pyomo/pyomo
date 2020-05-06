@@ -20,6 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
+        python-version: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
         include:
         - os: macos-latest
           TARGET: osx
@@ -30,7 +31,6 @@ jobs:
         - os: windows-latest
           TARGET: win
           PYENV: conda
-        python-version: [3.7]
 
 
     steps:
