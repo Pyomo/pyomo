@@ -278,22 +278,22 @@ jobs:
     - name: Install GJH_ASL_JSON
       run: |
         GJH_DIR="$TPL_DIR/gjh"
-        echo "::add-path::$GJH_DIR"
+        echo "::add-path::${GJH_DIR}"
         if test -e "$GJH_DIR"; then
             exit 0
         fi
+        $INSTALLER="${env:DOWNLOAD_DIR}/gjh_asl_json.zip"
         URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
-        wget -q "$URL" -O gjh_asl_json.zip
-        unzip -q gjh_asl_json.zip
-        rm -f gjh_asl_json.zip
+        curl --retry 8 -L $URL > $INSTALLER
+        mkdir ${env:DOWNLOAD_DIR}/gjh-build
+        cd ${env:DOWNLOAD_DIR}/gjh-build
+        unzip -q $INSTALLER
         cd gjh_asl_json-master/Thirdparty
         ./get.ASL
         cd ..
         make
         mv $(pwd)/bin "$GJH_DIR"
         cd ..
-        rm -rf gjh_asl_json-master
-        echo "::add-path::$GJH_DIR"
 
     - name: Install Pyomo and PyUtilib
       run: |
