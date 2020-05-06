@@ -34,9 +34,6 @@ from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from six import iteritems, iterkeys
 from weakref import ref as weakref_ref
 
-# TODO: DEBUG
-from nose.tools import set_trace
-
 logger = logging.getLogger('pyomo.gdp.chull')
 
 NAME_BUFFER = {}
@@ -709,7 +706,7 @@ class ConvexHull_Transformation(Transformation):
         if obj.is_indexed():
             try:
                 newConstraint = Constraint(obj.index_set(), transBlock.lbub)
-            # ESJ TODO: John, is this except block still reachable in the
+            # ESJ: TODO: John, is this except block still reachable in the
             # post-set-rewrite universe? I can't figure out how to test it...
             except:
                 # The original constraint may have been indexed by a
@@ -891,14 +888,40 @@ class ConvexHull_Transformation(Transformation):
         return get_transformed_constraints(srcConstraint)
 
     def get_disaggregated_var(self, v, disjunct):
-        # Retrieve the disaggregated var corresponding to the specified disjunct
+        """
+        Returns the disaggregated variable corresponding to the Var v and the
+        Disjunct disjunct.
+
+        If v is a local variable, this method will return v.
+
+        Parameters
+        ----------
+        v: a Var which appears in a constraint in a transformed Disjunct
+        disjunct: a transformed Disjunct in which v appears
+        """
         if disjunct._transformation_block is None:
             raise GDP_Error("Disjunct %s has not been transformed" 
                             % disjunct.name)
         transBlock = disjunct._transformation_block()
-        return transBlock._disaggregatedVarMap['disaggregatedVar'][v]
+        try:
+            return transBlock._disaggregatedVarMap['disaggregatedVar'][v]
+        except:
+            raise GDP_Error("It does not appear %s is a "
+                            "variable which appears in disjunct %s"
+                            % (v.name, disjunct.name))
         
     def get_src_var(self, disaggregated_var):
+        """
+        Returns the original model variable to which disaggregated_var 
+        corresponds.
+
+        Parameters
+        ----------
+        disaggregated_var: a Var which was created by the chull 
+                           transformation as a disaggregated variable 
+                           (and so appears on a transformation block 
+                           of some Disjunct)
+        """
         transBlock = disaggregated_var.parent_block()
         try:
             src_disjunct = transBlock._srcDisjunct()
@@ -910,6 +933,17 @@ class ConvexHull_Transformation(Transformation):
     # retrieves the disaggregation constraint for original_var resulting from
     # transforming disjunction
     def get_disaggregation_constraint(self, original_var, disjunction):
+        """
+        Returns the disaggregation (re-aggregation?) constraint 
+        (which links the disaggregated variables to their original) 
+        corresponding to original_var and the transformation of disjunction.
+
+        Parameters
+        ----------
+        original_var: a Var which was disaggregated in the transformation
+                      of Disjunction disjunction
+        disjunction: a transformed Disjunction containing original_var
+        """
         for disjunct in disjunction.disjuncts:
             transBlock = disjunct._transformation_block
             if not transBlock is None:
@@ -927,6 +961,18 @@ class ConvexHull_Transformation(Transformation):
                             (original_var.name, disjunction.name))
 
     def get_var_bounds_constraint(self, v):
+        """
+        Returns the IndexedConstraint which sets a disaggregated
+        variable to be within its bounds when its Disjunct is active and to
+        be 0 otherwise. (It is always an IndexedConstraint because each
+        bound becomes a separate constraint.)
+        
+        Parameters
+        ----------
+        v: a Var which was created by the chull  transformation as a 
+           disaggregated variable (and so appears on a transformation 
+           block of some Disjunct)
+        """
         # This can only go well if v is a disaggregated var
         transBlock = v.parent_block()
         try:

@@ -25,9 +25,6 @@ linear_solvers = pyomo.opt.check_available_solvers(
 import random
 from six import iteritems, iterkeys
 
-# DEBUG
-from nose.tools import set_trace
-
 EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
 class CommonTests:
@@ -1671,6 +1668,60 @@ class TestErrors(unittest.TestCase):
         ct.check_linear_coef(self, repn, disjunct1.indicator_var_4, -1)
         ct.check_linear_coef(self, repn,
                              transBlock.relaxedDisjuncts[1].indicator_var_9, -1)
+
+    def test_mapping_method_errors(self):
+        m = models.makeTwoTermDisj_Nonlinear()
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Either w is not a disaggregated variable, or "
+            "the disjunction that disaggregates it has not "
+            "been properly transformed.",
+            chull.get_var_bounds_constraint,
+            m.w)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "It doesn't appear that "
+            "_pyomo_gdp_chull_relaxation.relaxedDisjuncts\[1\].w is a "
+            "variable that was disaggregated by Disjunction disjunction",
+            chull.get_disaggregation_constraint,
+            m.d[1].transformation_block().w,
+            m.disjunction)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "w does not appear to be a disaggregated variable",
+            chull.get_src_var,
+            m.w)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "It does not appear "
+            "_pyomo_gdp_chull_relaxation.relaxedDisjuncts\[1\].w is a "
+            "variable which appears in disjunct d\[1\]",
+            chull.get_disaggregated_var,
+            m.d[1].transformation_block().w,
+            m.d[1])
+
+        m.random_disjunction = Disjunction(expr=[m.w == 2, m.w >= 7])
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Disjunction random_disjunction has not been properly "
+            "transformed: None of its disjuncts are transformed.",
+            chull.get_disaggregation_constraint,
+            m.w,
+            m.random_disjunction)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Disjunct random_disjunction_disjuncts\[0\] has not been "
+            "transformed",
+            chull.get_disaggregated_var,
+            m.w,
+            m.random_disjunction.disjuncts[0])
 
 class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
     def test_activeInnerDisjunction_err(self):
