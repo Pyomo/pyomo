@@ -12,5 +12,5 @@ source =
     pyomo
     examples
 omit =
-    # github actions creates a cahce directory we don't want measured
+    # github actions creates a cache directory we don't want measured
     cache/*
