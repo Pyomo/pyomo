@@ -276,6 +276,7 @@ jobs:
         }
 
     - name: Install GJH_ASL_JSON
+      if: matrix.TARGET != 'win'
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "::add-path::${GJH_DIR}"
