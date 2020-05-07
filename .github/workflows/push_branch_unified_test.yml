@@ -76,7 +76,7 @@ jobs:
       id: tpl-cache
       with:
         path: cache/tpl
-        key: tpl-v0-${{runner.os}}
+        key: tpl-v1-${{runner.os}}
 
     - name: Update OSX
       if: matrix.TARGET == 'osx'
