@@ -259,13 +259,16 @@ class MindtPySolver(object):
         config.set_value(kwds)
 
         # configration confirmation
-        if config.single_tree == True:
+        if config.single_tree is True:
             config.iteration_limit = 1
             config.add_slack = False
             config.add_integer_cuts = False
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
                 "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
+        # if the slacks fix to zero, just don't add them
+        if config.max_slack == 0.0:
+            config.add_slack = False
 
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
@@ -365,8 +368,9 @@ class MindtPySolver(object):
             #     MindtPy.feas_inverse_map[n] = c
 
             # Create slack variables for OA cuts
-            lin.slack_vars = VarList(
-                bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
+            if config.add_slack:
+                lin.slack_vars = VarList(
+                    bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
             # Create slack variables for feasibility problem
             feas.slack_var = Var(feas.constraint_set,
                                  domain=NonNegativeReals, initialize=1)

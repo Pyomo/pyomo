@@ -58,8 +58,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
     def add_lazy_oa_cuts(self, target_model, dual_values, solve_data, config, opt,
                          linearize_active=True,
                          linearize_violated=True,
-                         linearize_inactive=False,
-                         use_slack_var=False):
+                         linearize_inactive=False):
         """Add oa_cuts through Cplex inherent function self.add()"""
 
         for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
