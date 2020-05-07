@@ -11,6 +11,15 @@ defaults:
 
 env:
   PYTHONWARNINGS: ignore::UserWarning
+  PYTHON_BASE_PKGS: >
+      coverage cython dill ipython networkx nose openpyxl pathos
+      pint pymysql pyro4 pyyaml seaborn sphinx_rtd_theme sympy
+      xlrd
+  PYTHON_NUMPY_PKGS: >
+      numpy scipy pyodbc pandas matplotlib
+  CONDA_PKGS: >
+      glpk
+  PIP_PKGS:
 
 jobs:
   pyomo-tests:
@@ -127,18 +136,15 @@ jobs:
     - name: Install Python Packages (pip)
       if: matrix.PYENV == 'pip'
       shell: bash
-      env:
-        PIP_BASE: >
-            cython dill ipython pathos coverage nose
-        PIP_PKGS: >
-            scipy openpyxl sympy pyyaml pyodbc networkx xlrd
-            pandas matplotlib seaborn pymysql pyro4 pint
       run: |
         python -m pip install --cache-dir cache/pip --upgrade pip
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
-        pip install --cache-dir cache/pip $PIP_BASE
-        pip install --cache-dir cache/pip numpy
-        pip install --cache-dir cache/pip $PIP_PKGS
+        pip install --cache-dir cache/pip ${PYTHON_BASE_PKGS} ${PIP_PKGS}
+        if [[ ${{matrix.PYENV}} != pypy* ]]; then
+            # NumPy and derivatives either don't build under pypy, or if
+            # they do, the builds take forever.
+            pip install --cache-dir cache/pip ${PYTHON_NUMPY_PKGS}
+        fi
         pip install --cache-dir cache/pip cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
         python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
@@ -159,8 +165,9 @@ jobs:
         conda info
         conda config --show-sources
         conda list --show-channel-urls
-        conda install -q -y -c conda-forge --no-update-deps $CONDA_PKGS
-        conda install -q -y -c ibmdecisionoptimization --no-update-deps cplex \
+        conda install -y -c conda-forge ${PYTHON_BASE_PKGS} \
+            ${PYTHON_NUMPY_PKGS} ${CONDA_PKGS}
+        conda install -y -c ibmdecisionoptimization cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
         python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
             % (sys.executable,))'
