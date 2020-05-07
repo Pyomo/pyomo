@@ -48,11 +48,11 @@ struct MA57_struct {
    bool NRHS_set, LRHS_set, JOB_set;
    double WORK_factor, FACT_factor, IFACT_factor;
    int* IWORK;
-   int* KEEP; 
+   int* KEEP;
    int* IFACT;
    int ICNTL[20], INFO[40];
    int JOB;
-   double* WORK; 
+   double* WORK;
    double* FACT;
    double CNTL[5], RINFO[20];
 };
@@ -166,7 +166,7 @@ extern "C" {
 
 
    PYNUMERO_HSL_EXPORT
-   void do_symbolic_factorization(MA57_struct* ma57, int N, int NE, 
+   void do_symbolic_factorization(MA57_struct* ma57, int N, int NE,
                                   int* IRN, int* JCN) {
 
       if (!ma57->KEEP_allocated) {
@@ -179,9 +179,9 @@ extern "C" {
       ma57->IWORK = (int*)malloc(5*N*sizeof(int));
       if (ma57->IWORK == NULL) { abort_bad_memory(1); }
 	
-      ma57ad_(&N, &NE, IRN, JCN, 
-              &(ma57->LKEEP), ma57->KEEP, 
-              ma57->IWORK, ma57->ICNTL, 
+      ma57ad_(&N, &NE, IRN, JCN,
+              &(ma57->LKEEP), ma57->KEEP,
+              ma57->IWORK, ma57->ICNTL,
               ma57->INFO, ma57->RINFO);
 
       free(ma57->IWORK);
@@ -189,7 +189,7 @@ extern "C" {
 
 
    PYNUMERO_HSL_EXPORT
-   void do_numeric_factorization(MA57_struct* ma57, int N, int NE, 
+   void do_numeric_factorization(MA57_struct* ma57, int N, int NE,
                                  double* A) {
 
       // Get memory estimates from INFO, allocate FACT and IFACT
@@ -208,7 +208,7 @@ extern "C" {
       ma57->IWORK = (int*)malloc(N*sizeof(int));
       if (ma57->IWORK == NULL) { abort_bad_memory(1); }
 
-      ma57bd_(&N, &NE, A, 
+      ma57bd_(&N, &NE, A,
               ma57->FACT, &(ma57->LFACT),
               ma57->IFACT, &(ma57->LIFACT),
               &(ma57->LKEEP), ma57->KEEP,
@@ -245,21 +245,21 @@ extern "C" {
       // IWORK should always be length N
       ma57->IWORK = (int*)malloc(N*sizeof(int));
       if (ma57->IWORK == NULL) { abort_bad_memory(1); }
-  
+
       ma57cd_(
-              &(ma57->JOB), 
-              &N, 
-              ma57->FACT, 
+              &(ma57->JOB),
+              &N,
+              ma57->FACT,
               &(ma57->LFACT),
-              ma57->IFACT, 
+              ma57->IFACT,
               &(ma57->LIFACT),
-              &(ma57->NRHS), 
+              &(ma57->NRHS),
               RHS,
-              &(ma57->LRHS), 
+              &(ma57->LRHS),
               ma57->WORK,
-              &(ma57->LWORK), 
+              &(ma57->LWORK),
               ma57->IWORK,
-              ma57->ICNTL, 
+              ma57->ICNTL,
               ma57->INFO
               );
 
