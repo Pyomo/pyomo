@@ -3,8 +3,19 @@
 #include <stdbool.h>
 #include <string.h>
 
-extern "C" {
+// This would normally be in a header file, but as we do not need one,
+// we will explicitly include it here.
+#if defined(_WIN32) || defined(_WIN64)
+#  if defined(BUILDING_PYNUMERO_ASL)
+#    define PYNUMERO_HSL_EXPORT __declspec(dllexport)
+#  else
+#    define PYNUMERO_HSL_EXPORT __declspec(dllimport)
+#  endif
+#else
+#  define PYNUMERO_HSL_EXPORT
+#endif
 
+// Forward declaration of MA27 fortran routines
 void ma27id_(int* ICNTL, double* CNTL);
 void ma27ad_(int *N, int *NZ, int *IRN, int* ICN, 
 		int *IW, int* LIW, int* IKEEP, int *IW1,
@@ -19,12 +30,13 @@ void ma27cd_(int *N, double* A, int* LA, int* IW,
 		int* LIW, double* W, int* MAXFRT, 
 		double* RHS, int* IW1, int* NSTEPS, 
 		int* ICNTL, int* INFO);
-}
+
 
 void abort_bad_memory(int status){
 	printf("Bad memory allocation in MA27 C interface. Aborting.");
 	exit(status);
 }
+
 
 struct MA27_struct {
 	int LIW_a, LIW_b, NSTEPS, IFLAG, LA, MAXFRT;
@@ -49,6 +61,7 @@ struct MA27_struct {
 
 extern "C" {
 
+PYNUMERO_HSL_EXPORT
 struct MA27_struct* new_MA27_struct(void){
 
 	struct MA27_struct* ma27 = (struct MA27_struct *)malloc(sizeof(struct MA27_struct));
@@ -69,35 +82,49 @@ struct MA27_struct* new_MA27_struct(void){
 }
 
 // Functions for setting/accessing INFO/CNTL arrays:
+PYNUMERO_HSL_EXPORT
 void set_icntl(struct MA27_struct* ma27, int i, int val) {
   ma27->ICNTL[i] = val;
 }
+
+PYNUMERO_HSL_EXPORT
 int get_icntl(struct MA27_struct* ma27, int i) {
 	return ma27->ICNTL[i];
 }
+
+PYNUMERO_HSL_EXPORT
 void set_cntl(struct MA27_struct* ma27, int i, double val) {
 	ma27->CNTL[i] = val;
 }
+
+PYNUMERO_HSL_EXPORT
 double get_cntl(struct MA27_struct* ma27, int i) {
 	return ma27->CNTL[i];
 }
+
+PYNUMERO_HSL_EXPORT
 int get_info(struct MA27_struct* ma27, int i) {
 	return ma27->INFO[i];
 }
 
 // Functions for allocating WORK/FACT arrays:
+PYNUMERO_HSL_EXPORT
 void alloc_iw_a(struct MA27_struct* ma27, int l) {
 	ma27->LIW_a = l;
 	ma27->IW_a = (int*)malloc(l*sizeof(int));
 	if (ma27->IW_a == NULL) { abort_bad_memory(1); }
 	ma27->IW_a_allocated = true;
 }
+
+PYNUMERO_HSL_EXPORT
 void alloc_iw_b(struct MA27_struct* ma27, int l) {
 	ma27->LIW_b = l;
 	ma27->IW_b = (int*)malloc(l*sizeof(int));
 	if (ma27->IW_b == NULL) { abort_bad_memory(1); }
 	ma27->IW_b_allocated = true;
 }
+
+PYNUMERO_HSL_EXPORT
 void alloc_a(struct MA27_struct* ma27, int l) {
 	ma27->LA = l;
 	ma27->A = (double*)malloc(l*sizeof(double));
@@ -105,6 +132,7 @@ void alloc_a(struct MA27_struct* ma27, int l) {
 	ma27->A_allocated = true;
 }
 
+PYNUMERO_HSL_EXPORT
 void do_symbolic_factorization(struct MA27_struct* ma27, int N, int NZ, 
 		int* IRN, int* ICN) {
 
@@ -140,6 +168,7 @@ void do_symbolic_factorization(struct MA27_struct* ma27, int N, int NZ,
 	ma27->IW_a_allocated = false;
 }
 
+PYNUMERO_HSL_EXPORT
 void do_numeric_factorization(struct MA27_struct* ma27, int N, int NZ, 
 		int* IRN, int* ICN, double* A) {
 
@@ -181,6 +210,7 @@ void do_numeric_factorization(struct MA27_struct* ma27, int N, int NZ,
 	free(ma27->IW1);
 }
 
+PYNUMERO_HSL_EXPORT
 void do_backsolve(struct MA27_struct* ma27, int N, double* RHS) {
 
 	ma27->W = (double*)malloc(ma27->MAXFRT*sizeof(double));
@@ -207,6 +237,7 @@ void do_backsolve(struct MA27_struct* ma27, int N, double* RHS) {
 	free(ma27->W);
 }
 
+PYNUMERO_HSL_EXPORT
 void free_memory(struct MA27_struct* ma27) {
 	if (ma27->A_allocated) {
 		free(ma27->A);

@@ -2,11 +2,22 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-extern "C" {
+// This would normally be in a header file, but as we do not need one,
+// we will explicitly include it here.
+#if defined(_WIN32) || defined(_WIN64)
+#  if defined(BUILDING_PYNUMERO_ASL)
+#    define PYNUMERO_HSL_EXPORT __declspec(dllexport)
+#  else
+#    define PYNUMERO_HSL_EXPORT __declspec(dllimport)
+#  endif
+#else
+#  define PYNUMERO_HSL_EXPORT
+#endif
 
+// Forward declaration of MA57 fortran routines
 void ma57id_(double* CNTL, int* ICNTL);
 void ma57ad_(int *N, int *NE, const int *IRN, const int* JCN,
-		int *LKEEP, int* KEEP, int* IWORK, int *ICNTL,
+                int *LKEEP, int* KEEP, int* IWORK, int *ICNTL,
 		int* INFO, double* RINFO);
 void ma57bd_(int *N, int *NE, double* A, double* FACT, int* LFACT,
 		int* IFACT, int* LIFACT, int* LKEEP, int* KEEP, int* IWORK,
@@ -24,12 +35,12 @@ void ma57ed_(int *N, int* IC, int* KEEP, double* FACT, int* LFACT,
 		double* NEWFAC, int* LNEW, int* IFACT, int* LIFACT,
 		int* NEWIFC, int* LINEW, int* INFO);
 
-}
 
 void abort_bad_memory(int status){
 	printf("Bad memory allocation in MA57 C interface. Aborting.");
 	exit(status);
 }
+
 
 struct MA57_struct {
 	int LRHS, LFACT, LKEEP, LIFACT, LWORK, NRHS;
@@ -48,6 +59,7 @@ struct MA57_struct {
 
 extern "C" {
 
+PYNUMERO_HSL_EXPORT
 struct MA57_struct* new_MA57_struct(void){
 
 	struct MA57_struct* ma57 = (struct MA57_struct*)malloc(sizeof(struct MA57_struct));
@@ -69,44 +81,62 @@ struct MA57_struct* new_MA57_struct(void){
 }
 
 // Functions for setting/accessing INFO/CNTL arrays:
+PYNUMERO_HSL_EXPORT
 void set_icntl(struct MA57_struct* ma57, int i, int val) {
   ma57->ICNTL[i] = val;
 }
+
+PYNUMERO_HSL_EXPORT
 int get_icntl(struct MA57_struct* ma57, int i) {
 	return ma57->ICNTL[i];
 }
+
+PYNUMERO_HSL_EXPORT
 void set_cntl(struct MA57_struct* ma57, int i, double val) {
 	ma57->CNTL[i] = val;
 }
+
+PYNUMERO_HSL_EXPORT
 double get_cntl(struct MA57_struct* ma57, int i) {
 	return ma57->CNTL[i];
 }
+
+PYNUMERO_HSL_EXPORT
 int get_info(struct MA57_struct* ma57, int i) {
 	return ma57->INFO[i];
 }
+
+PYNUMERO_HSL_EXPORT
 double get_rinfo(struct MA57_struct* ma57, int i) {
 	return ma57->RINFO[i];
 }
 
 // Functions for allocating WORK/FACT arrays:
+PYNUMERO_HSL_EXPORT
 void alloc_keep(struct MA57_struct* ma57, int l) {
 	ma57->LKEEP = l;
 	ma57->KEEP = (int*)malloc(l*sizeof(int));
 	if (ma57->KEEP == NULL) { abort_bad_memory(1); }
 	ma57->KEEP_allocated = true;
 }
+
+PYNUMERO_HSL_EXPORT
 void alloc_work(struct MA57_struct* ma57, int l) {
 	ma57->LWORK = l;
 	ma57->WORK = (double*)malloc(l*sizeof(double));
 	if (ma57->WORK == NULL) { abort_bad_memory(1); }
 	ma57->WORK_allocated = true;
 }
+
+PYNUMERO_HSL_EXPORT
 void alloc_fact(struct MA57_struct* ma57, int l) {
 	ma57->LFACT = l;
 	ma57->FACT = (double*)malloc(l*sizeof(double));
 	if (ma57->FACT == NULL) { abort_bad_memory(1); }
 	ma57->FACT_allocated = true;
 }
+
+PYNUMERO_HSL_EXPORT
 void alloc_ifact(struct MA57_struct* ma57, int l) {
 	ma57->LIFACT = l;
 	ma57->IFACT = (int*)malloc(l*sizeof(int));
@@ -115,21 +145,27 @@ void alloc_ifact(struct MA57_struct* ma57, int l) {
 }
 
 // Functions for specifying dimensions of RHS:
+PYNUMERO_HSL_EXPORT
 void set_nrhs(struct MA57_struct* ma57, int n) {
 	ma57->NRHS = n;
 	ma57->NRHS_set = true;
 }
+
+PYNUMERO_HSL_EXPORT
 void set_lrhs(struct MA57_struct* ma57, int l) {
 	ma57->LRHS = l;
 	ma57->LRHS_set = true;
 }
 
 // Specify what job to be performed - maybe make an arg to functions
+PYNUMERO_HSL_EXPORT
 void set_job(struct MA57_struct* ma57, int j) {
 	ma57->JOB = j;
 	ma57->JOB_set = true;
 }
 
+
+PYNUMERO_HSL_EXPORT
 void do_symbolic_factorization(struct MA57_struct* ma57, int N, int NE, 
 		int* IRN, int* JCN) {
 
@@ -151,6 +187,8 @@ void do_symbolic_factorization(struct MA57_struct* ma57, int N, int NE,
 	free(ma57->IWORK);
 }
 
+
+PYNUMERO_HSL_EXPORT
 void do_numeric_factorization(struct MA57_struct* ma57, int N, int NE, 
 		double* A) {
 
@@ -181,6 +219,8 @@ void do_numeric_factorization(struct MA57_struct* ma57, int N, int NE,
 	free(ma57->IWORK);
 }
 
+
+PYNUMERO_HSL_EXPORT
 void do_backsolve(struct MA57_struct* ma57, int N, double* RHS) {
 
 	// Set number and length (principal axis) of RHS if not already set
@@ -228,6 +268,8 @@ void do_backsolve(struct MA57_struct* ma57, int N, double* RHS) {
 	ma57->WORK_allocated = false;
 }
 
+
+PYNUMERO_HSL_EXPORT
 void do_iterative_refinement(struct MA57_struct* ma57, int N, int NE,
 		double* A, int* IRN, int* JCN, double* RHS, double* X, double* RESID) {
 	// Number of steps of iterative refinement can be controlled with ICNTL[9-1]
@@ -281,6 +323,8 @@ void do_iterative_refinement(struct MA57_struct* ma57, int N, int NE,
 	ma57->WORK_allocated = false;
 }
 
+
+PYNUMERO_HSL_EXPORT
 void do_reallocation(struct MA57_struct* ma57, int N, double realloc_factor, int IC) {
 	// Need realloc_factor > 1 here
 
@@ -325,6 +369,8 @@ void do_reallocation(struct MA57_struct* ma57, int N, double realloc_factor, int
 	  // as normal in MA57B/C/D
 }
 
+
+PYNUMERO_HSL_EXPORT
 void free_memory(struct MA57_struct* ma57) {
 	if (ma57->WORK_allocated) {
 		free(ma57->WORK);
