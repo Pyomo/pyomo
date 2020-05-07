@@ -160,12 +160,15 @@ class MumpsInterface(LinearSolverInterface):
                         'numeric factorization.')
 
     def increase_memory_allocation(self):
-        new_allocation = 2*self._prev_allocation
-        self._prev_allocation = new_allocation
-
+        # info(16) is rounded to the nearest MB, so it could be zero
+        if self._prev_allocation == 0:
+            new_allocation = 1
+        else:
+            new_allocation = 2*self._prev_allocation
         # Here I set the memory allocation directly instead of increasing
         # the "percent-increase-from-predicted" parameter ICNTL(14)
         self.set_icntl(23, new_allocation)
+        self._prev_allocation = new_allocation
         return new_allocation
 
     def try_factorization(self, kkt):
