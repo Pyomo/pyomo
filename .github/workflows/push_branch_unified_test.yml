@@ -22,7 +22,7 @@ env:
 
 jobs:
   pyomo-tests:
-    name: ${{ matrix.TARGET }}/py${{ matrix.python-version }}
+    name: ${{ matrix.TARGET }}/${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -139,7 +139,7 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         pip install --cache-dir cache/pip ${PYTHON_BASE_PKGS} ${PIP_PKGS}
-        if [[ ${{matrix.PYENV}} != pypy* ]]; then
+        if [[ ${{matrix.python-version}} != pypy* ]]; then
             # NumPy and derivatives either don't build under pypy, or if
             # they do, the builds take forever.
             pip install --cache-dir cache/pip ${PYTHON_NUMPY_PKGS}
@@ -358,7 +358,7 @@ jobs:
 
     - name: Process code coverage report
       env:
-        CODECOV_NAME: ${{matrix.TARGET}}/py${{matrix.python-version}}
+        CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python-version}}
       run: |
         coverage combine
         coverage report -i
