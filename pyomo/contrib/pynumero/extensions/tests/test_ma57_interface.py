@@ -60,6 +60,10 @@ class TestMA57Interface(unittest.TestCase):
         ne = 7
         irn = np.array([1,1,2,2,3,3,5], dtype=np.intc)
         jcn = np.array([1,2,3,5,3,4,5], dtype=np.intc)
+        # Copied these Fortran-style indices from HSL docs. 
+        # Interface expects C-style indices, as is typical in Python.
+        irn = irn - 1
+        jcn = jcn - 1
 
         bad_jcn = np.array([1,2,3,5,3,4], dtype=np.intc)
 
@@ -81,6 +85,8 @@ class TestMA57Interface(unittest.TestCase):
         ne = 7
         irn = np.array([1,1,2,2,3,3,5], dtype=np.intc)
         jcn = np.array([1,2,3,5,3,4,5], dtype=np.intc)
+        irn = irn - 1
+        jcn = jcn - 1
         ent = np.array([2.,3.,4.,6.,1.,5.,1.], dtype=np.double)
         ma57.do_symbolic_factorization(n, irn, jcn)
         ma57.fact_factor = 1.5
@@ -110,6 +116,8 @@ class TestMA57Interface(unittest.TestCase):
         ne = 8
         irn = np.array([1,1,2,2,3,3,5,5], dtype=np.intc)
         jcn = np.array([1,2,3,5,3,4,5,1], dtype=np.intc)
+        irn = irn - 1
+        jcn = jcn - 1
         ent = np.array([2.,3.,4.,6.,1.,5.,1.,-1.3], dtype=np.double)
         status = ma57.do_symbolic_factorization(n, irn, jcn)
         self.assertEqual(status, 0)
@@ -126,8 +134,9 @@ class TestMA57Interface(unittest.TestCase):
         ne = 7
         irn = np.array([1,1,2,2,3,3,5], dtype=np.intc)
         jcn = np.array([1,2,3,5,3,4,5], dtype=np.intc)
+        irn = irn - 1
+        jcn = jcn - 1
         ent = np.array([2.,3.,4.,6.,1.,5.,1.], dtype=np.double)
-#        rhs = np.array([[8.],[45.],[31.],[15.],[17.]], dtype=np.double)
         rhs = np.array([8.,45.,31.,15.,17.], dtype=np.double)
         status = ma57.do_symbolic_factorization(n, irn, jcn)
         status = ma57.do_numeric_factorization(n, ent)
