@@ -328,14 +328,6 @@ _diff_map[_expr.ExternalFunctionExpression] = _diff_ExternalFunctionExpression
 
 
 class _NamedExpressionCollector(ExpressionValueVisitor):
-    """
-    The purpose of this class is to collect named expressions in a
-    particular order. The order is very important. In the resulting
-    list each named expression can only appear once, and any named
-    expressions that are used in other named expressions have to come
-    after the named expression that use them.
-    """
-    
     def __init__(self):
         self.named_expressions = list()
 
@@ -355,22 +347,27 @@ class _NamedExpressionCollector(ExpressionValueVisitor):
 
         return False, None
 
-    def finalize(self, ans):
-        seen = set()
-        res = list()
-        for e in reversed(self.named_expressions):
-            if id(e) in seen:
-                continue
-            seen.add(id(e))
-            res.append(e)
-        res = list(reversed(res))
-        return res
-
 
 def _collect_ordered_named_expressions(expr):
+    """
+    The purpose of this function is to collect named expressions in a
+    particular order. The order is very important. In the resulting
+    list each named expression can only appear once, and any named
+    expressions that are used in other named expressions have to come
+    after the named expression that use them.
+    """    
     visitor = _NamedExpressionCollector()
-    named_expressions = visitor.dfs_postorder_stack(expr)
-    return named_expressions
+    visitor.dfs_postorder_stack(expr)
+    named_expressions = visitor.named_expressions
+    seen = set()
+    res = list()
+    for e in reversed(named_expressions):
+        if id(e) in seen:
+            continue
+        seen.add(id(e))
+        res.append(e)
+    res = list(reversed(res))
+    return res
 
 
 class _ReverseADVisitorLeafToRoot(ExpressionValueVisitor):
