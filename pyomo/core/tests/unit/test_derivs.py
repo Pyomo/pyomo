@@ -1,6 +1,7 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_ad, reverse_sd
+from pyomo.common.getGSL import find_GSL
 
 
 tol = 6
@@ -205,3 +206,17 @@ class TestDerivs(unittest.TestCase):
         symbolic = reverse_sd(e)
         self.assertAlmostEqual(pe.value(symbolic[m.x]), 0)
         self.assertAlmostEqual(pe.value(symbolic[m.y]), 0)
+
+    def test_external(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest('Could not find the amplgsl.dll library')
+
+        m = pe.ConcreteModel()
+        m.hypot = pe.ExternalFunction(library=DLL, function='gsl_hypot')
+        m.x = pe.Var(initialize=0.5)
+        m.y = pe.Var(initialize=1.5)
+        e = 2 * m.hypot(m.x, m.x*m.y)
+        derivs = reverse_ad(e)
+        self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
+        self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
