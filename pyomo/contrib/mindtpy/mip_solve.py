@@ -66,7 +66,6 @@ def solve_OA_master(solve_data, config):
     getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-    # with SuppressInfeasibleWarning():
     masteropt = SolverFactory(config.mip_solver)
     # determine if persistent solver is called.
     if isinstance(masteropt, PersistentSolver):
