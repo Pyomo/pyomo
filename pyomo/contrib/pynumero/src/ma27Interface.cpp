@@ -70,7 +70,7 @@ struct MA27_struct* new_MA27_struct(void){
 
 // Functions for setting/accessing INFO/CNTL arrays:
 void set_icntl(struct MA27_struct* ma27, int i, int val) {
-  ma27->ICNTL[i] = val;
+	ma27->ICNTL[i] = val;
 }
 int get_icntl(struct MA27_struct* ma27, int i) {
 	return ma27->ICNTL[i];
@@ -108,6 +108,13 @@ void alloc_a(struct MA27_struct* ma27, int l) {
 void do_symbolic_factorization(struct MA27_struct* ma27, int N, int NZ, 
 		int* IRN, int* ICN) {
 
+	// Arrays, presumably supplied from Python, are assumed to have base-
+	// zero indices. Convert to base-one before sending to Fortran.
+	for (int i=0; i<NZ; i++) {
+		IRN[i] = IRN[i] + 1;
+		ICN[i] = ICN[i] + 1;
+	}
+
 	if (!ma27->IW_a_allocated) {
 		int min_size = 2*NZ + 3*N + 1;
 		int size = (int)(ma27->IW_factor*min_size);
@@ -120,7 +127,8 @@ void do_symbolic_factorization(struct MA27_struct* ma27, int N, int NZ,
 	ma27->IW1 = (int*)malloc(2*N*sizeof(int));
 	if (ma27->IW1 == NULL) { abort_bad_memory(1); }
 
-	ma27ad_(&N, 
+	ma27ad_(
+			&N, 
 			&NZ, 
 			IRN, 
 			ICN, 
@@ -143,6 +151,12 @@ void do_symbolic_factorization(struct MA27_struct* ma27, int N, int NZ,
 void do_numeric_factorization(struct MA27_struct* ma27, int N, int NZ, 
 		int* IRN, int* ICN, double* A) {
 
+	// Convert indices to base-one for Fortran
+	for (int i=0; i<NZ; i++) {
+		IRN[i] = IRN[i] + 1;
+		ICN[i] = ICN[i] + 1;
+	}
+
 	// Get memory estimates from INFO, allocate A and IW
 	if (!ma27->A_allocated) {
 		int info5 = ma27->INFO[5-1];
@@ -162,7 +176,8 @@ void do_numeric_factorization(struct MA27_struct* ma27, int N, int NZ,
 	ma27->IW1 = (int*)malloc(N*sizeof(int));
 	if (ma27->IW1 == NULL) { abort_bad_memory(1); }
 
-	ma27bd_(&N, 
+	ma27bd_(
+			&N, 
 			&NZ, 
 			IRN,
 			ICN,
