@@ -142,17 +142,17 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
                solve_data.LB, solve_data.UB))
 
-    def handle_lazy_NLP_subproblem_optimal(self, fix_nlp, solve_data, config, opt):
+    def handle_lazy_NLP_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """Copies result to mip(explaination see below), updates bound, adds OA and integer cut,
         stores best solution if new one is best"""
-        for c in fix_nlp.tmp_duals:
-            if fix_nlp.dual.get(c, None) is None:
-                fix_nlp.dual[c] = fix_nlp.tmp_duals[c]
-        dual_values = list(fix_nlp.dual[c]
-                           for c in fix_nlp.MindtPy_utils.constraint_list)
+        for c in fixed_nlp.tmp_duals:
+            if fixed_nlp.dual.get(c, None) is None:
+                fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
+        dual_values = list(fixed_nlp.dual[c]
+                           for c in fixed_nlp.MindtPy_utils.constraint_list)
 
         main_objective = next(
-            fix_nlp.component_data_objects(Objective, active=True))
+            fixed_nlp.component_data_objects(Objective, active=True))
         if main_objective.sense == minimize:
             solve_data.UB = min(value(main_objective.expr), solve_data.UB)
             solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
@@ -169,19 +169,19 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     solve_data.LB, solve_data.UB))
 
         if solve_data.solution_improved:
-            solve_data.best_solution_found = fix_nlp.clone()
+            solve_data.best_solution_found = fixed_nlp.clone()
 
         if config.strategy == 'OA':
             # In OA algorithm, OA cuts are generated based on the solution of the subproblem
             # We need to first copy the value of variables from the subproblem and then add cuts
             # since value(constr.body), value(jacs[constr][var]), value(var) are used in self.add_lazy_oa_cuts()
-            copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
+            copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config)
             self.add_lazy_oa_cuts(
                 solve_data.mip, dual_values, solve_data, config, opt)
 
-    def handle_lazy_NLP_subproblem_infeasible(self, fix_nlp, solve_data, config, opt):
+    def handle_lazy_NLP_subproblem_infeasible(self, fixed_nlp, solve_data, config, opt):
         """Solve feasibility problem, add cut according to strategy.
 
         The solution of the feasibility problem is copied to the working model.
@@ -189,14 +189,14 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info('NLP subproblem was locally infeasible.')
-        for c in fix_nlp.component_data_objects(ctype=Constraint):
+        for c in fixed_nlp.component_data_objects(ctype=Constraint):
             rhs = ((0 if c.upper is None else c.upper)
                    + (0 if c.lower is None else c.lower))
             sign_adjust = 1 if value(c.upper) is None else -1
-            fix_nlp.dual[c] = (sign_adjust
-                               * max(0, sign_adjust * (rhs - value(c.body))))
-        dual_values = list(fix_nlp.dual[c]
-                           for c in fix_nlp.MindtPy_utils.constraint_list)
+            fixed_nlp.dual[c] = (sign_adjust
+                                 * max(0, sign_adjust * (rhs - value(c.body))))
+        dual_values = list(fixed_nlp.dual[c]
+                           for c in fixed_nlp.MindtPy_utils.constraint_list)
 
         if config.strategy == 'OA':
             config.logger.info('Solving feasibility problem')
@@ -211,7 +211,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 self.add_lazy_oa_cuts(
                     solve_data.mip, dual_values, solve_data, config, opt)
 
-    def handle_lazy_NLP_subproblem_other_termination(self, fix_nlp, termination_condition,
+    def handle_lazy_NLP_subproblem_other_termination(self, fixed_nlp, termination_condition,
                                                      solve_data, config):
         """Case that fix-NLP is neither optimal nor infeasible (i.e. max_iterations)"""
         if termination_condition is tc.maxIterations:
@@ -219,7 +219,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             config.logger.info(
                 'NLP subproblem failed to converge within iteration limit.')
             var_values = list(
-                v.value for v in fix_nlp.MindtPy_utils.variable_list)
+                v.value for v in fixed_nlp.MindtPy_utils.variable_list)
         else:
             raise ValueError(
                 'MindtPy unable to handle NLP subproblem termination '
@@ -238,15 +238,15 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         # solve subproblem
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
-        fix_nlp, fix_nlp_result = solve_NLP_subproblem(solve_data, config)
+        fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
 
         # add oa cuts
-        if fix_nlp_result.solver.termination_condition is tc.optimal:
+        if fixed_nlp_result.solver.termination_condition is tc.optimal:
             self.handle_lazy_NLP_subproblem_optimal(
-                fix_nlp, solve_data, config, opt)
-        elif fix_nlp_result.solver.termination_condition is tc.infeasible:
+                fixed_nlp, solve_data, config, opt)
+        elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
             self.handle_lazy_NLP_subproblem_infeasible(
-                fix_nlp, solve_data, config, opt)
+                fixed_nlp, solve_data, config, opt)
         else:
-            self.handle_lazy_NLP_subproblem_other_termination(fix_nlp, fix_nlp_result.solver.termination_condition,
+            self.handle_lazy_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                               solve_data, config)
