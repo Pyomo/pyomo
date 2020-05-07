@@ -79,7 +79,6 @@ class TestMA27Interface(unittest.TestCase):
         irn = np.array([1,1,2,2,3,3,5], dtype=np.intc)
         icn = np.array([1,2,3,5,3,4,5], dtype=np.intc)
         ent = np.array([2.,3.,4.,6.,1.,5.,1.], dtype=np.double)
-        ent_copy = ent.copy()
         ma27.do_symbolic_factorization(n, irn, icn)
 
         status = ma27.do_numeric_factorization(irn, icn, n, ent)
@@ -87,7 +86,7 @@ class TestMA27Interface(unittest.TestCase):
 
         expected_ent = [2.,3.,4.,6.,1.,5.,1.,]
         for i in range(ne):
-            self.assertAlmostEqual(ent_copy[i], expected_ent[i])
+            self.assertAlmostEqual(ent[i], expected_ent[i])
     
         self.assertEqual(ma27.get_info(15), 2) # 2 negative eigenvalues
         self.assertEqual(ma27.get_info(14), 1) # 1 2x2 pivot
