@@ -42,9 +42,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     v_to.stale = False
             except ValueError:
                 # Snap the value to the bounds
-                if v_to.lb is not None and v_val < v_to.lb and v_to.lb - v_val <= config.zero_tolerance:
+                if v_to.has_lb() and v_val < v_to.lb and v_to.lb - v_val <= config.zero_tolerance:
                     v_to.set_value(v_to.lb)
-                elif v_to.ub is not None and v_val > v_to.ub and v_val - v_to.ub <= config.zero_tolerance:
+                elif v_to.has_ub() and v_val > v_to.ub and v_val - v_to.ub <= config.zero_tolerance:
                     v_to.set_value(v_to.ub)
                 # ... or the nearest integer
                 elif v_to.is_integer():

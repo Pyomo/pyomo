@@ -47,21 +47,27 @@ def solve_NLP_subproblem(solve_data, config):
     # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
     # The values of the duals are computed as follows: (Complementary Slackness)
     #
-    # | constraint | c_leq | status at x1 | tmp_dual  |
-    # |------------|-------|--------------|-----------|
-    # | g(x) <= b  | -1    | g(x1) <= b   | 0         |
-    # | g(x) <= b  | -1    | g(x1) > b    | b - g(x1) |
-    # | g(x) >= b  | +1    | g(x1) >= b   | 0         |
-    # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1) |
+    # | constraint | c_geq | status at x1 | tmp_dual (violation) |
+    # |------------|-------|--------------|----------------------|
+    # | g(x) <= b  | -1    | g(x1) <= b   | 0                    |
+    # | g(x) <= b  | -1    | g(x1) > b    | g(x1) - b            |
+    # | g(x) >= b  | +1    | g(x1) >= b   | 0                    |
+    # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
 
     for c in fix_nlp.component_data_objects(ctype=Constraint, active=True,
                                             descend_into=True):
-        rhs = ((0 if c.upper is None else c.upper)
-               + (0 if c.lower is None else c.lower))
-        rhs = c.upper if c.has_lb() and c.has_ub() else rhs
-        c_leq = 1 if value(c.upper) is None else -1
-        fix_nlp.tmp_duals[c] = c_leq * max(
-            0, c_leq*(rhs - value(c.body)))
+        # We prefer to include the upper bound as the right hand side since we are
+        # considering c by default a (hopefully) convex function, which would make
+        # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
+        # if we don't have to
+        rhs = c.upper if c. has_ub() else c.lower
+        c_geq = -1 if c.has_ub() else 1
+        # c_leq = 1 if c.has_ub else -1
+        fix_nlp.tmp_duals[c] = c_geq * max(
+            0, c_geq*(rhs - value(c.body)))
+        # fix_nlp.tmp_duals[c] = c_leq * max(
+        #     0, c_leq*(value(c.body) - rhs))
+        # TODO: change logic to c_leq based on benchmarking
 
     TransformationFactory('contrib.deactivate_trivial_constraints')\
         .apply_to(fix_nlp, tmp=True, ignore_infeasible=True)
@@ -136,25 +142,23 @@ def handle_NLP_subproblem_infeasible(fix_nlp, solve_data, config):
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
     for c in fix_nlp.component_data_objects(ctype=Constraint):
-        rhs = ((0 if c.upper is None else c.upper)
-               + (0 if c.lower is None else c.lower))
-        rhs = c.upper if c.has_lb() and c.has_ub() else rhs
-        c_leq = 1 if value(c.upper) is None else -1
-        fix_nlp.dual[c] = (c_leq
-                           * max(0, c_leq * (rhs - value(c.body))))
+        rhs = c.upper if c. has_ub() else c.lower
+        c_geq = -1 if c.has_ub() else 1
+        fix_nlp.dual[c] = (c_geq
+                           * max(0, c_geq * (rhs - value(c.body))))
     dual_values = list(fix_nlp.dual[c]
                        for c in fix_nlp.MindtPy_utils.constraint_list)
 
-    if config.strategy == 'PSC' or config.strategy == 'GBD':
-        for var in fix_nlp.component_data_objects(ctype=Var, descend_into=True):
-            fix_nlp.ipopt_zL_out[var] = 0
-            fix_nlp.ipopt_zU_out[var] = 0
-            if var.ub is not None and abs(var.ub - value(var)) < config.bound_tolerance:
-                fix_nlp.ipopt_zL_out[var] = 1
-            elif var.lb is not None and abs(value(var) - var.lb) < config.bound_tolerance:
-                fix_nlp.ipopt_zU_out[var] = -1
+    # if config.strategy == 'PSC' or config.strategy == 'GBD':
+    #     for var in fix_nlp.component_data_objects(ctype=Var, descend_into=True):
+    #         fix_nlp.ipopt_zL_out[var] = 0
+    #         fix_nlp.ipopt_zU_out[var] = 0
+    #         if var.has_ub() and abs(var.ub - value(var)) < config.bound_tolerance:
+    #             fix_nlp.ipopt_zL_out[var] = 1
+    #         elif var.has_lb() and abs(value(var) - var.lb) < config.bound_tolerance:
+    #             fix_nlp.ipopt_zU_out[var] = -1
 
-    elif config.strategy == 'OA':
+    if config.strategy == 'OA':
         config.logger.info('Solving feasibility problem')
         if config.initial_feas:
             # add_feas_slacks(fix_nlp, solve_data)
@@ -228,13 +232,11 @@ def solve_NLP_feas(solve_data, config):
     var_values = [v.value for v in MindtPy.variable_list]
     duals = [0 for _ in MindtPy.constraint_list]
 
-    for i, constr in enumerate(MindtPy.constraint_list):
-        rhs = ((0 if constr.upper is None else constr.upper)
-               + (0 if constr.lower is None else constr.lower))
-        rhs = constr.upper if constr.has_lb() and constr.has_ub() else rhs
-        c_leq = 1 if value(constr.upper) is None else -1
-        duals[i] = c_leq * max(
-            0, c_leq * (rhs - value(constr.body)))
+    for i, c in enumerate(MindtPy.constraint_list):
+        rhs = c.upper if c. has_ub() else c.lower
+        c_geq = -1 if c.has_ub() else 1
+        duals[i] = c_geq * max(
+            0, c_geq * (rhs - value(c.body)))
 
     if value(MindtPy.MindtPy_feas_obj.expr) == 0:
         raise ValueError(
