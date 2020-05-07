@@ -190,3 +190,18 @@ class TestDerivs(unittest.TestCase):
         derivs = reverse_ad(m.o.expr)
         symbolic = reverse_sd(m.o.expr)
         self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol)
+
+    def test_multiple_named_expressions(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.x.value = 1
+        m.y.value = 1
+        m.E = pe.Expression(expr=m.x*m.y)
+        e = m.E - m.E
+        derivs = reverse_ad(e)
+        self.assertAlmostEqual(derivs[m.x], 0)
+        self.assertAlmostEqual(derivs[m.y], 0)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(pe.value(symbolic[m.x]), 0)
+        self.assertAlmostEqual(pe.value(symbolic[m.y]), 0)
