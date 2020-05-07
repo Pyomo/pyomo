@@ -166,7 +166,9 @@ jobs:
         conda list --show-channel-urls
         conda install -y -c conda-forge ${PYTHON_BASE_PKGS} \
             ${PYTHON_NUMPY_PKGS} ${CONDA_PKGS}
-        conda install -y -c ibmdecisionoptimization cplex \
+        # Note: CPLEX 12.9 (the last version in conda that supports
+        #    Python 2.7) causes a seg fault in the tests.
+        conda install -y -c ibmdecisionoptimization cplex=12.10 \
             || echo "WARNING: CPLEX Community Edition is not available"
         python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
             % (sys.executable,))'
