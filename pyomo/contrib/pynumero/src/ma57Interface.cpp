@@ -15,26 +15,27 @@
 #endif
 
 // Forward declaration of MA57 fortran routines
-void ma57id_(double* CNTL, int* ICNTL);
-void ma57ad_(int *N, int *NE, const int *IRN, const int* JCN,
-             int *LKEEP, int* KEEP, int* IWORK, int *ICNTL,
-             int* INFO, double* RINFO);
-void ma57bd_(int *N, int *NE, double* A, double* FACT, int* LFACT,
-             int* IFACT, int* LIFACT, int* LKEEP, int* KEEP, int* IWORK,
-             int* ICNTL, double* CNTL, int* INFO, double* RINFO);
-void ma57cd_(int* JOB, int *N, double* FACT, int* LFACT,
-             int* IFACT, int* LIFACT, int* NRHS, double* RHS,
-             int* LRHS, double* WORK, int* LWORK, int* IWORK,
-             int* ICNTL, int* INFO);
-void ma57dd_(int* JOB, int *N, int *NE, int *IRN, int *JCN,
-             double *FACT, int *LFACT, int *IFACT, int *LIFACT,
-             double *RHS, double *X, double *RESID, double *WORK,
-             int *IWORK, int *ICNTL, double *CNTL, int *INFO,
-             double *RINFO);
-void ma57ed_(int *N, int* IC, int* KEEP, double* FACT, int* LFACT,
-             double* NEWFAC, int* LNEW, int* IFACT, int* LIFACT,
-             int* NEWIFC, int* LINEW, int* INFO);
-
+extern "C" {
+   void ma57id_(double* CNTL, int* ICNTL);
+   void ma57ad_(int *N, int *NE, const int *IRN, const int* JCN,
+                int *LKEEP, int* KEEP, int* IWORK, int *ICNTL,
+                int* INFO, double* RINFO);
+   void ma57bd_(int *N, int *NE, double* A, double* FACT, int* LFACT,
+                int* IFACT, int* LIFACT, int* LKEEP, int* KEEP, int* IWORK,
+                int* ICNTL, double* CNTL, int* INFO, double* RINFO);
+   void ma57cd_(int* JOB, int *N, double* FACT, int* LFACT,
+                int* IFACT, int* LIFACT, int* NRHS, double* RHS,
+                int* LRHS, double* WORK, int* LWORK, int* IWORK,
+                int* ICNTL, int* INFO);
+   void ma57dd_(int* JOB, int *N, int *NE, int *IRN, int *JCN,
+                double *FACT, int *LFACT, int *IFACT, int *LIFACT,
+                double *RHS, double *X, double *RESID, double *WORK,
+                int *IWORK, int *ICNTL, double *CNTL, int *INFO,
+                double *RINFO);
+   void ma57ed_(int *N, int* IC, int* KEEP, double* FACT, int* LFACT,
+                double* NEWFAC, int* LNEW, int* IFACT, int* LIFACT,
+                int* NEWIFC, int* LINEW, int* INFO);
+} // extern "C"
 
 void abort_bad_memory(int status){
    printf("Bad memory allocation in MA57 C interface. Aborting.");
@@ -115,7 +116,7 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void alloc_keep(MA57_struct* ma57, int l) {
       ma57->LKEEP = l;
-      ma57->KEEP = (int*)malloc(l*sizeof(int));
+      ma57->KEEP = new int[l];
       if (ma57->KEEP == NULL) { abort_bad_memory(1); }
       ma57->KEEP_allocated = true;
    }
@@ -123,7 +124,7 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void alloc_work(MA57_struct* ma57, int l) {
       ma57->LWORK = l;
-      ma57->WORK = (double*)malloc(l*sizeof(double));
+      ma57->WORK = new double[l];
       if (ma57->WORK == NULL) { abort_bad_memory(1); }
       ma57->WORK_allocated = true;
    }
@@ -131,7 +132,7 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void alloc_fact(MA57_struct* ma57, int l) {
       ma57->LFACT = l;
-      ma57->FACT = (double*)malloc(l*sizeof(double));
+      ma57->FACT = new double[l];
       if (ma57->FACT == NULL) { abort_bad_memory(1); }
       ma57->FACT_allocated = true;
    }
@@ -139,7 +140,7 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void alloc_ifact(MA57_struct* ma57, int l) {
       ma57->LIFACT = l;
-      ma57->IFACT = (int*)malloc(l*sizeof(int));
+      ma57->IFACT = new int[l];
       if (ma57->IFACT == NULL) { abort_bad_memory(1); }
       ma57->IFACT_allocated = true;
    }
@@ -176,7 +177,7 @@ extern "C" {
       }
 
       // This is a hard requirement, no need to give the user the option to change
-      ma57->IWORK = (int*)malloc(5*N*sizeof(int));
+      ma57->IWORK = new int[5*N];
       if (ma57->IWORK == NULL) { abort_bad_memory(1); }
 	
       ma57ad_(&N, &NE, IRN, JCN,
@@ -184,7 +185,7 @@ extern "C" {
               ma57->IWORK, ma57->ICNTL,
               ma57->INFO, ma57->RINFO);
 
-      free(ma57->IWORK);
+      delete[] ma57->IWORK;
    }
 
 
@@ -205,7 +206,7 @@ extern "C" {
       }
 
       // Again, length of IWORK is a hard requirement
-      ma57->IWORK = (int*)malloc(N*sizeof(int));
+      ma57->IWORK = new int[N];
       if (ma57->IWORK == NULL) { abort_bad_memory(1); }
 
       ma57bd_(&N, &NE, A,
@@ -216,7 +217,7 @@ extern "C" {
               ma57->CNTL, ma57->INFO,
               ma57->RINFO);
 
-      free(ma57->IWORK);
+      delete[] ma57->IWORK;
    }
 
 
@@ -243,7 +244,7 @@ extern "C" {
       }
 
       // IWORK should always be length N
-      ma57->IWORK = (int*)malloc(N*sizeof(int));
+      ma57->IWORK = new int[N];
       if (ma57->IWORK == NULL) { abort_bad_memory(1); }
 
       ma57cd_(
@@ -263,8 +264,8 @@ extern "C" {
               ma57->INFO
               );
 
-      free(ma57->IWORK);
-      free(ma57->WORK);
+      delete[] ma57->IWORK;
+      delete[] ma57->WORK;
       ma57->WORK_allocated = false;
    }
 
@@ -294,7 +295,7 @@ extern "C" {
          alloc_work(ma57, size);
       }
 
-      ma57->IWORK = (int*)malloc(N*sizeof(int));
+      ma57->IWORK = new int[N];
       if (ma57->IWORK == NULL) { abort_bad_memory(1); }
 
       ma57dd_(
@@ -318,8 +319,8 @@ extern "C" {
               ma57->RINFO
               );
 
-      free(ma57->IWORK);
-      free(ma57->WORK);
+      delete[] ma57->IWORK;
+      delete[] ma57->WORK;
       ma57->WORK_allocated = false;
    }
 
@@ -331,11 +332,11 @@ extern "C" {
       // MA57 seems to require that both LNEW and LINEW are larger than the old
       // values, regardless of which is being reallocated (set by IC)
       int LNEW = (int)(realloc_factor*ma57->LFACT);
-      double* NEWFAC = (double*)malloc(LNEW*sizeof(double));
+      double* NEWFAC = new double[LNEW];
       if (NEWFAC == NULL) { abort_bad_memory(1); }
 
       int LINEW = (int)(realloc_factor*ma57->LIFACT);
-      int* NEWIFC = (int*)malloc(LINEW*sizeof(int));
+      int* NEWIFC = new int[LINEW];
       if (NEWIFC == NULL) { abort_bad_memory(1); }
 
       ma57ed_(
@@ -355,16 +356,16 @@ extern "C" {
 
       if (IC <= 0) {
          // Copied real array; new int array is garbage
-         free(ma57->FACT);
+         delete[] ma57->FACT;
          ma57->LFACT = LNEW;
          ma57->FACT = NEWFAC;
-         free(NEWIFC);
+         delete[] NEWIFC;
       } else if (IC >= 1) {
          // Copied int array; new real array is garbage
-         free(ma57->IFACT);
+         delete[] ma57->IFACT;
          ma57->LIFACT = LINEW;
          ma57->IFACT = NEWIFC;
-         free(NEWFAC);
+         delete[] NEWFAC;
       } // Now either FACT or IFACT, whichever was specified by IC, can be used
       // as normal in MA57B/C/D
    }
@@ -373,16 +374,16 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void free_memory(MA57_struct* ma57) {
       if (ma57->WORK_allocated) {
-         free(ma57->WORK);
+         delete[] ma57->WORK;
       }
       if (ma57->FACT_allocated) {
-         free(ma57->FACT);
+         delete[] ma57->FACT;
       }
       if (ma57->IFACT_allocated) {
-         free(ma57->IFACT);
+         delete[] ma57->IFACT;
       }
       if (ma57->KEEP_allocated) {
-         free(ma57->KEEP);
+         delete[] ma57->KEEP;
       }
       delete ma57;
    }

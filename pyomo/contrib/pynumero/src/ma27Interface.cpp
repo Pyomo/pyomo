@@ -16,21 +16,22 @@
 #endif
 
 // Forward declaration of MA27 fortran routines
-void ma27id_(int* ICNTL, double* CNTL);
-void ma27ad_(int *N, int *NZ, int *IRN, int* ICN,
-             int *IW, int* LIW, int* IKEEP, int *IW1,
-             int* NSTEPS, int* IFLAG, int* ICNTL,
-             double* CNTL, int *INFO, double* OPS);
-void ma27bd_(int *N, int *NZ, int *IRN, int* ICN,
-             double* A, int* LA, int* IW, int* LIW,
-             int* IKEEP, int* NSTEPS, int* MAXFRT,
-             int* IW1, int* ICNTL, double* CNTL,
-             int* INFO);
-void ma27cd_(int *N, double* A, int* LA, int* IW,
-             int* LIW, double* W, int* MAXFRT,
-             double* RHS, int* IW1, int* NSTEPS,
-             int* ICNTL, int* INFO);
-
+extern "C" {
+   void ma27id_(int* ICNTL, double* CNTL);
+   void ma27ad_(int *N, int *NZ, int *IRN, int* ICN,
+                int *IW, int* LIW, int* IKEEP, int *IW1,
+                int* NSTEPS, int* IFLAG, int* ICNTL,
+                double* CNTL, int *INFO, double* OPS);
+   void ma27bd_(int *N, int *NZ, int *IRN, int* ICN,
+                double* A, int* LA, int* IW, int* LIW,
+                int* IKEEP, int* NSTEPS, int* MAXFRT,
+                int* IW1, int* ICNTL, double* CNTL,
+                int* INFO);
+   void ma27cd_(int *N, double* A, int* LA, int* IW,
+                int* LIW, double* W, int* MAXFRT,
+                double* RHS, int* IW1, int* NSTEPS,
+                int* ICNTL, int* INFO);
+} // extern "C"
 
 void abort_bad_memory(int status) {
    printf("Bad memory allocation in MA27 C interface. Aborting.");
@@ -110,7 +111,7 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void alloc_iw_a(MA27_struct* ma27, int l) {
       ma27->LIW_a = l;
-      ma27->IW_a = (int*)malloc(l*sizeof(int));
+      ma27->IW_a = new int[l];
       if (ma27->IW_a == NULL) { abort_bad_memory(1); }
       ma27->IW_a_allocated = true;
    }
@@ -118,7 +119,7 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void alloc_iw_b(MA27_struct* ma27, int l) {
       ma27->LIW_b = l;
-      ma27->IW_b = (int*)malloc(l*sizeof(int));
+      ma27->IW_b = new int[l];
       if (ma27->IW_b == NULL) { abort_bad_memory(1); }
       ma27->IW_b_allocated = true;
    }
@@ -126,7 +127,7 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void alloc_a(MA27_struct* ma27, int l) {
       ma27->LA = l;
-      ma27->A = (double*)malloc(l*sizeof(double));
+      ma27->A = new double[l];
       if (ma27->A == NULL) { abort_bad_memory(1); }
       ma27->A_allocated = true;
    }
@@ -140,10 +141,10 @@ extern "C" {
          alloc_iw_a(ma27, size);
       }
 
-      ma27->IKEEP = (int*)malloc(3*N*sizeof(int));
+      ma27->IKEEP = new int[3*N];
       if (ma27->IKEEP == NULL) { abort_bad_memory(1); }
       ma27->IKEEP_allocated = true;
-      ma27->IW1 = (int*)malloc(2*N*sizeof(int));
+      ma27->IW1 = new int[2*N];
       if (ma27->IW1 == NULL) { abort_bad_memory(1); }
 
       ma27ad_(&N,
@@ -161,8 +162,8 @@ extern "C" {
               ma27->INFO,
               &(ma27->OPS));
 
-      free(ma27->IW1);
-      free(ma27->IW_a);
+      delete[] ma27->IW1;
+      delete[] ma27->IW_a;
       ma27->IW_a_allocated = false;
    }
 
@@ -186,7 +187,7 @@ extern "C" {
          alloc_iw_b(ma27, size);
       }
 
-      ma27->IW1 = (int*)malloc(N*sizeof(int));
+      ma27->IW1 = new int[N];
       if (ma27->IW1 == NULL) { abort_bad_memory(1); }
 
       ma27bd_(&N,
@@ -205,15 +206,15 @@ extern "C" {
               ma27->CNTL,
               ma27->INFO);
 
-      free(ma27->IW1);
+      delete [] ma27->IW1;
    }
 
    PYNUMERO_HSL_EXPORT
    void do_backsolve(MA27_struct* ma27, int N, double* RHS) {
 
-      ma27->W = (double*)malloc(ma27->MAXFRT*sizeof(double));
+      ma27->W = new double[ma27->MAXFRT];
       if (ma27->W == NULL) { abort_bad_memory(1); }
-      ma27->IW1 = (int*)malloc(ma27->NSTEPS*sizeof(int));
+      ma27->IW1 = new int[ma27->NSTEPS];
       if (ma27->IW1 == NULL) { abort_bad_memory(1); }
 
       ma27cd_(
@@ -231,23 +232,23 @@ extern "C" {
               ma27->INFO
               );
 
-      free(ma27->IW1);
-      free(ma27->W);
+      delete[] ma27->IW1;
+      delete[] ma27->W;
    }
 
    PYNUMERO_HSL_EXPORT
    void free_memory(MA27_struct* ma27) {
       if (ma27->A_allocated) {
-         free(ma27->A);
+         delete[] ma27->A;
       }
       if (ma27->IW_a_allocated) {
-         free(ma27->IW_a);
+         delete[] ma27->IW_a;
       }
       if (ma27->IW_a_allocated) {
-         free(ma27->IW_a);
+         delete[] ma27->IW_a;
       }
       if (ma27->IKEEP_allocated) {
-         free(ma27->IKEEP);
+         delete[] ma27->IKEEP;
       }
       delete ma27;
    }
