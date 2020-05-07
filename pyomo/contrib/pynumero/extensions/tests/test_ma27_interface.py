@@ -58,18 +58,23 @@ class TestMA27Interface(unittest.TestCase):
         n = 5
         ne = 7
         irn = np.array([1,1,2,2,3,3,5], dtype=np.intc)
-        jcn = np.array([1,2,3,5,3,4,5], dtype=np.intc)
+        icn = np.array([1,2,3,5,3,4,5], dtype=np.intc)
+        # These arrays, copied out of HSL docs, contain Fortran indices.
+        # Interfaces accept C indices as this is what I typically expect.
+        irn = irn - 1
+        icn = icn - 1
 
-        bad_jcn = np.array([1,2,3,5,3,4], dtype=np.intc)
+        bad_icn = np.array([1,2,3,5,3,4], dtype=np.intc)
+        # ^No need to update these indices
 
-        ma27.do_symbolic_factorization(n, irn, jcn)
+        ma27.do_symbolic_factorization(n, irn, icn)
 
         self.assertEqual(ma27.get_info(1), 0)
         self.assertEqual(ma27.get_info(5), 14) # Min required num. integer words
         self.assertEqual(ma27.get_info(6), 20) # Min required num. real words
 
         with self.assertRaisesRegex(AssertionError, 'Dimension mismatch'):
-            ma27.do_symbolic_factorization(n, irn, bad_jcn)
+            ma27.do_symbolic_factorization(n, irn, bad_icn)
 
     def test_do_numeric_factorization(self):
         ma27 = MA27Interface()
@@ -78,8 +83,9 @@ class TestMA27Interface(unittest.TestCase):
         ne = 7
         irn = np.array([1,1,2,2,3,3,5], dtype=np.intc)
         icn = np.array([1,2,3,5,3,4,5], dtype=np.intc)
+        irn = irn - 1
+        icn = icn - 1
         ent = np.array([2.,3.,4.,6.,1.,5.,1.], dtype=np.double)
-        ent_copy = ent.copy()
         ma27.do_symbolic_factorization(n, irn, icn)
 
         status = ma27.do_numeric_factorization(irn, icn, n, ent)
@@ -87,7 +93,7 @@ class TestMA27Interface(unittest.TestCase):
 
         expected_ent = [2.,3.,4.,6.,1.,5.,1.,]
         for i in range(ne):
-            self.assertAlmostEqual(ent_copy[i], expected_ent[i])
+            self.assertAlmostEqual(ent[i], expected_ent[i])
     
         self.assertEqual(ma27.get_info(15), 2) # 2 negative eigenvalues
         self.assertEqual(ma27.get_info(14), 1) # 1 2x2 pivot
@@ -111,6 +117,8 @@ class TestMA27Interface(unittest.TestCase):
         # n is still 5, ne has changed to 8.
         irn = np.array([1,1,2,2,3,3,5,1], dtype=np.intc)
         icn = np.array([1,2,3,5,3,4,5,5], dtype=np.intc)
+        irn = irn - 1
+        icn = icn - 1
         ent = np.array([2.,3.,4.,6.,1.,5.,1.,3.], dtype=np.double)
         status = ma27.do_symbolic_factorization(n, irn, icn)
         self.assertEqual(status, 0)
@@ -125,6 +133,8 @@ class TestMA27Interface(unittest.TestCase):
         ne = 7
         irn = np.array([1,1,2,2,3,3,5], dtype=np.intc)
         icn = np.array([1,2,3,5,3,4,5], dtype=np.intc)
+        irn = irn - 1
+        icn = icn - 1
         ent = np.array([2.,3.,4.,6.,1.,5.,1.], dtype=np.double)
         rhs = np.array([8.,45.,31.,15.,17.], dtype=np.double)
         status = ma27.do_symbolic_factorization(n, irn, icn)

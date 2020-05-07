@@ -166,6 +166,13 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void do_symbolic_factorization(MA27_struct* ma27, int N, int NZ,
                                   int* IRN, int* ICN) {
+      // Arrays, presumably supplied from Python, are assumed to have base-
+      // zero indices. Convert to base-one before sending to Fortran.
+      for (int i=0; i<NZ; i++) {
+         IRN[i] = IRN[i] + 1;
+         ICN[i] = ICN[i] + 1;
+      }
+
       if ( ! ma27->IW_a ) {
          int min_size = 2*NZ + 3*N + 1;
          int size = (int)(ma27->IW_factor*min_size);
@@ -203,6 +210,12 @@ extern "C" {
    PYNUMERO_HSL_EXPORT
    void do_numeric_factorization(MA27_struct* ma27, int N, int NZ,
                                  int* IRN, int* ICN, double* A) {
+
+      // Convert indices to base-one for Fortran
+      for (int i=0; i<NZ; i++) {
+         IRN[i] = IRN[i] + 1;
+         ICN[i] = ICN[i] + 1;
+      }
 
       // Get memory estimates from INFO, allocate A and IW
       if ( ! ma27->A ) {

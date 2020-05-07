@@ -200,6 +200,13 @@ extern "C" {
    void do_symbolic_factorization(MA57_struct* ma57, int N, int NE,
                                   int* IRN, int* JCN) {
 
+      // Arrays, presumably supplied from Python, are assumed to have base-
+      // zero indices. Convert to base-one before sending to Fortran.
+      for (int i=0; i<NE; i++) {
+         IRN[i] = IRN[i] + 1;
+         JCN[i] = JCN[i] + 1;
+      }
+
       if ( ! ma57->KEEP ) {
          // KEEP must be >= 5*N+NE+MAX(N,NE)+42
          int size = 5*N + NE + (NE + N) + 42;
