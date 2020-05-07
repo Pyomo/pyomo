@@ -62,8 +62,8 @@ struct MA27_struct {
 extern "C" {
    
    PYNUMERO_HSL_EXPORT
-   struct MA27_struct* new_MA27_struct(void) {
-      struct MA27_struct* ma27 = (struct MA27_struct *)malloc(sizeof(struct MA27_struct));
+   MA27_struct* new_MA27_struct(void) {
+      MA27_struct* ma27 = new MA27_struct;
       if (ma27 == NULL) { abort_bad_memory(1); }
       
       ma27id_(ma27->ICNTL, ma27->CNTL);
@@ -82,33 +82,33 @@ extern "C" {
    
    // Functions for setting/accessing INFO/CNTL arrays:
    PYNUMERO_HSL_EXPORT
-   void set_icntl(struct MA27_struct* ma27, int i, int val) {
+   void set_icntl(MA27_struct* ma27, int i, int val) {
       ma27->ICNTL[i] = val;
    }
    
    PYNUMERO_HSL_EXPORT
-   int get_icntl(struct MA27_struct* ma27, int i) {
+   int get_icntl(MA27_struct* ma27, int i) {
       return ma27->ICNTL[i];
    }
    
    PYNUMERO_HSL_EXPORT
-   void set_cntl(struct MA27_struct* ma27, int i, double val) {
+   void set_cntl(MA27_struct* ma27, int i, double val) {
       ma27->CNTL[i] = val;
    }
    
    PYNUMERO_HSL_EXPORT
-   double get_cntl(struct MA27_struct* ma27, int i) {
+   double get_cntl(MA27_struct* ma27, int i) {
       return ma27->CNTL[i];
    }
 
    PYNUMERO_HSL_EXPORT
-   int get_info(struct MA27_struct* ma27, int i) {
+   int get_info(MA27_struct* ma27, int i) {
       return ma27->INFO[i];
    }
 
    // Functions for allocating WORK/FACT arrays:
    PYNUMERO_HSL_EXPORT
-   void alloc_iw_a(struct MA27_struct* ma27, int l) {
+   void alloc_iw_a(MA27_struct* ma27, int l) {
       ma27->LIW_a = l;
       ma27->IW_a = (int*)malloc(l*sizeof(int));
       if (ma27->IW_a == NULL) { abort_bad_memory(1); }
@@ -116,7 +116,7 @@ extern "C" {
    }
 
    PYNUMERO_HSL_EXPORT
-   void alloc_iw_b(struct MA27_struct* ma27, int l) {
+   void alloc_iw_b(MA27_struct* ma27, int l) {
       ma27->LIW_b = l;
       ma27->IW_b = (int*)malloc(l*sizeof(int));
       if (ma27->IW_b == NULL) { abort_bad_memory(1); }
@@ -124,7 +124,7 @@ extern "C" {
    }
 
    PYNUMERO_HSL_EXPORT
-   void alloc_a(struct MA27_struct* ma27, int l) {
+   void alloc_a(MA27_struct* ma27, int l) {
       ma27->LA = l;
       ma27->A = (double*)malloc(l*sizeof(double));
       if (ma27->A == NULL) { abort_bad_memory(1); }
@@ -132,7 +132,7 @@ extern "C" {
    }
 
    PYNUMERO_HSL_EXPORT
-   void do_symbolic_factorization(struct MA27_struct* ma27, int N, int NZ, 
+   void do_symbolic_factorization(MA27_struct* ma27, int N, int NZ, 
                                   int* IRN, int* ICN) {
       if (!ma27->IW_a_allocated) {
          int min_size = 2*NZ + 3*N + 1;
@@ -167,7 +167,7 @@ extern "C" {
    }
 
    PYNUMERO_HSL_EXPORT
-   void do_numeric_factorization(struct MA27_struct* ma27, int N, int NZ, 
+   void do_numeric_factorization(MA27_struct* ma27, int N, int NZ, 
                                  int* IRN, int* ICN, double* A) {
 
       // Get memory estimates from INFO, allocate A and IW
@@ -209,7 +209,7 @@ extern "C" {
    }
 
    PYNUMERO_HSL_EXPORT
-   void do_backsolve(struct MA27_struct* ma27, int N, double* RHS) {
+   void do_backsolve(MA27_struct* ma27, int N, double* RHS) {
 
       ma27->W = (double*)malloc(ma27->MAXFRT*sizeof(double));
       if (ma27->W == NULL) { abort_bad_memory(1); }
@@ -236,7 +236,7 @@ extern "C" {
    }
 
    PYNUMERO_HSL_EXPORT
-   void free_memory(struct MA27_struct* ma27) {
+   void free_memory(MA27_struct* ma27) {
       if (ma27->A_allocated) {
          free(ma27->A);
       }
@@ -249,7 +249,7 @@ extern "C" {
       if (ma27->IKEEP_allocated) {
          free(ma27->IKEEP);
       }
-      free(ma27);
+      delete ma27;
    }
 
 } // extern "C"
