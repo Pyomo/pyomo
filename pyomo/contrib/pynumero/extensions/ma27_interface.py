@@ -8,33 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.common.fileutils import find_library
+from pyomo.contrib.pynumero.extensions.utils import (validate_index, 
+        validate_value, _NotSet)
 import numpy.ctypeslib as npct
 import numpy as np
 import ctypes 
 import sys
 import os
-
-def validate_index(i, array_len, array_name=''):
-    if not isinstance(i, int):
-        raise TypeError(
-            'Index into %s array must be an integer. Got %s'
-            % (array_name, type(i)))
-    if i < 1 or i > array_len:
-        # NOTE: Use the FORTRAN indexing (same as documentation) to
-        # set and access info/cntl arrays from Python, whereas C
-        # functions use C indexing. Maybe this is too confusing.
-        raise IndexError(
-            'Index %s is out of range for %s array of length %s'
-            % (i, array_name, array_len))
-
-def validate_value(val, dtype, array_name=''):
-    if not isinstance(val, dtype):
-        raise ValueError(
-            'Members of %s array must have type %s. Got %s'
-            % (array_name, dtype, type(val)))
-
-class _NotSet:
-    pass
 
 class MA27Interface(object):
 
