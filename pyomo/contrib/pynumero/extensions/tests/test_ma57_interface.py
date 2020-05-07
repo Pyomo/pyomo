@@ -106,6 +106,19 @@ class TestMA57Interface(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, 'Dimension mismatch'):
             ma57.do_numeric_factorization(n+1, ent)
 
+        n = 5
+        ne = 8
+        irn = np.array([1,1,2,2,3,3,5,5], dtype=np.intc)
+        jcn = np.array([1,2,3,5,3,4,5,1], dtype=np.intc)
+        ent = np.array([2.,3.,4.,6.,1.,5.,1.,-1.3], dtype=np.double)
+        status = ma57.do_symbolic_factorization(n, irn, jcn)
+        self.assertEqual(status, 0)
+        status = ma57.do_numeric_factorization(n, ent)
+        self.assertEqual(status, 0)
+        self.assertEqual(ma57.get_info(24), 2)
+        self.assertEqual(ma57.get_info(23), 0)
+
+
     def test_do_backsolve(self):
         ma57 = MA57Interface()
 

@@ -96,6 +96,7 @@ class TestMA27Interface(unittest.TestCase):
         # with same symbolic factorization
         ent2 = np.array([1.5, 5.4, 1.2, 6.1, 4.2, 3.3, 2.0], dtype=np.double)
         status = ma27.do_numeric_factorization(irn, icn, n, ent2)
+        self.assertEqual(ma27.get_info(15), 2)
         self.assertEqual(status, 0)
 
         bad_ent = np.array([2.,3.,4.,6.,1.,5.], dtype=np.double)
@@ -115,6 +116,7 @@ class TestMA27Interface(unittest.TestCase):
         self.assertEqual(status, 0)
         status = ma27.do_numeric_factorization(irn, icn, n, ent)
         self.assertEqual(status, 0)
+        self.assertEqual(ma27.get_info(15), 3)
 
     def test_do_backsolve(self):
         ma27 = MA27Interface()
