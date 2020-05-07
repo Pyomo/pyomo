@@ -11,11 +11,6 @@ include(ExternalProject)
 OPTION(BUILD_ASL "Build the PyNumero ASL interface" ON)
 OPTION(BUILD_MA27 "Build the PyNumero ma27 interface" OFF)
 OPTION(BUILD_MA57 "Build the PyNumero ma57 interface" OFF)
-OPTION(USE_MA27_LIBRARY 
-	"Build MA27 solver interface from its individual library" OFF)
-OPTION(USE_MA57_LIBRARY
-	"Build MA57 solver interface from its individual library" OFF)
-        # Only use if you know what you're doing
 
 # Dependencies that we manage / can install
 SET(AMPLMP_TAG "3.1.0" CACHE STRING
@@ -78,14 +73,7 @@ FIND_LIBRARY(ASL_LIBRARY NAMES coinasl asl
         "${PC_COINASL_LIBRARY_DIRS}"
         ${LD_LIBRARY_DIR_LIST}
 )
-FIND_LIBRARY(HSL_LIBRARY NAMES coinhsl libcoinhsl
-  HINTS "${CMAKE_INSTALL_PREFIX}/lib"
-        "${IPOPT_DIR}/lib"
-        "${PC_COINHSL_LIBDIR}"
-        "${PC_COINHSL_LIBRARY_DIRS}"
-        ${LD_LIBRARY_DIR_LIST}
-)
-FIND_LIBRARY(MA27_LIBRARY NAMES ma27 libma27
+FIND_LIBRARY(MA27_LIBRARY NAMES coinhsl libcoinhsl ma27 libma27
   HINTS "${CMAKE_INSTALL_PREFIX}/lib"
         "${IPOPT_DIR}/lib"
         "${PC_COINHSL_LIBDIR}"
@@ -94,7 +82,7 @@ FIND_LIBRARY(MA27_LIBRARY NAMES ma27 libma27
 	"${MA27_DIR}/lib"
         ${LD_LIBRARY_DIR_LIST}
 )
-FIND_LIBRARY(MA57_LIBRARY NAMES ma57 libma57
+FIND_LIBRARY(MA57_LIBRARY NAMES coinhsl libcoinhsl ma57 libma57
   HINTS "${CMAKE_INSTALL_PREFIX}/lib"
         "${IPOPT_DIR}/lib"
         "${PC_COINHSL_LIBDIR}"
@@ -106,7 +94,7 @@ FIND_LIBRARY(MA57_LIBRARY NAMES ma57 libma57
 
 # If we were able to find the HSL, we will automatically enable the ma27
 # interface, as all versions of the HSL library contain ma27.
-IF( MA27_LIBRARY OR MA27_OBJECT OR HSL_LIBRARY )
+IF( MA27_LIBRARY OR MA27_OBJECT )
     set_property(CACHE BUILD_MA27 PROPERTY VALUE ON)
 ENDIF()
 
@@ -191,8 +179,6 @@ IF( BUILD_MA27 )
   ADD_LIBRARY( pynumero_MA27 SHARED ${PYNUMERO_MA27_SOURCES} )
   IF( MA27_OBJECT )
     TARGET_LINK_LIBRARIES( pynumero_MA27 ${MA27_OBJECT} )
-  ELSEIF( HSL_LIBRARY AND NOT USE_MA27_LIBRARY )
-    TARGET_LINK_LIBRARIES( pynumero_MA27 ${HSL_LIBRARY} )
   ELSE()
     TARGET_LINK_LIBRARIES( pynumero_MA27 ${MA27_LIBRARY} )
   ENDIF()
@@ -207,11 +193,7 @@ set(PYNUMERO_MA57_SOURCES
 
 IF( BUILD_MA57 )
   ADD_LIBRARY( pynumero_MA57 SHARED ${PYNUMERO_MA57_SOURCES} )
-  IF( HSL_LIBRARY AND NOT USE_MA57_LIBRARY )
-    TARGET_LINK_LIBRARIES( pynumero_MA57 ${HSL_LIBRARY} )
-  ELSE()
-    TARGET_LINK_LIBRARIES( pynumero_MA57 ${MA57_LIBRARY} )
-  ENDIF()
+  TARGET_LINK_LIBRARIES( pynumero_MA57 ${MA57_LIBRARY} )
   SET_TARGET_PROPERTIES( pynumero_MA57 PROPERTIES ENABLE_EXPORTS 1 )
   INSTALL(TARGETS pynumero_MA57 LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib )
