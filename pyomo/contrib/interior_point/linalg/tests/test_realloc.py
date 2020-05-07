@@ -20,69 +20,55 @@ from scipy.sparse import coo_matrix
 
 
 class TestReallocation(unittest.TestCase):
-    @unittest.skipIf(not asl_available, 'asl is not available')
+
     @unittest.skipIf(not mumps_available, 'mumps is not available')
     def test_reallocate_memory(self):
-        interface = InteriorPointInterface('realloc.nl')
-        '''This NLP is the steady state optimization of a moving bed
-        chemical looping reduction reactor.'''
 
-        linear_solver = mumps_interface.MumpsInterface()
-        linear_solver.allow_reallocation = True
-        ip_solver = InteriorPointSolver(linear_solver)
+        # Create a tri-diagonal matrix with small entries on the diagonal
+        n = 10000
+        small_val = 1e-7
+        big_val = 1e2
+        irn = []
+        jcn = []
+        ent = []
+        for i in range(n-1):
+            irn.extend([i+1, i, i])
+            jcn.extend([i, i, i+1])
+            ent.extend([big_val,small_val,big_val])
+        irn.append(n-1)
+        jcn.append(n-1)
+        ent.append(small_val)
+        irn = np.array(irn)
+        jcn = np.array(jcn)
+        ent = np.array(ent)
 
-        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=5)
-
-        # Predicted memory requirement after symbolic factorization
-        init_alloc = linear_solver.get_infog(16)
-
-        # Maximum memory allocation (presumably after reallocation)
-        # Stored in icntl(23), here accessed with C indexing:
-        realloc = linear_solver._mumps.mumps.id.icntl[22]
-
-        # Actual memory used:
-        i_actually_used = linear_solver.get_infog(18) # Integer
-        r_actually_used = linear_solver.get_rinfog(18) # Real
-
-        # Sanity check:
-        self.assertEqual(round(r_actually_used), i_actually_used)
-        self.assertTrue(init_alloc <= r_actually_used and
-                        r_actually_used <= realloc)
-
-        # Expected memory allocation in MB:
-        self.assertEqual(init_alloc, 2)
-        self.assertEqual(realloc, 4)
-
-        # Repeat, this time without reallocation
-        interface = InteriorPointInterface('realloc.nl')
-
-        # Reduce maximum memory allocation
-        linear_solver.set_icntl(23, 2)
-        linear_solver.allow_reallocation = False
-
-        with self.assertRaises(RuntimeError):
-            # Should be Mumps error: -9
-            x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=5)
-            
-
-    @unittest.skipIf(not mumps_available, 'mumps is not available')
-    def test_reallocate_matrix_only(self):
-        irn = np.array([0,1,2,3,4,5,6,7,8,9,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9])
-        jcn = np.array([0,1,2,3,4,5,6,7,8,9,1,9,2,8,3,7,4,6,5,4,6,4,7,3,8,2,9,1,0,1])
-        ent = np.array([0.,0.,0.,0.,0.,0.,0.,0.,0.,0.,
-                        1.,3.,5.,7.,9.,2.,4.,6.,8.,1.,
-                        1.1,2.2,3.3,4.4,5.5,6.6,7.7,8.8,9.9,0.1])
-
-        matrix = coo_matrix((ent, (irn, jcn)), shape=(10,10))
+        matrix = coo_matrix((ent, (irn, jcn)), shape=(n,n))
 
         linear_solver = mumps_interface.MumpsInterface()
         linear_solver.do_symbolic_factorization(matrix)
+
+        predicted = linear_solver.get_infog(16)
+
+        with self.assertRaisesRegex(RuntimeError, 'MUMPS error: -9'):
+            linear_solver.do_numeric_factorization(matrix)
+
+        linear_solver.allow_reallocation = True
+        linear_solver.max_num_realloc = 5
+        linear_solver.do_symbolic_factorization(matrix)
         linear_solver.do_numeric_factorization(matrix)
 
-        import pdb; pdb.set_trace()
+        # Expected memory allocation (MB)
+        self.assertEqual(linear_solver._prev_allocation, 6)
+
+        actual = linear_solver.get_infog(18)
+
+        # Sanity checks:
+        # Make sure actual memory usage is greater than initial guess
+        self.assertTrue(predicted < actual)
+        # Make sure memory allocation is at least as much as was used
+        self.assertTrue(actual <= linear_solver._prev_allocation)
 
 
 if __name__ == '__main__':
     test_realloc = TestReallocation()
     test_realloc.test_reallocate_memory()
-    test_realloc.test_reallocate_matrix_only()
