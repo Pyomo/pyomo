@@ -51,6 +51,8 @@ class MA27Interface(object):
         
         # Do I need to specify that this function takes no argument?
         self.lib.new_MA27_struct.restype = ctypes.c_void_p
+
+        self.lib.free_MA27_struct.argtypes = [ctypes.c_void_p]
         
         self.lib.set_icntl.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
         # Do I need to specify that this function returns nothing?
@@ -74,7 +76,6 @@ class MA27Interface(object):
                 ctypes.c_int, array_1d_int, array_1d_int, 
                 array_1d_double]
         self.lib.do_backsolve.argtypes = [ctypes.c_void_p, ctypes.c_int, array_1d_double]
-        self.lib.free_memory.argtypes = [ctypes.c_void_p]
 
         self.icntl_len = 30
         self.cntl_len = 5
@@ -84,7 +85,7 @@ class MA27Interface(object):
 
 
     def __del__(self):
-        self.lib.free_memory(self._ma27)
+        self.lib.free_MA27_struct(self._ma27)
 
 
     def set_icntl(self, i, val):

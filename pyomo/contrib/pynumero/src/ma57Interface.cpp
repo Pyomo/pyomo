@@ -44,17 +44,45 @@ void abort_bad_memory(int status){
 
 
 struct MA57_struct {
-   int LRHS, LFACT, LKEEP, LIFACT, LWORK, NRHS;
-   bool KEEP_allocated, WORK_allocated, FACT_allocated, IFACT_allocated;
+   MA57_struct():
+      LKEEP(0), LIFACT(0), LWORK(0), LFACT(0),
+      LRHS(0), NRHS(0), JOB(0),
+      NRHS_set(false),
+      LRHS_set(false),
+      JOB_set(false),
+      WORK_factor(1.2),
+      FACT_factor(2.0),
+      IFACT_factor(2.0),
+      KEEP(NULL),
+      IFACT(NULL),
+      WORK(NULL),
+      FACT(NULL)
+   {
+      ma57id_(this->CNTL, this->ICNTL);
+   }
+   virtual ~MA57_struct() {
+      if ( this->WORK ) {
+         delete[] this->WORK;
+      }
+      if ( this->FACT ) {
+         delete[] this->FACT;
+      }
+      if ( this->IFACT ) {
+         delete[] this->IFACT;
+      }
+      if ( this->KEEP ) {
+         delete[] this->KEEP;
+      }
+   }
+
+   int LKEEP, LIFACT, LWORK, LFACT, LRHS, NRHS, JOB;
    bool NRHS_set, LRHS_set, JOB_set;
    double WORK_factor, FACT_factor, IFACT_factor;
-   int* IWORK;
    int* KEEP;
    int* IFACT;
-   int ICNTL[20], INFO[40];
-   int JOB;
    double* WORK;
    double* FACT;
+   int ICNTL[20], INFO[40];
    double CNTL[5], RINFO[20];
 };
 
@@ -65,20 +93,14 @@ extern "C" {
 
       MA57_struct* ma57 = new MA57_struct;
       if (ma57 == NULL) { abort_bad_memory(1); }
-
-      ma57id_(ma57->CNTL, ma57->ICNTL);
-
-      // Set default values of parameters
-      ma57->KEEP_allocated = ma57->WORK_allocated = false;
-      ma57->FACT_allocated = ma57->IFACT_allocated = false;
-      ma57->NRHS_set = ma57->LRHS_set = ma57->JOB_set = false;
-      ma57->WORK_factor = 1.2;
-      ma57->FACT_factor = 2.0;
-      ma57->IFACT_factor = 2.0;
-
-      // Return pointer to ma57 that Python program can pass to other functions
-      // in this code
+      // Return pointer to ma57 that Python program can pass to other
+      // functions in this code
       return ma57;
+   }
+
+   PYNUMERO_HSL_EXPORT
+   void free_MA57_struct(MA57_struct* ma57) {
+      delete ma57;
    }
 
    // Functions for setting/accessing INFO/CNTL arrays:
@@ -115,34 +137,42 @@ extern "C" {
    // Functions for allocating WORK/FACT arrays:
    PYNUMERO_HSL_EXPORT
    void alloc_keep(MA57_struct* ma57, int l) {
+      if ( ma57->KEEP ) {
+         delete[] ma57->KEEP;
+      }
       ma57->LKEEP = l;
       ma57->KEEP = new int[l];
       if (ma57->KEEP == NULL) { abort_bad_memory(1); }
-      ma57->KEEP_allocated = true;
    }
 
    PYNUMERO_HSL_EXPORT
    void alloc_work(MA57_struct* ma57, int l) {
+      if ( ma57->WORK ) {
+         delete[] ma57->WORK;
+      }
       ma57->LWORK = l;
       ma57->WORK = new double[l];
       if (ma57->WORK == NULL) { abort_bad_memory(1); }
-      ma57->WORK_allocated = true;
    }
 
    PYNUMERO_HSL_EXPORT
    void alloc_fact(MA57_struct* ma57, int l) {
+      if ( ma57->FACT ) {
+         delete[] ma57->FACT;
+      }
       ma57->LFACT = l;
       ma57->FACT = new double[l];
       if (ma57->FACT == NULL) { abort_bad_memory(1); }
-      ma57->FACT_allocated = true;
    }
 
    PYNUMERO_HSL_EXPORT
    void alloc_ifact(MA57_struct* ma57, int l) {
+      if ( ma57->IFACT ) {
+         delete[] ma57->IFACT;
+      }
       ma57->LIFACT = l;
       ma57->IFACT = new int[l];
       if (ma57->IFACT == NULL) { abort_bad_memory(1); }
-      ma57->IFACT_allocated = true;
    }
 
    // Functions for specifying dimensions of RHS:
@@ -170,22 +200,23 @@ extern "C" {
    void do_symbolic_factorization(MA57_struct* ma57, int N, int NE,
                                   int* IRN, int* JCN) {
 
-      if (!ma57->KEEP_allocated) {
+      if ( ! ma57->KEEP ) {
          // KEEP must be >= 5*N+NE+MAX(N,NE)+42
          int size = 5*N + NE + (NE + N) + 42;
          alloc_keep(ma57, size);
       }
 
-      // This is a hard requirement, no need to give the user the option to change
-      ma57->IWORK = new int[5*N];
-      if (ma57->IWORK == NULL) { abort_bad_memory(1); }
+      // This is a hard requirement, no need to give the user the option
+      // to change
+      int* IWORK = new int[5*N];
+      if (IWORK == NULL) { abort_bad_memory(1); }
 	
       ma57ad_(&N, &NE, IRN, JCN,
               &(ma57->LKEEP), ma57->KEEP,
-              ma57->IWORK, ma57->ICNTL,
+              IWORK, ma57->ICNTL,
               ma57->INFO, ma57->RINFO);
 
-      delete[] ma57->IWORK;
+      delete[] IWORK;
    }
 
 
@@ -194,30 +225,30 @@ extern "C" {
                                  double* A) {
 
       // Get memory estimates from INFO, allocate FACT and IFACT
-      if (!ma57->FACT_allocated) {
+      if ( ! ma57->FACT ) {
          int info9 = ma57->INFO[9-1];
          int size = (int)(ma57->FACT_factor*info9);
          alloc_fact(ma57, size);
       }
-      if (!ma57->IFACT_allocated) {
+      if ( ! ma57->IFACT ) {
          int info10 = ma57->INFO[10-1];
          int size = (int)(ma57->IFACT_factor*info10);
          alloc_ifact(ma57, size);
       }
 
       // Again, length of IWORK is a hard requirement
-      ma57->IWORK = new int[N];
-      if (ma57->IWORK == NULL) { abort_bad_memory(1); }
+      int* IWORK = new int[N];
+      if (IWORK == NULL) { abort_bad_memory(1); }
 
       ma57bd_(&N, &NE, A,
               ma57->FACT, &(ma57->LFACT),
               ma57->IFACT, &(ma57->LIFACT),
               &(ma57->LKEEP), ma57->KEEP,
-              ma57->IWORK, ma57->ICNTL,
+              IWORK, ma57->ICNTL,
               ma57->CNTL, ma57->INFO,
               ma57->RINFO);
 
-      delete[] ma57->IWORK;
+      delete[] IWORK;
    }
 
 
@@ -238,14 +269,14 @@ extern "C" {
       }
 
       // Allocate WORK if not done. Should be >= N
-      if (!ma57->WORK_allocated) {
+      if ( ! ma57->WORK ) {
          int size = (int)(ma57->WORK_factor*ma57->NRHS*N);
          alloc_work(ma57, size);
       }
 
       // IWORK should always be length N
-      ma57->IWORK = new int[N];
-      if (ma57->IWORK == NULL) { abort_bad_memory(1); }
+      int* IWORK = new int[N];
+      if (IWORK == NULL) { abort_bad_memory(1); }
 
       ma57cd_(
               &(ma57->JOB),
@@ -259,14 +290,14 @@ extern "C" {
               &(ma57->LRHS),
               ma57->WORK,
               &(ma57->LWORK),
-              ma57->IWORK,
+              IWORK,
               ma57->ICNTL,
               ma57->INFO
               );
 
-      delete[] ma57->IWORK;
+      delete[] IWORK;
       delete[] ma57->WORK;
-      ma57->WORK_allocated = false;
+      ma57->WORK = NULL;
    }
 
 
@@ -281,7 +312,7 @@ extern "C" {
       }
 
       // Need to allocate WORK differently depending on ICNTL options
-      if (!ma57->WORK_allocated) {
+      if ( ! ma57->WORK ) {
          int icntl9 = ma57->ICNTL[9-1];
          int icntl10 = ma57->ICNTL[10-1];
          int size;
@@ -295,8 +326,8 @@ extern "C" {
          alloc_work(ma57, size);
       }
 
-      ma57->IWORK = new int[N];
-      if (ma57->IWORK == NULL) { abort_bad_memory(1); }
+      int* IWORK = new int[N];
+      if (IWORK == NULL) { abort_bad_memory(1); }
 
       ma57dd_(
               &(ma57->JOB),
@@ -312,16 +343,16 @@ extern "C" {
               X,
               RESID,
               ma57->WORK,
-              ma57->IWORK,
+              IWORK,
               ma57->ICNTL,
               ma57->CNTL,
               ma57->INFO,
               ma57->RINFO
               );
 
-      delete[] ma57->IWORK;
+      delete[] IWORK;
       delete[] ma57->WORK;
-      ma57->WORK_allocated = false;
+      ma57->WORK = NULL;
    }
 
 
@@ -368,24 +399,6 @@ extern "C" {
          delete[] NEWFAC;
       } // Now either FACT or IFACT, whichever was specified by IC, can be used
       // as normal in MA57B/C/D
-   }
-
-
-   PYNUMERO_HSL_EXPORT
-   void free_memory(MA57_struct* ma57) {
-      if (ma57->WORK_allocated) {
-         delete[] ma57->WORK;
-      }
-      if (ma57->FACT_allocated) {
-         delete[] ma57->FACT;
-      }
-      if (ma57->IFACT_allocated) {
-         delete[] ma57->IFACT;
-      }
-      if (ma57->KEEP_allocated) {
-         delete[] ma57->KEEP;
-      }
-      delete ma57;
    }
 
 } // extern "C"

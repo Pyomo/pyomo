@@ -54,6 +54,8 @@ class MA57Interface(object):
         # Do I need to specify that this function takes no argument?
         self.lib.new_MA57_struct.restype = ctypes.c_void_p
         # return type is pointer to MA57_struct. Why do I use c_void_p here?
+
+        self.lib.free_MA57_struct.argtypes = [ctypes.c_void_p]
         
         self.lib.set_icntl.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
         # Do I need to specify that this function returns nothing?
@@ -89,7 +91,6 @@ class MA57Interface(object):
                 array_1d_double, array_1d_double, array_1d_double]
         self.lib.do_reallocation.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_double,
                 ctypes.c_int]
-        self.lib.free_memory.argtypes = [ctypes.c_void_p]
 
         self.icntl_len = 20
         self.cntl_len = 5
@@ -100,7 +101,7 @@ class MA57Interface(object):
 
 
     def __del__(self):
-        self.lib.free_memory(self._ma57)
+        self.lib.free_MA57_struct(self._ma57)
 
 
     def set_icntl(self, i, val):
