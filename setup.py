@@ -36,13 +36,6 @@ def get_version():
         exec(_FILE.read(), _verInfo)
     return _verInfo['__version__']
 
-requires = [
-    'PyUtilib>=5.8.1.dev0',
-    'appdirs',
-    'ply',
-    'six>=1.4',
-    ]
-
 from setuptools import setup, find_packages
 
 CYTHON_REQUIRED = "required"
@@ -109,6 +102,7 @@ def run_setup():
       description='Pyomo: Python Optimization Modeling Objects',
       long_description=read('README.md'),
       long_description_content_type='text/markdown',
+      keywords=['optimization'],
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: End Users/Desktop',
@@ -132,12 +126,17 @@ def run_setup():
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
+      python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
+      install_requires=[
+          'PyUtilib>=5.8.1.dev0',
+          'appdirs',
+          'enum34;python_version<"3.4"',
+          'ply',
+          'six>=1.4',
+      ],
       packages=find_packages(exclude=("scripts",)),
       package_data={"pyomo.contrib.viewer":["*.ui"]},
-      keywords=['optimization'],
-      install_requires=requires,
       ext_modules = ext_modules,
-      python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
       entry_points="""
         [console_scripts]
         runbenders=pyomo.pysp.benders:Benders_main

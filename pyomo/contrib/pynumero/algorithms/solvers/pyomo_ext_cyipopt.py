@@ -13,7 +13,7 @@ import abc
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptProblemInterface
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
-from pyomo.environ import Var, Constraint
+from pyomo.environ import Var, Constraint, value
 from pyomo.core.base.var import _VarData
 from pyomo.common.modeling import unique_component_name
 
@@ -138,6 +138,16 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
                sum(v for v in self._inputs) + sum(v for v in self._outputs)
             )
         setattr(self._pyomo_model, dummy_con_name, dummy_con)
+
+        # initialize the dummy var to the right hand side
+        dummy_var_value = 0
+        for v in self._inputs:
+            if v.value is not None:
+                dummy_var_value += value(v)
+        for v in self._outputs:
+            if v.value is not None:
+                dummy_var_value += value(v)
+        dummy_var.value = dummy_var_value
 
         # make an nlp interface from the pyomo model
         self._pyomo_nlp = PyomoNLP(self._pyomo_model)
