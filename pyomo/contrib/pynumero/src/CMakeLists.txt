@@ -46,6 +46,13 @@ IF( PKG_CONFIG_FOUND )
   SET(ENV{PKG_CONFIG_PATH} "${_TMP}")
 ENDIF()
 
+# cmake does not search LD_LIBRARY_PATH by default.  So that libraries
+# like HSL can be added through mechanisms like 'environment modules',
+# we will explicitly add LD_LIBRARY_PATH to teh search path
+string(REPLACE ":" ";" LD_LIBRARY_DIR_LIST
+  $ENV{LD_LIBRARY_PATH}:$ENV{DYLD_LIBRARY_PATH}
+  )
+
 # Note: the directory search order is intentional: first the modules we
 # are creating, then directories specifically set by the user, and
 # finally automatically located installations (e.g., from pkg-config)
@@ -64,6 +71,7 @@ FIND_LIBRARY(ASL_LIBRARY NAMES coinasl asl
         "${AMPLMP_DIR}/lib"
         "${PC_COINASL_LIBDIR}"
         "${PC_COINASL_LIBRARY_DIRS}"
+        ${LD_LIBRARY_DIR_LIST}
 )
 FIND_LIBRARY(MA27_LIBRARY NAMES coinhsl libcoinhsl ma27 libma27
   HINTS "${CMAKE_INSTALL_PREFIX}/lib"
@@ -72,6 +80,7 @@ FIND_LIBRARY(MA27_LIBRARY NAMES coinhsl libcoinhsl ma27 libma27
         "${PC_COINHSL_LIBRARY_DIRS}"
 	"${MA27_DIR}"
 	"${MA27_DIR}/lib"
+        ${LD_LIBRARY_DIR_LIST}
 )
 FIND_LIBRARY(MA57_LIBRARY NAMES coinhsl libcoinhsl ma57 libma57
   HINTS "${CMAKE_INSTALL_PREFIX}/lib"
@@ -80,7 +89,14 @@ FIND_LIBRARY(MA57_LIBRARY NAMES coinhsl libcoinhsl ma57 libma57
         "${PC_COINHSL_LIBRARY_DIRS}"
 	"${MA57_DIR}"
 	"${MA57_DIR}/lib"
+        ${LD_LIBRARY_DIR_LIST}
 )
+
+# If we were able to find the HSL, we will automatically enable the ma27
+# interface, as all versions of the HSL library contain ma27.
+IF( MA27_LIBRARY OR MA27_OBJECT )
+    set_property(CACHE BUILD_MA27 PROPERTY VALUE ON)
+ENDIF()
 
 # If BUILD_AMPLMP_IF_NEEDED is set and we couldn't find / weren't
 # pointed to an ASL build, then we will forcibly enable the AMPLMP build
@@ -104,6 +120,7 @@ IF( BUILD_AMPLMP )
     # 3.1.0 needs to be patched to compile with recent compilers,
     # notably ubuntu 18.04.  The patch applies a backport of fmtlib/fmt
     # abbefd7; see https://github.com/fmtlib/fmt/issues/398
+    # The patch also disables AMPL/MP tests to speed up compilation.
     PATCH_COMMAND git apply
        ${CMAKE_CURRENT_SOURCE_DIR}/amplmp-${AMPLMP_TAG}.patch
     )
