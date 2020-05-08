@@ -189,11 +189,11 @@ jobs:
       run: |
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "::add-path::$IPOPT_DIR"
+        mkdir -p $IPOPT_DIR
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
             URL=https://github.com/IDAES/idaes-ext/releases/download/2.0.0
-            mkdir $IPOPT_DIR
             if test "${{matrix.TARGET}}" == osx; then
                 echo "IDAES Ipopt not available on OSX"
                 exit 0
@@ -291,7 +291,7 @@ jobs:
         echo "::add-path::${GJH_DIR}"
         INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
         if test ! -e "$INSTALL_DIR/bin"; then
-            mkdir "$INSTALL_DIR"
+            mkdir -p "$INSTALL_DIR"
             INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
             URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
             curl --retry 8 -L $URL > $INSTALLER
