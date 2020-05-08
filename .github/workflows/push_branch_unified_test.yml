@@ -171,11 +171,11 @@ jobs:
         conda info
         conda config --show-sources
         conda list --show-channel-urls
-        conda install -y -c conda-forge ${PYTHON_BASE_PKGS} \
+        conda install -q -y -c conda-forge ${PYTHON_BASE_PKGS} \
             ${PYTHON_NUMPY_PKGS} ${{matrix.PACKAGES}}
         # Note: CPLEX 12.9 (the last version in conda that supports
         #    Python 2.7) causes a seg fault in the tests.
-        conda install -y -c ibmdecisionoptimization cplex=12.10 \
+        conda install -q -y -c ibmdecisionoptimization cplex=12.10 \
             || echo "WARNING: CPLEX Community Edition is not available"
         python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
             % (sys.executable,))'
@@ -380,6 +380,16 @@ jobs:
         coverage combine
         coverage report -i
         coverage xml -i
-        curl --retry 8 -s https://codecov.io/bash -o codecov.sh
-        # Disable coverage uploads on branches
-        bash codecov.sh -X gcov -f coverage.xml
+        i=0
+        while /bin/true; do
+            curl --retry 8 -L https://codecov.io/bash -o codecov.sh
+            bash codecov.sh -X gcov -f coverage.xml | tee .cover.upload
+            if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
+                exit 0
+            elif test $i -ge 3; then
+                exit 1
+            fi
+            DELAY=$(( RANDOM % 30 + 15))
+            echo "Pausing $DELAY seconds before re-attempting upload"
+            sleep $DELAY
+        done
