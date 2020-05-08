@@ -5,7 +5,6 @@ from os.path import abspath, dirname, join, normpath
 
 from six import StringIO
 
-import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.gdpopt.GDPopt import GDPoptSolver
@@ -148,8 +147,6 @@ class TestGDPoptUnit(unittest.TestCase):
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
                  % (LOA_solvers,))
-@unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                 "Symbolic differentiation is not available")
 class TestGDPopt(unittest.TestCase):
     """Tests for the GDPopt solver plugin."""
 
