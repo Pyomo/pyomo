@@ -1,8 +1,11 @@
-name: GitHub Branch CI
+name: GitHub ci
 
 on:
   push:
-    branches-ignore:
+    branches:
+      - master
+  pull_request:
+    branches:
       - master
 
 defaults:
