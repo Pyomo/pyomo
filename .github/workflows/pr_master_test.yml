@@ -146,7 +146,7 @@ jobs:
     #
     # Our solution is to define a PYTHON_EXE environment variable that
     # can be explicitly called within subprocess calls to reach the
-    # correct interpreter.  Note that we must explicitly run nin a *non*
+    # correct interpreter.  Note that we must explicitly run in a *non*
     # login shell to set up the environment variable for the
     # setup-python environments.
 
