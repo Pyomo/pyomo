@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
         include:
         - os: macos-latest
@@ -39,6 +39,9 @@ jobs:
         - os: windows-latest
           TARGET: win
           PYENV: conda
+        exclude:
+        - {os: windows-latest, python-version: pypy2}
+        - {os: windows-latest, python-version: pypy3}
 
 
     steps:
@@ -71,12 +74,12 @@ jobs:
         path: cache/os
         key: pkg-v2-${{runner.os}}
 
-    - name: TPL Package cache
+    - name: TPL package download cache
       uses: actions/cache@v1
-      id: tpl-cache
+      id: download-cache
       with:
-        path: cache/tpl
-        key: tpl-v1-${{runner.os}}
+        path: cache/download
+        key: download-v3-${{runner.os}}
 
     - name: Update OSX
       if: matrix.TARGET == 'osx'
@@ -186,24 +189,23 @@ jobs:
       run: |
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "::add-path::$IPOPT_DIR"
-        if test -e $IPOPT_DIR; then
-            exit 0
-        fi
-        echo "...downloading Ipopt"
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
-        URL=https://github.com/IDAES/idaes-ext/releases/download/2.0.0
-        mkdir $IPOPT_DIR
-        cd $IPOPT_DIR
-        if test "${{matrix.TARGET}}" == osx; then
-            echo "IDAES Ipopt not available on OSX"
-            exit 0
-        elif test "${{matrix.TARGET}}" == linux; then
-            curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
-                > $IPOPT_TAR
-        else
-            curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
-                $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
+        if test ! -e $IPOPT_TAR; then
+            echo "...downloading Ipopt"
+            URL=https://github.com/IDAES/idaes-ext/releases/download/2.0.0
+            mkdir $IPOPT_DIR
+            if test "${{matrix.TARGET}}" == osx; then
+                echo "IDAES Ipopt not available on OSX"
+                exit 0
+            elif test "${{matrix.TARGET}}" == linux; then
+                curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
+                    > $IPOPT_TAR
+            else
+                curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
+                    $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
+            fi
         fi
+        cd $IPOPT_DIR
         tar -xzi < $IPOPT_TAR
 
     - name: Install GAMS
@@ -215,12 +217,8 @@ jobs:
         echo "::add-path::$GAMS_DIR"
         echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
         echo "::set-env name=DYLD_LIBRARY_PATH::${env:DYLD_LIBRARY_PATH}:$GAMS_DIR"
-        if (Test-Path -Path "$GAMS_DIR") {
-            exit 0
-        }
         $INSTALLER="${env:DOWNLOAD_DIR}/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
-        echo "...downloading GAMS"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
@@ -228,7 +226,10 @@ jobs:
         } else {
             $URL = "$URL/linux/linux_x64_64_sfx.exe"
         }
-        Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+        if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
+            echo "...downloading GAMS"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+        }
         echo "...installing GAMS"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             Start-Process -FilePath "$INSTALLER" -ArgumentList `
@@ -258,9 +259,6 @@ jobs:
       run: |
         $BARON_DIR="${env:TPL_DIR}/baron"
         echo "::add-path::$BARON_DIR"
-        if (Test-Path -Path "$BARON_DIR") {
-            exit 0
-        }
         $URL="https://www.minlp.com/downloads/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
@@ -291,21 +289,21 @@ jobs:
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "::add-path::${GJH_DIR}"
-        if test -e "$GJH_DIR"; then
-            exit 0
+        INSTALL_DIR="${env:DOWNLOAD_DIR}/gjh"
+        if test ! -e "$INSTALL_DIR/bin"; then
+            mkdir "$INSTALL_DIR"
+            INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
+            URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
+            curl --retry 8 -L $URL > $INSTALLER
+            cd $INSTALL_DIR
+            unzip -q $INSTALLER
+            cd gjh_asl_json-master/Thirdparty
+            ./get.ASL
+            cd ..
+            make
+            mv bin "$INSTALL_DIR/bin"
         fi
-        INSTALLER="${env:DOWNLOAD_DIR}/gjh_asl_json.zip"
-        URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
-        curl --retry 8 -L $URL > $INSTALLER
-        mkdir ${env:DOWNLOAD_DIR}/gjh-build
-        cd ${env:DOWNLOAD_DIR}/gjh-build
-        unzip -q $INSTALLER
-        cd gjh_asl_json-master/Thirdparty
-        ./get.ASL
-        cd ..
-        make
-        mv $(pwd)/bin "$GJH_DIR"
-        cd ..
+        cp -rp "$INSTALL_DIR/bin" "$GJH_DIR"
 
     - name: Install Pyomo and PyUtilib
       run: |
