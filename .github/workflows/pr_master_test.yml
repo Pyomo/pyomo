@@ -1,4 +1,4 @@
-name: ci/github
+name: continuous-integration/github
 
 on:
   push:
