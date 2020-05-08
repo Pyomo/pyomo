@@ -11,6 +11,7 @@
 import os
 import platform
 
+import enum
 import six
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
 
@@ -157,3 +158,13 @@ def add_docstring_list(docstring, configblock, indent_by=4):
             indent_spacing=0,
             width=256
         ).splitlines(True))
+
+
+class ConfigEnum(enum.Enum):
+    @classmethod
+    def from_enum_or_string(cls, arg):
+        if type(arg) is str:
+            return cls[arg]
+        else:
+            # Handles enum or integer inputs
+            return cls(arg)

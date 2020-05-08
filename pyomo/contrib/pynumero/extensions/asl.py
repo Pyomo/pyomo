@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.contrib.pynumero.extensions.utils import find_pynumero_library
+from pyomo.common.fileutils import find_library
 import numpy.ctypeslib as npct
 import numpy as np
 import platform
@@ -15,12 +15,17 @@ import ctypes
 import sys
 import os
 
+class _NotSet:
+    pass
 
 class AmplInterface(object):
 
-    libname = find_pynumero_library('pynumero_ASL')
+    libname = _NotSet
+
     @classmethod
     def available(cls):
+        if cls.libname is _NotSet:
+            cls.libname = find_library('pynumero_ASL')
         if cls.libname is None:
             return False
         return os.path.exists(cls.libname)
