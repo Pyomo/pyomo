@@ -5,7 +5,7 @@
 // This would normally be in a header file, but as we do not need one,
 // we will explicitly include it here.
 #if defined(_WIN32) || defined(_WIN64)
-#  if defined(BUILDING_PYNUMERO_ASL)
+#  if defined(BUILDING_PYNUMERO_MA57)
 #    define PYNUMERO_HSL_EXPORT __declspec(dllexport)
 #  else
 #    define PYNUMERO_HSL_EXPORT __declspec(dllimport)
