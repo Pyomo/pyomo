@@ -217,8 +217,7 @@ class Test(unittest.TestCase):
         instance = self.model.create_instance()
         instance.b.deactivate()
         relax_integrality = TransformationFactory('core.relax_integer_vars')
-        relax_integrality.apply_to(instance, 
-                                   descend_into_deactivated_components=False)
+        relax_integrality.apply_to(instance, transform_deactivated_blocks=False)
         self.assertIs(instance.b.x.domain, Binary)
         self.assertIs(instance.b.y.domain, Integers)
         self.assertIs(instance.x.domain, Reals)

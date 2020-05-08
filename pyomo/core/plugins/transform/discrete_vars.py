@@ -45,9 +45,8 @@ class RelaxIntegerVars(Transformation):
             model.del_component("_relaxed_integer_vars")
             return
         # True by default, you can specify False if you want
-        descend = kwds.get('descend_into_deactivated_components', 
-                           options.get('descend_into_deactivated_components', 
-                                       True))
+        descend = kwds.get('transform_deactivated_blocks',
+                           options.get('transform_deactivated_blocks', True))
         active = None if descend else True
 
         # Relax the model
