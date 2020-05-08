@@ -384,7 +384,8 @@ jobs:
         while /bin/true; do
             curl --retry 8 -L https://codecov.io/bash -o codecov.sh
             bash codecov.sh -X gcov -f coverage.xml | tee .cover.upload
-            if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
+            if test $? == 0 -a \
+                `grep -i 'View reports at' .cover.upload | wc -l` -ne 0; then
                 exit 0
             elif test $i -ge 3; then
                 exit 1
