@@ -19,7 +19,7 @@ env:
 
 jobs:
   pyomo-tests:
-    name: ${{ matrix.NAME }}${{ matrix.TARGET }}/${{ matrix.python }}
+    name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.NAME }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -44,7 +44,7 @@ jobs:
           TARGET: linux
           PYENV: conda
           PACKAGES: mpi4py
-          NAME: mpi/
+          NAME: /mpi
         exclude:
         - {os: macos-latest, python: pypy2}
         - {os: macos-latest, python: pypy3}
@@ -372,10 +372,9 @@ jobs:
             --eval-attr="mpi and (not fragile)" \
             pyomo `pwd`/pyomo-model-libraries
 
-
     - name: Process code coverage report
       env:
-        CODECOV_NAME: ${{matrix.NAME}}${{matrix.TARGET}}/${{matrix.python}}
+        CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
       run: |
         coverage combine
         coverage report -i
