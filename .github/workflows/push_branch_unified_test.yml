@@ -90,10 +90,10 @@ jobs:
         # Notes:
         #  - install glpk
         #  - pyodbc needs: gcc pkg-config unixodbc freetds
-        for pkg in bash gcc pkg-config unixodbc freetds glpk; do
+        for pkg in bash pkg-config unixodbc freetds glpk; do
             brew list $pkg || brew install $pkg
         done
-        brew link --overwrite gcc
+        #brew link --overwrite gcc
 
     - name: Update Linux
       if: matrix.TARGET == 'linux'
