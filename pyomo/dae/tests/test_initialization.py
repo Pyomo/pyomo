@@ -22,7 +22,7 @@ from pyomo.core.base import *
 from pyomo.environ import SolverFactory
 from pyomo.common.log import LoggingIntercept
 from pyomo.dae import *
-from pyomo.dae.init_cond import *
+from pyomo.dae.initialization import *
 from pyomo.core.kernel.component_map import ComponentMap
 
 currdir = dirname(abspath(__file__)) + os.sep
@@ -86,31 +86,6 @@ def make_model():
 
 class TestDaeInitCond(unittest.TestCase):
     
-    # Test explicit/implicit index detection functions
-    def test_indexed_by(self):
-        m = make_model()
-
-        deactivate_model_at(m, m.time, m.time[2])
-        self.assertTrue(m.fs.con1[m.time[1]].active)
-        self.assertFalse(m.fs.con1[m.time[2]].active)
-        self.assertTrue(m.fs.con2[m.space[1]].active)
-        self.assertFalse(m.fs.b1.con[m.time[2], m.space[1]].active)
-        self.assertFalse(m.fs.b2[m.time[2], m.space.last()].active)
-        self.assertTrue(m.fs.b2[m.time[2], m.space.last()].b3['a'].con['e'].active)
-
-        deactivate_model_at(m, m.time, [m.time[1], m.time[3]])
-        # Higher outlvl threshold as will encounter warning trying to deactivate
-        # disc equations at time.first()
-        self.assertFalse(m.fs.con1[m.time[1]].active)
-        self.assertFalse(m.fs.con1[m.time[3]].active)
-        self.assertFalse(m.fs.b1.con[m.time[1], m.space[1]].active)
-        self.assertFalse(m.fs.b1.con[m.time[3], m.space[1]].active)
-
-        with self.assertRaises(KeyError):
-            deactivate_model_at(m, m.time, m.time[1], allow_skip=False,
-                    suppress_warnings=True)
-
-
     def test_get_inconsistent_initial_conditions(self):
         m = make_model()
         inconsistent = get_inconsistent_initial_conditions(m, m.time)
