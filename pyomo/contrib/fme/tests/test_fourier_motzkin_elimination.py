@@ -59,10 +59,13 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             apply_to,
             m)
 
-    def check_projected_constraints(self, m):
+    unfiltered_indices = [1, 2, 3, 6]
+    filtered_indices = [1, 2, 3, 4]
+
+    def check_projected_constraints(self, m, indices):
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # x - 0.01y <= 1
-        cons = constraints[1]
+        cons = constraints[indices[0]]
         self.assertEqual(value(cons.lower), -1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -76,7 +79,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(coefs[1], 0.01)
 
         # y <= 1000*(1 - u_1)
-        cons = constraints[2]
+        cons = constraints[indices[1]]
         self.assertEqual(value(cons.lower), -1000)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -89,7 +92,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(coefs[1], -1000)
 
         # -x + 0.01y + 1 <= 1000*(1 - u_2)
-        cons = constraints[3]
+        cons = constraints[indices[2]]
         self.assertEqual(value(cons.lower), -999)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -104,7 +107,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(coefs[2], -1000)
 
         # u_2 + 100u_1 >= 1
-        cons = constraints[6]
+        cons = constraints[indices[3]]
         self.assertEqual(value(cons.lower), 1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -120,27 +123,45 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
-            vars_to_eliminate = m.lamb)
+            vars_to_eliminate = m.lamb,
+            constraint_filtering_callback=None)
 
         # we get some trivial constraints too, but let's check that the ones
         # that should be there really are
-        self.check_projected_constraints(m)
+        self.check_projected_constraints(m, self.unfiltered_indices)
 
     def test_transformed_constraints_varData_list_arg(self):
         m = self.makeModel()
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
-            vars_to_eliminate = [m.lamb[1], m.lamb[2]])
+            vars_to_eliminate = [m.lamb[1], m.lamb[2]],
+            constraint_filtering_callback=None)
 
-        self.check_projected_constraints(m)
+        self.check_projected_constraints(m, self.unfiltered_indices)
 
     def test_transformed_constraints_indexedVar_list(self):
         m = self.makeModel()
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
-            vars_to_eliminate = [m.lamb])
+            vars_to_eliminate = [m.lamb],
+            constraint_filtering_callback=None)
 
-        self.check_projected_constraints(m)
+        self.check_projected_constraints(m, self.unfiltered_indices)
+
+    def test_default_constraint_filtering(self):
+        # We will filter constraints which are trivial based on variable bounds
+        # during the transformation. This checks that we removed the constraints
+        # we expect.
+        m = self.makeModel()
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
+            m,
+            vars_to_eliminate = m.lamb)
+
+        # we still have all the right constraints
+        self.check_projected_constraints(m, self.filtered_indices)
+        # but now we *only* have the right constraints
+        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+        self.assertEqual(len(constraints), 4)
 
     def test_original_constraints_deactivated(self):
         m = self.makeModel()
@@ -276,7 +297,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                                           relaxationBlocks[4].component("p[1]"),
                                           relaxationBlocks[4].component("p[2]")])
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
-            m, vars_to_eliminate=disaggregatedVars)
+            m, vars_to_eliminate=disaggregatedVars,
+            constraint_filtering_callback=None)
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # we of course get tremendous amounts of garbage, but we make sure that
@@ -455,7 +477,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons4 = Constraint(expr=m.x[3] <= log(m.y + 1))
 
         TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to(m, vars_to_eliminate=m.x)
+            apply_to(m, vars_to_eliminate=m.x,
+            constraint_filtering_callback=None)
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
 
         # 0 <= y <= 3

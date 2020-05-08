@@ -21,6 +21,31 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 
+from six import iteritems
+import inspect
+
+# DEBUG
+from nose.tools import set_trace
+
+def _check_var_bounds_filter(constraint):
+    """Check if the constraint is already implied by the variable bounds"""
+    # this is one of our constraints, so we know that it is >=.
+    min_lhs = 0
+    for v, coef in iteritems(constraint['map']):
+        if coef > 0:
+            if v.lb is None:
+                return True # we don't have var bounds with which to imply the
+                            # constraint...
+            min_lhs += value(coef)*value(v.lb)
+        elif coef < 0:
+            if v.ub is None:
+                return True # we don't have var bounds with which to imply the
+                            # constraint...
+            min_lhs += value(coef)*value(v.ub)
+    if min_lhs >= value(constraint['lower']):
+        return False # constraint implied by var bounds
+    return True
+
 def vars_to_eliminate_list(x):
     if isinstance(x, (Var, _VarData)):
         if not x.is_indexed():
@@ -38,6 +63,13 @@ def vars_to_eliminate_list(x):
         raise ValueError(
             "Expected Var or list of Vars."
             "\n\tRecieved %s" % type(x))
+
+def constraint_filtering_function(f):
+    if f is None:
+        return
+    if not inspect.isfunction(f):
+        raise ValueError("Expected function. \n\tRecieved %s" % type(f))
+    return f
 
 @TransformationFactory.register('contrib.fourier_motzkin_elimination',
                                 doc="Project out specified (continuous) "
@@ -68,6 +100,20 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         Note that these variables must all be continuous and the model must be 
         linear."""
     ))
+    CONFIG.declare('constraint_filtering_callback', ConfigValue(
+        default=_check_var_bounds_filter,
+        domain=constraint_filtering_function,
+        description="Specifies whether or not and how the transformation should"
+        " filter out trivial constraints during the transformation.",
+        doc="""
+        Specify None in order for no constraint filtering to occur during the
+        transformation.
+
+        Specify a function with accepts a constraint (represtned in the >= 
+        dictionary form used in this transformation) and returns a Boolean
+        indicating whether or not to add it to the model.
+        """
+    ))
 
     def __init__(self):
         """Initialize transformation object"""
@@ -77,6 +123,8 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
         vars_to_eliminate = config.vars_to_eliminate
+        self.constraint_filter = config.constraint_filtering_callback
+        #self.constraint_filter = _check_var_bounds_filter
         if vars_to_eliminate is None:
             raise RuntimeError("The Fourier-Motzkin Elimination transformation "
                                "requires the argument vars_to_eliminate, a "
@@ -100,13 +148,13 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 descend_into=Block,
                 sort=SortComponents.deterministic,
                 active=True):
-            if obj.type() in ctypes_not_to_transform:
+            if obj.ctype in ctypes_not_to_transform:
                 continue
-            elif obj.type() is Constraint:
+            elif obj.ctype is Constraint:
                 cons_list = self._process_constraint(obj)
                 constraints.extend(cons_list)
                 obj.deactivate() # the truth will be on our transformation block
-            elif obj.type() is Var:
+            elif obj.ctype is Var:
                 # variable bounds are constraints, but we only need them if this
                 # is a variable we are projecting out
                 if obj not in vars_to_eliminate:
@@ -126,13 +174,16 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                     "handle purely algebraic models. That is, only "
                     "Sets, Params, Vars, Constraints, Expressions, Blocks, "
                     "and Objectives may be active on the model." % (obj.name, 
-                                                                    obj.type()))
+                                                                    obj.ctype))
 
         new_constraints = self._fourier_motzkin_elimination(constraints,
                                                             vars_to_eliminate)
 
         # put the new constraints on the transformation block
         for cons in new_constraints:
+            if self.constraint_filter is not None and not \
+               self.constraint_filter(cons):
+                continue
             body = cons['body']
             lhs = sum(coef*var for (coef, var) in zip(body.linear_coefs,
                                                       body.linear_vars)) + \
@@ -322,3 +373,4 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         ans['lower'] = cons1['lower'] + cons2['lower']
 
         return ans
+
