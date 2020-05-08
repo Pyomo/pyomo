@@ -55,7 +55,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             rhs = ((0 if constr.upper is None else constr.upper)
                    + (0 if constr.lower is None else constr.lower))
             rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
-            if config.add_slack is True:
+            if config.add_slack:
                 slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
             target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
                 expr=copysign(1, sign_adjust * dual_value)
@@ -69,7 +69,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                 and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.uslack() < 0) \
                     or (linearize_inactive and constr.uslack() > 0):
-                if config.add_slack is True:
+                if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
                 target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
@@ -83,7 +83,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                 and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.lslack() < 0) \
                     or (linearize_inactive and constr.lslack() > 0):
-                if config.add_slack is True:
+                if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
                 target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(

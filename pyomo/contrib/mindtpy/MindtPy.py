@@ -259,7 +259,7 @@ class MindtPySolver(object):
         config.set_value(kwds)
 
         # configration confirmation
-        if config.single_tree is True:
+        if config.single_tree:
             config.iteration_limit = 1
             config.add_slack = False
             config.add_integer_cuts = False

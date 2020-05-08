@@ -48,7 +48,7 @@ def solve_OA_master(solve_data, config):
     sign_adjust = 1 if main_objective.sense == minimize else - 1
     MindtPy.del_component('MindtPy_oa_obj')
 
-    if config.add_slack is True:
+    if config.add_slack:
         MindtPy.del_component('MindtPy_penalty_expr')
 
         MindtPy.MindtPy_penalty_expr = Expression(
@@ -58,7 +58,7 @@ def solve_OA_master(solve_data, config):
         MindtPy.MindtPy_oa_obj = Objective(
             expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
             sense=main_objective.sense)
-    elif config.add_slack is False:
+    else:
         MindtPy.MindtPy_oa_obj = Objective(
             expr=main_objective.expr,
             sense=main_objective.sense)
@@ -70,7 +70,7 @@ def solve_OA_master(solve_data, config):
     # determine if persistent solver is called.
     if isinstance(masteropt, PersistentSolver):
         masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
-    if config.single_tree is True:
+    if config.single_tree:
         # Configuration of lazy callback
         lazyoa = masteropt._solver_model.register_callback(
             single_tree.LazyOACallback_cplex)
@@ -87,7 +87,7 @@ def solve_OA_master(solve_data, config):
         solve_data.mip, **config.mip_solver_args)  # , tee=True)
 
     if master_mip_results.solver.termination_condition is tc.optimal:
-        if config.single_tree is True:
+        if config.single_tree:
             if main_objective.sense == minimize:
                 solve_data.LB = max(
                     master_mip_results.problem.lower_bound, solve_data.LB)
