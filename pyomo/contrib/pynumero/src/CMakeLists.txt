@@ -33,7 +33,7 @@ FIND_LIBRARY(DL_LIBRARY dl)
 SET(IPOPT_DIR "" CACHE PATH "Path to compiled Ipopt installation")
 SET(AMPLMP_DIR "" CACHE PATH "Path to compiled AMPL/MP installation")
 #SET(ASL_NETLIB_DIR "" CACHE PATH "Path to compiled ASL (netlib) installation")
-SET(MA27_OBJECT "" CACHE FILEPATH 
+SET(MA27_OBJECT "" CACHE FILEPATH
 	"Path to compiled ma27d.o object. Must be compiled with -fPIC.")
 
 # Use pkg-config to get the ASL/HSL directories from the Ipopt/COIN-OR build
@@ -78,8 +78,8 @@ FIND_LIBRARY(MA27_LIBRARY NAMES coinhsl libcoinhsl ma27 libma27
         "${IPOPT_DIR}/lib"
         "${PC_COINHSL_LIBDIR}"
         "${PC_COINHSL_LIBRARY_DIRS}"
-	"${MA27_DIR}"
-	"${MA27_DIR}/lib"
+        "${MA27_DIR}"
+        "${MA27_DIR}/lib"
         ${LD_LIBRARY_DIR_LIST}
 )
 FIND_LIBRARY(MA57_LIBRARY NAMES coinhsl libcoinhsl ma57 libma57
@@ -87,8 +87,8 @@ FIND_LIBRARY(MA57_LIBRARY NAMES coinhsl libcoinhsl ma57 libma57
         "${IPOPT_DIR}/lib"
         "${PC_COINHSL_LIBDIR}"
         "${PC_COINHSL_LIBRARY_DIRS}"
-	"${MA57_DIR}"
-	"${MA57_DIR}/lib"
+        "${MA57_DIR}"
+        "${MA57_DIR}/lib"
         ${LD_LIBRARY_DIR_LIST}
 )
 
