@@ -24,23 +24,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: []
-        python: []
+        os: [ubuntu-latest]
+        python: [3.8]
         mpi: [0]
         include:
-        - os: macos-latest
-          TARGET: osx
-          PYENV: pip
-          python: 2.7
         - os: ubuntu-latest
           TARGET: linux
           PYENV: pip
-          python: 3.8
+
+        - os: macos-latest
+          python: 2.7
+          TARGET: osx
+          PYENV: pip
+
         - os: windows-latest
+          python: 3.5
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
-          python: 3.5
+
         - os: ubuntu-latest
           python: 3.7
           mpi: 3
@@ -48,6 +50,7 @@ jobs:
           PYENV: conda
           PACKAGES: mpi4py
           NAME: /mpi
+
         exclude:
         - {os: macos-latest, python: pypy2}
         - {os: macos-latest, python: pypy3}

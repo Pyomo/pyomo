@@ -31,16 +31,19 @@ jobs:
         python: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
         mpi: [0]
         include:
-        - os: macos-latest
-          TARGET: osx
-          PYENV: pip
         - os: ubuntu-latest
           TARGET: linux
           PYENV: pip
+
+        - os: macos-latest
+          TARGET: osx
+          PYENV: pip
+
         - os: windows-latest
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
+
         - os: ubuntu-latest
           python: 3.7
           mpi: 3
@@ -48,6 +51,7 @@ jobs:
           PYENV: conda
           PACKAGES: mpi4py
           NAME: /mpi
+
         exclude:
         - {os: macos-latest, python: pypy2}
         - {os: macos-latest, python: pypy3}
