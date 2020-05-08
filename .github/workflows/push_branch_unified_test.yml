@@ -362,7 +362,7 @@ jobs:
         pyomo build-extensions --parallel 2
 
     - name: Run Pyomo tests
-      if matrix.mpi == 0
+      if: matrix.mpi == 0
       run: |
         test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
 
