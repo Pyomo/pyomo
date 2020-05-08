@@ -44,11 +44,16 @@ class RelaxIntegerVars(Transformation):
                 v.setub(bounds[1])
             model.del_component("_relaxed_integer_vars")
             return
+        # True by default, you can specify False if you want
+        descend = kwds.get('descend_into_deactivated_components', 
+                           options.get('descend_into_deactivated_components', 
+                                       True))
+        active = None if descend else True
 
         # Relax the model
         relaxed_vars = {}
         _base_model_vars = model.component_data_objects(
-            Var, active=True, descend_into=True )
+            Var, active=active, descend_into=True )
         for var in _base_model_vars:
             if not var.is_integer():
                 continue
