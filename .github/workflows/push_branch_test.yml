@@ -13,7 +13,7 @@ jobs:
         include:
         - os: ubuntu-18.04
           TARGET: linux
-        python-version: [3.7]
+        python-version: [2.7, 3.7]
 
     steps:
     - uses: actions/checkout@v2
@@ -98,7 +98,11 @@ jobs:
         echo ""
         echo "Install PyUtilib..."
         echo ""
-        pip install --quiet git+https://github.com/PyUtilib/pyutilib
+        git clone --quiet https://github.com/mrmundt/pyutilib.git
+        cd pyutilib
+        git checkout remove_utilib_deps
+        python setup.py develop
+        cd ..
         echo ""
         echo "Install Pyomo..."
         echo ""
