@@ -289,7 +289,7 @@ jobs:
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "::add-path::${GJH_DIR}"
-        INSTALL_DIR="${env:DOWNLOAD_DIR}/gjh"
+        INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
         if test ! -e "$INSTALL_DIR/bin"; then
             mkdir "$INSTALL_DIR"
             INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
