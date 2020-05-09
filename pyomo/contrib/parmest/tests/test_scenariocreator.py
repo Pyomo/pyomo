@@ -138,7 +138,6 @@ class  pamest_Scenario_creator_semibatch(unittest.TestCase):
         tval = bootscens.ScenarioNumber(0).ThetaVals["k1"]
         self.assertAlmostEqual(tval, 20.64, places=1)
 
-    @unittest.skipIf(sys.platform[0:3] == "win", "Trying to skip on appveyor due to mumps ipopt")
     def test_semibatch_example(self):
         # this is referenced in the documentation so at least look for smoke
         sbc.main(self.fbase)
