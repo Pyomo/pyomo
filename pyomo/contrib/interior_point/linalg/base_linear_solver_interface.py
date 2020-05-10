@@ -1,8 +1,18 @@
 from abc import ABCMeta, abstractmethod
 import six
+import logging
 
 
 class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
+    @classmethod
+    def getLoggerName(cls):
+        return 'linear_solver'
+
+    @classmethod
+    def getLogger(cls):
+        name = 'interior_point.' + cls.getLoggerName()
+        return logging.getLogger(name)
+
     @abstractmethod
     def do_symbolic_factorization(self, matrix):
         pass
@@ -21,13 +31,4 @@ class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
 
     @abstractmethod
     def get_inertia(self):
-        pass
-
-    def set_outer_iteration_number(self, num):
-        pass
-
-    def set_regularization_switch(self, reg_switch):
-        pass
-
-    def set_reg_coef(self, reg_coef):
         pass
