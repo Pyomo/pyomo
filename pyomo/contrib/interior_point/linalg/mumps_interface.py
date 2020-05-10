@@ -5,7 +5,14 @@ from collections import OrderedDict
 import logging
 
 
+# TODO: Probably should move this into the base solver file
+
 class MumpsInterface(LinearSolverInterface):
+
+    @classmethod
+    def getLoggerName(cls):
+        return 'mumps'
+
     def __init__(self, par=1, comm=None, cntl_options=None, icntl_options=None,
                  log_filename=None, allow_reallocation=False,
                  max_allocation_iterations=5):
@@ -28,83 +35,22 @@ class MumpsInterface(LinearSolverInterface):
             self.set_cntl(k, v)
         for k, v in icntl_options.items():
             self.set_icntl(k, v)
-
         
         self.error_level = self._mumps.mumps.id.icntl[10]
         self.log_error = bool(self.error_level)
 
         self._dim = None
 
-        self.logger = logging.getLogger('mumps')
-        if log_filename:
-            self.logger.propagate = False
-            self.log_switch = True 
-            open(log_filename, 'w').close()
-            self.logger.setLevel(logging.DEBUG)
-
-            fh = logging.FileHandler(log_filename)
-            fh.setLevel(logging.DEBUG)
-            self.logger.addHandler(fh)
-            # Now logger will not propagate to the root logger.
-            # This is probably bad because I might want to 
-            # propagate ERROR to the console, but I can't figure
-            # out how to disable console logging otherwise
+        self.logger = self.getLogger()
 
         self.log_header(include_error=self.log_error)
 
         self.allow_reallocation = allow_reallocation
         self._prev_allocation = None
         # Max number of reallocations per iteration:
+        #self.max_num_realloc = max_allocation_iterations
+        # Probably don't want this in linear_solver class
         self.max_num_realloc = max_allocation_iterations
-
-        # When logging linear solver info, it is useful to know what iteration
-        # of the "outer algorithm" we're in so linear solver/IP solver info
-        # can be compared
-        self.outer_iteration_number = 0
-
-        # Need to know whether we are in a regularization iteration so we know
-        # what into to save/log
-        self.regularization_switch = False
-
-        # Want to know what regularization coefficient was used to construct
-        # our matrix so we can log it next to the matrix's info.
-        self.reg_coef = None
-
-    def set_outer_iteration_number(self, iter_no):
-        if type(iter_no) is not int:
-            raise ValueError(
-                'outer iteration number must be an int')
-        self.outer_iteration_number = iter_no
-
-    def set_regularization_switch(self, switch_val):
-        if type(switch_val) is not bool:
-            raise ValueError(
-                'regularization switch must be a bool')
-        if self.regularization_switch == False and switch_val == True:
-            # What's the best way to do this? - want to have a context
-            # for regularization in the linear solver, triggered by the
-            # context in the IP solver. Define a context for regularization
-            # in this module, then call __enter__ and __exit__ in IP solver's
-            # context manager? That assumes existance of such a context
-            # manager here. Could this be done at the base class level?
-            self.logger.debug('- - -Entering regularization- - -')
-            self.log_header(include_error=False,
-                    extra_fields=['reg_coef'])
-            # This logs info about the solve just before regularization
-            # which otherwise wouldn't be logged.
-            self.log_info(include_error=False)
-        elif self.regularization_switch == True and switch_val == False:
-            self.logger.debug('- - -Exiting regularization- - -')
-        self.regularization_switch = switch_val
-
-    def set_reg_coef(self, reg_coef):
-        self.reg_coef = float(reg_coef)
-
-    def set_log_error(self, log_error):
-        if type(log_error) is not bool:
-            raise ValueError(
-                'log_error must be a bool')
-        self.log_error = log_error
 
     def do_symbolic_factorization(self, matrix):
         if not isspmatrix_coo(matrix):
@@ -121,43 +67,43 @@ class MumpsInterface(LinearSolverInterface):
             matrix = matrix.tocoo()
         matrix = tril(matrix)
 
-        if not self.allow_reallocation:
-            self._mumps.do_numeric_factorization(matrix)
-        else:
-            success = False
-            for count in range(self.max_num_realloc):
-                try:
-                    self._mumps.do_numeric_factorization(matrix)
-                    success = True
-                    break
-                except RuntimeError as err:
-                    # What is the proper error to indicate that numeric
-                    # factorization needs reallocation?
-                    msg = str(err)
-                    if ('MUMPS error: -9' not in msg and 
-                        'MUMPS error: -8' not in msg):
-                        raise
-
-                    status = self.get_infog(1)
-                    if status != -8 and status != -9:
-                        raise
-
-                    # Increase the amount of memory allocated to this
-                    # factorization.
-                    new_allocation = self.increase_memory_allocation()
-
-                    # Should probably handle propagation with a context manager
-                    self.logger.propagate = True
-                    self.logger.info(
-                            'Reallocating memory for MUMPS Linear Solver. '
-                            'New memory allocation is ' + str(new_allocation)
-                            + ' MB.')
-                    self.logger.propagate = False
-                    
-            if not success:
-                raise RuntimeError(
-                        'Maximum number of reallocations exceeded in the '
-                        'numeric factorization.')
+#        if not self.allow_reallocation:
+        self._mumps.do_numeric_factorization(matrix)
+#        else:
+#            success = False
+#            for count in range(self.max_num_realloc):
+#                try:
+#                    self._mumps.do_numeric_factorization(matrix)
+#                    success = True
+#                    break
+#                except RuntimeError as err:
+#                    # What is the proper error to indicate that numeric
+#                    # factorization needs reallocation?
+#                    msg = str(err)
+#                    if ('MUMPS error: -9' not in msg and 
+#                        'MUMPS error: -8' not in msg):
+#                        raise
+#
+#                    status = self.get_infog(1)
+#                    if status != -8 and status != -9:
+#                        raise
+#
+#                    # Increase the amount of memory allocated to this
+#                    # factorization.
+#                    new_allocation = self.increase_memory_allocation()
+#
+#                    # Should probably handle propagation with a context manager
+#                    self.logger.propagate = True
+#                    self.logger.info(
+#                            'Reallocating memory for MUMPS Linear Solver. '
+#                            'New memory allocation is ' + str(new_allocation)
+#                            + ' MB.')
+#                    self.logger.propagate = False
+#                    
+#            if not success:
+#                raise RuntimeError(
+#                        'Maximum number of reallocations exceeded in the '
+#                        'numeric factorization.')
 
     def increase_memory_allocation(self):
         # info(16) is rounded to the nearest MB, so it could be zero
@@ -171,6 +117,12 @@ class MumpsInterface(LinearSolverInterface):
         self._prev_allocation = new_allocation
         return new_allocation
 
+    def set_memory_allocation(self, value):
+        self.set_icntl(23, value)
+
+    def get_memory_allocation(self):
+        return self._prev_allocation
+
     def try_factorization(self, kkt):
         error = None
         try:
@@ -178,9 +130,6 @@ class MumpsInterface(LinearSolverInterface):
             self.do_numeric_factorization(kkt)
         except RuntimeError as err:
             error = err
-        finally:
-            if self.regularization_switch:
-                self.log_regularization_info()
         return error
 
     def is_numerically_singular(self, err=None, raise_if_not=True):
@@ -201,8 +150,7 @@ class MumpsInterface(LinearSolverInterface):
             return False
 
     def do_back_solve(self, rhs):
-        self.log_info(iter_no=self.outer_iteration_number,
-                      include_error=self.log_error)
+        self.log_info()
         return self._mumps.do_back_solve(rhs)
 
     def get_inertia(self):
@@ -273,21 +221,26 @@ class MumpsInterface(LinearSolverInterface):
         header_string += '{2:<10}'
         header_string += '{3:<10}'
 
-        # Allocate 15 spsaces for the rest, which I assume are floats
+        # Allocate 15 spaces for the rest, which I assume are floats
         for i in range(4, len(header_fields)):
             header_string += '{' + str(i) + ':<15}'
 
-        self.logger.debug(header_string.format(*header_fields))
+        self.logger.info(header_string.format(*header_fields))
 
-    def log_info(self, iter_no='', include_error=True, extra_fields=[]):
-        fields = [iter_no]
+    def log_info(self):
+        # Which fields to log should be specified at the instance level
+        # Any logging that should be done on an iteration-specific case
+        # should be handled by the IP solver
+        fields=[]
         fields.append(self.get_infog(1))   # Status, 0 for success
         fields.append(self.get_infog(28))  # Number of null pivots
         fields.append(self.get_infog(12))  # Number of negative pivots
 
+        include_error = self.log_error
         if include_error:
             fields.extend(self.get_error_info().values())
 
+        extra_fields = []
         fields.extend(extra_fields)
 
         # Allocate 10 spaces for integer values
@@ -300,9 +253,5 @@ class MumpsInterface(LinearSolverInterface):
         for i in range(4, len(fields)):
             log_string += '{' + str(i) + ':<15.3e}'
 
-        self.logger.debug(log_string.format(*fields))
-
-    def log_regularization_info(self):
-        self.log_info(include_error=False,
-                extra_fields=[self.reg_coef])
+        self.logger.info(log_string.format(*fields))
 
