@@ -1,14 +1,80 @@
 from pyomo.contrib.interior_point.interface import InteriorPointInterface, BaseInteriorPointInterface
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
 from scipy.sparse import tril, coo_matrix, identity
+from contextlib import contextmanager
+from pyutilib.misc import capture_output
 import numpy as np
 import logging
+import threading
 import time
+import pdb
 
 
 ip_logger = logging.getLogger('interior_point')
 
 
+@contextmanager
+def linear_solve_context(filename=None):
+    # Should this attempt to change output log level? For instance, if 
+    # filename is provided, lower log level to debug.
+    #
+    # This should be just a wrapper around linear_solver methods
+    with capture_output() as st:
+        yield st
+    output = st.getvalue()
+    if filename is None:
+        # But don't want to print if there is no file
+        # Want to log with low priority if there is no file
+        print(output)
+    with open(filename, 'a') as f:
+        f.write(output)
+
+class LinearSolveContext(object):
+    def __init__(self, 
+            interior_point_logger, 
+            linear_solver_logger,
+            filename=None):
+
+        self.interior_point_logger = interior_point_logger
+        self.linear_solver_logger = linear_solver_logger
+        self.filename = filename
+
+        self.linear_solver_logger.propagate = False
+
+        stream_handler = logging.StreamHandler()
+        if filename:
+            stream_handler.setLevel(
+                    interior_point_logger.level)
+        else:
+            stream_handler.setLevel(
+                    interior_point_logger.level+10)
+        linear_solver_logger.addHandler(stream_handler)
+
+        self.capture_context = capture_output()
+
+    def __enter__(self):
+        if self.filename:
+            st = self.capture_context.__enter__()
+            #with capture_output() as st:
+            #    pdb.set_trace()
+            #    self.output = st
+            #    yield st
+            self.output = st
+            yield self
+
+    def __exit__(self, et, ev, tb):
+        if self.filename:
+            self.capture_context.__exit__(et, ev, tb)
+            with open(self.filename, 'a') as f:
+                f.write(self.output.getvalue())
+
+
+# How should the RegContext work?
+# TODO: in this class, use the linear_solver_context to ...
+#       Use linear_solver_logger to write iter_no and reg_coef
+#       
+#       Define a method for logging IP_reg_info to the linear solver log
+#       Method can be called within linear_solve_context
 class RegularizationContext(object):
     def __init__(self, logger, linear_solver):
         # Any reason to pass in a logging level here?
@@ -19,13 +85,11 @@ class RegularizationContext(object):
     def __enter__(self):
         self.logger.debug('KKT matrix has incorrect inertia. '
                          'Regularizing Hessian...')
-        self.linear_solver.set_regularization_switch(True)
         self.log_header()
         return self
 
     def __exit__(self, et, ev, tb):
         self.logger.debug('Exiting regularization.')
-        self.linear_solver.set_regularization_switch(False)
         # Will this swallow exceptions in this context?
 
     def log_header(self):
@@ -51,17 +115,30 @@ class InteriorPointSolver(object):
     '''Class for creating interior point solvers with different options
     '''
     def __init__(self, linear_solver, max_iter=100, tol=1e-8, 
-            regularize_kkt=False):
+            regularize_kkt=False,
+            linear_solver_log_filename=None,
+            max_reallocation_iterations=5):
         self.linear_solver = linear_solver
         self.max_iter = max_iter
         self.tol = tol
         self.regularize_kkt = regularize_kkt
+        self.linear_solver_log_filename = linear_solver_log_filename
+        self.max_reallocation_iterations = max_reallocation_iterations
 
         self.logger = logging.getLogger('interior_point')
         self._iter = 0
         self.regularization_context = RegularizationContext(
                 self.logger,
                 self.linear_solver)
+
+        if linear_solver_log_filename:
+            with open(linear_solver_log_filename, 'w'):
+                pass
+
+        self.linear_solver_logger = self.linear_solver.getLogger()
+        self.linear_solve_context = LinearSolveContext(self.logger,
+                self.linear_solver_logger,
+                self.linear_solver_log_filename)
 
 
     def set_linear_solver(self, linear_solver):
@@ -182,7 +259,6 @@ class InteriorPointSolver(object):
             rhs = interface.evaluate_primal_dual_kkt_rhs()
 
             # Factorize linear system, with or without regularization:
-            linear_solver.set_outer_iteration_number(_iter)
             if not regularize_kkt:
                 self.factorize_linear_system(kkt)
             else:
@@ -225,6 +301,35 @@ class InteriorPointSolver(object):
         # Should I return something here?
 
 
+    def try_factorization_and_reallocation(self, kkt):
+        success = False
+        for count in range(self.max_reallocation_iterations):
+            err = self.linear_solver.try_factorization(kkt)
+            msg = str(err)
+            status = self.linear_solver.get_infog(1)
+            if (('MUMPS error: -9' in msg or 'MUMPS error: -8' in msg)
+                    and (status == -8 or status == -9)):
+                prev_allocation = linear_solver.get_memory_allocation()
+                if prev_allocation == 0:
+                    new_allocation = 1
+                else:
+                    new_allocation = 2*prev_allocation
+                self.logger.info('Reallocating memory for linear solver. '
+                        'New memory allocation is %s' % (new_allocation))
+                # ^ Don't write the units as different linear solvers may
+                # report different units.
+                linear_solver.set_memory_allocation(new_allocation)
+            elif err is not None:
+                return err
+            else:
+                success = True
+                break
+        if not success:
+            raise RuntimeError(
+                'Maximum number of memory reallocations exceeded in the '
+                'linear solver.')
+
+
     def factorize_with_regularization(self, kkt,
                                       eq_reg_coef=1e-8,
                                       max_reg_coef=1e10,
@@ -239,7 +344,8 @@ class InteriorPointSolver(object):
         reg_kkt_1 = kkt
         reg_coef = 1e-4
 
-        err = linear_solver.try_factorization(kkt)
+        #err = linear_solver.try_factorization(kkt)
+        err = self.try_factorization_and_reallocation(kkt)
         if linear_solver.is_numerically_singular(err):
             # No context manager for "equality gradient regularization,"
             # as this is pretty simple
@@ -247,7 +353,8 @@ class InteriorPointSolver(object):
                              'Regularizing equality gradient...')
             reg_kkt_1 = self.interface.regularize_equality_gradient(kkt,
                                        eq_reg_coef)
-            err = linear_solver.try_factorization(reg_kkt_1)
+            #err = linear_solver.try_factorization(reg_kkt_1)
+            err = self.try_factorization_and_reallocation(reg_kkt_1)
 
         inertia = linear_solver.get_inertia()
         if (linear_solver.is_numerically_singular(err) or
@@ -263,9 +370,9 @@ class InteriorPointSolver(object):
                     reg_kkt_2 = self.interface.regularize_hessian(reg_kkt_1, 
                                                                   reg_coef)
                     reg_iter += 1
-                    linear_solver.set_reg_coef(reg_coef)
     
-                    err = linear_solver.try_factorization(reg_kkt_2)
+                    #err = linear_solver.try_factorization(reg_kkt_2)
+                    err = self..try_factorization_and_reallocation(reg_kkt_2)
                     inertia = linear_solver.get_inertia()
                     reg_con.log_info(_iter, reg_iter, reg_coef, inertia)
 
