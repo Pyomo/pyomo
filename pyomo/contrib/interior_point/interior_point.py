@@ -309,7 +309,7 @@ class InteriorPointSolver(object):
             status = self.linear_solver.get_infog(1)
             if (('MUMPS error: -9' in msg or 'MUMPS error: -8' in msg)
                     and (status == -8 or status == -9)):
-                prev_allocation = linear_solver.get_memory_allocation()
+                prev_allocation = self.linear_solver.get_memory_allocation()
                 if prev_allocation == 0:
                     new_allocation = 1
                 else:
@@ -318,7 +318,7 @@ class InteriorPointSolver(object):
                         'New memory allocation is %s' % (new_allocation))
                 # ^ Don't write the units as different linear solvers may
                 # report different units.
-                linear_solver.set_memory_allocation(new_allocation)
+                self.linear_solver.set_memory_allocation(new_allocation)
             elif err is not None:
                 return err
             else:
@@ -372,7 +372,7 @@ class InteriorPointSolver(object):
                     reg_iter += 1
     
                     #err = linear_solver.try_factorization(reg_kkt_2)
-                    err = self..try_factorization_and_reallocation(reg_kkt_2)
+                    err = self.try_factorization_and_reallocation(reg_kkt_2)
                     inertia = linear_solver.get_inertia()
                     reg_con.log_info(_iter, reg_iter, reg_coef, inertia)
 
