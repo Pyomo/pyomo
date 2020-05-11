@@ -48,7 +48,7 @@ class _CplexExpr(object):
     ):
         self.variables = variables
         self.coefficients = coefficients
-        self.offset = offset or 0.
+        self.offset = offset or 0.0
         self.q_variables1 = q_variables1 or []
         self.q_variables2 = q_variables2 or []
         self.q_coefficients = q_coefficients or []
