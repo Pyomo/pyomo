@@ -993,10 +993,10 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
 
         disaggregationConstraints = m._pyomo_gdp_chull_relaxation.\
                                     disaggregationConstraints
-
+        disaggregationConstraints.pprint()
         consmap = [
-            (m.component("b.x"), disaggregationConstraints[0]),
-            (m.b.x, disaggregationConstraints[1]) 
+            (m.component("b.x"), disaggregationConstraints[(0, None)]),
+            (m.b.x, disaggregationConstraints[(1, None)]) 
         ]
 
         for v, cons in consmap:
@@ -1218,17 +1218,20 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(dis, Constraint)
         self.assertTrue(dis.active)
         self.assertEqual(len(dis), 3)
-        self.check_outer_disaggregation_constraint(dis[0], m.x, m.d1, m.d2)
+        self.check_outer_disaggregation_constraint(dis[0,None], m.x, m.d1,
+                                                   m.d2)
         self.assertIs(chull.get_disaggregation_constraint(m.x, m.disj),
-                      dis[0])
-        self.check_outer_disaggregation_constraint(dis[1], m.d1.d3.indicator_var,
-                                             m.d1, m.d2)
+                      dis[0, None])
+        self.check_outer_disaggregation_constraint(dis[1,None],
+                                                   m.d1.d3.indicator_var, m.d1,
+                                                   m.d2)
         self.assertIs(chull.get_disaggregation_constraint(m.d1.d3.indicator_var,
-                                                          m.disj), dis[1])
-        self.check_outer_disaggregation_constraint(dis[2], m.d1.d4.indicator_var,
-                                             m.d1, m.d2)
+                                                          m.disj), dis[1,None])
+        self.check_outer_disaggregation_constraint(dis[2,None],
+                                                   m.d1.d4.indicator_var, m.d1,
+                                                   m.d2)
         self.assertIs(chull.get_disaggregation_constraint(m.d1.d4.indicator_var,
-                                                          m.disj), dis[2])
+                                                          m.disj), dis[2,None])
 
         # we should have two disjunct transformation blocks
         disjBlocks = transBlock.relaxedDisjuncts
@@ -1310,10 +1313,12 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(dis_cons_inner_disjunction, Constraint)
         self.assertTrue(dis_cons_inner_disjunction.active)
         self.assertEqual(len(dis_cons_inner_disjunction), 1)
-        self.assertTrue(dis_cons_inner_disjunction[(0, 'eq')].active)
-        self.assertEqual(dis_cons_inner_disjunction[(0, 'eq')].lower, 0)
-        self.assertEqual(dis_cons_inner_disjunction[(0, 'eq')].upper, 0)
-        repn = generate_standard_repn(dis_cons_inner_disjunction[(0, 'eq')].body)
+        dis_cons_inner_disjunction.pprint()
+        self.assertTrue(dis_cons_inner_disjunction[(0,None,'eq')].active)
+        self.assertEqual(dis_cons_inner_disjunction[(0,None,'eq')].lower, 0)
+        self.assertEqual(dis_cons_inner_disjunction[(0,None,'eq')].upper, 0)
+        repn = generate_standard_repn(dis_cons_inner_disjunction[(0, None,
+                                                                  'eq')].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 3)
@@ -1404,16 +1409,17 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         # the same goes for the disaggregation constraint
         orig_dis_container = m.d1._pyomo_gdp_chull_relaxation.\
                              disaggregationConstraints
-        orig_dis = orig_dis_container[0]
+        orig_dis = orig_dis_container[0,None]
         self.assertIs(chull.get_disaggregation_constraint(m.x, m.d1.disj2),
                       orig_dis)
         self.assertFalse(orig_dis.active)
         transformedList = chull.get_transformed_constraints(orig_dis)
         self.assertEqual(len(transformedList), 1)
-        self.assertIs(transformedList[0], dis_cons_inner_disjunction[(0, 'eq')])
+        self.assertIs(transformedList[0], dis_cons_inner_disjunction[(0, None,
+                                                                      'eq')])
 
         self.assertIs(chull.get_src_constraint(
-            dis_cons_inner_disjunction[(0,'eq')]), orig_dis)
+            dis_cons_inner_disjunction[(0, None, 'eq')]), orig_dis)
         self.assertIs(chull.get_src_constraint( dis_cons_inner_disjunction),
                       orig_dis_container)
         # though we don't have a map back from the disaggregation constraint to
@@ -1648,7 +1654,7 @@ class TestErrors(unittest.TestCase):
         # but the disaggregation constraints are going to force them to 0 (which
         # will in turn force the outer disjunct indicator variable to 0, which
         # is what we want)
-        d3_ind_dis = transBlock.disaggregationConstraints[1]
+        d3_ind_dis = transBlock.disaggregationConstraints[1, None]
         self.assertEqual(d3_ind_dis.lower, 0)
         self.assertEqual(d3_ind_dis.upper, 0)
         repn = generate_standard_repn(d3_ind_dis.body)
@@ -1658,7 +1664,7 @@ class TestErrors(unittest.TestCase):
         ct.check_linear_coef(self, repn, disjunct1.indicator_var, -1)
         ct.check_linear_coef(self, repn,
                              transBlock.relaxedDisjuncts[1].indicator_var, -1)
-        d4_ind_dis = transBlock.disaggregationConstraints[2]
+        d4_ind_dis = transBlock.disaggregationConstraints[2, None]
         self.assertEqual(d4_ind_dis.lower, 0)
         self.assertEqual(d4_ind_dis.upper, 0)
         repn = generate_standard_repn(d4_ind_dis.body)

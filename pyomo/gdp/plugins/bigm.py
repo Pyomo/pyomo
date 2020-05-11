@@ -17,8 +17,8 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
-    Expression, SortComponents, TraversalStrategy, Any, value,
-    RangeSet)
+    Expression, SortComponents, TraversalStrategy, value,
+    RangeSet, NonNegativeIntegers)
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
@@ -272,7 +272,7 @@ class BigM_Transformation(Transformation):
             '_pyomo_gdp_bigm_relaxation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
-        transBlock.relaxedDisjuncts = Block(Any)
+        transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
         transBlock.lbub = Set(initialize=['lb', 'ub'])
 
         return transBlock
@@ -302,7 +302,7 @@ class BigM_Transformation(Transformation):
         assert isinstance(disjunction, Disjunction)
 
         # first check if the constraint already exists
-        if not disjunction._algebraic_constraint is None:
+        if disjunction._algebraic_constraint is not None:
             return disjunction._algebraic_constraint()
 
         # add the XOR (or OR) constraints to parent block (with unique name)
@@ -352,7 +352,7 @@ class BigM_Transformation(Transformation):
             # the case, let's use the same transformation block. (Else it will
             # be really confusing that the XOR constraint goes to that old block
             # but we create a new one here.)
-            if not obj.parent_component()._algebraic_constraint is None:
+            if obj.parent_component()._algebraic_constraint is not None:
                 transBlock = obj.parent_component()._algebraic_constraint().\
                              parent_block()
             else:
@@ -415,7 +415,7 @@ class BigM_Transformation(Transformation):
                     "indicator_var to 0.)"
                     % ( obj.name, ))
                 
-        if not obj._transformation_block is None:
+        if obj._transformation_block is not None:
             # we've transformed it, which means this is the second time it's
             # appearing in a Disjunction
             raise GDP_Error(

@@ -21,7 +21,7 @@ from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, RangeSet, Reals, value
+    Any, RangeSet, Reals, value, NonNegativeIntegers
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (clone_without_expression_components, target_list,
@@ -266,11 +266,12 @@ class ConvexHull_Transformation(Transformation):
             '_pyomo_gdp_chull_relaxation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
-        transBlock.relaxedDisjuncts = Block(Any)
+        transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
         transBlock.lbub = Set(initialize = ['lb','ub','eq'])
         # We will store all of the disaggregation constraints for any
         # Disjunctions we transform onto this block here.
-        transBlock.disaggregationConstraints = Constraint(Any)
+        transBlock.disaggregationConstraints = Constraint(NonNegativeIntegers,
+                                                          Any)
 
         # This will map from srcVar to a map of srcDisjunction to the
         # disaggregation constraint corresponding to srcDisjunction
@@ -301,14 +302,13 @@ class ConvexHull_Transformation(Transformation):
         assert isinstance(disjunction, Disjunction)
 
         # check if the constraint already exists
-        if not disjunction._algebraic_constraint is None:
+        if disjunction._algebraic_constraint is not None:
             return disjunction._algebraic_constraint()
 
         # add the XOR (or OR) constraints to parent block (with
         # unique name) It's indexed if this is an
         # IndexedDisjunction, not otherwise
-        orC = Constraint(disjunction.index_set()) if \
-              disjunction.is_indexed() else Constraint()
+        orC = Constraint(disjunction.index_set())
         transBlock.add_component( 
             unique_component_name(transBlock,
                                   disjunction.getname(fully_qualified=True,
@@ -328,7 +328,7 @@ class ConvexHull_Transformation(Transformation):
         # unless this is a disjunction we have seen in a prior call to chull, in
         # which case we will use the same transformation block we created
         # before.
-        if not obj._algebraic_constraint is None:
+        if obj._algebraic_constraint is not None:
             transBlock = obj._algebraic_constraint().parent_block()
         else:
             transBlock = self._add_transformation_block(obj.parent_block())
@@ -359,7 +359,7 @@ class ConvexHull_Transformation(Transformation):
             # the case, let's use the same transformation block. (Else it will
             # be really confusing that the XOR constraint goes to that old block
             # but we create a new one here.)
-            if not obj.parent_component()._algebraic_constraint is None:
+            if obj.parent_component()._algebraic_constraint is not None:
                 transBlock = obj.parent_component()._algebraic_constraint().\
                              parent_block()
             else:
@@ -422,11 +422,12 @@ class ConvexHull_Transformation(Transformation):
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
             # clearly not local if used in more than one disjunct 
             if len(disjuncts) > 1:
-                # TODO: Is this okay though? It means I will silently do the
-                # right thing if you told me to do the wrong thing. But is it
-                # worth the effort to check that here?
+                if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                    logger.debug("Assuming %s is not a local var since it is"
+                                 "used in multiple disjuncts." %
+                                 var.getname(fully_qualified=True,
+                                             name_buffer=NAME_BUFFER))
                 varSet.append(var)
-            
             elif localVarsByDisjunct.get(disjuncts[0]) is not None:
                 if var in localVarsByDisjunct[disjuncts[0]]:
                     localVars.append(var)
@@ -458,25 +459,17 @@ class ConvexHull_Transformation(Transformation):
                 disaggregatedVar = disjunct._transformation_block().\
                                    _disaggregatedVarMap['disaggregatedVar'][var]
                 disaggregatedExpr += disaggregatedVar
-            if type(index) is tuple:
-                consIdx = index + (i,)
-            elif parent_component.is_indexed():
-                consIdx = (index,) + (i,)
-            else:
-                consIdx = i
 
-            disaggregationConstraint.add(
-                consIdx,
-                var == disaggregatedExpr)
+            disaggregationConstraint.add((i, index), var == disaggregatedExpr)
             # and update the map so that we can find this later. We index by
             # variable and the particular disjunction because there is a
             # different one for each disjunction
-            if not disaggregationConstraintMap.get(var) is None:
+            if disaggregationConstraintMap.get(var) is not None:
                 disaggregationConstraintMap[var][obj] = disaggregationConstraint[
-                    consIdx]
+                    (i, index)]
             else:
                 thismap = disaggregationConstraintMap[var] = ComponentMap()
-                thismap[obj] = disaggregationConstraint[consIdx]
+                thismap[obj] = disaggregationConstraint[(i, index)]
                 
         # deactivate for the writers
         obj.deactivate()
@@ -503,7 +496,7 @@ class ConvexHull_Transformation(Transformation):
                     "indicator_var to 0.)"
                     % ( obj.name, ))
 
-        if not obj._transformation_block is None:
+        if obj._transformation_block is not None:
             # we've transformed it, which means this is the second time it's
             # appearing in a Disjunction
             raise GDP_Error(
@@ -704,15 +697,7 @@ class ConvexHull_Transformation(Transformation):
             fully_qualified=True, name_buffer=NAME_BUFFER))
 
         if obj.is_indexed():
-            try:
-                newConstraint = Constraint(obj.index_set(), transBlock.lbub)
-            # ESJ: TODO: John, is this except block still reachable in the
-            # post-set-rewrite universe? I can't figure out how to test it...
-            except:
-                # The original constraint may have been indexed by a
-                # non-concrete set (like an Any).  We will give up on
-                # strict index verification and just blindly proceed.
-                newConstraint = Constraint(Any)
+            newConstraint = Constraint(obj.index_set(), transBlock.lbub)
         else:
             newConstraint = Constraint(transBlock.lbub)
         relaxationBlock.add_component(name, newConstraint)
@@ -946,7 +931,7 @@ class ConvexHull_Transformation(Transformation):
         """
         for disjunct in disjunction.disjuncts:
             transBlock = disjunct._transformation_block
-            if not transBlock is None:
+            if transBlock is not None:
                 break
         if transBlock is None:
             raise GDP_Error("Disjunction %s has not been properly transformed: "
