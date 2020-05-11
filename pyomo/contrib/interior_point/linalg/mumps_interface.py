@@ -160,7 +160,6 @@ class MumpsInterface(LinearSolverInterface):
 
     def log_header(self, include_error=True, extra_fields=[]):
         header_fields = []
-        header_fields.append('Iter')
         header_fields.append('Status')
         header_fields.append('n_null')
         header_fields.append('n_neg')
@@ -174,7 +173,6 @@ class MumpsInterface(LinearSolverInterface):
         header_string = '{0:<10}'
         header_string += '{1:<10}'
         header_string += '{2:<10}'
-        header_string += '{3:<10}'
 
         # Allocate 15 spaces for the rest, which I assume are floats
         for i in range(4, len(header_fields)):
@@ -202,7 +200,6 @@ class MumpsInterface(LinearSolverInterface):
         log_string = '{0:<10}'
         log_string += '{1:<10}'
         log_string += '{2:<10}'
-        log_string += '{3:<10}'
 
         # Allocate 15 spsaces for the rest, which I assume are floats
         for i in range(4, len(fields)):
