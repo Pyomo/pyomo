@@ -14,12 +14,16 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
-                        Binary, value, Block)
+                        Binary, value, Block, Objective)
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import log
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.opt import SolverFactory
+
+# DEBUG
+from nose.tools import set_trace
 
 class TestFourierMotzkinElimination(unittest.TestCase):
     @staticmethod
@@ -421,12 +425,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertIs(body.linear_vars[2], m.off.indicator_var)
         self.assertEqual(body.linear_coefs[2], -1)
 
-    def test_project_disaggregated_vars(self):
-        """This is a little bit more of an integration test with GDP, 
-        but also an example of why FME is 'useful.' We will give a GDP, 
-        take chull relaxation, and then project out the disaggregated 
-        variables."""
-
+    def create_chull_model(self):
         m = ConcreteModel()
         m.p = Var([1, 2], bounds=(0, 10))
         m.time1 = Disjunction(expr=[m.p[1] >= 1, m.p[1] == 0])
@@ -444,6 +443,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.off.off = Constraint(expr=m.p[2] == 0)
         m.time2 = Disjunction(expr=[m.on, m.startup, m.off])
 
+        m.obj = Objective(expr=m.p[1] + m.p[2])
+
         TransformationFactory('gdp.chull').apply_to(m)
         relaxationBlocks = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
         disaggregatedVars = ComponentSet([relaxationBlocks[0].component("p[1]"),
@@ -454,6 +455,16 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                                           relaxationBlocks[3].component("p[2]"),
                                           relaxationBlocks[4].component("p[1]"),
                                           relaxationBlocks[4].component("p[2]")])
+
+        return m, disaggregatedVars
+
+    def test_project_disaggregated_vars(self):
+        """This is a little bit more of an integration test with GDP, 
+        but also an example of why FME is 'useful.' We will give a GDP, 
+        take chull relaxation, and then project out the disaggregated 
+        variables."""
+        m, disaggregatedVars = self.create_chull_model()
+        
         filtered = TransformationFactory('contrib.fourier_motzkin_elimination').\
                    create_using(m, vars_to_eliminate=disaggregatedVars)
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
@@ -474,6 +485,31 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                                                                        11, 8, 1,
                                                                        2, 3, 4])
 
+    def test_post_processing(self):
+        m, disaggregatedVars = self.create_chull_model()
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        fme.apply_to(m, vars_to_eliminate=disaggregatedVars)
+        # post-process
+        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+
+        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+        self.assertEqual(len(constraints), 11)
+
+        # They should be the same as the above, but now these are *all* the
+        # constraints
+        self.check_chull_projected_constraints(m, constraints, [6, 5, 16, 17,
+                                                                15, 11, 8, 1, 2,
+                                                                3, 4])
+
+        # and check that we didn't change the model
+        for disj in m.component_data_objects(Disjunct):
+            self.assertIs(disj.indicator_var.domain, Binary)
+        self.assertEqual(len([o for o in m.component_data_objects(Objective)]),
+                         1)
+        self.assertIsInstance(m.component("obj"), Objective)
+        self.assertTrue(m.obj.active)
+        
+
     def test_model_with_unrelated_nonlinear_expressions(self):
         m = ConcreteModel()
         m.x = Var([1, 2, 3], bounds=(0,3))
@@ -489,9 +525,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # This is vacuous, but I just want something that's not quadratic
         m.cons4 = Constraint(expr=m.x[3] <= log(m.y + 1))
 
-        TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to(m, vars_to_eliminate=m.x,
-            constraint_filtering_callback=None)
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        fme.apply_to(m, vars_to_eliminate=m.x,
+                     constraint_filtering_callback=None)
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
 
         # 0 <= y <= 3
@@ -560,3 +596,27 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             for i in constraints:
                 self.assertLessEqual(value(constraints[i].lower),
                                      value(constraints[i].body))
+        m.y.fixed = False
+        m.z.fixed = False
+        
+        # check post process these are non-convex, so I don't want to deal with
+        # it... (and this is a good test that I *don't* deal with it.)
+        constraints[4].deactivate()
+        constraints[3].deactivate()
+        constraints[1].deactivate()
+        # NOTE also that some of the suproblems in this test are unbounded: We
+        # need to keep those constraints.
+        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+        # we needed all the constraints, so we kept them all
+        self.assertEqual(len(constraints), 6)
+
+        # last check that if someone activates something on the model in
+        # between, we just use it. (I struggle to imagine why you would do this
+        # because why withold the information *during* FME, but if there's some
+        # reason, we may as well use all the information we've got.)
+        m.some_new_cons = Constraint(expr=m.y <= 2)
+        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+        # now we should have lost one constraint
+        self.assertEqual(len(constraints), 5)
+        # and it should be the y <= 3 one...
+        self.assertIsNone(dict(constraints).get(5))

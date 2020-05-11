@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core import (Var, Block, Constraint, Param, Set, Suffix, Expression,
-                        Objective, SortComponents, value, ConstraintList)
+                        Objective, SortComponents, value, ConstraintList, Reals)
 from pyomo.core.base import (TransformationFactory, _VarData)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
@@ -20,6 +20,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.opt import TerminationCondition
 
 from six import iteritems
 import inspect
@@ -374,3 +375,86 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
 
         return ans
 
+    def post_process_fme_constraints(self, m, solver_factory):
+        """Function which solves a sequence of optimization problems to check if
+        constraints are implied by each other. Deletes any that are.
+
+        Parameters
+        ----------------
+        m: A model, already transformed with FME. Note that if constraints 
+           have been added, activated, or deactivated, we will check for 
+           redundancy against the whole active part of the model. If you call 
+           this straight after FME, you are only checking within the projected 
+           constraints, but otherwise it is up to the user.
+        solver_factory: A SolverFactory object (constructed with a solver 
+                        which can solve the continuous relaxation of the 
+                        active constraints on the model. That is, if you 
+                        had nonlinear constraints unrelated to the variables 
+                        being projected, you need either deactivate them or 
+                        provide a solver which will do the right thing.)
+        """
+        transBlock = m._pyomo_contrib_fme_transformation
+        constraints = transBlock.projected_constraints
+    
+        #TransformationFactory('core.relax_integer_vars').apply_to(m) 
+        # HACK: The above will work after #1428, but for now, the real place I
+        # need to relax integrality is the indicator_vars, so I'm doing it by
+        # hand
+        relaxed_vars = ComponentMap()
+        for v in m.component_data_objects(Var, descend_into=True):
+            if not v.is_integer():
+                continue
+            lb, ub = v.bounds
+            domain = v.domain
+            v.domain = Reals
+            v.setlb(lb)
+            v.setub(ub)
+            relaxed_vars[v] = domain
+        active_objs = []
+        for obj in m.component_data_objects(Objective, descend_into=True):
+            if obj.active:
+                active_objs.append(obj)
+            obj.deactivate()
+        obj_name = unique_component_name(m, '_fme_post_process_obj')
+        obj = Objective(expr=0)
+        m.add_component(obj_name, obj)
+        for i in constraints:
+            # If someone wants us to ignore it and leave it in the model, we
+            # can.
+            if not constraints[i].active:
+                continue
+            constraints[i].deactivate()
+            m.del_component(obj)
+            obj = Objective(expr=constraints[i].body - constraints[i].lower)
+            m.add_component(obj_name, obj)
+            results = solver_factory.solve(m)
+            print(results.solver.termination_condition)
+            if results.solver.termination_condition == \
+               TerminationCondition.unbounded:
+                obj_val = -float('inf')
+            elif results.solver.termination_condition != \
+               TerminationCondition.optimal:
+                raise RuntimeError("Unsuccessful subproblem solve when checking"
+                                   "constraint %s.\n\t"
+                                   "Termination Condition: %s" %
+                                   (constraints[i].name, 
+                                    results.solver.termination_condition))
+            else:
+                obj_val = value(obj)
+            if obj_val >= 0:
+                m.del_component(constraints[i])
+                del constraints[i]
+            else:
+                constraints[i].activate()
+
+        # clean up
+        m.del_component(obj)
+        for obj in active_objs:
+            obj.activate()
+        # TODO: We'll just call the reverse transformation for
+        # relax_integer_vars, but doing it manually for now
+        for v, domain in iteritems(relaxed_vars):
+            lb, ub = v.bounds
+            v.domain = domain
+            v.setlb(lb)
+            v.setub(ub)
