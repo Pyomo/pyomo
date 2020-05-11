@@ -271,7 +271,7 @@ def _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER):
                     "disjunction before the disjunct in the list."
                     % (_probDisjName, disjunct.name))
 
-def _warn_for_active_disjunct(innerdisjunct, outerdisjunct):
+def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
     assert innerdisjunct.active
     problemdisj = innerdisjunct
     if innerdisjunct.is_indexed():
@@ -285,5 +285,8 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct):
                     "is not in a disjunction or the disjunction it is in "
                     "has not been transformed. {0} needs to be deactivated "
                     "or its disjunction transformed before {1} can be "
-                    "transformed.".format(problemdisj.name,
-                                          outerdisjunct.name))
+                    "transformed.".format(problemdisj.getname(
+                        fully_qualified=True, name_buffer = NAME_BUFFER),
+                                          outerdisjunct.getname(
+                                              fully_qualified=True, 
+                                              name_buffer=NAME_BUFFER)))

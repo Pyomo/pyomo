@@ -675,7 +675,7 @@ class ConvexHull_Transformation(Transformation):
 
     def _warn_for_active_disjunct( self, innerdisjunct, outerdisjunct,
                                    var_substitute_map, zero_substitute_map):
-        _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
+        _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER)
 
     def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
                                       zero_substitute_map):
