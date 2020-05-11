@@ -651,45 +651,6 @@ def substitute_template_with_value(expr):
         return resolve_template(expr)
 
 
-
-class mock_globals(object):
-    """Implement custom context for a user-specified function.
-
-    This class implements a custom context that injects user-specified
-    attributes into the globals() context before calling a function (and
-    then cleans up the global context after the function returns).
-
-    Parameters
-    ----------
-        fcn : function
-            The function whose globals context will be overridden
-        overrides : dict
-            A dict mapping {name: object} that will be injected into the
-            `fcn` globals() context.
-    """
-    __slots__ = ('_data',)
-
-    def __init__(self, fcn, overrides):
-        self._data = fcn, overrides
-
-    def __call__(self, *args, **kwds):
-        fcn, overrides = self._data
-        _old = {}
-        try:
-            for name, val in iteritems(overrides):
-                if name in fcn.__globals__:
-                    _old[name] = fcn.__globals__[name]
-            fcn.__globals__[name] = val
-
-            return fcn(*args, **kwds)
-        finally:
-            for name, val in iteritems(overrides):
-                if name in _old:
-                    fcn.__globals__[name] = _old[name]
-                else:
-                    del fcn.__globals__[name]
-
-
 class _set_iterator_template_generator(object):
     """Replacement iterator that returns IndexTemplates
 
