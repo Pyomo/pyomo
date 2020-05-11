@@ -5,8 +5,6 @@ from collections import OrderedDict
 import logging
 
 
-# TODO: Probably should move this into the base solver file
-
 class MumpsInterface(LinearSolverInterface):
 
     @classmethod
@@ -66,62 +64,19 @@ class MumpsInterface(LinearSolverInterface):
         if not isspmatrix_coo(matrix):
             matrix = matrix.tocoo()
         matrix = tril(matrix)
-
-#        if not self.allow_reallocation:
         self._mumps.do_numeric_factorization(matrix)
-#        else:
-#            success = False
-#            for count in range(self.max_num_realloc):
-#                try:
-#                    self._mumps.do_numeric_factorization(matrix)
-#                    success = True
-#                    break
-#                except RuntimeError as err:
-#                    # What is the proper error to indicate that numeric
-#                    # factorization needs reallocation?
-#                    msg = str(err)
-#                    if ('MUMPS error: -9' not in msg and 
-#                        'MUMPS error: -8' not in msg):
-#                        raise
-#
-#                    status = self.get_infog(1)
-#                    if status != -8 and status != -9:
-#                        raise
-#
-#                    # Increase the amount of memory allocated to this
-#                    # factorization.
-#                    new_allocation = self.increase_memory_allocation()
-#
-#                    # Should probably handle propagation with a context manager
-#                    self.logger.propagate = True
-#                    self.logger.info(
-#                            'Reallocating memory for MUMPS Linear Solver. '
-#                            'New memory allocation is ' + str(new_allocation)
-#                            + ' MB.')
-#                    self.logger.propagate = False
-#                    
-#            if not success:
-#                raise RuntimeError(
-#                        'Maximum number of reallocations exceeded in the '
-#                        'numeric factorization.')
 
-    def increase_memory_allocation(self):
+    def increase_memory_allocation(self, factor):
         # info(16) is rounded to the nearest MB, so it could be zero
         if self._prev_allocation == 0:
             new_allocation = 1
         else:
-            new_allocation = 2*self._prev_allocation
+            new_allocation = factor*self._prev_allocation
         # Here I set the memory allocation directly instead of increasing
         # the "percent-increase-from-predicted" parameter ICNTL(14)
         self.set_icntl(23, new_allocation)
         self._prev_allocation = new_allocation
         return new_allocation
-
-    def set_memory_allocation(self, value):
-        self.set_icntl(23, value)
-
-    def get_memory_allocation(self):
-        return self._prev_allocation
 
     def try_factorization(self, kkt):
         error = None

@@ -13,22 +13,6 @@ import pdb
 ip_logger = logging.getLogger('interior_point')
 
 
-@contextmanager
-def linear_solve_context(filename=None):
-    # Should this attempt to change output log level? For instance, if 
-    # filename is provided, lower log level to debug.
-    #
-    # This should be just a wrapper around linear_solver methods
-    with capture_output() as st:
-        yield st
-    output = st.getvalue()
-    if filename is None:
-        # But don't want to print if there is no file
-        # Want to log with low priority if there is no file
-        print(output)
-    with open(filename, 'a') as f:
-        f.write(output)
-
 class LinearSolveContext(object):
     def __init__(self, 
             interior_point_logger, 
@@ -117,13 +101,15 @@ class InteriorPointSolver(object):
     def __init__(self, linear_solver, max_iter=100, tol=1e-8, 
             regularize_kkt=False,
             linear_solver_log_filename=None,
-            max_reallocation_iterations=5):
+            max_reallocation_iterations=5,
+            reallocation_factor=2):
         self.linear_solver = linear_solver
         self.max_iter = max_iter
         self.tol = tol
         self.regularize_kkt = regularize_kkt
         self.linear_solver_log_filename = linear_solver_log_filename
         self.max_reallocation_iterations = max_reallocation_iterations
+        self.reallocation_factor = reallocation_factor
 
         self.logger = logging.getLogger('interior_point')
         self._iter = 0
@@ -309,16 +295,12 @@ class InteriorPointSolver(object):
             status = self.linear_solver.get_infog(1)
             if (('MUMPS error: -9' in msg or 'MUMPS error: -8' in msg)
                     and (status == -8 or status == -9)):
-                prev_allocation = self.linear_solver.get_memory_allocation()
-                if prev_allocation == 0:
-                    new_allocation = 1
-                else:
-                    new_allocation = 2*prev_allocation
+                new_allocation = self.linear_solver.increase_memory_allocation(
+                        self.reallocation_factor)
                 self.logger.info('Reallocating memory for linear solver. '
                         'New memory allocation is %s' % (new_allocation))
                 # ^ Don't write the units as different linear solvers may
                 # report different units.
-                self.linear_solver.set_memory_allocation(new_allocation)
             elif err is not None:
                 return err
             else:
@@ -344,7 +326,6 @@ class InteriorPointSolver(object):
         reg_kkt_1 = kkt
         reg_coef = 1e-4
 
-        #err = linear_solver.try_factorization(kkt)
         err = self.try_factorization_and_reallocation(kkt)
         if linear_solver.is_numerically_singular(err):
             # No context manager for "equality gradient regularization,"
@@ -353,7 +334,6 @@ class InteriorPointSolver(object):
                              'Regularizing equality gradient...')
             reg_kkt_1 = self.interface.regularize_equality_gradient(kkt,
                                        eq_reg_coef)
-            #err = linear_solver.try_factorization(reg_kkt_1)
             err = self.try_factorization_and_reallocation(reg_kkt_1)
 
         inertia = linear_solver.get_inertia()
@@ -371,7 +351,6 @@ class InteriorPointSolver(object):
                                                                   reg_coef)
                     reg_iter += 1
     
-                    #err = linear_solver.try_factorization(reg_kkt_2)
                     err = self.try_factorization_and_reallocation(reg_kkt_2)
                     inertia = linear_solver.get_inertia()
                     reg_con.log_info(_iter, reg_iter, reg_coef, inertia)
