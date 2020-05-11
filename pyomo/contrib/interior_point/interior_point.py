@@ -112,10 +112,14 @@ class InteriorPointSolver(object):
             with open(linear_solver_log_filename, 'w'):
                 pass
 
-        self.linear_solver_logger = self.linear_solver.getLogger()
-        self.linear_solve_context = LinearSolveContext(self.logger,
-                self.linear_solver_logger,
-                self.linear_solver_log_filename)
+        if linear_solver:
+            # ^ This if statement is a hack to get some tests to pass without
+            # needing to supply a linear solver. Really should have a dummy
+            # linear solver that we could pass in such cases.
+            self.linear_solver_logger = self.linear_solver.getLogger()
+            self.linear_solve_context = LinearSolveContext(self.logger,
+                    self.linear_solver_logger,
+                    self.linear_solver_log_filename)
 
 
     def set_linear_solver(self, linear_solver):
@@ -284,21 +288,22 @@ class InteriorPointSolver(object):
         success = False
         for count in range(self.max_reallocation_iterations):
             err = self.linear_solver.try_factorization(kkt)
+            if not err:
+                success = True
+                break
             msg = str(err)
-            status = self.linear_solver.get_infog(1)
-            if (('MUMPS error: -9' in msg or 'MUMPS error: -8' in msg)
-                    and (status == -8 or status == -9)):
+#            status = self.linear_solver.get_infog(1)
+# TODO: Incorporate status in a LinearSolverResults object
+            if ('MUMPS error: -9' in msg or 'MUMPS error: -8' in msg):
+#                    and (status == -8 or status == -9)):
                 new_allocation = self.linear_solver.increase_memory_allocation(
                         self.reallocation_factor)
                 self.logger.info('Reallocating memory for linear solver. '
                         'New memory allocation is %s' % (new_allocation))
                 # ^ Don't write the units as different linear solvers may
                 # report different units.
-            elif err is not None:
-                return err
             else:
-                success = True
-                break
+                return err
         if not success:
             raise RuntimeError(
                 'Maximum number of memory reallocations exceeded in the '
