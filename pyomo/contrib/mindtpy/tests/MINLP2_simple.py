@@ -54,7 +54,7 @@ class SimpleMINLP(ConcreteModel):
         # DISCRETE VARIABLES
         Y = m.Y = Var(J, domain=Binary, initialize=initY)
         # CONTINUOUS VARIABLES
-        X = m.X = Var(I, domain=NonNegativeReals, initialize=initX)
+        X = m.X = Var(I, domain=NonNegativeReals, initialize=initX, bounds=(0, 2))
 
         """Constraint definitions"""
         # CONSTRAINTS

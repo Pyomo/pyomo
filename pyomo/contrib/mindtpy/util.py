@@ -13,6 +13,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 
 class MindtPySolveData(object):
@@ -40,19 +41,24 @@ def model_is_valid(solve_data, config):
         prob.number_of_integer_variables == 0 and
             prob.number_of_disjunctions == 0):
         config.logger.info('Problem has no discrete decisions.')
-        if len(MindtPy.working_nonlinear_constraints) > 0:
+        obj = next(m.component_data_objects(ctype=Objective, active=True))
+        if (any(c.body.polynomial_degree() not in (1, 0) for c in MindtPy.constraint_list) or
+                obj.expr.polynomial_degree() not in (1, 0)):
             config.logger.info(
                 "Your model is an NLP (nonlinear program). "
-                "Using NLP solver %s to solve." % config.nlp)
-            SolverFactory(config.nlp).solve(
-                solve_data.original_model, **config.nlp_options)
+                "Using NLP solver %s to solve." % config.nlp_solver)
+            SolverFactory(config.nlp_solver).solve(
+                solve_data.original_model, **config.nlp_solver_args)
             return False
         else:
             config.logger.info(
                 "Your model is an LP (linear program). "
-                "Using LP solver %s to solve." % config.mip)
-            SolverFactory(config.mip).solve(
-                solve_data.original_model, **config.mip_options)
+                "Using LP solver %s to solve." % config.mip_solver)
+            mipopt = SolverFactory(config.mip_solver)
+            if isinstance(mipopt, PersistentSolver):
+                mipopt.set_instance(solve_data.original_model)
+
+            mipopt.solve(solve_data.original_model, **config.mip_solver_args)
             return False
 
     if not hasattr(m, 'dual'):  # Set up dual value reporting
@@ -72,7 +78,8 @@ def calc_jacobians(solve_data, config):
         if c.body.polynomial_degree() in (1, 0):
             continue  # skip linear constraints
         vars_in_constr = list(EXPR.identify_variables(c.body))
-        jac_list = differentiate(c.body, wrt_list=vars_in_constr, mode=differentiate.Modes.sympy)
+        jac_list = differentiate(
+            c.body, wrt_list=vars_in_constr, mode=differentiate.Modes.sympy)
         solve_data.jacobians[c] = ComponentMap(
             (var, jac_wrt_var)
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))
@@ -87,5 +94,3 @@ def add_feas_slacks(m):
         c = MindtPy.MindtPy_feas.feas_constraints.add(
             constr.body - rhs
             <= MindtPy.MindtPy_feas.slack_var[i])
-
-

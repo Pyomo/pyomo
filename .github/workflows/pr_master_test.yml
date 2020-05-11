@@ -1,8 +1,11 @@
-name: GitHub Branch CI
+name: GitHub CI
 
 on:
   push:
-    branches-ignore:
+    branches:
+      - master
+  pull_request:
+    branches:
       - master
 
 defaults:
@@ -24,8 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python: [3.8]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
         mpi: [0]
         include:
         - os: ubuntu-latest
@@ -33,12 +36,10 @@ jobs:
           PYENV: pip
 
         - os: macos-latest
-          python: 2.7
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.5
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
