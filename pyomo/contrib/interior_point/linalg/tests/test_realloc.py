@@ -22,7 +22,7 @@ from scipy.sparse import coo_matrix
 class TestReallocation(unittest.TestCase):
 
     @unittest.skipIf(not mumps_available, 'mumps is not available')
-    def test_reallocate_memory(self):
+    def test_reallocate_memory_mumps(self):
 
         # Create a tri-diagonal matrix with small entries on the diagonal
         n = 10000
@@ -52,9 +52,11 @@ class TestReallocation(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'MUMPS error: -9'):
             linear_solver.do_numeric_factorization(matrix)
 
-        linear_solver.allow_reallocation = True
-        linear_solver.max_num_realloc = 5
         linear_solver.do_symbolic_factorization(matrix)
+
+        factor = 2
+        linear_solver.increase_memory_allocation(factor)
+
         linear_solver.do_numeric_factorization(matrix)
 
         # Expected memory allocation (MB)
@@ -71,4 +73,4 @@ class TestReallocation(unittest.TestCase):
 
 if __name__ == '__main__':
     test_realloc = TestReallocation()
-    test_realloc.test_reallocate_memory()
+    test_realloc.test_reallocate_memory_mumps()
