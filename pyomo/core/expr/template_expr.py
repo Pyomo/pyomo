@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import __builtin__
 import copy
 import itertools
 import logging
@@ -728,21 +729,20 @@ def templatize_rule(block, rule, index_set):
     import pyomo.core.base.set
     context = _template_iter_context()
     internal_error = None
-    try:
-        # Override Set iteration to return IndexTemplates
-        _old_iters = (
+    _old_iters = (
             pyomo.core.base.set._FiniteSetMixin.__iter__,
             GetItemExpression.__iter__,
             GetAttrExpression.__iter__,
         )
+    _old_sum = __builtin__.sum
+    try:
+        # Override Set iteration to return IndexTemplates
         pyomo.core.base.set._FiniteSetMixin.__iter__ \
             = GetItemExpression.__iter__ \
             = GetAttrExpression.__iter__ \
             = lambda x: context.get_iter(x).__iter__()
-
         # Override sum with our sum
-        _old_sum = __builtins__['sum']
-        __builtins__['sum'] = context.sum_template
+        __builtin__.sum = context.sum_template
         # Get the index templates needed for calling the rule
         if index_set is not None:
             if not index_set.isfinite():
@@ -772,7 +772,7 @@ def templatize_rule(block, rule, index_set):
         pyomo.core.base.set._FiniteSetMixin.__iter__, \
             GetItemExpression.__iter__, \
             GetAttrExpression.__iter__ = _old_iters
-        __builtins__['sum'] = _old_sum
+        __builtin__.sum = _old_sum
         if len(context.cache):
             if internal_error is not None:
                 logger.error("The following exception was raised when "
