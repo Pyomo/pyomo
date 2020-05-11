@@ -7,45 +7,26 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from ctypes.util import find_library
-import sys
-import os
 
+def validate_index(i, array_len, array_name=''):
+    if not isinstance(i, int):
+        raise TypeError(
+            'Index into %s array must be an integer. Got %s'
+            % (array_name, type(i)))
+    if i < 1 or i > array_len:
+        # NOTE: Use the FORTRAN indexing (same as documentation) to
+        # set and access info/cntl arrays from Python, whereas C
+        # functions use C indexing. Maybe this is too confusing.
+        raise IndexError(
+            'Index %s is out of range for %s array of length %s'
+            % (i, array_name, array_len))
 
-def find_pynumero_library(library_name):
+def validate_value(val, dtype, array_name=''):
+    if not isinstance(val, dtype):
+        raise ValueError(
+            'Members of %s array must have type %s. Got %s'
+            % (array_name, dtype, type(val)))
 
-    lib_path = find_library(library_name)
-    if lib_path is not None:
-        return lib_path
+class _NotSet:
+    pass
 
-    # On windows the library is prefixed with 'lib'
-    lib_path = find_library('lib'+library_name)
-    if lib_path is not None:
-        return lib_path
-    else:
-        # try looking into extensions directory now
-        file_path = os.path.abspath(__file__)
-        dir_path = os.path.dirname(file_path)
-
-        if os.name in ['nt', 'dos']:
-            libname = 'lib/Windows/lib{}.dll'.format(library_name)
-        elif sys.platform in ['darwin']:
-            libname = 'lib/Darwin/lib{}.dylib'.format(library_name)
-        else:
-            libname = 'lib/Linux/lib{}.so'.format(library_name)
-
-        lib_path = os.path.join(dir_path, libname)
-
-        if os.path.exists(lib_path):
-            return lib_path
-    return None
-
-
-def found_pynumero_libraries():
-
-    p1 = find_pynumero_library('pynumero_ASL')
-    p2 = find_pynumero_library('pynumero_SPARSE')
-
-    if p1 is not None and p2 is not None:
-        return True
-    return False

@@ -9,12 +9,13 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 
-from pyomo.contrib.pynumero import numpy_available, scipy_available
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available, scipy_available
+)
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
 from scipy.sparse import coo_matrix, bmat
-import numpy as np
 
 from pyomo.contrib.pynumero.sparse.utils import is_symmetric_dense, is_symmetric_sparse
 
