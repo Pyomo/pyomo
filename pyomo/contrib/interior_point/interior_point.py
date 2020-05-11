@@ -17,40 +17,31 @@ class LinearSolveContext(object):
     def __init__(self, 
             interior_point_logger, 
             linear_solver_logger,
-            filename=None):
+            filename=None,
+            level=logging.INFO):
 
         self.interior_point_logger = interior_point_logger
         self.linear_solver_logger = linear_solver_logger
         self.filename = filename
 
-        self.linear_solver_logger.propagate = False
-
-        stream_handler = logging.StreamHandler()
         if filename:
-            stream_handler.setLevel(
-                    interior_point_logger.level)
-        else:
-            stream_handler.setLevel(
-                    interior_point_logger.level+10)
-        linear_solver_logger.addHandler(stream_handler)
-
-        self.capture_context = capture_output()
+            self.handler = logging.FileHandler(filename)
+            self.handler.setLevel(level)
 
     def __enter__(self):
+        self.linear_solver_logger.propagate = False
+        self.interior_point_logger.propagate = False
         if self.filename:
-            st = self.capture_context.__enter__()
-            #with capture_output() as st:
-            #    pdb.set_trace()
-            #    self.output = st
-            #    yield st
-            self.output = st
-            yield self
+            self.linear_solver_logger.addHandler(self.handler)
+            self.interior_point_logger.addHandler(self.handler)
+
 
     def __exit__(self, et, ev, tb):
+        self.linear_solver_logger.propagate = True
+        self.interior_point_logger.propagate = True
         if self.filename:
-            self.capture_context.__exit__(et, ev, tb)
-            with open(self.filename, 'a') as f:
-                f.write(self.output.getvalue())
+            self.linear_solver_logger.removeHandler(self.handler)
+            self.interior_point_logger.removeHandler(self.handler)
 
 
 # How should the RegContext work?
@@ -255,7 +246,9 @@ class InteriorPointSolver(object):
                         max_reg_coef=max_reg_coef,
                         factor_increase=reg_factor_increase)
 
-            delta = linear_solver.do_back_solve(rhs)
+            with self.linear_solve_context:
+                self.logger.info('Iter: %s' % self._iter)
+                delta = linear_solver.do_back_solve(rhs)
 
             interface.set_primal_dual_kkt_solution(delta)
             alpha_primal_max, alpha_dual_max = \
