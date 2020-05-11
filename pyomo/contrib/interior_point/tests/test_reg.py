@@ -1,4 +1,5 @@
 import pyutilib.th as unittest
+from pyomo.core.base import ConcreteModel, Var, Constraint, Objective
 from pyomo.common.dependencies import attempt_import
 
 np, numpy_available = attempt_import('numpy', 'Interior point requires numpy',
@@ -18,13 +19,31 @@ from pyomo.contrib.interior_point.interface import InteriorPointInterface
 from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
 
 
+def make_model():
+    m = ConcreteModel()
+    m.x = Var([1,2,3], initialize=0)
+    m.f = Var([1,2,3], initialize=0)
+    m.F = Var(initialize=0)
+    m.f[1].fix(1)
+    m.f[2].fix(2)
+
+    m.sum_con = Constraint(expr= 
+            (1 == m.x[1] + m.x[2] + m.x[3]))
+    def bilin_rule(m, i):
+        return m.F*m.x[i] == m.f[i]
+    m.bilin_con = Constraint([1,2,3], rule=bilin_rule)
+
+    m.obj = Objective(expr=m.F**2)
+
+    return m
+
+
 class TestRegularization(unittest.TestCase):
     @unittest.skipIf(not asl_available, 'asl is not available')
     @unittest.skipIf(not mumps_available, 'mumps is not available')
     def test_regularize_mumps(self):
-        interface = InteriorPointInterface('reg.nl')
-        '''This NLP is the solve for consistent initial conditions 
-        in a simple 3-reaction CSTR.'''
+        m = make_model()
+        interface = InteriorPointInterface(m)
 
         linear_solver = mumps_interface.MumpsInterface()
 
@@ -46,15 +65,8 @@ class TestRegularization(unittest.TestCase):
         # Perform one iteration of interior point algorithm
         x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=1)
 
-# The exact regularization coefficient at which Mumps recognizes the matrix
-# as non-singular appears to be non-deterministic...
-# I have seen 1e-4, 1e-2, and 1e0.
-# According to scipy, 1e-4 seems to be correct, although Numpy's eigenvalue
-# routine is probably not as accurate as MUMPS
-# MUMPS 5.3.1 seems to settle on 1e-2
-# According to MA57, 1e-4 (or lower) is sufficient.
 #        # Expected regularization coefficient:
-        self.assertAlmostEqual(ip_solver.reg_coef, 1e-2)
+        self.assertAlmostEqual(ip_solver.reg_coef, 1e-4)
 
         desired_n_neg_evals = (ip_solver.interface._nlp.n_eq_constraints() +
                                ip_solver.interface._nlp.n_ineq_constraints())
@@ -65,18 +77,12 @@ class TestRegularization(unittest.TestCase):
         self.assertEqual(n_null_evals, 0)
         self.assertEqual(n_neg_evals, desired_n_neg_evals)
 
-# The following is buggy. When regularizing the KKT matrix in iteration 0, 
-# I will sometimes exceed the max regularization coefficient.
-# This happens even if I recreate linear_solver and ip_solver.
-# Appears to be non-deterministic
-# Using MUMPS 5.2.1
-# Problem persists with MUMPS 5.3.1
         # Now perform two iterations of the interior point algorithm.
         # Because of the way the solve routine is written, updates to the
         # interface's variables don't happen until the start of the next
         # next iteration, meaning that the interface has been unaffected
         # by the single iteration performed above.
-        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=2)
+        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=10)
 
         # This will be the KKT matrix in iteration 1, without regularization
         kkt = interface.evaluate_primal_dual_kkt_matrix()
@@ -94,9 +100,8 @@ class TestRegularization(unittest.TestCase):
     @unittest.skipIf(not asl_available, 'asl is not available')
     @unittest.skipIf(not scipy_available, 'scipy is not available')
     def test_regularize_scipy(self):
-        interface = InteriorPointInterface('reg.nl')
-        '''This NLP is the solve for consistent initial conditions 
-        in a simple 3-reaction CSTR.'''
+        m = make_model()
+        interface = InteriorPointInterface(m)
 
         linear_solver = ScipyInterface(compute_inertia=True)
 
@@ -130,7 +135,9 @@ class TestRegularization(unittest.TestCase):
         # interface's variables don't happen until the start of the next
         # next iteration, meaning that the interface has been unaffected
         # by the single iteration performed above.
-        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=2)
+        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=15)
+        # ^ More iterations are required to get to a region of proper inertia
+        # when using scipy. This is not unexpected
 
         # This will be the KKT matrix in iteration 1, without regularization
         kkt = interface.evaluate_primal_dual_kkt_matrix()
