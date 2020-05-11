@@ -76,10 +76,7 @@ class _VariableData(object):
         self.types.append(type_)
         self.names.append(name)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *excinfo):
+    def store_in_cplex(self):
         self._solver_model.variables.add(
             lb=self.lb, ub=self.ub, types=self.types, names=self.names
         )
@@ -101,10 +98,7 @@ class _LinearConstraintData(object):
         self.range_values.append(range_values)
         self.names.append(name)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *excinfo):
+    def store_in_cplex(self):
         self._solver_model.linear_constraints.add(
             lin_expr=self.lin_expr,
             senses=self.senses,
@@ -112,27 +106,6 @@ class _LinearConstraintData(object):
             range_values=self.range_values,
             names=self.names,
         )
-
-
-# `nullcontext()` is part of the standard library as of Py3.7
-# This is verbatim from `cpython/Lib/contextlib.py`
-class nullcontext(object):
-    """Context manager that does no additional processing.
-    Used as a stand-in for a normal context manager, when a particular
-    block of code is only sometimes used with a normal context manager:
-    cm = optional_cm if condition else nullcontext()
-    with cm:
-        # Perform operation, using optional_cm if condition is True
-    """
-
-    def __init__(self, enter_result=None):
-        self.enter_result = enter_result
-
-    def __enter__(self):
-        return self.enter_result
-
-    def __exit__(self, *excinfo):
-        pass
 
 
 @SolverFactory.register('cplex_direct', doc='Direct python interface to CPLEX')
@@ -321,7 +294,7 @@ class CPLEXDirect(DirectSolver):
 
         return cplex_expr, referenced_vars
 
-    def _add_var(self, var, cplex_var_data=None):
+    def _add_var(self, var, var_data=None):
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._cplex_vtype_from_var(var)
         if var.has_lb():
@@ -337,13 +310,12 @@ class CPLEXDirect(DirectSolver):
             lb = value(var)
             ub = value(var)
 
-        ctx = (
-            _VariableData(self._solver_model)
-            if cplex_var_data is None
-            else nullcontext(cplex_var_data)
+        cplex_var_data = (
+            _VariableData(self._solver_model) if var_data is None else var_data
         )
-        with ctx as cplex_var_data:
-            cplex_var_data.add(lb=lb, ub=ub, type_=vtype, name=varname)
+        cplex_var_data.add(lb=lb, ub=ub, type_=vtype, name=varname)
+        if var_data is None:
+            cplex_var_data.store_in_cplex()
 
         self._pyomo_var_to_solver_var_map[var] = varname
         self._solver_var_to_pyomo_var_map[varname] = var
@@ -383,48 +355,50 @@ class CPLEXDirect(DirectSolver):
                             % (var.name, self._pyomo_model.name,))
 
     def _add_block(self, block):
-        with _VariableData(self._solver_model) as cplex_var_data:
-            for var in block.component_data_objects(
-                ctype=pyomo.core.base.var.Var, descend_into=True, active=True, sort=True
+        var_data = _VariableData(self._solver_model)
+        for var in block.component_data_objects(
+            ctype=pyomo.core.base.var.Var, descend_into=True, active=True, sort=True
+        ):
+            self._add_var(var, var_data)
+        var_data.store_in_cplex()
+
+        lin_con_data = _LinearConstraintData(self._solver_model)
+        for sub_block in block.block_data_objects(descend_into=True, active=True):
+            for con in sub_block.component_data_objects(
+                ctype=pyomo.core.base.constraint.Constraint,
+                descend_into=False,
+                active=True,
+                sort=True,
             ):
-                self._add_var(var, cplex_var_data)
+                if not con.has_lb() and not con.has_ub():
+                    assert not con.equality
+                    continue  # non-binding, so skip
 
-        with _LinearConstraintData(self._solver_model) as cplex_lin_con_data:
-            for sub_block in block.block_data_objects(descend_into=True, active=True):
-                for con in sub_block.component_data_objects(
-                    ctype=pyomo.core.base.constraint.Constraint,
-                    descend_into=False,
-                    active=True,
-                    sort=True,
-                ):
-                    if not con.has_lb() and not con.has_ub():
-                        assert not con.equality
-                        continue  # non-binding, so skip
+                self._add_constraint(con, lin_con_data)
 
-                    self._add_constraint(con, cplex_lin_con_data)
+            for con in sub_block.component_data_objects(
+                ctype=pyomo.core.base.sos.SOSConstraint,
+                descend_into=False,
+                active=True,
+                sort=True,
+            ):
+                self._add_sos_constraint(con)
 
-                for con in sub_block.component_data_objects(
-                    ctype=pyomo.core.base.sos.SOSConstraint,
-                    descend_into=False,
-                    active=True,
-                    sort=True,
-                ):
-                    self._add_sos_constraint(con)
+            obj_counter = 0
+            for obj in sub_block.component_data_objects(
+                ctype=pyomo.core.base.objective.Objective,
+                descend_into=False,
+                active=True,
+            ):
+                obj_counter += 1
+                if obj_counter > 1:
+                    raise ValueError(
+                        "Solver interface does not support multiple objectives."
+                    )
+                self._set_objective(obj)
+        lin_con_data.store_in_cplex()
 
-                obj_counter = 0
-                for obj in sub_block.component_data_objects(
-                    ctype=pyomo.core.base.objective.Objective,
-                    descend_into=False,
-                    active=True,
-                ):
-                    obj_counter += 1
-                    if obj_counter > 1:
-                        raise ValueError(
-                            "Solver interface does not support multiple objectives."
-                        )
-                    self._set_objective(obj)
-
-    def _add_constraint(self, con, cplex_lin_con_data=None):
+    def _add_constraint(self, con, lin_con_data=None):
         if not con.active:
             return None
 
@@ -476,13 +450,14 @@ class CPLEXDirect(DirectSolver):
             )
 
         if len(cplex_expr.q_coefficients) == 0:
-            ctx = (
+            cplex_lin_con_data = (
                 _LinearConstraintData(self._solver_model)
-                if cplex_lin_con_data is None
-                else nullcontext(cplex_lin_con_data)
+                if lin_con_data is None
+                else lin_con_data
             )
-            with ctx as cplex_lin_con_data:
-                cplex_lin_con_data.add(cplex_expr, sense, rhs, range_, conname)
+            cplex_lin_con_data.add(cplex_expr, sense, rhs, range_, conname)
+            if lin_con_data is None:
+                cplex_lin_con_data.store_in_cplex()
         else:
             if sense == 'R':
                 raise ValueError("The CPLEXDirect interface does not "
