@@ -282,15 +282,15 @@ class SMT_visitor(StreamBasedExpressionVisitor):
             # This means the child is POD
             # i.e., int, float, string
             return False, str(child)
-        elif child.is_variable_type():
-            return False, str(self.variable_label_map.getSymbol(child))
-        elif child.is_parameter_type():
-            return False, str(value(child))
-        elif not child.is_expression_type():
-            return False, str(child)
-        else:
-            # this is an expression node
+        elif child.is_expression_type():
             return True, ""
+        elif child.is_numeric_type():
+            if child.is_fixed():
+                return False, str(value(child))
+            else:
+                return False, str(self.variable_label_map.getSymbol(child))
+        else:
+            return False, str(child)
 
     def finalizeResult(self, node_result):
         return node_result
