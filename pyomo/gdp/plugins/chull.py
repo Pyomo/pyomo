@@ -232,12 +232,12 @@ class ConvexHull_Transformation(Transformation):
                 raise GDP_Error("Target %s is not a component on instance %s!"
                                 % (t.name, instance.name))
             elif t.ctype is Disjunction:
-                if t.parent_component() is t:
+                if t.is_indexed():
                     self._transform_disjunction(t)
                 else:
                     self._transform_disjunctionData(t, t.index())
             elif t.ctype in (Block, Disjunct):
-                if t.parent_component() is t:
+                if t.is_indexed():
                     self._transform_block(t)
                 else:
                     self._transform_blockData(t)

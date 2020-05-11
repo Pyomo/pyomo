@@ -224,12 +224,12 @@ class BigM_Transformation(Transformation):
                 raise GDP_Error("Target %s is not a component on instance %s!"
                                 % (t.name, instance.name))
             elif t.ctype is Disjunction:
-                if t.parent_component() is t:
+                if t.is_indexed():
                     self._transform_disjunction(t, bigM)
                 else:
                     self._transform_disjunctionData( t, bigM, t.index())
             elif t.ctype in (Block, Disjunct):
-                if t.parent_component() is t:
+                if t.is_indexed():
                     self._transform_block(t, bigM)
                 else:
                     self._transform_blockData(t, bigM)
