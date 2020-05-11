@@ -144,21 +144,18 @@ class BigM_Transformation(Transformation):
             Block:       self._transform_block_on_disjunct,
         }
 
-    def _get_bigm_suffix_list(self, block):
+    def _get_bigm_suffix_list(self, block, stopping_block=None):
         # Note that you can only specify suffixes on BlockData objects or
         # SimpleBlocks. Though it is possible at this point to stick them
         # on whatever components you want, we won't pick them up.
         suffix_list = []
-        # first descend into the subblocks here to see if anything is there
-        for b in block.component_data_objects(Block, descend_into=(Block),
-                                              active=True,
-                                              sort=SortComponents.deterministic):
-            bigm = b.component('BigM')
-            if type(bigm) is Suffix:
-                suffix_list.append(bigm)
+        orig_block = block
 
-        # now go searching above the disjunct in the tree
-        while block is not None:
+        # go searching above block in the tree, stop when we hit stopping_block
+        # (This is so that we can search on each Disjunct once, but get any
+        # information between a cosntraint and its Disjunct while transforming
+        # the constraint).
+        while block is not stopping_block:
             bigm = block.component('BigM')
             if type(bigm) is Suffix:
                 suffix_list.append(bigm)
@@ -543,7 +540,7 @@ class BigM_Transformation(Transformation):
         return transBlock._constraintMap
 
     def _transform_constraint(self, obj, disjunct, bigMargs, arg_list,
-                              suffix_list):
+                              disjunct_suffix_list):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
         bigm_src = transBlock.bigm_src
@@ -588,6 +585,11 @@ class BigM_Transformation(Transformation):
 
             # if we didn't get something from args, try suffixes:
             if M is None:
+                # first get anything parent to c but below disjunct
+                suffix_list = self._get_bigm_suffix_list(c.parent_block(),
+                                                         stopping_block=disjunct)
+                # prepend that to what we already collected for the disjunct.
+                suffix_list.extend(disjunct_suffix_list)
                 M = self._get_M_from_suffixes(c, suffix_list, bigm_src)
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):

@@ -1769,6 +1769,41 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertIs(repn.linear_vars[1], m.evil[1].indicator_var)
         self.assertEqual(repn.linear_coefs[1], 2000)
 
+    def test_use_correct_none_suffix(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-100, 111))
+        m.b = Block()
+        m.b.d = Disjunct()
+        m.b.d.foo = Block()
+
+        m.b.d.c = Constraint(expr=m.x>=9)
+
+        m.b.BigM = Suffix()
+        m.b.BigM[None] = 10
+        m.b.d.foo.BigM = Suffix()
+        m.b.d.foo.BigM[None] = 1
+
+        m.d = Disjunct()
+        m.disj = Disjunction(expr=[m.d, m.b.d])
+
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+
+        # we should have picked up 10 for m.b.d.c
+        cons_list = bigm.get_transformed_constraints(m.b.d.c)
+        lb = cons_list[0]
+        self.assertEqual(lb.index(), 'lb')
+        self.assertEqual(lb.lower, 9)
+        self.assertIsNone(lb.upper)
+        repn = generate_standard_repn(lb.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 10)
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertIs(repn.linear_vars[0], m.x)
+        self.assertEqual(repn.linear_coefs[0], 1)
+        self.assertIs(repn.linear_vars[1], m.b.d.indicator_var)
+        self.assertEqual(repn.linear_coefs[1], -10)
+
 class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
     def test_activeInnerDisjunction_err(self):
         ct.check_activeInnerDisjunction_err(self, 'bigm')
