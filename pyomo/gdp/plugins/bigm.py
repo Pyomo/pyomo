@@ -155,7 +155,7 @@ class BigM_Transformation(Transformation):
 
         # go searching above block in the tree, stop when we hit stopping_block
         # (This is so that we can search on each Disjunct once, but get any
-        # information between a cosntraint and its Disjunct while transforming
+        # information between a constraint and its Disjunct while transforming
         # the constraint).
         while block is not stopping_block:
             bigm = block.component('BigM')
