@@ -1,3 +1,4 @@
+from __future__ import division
 import operator
 from itertools import product
 
@@ -270,7 +271,54 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertTrue(Equivalent(m.Y1, m.Y2).is_expression_type())
         self.assertTrue(AtMost(1, [m.Y1, m.Y2, m.Y3]).is_expression_type())
 
-    @unittest.skipUnless(sympy_available, "sympy not available")
+    def test_numeric_invalid(self):
+        m = ConcreteModel()
+        m.Y1 = BooleanVar()
+        m.Y2 = BooleanVar()
+        m.Y3 = BooleanVar()
+
+        def invalid_expression_generator():
+            yield lambda: m.Y1 >= 0
+            yield lambda: m.Y1 <= 0
+            yield lambda: m.Y1 > 0
+            yield lambda: m.Y1 < 0
+            yield lambda: m.Y1 + m.Y2
+            yield lambda: m.Y1 - m.Y2
+            yield lambda: m.Y1 * m.Y2
+            yield lambda: m.Y1 / m.Y2
+            yield lambda: m.Y1 // m.Y2
+            yield lambda: m.Y1**m.Y2
+            yield lambda: 0 + m.Y2
+            yield lambda: 0 - m.Y2
+            yield lambda: 0 * m.Y2
+            yield lambda: 0 / m.Y2
+            yield lambda: 0 // m.Y2
+            yield lambda: 0**m.Y2
+            yield lambda: -m.Y1
+            yield lambda: +m.Y1
+
+        numeric_error_msg = "Unable to perform arithmetic operations between logical values."
+        for invalid_expr_fcn in invalid_expression_generator():
+            with self.assertRaisesRegex(TypeError, numeric_error_msg):
+                myexpr = invalid_expr_fcn()
+
+    def test_invalid_conversion(self):
+        m = ConcreteModel()
+        m.Y1 = BooleanVar()
+
+        with self.assertRaisesRegex(
+                TypeError, "Implicit conversion of Pyomo LogicalValue type "
+                "'Y1' to a float is disabled."):
+            float(m.Y1)
+
+        with self.assertRaisesRegex(
+                TypeError, "Implicit conversion of Pyomo LogicalValue type "
+                r"'Y1' to a integer is disabled."):
+            int(m.Y1)
+
+
+@unittest.skipUnless(sympy_available, "sympy not available")
+class TestCNF(unittest.TestCase):
     def test_cnf(self):
         m = ConcreteModel()
         m.Y1 = BooleanVar()
@@ -291,7 +339,7 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertEquals(str(x[0]), "extraY[1] | (~Y1)")
         self.assertIs(indicator_map[m.extraY[1]], atleast)
 
-        # TODO need to test other combinations as well
+    # TODO need to test other combinations as well
 
 
 if __name__ == "__main__":

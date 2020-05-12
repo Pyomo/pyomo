@@ -161,87 +161,87 @@ class LogicalValue(object):
             "'%s' to an integer is disabled." % (self.name,))
 
     def __lt__(self, other):
-        return TypeError(
+        raise TypeError(
             "Numeric comparison with LogicalValue %s is not allowed." % self.name)
 
     def __gt__(self, other):
-        return TypeError(
+        raise TypeError(
             "Numeric comparison with LogicalValue %s is not allowed." % self.name)
 
     def __le__(self, other):
-        return TypeError(
+        raise TypeError(
             "Numeric comparison with LogicalValue %s is not allowed." % self.name)
 
     def __ge__(self, other):
-        return TypeError(
+        raise TypeError(
             "Numeric comparison with LogicalValue %s is not allowed." % self.name)
     
     def __add__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __sub__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __mul__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __div__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __truediv__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __pow__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __radd__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __rsub__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __rmul__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __rdiv__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __rtruediv__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __rpow__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __iadd__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __isub__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __imul__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __idiv__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __itruediv__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __ipow__(self, other):
-        return TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __neg__(self):
-        return TypeError("""Negation operator on logical values is not defined.""")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __pos__(self):
-        return TypeError("""Positive operator on logical values is not defined.""")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __abs__(self):
-        return TypeError("""Absolute value operator on logical values is not defined.""")
+        raise TypeError("Unable to perform arithmetic operations between logical values.")
 
     def __bool__(self):
         """Evaluation as a boolean (using if, and, or keywords)"""
-        return TypeError("Use value() for finding the value of a LogicalValue.")
+        raise TypeError("Use value() for finding the value of a LogicalValue.")
 
     def __eq__(self, other):
         """
