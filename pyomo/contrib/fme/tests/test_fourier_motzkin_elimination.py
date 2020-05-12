@@ -20,10 +20,12 @@ from pyomo.core.expr.current import log
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, check_available_solvers
 
 # DEBUG
 from nose.tools import set_trace
+
+solvers = check_available_solvers('glpk')
 
 class TestFourierMotzkinElimination(unittest.TestCase):
     @staticmethod
@@ -484,7 +486,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                                                                        17, 15,
                                                                        11, 8, 1,
                                                                        2, 3, 4])
-
+    
+    @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_post_processing(self):
         m, disaggregatedVars = self.create_chull_model()
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
@@ -509,7 +512,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertIsInstance(m.component("obj"), Objective)
         self.assertTrue(m.obj.active)
         
-
+    @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_model_with_unrelated_nonlinear_expressions(self):
         m = ConcreteModel()
         m.x = Var([1, 2, 3], bounds=(0,3))
