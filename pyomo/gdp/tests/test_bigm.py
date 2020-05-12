@@ -25,7 +25,6 @@ import random
 import sys
 
 from six import iteritems, StringIO
-from nose.tools import set_trace
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
