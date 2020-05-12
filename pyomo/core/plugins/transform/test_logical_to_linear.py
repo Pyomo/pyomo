@@ -4,7 +4,7 @@ from pyomo.core.expr.logical_expr import AtLeast, AtMost, Exactly
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 from pyomo.environ import ConcreteModel, BooleanVar, LogicalStatement, TransformationFactory, RangeSet, \
-    Var, Constraint, ComponentMap, value
+    Var, Constraint, ComponentMap, value, BooleanSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests.test_bigm import check_linear_coef
 from pyomo.repn import generate_standard_repn
@@ -117,30 +117,80 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
                 (2, m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary(), None)
             ], m.logic_to_linear)
 
-        # TODO add in other statements
-        # TODO add in asserts to make sure things are generated correctly
+    def test_xfrm_atmost_statement(self):
+        m = ConcreteModel()
+        m.s = RangeSet(3)
+        m.Y = BooleanVar(m.s)
+        m.p = LogicalStatement(expr=AtMost(2, m.Y[1], m.Y[2], m.Y[3]))
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        _constrs_contained_within(
+            self, [
+                (None, m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary(), 2)
+            ], m.logic_to_linear)
+
+    def test_xfrm_exactly_statement(self):
+        m = ConcreteModel()
+        m.s = RangeSet(3)
+        m.Y = BooleanVar(m.s)
+        m.p = LogicalStatement(expr=Exactly(2, m.Y[1], m.Y[2], m.Y[3]))
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        _constrs_contained_within(
+            self, [
+                (2, m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary(), 2)
+            ], m.logic_to_linear)
 
     def test_xfrm_special_atoms_nonroot(self):
-        m = ConcreteModel()
-        m.s = RangeSet(3)
-        m.Y = BooleanVar(m.s)
-        m.p = LogicalStatement(expr=m.Y[1] >> AtLeast(2, m.Y[1], m.Y[2], m.Y[3]))
-        TransformationFactory('core.logical_to_linear').apply_to(m)
-        # m.pprint()
-
-        m = ConcreteModel()
-        m.s = RangeSet(3)
-        m.Y = BooleanVar(m.s)
-        m.p = LogicalStatement(expr=m.Y[1] >> AtMost(2, m.Y[1], m.Y[2], m.Y[3]))
-        TransformationFactory('core.logical_to_linear').apply_to(m)
-        # m.pprint()
+        # m = ConcreteModel()
+        # m.s = RangeSet(3)
+        # m.Y = BooleanVar(m.s)
+        # m.p = LogicalStatement(expr=m.Y[1] >> AtLeast(2, m.Y[1], m.Y[2], m.Y[3]))
+        # TransformationFactory('core.logical_to_linear').apply_to(m)
+        # augmented_vars = m.logic_to_linear_augmented_vars
+        # self.assertEqual(len(augmented_vars), 1)
+        # self.assertEqual(augmented_vars[1].domain, BooleanSet)
+        # _constrs_contained_within(
+        #     self, [
+        #         (None, sum(m.Y[:].as_binary()) - (1 + 2 * augmented_vars[1].as_binary()), 0),
+        #         (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
+        #         (None, 2 - 2 * (1 - augmented_vars[1].as_binary()) - sum(m.Y[:].as_binary()), 0)
+        #     ], m.logic_to_linear)
+        #
+        # m = ConcreteModel()
+        # m.s = RangeSet(3)
+        # m.Y = BooleanVar(m.s)
+        # m.p = LogicalStatement(expr=m.Y[1] >> AtMost(2, m.Y[1], m.Y[2], m.Y[3]))
+        # TransformationFactory('core.logical_to_linear').apply_to(m)
+        # augmented_vars = m.logic_to_linear_augmented_vars
+        # self.assertEqual(len(augmented_vars), 1)
+        # self.assertEqual(augmented_vars[1].domain, BooleanSet)
+        # _constrs_contained_within(
+        #     self, [
+        #         (None, sum(m.Y[:].as_binary()) - (1 - augmented_vars[1].as_binary() + 2), 0),
+        #         (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
+        #         (None, 3 - 3 * augmented_vars[1].as_binary() - sum(m.Y[:].as_binary()), 0)
+        #     ], m.logic_to_linear)
 
         m = ConcreteModel()
         m.s = RangeSet(3)
         m.Y = BooleanVar(m.s)
         m.p = LogicalStatement(expr=m.Y[1] >> Exactly(2, m.Y[1], m.Y[2], m.Y[3]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        # m.pprint()
+        augmented_vars = m.logic_to_linear_augmented_vars
+        self.assertEqual(len(augmented_vars), 3)
+        self.assertEqual(augmented_vars[1].domain, BooleanSet)
+        m.pprint()
+        _constrs_contained_within(
+            self, [
+                (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
+                (None, sum(m.Y[:].as_binary()) - (1 - augmented_vars[1].as_binary() + 2), 0),
+                (None, 2 - 2 * (1 - augmented_vars[1].as_binary()) - sum(m.Y[:].as_binary()), 0),
+                (1, augmented_vars[1].as_binary() + augmented_vars[2].as_binary() + augmented_vars[3].as_binary(), None)
+                # (None, m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary()
+                #  - (1 - augmented_vars[1].as_binary() + 2), 0),
+                # (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
+                # (None, 3 - 3 * augmented_vars[1].as_binary()
+                #  - (m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary()), 0)
+            ], m.logic_to_linear)
 
         m = ConcreteModel()
         m.s = RangeSet(3)
@@ -148,7 +198,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.x = Var(bounds=(1, 3))
         m.p = LogicalStatement(expr=m.Y[1] >> Exactly(m.x, m.Y[1], m.Y[2], m.Y[3]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        m.pprint()
+        # m.pprint()
 
     def test_xfrm_atleast_nested(self):
         m = _generate_boolean_model(4)
@@ -180,7 +230,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m = _generate_boolean_model(2)
         m.disj = Disjunction(expr=[
             [m.Y[1] >> m.Y[2]],
-            [m.Y[2] == False]
+            [m.Y[2].equivalent_to(False)]
         ])
         TransformationFactory('core.logical_to_linear').apply_to(m)
         m.pprint()

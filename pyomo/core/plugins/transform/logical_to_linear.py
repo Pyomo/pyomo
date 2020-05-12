@@ -87,9 +87,19 @@ def _process_statements_in_logical_context(context):
             new_constrlist.add(expr=linear_constraint)
 
     # Add bigM associated with special atoms
+    # Note: this ad-hoc reformulation may be revisited for tightness in the future.
+    old_varlist_length = len(new_varlist)
     for indicator_var, special_atom in indicator_map.items():
         for linear_constraint in _cnf_to_linear_constraint_list(special_atom, indicator_var, new_varlist):
             new_constrlist.add(expr=linear_constraint)
+
+    # Previous step may have added auxiliary binaries. Associate augmented Booleans to them.
+    num_new = len(new_varlist) - old_varlist_length
+    list_o_vars = list(new_varlist.values())
+    if num_new:
+        for binary_vardata in list_o_vars[-num_new:]:
+            new_bool_vardata = new_boolvarlist.add()
+            new_bool_vardata.set_binary_var(binary_vardata)
 
     # If added components were not used, remove them.
     # Note: it is ok to simply delete the index_set for these components, because by
