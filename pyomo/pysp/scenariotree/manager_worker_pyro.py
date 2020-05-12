@@ -12,6 +12,7 @@ __all__ = ("ScenarioTreeManagerWorkerPyro",)
 
 import time
 
+from pyomo.common.dependencies import dill, dill_available
 from pyomo.pysp.util.misc import _EnumValueWithData
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigBlock,
@@ -23,12 +24,6 @@ from pyomo.pysp.scenariotree.manager \
 
 import six
 from six import iteritems, string_types
-
-try:
-    import dill
-    dill_available = True
-except ImportError:                               #pragma:nocover
-    dill_available = False
 
 #
 # A full implementation of the ScenarioTreeManager interface

@@ -31,7 +31,7 @@ from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
 from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
-from pyomo.core.base.sets import Set
+from pyomo.core.base.set import Set
 from pyomo.core.base import minimize, maximize
 
 from six import iteritems
@@ -614,7 +614,7 @@ class ObjectiveList(IndexedObjective):
 
     def __init__(self, **kwargs):
         """Constructor"""
-        args = (Set(),)
+        args = (Set(dimen=1),)
         if 'expr' in kwargs:
             raise ValueError(
                 "ObjectiveList does not accept the 'expr' keyword")
@@ -633,6 +633,7 @@ class ObjectiveList(IndexedObjective):
         if self._constructed:
             return
         self._constructed=True
+        self.index_set().construct()
 
         assert self._init_expr is None
         _init_rule = self.rule

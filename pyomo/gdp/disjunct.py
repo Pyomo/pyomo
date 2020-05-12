@@ -221,7 +221,7 @@ class _DisjunctionData(ActiveComponentData):
             # the new Disjuncts are Blocks already. This catches them for who
             # they are anyway.
             if isinstance(e, _DisjunctData):
-            #if hasattr(e, 'type') and e.type() == Disjunct:
+            #if hasattr(e, 'type') and e.ctype == Disjunct:
                 self.disjuncts.append(e)
                 continue
             # The user was lazy and gave us a single constraint

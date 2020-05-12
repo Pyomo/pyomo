@@ -39,12 +39,9 @@ from pyomo.pysp.scenariotree.tree_structure import \
 
 import six
 
-has_networkx = False
-try:
-    import networkx
-    has_networkx = True
-except:                #pragma:nocover
-    has_networkx = False
+from pyomo.common.dependencies import (
+    networkx, networkx_available as has_networkx
+)
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -826,10 +823,13 @@ class ScenarioTreeInstanceFactory(object):
                 scenario_tree_model = scenario_tree_model.clone()
                 scenario_tree_model.Bundling = True
                 scenario_tree_model.Bundling._constructed = False
+                scenario_tree_model.Bundling._data.clear()
                 scenario_tree_model.Bundles.clear()
                 scenario_tree_model.Bundles._constructed = False
+                scenario_tree_model.Bundles._data.clear()
                 scenario_tree_model.BundleScenarios.clear()
                 scenario_tree_model.BundleScenarios._constructed = False
+                scenario_tree_model.BundleScenarios._data.clear()
                 scenario_tree_model.load(bundles)
 
         #

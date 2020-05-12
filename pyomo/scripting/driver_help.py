@@ -16,6 +16,7 @@ import datetime
 import textwrap
 import logging
 import argparse
+import socket
 
 import pyutilib.subprocess
 from pyutilib.misc import Options
@@ -326,6 +327,7 @@ def help_solvers():
     print('')
     try:
         logging.disable(logging.WARNING)
+        socket.setdefaulttimeout(10)
         import pyomo.neos.kestrel
         kestrel = pyomo.neos.kestrel.kestrelAMPL()
         #print "HERE", solver_list
@@ -353,6 +355,7 @@ def help_solvers():
         pass
     finally:
         logging.disable(logging.NOTSET)
+        socket.setdefaulttimeout(None)
 
 def print_components(data):
     """

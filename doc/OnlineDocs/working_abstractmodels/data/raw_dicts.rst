@@ -29,10 +29,12 @@ components, the required data dictionary maps the implicit index
     >>> i = m.create_instance(data)
     >>> i.pprint()
     2 Set Declarations
-        I : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-            [1, 2, 3]
-        r_index : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
-            Virtual
+        I : Size=1, Index=None, Ordered=Insertion
+            Key  : Dimen : Domain : Size : Members
+            None :     1 :    Any :    3 : {1, 2, 3}
+        r_index : Size=1, Index=None, Ordered=True
+            Key  : Dimen : Domain : Size : Members
+            None :     2 :    I*I :    9 : {(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3)}
     <BLANKLINE>
     3 Param Declarations
         p : Size=1, Index=None, Domain=Any, Default=None, Mutable=False

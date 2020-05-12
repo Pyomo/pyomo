@@ -109,6 +109,23 @@ class TestCategorize(unittest.TestCase):
         for ref in time:
             self.assertIn(self._hashRef(ref), ref_data)
 
+
+    def test_2dim_set(self):
+        m = ConcreteModel()
+        m.time = ContinuousSet(bounds=(0,1))
+
+        m.v = Var(m.time, [('a',1), ('b',2)])
+
+        scalar, dae = flatten_dae_variables(m, m.time)
+        self.assertEqual(len(scalar), 0)
+        ref_data = {
+                self._hashRef(Reference(m.v[:,'a',1])),
+                self._hashRef(Reference(m.v[:,'b',2])),
+                }
+        self.assertEqual(len(dae), len(ref_data))
+        for ref in dae:
+            self.assertIn(self._hashRef(ref), ref_data)
+
     # TODO: Add tests for Sets with dimen==None
 
 

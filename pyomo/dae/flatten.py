@@ -9,31 +9,11 @@
 #  ___________________________________________________________________________
 from pyomo.core.base import Block, Var, Reference
 from pyomo.core.base.block import SubclassOf
-from pyomo.core.base.sets import _SetProduct
 from pyomo.core.base.indexed_component_slice import _IndexedComponent_slice
-
-def identify_member_sets(index):
-    """
-    Identify all of the individual subsets in an indexing set. When the
-    Set rewrite is finished this function should no longer be needed,
-    the `subsets` method will provide this functionality.
-    """
-
-    if index is None:
-        return []
-    queue = [index]
-    ans = []
-    while queue:
-        s = queue.pop(0)
-        if not isinstance(s, _SetProduct):
-            ans.append(s)
-        else:
-            queue.extend(s.set_tuple)
-    return ans
 
 
 def generate_time_only_slices(obj, time):
-    o_sets = identify_member_sets(obj.index_set())
+    o_sets = obj.index_set().subsets()
     # Given a potentially complex set, determine the index of the TIME
     # set, as well as all other "fixed" indices.  We will even support a
     # single Set with dimen==None (using ellipsis in the slice).
@@ -47,7 +27,7 @@ def generate_time_only_slices(obj, time):
             idx += 1
         elif s.dimen is not None:
             for sub_idx in range(s.dimen):
-                regular_idx.append(idx)
+                regular_idx.append(idx+sub_idx)
             idx += s.dimen
         elif ellipsis_idx is None:
             ellipsis_idx = idx
@@ -74,7 +54,7 @@ def generate_time_only_slices(obj, time):
     )
     # For each combination of regular indices, we can generate a single
     # slice over the time index
-    time_sliced = {time_idx: time.first()}
+    time_sliced = [time_idx]
     for key in _slice.wildcard_keys():
         if type(key) is not tuple:
             key = (key,)
@@ -138,7 +118,7 @@ def flatten_dae_variables(model, time):
     time_indexed_vars = []
     while block_queue:
         b = block_queue.pop(0)
-        b_sets = identify_member_sets(b.index_set())
+        b_sets = b.index_set().subsets()
         if time in b_sets:
             for _slice in generate_time_indexed_block_slices(b, time):
                 time_indexed_vars.append(Reference(_slice))
@@ -147,7 +127,7 @@ def flatten_dae_variables(model, time):
             list(b.component_objects(Block, descend_into=False))
         )
         for v in b.component_objects(SubclassOf(Var), descend_into=False):
-            v_sets = identify_member_sets(v.index_set())
+            v_sets = v.index_set().subsets()
             if time in v_sets:
                 for _slice in generate_time_only_slices(v, time):
                     time_indexed_vars.append(Reference(_slice))

@@ -2,47 +2,39 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import os.path
 import six
-from pyutilib.excel import ExcelSpreadsheet
 import pyutilib.common
-
-try:
-    import win32com
-    win32com_available=True
-except ImportError:
-    win32com_available=False
-_excel_available = False  #pragma:nocover
-if win32com_available:
-    from pyutilib.excel.spreadsheet_win32com import ExcelSpreadsheet_win32com
-    tmp = ExcelSpreadsheet_win32com()
-    try:
-        tmp._excel_dispatch()
-        tmp._excel_quit()
-        _excel_available = True
-    except:
-        pass
-try:
-    import openpyxl
-    openpyxl_available=True
-except (ImportError, SyntaxError):
-    # Some versions of openpyxl contain python2.6-incompatible syntax
-    openpyxl_available=False
-try:
-    import xlrd
-    xlrd_available=True
-except ImportError:
-    xlrd_available=False
+from pyutilib.excel.spreadsheet import ExcelSpreadsheet, Interfaces
 
 from pyomo.dataportal import TableData
-from pyomo.dataportal.plugins.db_table import pyodbc_available, pyodbc_db_Table, pypyodbc_available, pypyodbc_db_Table
+# from pyomo.dataportal.plugins.db_table import (
+#     pyodbc_available, pyodbc_db_Table, pypyodbc_available, pypyodbc_db_Table
+# )
 from pyomo.dataportal.factory import DataManagerFactory
+
+
+def _attempt_open_excel():
+    if _attempt_open_excel.result is None:
+        from pyutilib.excel.spreadsheet_win32com import (
+            ExcelSpreadsheet_win32com
+        )
+        try:
+            tmp = ExcelSpreadsheet_win32com()
+            tmp._excel_dispatch()
+            tmp._excel_quit()
+            _attempt_open_excel.result = True
+        except:
+            _attempt_open_excel.result = False
+    return _attempt_open_excel.result
+
+_attempt_open_excel.result = None
 
 
 class SheetTable(TableData):
@@ -92,142 +84,135 @@ class SheetTable(TableData):
 
 
 
-if pyodbc_available or not pypyodbc_available:
-    pyodbc_db_base = pyodbc_db_Table
-else:
-    pyodbc_db_base = pypyodbc_db_Table
+@DataManagerFactory.register("xls", "Excel XLS file interface")
+class SheetTable_xls(SheetTable):
+
+    def __init__(self):
+        if Interfaces()['win32com'].available and _attempt_open_excel():
+            SheetTable.__init__(self, ctype='win32com')
+        elif Interfaces()['xlrd'].available:
+            SheetTable.__init__(self, ctype='xlrd')
+        else:
+            raise RuntimeError("No excel interface is available; install %s"
+                               % self.requirements())
+
+    def available(self):
+        _inter = Interfaces()
+        return (_inter['win32com'].available and _attempt_open_excel()) \
+            or _inter['xlrd'].available
+
+    def requirements(self):
+        return "win32com or xlrd"
+
+
+# @DataManagerFactory.register("xls", "Excel XLS file interface")
+# class pyodbc_xls(pyodbc_db_base):
+
+#     def __init__(self):
+#         pyodbc_db_base.__init__(self)
+
+#     def requirements(self):
+#         return "pyodbc or pypyodbc"
+
+#     def open(self):
+#         if self.filename is None:
+#             raise IOError("No filename specified")
+#         if not os.path.exists(self.filename):
+#             raise IOError("Cannot find file '%s'" % self.filename)
+#         return pyodbc_db_base.open(self)
+
+
+@DataManagerFactory.register("xlsx", "Excel XLSX file interface")
+class SheetTable_xlsx(SheetTable):
+
+    def __init__(self):
+        if Interfaces()['win32com'].available and _attempt_open_excel():
+            SheetTable.__init__(self, ctype='win32com')
+        elif Interfaces()['openpyxl'].available:
+            SheetTable.__init__(self, ctype='openpyxl')
+        else:
+            raise RuntimeError("No excel interface is available; install %s"
+                               % self.requirements())
+
+    def available(self):
+        _inter = Interfaces()
+        return (_inter['win32com'].available and _attempt_open_excel()) \
+            or _inter['openpyxl'].available
+
+    def requirements(self):
+        return "win32com or openpyxl"
 
 #
-# FIXME: The pyodbc interface doesn't work right now.  We will disable it.
+# This class is OK, but the pyodbc interface doesn't work right now.
 #
-pyodbc_available = False
 
-if (win32com_available and _excel_available) or xlrd_available:
-
-    @DataManagerFactory.register("xls", "Excel XLS file interface")
-    class SheetTable_xls(SheetTable):
-
-        def __init__(self):
-            if win32com_available and _excel_available:
-                SheetTable.__init__(self, ctype='win32com')
-            else:
-                SheetTable.__init__(self, ctype='xlrd')
-
-        def available(self):
-            return win32com_available or xlrd_available
-
-        def requirements(self):
-            return "win32com or xlrd"
-
-elif pyodbc_available:
-
-    @DataManagerFactory.register("xls", "Excel XLS file interface")
-    class pyodbc_xls(pyodbc_db_base):
-
-        def __init__(self):
-            pyodbc_db_base.__init__(self)
-
-        def requirements(self):
-            return "pyodbc or pypyodbc"
-
-        def open(self):
-            if self.filename is None:
-                raise IOError("No filename specified")
-            if not os.path.exists(self.filename):
-                raise IOError("Cannot find file '%s'" % self.filename)
-            return pyodbc_db_base.open(self)
+# @DataManagerFactory.register("xlsx", "Excel XLSX file interface")
+# class SheetTable_xlsx(pyodbc_db_base):
+#
+#     def __init__(self):
+#         pyodbc_db_base.__init__(self)
+#
+#     def requirements(self):
+#         return "pyodbc or pypyodbc"
+#
+#     def open(self):
+#         if self.filename is None:
+#             raise IOError("No filename specified")
+#         if not os.path.exists(self.filename):
+#             raise IOError("Cannot find file '%s'" % self.filename)
+#         return pyodbc_db_base.open(self)
 
 
-if (win32com_available and _excel_available) or openpyxl_available:
-
-    @DataManagerFactory.register("xlsx", "Excel XLSX file interface")
-    class SheetTable_xlsx(SheetTable):
-
-        def __init__(self):
-            if win32com_available and _excel_available:
-                SheetTable.__init__(self, ctype='win32com')
-            else:
-                SheetTable.__init__(self, ctype='openpyxl')
-
-        def available(self):
-            return win32com_available or openpyxl_available
-
-        def requirements(self):
-            return "win32com or openpyxl"
-
-elif pyodbc_available:
-    #
-    # This class is OK, but the pyodbc interface doesn't work right now.
-    #
-
-    @DataManagerFactory.register("xlsx", "Excel XLSX file interface")
-    class SheetTable_xlsx(pyodbc_db_base):
-
-        def __init__(self):
-            pyodbc_db_base.__init__(self)
-
-        def requirements(self):
-            return "pyodbc or pypyodbc"
-
-        def open(self):
-            if self.filename is None:
-                raise IOError("No filename specified")
-            if not os.path.exists(self.filename):
-                raise IOError("Cannot find file '%s'" % self.filename)
-            return pyodbc_db_base.open(self)
+# @DataManagerFactory.register("xlsb", "Excel XLSB file interface")
+# class SheetTable_xlsb(pyodbc_db_base):
+#
+#     def __init__(self):
+#         pyodbc_db_base.__init__(self)
+#
+#     def requirements(self):
+#         return "pyodbc or pypyodbc"
+#
+#     def open(self):
+#         if self.filename is None:
+#             raise IOError("No filename specified")
+#         if not os.path.exists(self.filename):
+#             raise IOError("Cannot find file '%s'" % self.filename)
+#         return pyodbc_db_base.open(self)
 
 
-if pyodbc_available:
+@DataManagerFactory.register("xlsm", "Excel XLSM file interface")
+class SheetTable_xlsm(SheetTable):
 
-    @DataManagerFactory.register("xlsb", "Excel XLSB file interface")
-    class SheetTable_xlsb(pyodbc_db_base):
+    def __init__(self):
+        if Interfaces()['win32com'].available and _attempt_open_excel():
+            SheetTable.__init__(self, ctype='win32com')
+        elif Interfaces()['openpyxl'].available:
+            SheetTable.__init__(self, ctype='openpyxl')
+        else:
+            raise RuntimeError("No excel interface is available; install %s"
+                               % self.requirements())
 
-        def __init__(self):
-            pyodbc_db_base.__init__(self)
+    def available(self):
+        _inter = Interfaces()
+        return (_inter['win32com'].available and _attempt_open_excel()) \
+            or _inter['openpyxl'].available
 
-        def requirements(self):
-            return "pyodbc or pypyodbc"
+    def requirements(self):
+        return "win32com or openpyxl"
 
-        def open(self):
-            if self.filename is None:
-                raise IOError("No filename specified")
-            if not os.path.exists(self.filename):
-                raise IOError("Cannot find file '%s'" % self.filename)
-            return pyodbc_db_base.open(self)
-
-
-if (win32com_available and _excel_available) or openpyxl_available:
-
-    @DataManagerFactory.register("xlsm", "Excel XLSM file interface")
-    class SheetTable_xlsm(SheetTable):
-
-        def __init__(self):
-            if win32com_available and _excel_available:
-                SheetTable.__init__(self, ctype='win32com')
-            else:
-                SheetTable.__init__(self, ctype='openpyxl')
-
-        def available(self):
-            return win32com_available or openpyxl_available
-
-        def requirements(self):
-            return "win32com or openpyxl"
-
-elif pyodbc_available:
-
-    @DataManagerFactory.register("xlsm", "Excel XLSM file interface")
-    class SheetTable_xlsm(pyodbc_db_base):
-
-        def __init__(self):
-            pyodbc_db_base.__init__(self)
-
-        def requirements(self):
-            return "pyodbc or pypyodbc"
-
-        def open(self):
-            if self.filename is None:
-                raise IOError("No filename specified")
-            if not os.path.exists(self.filename):
-                raise IOError("Cannot find file '%s'" % self.filename)
-            return pyodbc_db_base.open(self)
+# @DataManagerFactory.register("xlsm", "Excel XLSM file interface")
+# class SheetTable_xlsm(pyodbc_db_base):
+#
+#     def __init__(self):
+#         pyodbc_db_base.__init__(self)
+#
+#     def requirements(self):
+#         return "pyodbc or pypyodbc"
+#
+#     def open(self):
+#         if self.filename is None:
+#             raise IOError("No filename specified")
+#         if not os.path.exists(self.filename):
+#             raise IOError("Cannot find file '%s'" % self.filename)
+#         return pyodbc_db_base.open(self)
 

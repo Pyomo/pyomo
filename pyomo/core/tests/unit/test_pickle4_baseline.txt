@@ -1,6 +1,7 @@
 1 Set Declarations
-    s : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 2)
-        [1, 2]
+    s : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {1, 2}
 
 2 Var Declarations
     x : Size=1, Index=None

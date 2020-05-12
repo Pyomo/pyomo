@@ -9,13 +9,14 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 
-from pyomo.contrib.pynumero import numpy_available, scipy_available
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available, scipy_sparse as sp, scipy_available
+)
 if not (numpy_available and scipy_available):
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockMatrix tests")
+    raise unittest.SkipTest(
+        "Pynumero needs scipy and numpy to run BlockMatrix tests")
 
 from scipy.sparse import coo_matrix, bmat
-import scipy.sparse as sp
-import numpy as np
 
 from pyomo.contrib.pynumero.sparse import (BlockMatrix,
                                            BlockVector,

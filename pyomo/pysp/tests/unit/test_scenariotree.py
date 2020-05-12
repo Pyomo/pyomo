@@ -19,12 +19,9 @@ from pyomo.core import (ConcreteModel,
                         Expression,
                         Objective,
                         Block)
-
-try:
-    import networkx
-    has_networkx = True
-except:
-    has_networkx = False
+from pyomo.common.dependencies import (
+    networkx, networkx_available as has_networkx
+)
 
 class TestScenarioTree(unittest.TestCase):
 

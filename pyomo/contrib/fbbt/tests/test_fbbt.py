@@ -2,17 +2,12 @@ import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
 from pyomo.contrib.fbbt import interval
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import ProductExpression, UnaryFunctionExpression
 import math
 import logging
 import io
-try:
-    import numpy as np
-    numpy_available = True
-except ImportError:
-    numpy_available = False
-
 
 class DummyExpr(ProductExpression):
     pass

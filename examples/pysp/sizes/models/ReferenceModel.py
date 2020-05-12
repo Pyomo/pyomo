@@ -15,76 +15,76 @@
 #Journal of Heuristics, 1996, Vol 2, Pages 111-128.
 
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
 #
 # Model
 #
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
 #
 # Parameters
 #
 
 # the number of product sizes.
-model.NumSizes = Param(within=NonNegativeIntegers)
+model.NumSizes = pyo.Param(within=pyo.NonNegativeIntegers)
 
 # the set of sizes, labeled 1 through NumSizes.
 def product_sizes_rule(model):
-    return set(range(1, model.NumSizes()+1))
-model.ProductSizes = Set(initialize=product_sizes_rule)
+    return list(range(1, model.NumSizes()+1))
+model.ProductSizes = pyo.Set(initialize=product_sizes_rule)
 
 # the deterministic demands for product at each size.
-model.DemandsFirstStage = Param(model.ProductSizes, within=NonNegativeIntegers)
-model.DemandsSecondStage = Param(model.ProductSizes, within=NonNegativeIntegers)
+model.DemandsFirstStage = pyo.Param(model.ProductSizes, within=pyo.NonNegativeIntegers)
+model.DemandsSecondStage = pyo.Param(model.ProductSizes, within=pyo.NonNegativeIntegers)
 
 # the unit production cost at each size.
-model.UnitProductionCosts = Param(model.ProductSizes, within=NonNegativeReals)
+model.UnitProductionCosts = pyo.Param(model.ProductSizes, within=pyo.NonNegativeReals)
 
 # the setup cost for producing any units of size i.
-model.SetupCosts = Param(model.ProductSizes, within=NonNegativeReals)
+model.SetupCosts = pyo.Param(model.ProductSizes, within=pyo.NonNegativeReals)
 
 # the cost to reduce a unit i to a lower unit j.
-model.UnitReductionCost = Param(within=NonNegativeReals)
+model.UnitReductionCost = pyo.Param(within=pyo.NonNegativeReals)
 
 # a cap on the overall production within any time stage.
-model.Capacity = Param(within=PositiveReals)
+model.Capacity = pyo.Param(within=pyo.PositiveReals)
 
 # a derived set to constrain the NumUnitsCut variable domain.
 # TBD: the (i,j) with i >= j set should be a generic utility.
 def num_units_cut_domain_rule(model):
-    ans = set()
-    for i in range(1,model.NumSizes()+1):
-        for j in range(1, i+1):
-            ans.add((i,j))
-    return ans
+    return ((i,j) for i in range(1,model.NumSizes()+1) for j in range(1,i+1))
 
-model.NumUnitsCutDomain = Set(initialize=num_units_cut_domain_rule, dimen=2)
+model.NumUnitsCutDomain = pyo.Set(initialize=num_units_cut_domain_rule, dimen=2)
 
 #
 # Variables
 #
 
 # are any products at size i produced?
-model.ProduceSizeFirstStage = Var(model.ProductSizes, domain=Boolean)
-model.ProduceSizeSecondStage = Var(model.ProductSizes, domain=Boolean)
+model.ProduceSizeFirstStage = pyo.Var(model.ProductSizes, domain=pyo.Boolean)
+model.ProduceSizeSecondStage = pyo.Var(model.ProductSizes, domain=pyo.Boolean)
 
 # NOTE: The following (num-produced and num-cut) variables are implicitly integer
 #       under the normal cost objective, but with the PH cost objective, this isn't
 #       the case.
 
 # the number of units at each size produced.
-model.NumProducedFirstStage = Var(model.ProductSizes, domain=NonNegativeIntegers, bounds=(0.0, model.Capacity))
-model.NumProducedSecondStage = Var(model.ProductSizes, domain=NonNegativeIntegers, bounds=(0.0, model.Capacity))
+model.NumProducedFirstStage = pyo.Var(model.ProductSizes, domain=pyo.NonNegativeIntegers, bounds=(0.0, model.Capacity))
+model.NumProducedSecondStage = pyo.Var(model.ProductSizes, domain=pyo.NonNegativeIntegers, bounds=(0.0, model.Capacity))
 
 # the number of units of size i cut (down) to meet demand for units of size j.
-model.NumUnitsCutFirstStage = Var(model.NumUnitsCutDomain, domain=NonNegativeIntegers, bounds=(0.0, model.Capacity))
-model.NumUnitsCutSecondStage = Var(model.NumUnitsCutDomain, domain=NonNegativeIntegers, bounds=(0.0, model.Capacity))
+model.NumUnitsCutFirstStage = pyo.Var(model.NumUnitsCutDomain,
+                                      domain=pyo.NonNegativeIntegers,
+                                      bounds=(0.0, model.Capacity))
+model.NumUnitsCutSecondStage = pyo.Var(model.NumUnitsCutDomain,
+                                       domain=pyo.NonNegativeIntegers,
+                                       bounds=(0.0, model.Capacity))
 
 # stage-specific cost variables for use in the pysp scenario tree / analysis.
-model.FirstStageCost = Var(domain=NonNegativeReals)
-model.SecondStageCost = Var(domain=NonNegativeReals)
+model.FirstStageCost = pyo.Var(domain=pyo.NonNegativeReals)
+model.SecondStageCost = pyo.Var(domain=pyo.NonNegativeReals)
 
 #
 # Constraints
@@ -97,8 +97,8 @@ def demand_satisfied_first_stage_rule(model, i):
 def demand_satisfied_second_stage_rule(model, i):
     return (0.0, sum([model.NumUnitsCutSecondStage[j,i] for j in model.ProductSizes if j >= i]) - model.DemandsSecondStage[i], None)
 
-model.DemandSatisfiedFirstStage = Constraint(model.ProductSizes, rule=demand_satisfied_first_stage_rule)
-model.DemandSatisfiedSecondStage = Constraint(model.ProductSizes, rule=demand_satisfied_second_stage_rule)
+model.DemandSatisfiedFirstStage = pyo.Constraint(model.ProductSizes, rule=demand_satisfied_first_stage_rule)
+model.DemandSatisfiedSecondStage = pyo.Constraint(model.ProductSizes, rule=demand_satisfied_second_stage_rule)
 
 # ensure that you don't produce any units if the decision has been made to disable producion.
 def enforce_production_first_stage_rule(model, i):
@@ -109,8 +109,8 @@ def enforce_production_second_stage_rule(model, i):
     # The production capacity per time stage serves as a simple upper bound for "M".
     return (None, model.NumProducedSecondStage[i] - model.Capacity * model.ProduceSizeSecondStage[i], 0.0)
 
-model.EnforceProductionBinaryFirstStage = Constraint(model.ProductSizes, rule=enforce_production_first_stage_rule)
-model.EnforceProductionBinarySecondStage = Constraint(model.ProductSizes, rule=enforce_production_second_stage_rule)
+model.EnforceProductionBinaryFirstStage = pyo.Constraint(model.ProductSizes, rule=enforce_production_first_stage_rule)
+model.EnforceProductionBinarySecondStage = pyo.Constraint(model.ProductSizes, rule=enforce_production_second_stage_rule)
 
 # ensure that the production capacity is not exceeded for each time stage.
 def enforce_capacity_first_stage_rule(model):
@@ -119,8 +119,8 @@ def enforce_capacity_first_stage_rule(model):
 def enforce_capacity_second_stage_rule(model):
     return (None, sum([model.NumProducedSecondStage[i] for i in model.ProductSizes]) - model.Capacity, 0.0)
 
-model.EnforceCapacityLimitFirstStage = Constraint(rule=enforce_capacity_first_stage_rule)
-model.EnforceCapacityLimitSecondStage = Constraint(rule=enforce_capacity_second_stage_rule)
+model.EnforceCapacityLimitFirstStage = pyo.Constraint(rule=enforce_capacity_first_stage_rule)
+model.EnforceCapacityLimitSecondStage = pyo.Constraint(rule=enforce_capacity_second_stage_rule)
 
 # ensure that you can't generate inventory out of thin air.
 def enforce_inventory_first_stage_rule(model, i):
@@ -136,8 +136,8 @@ def enforce_inventory_second_stage_rule(model, i):
             - model.NumProducedFirstStage[i] - model.NumProducedSecondStage[i], \
             0.0)
 
-model.EnforceInventoryFirstStage = Constraint(model.ProductSizes, rule=enforce_inventory_first_stage_rule)
-model.EnforceInventorySecondStage = Constraint(model.ProductSizes, rule=enforce_inventory_second_stage_rule)
+model.EnforceInventoryFirstStage = pyo.Constraint(model.ProductSizes, rule=enforce_inventory_first_stage_rule)
+model.EnforceInventorySecondStage = pyo.Constraint(model.ProductSizes, rule=enforce_inventory_second_stage_rule)
 
 # stage-specific cost computations.
 def first_stage_cost_rule(model):
@@ -148,7 +148,7 @@ def first_stage_cost_rule(model):
                     for (i,j) in model.NumUnitsCutDomain if i != j])
     return (model.FirstStageCost - production_costs - cut_costs) == 0.0
 
-model.ComputeFirstStageCost = Constraint(rule=first_stage_cost_rule)
+model.ComputeFirstStageCost = pyo.Constraint(rule=first_stage_cost_rule)
 
 def second_stage_cost_rule(model):
     production_costs = sum([model.SetupCosts[i] * model.ProduceSizeSecondStage[i] + \
@@ -158,10 +158,8 @@ def second_stage_cost_rule(model):
                     for (i,j) in model.NumUnitsCutDomain if i != j])
     return (model.SecondStageCost - production_costs - cut_costs) == 0.0
 
-model.ComputeSecondStageCost = Constraint(rule=second_stage_cost_rule)
+model.ComputeSecondStageCost = pyo.Constraint(rule=second_stage_cost_rule)
 
-#
-# PySP Auto-generated Objective
 #
 # minimize: sum of StageCosts
 #
@@ -169,5 +167,5 @@ model.ComputeSecondStageCost = Constraint(rule=second_stage_cost_rule)
 # included here for informational purposes.
 def total_cost_rule(model):
     return model.FirstStageCost + model.SecondStageCost
-model.Total_Cost_Objective = Objective(rule=total_cost_rule, sense=minimize)
+model.Total_Cost_Objective = pyo.Objective(rule=total_cost_rule, sense=pyo.minimize)
 

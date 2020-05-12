@@ -33,7 +33,7 @@ import abc
 
 
 @six.add_metaclass(abc.ABCMeta)
-class CyIpoptProblemInterface(abc.ABC):
+class CyIpoptProblemInterface(object):
     @abc.abstractmethod
     def x_init(self):
         """Return the initial values for x as a numpy ndarray
