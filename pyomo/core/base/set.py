@@ -2527,7 +2527,7 @@ class RangeSet(Component):
 
     Parameters
     ----------
-    *args: tuple | int | None
+    *args: int | float | None
         The range defined by ([start=1], end, [step=1]).  If only a
         single positional parameter, `end` is supplied, then the
         RangeSet will be the integers starting at 1 up through and
