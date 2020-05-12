@@ -145,14 +145,14 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.Y = BooleanVar(m.s)
         m.p = LogicalStatement(expr=m.Y[1] >> AtLeast(2, m.Y[1], m.Y[2], m.Y[3]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        augmented_vars = m.logic_to_linear_augmented_vars
-        self.assertEqual(len(augmented_vars), 1)
-        self.assertEqual(augmented_vars[1].domain, BooleanSet)
+        Y_aug = m.logic_to_linear_augmented_vars
+        self.assertEqual(len(Y_aug), 1)
+        self.assertEqual(Y_aug[1].domain, BooleanSet)
         _constrs_contained_within(
             self, [
-                (None, sum(m.Y[:].as_binary()) - (1 + 2 * augmented_vars[1].as_binary()), 0),
-                (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
-                (None, 2 - 2 * (1 - augmented_vars[1].as_binary()) - sum(m.Y[:].as_binary()), 0)
+                (None, sum(m.Y[:].as_binary()) - (1 + 2 * Y_aug[1].as_binary()), 0),
+                (1, (1 - m.Y[1].as_binary()) + Y_aug[1].as_binary(), None),
+                (None, 2 - 2 * (1 - Y_aug[1].as_binary()) - sum(m.Y[:].as_binary()), 0)
             ], m.logic_to_linear)
 
         m = ConcreteModel()
@@ -160,14 +160,14 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.Y = BooleanVar(m.s)
         m.p = LogicalStatement(expr=m.Y[1] >> AtMost(2, m.Y[1], m.Y[2], m.Y[3]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        augmented_vars = m.logic_to_linear_augmented_vars
-        self.assertEqual(len(augmented_vars), 1)
-        self.assertEqual(augmented_vars[1].domain, BooleanSet)
+        Y_aug = m.logic_to_linear_augmented_vars
+        self.assertEqual(len(Y_aug), 1)
+        self.assertEqual(Y_aug[1].domain, BooleanSet)
         _constrs_contained_within(
             self, [
-                (None, sum(m.Y[:].as_binary()) - (1 - augmented_vars[1].as_binary() + 2), 0),
-                (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
-                (None, 3 - 3 * augmented_vars[1].as_binary() - sum(m.Y[:].as_binary()), 0)
+                (None, sum(m.Y[:].as_binary()) - (1 - Y_aug[1].as_binary() + 2), 0),
+                (1, (1 - m.Y[1].as_binary()) + Y_aug[1].as_binary(), None),
+                (None, 3 - 3 * Y_aug[1].as_binary() - sum(m.Y[:].as_binary()), 0)
             ], m.logic_to_linear)
 
         m = ConcreteModel()
@@ -175,17 +175,17 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.Y = BooleanVar(m.s)
         m.p = LogicalStatement(expr=m.Y[1] >> Exactly(2, m.Y[1], m.Y[2], m.Y[3]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        augmented_vars = m.logic_to_linear_augmented_vars
-        self.assertEqual(len(augmented_vars), 3)
-        self.assertEqual(augmented_vars[1].domain, BooleanSet)
+        Y_aug = m.logic_to_linear_augmented_vars
+        self.assertEqual(len(Y_aug), 3)
+        self.assertEqual(Y_aug[1].domain, BooleanSet)
         _constrs_contained_within(
             self, [
-                (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
-                (None, sum(m.Y[:].as_binary()) - (1 - augmented_vars[1].as_binary() + 2), 0),
-                (None, 2 - 2 * (1 - augmented_vars[1].as_binary()) - sum(m.Y[:].as_binary()), 0),
-                (1, sum(augmented_vars[:].as_binary()), None),
-                (None, sum(m.Y[:].as_binary()) - (1 + 2*(1 - augmented_vars[2].as_binary())), 0),
-                (None, 3 - 3*(1 - augmented_vars[3].as_binary()) - sum(m.Y[:].as_binary()), 0),
+                (1, (1 - m.Y[1].as_binary()) + Y_aug[1].as_binary(), None),
+                (None, sum(m.Y[:].as_binary()) - (1 - Y_aug[1].as_binary() + 2), 0),
+                (None, 2 - 2 * (1 - Y_aug[1].as_binary()) - sum(m.Y[:].as_binary()), 0),
+                (1, sum(Y_aug[:].as_binary()), None),
+                (None, sum(m.Y[:].as_binary()) - (1 + 2*(1 - Y_aug[2].as_binary())), 0),
+                (None, 3 - 3*(1 - Y_aug[3].as_binary()) - sum(m.Y[:].as_binary()), 0),
             ], m.logic_to_linear)
 
         # Note: x is now a variable
@@ -195,17 +195,17 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.x = Var(bounds=(1, 3))
         m.p = LogicalStatement(expr=m.Y[1] >> Exactly(m.x, m.Y[1], m.Y[2], m.Y[3]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        augmented_vars = m.logic_to_linear_augmented_vars
-        self.assertEqual(len(augmented_vars), 3)
-        self.assertEqual(augmented_vars[1].domain, BooleanSet)
+        Y_aug = m.logic_to_linear_augmented_vars
+        self.assertEqual(len(Y_aug), 3)
+        self.assertEqual(Y_aug[1].domain, BooleanSet)
         _constrs_contained_within(
             self, [
-                (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
-                (None, sum(m.Y[:].as_binary()) - (m.x + 2*(1 - augmented_vars[1].as_binary())), 0),
-                (None, m.x - 3*(1 - augmented_vars[1].as_binary()) - sum(m.Y[:].as_binary()), 0),
-                (1, sum(augmented_vars[:].as_binary()), None),
-                (None, sum(m.Y[:].as_binary()) - (m.x - 1 + 3*(1 - augmented_vars[2].as_binary())), 0),
-                (None, m.x + 1 - 4*(1 - augmented_vars[3].as_binary()) - sum(m.Y[:].as_binary()), 0),
+                (1, (1 - m.Y[1].as_binary()) + Y_aug[1].as_binary(), None),
+                (None, sum(m.Y[:].as_binary()) - (m.x + 2*(1 - Y_aug[1].as_binary())), 0),
+                (None, m.x - 3*(1 - Y_aug[1].as_binary()) - sum(m.Y[:].as_binary()), 0),
+                (1, sum(Y_aug[:].as_binary()), None),
+                (None, sum(m.Y[:].as_binary()) - (m.x - 1 + 3*(1 - Y_aug[2].as_binary())), 0),
+                (None, m.x + 1 - 4*(1 - Y_aug[3].as_binary()) - sum(m.Y[:].as_binary()), 0),
             ], m.logic_to_linear)
 
     def test_xfrm_atleast_nested(self):
@@ -213,7 +213,20 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.p = LogicalStatement(expr=AtLeast(1, AtLeast(2, m.Y[1], m.Y[1] | m.Y[2], m.Y[2]) | m.Y[3], m.Y[4]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         m.pprint()
-        # TODO check if accurate
+        Y_aug = m.logic_to_linear_augmented_vars
+        self.assertEqual(len(Y_aug), 3)
+        _constrs_contained_within(
+            self, [
+                (1, Y_aug[1].as_binary() + m.Y[4].as_binary(), None),
+                (1, 1 - Y_aug[2].as_binary() + Y_aug[1].as_binary(), None),
+                (1, 1 - m.Y[3].as_binary() + Y_aug[1].as_binary(), None),
+                (1, Y_aug[2].as_binary() + m.Y[3].as_binary() + 1 - Y_aug[1].as_binary(), None),
+                (1, 1 - m.Y[1].as_binary() + Y_aug[3].as_binary(), None),
+                (1, 1 - m.Y[2].as_binary() + Y_aug[3].as_binary(), None),
+                (1, m.Y[1].as_binary() + m.Y[2].as_binary() + 1 - Y_aug[3].as_binary(), None),
+                (None, 2 - 2*(1 - Y_aug[2].as_binary()) - (m.Y[1].as_binary() + Y_aug[3].as_binary() + m.Y[2].as_binary()), 0),
+                (None, m.Y[1].as_binary() + Y_aug[3].as_binary() + m.Y[2].as_binary() - (1 + 2*Y_aug[2].as_binary()), 0)
+            ], m.logic_to_linear)
 
     def test_link_with_gdp_indicators(self):
         m = _generate_boolean_model(4)
