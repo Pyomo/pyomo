@@ -140,35 +140,35 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
             ], m.logic_to_linear)
 
     def test_xfrm_special_atoms_nonroot(self):
-        # m = ConcreteModel()
-        # m.s = RangeSet(3)
-        # m.Y = BooleanVar(m.s)
-        # m.p = LogicalStatement(expr=m.Y[1] >> AtLeast(2, m.Y[1], m.Y[2], m.Y[3]))
-        # TransformationFactory('core.logical_to_linear').apply_to(m)
-        # augmented_vars = m.logic_to_linear_augmented_vars
-        # self.assertEqual(len(augmented_vars), 1)
-        # self.assertEqual(augmented_vars[1].domain, BooleanSet)
-        # _constrs_contained_within(
-        #     self, [
-        #         (None, sum(m.Y[:].as_binary()) - (1 + 2 * augmented_vars[1].as_binary()), 0),
-        #         (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
-        #         (None, 2 - 2 * (1 - augmented_vars[1].as_binary()) - sum(m.Y[:].as_binary()), 0)
-        #     ], m.logic_to_linear)
-        #
-        # m = ConcreteModel()
-        # m.s = RangeSet(3)
-        # m.Y = BooleanVar(m.s)
-        # m.p = LogicalStatement(expr=m.Y[1] >> AtMost(2, m.Y[1], m.Y[2], m.Y[3]))
-        # TransformationFactory('core.logical_to_linear').apply_to(m)
-        # augmented_vars = m.logic_to_linear_augmented_vars
-        # self.assertEqual(len(augmented_vars), 1)
-        # self.assertEqual(augmented_vars[1].domain, BooleanSet)
-        # _constrs_contained_within(
-        #     self, [
-        #         (None, sum(m.Y[:].as_binary()) - (1 - augmented_vars[1].as_binary() + 2), 0),
-        #         (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
-        #         (None, 3 - 3 * augmented_vars[1].as_binary() - sum(m.Y[:].as_binary()), 0)
-        #     ], m.logic_to_linear)
+        m = ConcreteModel()
+        m.s = RangeSet(3)
+        m.Y = BooleanVar(m.s)
+        m.p = LogicalStatement(expr=m.Y[1] >> AtLeast(2, m.Y[1], m.Y[2], m.Y[3]))
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        augmented_vars = m.logic_to_linear_augmented_vars
+        self.assertEqual(len(augmented_vars), 1)
+        self.assertEqual(augmented_vars[1].domain, BooleanSet)
+        _constrs_contained_within(
+            self, [
+                (None, sum(m.Y[:].as_binary()) - (1 + 2 * augmented_vars[1].as_binary()), 0),
+                (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
+                (None, 2 - 2 * (1 - augmented_vars[1].as_binary()) - sum(m.Y[:].as_binary()), 0)
+            ], m.logic_to_linear)
+
+        m = ConcreteModel()
+        m.s = RangeSet(3)
+        m.Y = BooleanVar(m.s)
+        m.p = LogicalStatement(expr=m.Y[1] >> AtMost(2, m.Y[1], m.Y[2], m.Y[3]))
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        augmented_vars = m.logic_to_linear_augmented_vars
+        self.assertEqual(len(augmented_vars), 1)
+        self.assertEqual(augmented_vars[1].domain, BooleanSet)
+        _constrs_contained_within(
+            self, [
+                (None, sum(m.Y[:].as_binary()) - (1 - augmented_vars[1].as_binary() + 2), 0),
+                (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
+                (None, 3 - 3 * augmented_vars[1].as_binary() - sum(m.Y[:].as_binary()), 0)
+            ], m.logic_to_linear)
 
         m = ConcreteModel()
         m.s = RangeSet(3)
@@ -178,18 +178,14 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         augmented_vars = m.logic_to_linear_augmented_vars
         self.assertEqual(len(augmented_vars), 3)
         self.assertEqual(augmented_vars[1].domain, BooleanSet)
-        m.pprint()
         _constrs_contained_within(
             self, [
                 (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
                 (None, sum(m.Y[:].as_binary()) - (1 - augmented_vars[1].as_binary() + 2), 0),
                 (None, 2 - 2 * (1 - augmented_vars[1].as_binary()) - sum(m.Y[:].as_binary()), 0),
-                (1, augmented_vars[1].as_binary() + augmented_vars[2].as_binary() + augmented_vars[3].as_binary(), None)
-                # (None, m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary()
-                #  - (1 - augmented_vars[1].as_binary() + 2), 0),
-                # (1, (1 - m.Y[1].as_binary()) + augmented_vars[1].as_binary(), None),
-                # (None, 3 - 3 * augmented_vars[1].as_binary()
-                #  - (m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary()), 0)
+                (1, sum(augmented_vars[:].as_binary()), None),
+                (None, sum(m.Y[:].as_binary()) - (1 + 2*(1 - augmented_vars[2].as_binary())), 0),
+                (None, 3 - 3*(1 - augmented_vars[3].as_binary()) - sum(m.Y[:].as_binary()), 0),
             ], m.logic_to_linear)
 
         m = ConcreteModel()
