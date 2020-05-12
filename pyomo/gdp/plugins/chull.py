@@ -188,10 +188,10 @@ class ConvexHull_Transformation(Transformation):
                     local_var_dict[disj].update(var_list)
 
     def _get_local_var_suffixes(self, block, local_var_dict):
-        # You can specify suffixes on any block (dijuncts included). This method
+        # You can specify suffixes on any block (disjuncts included). This method
         # starts from a Disjunct (presumably) and checks for a LocalVar suffixes
-        # going up the tree, adding them into the dictionary that is the second
-        # argument.
+        # going both up and down the tree, adding them into the dictionary that
+        # is the second argument.
 
         # first look beneath where we are (there could be Blocks on this
         # disjunct)
@@ -891,9 +891,10 @@ class ConvexHull_Transformation(Transformation):
         try:
             return transBlock._disaggregatedVarMap['disaggregatedVar'][v]
         except:
-            raise GDP_Error("It does not appear %s is a "
-                            "variable which appears in disjunct %s"
-                            % (v.name, disjunct.name))
+            logger.error("It does not appear %s is a "
+                         "variable which appears in disjunct %s"
+                         % (v.name, disjunct.name))
+            raise
         
     def get_src_var(self, disaggregated_var):
         """
@@ -909,11 +910,11 @@ class ConvexHull_Transformation(Transformation):
         """
         transBlock = disaggregated_var.parent_block()
         try:
-            src_disjunct = transBlock._srcDisjunct()
+            return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
         except:
-            raise GDP_Error("%s does not appear to be a disaggregated variable"
-                            % disaggregated_var.name)
-        return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
+            logger.error("%s does not appear to be a disaggregated variable" 
+                         % disaggregated_var.name)
+            raise
 
     # retrieves the disaggregation constraint for original_var resulting from
     # transforming disjunction
@@ -937,13 +938,15 @@ class ConvexHull_Transformation(Transformation):
             raise GDP_Error("Disjunction %s has not been properly transformed: "
                             "None of its disjuncts are transformed." 
                             % disjunction.name)
+        
         try:
             return transBlock().parent_block()._disaggregationConstraintMap[
                 original_var][disjunction]
         except:
-            raise GDP_Error("It doesn't appear that %s is a variable that was "
-                            "disaggregated by Disjunction %s" % 
-                            (original_var.name, disjunction.name))
+            logger.error("It doesn't appear that %s is a variable that was "
+                         "disaggregated by Disjunction %s" % 
+                         (original_var.name, disjunction.name))
+            raise
 
     def get_var_bounds_constraint(self, v):
         """
@@ -963,6 +966,7 @@ class ConvexHull_Transformation(Transformation):
         try:
             return transBlock._bigMConstraintMap[v]
         except:
-            raise GDP_Error("Either %s is not a disaggregated variable, or "
-                            "the disjunction that disaggregates it has not "
-                            "been properly transformed." % v.name)
+            logger.error("Either %s is not a disaggregated variable, or "
+                         "the disjunction that disaggregates it has not "
+                         "been properly transformed." % v.name)
+            raise

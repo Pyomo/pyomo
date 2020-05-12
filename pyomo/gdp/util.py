@@ -21,6 +21,10 @@ from pyomo.opt import TerminationCondition, SolverStatus
 from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys
 import sys
+from weakref import ref as weakref_ref
+import logging
+
+logger = logging.getLogger('pyomo.gdp')
 
 _acceptable_termination_conditions = set([
     TerminationCondition.optimal,
@@ -171,13 +175,12 @@ def get_src_disjunct(transBlock):
     transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
                 on a transformation block.
     """
-    try:
-        return transBlock._srcDisjunct()
-    except:
+    if not hasattr(transBlock, "_srcDisjunct") or \
+       type(transBlock._srcDisjunct) is not weakref_ref:
         raise GDP_Error("Block %s doesn't appear to be a transformation "
                         "block for a disjunct. No source disjunct found." 
-                        "\n\t(original error: %s)" 
-                        % (transBlock.name, sys.exc_info()[1]))
+                        % transBlock.name)
+    return transBlock._srcDisjunct()
 
 def get_src_constraint(transformedConstraint):
     """Return the original Constraint whose transformed counterpart is
@@ -240,13 +243,12 @@ def get_transformed_constraints(srcConstraint):
                         "component of a transformed constraint originating "
                         "from any of its _ComponentDatas.)")
     transBlock = _get_constraint_transBlock(srcConstraint)
-
-    if hasattr(transBlock, "_constraintMap") and transBlock._constraintMap[
-            'transformedConstraints'].get(srcConstraint) is not None:
-        return transBlock._constraintMap['transformedConstraints'][
-            srcConstraint]
-    raise GDP_Error("Constraint %s has not been transformed." 
-                    % srcConstraint.name)
+    try:
+        return transBlock._constraintMap['transformedConstraints'][srcConstraint]
+    except:
+        logger.error("Constraint %s has not been transformed." 
+                     % srcConstraint.name)
+        raise
 
 def _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER):
     # this should only have gotten called if the disjunction is active
@@ -265,11 +267,12 @@ def _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER):
     assert problemdisj.algebraic_constraint is None
     _probDisjName = problemdisj.getname(
         fully_qualified=True, name_buffer=NAME_BUFFER)
+    _disjName = disjunct.getname(fully_qualified=True, name_buffer=NAME_BUFFER)
     raise GDP_Error("Found untransformed disjunction %s in disjunct %s! "
                     "The disjunction must be transformed before the "
                     "disjunct. If you are using targets, put the "
                     "disjunction before the disjunct in the list."
-                    % (_probDisjName, disjunct.name))
+                    % (_probDisjName, _disjName))
 
 def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
     assert innerdisjunct.active

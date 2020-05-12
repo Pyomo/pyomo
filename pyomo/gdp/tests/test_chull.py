@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
+from pyomo.common.log import LoggingIntercept
+import logging
 
 from pyomo.environ import *
 from pyomo.core.base import constraint
@@ -23,7 +25,7 @@ linear_solvers = pyomo.opt.check_available_solvers(
     'glpk','cbc','gurobi','cplex')
 
 import random
-from six import iteritems, iterkeys
+from six import iteritems, iterkeys, StringIO
 
 EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
@@ -594,11 +596,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         chull = TransformationFactory('gdp.chull')
         chull.apply_to(m)
         # can't ask for simpledisj1.c[1]: it wasn't transformed
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Constraint b.simpledisj1.c\[1\] has not been transformed.",
-            chull.get_transformed_constraints,
-            m.b.simpledisj1.c[1])
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
+            self.assertRaisesRegexp(
+                KeyError,
+                ".*b.simpledisj1.c\[1\]",
+                chull.get_transformed_constraints,
+                m.b.simpledisj1.c[1])
+        self.assertRegexpMatches(log.getvalue(), 
+                                 ".*Constraint b.simpledisj1.c\[1\] has not "
+                                 "been transformed.")
 
         # this fixes a[2] to 0, so we should get the disggregated var
         transformed = chull.get_transformed_constraints(m.b.simpledisj1.c[2])
@@ -1680,37 +1687,55 @@ class TestErrors(unittest.TestCase):
         chull = TransformationFactory('gdp.chull')
         chull.apply_to(m)
 
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Either w is not a disaggregated variable, or "
-            "the disjunction that disaggregates it has not "
-            "been properly transformed.",
-            chull.get_var_bounds_constraint,
-            m.w)
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
+            self.assertRaisesRegexp(
+                AttributeError,
+                "'ConcreteModel' object has no attribute '_bigMConstraintMap'",
+                chull.get_var_bounds_constraint,
+                m.w)
+        self.assertRegexpMatches(log.getvalue(),
+                                 ".*Either w is not a disaggregated variable, "
+                                 "or the disjunction that disaggregates it has "
+                                 "not been properly transformed.")
 
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "It doesn't appear that "
-            "_pyomo_gdp_chull_relaxation.relaxedDisjuncts\[1\].w is a "
-            "variable that was disaggregated by Disjunction disjunction",
-            chull.get_disaggregation_constraint,
-            m.d[1].transformation_block().w,
-            m.disjunction)
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
+            self.assertRaisesRegexp(
+                KeyError,
+                ".*_pyomo_gdp_chull_relaxation.relaxedDisjuncts\[1\].w",
+                chull.get_disaggregation_constraint,
+                m.d[1].transformation_block().w,
+                m.disjunction)
+        self.assertRegexpMatches(log.getvalue(), ".*It doesn't appear that "
+                                 "_pyomo_gdp_chull_relaxation."
+                                 "relaxedDisjuncts\[1\].w is a "
+                                 "variable that was disaggregated by "
+                                 "Disjunction disjunction")
 
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "w does not appear to be a disaggregated variable",
-            chull.get_src_var,
-            m.w)
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
+            self.assertRaisesRegexp(
+                AttributeError,
+                "'ConcreteModel' object has no attribute '_disaggregatedVarMap'",
+                chull.get_src_var,
+                m.w)
+        self.assertRegexpMatches(log.getvalue(), ".*w does not appear to be a "
+                                 "disaggregated variable")
 
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "It does not appear "
-            "_pyomo_gdp_chull_relaxation.relaxedDisjuncts\[1\].w is a "
-            "variable which appears in disjunct d\[1\]",
-            chull.get_disaggregated_var,
-            m.d[1].transformation_block().w,
-            m.d[1])
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
+            self.assertRaisesRegexp(
+                KeyError,
+                ".*_pyomo_gdp_chull_relaxation.relaxedDisjuncts\[1\].w",
+                chull.get_disaggregated_var,
+                m.d[1].transformation_block().w,
+                m.d[1])
+        self.assertRegexpMatches(log.getvalue(),
+                                 ".*It does not appear "
+                                 "_pyomo_gdp_chull_relaxation."
+                                 "relaxedDisjuncts\[1\].w is a "
+                                 "variable which appears in disjunct d\[1\]")
 
         m.random_disjunction = Disjunction(expr=[m.w == 2, m.w >= 7])
         self.assertRaisesRegexp(

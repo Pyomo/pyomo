@@ -16,6 +16,7 @@ from pyomo.core.base import constraint, _ConstraintData
 from pyomo.core.expr import current as EXPR
 from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
+import logging
 
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
@@ -1041,11 +1042,16 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
         bigm.apply_to(m)
 
         # the real test: This wasn't transformed
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Constraint b.simpledisj1.c\[1\] has not been transformed.",
-            bigm.get_transformed_constraints,
-            m.b.simpledisj1.c[1])
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
+            self.assertRaisesRegexp(
+                KeyError,
+                ".*b.simpledisj1.c\[1\]",
+                bigm.get_transformed_constraints,
+                m.b.simpledisj1.c[1])
+        self.assertRegexpMatches(log.getvalue(), 
+                                 ".*Constraint b.simpledisj1.c\[1\] "
+                                 "has not been transformed.")
 
         # and the rest of the container was transformed
         cons_list = bigm.get_transformed_constraints(m.b.simpledisj1.c[2])
