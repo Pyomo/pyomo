@@ -161,6 +161,19 @@ class ConvexHull_Transformation(Transformation):
         domain=cfg.PositiveFloat,
         description="Epsilon value to use in perspective function",
     ))
+    CONFIG.declare('assume_fixed_vars_permanent', cfg.ConfigValue(
+        default=False,
+        domain=bool,
+        description="Boolean indicating whether or not to transform so that the "
+        "the transformed model will still be valid when fixed Vars are unfixed.",
+        doc="""
+        If True, the transformation will not disaggregate fixed variables.
+        This means that if a fixed variable is unfixed after transformation, 
+        the transformed model is no longer valid. By default, the transformation
+        will disagregate fixed variables so that any later fixing and unfixing
+        will be valid in the transformed model.
+        """
+    ))
 
     def __init__(self):
         super(ConvexHull_Transformation, self).__init__()
@@ -384,6 +397,7 @@ class ConvexHull_Transformation(Transformation):
         varOrder = []
         varsByDisjunct = ComponentMap()
         localVarsByDisjunct = ComponentMap()
+        include_fixed_vars = not self._config.assume_fixed_vars_permanent
         for disjunct in obj.disjuncts:
             disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
             for cons in disjunct.component_data_objects(
@@ -391,13 +405,15 @@ class ConvexHull_Transformation(Transformation):
                     active = True,
                     sort=SortComponents.deterministic,
                     descend_into=Block):
-                # [ESJ 02/14/2020] We *will* disaggregate fixed variables on the
-                # philosophy that fixing is not a promise for the future and we
-                # are mathematically wrong if we don't transform these correctly
-                # and someone later unfixes them and keeps playing with their
-                # transformed model
-                for var in EXPR.identify_variables(
-                        cons.body, include_fixed=True):
+                # [ESJ 02/14/2020] By default, we disaggregate fixed variables
+                # on the philosophy that fixing is not a promise for the future
+                # and we are mathematically wrong if we don't transform these
+                # correctly and someone later unfixes them and keeps playing
+                # with their transformed model. However, the user may have set
+                # assume_fixed_vars_permanent to True in which case we will skip
+                # them
+                for var in EXPR.identify_variables( 
+                        cons.body, include_fixed=include_fixed_vars):
                     # Note the use of a list so that we will
                     # eventually disaggregate the vars in a
                     # deterministic order (the order that we found

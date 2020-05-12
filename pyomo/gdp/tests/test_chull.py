@@ -1877,3 +1877,24 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(repn.linear_vars), 1)
         self.assertIs(repn.linear_vars[0], m.disj2.indicator_var)
         self.assertEqual(repn.linear_coefs[0], 1)
+
+class DisaggregatingFixedVars(unittest.TestCase):
+    def test_disaggregate_fixed_variables(self):
+        m = models.makeTwoTermDisj()
+        m.x.fix(6)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+        # check that we did indeed disaggregate x
+        transBlock = m.d[1]._transformation_block()
+        self.assertIsInstance(transBlock.component("x"), Var)
+        self.assertIs(chull.get_disaggregated_var(m.x, m.d[1]), transBlock.x)
+        self.assertIs(chull.get_src_var(transBlock.x), m.x)
+
+    def test_do_not_disaggregate_fixed_variables(self):
+        m = models.makeTwoTermDisj()
+        m.x.fix(6)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m, assume_fixed_vars_permanent=True)
+        # check that we didn't disaggregate x
+        transBlock = m.d[1]._transformation_block()
+        self.assertIsNone(transBlock.component("x"))
