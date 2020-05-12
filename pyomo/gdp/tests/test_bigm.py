@@ -25,7 +25,7 @@ import random
 import sys
 
 from six import iteritems, StringIO
-
+from nose.tools import set_trace
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
@@ -1992,7 +1992,7 @@ class TestErrors(unittest.TestCase):
         self.assertEqual(value(relaxed_xor['ub'].upper), 1)
         self.assertEqual(len(repn.linear_vars), 1)
         ct.check_linear_coef( self, repn,
-                              m.disjunction.disjuncts[0].indicator_var, -1)
+                              m.disjunction.disjuncts[0].indicator_var, 1)
 
         # and last check that the other constraints here look fine
         x0 = disjunct1.component("disjunction_disjuncts[0].constraint")
@@ -2024,6 +2024,46 @@ class TestErrors(unittest.TestCase):
 
     def test_silly_target(self):
         ct.check_silly_target(self, 'bigm')
+
+class EstimatingMwithFixedVars(unittest.TestCase):
+    def test_tighter_Ms_when_vars_fixed_forever(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.y = Var(bounds=(0, 70))
+        m.d = Disjunct()
+        m.d.c = Constraint(expr=m.x + m.y <= 13)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x >= 7)
+        m.disj = Disjunction(expr=[m.d, m.d2])
+        m.y.fix(10)
+        bigm = TransformationFactory('gdp.bigm')
+        promise = bigm.create_using(m, assume_fixed_vars_permanent=True)
+        bigm.apply_to(m, assume_fixed_vars_permanent=False)
+
+        # check the M values in both cases
+        # first where y might be unfixed:
+        xformed = bigm.get_transformed_constraints(m.d.c)
+        self.assertEqual(len(xformed), 1)
+        cons = xformed[0]
+        self.assertEqual(cons.upper, 13)
+        self.assertIsNone(cons.lower)
+        repn = generate_standard_repn(cons.body)
+        self.assertEqual(repn.constant, -57)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, m.x, 1)
+        ct.check_linear_coef(self, repn, m.d.indicator_var, 67)
+
+        # then where it won't
+        xformed = bigm.get_transformed_constraints(promise.d.c)
+        self.assertEqual(len(xformed), 1)
+        cons = xformed[0]
+        self.assertEqual(cons.upper, 13)
+        self.assertIsNone(cons.lower)
+        repn = generate_standard_repn(cons.body)
+        self.assertEqual(repn.constant, 3)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, promise.x, 1)
+        ct.check_linear_coef(self, repn, promise.d.indicator_var, 7)
 
 if __name__ == '__main__':
     unittest.main()

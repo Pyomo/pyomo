@@ -25,6 +25,7 @@ from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
+import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (target_list, is_child_of, get_src_disjunction,
                             get_src_constraint, get_transformed_constraints,
@@ -122,6 +123,23 @@ class BigM_Transformation(Transformation):
         M-values found through model Suffixes or that would otherwise be
         calculated using variable domains."""
     ))
+    CONFIG.declare('assume_fixed_vars_permanent', ConfigValue(
+        default=False,
+        domain=bool,
+        description="Boolean indicating whether or not to transform so that the "
+        "the transformed model will still be valid when fixed Vars are unfixed.",
+        doc="""
+        This is only relevant when the transformation will be estimating values
+        for M. If True, the transformation will calculate M values assuming that
+        fixed variables will always be fixed to their current values. This means
+        that if a fixed variable is unfixed after transformation, the 
+        transformed model is potentially no longer valid. By default, the 
+        transformation will assume fixed variables could be unfixed in the 
+        future and will use their bounds to calculate the M value rather than
+        their value. Note that this could make for a weaker LP relaxation
+        while the variables remain fixed.
+        """
+    ))
 
     def __init__(self):
         """Initialize transformation object."""
@@ -208,6 +226,7 @@ class BigM_Transformation(Transformation):
 
         config.set_value(kwds)
         bigM = config.bigM
+        self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
 
         targets = config.targets
         if targets is None:
@@ -733,6 +752,15 @@ class BigM_Transformation(Transformation):
         return M
 
     def _estimate_M(self, expr, name):
+        # If there are fixed variables here, unfix them for this calculation,
+        # and we'll restore them at the end.
+        fixed_vars = ComponentMap()
+        if not self.assume_fixed_vars_permanent:
+            for v in EXPR.identify_variables(expr, include_fixed=True):
+                if v.fixed:
+                    fixed_vars[v] = value(v)
+                    v.fixed = False
+
         # Calculate a best guess at M
         repn = generate_standard_repn(expr, quadratic=False)
         M = [0, 0]
@@ -770,6 +798,11 @@ class BigM_Transformation(Transformation):
                                 "constraint %s)" % name)
             else:
                 M = (expr_lb, expr_ub)
+
+        # clean up if we unfixed things (fixed_vars is empty if we were assuming
+        # fixed vars are fixed for life)
+        for v, val in iteritems(fixed_vars):
+            v.fix(val)
 
         return tuple(M)
 
