@@ -278,29 +278,33 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y3 = BooleanVar()
 
         def invalid_expression_generator():
-            yield lambda: m.Y1 >= 0
-            yield lambda: m.Y1 <= 0
-            yield lambda: m.Y1 > 0
-            yield lambda: m.Y1 < 0
             yield lambda: m.Y1 + m.Y2
             yield lambda: m.Y1 - m.Y2
             yield lambda: m.Y1 * m.Y2
             yield lambda: m.Y1 / m.Y2
-            yield lambda: m.Y1 // m.Y2
             yield lambda: m.Y1**m.Y2
             yield lambda: 0 + m.Y2
             yield lambda: 0 - m.Y2
             yield lambda: 0 * m.Y2
             yield lambda: 0 / m.Y2
-            yield lambda: 0 // m.Y2
             yield lambda: 0**m.Y2
             yield lambda: -m.Y1
             yield lambda: +m.Y1
 
+        def invalid_comparison_generator():
+            yield lambda: m.Y1 >= 0
+            yield lambda: m.Y1 <= 0
+            yield lambda: m.Y1 > 0
+            yield lambda: m.Y1 < 0
+
         numeric_error_msg = "Unable to perform arithmetic operations between logical values."
         for invalid_expr_fcn in invalid_expression_generator():
             with self.assertRaisesRegex(TypeError, numeric_error_msg):
-                myexpr = invalid_expr_fcn()
+                _ = invalid_expr_fcn()
+        comparison_error_msg = "Numeric comparison with LogicalValue Y1 is not allowed."
+        for invalid_expr_fcn in invalid_comparison_generator():
+            with self.assertRaisesRegex(TypeError, comparison_error_msg):
+                _ = invalid_expr_fcn()
 
     def test_invalid_conversion(self):
         m = ConcreteModel()
@@ -313,7 +317,7 @@ class TestLogicalClasses(unittest.TestCase):
 
         with self.assertRaisesRegex(
                 TypeError, "Implicit conversion of Pyomo LogicalValue type "
-                r"'Y1' to a integer is disabled."):
+                "'Y1' to an integer is disabled."):
             int(m.Y1)
 
 
