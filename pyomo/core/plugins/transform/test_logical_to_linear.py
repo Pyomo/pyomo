@@ -212,7 +212,6 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m = _generate_boolean_model(4)
         m.p = LogicalStatement(expr=AtLeast(1, AtLeast(2, m.Y[1], m.Y[1] | m.Y[2], m.Y[2]) | m.Y[3], m.Y[4]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        m.pprint()
         Y_aug = m.logic_to_linear_augmented_vars
         self.assertEqual(len(Y_aug), 3)
         _constrs_contained_within(
@@ -245,7 +244,11 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.p = LogicalStatement(expr=m.Y[1] >> m.Y[3] | m.Y[4])
         m.p2 = LogicalStatement(expr=AtMost(2, *m.Y[:]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        m.pprint()
+        _constrs_contained_within(
+            self, [
+                (1, m.dd[1].indicator_var + m.dd[2].indicator_var + 1 - m.d1.indicator_var, None),
+                (None, m.d1.indicator_var + m.d2.indicator_var + m.dd[1].indicator_var + m.dd[2].indicator_var, 2)
+            ], m.logic_to_linear)
 
     def test_gdp_nesting(self):
         m = _generate_boolean_model(2)
@@ -254,7 +257,14 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
             [m.Y[2].equivalent_to(False)]
         ])
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        m.pprint()
+        _constrs_contained_within(
+            self, [
+                (1, 1 - m.Y[1].as_binary() + m.Y[2].as_binary(), None),
+            ], m.disj_disjuncts[0].logic_to_linear)
+        _constrs_contained_within(
+            self, [
+                (1, 1 - m.Y[2].as_binary(), 1),
+            ], m.disj_disjuncts[1].logic_to_linear)
 
 
 @unittest.skipUnless(sympy_available, "Sympy not available")
