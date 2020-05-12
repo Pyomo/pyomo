@@ -10,12 +10,11 @@ from weakref import ref as weakref_ref
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.logicalvalue import LogicalValue
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.set_types import Reals, Boolean
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.sets import Set
+from pyomo.core.base.set import Set, BooleanSet
 from pyomo.core.base.util import is_functor
 from six.moves import xrange
 
@@ -182,7 +181,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._value = None
-        self._domain = Boolean
+        self._domain = BooleanSet
         self.fixed = False
         self.stale = True
 
