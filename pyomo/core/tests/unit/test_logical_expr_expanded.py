@@ -1,3 +1,6 @@
+"""
+Testing for the logical expression system
+"""
 from __future__ import division
 import operator
 from itertools import product
@@ -12,10 +15,6 @@ from pyomo.core.expr.logicalvalue import LogicalConstant
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.environ import *
-
-'''
-First testing file.
-'''
 
 
 def create_model1(y):
@@ -82,7 +81,7 @@ class TestLogicalClasses(unittest.TestCase):
 
     def test_BooleanVar(self):
         """
-        Test 1
+        Simple construction and value setting
         """
         m = ConcreteModel()
         m.Y1 = BooleanVar()
