@@ -77,7 +77,7 @@ class XpressDirect(DirectSolver):
         # the "version" returned by getversion and the commonly used release numbers
         # (including those in the license and pip/conda install) are different.
         # We'll report the more commonly used number for this error
-        if self._version_major < 34:
+        if self._python_api_exists and self._version_major < 34:
             raise Exception(kwds['type']+' is incompatible with Xpress versions prior to 8.6.0')
 
         # TODO: this isn't a limit of XPRESS, which implements an SLP
