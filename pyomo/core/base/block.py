@@ -1901,7 +1901,7 @@ class Block(ActiveIndexedComponent):
         try:
             if self.is_indexed():
                 # We can only populate Blocks with finite indexing sets
-                if self.index_set().isfinite():
+                if self._rule is not None and self.index_set().isfinite():
                     for _idx in self.index_set():
                         # Trigger population & call the rule
                         self._getitem_when_not_present(_idx)
