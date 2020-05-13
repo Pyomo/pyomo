@@ -14,19 +14,15 @@ class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
         return logging.getLogger(name)
 
     @abstractmethod
-    def do_symbolic_factorization(self, matrix):
+    def do_symbolic_factorization(self, matrix, raise_on_error=True):
         pass
 
     @abstractmethod
-    def do_numeric_factorization(self, matrix):
+    def do_numeric_factorization(self, matrix, raise_on_error=True):
         pass
 
     @abstractmethod
     def do_back_solve(self, rhs):
-        pass
-
-    @abstractmethod
-    def is_numerically_singular(self, err=None, raise_if_not=True):
         pass
 
     @abstractmethod

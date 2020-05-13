@@ -13,12 +13,12 @@ import numpy as np
 from pyomo.contrib.pynumero.extensions.asl import AmplInterface
 asl_available = AmplInterface.available()
 
-from pyomo.contrib.interior_point.interior_point import InteriorPointSolver
-#from pyomo.contrib.interior_point.interior_point import (solve_interior_point,
-#                                                         _process_init,
-#                                                         _process_init_duals,
-#                                                         _fraction_to_the_boundary_helper_lb,
-#                                                         _fraction_to_the_boundary_helper_ub)
+from pyomo.contrib.interior_point.interior_point import (InteriorPointSolver,
+                                                         process_init,
+                                                         process_init_duals,
+                                                         fraction_to_the_boundary,
+                                                         _fraction_to_the_boundary_helper_lb,
+                                                         _fraction_to_the_boundary_helper_ub)
 from pyomo.contrib.interior_point.interface import InteriorPointInterface
 from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
@@ -35,6 +35,7 @@ class TestSolveInteriorPoint(unittest.TestCase):
         m.c2 = pe.Constraint(expr=m.y >= (m.x - 1)**2)
         interface = InteriorPointInterface(m)
         linear_solver = ScipyInterface()
+        linear_solver.compute_inertia = True
         ip_solver = InteriorPointSolver(linear_solver)
 #        x, duals_eq, duals_ineq = solve_interior_point(interface, linear_solver)
         x, duals_eq, duals_ineq = ip_solver.solve(interface)
@@ -59,50 +60,45 @@ class TestSolveInteriorPoint(unittest.TestCase):
 
 class TestProcessInit(unittest.TestCase):
     def testprocess_init(self):
-        solver = InteriorPointSolver(None)
         lb = np.array([-np.inf, -np.inf,     -2, -2], dtype=np.double)
         ub = np.array([ np.inf,       2, np.inf,  2], dtype=np.double)
 
         x = np.array([       0,       0,      0,  0], dtype=np.double)
-        solver.process_init(x, lb, ub)
+        process_init(x, lb, ub)
         self.assertTrue(np.allclose(x, np.array([0, 0, 0, 0], dtype=np.double)))
 
         x = np.array([      -2,      -2,     -2,  -2], dtype=np.double)
-        solver.process_init(x, lb, ub)
+        process_init(x, lb, ub)
         self.assertTrue(np.allclose(x, np.array([-2, -2, -1, 0], dtype=np.double)))
 
         x = np.array([      -3,      -3,     -3,  -3], dtype=np.double)
-        solver.process_init(x, lb, ub)
+        process_init(x, lb, ub)
         self.assertTrue(np.allclose(x, np.array([-3, -3, -1, 0], dtype=np.double)))
 
         x = np.array([       2,       2,      2,   2], dtype=np.double)
-        solver.process_init(x, lb, ub)
+        process_init(x, lb, ub)
         self.assertTrue(np.allclose(x, np.array([2, 1, 2, 0], dtype=np.double)))
 
         x = np.array([       3,       3,      3,   3], dtype=np.double)
-        solver.process_init(x, lb, ub)
+        process_init(x, lb, ub)
         self.assertTrue(np.allclose(x, np.array([3, 1, 3, 0], dtype=np.double)))
 
     def testprocess_init_duals(self):
-        solver = InteriorPointSolver(None)
-
         x = np.array([0, 0, 0, 0], dtype=np.double)
-        solver.process_init_duals(x)
+        process_init_duals(x)
         self.assertTrue(np.allclose(x, np.array([1, 1, 1, 1], dtype=np.double)))
 
         x = np.array([-1, -1, -1, -1], dtype=np.double)
-        solver.process_init_duals(x)
+        process_init_duals(x)
         self.assertTrue(np.allclose(x, np.array([1, 1, 1, 1], dtype=np.double)))
 
         x = np.array([2, 2, 2, 2], dtype=np.double)
-        solver.process_init_duals(x)
+        process_init_duals(x)
         self.assertTrue(np.allclose(x, np.array([2, 2, 2, 2], dtype=np.double)))
 
         
 class TestFractionToTheBoundary(unittest.TestCase):
     def test_fraction_to_the_boundary_helper_lb(self):
-        solver = InteriorPointSolver(None)
-
         tau = 0.9
         x = np.array([0, 0, 0, 0], dtype=np.double)
         xl = np.array([-np.inf, -1, -np.inf, -1], dtype=np.double)
@@ -110,36 +106,34 @@ class TestFractionToTheBoundary(unittest.TestCase):
         xl_compressed = xl_compression_matrix * xl
 
         delta_x = np.array([-0.1, -0.1, -0.1, -0.1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
         self.assertAlmostEqual(alpha, 1)
 
         delta_x = np.array([-1, -1, -1, -1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
         self.assertAlmostEqual(alpha, 0.9)
 
         delta_x = np.array([-10, -10, -10, -10], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
         self.assertAlmostEqual(alpha, 0.09)
 
         delta_x = np.array([1, 1, 1, 1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
         self.assertAlmostEqual(alpha, 1)
 
         delta_x = np.array([-10, 1, -10, 1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
         self.assertAlmostEqual(alpha, 1)
 
         delta_x = np.array([-10, -1, -10, -1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
         self.assertAlmostEqual(alpha, 0.9)
 
         delta_x = np.array([1, -10, 1, -1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed, xl_compression_matrix)
         self.assertAlmostEqual(alpha, 0.09)
 
     def test_fraction_to_the_boundary_helper_ub(self):
-        solver = InteriorPointSolver(None)
-
         tau = 0.9
         x = np.array([0, 0, 0, 0], dtype=np.double)
         xu = np.array([np.inf, 1, np.inf, 1], dtype=np.double)
@@ -147,29 +141,29 @@ class TestFractionToTheBoundary(unittest.TestCase):
         xu_compressed = xu_compression_matrix * xu
 
         delta_x = np.array([0.1, 0.1, 0.1, 0.1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
         self.assertAlmostEqual(alpha, 1)
 
         delta_x = np.array([1, 1, 1, 1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
         self.assertAlmostEqual(alpha, 0.9)
 
         delta_x = np.array([10, 10, 10, 10], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
         self.assertAlmostEqual(alpha, 0.09)
 
         delta_x = np.array([-1, -1, -1, -1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
         self.assertAlmostEqual(alpha, 1)
 
         delta_x = np.array([10, -1, 10, -1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
         self.assertAlmostEqual(alpha, 1)
 
         delta_x = np.array([10, 1, 10, 1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
         self.assertAlmostEqual(alpha, 0.9)
 
         delta_x = np.array([-1, 10, -1, 1], dtype=np.double)
-        alpha = solver._fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
+        alpha = _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu_compressed, xu_compression_matrix)
         self.assertAlmostEqual(alpha, 0.09)

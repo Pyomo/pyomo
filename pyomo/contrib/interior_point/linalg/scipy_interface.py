@@ -1,4 +1,5 @@
 from .base_linear_solver_interface import LinearSolverInterface
+from .results import LinearSolverStatus, LinearSolverResults
 from scipy.sparse.linalg import splu
 from scipy.linalg import eigvals
 from scipy.sparse import isspmatrix_csc
@@ -16,13 +17,26 @@ class ScipyInterface(LinearSolverInterface):
         self.logger = logging.getLogger('scipy')
         self.logger.propagate = False
 
-    def do_symbolic_factorization(self, matrix):
-        pass
+    def do_symbolic_factorization(self, matrix, raise_on_error=True):
+        res = LinearSolverResults()
+        res.status = LinearSolverStatus.successful
+        return res
 
-    def do_numeric_factorization(self, matrix):
+    def do_numeric_factorization(self, matrix, raise_on_error=True):
         if not isspmatrix_csc(matrix):
             matrix = matrix.tocsc()
-        self._lu = splu(matrix)
+        res = LinearSolverResults()
+        try:
+            self._lu = splu(matrix)
+            res.status = LinearSolverStatus.successful
+        except RuntimeError as err:
+            if raise_on_error:
+                raise err
+            if 'Factor is exactly singular' in str(err):
+                res.status = LinearSolverStatus.singular
+            else:
+                res.status = LinearSolverStatus.error
+
         if self.compute_inertia:
             eig = eigvals(matrix.toarray())
             pos_eig = np.count_nonzero((eig > 0))
@@ -30,29 +44,7 @@ class ScipyInterface(LinearSolverInterface):
             zero_eig = np.count_nonzero(eig == 0)
             self._inertia = (pos_eig, neg_eigh, zero_eig)
 
-    def try_factorization(self, matrix):
-        error = None
-        try:
-            self.do_numeric_factorization(matrix)
-        except RuntimeError as err:
-            error = err
-        finally:
-            if self.compute_inertia:
-                eig = eigvals(matrix.toarray())
-                pos_eig = np.count_nonzero((eig > 0))
-                neg_eigh = np.count_nonzero((eig < 0))
-                zero_eig = np.count_nonzero(eig == 0)
-                self._inertia = (pos_eig, neg_eigh, zero_eig)
-        return error
-
-    def is_numerically_singular(self, err=None, raise_if_not=True):
-        if err:
-            if 'Factor is exactly singular' in str(err):
-                return True
-            else:
-                raise
-        # Appears to be no way to query splu for info about the solve
-        return False
+        return res
 
     def do_back_solve(self, rhs):
         if isinstance(rhs, BlockVector):
