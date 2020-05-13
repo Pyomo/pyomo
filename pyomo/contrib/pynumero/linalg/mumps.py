@@ -16,8 +16,7 @@ except ImportError as e:
     raise ImportError('Error importing mumps. Install pymumps '
                       'conda install -c conda-forge pymumps')
 
-from pyomo.contrib.pynumero.sparse.utils import is_symmetric_sparse
-from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
+from pyomo.contrib.pynumero.sparse import BlockVector
 
 
 class MumpsCentralizedAssembledLinearSolver(object):
@@ -46,8 +45,11 @@ class MumpsCentralizedAssembledLinearSolver(object):
     def __init__(self, sym=0, par=1, comm=None, cntl_options=None, icntl_options=None):
         self._nnz = None
         self._dim = None
-        self.mumps = mumps.DMumpsContext(sym=sym, par=par, comm=comm)
-        self.mumps.set_silent()
+        self._mumps = mumps.DMumpsContext(sym=sym, par=par, comm=comm)
+        self._mumps.set_silent()
+        self._icntl_options = dict()
+        self._cntl_options = dict()
+
         if cntl_options is None:
             cntl_options = dict()
         if icntl_options is None:
@@ -55,6 +57,17 @@ class MumpsCentralizedAssembledLinearSolver(object):
         for k, v in cntl_options.items():
             self.set_cntl(k, v)
         for k, v in icntl_options.items():
+            self.set_icntl(k, v)
+
+    def _init(self):
+        """
+        The purpose of this method is to address issue #12 from pymumps
+        """
+        self._mumps.run(job=-1)
+        self._mumps.set_silent()
+        for k, v in self._cntl_options.items():
+            self.set_cntl(k, v)
+        for k, v in self._icntl_options.items():
             self.set_icntl(k, v)
         
     def do_symbolic_factorization(self, matrix):
@@ -69,6 +82,7 @@ class MumpsCentralizedAssembledLinearSolver(object):
             is not already in coo format. If sym is 1 or 2, the matrix must be lower 
             or upper triangular.
         """
+        self._init()
         if type(matrix) == np.ndarray:
             matrix = coo_matrix(matrix)
         if not isspmatrix_coo(matrix):
@@ -78,9 +92,9 @@ class MumpsCentralizedAssembledLinearSolver(object):
             raise ValueError('matrix is not square')
         self._dim = nrows
         self._nnz = matrix.nnz
-        self.mumps.set_shape(nrows)
-        self.mumps.set_centralized_assembled_rows_cols(matrix.row + 1, matrix.col + 1)
-        self.mumps.run(job=1)
+        self._mumps.set_shape(nrows)
+        self._mumps.set_centralized_assembled_rows_cols(matrix.row + 1, matrix.col + 1)
+        self._mumps.run(job=1)
 
     def do_numeric_factorization(self, matrix):
         """
@@ -108,8 +122,8 @@ class MumpsCentralizedAssembledLinearSolver(object):
             raise ValueError('The shape of the matrix changed between symbolic and numeric factorization')
         if self._nnz != matrix.nnz:
             raise ValueError('The number of nonzeros changed between symbolic and numeric factorization')
-        self.mumps.set_centralized_assembled_values(matrix.data)
-        self.mumps.run(job=2)
+        self._mumps.set_centralized_assembled_values(matrix.data)
+        self._mumps.run(job=2)
 
     def do_back_solve(self, rhs):
         """
@@ -133,8 +147,8 @@ class MumpsCentralizedAssembledLinearSolver(object):
         else:
             result = rhs.copy()
 
-        self.mumps.set_rhs(result)
-        self.mumps.run(job=3)
+        self._mumps.set_rhs(result)
+        self._mumps.run(job=3)
 
         if isinstance(rhs, BlockVector):
             _result = rhs.copy_structure()
@@ -144,13 +158,15 @@ class MumpsCentralizedAssembledLinearSolver(object):
         return result
 
     def __del__(self):
-        self.mumps.destroy()
+        self._mumps.destroy()
 
     def set_icntl(self, key, value):
-        self.mumps.set_icntl(key, value)
+        self._icntl_options[key] = value
+        self._mumps.set_icntl(key, value)
 
     def set_cntl(self, key, value):
-        self.mumps.id.cntl[key-1] = value
+        self._cntl_options[key] = value
+        self._mumps.id.cntl[key - 1] = value
 
     def solve(self, matrix, rhs):
         self.do_symbolic_factorization(matrix)
@@ -158,13 +174,13 @@ class MumpsCentralizedAssembledLinearSolver(object):
         return self.do_back_solve(rhs)
 
     def get_info(self, key):
-        return self.mumps.id.info[key-1]
+        return self._mumps.id.info[key - 1]
 
     def get_infog(self, key):
-        return self.mumps.id.infog[key-1]
+        return self._mumps.id.infog[key - 1]
 
     def get_rinfo(self, key):
-        return self.mumps.id.rinfo[key-1]
+        return self._mumps.id.rinfo[key - 1]
 
     def get_rinfog(self, key):
-        return self.mumps.id.rinfog[key-1]
+        return self._mumps.id.rinfog[key - 1]
