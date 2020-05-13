@@ -10,7 +10,7 @@ if not (numpy_availalbe and scipy_available):
 
 import numpy as np
 
-from pyomo.contrib.pynumero.extensions.asl import AmplInterface
+from pyomo.contrib.pynumero.asl import AmplInterface
 asl_available = AmplInterface.available()
 
 from pyomo.contrib.interior_point.interior_point import (InteriorPointSolver,

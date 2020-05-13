@@ -11,7 +11,7 @@ mumps_interface, mumps_available = attempt_import(
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest('Interior point tests require numpy and scipy')
 
-from pyomo.contrib.pynumero.extensions.asl import AmplInterface
+from pyomo.contrib.pynumero.asl import AmplInterface
 asl_available = AmplInterface.available()
 
 from pyomo.contrib.interior_point.interior_point import InteriorPointSolver

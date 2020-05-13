@@ -1,6 +1,6 @@
 from .base_linear_solver_interface import LinearSolverInterface
 from .results import LinearSolverStatus, LinearSolverResults
-from pyomo.contrib.pynumero.linalg.mumps_solver import MumpsCentralizedAssembledLinearSolver
+from pyomo.contrib.pynumero.linalg.mumps import MumpsCentralizedAssembledLinearSolver
 from scipy.sparse import isspmatrix_coo, tril
 from collections import OrderedDict
 import logging
@@ -35,7 +35,7 @@ class MumpsInterface(LinearSolverInterface):
         for k, v in icntl_options.items():
             self.set_icntl(k, v)
         
-        self.error_level = self._mumps.mumps.id.icntl[10]
+        self.error_level = self.get_icntl(11)
         self.log_error = bool(self.error_level)
 
         self._dim = None
@@ -155,6 +155,12 @@ class MumpsInterface(LinearSolverInterface):
 
     def set_cntl(self, key, value):
         self._mumps.set_cntl(key, value)
+
+    def get_icntl(self, key):
+        return self._mumps.get_icntl(key)
+
+    def get_cntl(self, key):
+        return self._mumps.get_cntl(key)
 
     def get_info(self, key):
         return self._mumps.get_info(key)

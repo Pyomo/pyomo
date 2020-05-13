@@ -7,7 +7,7 @@ from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hes
 np, numpy_available = attempt_import('numpy', 'inverse_reduced_hessian numpy',
                                      minimum_version='1.13.0')
 scipy, scipy_available = attempt_import('scipy', 'inverse_reduced_hessian requires scipy')
-from pyomo.contrib.pynumero.extensions.asl import AmplInterface
+from pyomo.contrib.pynumero.asl import AmplInterface
 asl_available = AmplInterface.available()
 if not (numpy_available and scipy_available and asl_available):
     raise unittest.SkipTest('inverse_reduced_hessian tests require numpy, scipy, and asl')
