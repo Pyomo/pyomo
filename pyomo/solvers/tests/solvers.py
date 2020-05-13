@@ -82,6 +82,7 @@ def test_solver_cases(*args):
     if len(_test_solver_cases) == 0:
         logging.disable(logging.WARNING)
 
+
         #
         # MOSEK
         #
@@ -311,6 +312,22 @@ def test_solver_cases(*args):
             io='nl',
             capabilities=_xpress_capabilities,
             import_suffixes=['dual'])
+
+        _test_solver_cases['xpress', 'python'] = initialize(
+            name='xpress',
+            io='mps',
+            capabilities=_xpress_capabilities,
+            import_suffixes=['dual','rc','slack'])
+
+        #
+        # XPRESS PERSISTENT 
+        #
+
+        _test_solver_cases['xpress_persistent', 'python'] = initialize(
+            name='xpress_persistent',
+            io='python',
+            capabilities=_gurobi_capabilities,
+            import_suffixes=['slack', 'dual', 'rc'])
 
         #
         # IPOPT
