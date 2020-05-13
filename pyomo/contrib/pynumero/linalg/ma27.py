@@ -30,8 +30,7 @@ class MA27Interface(object):
 
     def __init__(self,
                  iw_factor=None,
-                 a_factor=None,
-                 memory_increase_factor=2.):
+                 a_factor=None):
 
         if not MA27Interface.available():
             raise RuntimeError(
@@ -39,7 +38,6 @@ class MA27Interface(object):
 
         self.iw_factor = iw_factor
         self.a_factor = a_factor
-        self.memory_increase_factor = memory_increase_factor
 
         self.lib = ctypes.cdll.LoadLibrary(self.libname)
 
