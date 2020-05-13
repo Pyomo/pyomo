@@ -15,10 +15,11 @@ except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run linear solver tests")
 
 try:
-    from pyomo.contrib.pynumero.linalg.mumps import MumpsCentralizedAssembledLinearSolver
+    import mumps
 except ImportError:
     raise unittest.SkipTest("Pynumero needs pymumps to run linear solver tests")
 
+from pyomo.contrib.pynumero.linalg.mumps import MumpsCentralizedAssembledLinearSolver
 from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
 
 
