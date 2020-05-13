@@ -685,6 +685,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write('\n' + line)
             output_file.write("\n\n* END USER ADDITIONAL OPTIONS\n\n")
 
+        if put_results is not None:
+            output_file.write("\n\noption savepoint=1;\n\n")
+
         output_file.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n\n"
             % ( model_name,
@@ -720,27 +723,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write("ETSOLVE = %s.etsolve\n\n" % model_name)
 
         if put_results is not None:
-            results = put_results + '.dat'
-            output_file.write("\nfile results /'%s'/;" % results)
-            output_file.write("\nresults.nd=15;")
-            output_file.write("\nresults.nw=21;")
-            output_file.write("\nput results;")
-            output_file.write("\nput 'SYMBOL  :  LEVEL  :  MARGINAL' /;")
-            for var in var_list:
-                output_file.write("\nput %s %s.l %s.m /;" % (var, var, var))
-            for con in constraint_names:
-                output_file.write("\nput %s %s.l %s.m /;" % (con, con, con))
-            output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
-                              "GAMS_OBJECTIVE.m;\n")
-
-            statresults = put_results + 'stat.dat'
-            output_file.write("\nfile statresults /'%s'/;" % statresults)
-            output_file.write("\nstatresults.nd=15;")
-            output_file.write("\nstatresults.nw=21;")
-            output_file.write("\nput statresults;")
-            output_file.write("\nput 'SYMBOL   :   VALUE' /;")
+            output_file.write("\nexecute_unload '%s_s.gdx'" % model_name)
             for stat in stat_vars:
-                output_file.write("\nput '%s' %s /;\n" % (stat, stat))
+                output_file.write(", %s" % stat)
+            output_file.write(";\n")
 
 
 valid_solvers = {

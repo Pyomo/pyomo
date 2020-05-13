@@ -101,9 +101,9 @@ class GAMSTests(unittest.TestCase):
             self.assertFalse(os.path.exists(os.path.join(tmpdir,
                                                          'output.lst')))
             self.assertFalse(os.path.exists(os.path.join(tmpdir,
-                                                         'results.dat')))
+                                                         'GAMS_MODEL_p.gdx')))
             self.assertFalse(os.path.exists(os.path.join(tmpdir,
-                                                         'resultsstat.dat')))
+                                                         'GAMS_MODEL_s.gdx')))
 
             os.rmdir(tmpdir)
 
@@ -157,9 +157,9 @@ class GAMSTests(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(tmpdir,
                                                          'output.lst')))
             self.assertTrue(os.path.exists(os.path.join(tmpdir,
-                                                         'results.dat')))
+                                                         'GAMS_MODEL_p.gdx')))
             self.assertTrue(os.path.exists(os.path.join(tmpdir,
-                                                         'resultsstat.dat')))
+                                                         'GAMS_MODEL_s.gdx')))
 
             shutil.rmtree(tmpdir)
 
