@@ -63,6 +63,13 @@ class XpressDirect(DirectSolver):
                     int(k) for k in self._xpress.getversion().split('.'))
             self._name = "Xpress %s.%s.%s" % self._version
             self._version_major = self._version[0]
+            # in versions prior to 34, xpress raised a RuntimeError, but in more
+            # recent versions it raises a xpress.ModelError. We'll cache the appropriate
+            # one here
+            if self._version_major < 34:
+                self._XpressException = RuntimeError
+            else:
+                self._XpressException = xpress.ModelError
         except ImportError:
             self._python_api_exists = False
         except Exception as e:
@@ -74,11 +81,6 @@ class XpressDirect(DirectSolver):
             print("Import of xpress failed - xpress message=" + str(e) + "\n")
             self._python_api_exists = False
             
-        # the "version" returned by getversion and the commonly used release numbers
-        # (including those in the license and pip/conda install) are different.
-        # We'll report the more commonly used number for this error
-        if self._python_api_exists and self._version_major < 34:
-            raise Exception(kwds['type']+' is incompatible with Xpress versions prior to 8.6.0')
 
         # TODO: this isn't a limit of XPRESS, which implements an SLP
         #       method for NLPs. But it is a limit of *this* interface
@@ -129,7 +131,7 @@ class XpressDirect(DirectSolver):
         for key, option in self.options.items():
             try: 
                 self._solver_model.setControl(key, option)
-            except self._xpress.ModelError:
+            except self._XpressException:
                 # take another try, converting to its type
                 # we'll wrap this in a function to raise the
                 # xpress error
@@ -542,25 +544,25 @@ class XpressDirect(DirectSolver):
             try:
                 self.results.problem.upper_bound = xprob_attrs.lpobjval
                 self.results.problem.lower_bound = xprob_attrs.lpobjval
-            except (xp.ModelError, AttributeError):
+            except (self._XpressException, AttributeError):
                 pass
         elif xprob_attrs.objsense == 1.0:  # minimizing MIP
             try:
                 self.results.problem.upper_bound = xprob_attrs.mipbestobjval
-            except (xp.ModelError, AttributeError):
+            except (self._XpressException, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = xprob_attrs.bestbound
-            except (xp.ModelError, AttributeError):
+            except (self._XpressException, AttributeError):
                 pass
         elif xprob_attrs.objsense == -1.0:  # maximizing MIP
             try:
                 self.results.problem.upper_bound = xprob_attrs.bestbound
-            except (xp.ModelError, AttributeError):
+            except (self._XpressException, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = xprob_attrs.mipbestobjval
-            except (xp.ModelError, AttributeError):
+            except (self._XpressException, AttributeError):
                 pass
         else:
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
