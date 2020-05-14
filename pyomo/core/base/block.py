@@ -1317,27 +1317,22 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = PseudoMap(self, ctype, active, sort)
         for name, comp in _subcomp.iteritems():
-            # _NOTE_: Suffix has a dict interface (something other
-            #         derived non-indexed Components may do as well),
-            #         so we don't want to test the existence of
-            #         iteritems as a check for components. Also,
-            #         the case where we test len(comp) after seeing
-            #         that comp.is_indexed is False is a hack for a
-            #         SimpleConstraint whose expression resolved to
-            #         Constraint.skip or Constraint.feasible (in which
-            #         case its data is empty and iteritems would have
-            #         been empty as well)
-            # try:
-            #    _items = comp.iteritems()
-            # except AttributeError:
-            #    _items = [ (None, comp) ]
+            # NOTE: Suffix has a dict interface (something other derived
+            #   non-indexed Components may do as well), so we don't want
+            #   to test the existence of iteritems as a check for
+            #   component datas. We will rely on is_indexed() to catch
+            #   all the indexed components.  Then we will do special
+            #   processing for the scalar components to catch the case
+            #   where there are "sparse scalar components"
             if comp.is_indexed():
                 _items = comp.iteritems()
-            # This is a hack (see _NOTE_ above).
-            elif len(comp) or not hasattr(comp, '_data'):
-                _items = ((None, comp),)
+            elif hasattr(comp, '_data'):
+                # This may be an empty Scalar component (e.g., from
+                # Constraint.Skip on a scalar Constraint)
+                assert len(comp._data) <= 1
+                _items = iteritems(comp._data)
             else:
-                _items = tuple()
+                _items = ((None, comp),)
 
             if _sort_indices:
                 _items = sorted(_items, key=itemgetter(0))
