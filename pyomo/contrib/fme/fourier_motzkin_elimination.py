@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core import (Var, Block, Constraint, Param, Set, Suffix, Expression,
-                        Objective, SortComponents, value, ConstraintList, Reals)
+                        Objective, SortComponents, value, ConstraintList)
 from pyomo.core.base import (TransformationFactory, _VarData)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
@@ -122,7 +122,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         config.set_value(kwds)
         vars_to_eliminate = config.vars_to_eliminate
         self.constraint_filter = config.constraint_filtering_callback
-        #self.constraint_filter = _check_var_bounds_filter
         if vars_to_eliminate is None:
             raise RuntimeError("The Fourier-Motzkin Elimination transformation "
                                "requires the argument vars_to_eliminate, a "
