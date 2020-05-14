@@ -22,9 +22,6 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory, check_available_solvers
 
-# DEBUG
-from nose.tools import set_trace
-
 solvers = check_available_solvers('glpk')
 
 class TestFourierMotzkinElimination(unittest.TestCase):
@@ -131,7 +128,6 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             m,
             vars_to_eliminate = m.lamb,
             constraint_filtering_callback=None)
-
         # we get some trivial constraints too, but let's check that the ones
         # that should be there really are
         self.check_projected_constraints(m, self.unfiltered_indices)
