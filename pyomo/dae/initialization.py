@@ -18,7 +18,7 @@ from pyomo.dae.set_utils import (is_explicitly_indexed_by,
 def get_inconsistent_initial_conditions(model, time, tol=1e-8, t0=None, 
         allow_skip=True, suppress_warnings=False):
     """Finds constraints of the model that are implicitly or explicitly
-    indexed by time and checks if they consistent to within a tolerance
+    indexed by time and checks if they are consistent to within a tolerance
     at the initial value of time.
 
     Args:
@@ -96,7 +96,7 @@ def solve_consistent_initial_conditions(model, time, solver):
     Args:
         model: Model that will be solved
         time: Set whose initial conditions will remain active for solve
-        solver: Something that implements an solve method that accepts
+        solver: Something that implements a solve method that accepts
                 a model as an argument
 
     Returns:
