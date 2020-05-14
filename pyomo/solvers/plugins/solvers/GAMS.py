@@ -587,7 +587,7 @@ class GAMSShell(_GAMSSolver):
         try:
             from gdxcc import new_gdxHandle_tp, gdxCreateD, gdxClose, gdxFree
             from gdxcc import gdxOpenRead, gdxDataReadRawStart, gdxDataReadRaw
-            from gdxcc import gdxSymbolInfo
+            from gdxcc import gdxDataReadDone, gdxSymbolInfo
             return True
         except ImportError as e:
             if not exception_flag:
@@ -675,7 +675,7 @@ class GAMSShell(_GAMSSolver):
 
         from gdxcc import new_gdxHandle_tp, gdxCreateD, gdxClose, gdxFree
         from gdxcc import gdxOpenRead, gdxDataReadRawStart, gdxDataReadRaw
-        from gdxcc import gdxSymbolInfo
+        from gdxcc import gdxDataReadDone, gdxSymbolInfo
 
         if len(args) != 1:
             raise ValueError('Exactly one model must be passed '
@@ -822,6 +822,7 @@ class GAMSShell(_GAMSSolver):
                 else:
                     stat_vars[stat] = int(ret[2][0])
 
+            gdxDataReadDone(pgdx)
             gdxClose(pgdx)
 
             ret = gdxOpenRead(pgdx, results_filename)
@@ -844,6 +845,7 @@ class GAMSShell(_GAMSSolver):
                     raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
                 model_soln[ret[1]] = (level, dual)
 
+            gdxDataReadDone(pgdx)
             gdxClose(pgdx)
             gdxFree(pgdx)
 
