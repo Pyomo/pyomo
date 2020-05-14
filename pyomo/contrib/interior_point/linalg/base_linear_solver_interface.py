@@ -21,6 +21,9 @@ class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
     def do_numeric_factorization(self, matrix, raise_on_error=True):
         pass
 
+    def increase_memory_allocation(self, factor):
+        raise NotImplementedError('Should be implemented by base class.')
+
     @abstractmethod
     def do_back_solve(self, rhs):
         pass

@@ -51,47 +51,45 @@ class LinearSolveContext(object):
 #       
 #       Define a method for logging IP_reg_info to the linear solver log
 #       Method can be called within linear_solve_context
-class RegularizationContext(object):
-    def __init__(self, logger, linear_solver):
+class FactorizationContext(object):
+    def __init__(self, logger):
         # Any reason to pass in a logging level here?
         # ^ So the "regularization log" can have its own outlvl
         self.logger = logger
-        self.linear_solver = linear_solver
 
-    def __enter__(self):
-        self.logger.debug('KKT matrix has incorrect inertia. '
-                         'Regularizing Hessian...')
+    def start(self):
+        self.logger.debug('Factorizing KKT')
         self.log_header()
-        return self
 
-    def __exit__(self, et, ev, tb):
-        self.logger.debug('Exiting regularization.')
-        # Will this swallow exceptions in this context?
+    def stop(self):
+        self.logger.debug('Finished factorizing KKT')
 
     def log_header(self):
         self.logger.debug('{_iter:<10}'
                           '{reg_iter:<10}'
+                          '{num_realloc:<10}'
                           '{reg_coef:<10}'
                           '{neg_eig:<10}'
                           '{status:<10}'.format(
             _iter='Iter',
             reg_iter='reg_iter',
+            num_realloc='# realloc',
             reg_coef='reg_coef',
             neg_eig='neg_eig',
             status='status'))
 
-    def log_info(self, _iter, reg_iter, coef, inertia, status):
-        singular = bool(inertia[2])
-        n_neg = inertia[1]
+    def log_info(self, _iter, reg_iter, num_realloc, coef, neg_eig, status):
         self.logger.debug('{_iter:<10}'
                           '{reg_iter:<10}'
+                          '{num_realloc:<10}'
                           '{reg_coef:<10.2e}'
                           '{neg_eig:<10}'
                           '{status:<10}'.format(
             _iter=_iter,
             reg_iter=reg_iter,
+            num_realloc=num_realloc,
             reg_coef=coef,
-            neg_eig=n_neg,
+            neg_eig=str(neg_eig),
             status=status.name))
 
 
@@ -117,12 +115,13 @@ class InteriorPointSolver(object):
         self.base_eq_reg_coef = -1e-8
         self._barrier_parameter = 0.1
         self._minimum_barrier_parameter = 1e-9
+        self.hess_reg_coef = 1e-4
+        self.max_reg_iter = 6
+        self.reg_factor_increase = 100
 
         self.logger = logging.getLogger('interior_point')
         self._iter = 0
-        self.regularization_context = RegularizationContext(
-                self.logger,
-                self.linear_solver)
+        self.factorization_context = FactorizationContext(self.logger)
 
         if linear_solver_log_filename:
             with open(linear_solver_log_filename, 'w'):
@@ -167,9 +166,6 @@ class InteriorPointSolver(object):
         linear_solver = self.linear_solver
         max_iter = kwargs.pop('max_iter', self.max_iter)
         tol = kwargs.pop('tol', self.tol)
-        regularize_kkt = kwargs.pop('regularize_kkt', self.regularize_kkt)
-        max_reg_coef = kwargs.pop('max_reg_coef', 1e10)
-        reg_factor_increase = kwargs.pop('reg_factor_increase', 1e2)
         self._barrier_parameter = 0.1
 
         self.set_interface(interface)
@@ -261,16 +257,8 @@ class InteriorPointSolver(object):
             kkt = interface.evaluate_primal_dual_kkt_matrix()
             rhs = interface.evaluate_primal_dual_kkt_rhs()
 
-            # Factorize linear system, with or without regularization:
-            if not regularize_kkt:
-                self.factorize_linear_system(kkt)
-            else:
-                eq_reg_coef = self.base_eq_reg_coef*\
-                              self._barrier_parameter**(1/4)
-                self.factorize_with_regularization(kkt,
-                        eq_reg_coef=eq_reg_coef,
-                        max_reg_coef=max_reg_coef,
-                        factor_increase=reg_factor_increase)
+            # Factorize linear system
+            self.factorize(kkt=kkt)
 
             with self.linear_solve_context:
                 self.logger.info('Iter: %s' % self._iter)
@@ -287,7 +275,7 @@ class InteriorPointSolver(object):
             delta_duals_primals_ub = interface.get_delta_duals_primals_ub()
             delta_duals_slacks_lb = interface.get_delta_duals_slacks_lb()
             delta_duals_slacks_ub = interface.get_delta_duals_slacks_ub()
-            
+
             primals += alpha_primal_max * delta_primals
             slacks += alpha_primal_max * delta_slacks
             duals_eq += alpha_dual_max * delta_duals_eq
@@ -299,82 +287,53 @@ class InteriorPointSolver(object):
 
         return primals, duals_eq, duals_ineq
 
-    def factorize_linear_system(self, kkt):
-        self.linear_solver.do_symbolic_factorization(kkt)
-        self.linear_solver.do_numeric_factorization(kkt)
-        # Should I return something here?
+    def factorize(self, kkt):
+        desired_n_neg_evals = (self.interface.n_eq_constraints() +
+                               self.interface.n_ineq_constraints())
+        reg_iter = 0
+        self.factorization_context.start()
 
-    def try_factorization_and_reallocation(self, kkt):
-        assert self.max_reallocation_iterations >= 1
-        for count in range(self.max_reallocation_iterations):
-            res = self.linear_solver.do_symbolic_factorization(matrix=kkt, raise_on_error=False)
-            if res.status == LinearSolverStatus.successful:
-                res = self.linear_solver.do_numeric_factorization(matrix=kkt, raise_on_error=False)
-            if res.status == LinearSolverStatus.successful:
-                status = LinearSolverStatus.successful
-                break
-            elif res.status == LinearSolverStatus.not_enough_memory:
-                status = LinearSolverStatus.not_enough_memory
-                new_allocation = self.linear_solver.increase_memory_allocation(self.reallocation_factor)
-                self.logger.info('Reallocating memory for linear solver. New memory allocation is {0}'.format(new_allocation))
-            else:
-                status = res.status
-                break
-        return status
+        status, num_realloc = try_factorization_and_reallocation(kkt=kkt,
+                                                                 linear_solver=self.linear_solver,
+                                                                 reallocation_factor=self.reallocation_factor,
+                                                                 max_iter=self.max_reallocation_iterations)
+        if status == LinearSolverStatus.successful:
+            neg_eig = self.linear_solver.get_inertia()[1]
+        else:
+            neg_eig = None
+        self.factorization_context.log_info(_iter=self._iter, reg_iter=reg_iter, num_realloc=num_realloc,
+                                            coef=0, neg_eig=neg_eig, status=status)
+        reg_iter += 1
 
-    def factorize_with_regularization(self, kkt,
-                                      eq_reg_coef=1e-8,
-                                      max_reg_coef=1e10,
-                                      factor_increase=1e2):
-        linear_solver = self.linear_solver
-        logger = self.logger
-        _iter = self._iter
-        regularization_context = self.regularization_context
-        desired_n_neg_evals = (self.interface._nlp.n_eq_constraints() + 
-                               self.interface._nlp.n_ineq_constraints())
-
-        reg_kkt_1 = kkt
-        reg_coef = 1e-4
-
-        status = self.try_factorization_and_reallocation(kkt)
         if status == LinearSolverStatus.singular:
-            # No context manager for "equality gradient regularization,"
-            # as this is pretty simple
-            self.logger.debug('KKT matrix is numerically singular. '
-                             'Regularizing equality gradient...')
-            reg_kkt_1 = self.interface.regularize_equality_gradient(kkt,
-                                       eq_reg_coef)
-            status = self.try_factorization_and_reallocation(reg_kkt_1)
+            kkt = self.interface.regularize_kkt(kkt=kkt,
+                                                hess_coef=None,
+                                                jac_eq_coef=self.base_eq_reg_coef * self._barrier_parameter**0.25,
+                                                copy_kkt=False)
+        total_hess_reg_coef = self.hess_reg_coef
+        last_hess_reg_coef = 0
 
-        inertia = linear_solver.get_inertia()
-        if status == LinearSolverStatus.singular or inertia[1] != desired_n_neg_evals:
+        while neg_eig != desired_n_neg_evals:
+            kkt = self.interface.regularize_kkt(kkt=kkt,
+                                                hess_coef=total_hess_reg_coef - last_hess_reg_coef,
+                                                jac_eq_coef=None,
+                                                copy_kkt=False)
+            status, num_realloc = try_factorization_and_reallocation(kkt=kkt,
+                                                                     linear_solver=self.linear_solver,
+                                                                     reallocation_factor=self.reallocation_factor,
+                                                                     max_iter=self.max_reallocation_iterations)
+            if status != LinearSolverStatus.successful:
+                raise RuntimeError('Could not factorize KKT system; linear solver status: ' + str(status))
+            neg_eig = self.linear_solver.get_inertia()[1]
+            self.factorization_context.log_info(_iter=self._iter, reg_iter=reg_iter, num_realloc=num_realloc,
+                                                coef=total_hess_reg_coef, neg_eig=neg_eig, status=status)
+            reg_iter += 1
+            if reg_iter > self.max_reg_iter:
+                raise RuntimeError('Exceeded maximum number of regularization iterations.')
+            last_hess_reg_coef = total_hess_reg_coef
+            total_hess_reg_coef *= self.reg_factor_increase
 
-            with regularization_context as reg_con:
-
-                reg_iter = 0
-                reg_con.log_info(_iter, reg_iter, 0e0, inertia, status)
-
-                while reg_coef <= max_reg_coef:
-                    # Construct new regularized KKT matrix
-                    reg_kkt_2 = self.interface.regularize_hessian(reg_kkt_1, 
-                                                                  reg_coef)
-                    reg_iter += 1
-    
-                    status = self.try_factorization_and_reallocation(reg_kkt_2)
-                    inertia = linear_solver.get_inertia()
-                    reg_con.log_info(_iter, reg_iter, reg_coef, inertia, status)
-
-                    if status == LinearSolverStatus.singular or inertia[1] != desired_n_neg_evals:
-                        reg_coef = reg_coef * factor_increase
-                    else:
-                        # Success
-                        self.reg_coef = reg_coef
-                        break
-    
-            if reg_coef > max_reg_coef:
-                raise RuntimeError(
-                    'Regularization coefficient has exceeded maximum. '
-                    'At this point IPOPT would enter feasibility restoration.')
+        self.factorization_context.stop()
 
     def process_init(self, x, lb, ub):
         process_init(x, lb, ub)
@@ -477,6 +436,20 @@ class InteriorPointSolver(object):
 
     def fraction_to_the_boundary(self):
         return fraction_to_the_boundary(self.interface, 1 - self._barrier_parameter)
+
+
+def try_factorization_and_reallocation(kkt, linear_solver, reallocation_factor, max_iter):
+    assert max_iter >= 1
+    for count in range(max_iter):
+        res = linear_solver.do_symbolic_factorization(matrix=kkt, raise_on_error=False)
+        if res.status == LinearSolverStatus.successful:
+            res = linear_solver.do_numeric_factorization(matrix=kkt, raise_on_error=False)
+        status = res.status
+        if status == LinearSolverStatus.not_enough_memory:
+            linear_solver.increase_memory_allocation(reallocation_factor)
+        else:
+            break
+    return status, count
 
 
 def _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl_compressed,

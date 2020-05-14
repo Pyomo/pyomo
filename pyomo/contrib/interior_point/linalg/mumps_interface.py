@@ -12,9 +12,7 @@ class MumpsInterface(LinearSolverInterface):
     def getLoggerName(cls):
         return 'mumps'
 
-    def __init__(self, par=1, comm=None, cntl_options=None, icntl_options=None,
-                 log_filename=None, allow_reallocation=False,
-                 max_allocation_iterations=5):
+    def __init__(self, par=1, comm=None, cntl_options=None, icntl_options=None):
         self._mumps = MumpsCentralizedAssembledLinearSolver(sym=2,
                                                             par=par,
                                                             comm=comm)
@@ -37,19 +35,10 @@ class MumpsInterface(LinearSolverInterface):
         
         self.error_level = self.get_icntl(11)
         self.log_error = bool(self.error_level)
-
         self._dim = None
-
         self.logger = self.getLogger()
-
         self.log_header(include_error=self.log_error)
-
-        self.allow_reallocation = allow_reallocation
         self._prev_allocation = None
-        # Max number of reallocations per iteration:
-        #self.max_num_realloc = max_allocation_iterations
-        # Probably don't want this in linear_solver class
-        self.max_num_realloc = max_allocation_iterations
 
     def do_symbolic_factorization(self, matrix, raise_on_error=True):
         if not isspmatrix_coo(matrix):
@@ -120,8 +109,9 @@ class MumpsInterface(LinearSolverInterface):
 
     def get_inertia(self):
         num_negative_eigenvalues = self.get_infog(12)
-        num_positive_eigenvalues = self._dim - num_negative_eigenvalues
-        return (num_positive_eigenvalues, num_negative_eigenvalues, 0)
+        num_zero_eigenvalues = self.get_infog(28)
+        num_positive_eigenvalues = self._dim - num_negative_eigenvalues - num_zero_eigenvalues
+        return num_positive_eigenvalues, num_negative_eigenvalues, num_zero_eigenvalues
 
     def get_error_info(self):
         # Access error level contained in ICNTL(11) (Fortran indexing).

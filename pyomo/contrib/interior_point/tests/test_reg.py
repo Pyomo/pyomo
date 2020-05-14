@@ -1,4 +1,5 @@
 import pyutilib.th as unittest
+import pyomo.environ as pe
 from pyomo.core.base import ConcreteModel, Var, Constraint, Objective
 from pyomo.common.dependencies import attempt_import
 
@@ -16,7 +17,10 @@ asl_available = AmplInterface.available()
 
 from pyomo.contrib.interior_point.interior_point import InteriorPointSolver
 from pyomo.contrib.interior_point.interface import InteriorPointInterface
-from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
+from pyomo.contrib.interior_point.linalg import (LinearSolverStatus,
+                                                 ScipyInterface,
+                                                 MumpsInterface,
+                                                 InteriorPointMA27Interface)
 
 
 def make_model():
@@ -38,123 +42,195 @@ def make_model():
     return m
 
 
+def make_model_2():
+    m = ConcreteModel()
+    m.x = Var(initialize=0.1, bounds=(0, 1))
+    m.y = Var(initialize=0.1, bounds=(0, 1))
+    m.obj = Objective(expr=-m.x**2 - m.y**2)
+    m.c = Constraint(expr=m.y <= pe.exp(-m.x))
+    return m
+
+
 class TestRegularization(unittest.TestCase):
-    @unittest.skipIf(not asl_available, 'asl is not available')
-    @unittest.skipIf(not mumps_available, 'mumps is not available')
-    def test_regularize_mumps(self):
-        m = make_model()
+    def _test_regularization(self, linear_solver):
+        m = make_model_2()
         interface = InteriorPointInterface(m)
+        ip_solver = InteriorPointSolver(linear_solver)
 
-        linear_solver = mumps_interface.MumpsInterface()
+        x, duals_eq, duals_ineq = ip_solver.solve(interface)
+        self.assertAlmostEqual(x[0], 1)
+        self.assertAlmostEqual(x[1], pe.exp(-1))
 
-        ip_solver = InteriorPointSolver(linear_solver,
-                                        regularize_kkt=True)
+    # def _test_regularization(self, linear_solver):
+    #     m = make_model()
+    #     interface = InteriorPointInterface(m)
+    #     ip_solver = InteriorPointSolver(linear_solver)
+    #
+    #     interface.set_barrier_parameter(1e-1)
+    #
+    #     # Evaluate KKT matrix before any iterations
+    #     kkt = interface.evaluate_primal_dual_kkt_matrix()
+    #     res = linear_solver.do_symbolic_factorization(kkt)
+    #     self.assertEqual(res.status, LinearSolverStatus.successful)
+    #     res = linear_solver.do_numeric_factorization(kkt, raise_on_error=False)
+    #     self.assertEqual(res.status, LinearSolverStatus.singular)
+    #
+    #     # Perform one iteration of interior point algorithm
+    #     x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=1)
+    #
+    #     # Expected regularization coefficient:
+    #     self.assertAlmostEqual(ip_solver.reg_coef, 1e-4)
+    #
+    #     desired_n_neg_evals = (ip_solver.interface._nlp.n_eq_constraints() +
+    #                            ip_solver.interface._nlp.n_ineq_constraints())
+    #
+    #     # Expected inertia:
+    #     n_pos_evals, n_neg_evals, n_null_evals = linear_solver.get_inertia()
+    #     self.assertEqual(n_null_evals, 0)
+    #     self.assertEqual(n_neg_evals, desired_n_neg_evals)
+    #
+    #     # Now perform two iterations of the interior point algorithm.
+    #     # Because of the way the solve routine is written, updates to the
+    #     # interface's variables don't happen until the start of the next
+    #     # next iteration, meaning that the interface has been unaffected
+    #     # by the single iteration performed above.
+    #     x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=2)
+    #
+    #     # Assert that one iteration with regularization was enough to get us
+    #     # out of the pointof singularity/incorrect inertia
+    #     n_pos_evals, n_neg_evals, n_null_evals = linear_solver.get_inertia()
+    #     self.assertEqual(n_null_evals, 0)
+    #     self.assertEqual(n_neg_evals, desired_n_neg_evals)
 
-        interface.set_barrier_parameter(1e-1)
+    def test_mumps(self):
+        solver = MumpsInterface()
+        self._test_regularization(solver)
 
-        # Evaluate KKT matrix before any iterations
-        kkt = interface.evaluate_primal_dual_kkt_matrix()
-        with self.assertRaises(RuntimeError):
-            # Should be Mumps error: -10, numerically singular
-            # (Really the matrix is structurally singular, but it has 
-            # enough symbolic zeros that the symbolic factorization can
-            # be performed.
-            linear_solver.do_symbolic_factorization(kkt)
-            linear_solver.do_numeric_factorization(kkt)
+    def test_scipy(self):
+        solver = ScipyInterface(compute_inertia=True)
+        self._test_regularization(solver)
 
-        # Perform one iteration of interior point algorithm
-        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=1)
+    def test_ma27(self):
+        solver = InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
+        self._test_regularization(solver)
 
-#        # Expected regularization coefficient:
-        self.assertAlmostEqual(ip_solver.reg_coef, 1e-4)
-
-        desired_n_neg_evals = (ip_solver.interface._nlp.n_eq_constraints() +
-                               ip_solver.interface._nlp.n_ineq_constraints())
-
-        # Expected inertia:
-        n_neg_evals = linear_solver.get_infog(12)
-        n_null_evals = linear_solver.get_infog(28)
-        self.assertEqual(n_null_evals, 0)
-        self.assertEqual(n_neg_evals, desired_n_neg_evals)
-
-        # Now perform two iterations of the interior point algorithm.
-        # Because of the way the solve routine is written, updates to the
-        # interface's variables don't happen until the start of the next
-        # next iteration, meaning that the interface has been unaffected
-        # by the single iteration performed above.
-        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=10)
-
-        # This will be the KKT matrix in iteration 1, without regularization
-        kkt = interface.evaluate_primal_dual_kkt_matrix()
-        linear_solver.do_symbolic_factorization(kkt)
-        linear_solver.do_numeric_factorization(kkt)
-
-        # Assert that one iteration with regularization was enough to get us
-        # out of the pointof singularity/incorrect inertia
-        n_neg_evals = linear_solver.get_infog(12)
-        n_null_evals = linear_solver.get_infog(28)
-        self.assertEqual(n_null_evals, 0)
-        self.assertEqual(n_neg_evals, desired_n_neg_evals)
-
-
-    @unittest.skipIf(not asl_available, 'asl is not available')
-    @unittest.skipIf(not scipy_available, 'scipy is not available')
-    def test_regularize_scipy(self):
-        m = make_model()
-        interface = InteriorPointInterface(m)
-
-        linear_solver = ScipyInterface(compute_inertia=True)
-
-        ip_solver = InteriorPointSolver(linear_solver,
-                                        regularize_kkt=True)
-
-        interface.set_barrier_parameter(1e-1)
-
-        # Evaluate KKT matrix before any iterations
-        kkt = interface.evaluate_primal_dual_kkt_matrix()
-        with self.assertRaises(RuntimeError):
-            linear_solver.do_symbolic_factorization(kkt)
-            linear_solver.do_numeric_factorization(kkt)
-
-        # Perform one iteration of interior point algorithm
-        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=1)
-
-        # Expected regularization coefficient:
-        self.assertAlmostEqual(ip_solver.reg_coef, 1e-4)
-
-        desired_n_neg_evals = (ip_solver.interface._nlp.n_eq_constraints() +
-                               ip_solver.interface._nlp.n_ineq_constraints())
-
-        # Expected inertia:
-        n_pos_evals, n_neg_evals, n_null_evals = linear_solver.get_inertia()
-        self.assertEqual(n_null_evals, 0)
-        self.assertEqual(n_neg_evals, desired_n_neg_evals)
-
-        # Now perform two iterations of the interior point algorithm.
-        # Because of the way the solve routine is written, updates to the
-        # interface's variables don't happen until the start of the next
-        # next iteration, meaning that the interface has been unaffected
-        # by the single iteration performed above.
-        x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=15)
-        # ^ More iterations are required to get to a region of proper inertia
-        # when using scipy. This is not unexpected
-
-        # This will be the KKT matrix in iteration 1, without regularization
-        kkt = interface.evaluate_primal_dual_kkt_matrix()
-        linear_solver.do_symbolic_factorization(kkt)
-        linear_solver.do_numeric_factorization(kkt)
-
-        # Assert that one iteration with regularization was enough to get us
-        # out of the point of singularity/incorrect inertia
-        n_pos_evals, n_neg_evals, n_null_evals = linear_solver.get_inertia()
-        self.assertEqual(n_null_evals, 0)
-        self.assertEqual(n_neg_evals, desired_n_neg_evals)
+#     @unittest.skipIf(not asl_available, 'asl is not available')
+#     @unittest.skipIf(not mumps_available, 'mumps is not available')
+#     def test_regularize_mumps(self):
+#         m = make_model()
+#         interface = InteriorPointInterface(m)
+#
+#         linear_solver = mumps_interface.MumpsInterface()
+#
+#         ip_solver = InteriorPointSolver(linear_solver,
+#                                         regularize_kkt=True)
+#
+#         interface.set_barrier_parameter(1e-1)
+#
+#         # Evaluate KKT matrix before any iterations
+#         kkt = interface.evaluate_primal_dual_kkt_matrix()
+#         with self.assertRaises(RuntimeError):
+#             # Should be Mumps error: -10, numerically singular
+#             # (Really the matrix is structurally singular, but it has
+#             # enough symbolic zeros that the symbolic factorization can
+#             # be performed.
+#             linear_solver.do_symbolic_factorization(kkt)
+#             linear_solver.do_numeric_factorization(kkt)
+#
+#         # Perform one iteration of interior point algorithm
+#         x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=1)
+#
+# #        # Expected regularization coefficient:
+#         self.assertAlmostEqual(ip_solver.reg_coef, 1e-4)
+#
+#         desired_n_neg_evals = (ip_solver.interface._nlp.n_eq_constraints() +
+#                                ip_solver.interface._nlp.n_ineq_constraints())
+#
+#         # Expected inertia:
+#         n_neg_evals = linear_solver.get_infog(12)
+#         n_null_evals = linear_solver.get_infog(28)
+#         self.assertEqual(n_null_evals, 0)
+#         self.assertEqual(n_neg_evals, desired_n_neg_evals)
+#
+#         # Now perform two iterations of the interior point algorithm.
+#         # Because of the way the solve routine is written, updates to the
+#         # interface's variables don't happen until the start of the next
+#         # next iteration, meaning that the interface has been unaffected
+#         # by the single iteration performed above.
+#         x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=10)
+#
+#         # This will be the KKT matrix in iteration 1, without regularization
+#         kkt = interface.evaluate_primal_dual_kkt_matrix()
+#         linear_solver.do_symbolic_factorization(kkt)
+#         linear_solver.do_numeric_factorization(kkt)
+#
+#         # Assert that one iteration with regularization was enough to get us
+#         # out of the pointof singularity/incorrect inertia
+#         n_neg_evals = linear_solver.get_infog(12)
+#         n_null_evals = linear_solver.get_infog(28)
+#         self.assertEqual(n_null_evals, 0)
+#         self.assertEqual(n_neg_evals, desired_n_neg_evals)
+#
+#
+#     @unittest.skipIf(not asl_available, 'asl is not available')
+#     @unittest.skipIf(not scipy_available, 'scipy is not available')
+#     def test_regularize_scipy(self):
+#         m = make_model()
+#         interface = InteriorPointInterface(m)
+#
+#         linear_solver = ScipyInterface(compute_inertia=True)
+#
+#         ip_solver = InteriorPointSolver(linear_solver,
+#                                         regularize_kkt=True)
+#
+#         interface.set_barrier_parameter(1e-1)
+#
+#         # Evaluate KKT matrix before any iterations
+#         kkt = interface.evaluate_primal_dual_kkt_matrix()
+#         with self.assertRaises(RuntimeError):
+#             linear_solver.do_symbolic_factorization(kkt)
+#             linear_solver.do_numeric_factorization(kkt)
+#
+#         # Perform one iteration of interior point algorithm
+#         x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=1)
+#
+#         # Expected regularization coefficient:
+#         self.assertAlmostEqual(ip_solver.reg_coef, 1e-4)
+#
+#         desired_n_neg_evals = (ip_solver.interface._nlp.n_eq_constraints() +
+#                                ip_solver.interface._nlp.n_ineq_constraints())
+#
+#         # Expected inertia:
+#         n_pos_evals, n_neg_evals, n_null_evals = linear_solver.get_inertia()
+#         self.assertEqual(n_null_evals, 0)
+#         self.assertEqual(n_neg_evals, desired_n_neg_evals)
+#
+#         # Now perform two iterations of the interior point algorithm.
+#         # Because of the way the solve routine is written, updates to the
+#         # interface's variables don't happen until the start of the next
+#         # next iteration, meaning that the interface has been unaffected
+#         # by the single iteration performed above.
+#         x, duals_eq, duals_ineq = ip_solver.solve(interface, max_iter=15)
+#         # ^ More iterations are required to get to a region of proper inertia
+#         # when using scipy. This is not unexpected
+#
+#         # This will be the KKT matrix in iteration 1, without regularization
+#         kkt = interface.evaluate_primal_dual_kkt_matrix()
+#         linear_solver.do_symbolic_factorization(kkt)
+#         linear_solver.do_numeric_factorization(kkt)
+#
+#         # Assert that one iteration with regularization was enough to get us
+#         # out of the point of singularity/incorrect inertia
+#         n_pos_evals, n_neg_evals, n_null_evals = linear_solver.get_inertia()
+#         self.assertEqual(n_null_evals, 0)
+#         self.assertEqual(n_neg_evals, desired_n_neg_evals)
         
 
 
 if __name__ == '__main__':
-    # 
-    test_reg = TestRegularization()
-    test_reg.test_regularize_mumps()
-    test_reg.test_regularize_scipy()
+    #
+    unittest.main()
+    # test_reg = TestRegularization()
+    # test_reg.test_regularize_mumps()
+    # test_reg.test_regularize_scipy()
     
