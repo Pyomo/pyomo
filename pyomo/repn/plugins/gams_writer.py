@@ -578,6 +578,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         categorized_vars = Categorizer(var_list, symbolMap)
 
         # Write the GAMS model
+        output_file.write("$offlisting\n")
         # $offdigit ignores extra precise digits instead of erroring
         output_file.write("$offdigit\n\n")
         output_file.write("EQUATIONS\n\t")

@@ -755,7 +755,8 @@ class GAMSShell(_GAMSSolver):
         ####################################################################
 
         exe = self.executable()
-        command = [exe, output, "o=" + lst, "curdir=" + tmpdir]
+        command = [exe, output, "o=" + lst, "curdir=" + tmpdir, "solvelink=5", 
+                   "limrow=0", "limcol=0", "solprint=off"]
         if tee and not logfile:
             # default behaviour of gams is to print to console, for
             # compatability with windows and *nix we want to explicitly log to
