@@ -14,6 +14,7 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.numvalue import value, is_fixed, native_numeric_types
 from pyomo.core.expr import current as EXPR
 from pyomo.opt.base import SolverFactory
+from pyomo.pysp.phutils import find_active_objective
 import collections
 
 
