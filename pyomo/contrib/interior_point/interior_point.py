@@ -1,14 +1,10 @@
-from pyomo.contrib.interior_point.interface import InteriorPointInterface, BaseInteriorPointInterface
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
-from scipy.sparse import tril, coo_matrix, identity
-from contextlib import contextmanager
-from pyutilib.misc import capture_output
+from scipy.sparse import coo_matrix, identity
 import numpy as np
 import logging
-import threading
 import time
-import pdb
 from pyomo.contrib.interior_point.linalg.results import LinearSolverStatus
+from pyutilib.misc.timing import HierarchicalTimer
 
 
 ip_logger = logging.getLogger('interior_point')
@@ -60,9 +56,11 @@ class FactorizationContext(object):
     def __enter__(self):
         self.logger.debug('Factorizing KKT')
         self.log_header()
+        return self
 
     def __exit__(self, et, ev, tb):
         self.logger.debug('Finished factorizing KKT')
+        # Will this swallow exceptions in this context?
 
     def log_header(self):
         self.logger.debug('{_iter:<10}'
@@ -166,6 +164,12 @@ class InteriorPointSolver(object):
         linear_solver = self.linear_solver
         max_iter = kwargs.pop('max_iter', self.max_iter)
         tol = kwargs.pop('tol', self.tol)
+        report_timing = kwargs.pop('report_timing', False)
+        timer = kwargs.pop('timer', HierarchicalTimer())
+
+        timer.start('IP solve')
+        timer.start('init')
+
         self._barrier_parameter = 0.1
 
         self.set_interface(interface)
@@ -192,23 +196,29 @@ class InteriorPointSolver(object):
         alpha_primal_max = 1
         alpha_dual_max = 1
 
-        self.logger.info('{_iter:<10}'
-                         '{objective:<15}'
-                         '{primal_inf:<15}'
-                         '{dual_inf:<15}'
-                         '{compl_inf:<15}'
-                         '{barrier:<15}'
-                         '{alpha_p:<15}'
-                         '{alpha_d:<15}'
-                         '{time:<20}'.format(_iter='Iter',
-                                             objective='Objective',
-                                             primal_inf='Primal Inf',
-                                             dual_inf='Dual Inf',
-                                             compl_inf='Compl Inf',
-                                             barrier='Barrier',
-                                             alpha_p='Prim Step Size',
-                                             alpha_d='Dual Step Size',
-                                             time='Elapsed Time (s)'))
+        self.logger.info('{_iter:<6}'
+                         '{objective:<11}'
+                         '{primal_inf:<11}'
+                         '{dual_inf:<11}'
+                         '{compl_inf:<11}'
+                         '{barrier:<11}'
+                         '{alpha_p:<11}'
+                         '{alpha_d:<11}'
+                         '{reg:<11}'
+                         '{time:<7}'.format(_iter='Iter',
+                                            objective='Objective',
+                                            primal_inf='Prim Inf',
+                                            dual_inf='Dual Inf',
+                                            compl_inf='Comp Inf',
+                                            barrier='Barrier',
+                                            alpha_p='Prim Step',
+                                            alpha_d='Dual Step',
+                                            reg='Reg',
+                                            time='Time'))
+
+        reg_coef = 0
+
+        timer.stop('init')
 
         for _iter in range(max_iter):
             self._iter = _iter
@@ -221,32 +231,38 @@ class InteriorPointSolver(object):
             interface.set_duals_primals_ub(duals_primals_ub)
             interface.set_duals_slacks_lb(duals_slacks_lb)
             interface.set_duals_slacks_ub(duals_slacks_ub)
-            
+
+            timer.start('convergence check')
             primal_inf, dual_inf, complimentarity_inf = \
                     self.check_convergence(barrier=0)
+            timer.stop('convergence check')
             objective = interface.evaluate_objective()
-            self.logger.info('{_iter:<10}'
-                             '{objective:<15.3e}'
-                             '{primal_inf:<15.3e}'
-                             '{dual_inf:<15.3e}'
-                             '{compl_inf:<15.3e}'
-                             '{barrier:<15.3e}'
-                             '{alpha_p:<15.3e}'
-                             '{alpha_d:<15.3e}'
-                             '{time:<20.2e}'.format(_iter=_iter,
-                                                    objective=objective,
-                                                    primal_inf=primal_inf,
-                                                    dual_inf=dual_inf,
-                                                    compl_inf=complimentarity_inf,
-                                                    barrier=self._barrier_parameter,
-                                                    alpha_p=alpha_primal_max,
-                                                    alpha_d=alpha_dual_max,
-                                                    time=time.time() - t0))
+            self.logger.info('{_iter:<6}'
+                             '{objective:<11.2e}'
+                             '{primal_inf:<11.2e}'
+                             '{dual_inf:<11.2e}'
+                             '{compl_inf:<11.2e}'
+                             '{barrier:<11.2e}'
+                             '{alpha_p:<11.2e}'
+                             '{alpha_d:<11.2e}'
+                             '{reg:<11.2e}'
+                             '{time:<7.3f}'.format(_iter=_iter,
+                                                   objective=objective,
+                                                   primal_inf=primal_inf,
+                                                   dual_inf=dual_inf,
+                                                   compl_inf=complimentarity_inf,
+                                                   barrier=self._barrier_parameter,
+                                                   alpha_p=alpha_primal_max,
+                                                   alpha_d=alpha_dual_max,
+                                                   reg=reg_coef,
+                                                   time=time.time() - t0))
 
             if max(primal_inf, dual_inf, complimentarity_inf) <= tol:
                 break
+            timer.start('convergence check')
             primal_inf, dual_inf, complimentarity_inf = \
                     self.check_convergence(barrier=self._barrier_parameter)
+            timer.stop('convergence check')
             if max(primal_inf, dual_inf, complimentarity_inf) \
                     <= 0.1 * self._barrier_parameter:
                 # This comparison is made with barrier problem infeasibility.
@@ -254,19 +270,27 @@ class InteriorPointSolver(object):
                 self.update_barrier_parameter()
 
             interface.set_barrier_parameter(self._barrier_parameter)
+            timer.start('eval')
             kkt = interface.evaluate_primal_dual_kkt_matrix()
             rhs = interface.evaluate_primal_dual_kkt_rhs()
+            timer.stop('eval')
 
             # Factorize linear system
-            self.factorize(kkt=kkt)
+            timer.start('factorize')
+            reg_coef = self.factorize(kkt=kkt)
+            timer.stop('factorize')
 
+            timer.start('back solve')
             with self.linear_solve_context:
                 self.logger.info('Iter: %s' % self._iter)
                 delta = linear_solver.do_back_solve(rhs)
+            timer.stop('back solve')
 
             interface.set_primal_dual_kkt_solution(delta)
+            timer.start('frac boundary')
             alpha_primal_max, alpha_dual_max = \
                     self.fraction_to_the_boundary()
+            timer.stop('frac boundary')
             delta_primals = interface.get_delta_primals()
             delta_slacks = interface.get_delta_slacks()
             delta_duals_eq = interface.get_delta_duals_eq()
@@ -285,6 +309,9 @@ class InteriorPointSolver(object):
             duals_slacks_lb += alpha_dual_max * delta_duals_slacks_lb
             duals_slacks_ub += alpha_dual_max * delta_duals_slacks_ub
 
+        timer.stop('IP solve')
+        if report_timing:
+            print(timer)
         return primals, duals_eq, duals_ineq
 
     def factorize(self, kkt):
@@ -296,6 +323,9 @@ class InteriorPointSolver(object):
                                                                      linear_solver=self.linear_solver,
                                                                      reallocation_factor=self.reallocation_factor,
                                                                      max_iter=self.max_reallocation_iterations)
+            if status not in {LinearSolverStatus.successful, LinearSolverStatus.singular}:
+                raise RuntimeError('Could not factorize KKT system; linear solver status: ' + str(status))
+
             if status == LinearSolverStatus.successful:
                 neg_eig = self.linear_solver.get_inertia()[1]
             else:
@@ -308,10 +338,11 @@ class InteriorPointSolver(object):
                 kkt = self.interface.regularize_equality_gradient(kkt=kkt,
                                                                   coef=self.base_eq_reg_coef * self._barrier_parameter**0.25,
                                                                   copy_kkt=False)
+
             total_hess_reg_coef = self.hess_reg_coef
             last_hess_reg_coef = 0
 
-            while neg_eig != desired_n_neg_evals:
+            while neg_eig != desired_n_neg_evals or status == LinearSolverStatus.singular:
                 kkt = self.interface.regularize_hessian(kkt=kkt,
                                                         coef=total_hess_reg_coef - last_hess_reg_coef,
                                                         copy_kkt=False)
@@ -329,6 +360,8 @@ class InteriorPointSolver(object):
                     raise RuntimeError('Exceeded maximum number of regularization iterations.')
                 last_hess_reg_coef = total_hess_reg_coef
                 total_hess_reg_coef *= self.reg_factor_increase
+
+        return last_hess_reg_coef
 
     def process_init(self, x, lb, ub):
         process_init(x, lb, ub)
