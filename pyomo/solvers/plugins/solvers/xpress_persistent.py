@@ -11,20 +11,11 @@
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.solvers.plugins.solvers.xpress_direct import XpressDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.core.expr.numvalue import value, is_fixed, native_numeric_types
+from pyomo.core.expr.numvalue import value, is_fixed
 from pyomo.core.expr import current as EXPR
 from pyomo.opt.base import SolverFactory
-from pyomo.pysp.phutils import find_active_objective
 import collections
 
-
-def _convert_to_const(val):
-    if val.__class__ in native_numeric_types:
-        return val
-    elif val.is_expression_type():
-        return EXPR.evaluate_expression(obj_term)
-    else:
-        return value(val)
 
 @SolverFactory.register('xpress_persistent', doc='Persistent python interface to Xpress')
 class XpressPersistent(PersistentSolver, XpressDirect):
@@ -121,45 +112,26 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         self._solver_model.chgbounds([xpress_var, xpress_var], ['L', 'U'], [lb, ub])
         self._solver_model.chgcoltype([xpress_var], [qctype])
 
-    def add_column(self, var, obj_term, constraints, coefficients):
+    def _add_column(self, var, obj_coef, constraints, coefficients):
         """Add a column to the solver's and Pyomo model
 
         This will add the Pyomo variable var to the solver's
         model, and put the coefficients on the associated 
-        constraints in the solver model. If the obj_term is
-        not zero, it will add obj_term*var to the objective 
+        constraints in the solver model. If the obj_coef is
+        not zero, it will add obj_coef*var to the objective 
         of both the Pyomo and solver's model.
 
         Parameters
         ----------
         var: Var (scalar Var or single _VarData)
-        obj_term: float, pyo.Param
+        obj_coef: float, pyo.Param
 
         constraints: list of scalar Constraints of single _ConstraintDatas  
         coefficients: the coefficient to put on var in the associated constraint
         """
-        
-        ## process the objective
-        obj_term_const = False
-        if obj_term.__class__ in native_numeric_types and obj_term == 0.:
-            pass ## nothing to do
-        else:
-            obj = find_active_objective(self._pyomo_model, True)
-            obj.expr += obj_term*var
 
-        obj_coef = _convert_to_const(obj_term)
-
-        ## add the constraints, collect the
-        ## column information
-        coeff_list = list()
-        constr_list = list()
-        for val,c in zip(coefficients,constraints):
-            c._body += val*var
-            self._vars_referenced_by_con[c].add(var)
-
-            cval = _convert_to_const(val)
-            coeff_list.append(cval)
-            constr_list.append(self._pyomo_con_to_solver_con_map[c])
+        obj, solver_coeff_list, solver_constr_list = \
+                self._add_and_collect_column_data(var, obj_coef, constraints, coefficients)
 
         ## set-up add var
         varname = self._symbol_map.getSymbol(var, self._labeler)
@@ -176,8 +148,8 @@ class XpressPersistent(PersistentSolver, XpressDirect):
             lb = value(var.value)
             ub = value(var.value)
 
-        self._solver_model.addcols(objx=[obj_coef], mstart=[0,len(coeff_list)], 
-                                    mrwind=constr_list, dmatval=coeff_list, 
+        self._solver_model.addcols(objx=[obj], mstart=[0,len(solver_coeff_list)], 
+                                    mrwind=solver_constr_list, dmatval=solver_coeff_list, 
                                     bdl=[lb], bdu=[ub], names=[varname], 
                                     types=[vartype])
 
@@ -186,7 +158,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
 
         self._pyomo_var_to_solver_var_map[var] = xpress_var
         self._solver_var_to_pyomo_var_map[xpress_var] = var
-        self._referenced_variables[var] = len(coeff_list)
+        self._referenced_variables[var] = len(solver_coeff_list)
 
     def get_xpress_attribute(self, *args):
         """
