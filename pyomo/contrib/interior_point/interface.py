@@ -201,38 +201,6 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
     def evaluate_jacobian_ineq(self):
         pass
 
-    @abstractmethod
-    def get_primals_lb_compression_matrix(self):
-        pass
-
-    @abstractmethod
-    def get_primals_ub_compression_matrix(self):
-        pass
-
-    @abstractmethod
-    def get_ineq_lb_compression_matrix(self):
-        pass
-
-    @abstractmethod
-    def get_ineq_ub_compression_matrix(self):
-        pass
-
-    @abstractmethod
-    def get_primals_lb_compressed(self):
-        pass
-
-    @abstractmethod
-    def get_primals_ub_compressed(self):
-        pass
-
-    @abstractmethod
-    def get_ineq_lb_compressed(self):
-        pass
-
-    @abstractmethod
-    def get_ineq_ub_compressed(self):
-        pass
-
     def regularize_equality_gradient(self, kkt, coef, copy_kkt=True):
         raise RuntimeError(
             'Equality gradient regularization is necessary but no '
@@ -251,30 +219,14 @@ class InteriorPointInterface(BaseInteriorPointInterface):
             self._nlp = ampl_nlp.AmplNLP(pyomo_model)
         else:
             self._nlp = pyomo_nlp.PyomoNLP(pyomo_model)
-        lb = self._nlp.primals_lb()
-        ub = self._nlp.primals_ub()
-        self._primals_lb_compression_matrix = \
-                build_compression_matrix(build_bounds_mask(lb)).tocsr()
-        self._primals_ub_compression_matrix = \
-                build_compression_matrix(build_bounds_mask(ub)).tocsr()
-        ineq_lb = self._nlp.ineq_lb()
-        ineq_ub = self._nlp.ineq_ub()
-        self._ineq_lb_compression_matrix = \
-                build_compression_matrix(build_bounds_mask(ineq_lb)).tocsr()
-        self._ineq_ub_compression_matrix = \
-                build_compression_matrix(build_bounds_mask(ineq_ub)).tocsr()
-        self._primals_lb_compressed = self._primals_lb_compression_matrix * lb
-        self._primals_ub_compressed = self._primals_ub_compression_matrix * ub
-        self._ineq_lb_compressed = self._ineq_lb_compression_matrix * ineq_lb
-        self._ineq_ub_compressed = self._ineq_ub_compression_matrix * ineq_ub
         self._slacks = self.init_slacks()
 
         # set the init_duals_primals_lb/ub from ipopt_zL_out, ipopt_zU_out if available
         # need to compress them as well and initialize the duals_primals_lb/ub 
         self._init_duals_primals_lb, self._init_duals_primals_ub =\
             self._get_full_duals_primals_bounds()
-        self._init_duals_primals_lb = self._primals_lb_compression_matrix * self._init_duals_primals_lb
-        self._init_duals_primals_ub = self._primals_ub_compression_matrix * self._init_duals_primals_ub
+        self._init_duals_primals_lb[np.isneginf(self._nlp.primals_lb())] = 0
+        self._init_duals_primals_ub[np.isinf(self._nlp.primals_ub())] = 0
         self._duals_primals_lb = self._init_duals_primals_lb.copy()
         self._duals_primals_ub = self._init_duals_primals_ub.copy()
 
@@ -283,14 +235,10 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         # (-) value indicates it the upper is active, while (+) indicates
         # that lower is active
         self._init_duals_slacks_lb = self._nlp.init_duals_ineq().copy()
-        self._init_duals_slacks_lb = self._ineq_lb_compression_matrix * \
-            self._init_duals_slacks_lb
         self._init_duals_slacks_lb[self._init_duals_slacks_lb < 0] = 0
         self._init_duals_slacks_ub = self._nlp.init_duals_ineq().copy()
-        self._init_duals_slacks_ub = self._ineq_ub_compression_matrix * \
-            self._init_duals_slacks_ub
         self._init_duals_slacks_ub[self._init_duals_slacks_ub > 0] = 0
-        self._init_duals_slacks_ub = -1.0*self._init_duals_slacks_ub
+        self._init_duals_slacks_ub *= -1.0
 
         self._duals_slacks_lb = self._init_duals_slacks_lb.copy()
         self._duals_slacks_ub = self._init_duals_slacks_ub.copy()
@@ -410,64 +358,27 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         jac_ineq = self._nlp.evaluate_jacobian_ineq()
         timer.stop('eval jac')
 
-        timer.start('diff_inv')
-        primals_lb_diff_inv = self._get_primals_lb_diff_inv()
-        primals_ub_diff_inv = self._get_primals_ub_diff_inv()
-        slacks_lb_diff_inv = self._get_slacks_lb_diff_inv()
-        slacks_ub_diff_inv = self._get_slacks_ub_diff_inv()
-        timer.stop('diff_inv')
-
         duals_primals_lb = self._duals_primals_lb
         duals_primals_ub = self._duals_primals_ub
         duals_slacks_lb = self._duals_slacks_lb
         duals_slacks_ub = self._duals_slacks_ub
-
-        duals_primals_lb = scipy.sparse.coo_matrix(
-                            (duals_primals_lb, 
-                             (np.arange(duals_primals_lb.size), 
-                              np.arange(duals_primals_lb.size))), 
-                            shape=(duals_primals_lb.size, 
-                                   duals_primals_lb.size))
-        duals_primals_ub = scipy.sparse.coo_matrix(
-                            (duals_primals_ub, 
-                             (np.arange(duals_primals_ub.size), 
-                              np.arange(duals_primals_ub.size))), 
-                            shape=(duals_primals_ub.size, 
-                                   duals_primals_ub.size))
-        duals_slacks_lb = scipy.sparse.coo_matrix(
-                            (duals_slacks_lb, 
-                             (np.arange(duals_slacks_lb.size), 
-                              np.arange(duals_slacks_lb.size))), 
-                            shape=(duals_slacks_lb.size, 
-                                   duals_slacks_lb.size))
-        duals_slacks_ub = scipy.sparse.coo_matrix(
-                            (duals_slacks_ub, 
-                             (np.arange(duals_slacks_ub.size), 
-                              np.arange(duals_slacks_ub.size))), 
-                            shape=(duals_slacks_ub.size, 
-                                   duals_slacks_ub.size))
+        primals = self._nlp.get_primals()
 
         timer.start('hess block')
-        hess_block = (hessian +
-                      self._primals_lb_compression_matrix.transpose() *
-                      primals_lb_diff_inv *
-                      duals_primals_lb *
-                      self._primals_lb_compression_matrix +
-                      self._primals_ub_compression_matrix.transpose() *
-                      primals_ub_diff_inv *
-                      duals_primals_ub *
-                      self._primals_ub_compression_matrix)
+        data = (duals_primals_lb/(primals - self._nlp.primals_lb()) +
+                duals_primals_ub/(self._nlp.primals_ub() - primals))
+        n = self._nlp.n_primals()
+        indices = np.arange(n)
+        hess_block = scipy.sparse.coo_matrix((data, (indices, indices)), shape=(n, n))
+        hess_block += hessian
         timer.stop('hess block')
 
         timer.start('slack block')
-        slack_block = (self._ineq_lb_compression_matrix.transpose() *
-                             slacks_lb_diff_inv *
-                             duals_slacks_lb *
-                             self._ineq_lb_compression_matrix +
-                             self._ineq_ub_compression_matrix.transpose() *
-                             slacks_ub_diff_inv *
-                             duals_slacks_ub *
-                             self._ineq_ub_compression_matrix)
+        data = (duals_slacks_lb/(self._slacks - self._nlp.ineq_lb()) +
+                duals_slacks_ub/(self._nlp.ineq_ub() - self._slacks))
+        n = self._nlp.n_ineq_constraints()
+        indices = np.arange(n)
+        slack_block = scipy.sparse.coo_matrix((data, (indices, indices)), shape=(n, n))
         timer.stop('slack block')
 
         timer.start('set block')
@@ -492,33 +403,16 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         jac_eq = self._nlp.evaluate_jacobian_eq()
         jac_ineq = self._nlp.evaluate_jacobian_ineq()
 
-        primals_lb_diff_inv = self._get_primals_lb_diff_inv()
-        primals_ub_diff_inv = self._get_primals_ub_diff_inv()
-        slacks_lb_diff_inv = self._get_slacks_lb_diff_inv()
-        slacks_ub_diff_inv = self._get_slacks_ub_diff_inv()
-
         rhs = BlockVector(4)
         rhs.set_block(0, (grad_obj +
                           jac_eq.transpose() * self._nlp.get_duals_eq() +
                           jac_ineq.transpose() * self._nlp.get_duals_ineq() -
-                          self._barrier * 
-                          self._primals_lb_compression_matrix.transpose() * 
-                          primals_lb_diff_inv * 
-                          np.ones(primals_lb_diff_inv.size) +
-                          self._barrier * 
-                          self._primals_ub_compression_matrix.transpose() * 
-                          primals_ub_diff_inv * 
-                          np.ones(primals_ub_diff_inv.size)))
+                          self._barrier / (self._nlp.get_primals() - self._nlp.primals_lb()) +
+                          self._barrier / (self._nlp.primals_ub() - self._nlp.get_primals())))
 
         rhs.set_block(1, (-self._nlp.get_duals_ineq() -
-                          self._barrier * 
-                          self._ineq_lb_compression_matrix.transpose() * 
-                          slacks_lb_diff_inv * 
-                          np.ones(slacks_lb_diff_inv.size) +
-                          self._barrier * 
-                          self._ineq_ub_compression_matrix.transpose() * 
-                          slacks_ub_diff_inv * 
-                          np.ones(slacks_ub_diff_inv.size)))
+                          self._barrier / (self._slacks - self._nlp.ineq_lb()) +
+                          self._barrier / (self._nlp.ineq_ub() - self._slacks)))
 
         rhs.set_block(2, self._nlp.evaluate_eq_constraints())
         rhs.set_block(3, self._nlp.evaluate_ineq_constraints() - self._slacks)
@@ -544,55 +438,27 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         return self._delta_duals_ineq
 
     def get_delta_duals_primals_lb(self):
-        primals_lb_diff_inv = self._get_primals_lb_diff_inv()
-        duals_primals_lb_matrix = scipy.sparse.coo_matrix(
-                                    (self._duals_primals_lb, 
-                                     (np.arange(self._duals_primals_lb.size), 
-                                      np.arange(self._duals_primals_lb.size))), 
-                                    shape=(self._duals_primals_lb.size, 
-                                           self._duals_primals_lb.size))
-        res = -self._duals_primals_lb + primals_lb_diff_inv * (self._barrier - 
-              duals_primals_lb_matrix * self._primals_lb_compression_matrix * 
-              self.get_delta_primals())
+        res = (((self._barrier - self._duals_primals_lb * self._delta_primals) /
+                (self._nlp.get_primals() - self._nlp.primals_lb())) -
+               self._duals_primals_lb)
         return res
 
     def get_delta_duals_primals_ub(self):
-        primals_ub_diff_inv = self._get_primals_ub_diff_inv()
-        duals_primals_ub_matrix = scipy.sparse.coo_matrix(
-                                    (self._duals_primals_ub, 
-                                     (np.arange(self._duals_primals_ub.size), 
-                                      np.arange(self._duals_primals_ub.size))), 
-                                    shape=(self._duals_primals_ub.size, 
-                                           self._duals_primals_ub.size))
-        res = -self._duals_primals_ub + primals_ub_diff_inv * (self._barrier + 
-                duals_primals_ub_matrix * self._primals_ub_compression_matrix * 
-                self.get_delta_primals())
+        res = (((self._barrier + self._duals_primals_ub * self._delta_primals) /
+                (self._nlp.primals_ub() - self._nlp.get_primals())) -
+               self._duals_primals_ub)
         return res
 
     def get_delta_duals_slacks_lb(self):
-        slacks_lb_diff_inv = self._get_slacks_lb_diff_inv()
-        duals_slacks_lb_matrix = scipy.sparse.coo_matrix(
-                                    (self._duals_slacks_lb, 
-                                     (np.arange(self._duals_slacks_lb.size), 
-                                      np.arange(self._duals_slacks_lb.size))), 
-                                    shape=(self._duals_slacks_lb.size, 
-                                           self._duals_slacks_lb.size))
-        res = -self._duals_slacks_lb + slacks_lb_diff_inv * (self._barrier - 
-                duals_slacks_lb_matrix * self._ineq_lb_compression_matrix * 
-                self.get_delta_slacks())
+        res = (((self._barrier - self._duals_slacks_lb * self._delta_slacks) /
+                (self._slacks - self._nlp.ineq_lb())) -
+               self._duals_slacks_lb)
         return res
 
     def get_delta_duals_slacks_ub(self):
-        slacks_ub_diff_inv = self._get_slacks_ub_diff_inv()
-        duals_slacks_ub_matrix = scipy.sparse.coo_matrix(
-                                    (self._duals_slacks_ub, 
-                                     (np.arange(self._duals_slacks_ub.size), 
-                                      np.arange(self._duals_slacks_ub.size))), 
-                                    shape=(self._duals_slacks_ub.size, 
-                                           self._duals_slacks_ub.size))
-        res = -self._duals_slacks_ub + slacks_ub_diff_inv * (self._barrier + 
-                duals_slacks_ub_matrix * self._ineq_ub_compression_matrix * 
-                self.get_delta_slacks())
+        res = (((self._barrier + self._duals_slacks_ub * self._delta_slacks) /
+                (self._nlp.ineq_ub() - self._slacks)) -
+               self._duals_slacks_ub)
         return res
 
     def evaluate_objective(self):
@@ -612,62 +478,6 @@ class InteriorPointInterface(BaseInteriorPointInterface):
 
     def evaluate_jacobian_ineq(self):
         return self._nlp.evaluate_jacobian_ineq()
-
-    def _get_primals_lb_diff_inv(self):
-        res = (self._primals_lb_compression_matrix * self._nlp.get_primals() -
-               self._primals_lb_compressed)
-        res = scipy.sparse.coo_matrix(
-            (1 / res, (np.arange(res.size), np.arange(res.size))),
-            shape=(res.size, res.size))
-        return res
-
-    def _get_primals_ub_diff_inv(self):
-        res = (self._primals_ub_compressed - 
-               self._primals_ub_compression_matrix * self._nlp.get_primals())
-        res = scipy.sparse.coo_matrix(
-            (1 / res, (np.arange(res.size), np.arange(res.size))),
-            shape=(res.size, res.size))
-        return res
-
-    def _get_slacks_lb_diff_inv(self):
-        res = (self._ineq_lb_compression_matrix * self._slacks - 
-               self._ineq_lb_compressed)
-        res = scipy.sparse.coo_matrix(
-            (1 / res, (np.arange(res.size), np.arange(res.size))),
-            shape=(res.size, res.size))
-        return res
-
-    def _get_slacks_ub_diff_inv(self):
-        res = (self._ineq_ub_compressed - 
-               self._ineq_ub_compression_matrix * self._slacks)
-        res = scipy.sparse.coo_matrix(
-            (1 / res, (np.arange(res.size), np.arange(res.size))),
-            shape=(res.size, res.size))
-        return res
-
-    def get_primals_lb_compression_matrix(self):
-        return self._primals_lb_compression_matrix
-
-    def get_primals_ub_compression_matrix(self):
-        return self._primals_ub_compression_matrix
-
-    def get_ineq_lb_compression_matrix(self):
-        return self._ineq_lb_compression_matrix
-
-    def get_ineq_ub_compression_matrix(self):
-        return self._ineq_ub_compression_matrix
-
-    def get_primals_lb_compressed(self):
-        return self._primals_lb_compressed
-
-    def get_primals_ub_compressed(self):
-        return self._primals_ub_compressed
-
-    def get_ineq_lb_compressed(self):
-        return self._ineq_lb_compressed
-
-    def get_ineq_ub_compressed(self):
-        return self._ineq_ub_compressed
 
     def regularize_equality_gradient(self, kkt, coef, copy_kkt=True):
         # Not technically regularizing the equality gradient ...
