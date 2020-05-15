@@ -176,7 +176,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
             lb = value(var.value)
             ub = value(var.value)
 
-        self._solver_model.addcols(objx=[obj_term], mstart=[0,len(coeff_list)], 
+        self._solver_model.addcols(objx=[obj_coef], mstart=[0,len(coeff_list)], 
                                     mrwind=constr_list, dmatval=coeff_list, 
                                     bdl=[lb], bdu=[ub], names=[varname], 
                                     types=[vartype])

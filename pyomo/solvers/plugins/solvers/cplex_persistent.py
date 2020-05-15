@@ -8,13 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.numvalue import value
+from pyomo.core.expr.numvalue import value, native_numeric_types
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
 from pyomo.solvers.plugins.solvers.cplex_direct import CPLEXDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.pysp.phutils import find_active_objective
+from pyomo.solvers.plugins.solvers.xpress_persistent import _convert_to_const
 from pyomo.opt.base import SolverFactory
 
 
@@ -123,3 +125,65 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
             The file type (e.g., lp).
         """
         self._solver_model.write(filename, filetype=filetype)
+
+    def add_column(self, var, obj_term, constraints, coefficients):
+        """Add a column to the solver's and Pyomo model
+
+        This will add the Pyomo variable var to the solver's
+        model, and put the coefficients on the associated 
+        constraints in the solver model. If the obj_term is
+        not zero, it will add obj_term*var to the objective 
+        of both the Pyomo and solver's model.
+
+        Parameters
+        ----------
+        var: Var (scalar Var or single _VarData)
+        obj_term: float, pyo.Param
+
+        constraints: list of scalar Constraints of single _ConstraintDatas  
+        coefficients: the coefficient to put on var in the associated constraint
+        """
+        
+        ## process the objective
+        obj_term_const = False
+        if obj_term.__class__ in native_numeric_types and obj_term == 0.:
+            pass ## nothing to do
+        else:
+            obj = find_active_objective(self._pyomo_model, True)
+            obj.expr += obj_term*var
+
+        obj_coef = _convert_to_const(obj_term)
+
+        ## add the constraints, collect the
+        ## column information
+        coeff_list = list()
+        constr_list = list()
+        for val,c in zip(coefficients,constraints):
+            c._body += val*var
+            self._vars_referenced_by_con[c].add(var)
+
+            cval = _convert_to_const(val)
+            coeff_list.append(cval)
+            constr_list.append(self._pyomo_con_to_solver_con_map[c])
+
+        ## set-up add var
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vtype = self._cplex_vtype_from_var(var)
+        if var.has_lb():
+            lb = value(var.lb)
+        else:
+            lb = -self._cplex.infinity
+        if var.has_ub():
+            ub = value(var.ub)
+        else:
+            ub = self._cplex.infinity
+
+        ## do column addition
+        self._solver_model.variables.add(obj=[obj_coef], lb=[lb], ub=[ub], types=[vtype], names=[varname],
+                            columns=[self._cplex.SparsePair(ind=constr_list, val=coeff_list)])
+
+        self._pyomo_var_to_solver_var_map[var] = varname
+        self._solver_var_to_pyomo_var_map[varname] = var
+        self._pyomo_var_to_ndx_map[var] = self._ndx_count
+        self._ndx_count += 1
+        self._referenced_variables[var] = len(coeff_list)
