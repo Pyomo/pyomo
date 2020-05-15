@@ -652,23 +652,27 @@ class InteriorPointInterface(BaseInteriorPointInterface):
     def n_ineq_constraints(self):
         return self._nlp.n_ineq_constraints()
 
-    def regularize_kkt(self, kkt, hess_coef=None, jac_eq_coef=None, copy_kkt=True):
-        # regularize the equality constraint gradient
+    def regularize_equality_gradient(self, kkt, coef, copy_kkt=True):
+        # Not technically regularizing the equality gradient ...
+        # Replace this with a regularize_diagonal_block function?
+        # Then call with kkt matrix and the value of the perturbation?
         if copy_kkt:
             kkt = kkt.copy()
-        if jac_eq_coef is not None:
-            ptb = (jac_eq_coef *
-                   scipy.sparse.identity(self._nlp.n_eq_constraints(),
-                                         format='coo'))
+        ptb = (coef *
+               scipy.sparse.identity(self._nlp.n_eq_constraints(),
+                                     format='coo'))
 
-            kkt.set_block(2, 2, ptb)
+        kkt.set_block(2, 2, ptb)
+        return kkt
 
-        if hess_coef is not None:
-            hess = kkt.get_block(0, 0)
-            ptb = hess_coef * scipy.sparse.identity(self._nlp.n_primals(), format='coo')
-            hess += ptb
-            kkt.set_block(0, 0, hess)
+    def regularize_hessian(self, kkt, coef, copy_kkt=True):
+        if copy_kkt:
+            kkt = kkt.copy()
 
+        hess = kkt.get_block(0, 0)
+        ptb = coef * scipy.sparse.identity(self._nlp.n_primals(), format='coo')
+        hess += ptb
+        kkt.set_block(0, 0, hess)
         return kkt
 
     def _get_full_duals_primals_bounds(self):
