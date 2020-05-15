@@ -271,8 +271,12 @@ class InteriorPointSolver(object):
 
             interface.set_barrier_parameter(self._barrier_parameter)
             timer.start('eval')
-            kkt = interface.evaluate_primal_dual_kkt_matrix()
+            timer.start('eval kkt')
+            kkt = interface.evaluate_primal_dual_kkt_matrix(timer=timer)
+            timer.stop('eval kkt')
+            timer.start('eval rhs')
             rhs = interface.evaluate_primal_dual_kkt_rhs()
+            timer.stop('eval rhs')
             timer.stop('eval')
 
             # Factorize linear system

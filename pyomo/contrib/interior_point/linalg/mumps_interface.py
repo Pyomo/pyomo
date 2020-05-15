@@ -116,7 +116,7 @@ class MumpsInterface(LinearSolverInterface):
     def get_error_info(self):
         # Access error level contained in ICNTL(11) (Fortran indexing).
         # Assuming this value has not changed since the solve was performed.
-        error_level = self._mumps.mumps.id.icntl[10]
+        error_level = self.get_icntl(11)
         info = OrderedDict()
         if error_level == 0:
             return info

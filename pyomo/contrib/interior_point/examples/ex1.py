@@ -22,7 +22,6 @@ linear_solver = MumpsInterface(
 #        log_filename='lin_sol.log',
         icntl_options={11: 1}, # Set error level to 1 (most detailed)
         )
-linear_solver.allow_reallocation = True
 
 ip_solver = InteriorPointSolver(linear_solver)
 x, duals_eq, duals_ineq = ip_solver.solve(interface)

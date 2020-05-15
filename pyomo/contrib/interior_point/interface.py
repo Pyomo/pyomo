@@ -5,6 +5,7 @@ from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_com
 from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
 import numpy as np
 import scipy.sparse
+from pyutilib.misc.timing import HierarchicalTimer
 
 
 class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
@@ -133,7 +134,7 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
         pass
 
     @abstractmethod
-    def evaluate_primal_dual_kkt_matrix(self):
+    def evaluate_primal_dual_kkt_matrix(self, timer=None):
         pass
 
     @abstractmethod
@@ -398,15 +399,23 @@ class InteriorPointInterface(BaseInteriorPointInterface):
     def pyomo_nlp(self):
         return self._nlp
 
-    def evaluate_primal_dual_kkt_matrix(self):
+    def evaluate_primal_dual_kkt_matrix(self, timer=None):
+        if timer is None:
+            timer = HierarchicalTimer()
+        timer.start('eval hess')
         hessian = self._nlp.evaluate_hessian_lag()
+        timer.stop('eval hess')
+        timer.start('eval jac')
         jac_eq = self._nlp.evaluate_jacobian_eq()
         jac_ineq = self._nlp.evaluate_jacobian_ineq()
+        timer.stop('eval jac')
 
+        timer.start('diff_inv')
         primals_lb_diff_inv = self._get_primals_lb_diff_inv()
         primals_ub_diff_inv = self._get_primals_ub_diff_inv()
         slacks_lb_diff_inv = self._get_slacks_lb_diff_inv()
         slacks_ub_diff_inv = self._get_slacks_ub_diff_inv()
+        timer.stop('diff_inv')
 
         duals_primals_lb = self._duals_primals_lb
         duals_primals_ub = self._duals_primals_ub
@@ -438,26 +447,33 @@ class InteriorPointInterface(BaseInteriorPointInterface):
                             shape=(duals_slacks_ub.size, 
                                    duals_slacks_ub.size))
 
-        kkt = BlockMatrix(4, 4)
-        kkt.set_block(0, 0, (hessian +
-                             self._primals_lb_compression_matrix.transpose() * 
-                             primals_lb_diff_inv * 
-                             duals_primals_lb * 
-                             self._primals_lb_compression_matrix +
-                             self._primals_ub_compression_matrix.transpose() * 
-                             primals_ub_diff_inv * 
-                             duals_primals_ub * 
-                             self._primals_ub_compression_matrix))
+        timer.start('hess block')
+        hess_block = (hessian +
+                      self._primals_lb_compression_matrix.transpose() *
+                      primals_lb_diff_inv *
+                      duals_primals_lb *
+                      self._primals_lb_compression_matrix +
+                      self._primals_ub_compression_matrix.transpose() *
+                      primals_ub_diff_inv *
+                      duals_primals_ub *
+                      self._primals_ub_compression_matrix)
+        timer.stop('hess block')
 
-        kkt.set_block(1, 1, (self._ineq_lb_compression_matrix.transpose() * 
-                             slacks_lb_diff_inv * 
-                             duals_slacks_lb * 
+        timer.start('slack block')
+        slack_block = (self._ineq_lb_compression_matrix.transpose() *
+                             slacks_lb_diff_inv *
+                             duals_slacks_lb *
                              self._ineq_lb_compression_matrix +
-                             self._ineq_ub_compression_matrix.transpose() * 
-                             slacks_ub_diff_inv * 
-                             duals_slacks_ub * 
-                             self._ineq_ub_compression_matrix))
+                             self._ineq_ub_compression_matrix.transpose() *
+                             slacks_ub_diff_inv *
+                             duals_slacks_ub *
+                             self._ineq_ub_compression_matrix)
+        timer.stop('slack block')
 
+        timer.start('set block')
+        kkt = BlockMatrix(4, 4)
+        kkt.set_block(0, 0, hess_block)
+        kkt.set_block(1, 1, slack_block)
         kkt.set_block(2, 0, jac_eq)
         kkt.set_block(0, 2, jac_eq.transpose())
         kkt.set_block(3, 0, jac_ineq)
@@ -468,6 +484,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         kkt.set_block(1, 3, -scipy.sparse.identity(
                                             self._nlp.n_ineq_constraints(),
                                             format='coo'))
+        timer.stop('set block')
         return kkt
 
     def evaluate_primal_dual_kkt_rhs(self):
@@ -597,7 +614,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         return self._nlp.evaluate_jacobian_ineq()
 
     def _get_primals_lb_diff_inv(self):
-        res = (self._primals_lb_compression_matrix * self._nlp.get_primals() - 
+        res = (self._primals_lb_compression_matrix * self._nlp.get_primals() -
                self._primals_lb_compressed)
         res = scipy.sparse.coo_matrix(
             (1 / res, (np.arange(res.size), np.arange(res.size))),
