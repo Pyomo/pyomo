@@ -300,6 +300,12 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         self._delta_duals_ineq = None
         self._barrier = None
 
+    def n_eq_constraints(self):
+        return self._nlp.n_eq_constraints()
+
+    def n_ineq_constraints(self):
+        return self._nlp.n_ineq_constraints()
+
     def init_primals(self):
         primals = self._nlp.init_primals()
         return primals
@@ -646,19 +652,17 @@ class InteriorPointInterface(BaseInteriorPointInterface):
     def get_ineq_ub_compressed(self):
         return self._ineq_ub_compressed
 
-    def n_eq_constraints(self):
-        return self._nlp.n_eq_constraints()
-
-    def n_ineq_constraints(self):
-        return self._nlp.n_ineq_constraints()
-
     def regularize_equality_gradient(self, kkt, coef, copy_kkt=True):
         # Not technically regularizing the equality gradient ...
         # Replace this with a regularize_diagonal_block function?
         # Then call with kkt matrix and the value of the perturbation?
+
+        # Use a constant perturbation to regularize the equality constraint
+        # gradient
         if copy_kkt:
             kkt = kkt.copy()
-        ptb = (coef *
+        reg_coef = coef
+        ptb = (reg_coef *
                scipy.sparse.identity(self._nlp.n_eq_constraints(),
                                      format='coo'))
 
