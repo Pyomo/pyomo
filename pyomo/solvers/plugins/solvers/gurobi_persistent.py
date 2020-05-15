@@ -11,10 +11,9 @@
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.core.expr.numvalue import value, is_fixed
+from pyomo.core.expr.numvalue import value, is_fixed, native_numeric_types
 from pyomo.opt.base import SolverFactory
 from pyomo.pysp.phutils import find_active_objective
-from pyomo.core.expr import current as EXPR
 from pyomo.solvers.plugins.solvers.xpress_persistent import _convert_to_const
 import collections
 
