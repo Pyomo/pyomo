@@ -686,7 +686,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             lb = value(var.value)
             ub = value(var.value)
 
-        gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname, 
+        gurobipy_var = self._solver_model.addVar(obj=obj_coef, lb=lb, ub=ub, vtype=vtype, name=varname, 
                             column=self._gurobipy.Column(coeffs=coeff_list, constrs=constr_list) )
 
         self._pyomo_var_to_solver_var_map[var] = gurobipy_var 
