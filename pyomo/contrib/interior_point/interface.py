@@ -9,6 +9,14 @@ import scipy.sparse
 
 class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
     @abstractmethod
+    def n_eq_constraints(self):
+        pass
+
+    @abstractmethod
+    def n_ineq_constraints(self):
+        pass
+
+    @abstractmethod
     def init_primals(self):
         pass
 
@@ -224,17 +232,14 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
     def get_ineq_ub_compressed(self):
         pass
 
-    @abstractmethod
-    def n_eq_constraints(self):
-        pass
-
-    @abstractmethod
-    def n_ineq_constraints(self):
-        pass
-
-    def regularize_kkt(self, kkt, hess_coef, jac_eq_coef, copy_kkt=True):
+    def regularize_equality_gradient(self, kkt, coef, copy_kkt=True):
         raise RuntimeError(
-            'regularization is necessary but no '
+            'Equality gradient regularization is necessary but no '
+            'function has been implemented for doing so.')
+
+    def regularize_hessian(self, kkt, coef, copy_kkt=True):
+        raise RuntimeError(
+            'Hessian of Lagrangian regularization is necessary but no '
             'function has been implemented for doing so.')
 
 
