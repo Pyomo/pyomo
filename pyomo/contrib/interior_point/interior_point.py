@@ -57,11 +57,11 @@ class FactorizationContext(object):
         # ^ So the "regularization log" can have its own outlvl
         self.logger = logger
 
-    def start(self):
+    def __enter__(self):
         self.logger.debug('Factorizing KKT')
         self.log_header()
 
-    def stop(self):
+    def __exit__(self, et, ev, tb):
         self.logger.debug('Finished factorizing KKT')
 
     def log_header(self):
@@ -291,49 +291,44 @@ class InteriorPointSolver(object):
         desired_n_neg_evals = (self.interface.n_eq_constraints() +
                                self.interface.n_ineq_constraints())
         reg_iter = 0
-        self.factorization_context.start()
-
-        status, num_realloc = try_factorization_and_reallocation(kkt=kkt,
-                                                                 linear_solver=self.linear_solver,
-                                                                 reallocation_factor=self.reallocation_factor,
-                                                                 max_iter=self.max_reallocation_iterations)
-        if status == LinearSolverStatus.successful:
-            neg_eig = self.linear_solver.get_inertia()[1]
-        else:
-            neg_eig = None
-        self.factorization_context.log_info(_iter=self._iter, reg_iter=reg_iter, num_realloc=num_realloc,
-                                            coef=0, neg_eig=neg_eig, status=status)
-        reg_iter += 1
-
-        if status == LinearSolverStatus.singular:
-            kkt = self.interface.regularize_kkt(kkt=kkt,
-                                                hess_coef=None,
-                                                jac_eq_coef=self.base_eq_reg_coef * self._barrier_parameter**0.25,
-                                                copy_kkt=False)
-        total_hess_reg_coef = self.hess_reg_coef
-        last_hess_reg_coef = 0
-
-        while neg_eig != desired_n_neg_evals:
-            kkt = self.interface.regularize_kkt(kkt=kkt,
-                                                hess_coef=total_hess_reg_coef - last_hess_reg_coef,
-                                                jac_eq_coef=None,
-                                                copy_kkt=False)
+        with self.factorization_context as fact_con:
             status, num_realloc = try_factorization_and_reallocation(kkt=kkt,
                                                                      linear_solver=self.linear_solver,
                                                                      reallocation_factor=self.reallocation_factor,
                                                                      max_iter=self.max_reallocation_iterations)
-            if status != LinearSolverStatus.successful:
-                raise RuntimeError('Could not factorize KKT system; linear solver status: ' + str(status))
-            neg_eig = self.linear_solver.get_inertia()[1]
-            self.factorization_context.log_info(_iter=self._iter, reg_iter=reg_iter, num_realloc=num_realloc,
-                                                coef=total_hess_reg_coef, neg_eig=neg_eig, status=status)
+            if status == LinearSolverStatus.successful:
+                neg_eig = self.linear_solver.get_inertia()[1]
+            else:
+                neg_eig = None
+            fact_con.log_info(_iter=self._iter, reg_iter=reg_iter, num_realloc=num_realloc,
+                              coef=0, neg_eig=neg_eig, status=status)
             reg_iter += 1
-            if reg_iter > self.max_reg_iter:
-                raise RuntimeError('Exceeded maximum number of regularization iterations.')
-            last_hess_reg_coef = total_hess_reg_coef
-            total_hess_reg_coef *= self.reg_factor_increase
 
-        self.factorization_context.stop()
+            if status == LinearSolverStatus.singular:
+                kkt = self.interface.regularize_equality_gradient(kkt=kkt,
+                                                                  coef=self.base_eq_reg_coef * self._barrier_parameter**0.25,
+                                                                  copy_kkt=False)
+            total_hess_reg_coef = self.hess_reg_coef
+            last_hess_reg_coef = 0
+
+            while neg_eig != desired_n_neg_evals:
+                kkt = self.interface.regularize_hessian(kkt=kkt,
+                                                        coef=total_hess_reg_coef - last_hess_reg_coef,
+                                                        copy_kkt=False)
+                status, num_realloc = try_factorization_and_reallocation(kkt=kkt,
+                                                                         linear_solver=self.linear_solver,
+                                                                         reallocation_factor=self.reallocation_factor,
+                                                                         max_iter=self.max_reallocation_iterations)
+                if status != LinearSolverStatus.successful:
+                    raise RuntimeError('Could not factorize KKT system; linear solver status: ' + str(status))
+                neg_eig = self.linear_solver.get_inertia()[1]
+                fact_con.log_info(_iter=self._iter, reg_iter=reg_iter, num_realloc=num_realloc,
+                                  coef=total_hess_reg_coef, neg_eig=neg_eig, status=status)
+                reg_iter += 1
+                if reg_iter > self.max_reg_iter:
+                    raise RuntimeError('Exceeded maximum number of regularization iterations.')
+                last_hess_reg_coef = total_hess_reg_coef
+                total_hess_reg_coef *= self.reg_factor_increase
 
     def process_init(self, x, lb, ub):
         process_init(x, lb, ub)
