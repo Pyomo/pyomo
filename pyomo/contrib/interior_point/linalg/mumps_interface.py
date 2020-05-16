@@ -1,9 +1,10 @@
 from .base_linear_solver_interface import LinearSolverInterface
 from .results import LinearSolverStatus, LinearSolverResults
-from pyomo.contrib.pynumero.linalg.mumps import MumpsCentralizedAssembledLinearSolver
+from pyomo.common.dependencies import attempt_import
 from scipy.sparse import isspmatrix_coo, tril
 from collections import OrderedDict
 import logging
+mumps, mumps_available = attempt_import('pyomo.contrib.pynumero.linalg.mumps')
 
 
 class MumpsInterface(LinearSolverInterface):
@@ -13,9 +14,9 @@ class MumpsInterface(LinearSolverInterface):
         return 'mumps'
 
     def __init__(self, par=1, comm=None, cntl_options=None, icntl_options=None):
-        self._mumps = MumpsCentralizedAssembledLinearSolver(sym=2,
-                                                            par=par,
-                                                            comm=comm)
+        self._mumps = mumps.MumpsCentralizedAssembledLinearSolver(sym=2,
+                                                                  par=par,
+                                                                  comm=comm)
 
         if cntl_options is None:
             cntl_options = dict()

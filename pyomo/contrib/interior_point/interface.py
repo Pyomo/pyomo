@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 import six
 from pyomo.contrib.pynumero.interfaces import pyomo_nlp, ampl_nlp
-from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
 from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
 import numpy as np
 import scipy.sparse
