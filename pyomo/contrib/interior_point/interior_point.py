@@ -7,6 +7,16 @@ from pyomo.contrib.interior_point.linalg.results import LinearSolverStatus
 from pyutilib.misc.timing import HierarchicalTimer
 
 
+"""
+Interface Requirements
+----------------------
+1) duals_primals_lb[i] must always be 0 if primals_lb[i] is -inf
+2) duals_primals_ub[i] must always be 0 if primals_ub[i] is inf
+3) duals_slacks_lb[i] must always be 0 if ineq_lb[i] is -inf
+4) duals_slacks_ub[i] must always be 0 if ineq_ub[i] is inf
+"""
+
+
 ip_logger = logging.getLogger('interior_point')
 
 
@@ -186,10 +196,10 @@ class InteriorPointSolver(object):
 
         self.process_init(primals, interface.get_primals_lb(), interface.get_primals_ub())
         self.process_init(slacks, interface.get_ineq_lb(), interface.get_ineq_ub())
-        self.process_init_duals(duals_primals_lb)
-        self.process_init_duals(duals_primals_ub)
-        self.process_init_duals(duals_slacks_lb)
-        self.process_init_duals(duals_slacks_ub)
+        self.process_init_duals_lb(duals_primals_lb, self.interface.get_primals_lb())
+        self.process_init_duals_ub(duals_primals_ub, self.interface.get_primals_ub())
+        self.process_init_duals_lb(duals_slacks_lb, self.interface.get_ineq_lb())
+        self.process_init_duals_ub(duals_slacks_ub, self.interface.get_ineq_ub())
         
         interface.set_barrier_parameter(self._barrier_parameter)
 
@@ -370,8 +380,11 @@ class InteriorPointSolver(object):
     def process_init(self, x, lb, ub):
         process_init(x, lb, ub)
 
-    def process_init_duals(self, x):
-        process_init_duals(x)
+    def process_init_duals_lb(self, x, lb):
+        process_init_duals_lb(x, lb)
+
+    def process_init_duals_ub(self, x, ub):
+        process_init_duals_ub(x, ub)
 
     def check_convergence(self, barrier):
         """
@@ -397,37 +410,40 @@ class InteriorPointSolver(object):
         duals_primals_ub = interface.get_duals_primals_ub()
         duals_slacks_lb = interface.get_duals_slacks_lb()
         duals_slacks_ub = interface.get_duals_slacks_ub()
-        primals_lb_compression_matrix = interface.get_primals_lb_compression_matrix()
-        primals_ub_compression_matrix = interface.get_primals_ub_compression_matrix()
-        ineq_lb_compression_matrix = interface.get_ineq_lb_compression_matrix()
-        ineq_ub_compression_matrix = interface.get_ineq_ub_compression_matrix()
-        primals_lb_compressed = interface.get_primals_lb_compressed()
-        primals_ub_compressed = interface.get_primals_ub_compressed()
-        ineq_lb_compressed = interface.get_ineq_lb_compressed()
-        ineq_ub_compressed = interface.get_ineq_ub_compressed()
-    
+
+        primals_lb = interface.get_primals_lb()
+        primals_ub = interface.get_primals_ub()
+        primals_lb_mod = primals_lb.copy()
+        primals_ub_mod = primals_ub.copy()
+        primals_lb_mod[np.isneginf(primals_lb)] = 0  # these entries get multiplied by 0
+        primals_ub_mod[np.isinf(primals_ub)] = 0  # these entries get multiplied by 0
+
+        ineq_lb = interface.get_ineq_lb()
+        ineq_ub = interface.get_ineq_ub()
+        ineq_lb_mod = ineq_lb.copy()
+        ineq_ub_mod = ineq_ub.copy()
+        ineq_lb_mod[np.isneginf(ineq_lb)] = 0  # these entries get multiplied by 0
+        ineq_ub_mod[np.isinf(ineq_ub)] = 0  # these entries get multiplied by 0
+
         grad_lag_primals = (grad_obj +
                             jac_eq.transpose() * duals_eq +
                             jac_ineq.transpose() * duals_ineq -
-                            primals_lb_compression_matrix.transpose() * 
-                                                             duals_primals_lb +
-                            primals_ub_compression_matrix.transpose() * 
-                                                             duals_primals_ub)
+                            duals_primals_lb +
+                            duals_primals_ub)
         grad_lag_slacks = (-duals_ineq -
-                           ineq_lb_compression_matrix.transpose() * duals_slacks_lb +
-                           ineq_ub_compression_matrix.transpose() * duals_slacks_ub)
+                           duals_slacks_lb +
+                           duals_slacks_ub)
         eq_resid = interface.evaluate_eq_constraints()
         ineq_resid = interface.evaluate_ineq_constraints() - slacks
-        primals_lb_resid = (primals_lb_compression_matrix * primals - 
-                            primals_lb_compressed) * duals_primals_lb - barrier
-        primals_ub_resid = (primals_ub_compressed - 
-                            primals_ub_compression_matrix * primals) * \
-                            duals_primals_ub - barrier
-        slacks_lb_resid = (ineq_lb_compression_matrix * slacks - ineq_lb_compressed) \
-                           * duals_slacks_lb - barrier
-        slacks_ub_resid = (ineq_ub_compressed - ineq_ub_compression_matrix * slacks) \
-                           * duals_slacks_ub - barrier
-    
+        primals_lb_resid = (primals - primals_lb_mod) * duals_primals_lb - barrier
+        primals_ub_resid = (primals_ub_mod - primals) * duals_primals_ub - barrier
+        primals_lb_resid[np.isneginf(primals_lb)] = 0
+        primals_ub_resid[np.isinf(primals_ub)] = 0
+        slacks_lb_resid = (slacks - ineq_lb_mod) * duals_slacks_lb - barrier
+        slacks_ub_resid = (ineq_ub_mod - slacks) * duals_slacks_ub - barrier
+        slacks_lb_resid[np.isneginf(ineq_lb)] = 0
+        slacks_ub_resid[np.isinf(ineq_ub)] = 0
+
         if eq_resid.size == 0:
             max_eq_resid = 0
         else:
@@ -461,7 +477,7 @@ class InteriorPointSolver(object):
             max_slacks_ub_resid = 0
         else:
             max_slacks_ub_resid = np.max(np.abs(slacks_ub_resid))
-        complimentarity_inf = max(max_primals_lb_resid, max_primals_ub_resid, 
+        complimentarity_inf = max(max_primals_lb_resid, max_primals_ub_resid,
                                   max_slacks_lb_resid, max_slacks_ub_resid)
     
         return primal_inf, dual_inf, complimentarity_inf
@@ -485,8 +501,10 @@ def try_factorization_and_reallocation(kkt, linear_solver, reallocation_factor, 
 
 
 def _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl):
-    alpha = -tau * (x - xl) / delta_x
-    alpha[alpha < 0] = np.inf
+    delta_x_mod = delta_x.copy()
+    delta_x_mod[delta_x_mod == 0] = 1
+    alpha = -tau * (x - xl) / delta_x_mod
+    alpha[delta_x >= 0] = np.inf
     if len(alpha) == 0:
         return 1
     else:
@@ -494,8 +512,10 @@ def _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl):
 
 
 def _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu):
-    alpha = tau * (xu - x) / delta_x
-    alpha[alpha < 0] = np.inf
+    delta_x_mod = delta_x.copy()
+    delta_x_mod[delta_x_mod == 0] = 1
+    alpha = tau * (xu - x) / delta_x_mod
+    alpha[delta_x <= 0] = np.inf
     if len(alpha) == 0:
         return 1
     else:
@@ -609,6 +629,13 @@ def process_init(x, lb, ub):
            (0.5 * cm.transpose() * (cm * lb + cm * ub))[out_of_bounds_lb_and_ub])
 
 
-def process_init_duals(x):
+def process_init_duals_lb(x, lb):
     out_of_bounds = (x <= 0).nonzero()[0]
     np.put(x, out_of_bounds, 1)
+    x[np.isneginf(lb)] = 0
+
+
+def process_init_duals_ub(x, ub):
+    out_of_bounds = (x <= 0).nonzero()[0]
+    np.put(x, out_of_bounds, 1)
+    x[np.isinf(ub)] = 0
