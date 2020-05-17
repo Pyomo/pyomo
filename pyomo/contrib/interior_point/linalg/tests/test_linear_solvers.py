@@ -1,6 +1,6 @@
 import pyutilib.th as unittest
 from pyomo.common.dependencies import attempt_import
-np, np_available = attempt_import('numpy')
+np, np_available = attempt_import('numpy', minimum_version='1.13.0')
 scipy, scipy_available = attempt_import('scipy.sparse')
 mumps, mumps_available = attempt_import('mumps')
 if not np_available or not scipy_available:

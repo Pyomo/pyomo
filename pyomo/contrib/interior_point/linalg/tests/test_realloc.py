@@ -1,26 +1,16 @@
 import pyutilib.th as unittest
 from pyomo.common.dependencies import attempt_import
-
 np, numpy_available = attempt_import('numpy', 'Interior point requires numpy',
         minimum_version='1.13.0')
 scipy, scipy_available = attempt_import('scipy', 'Interior point requires scipy')
-mumps_interface, mumps_available = attempt_import(
-        'pyomo.contrib.interior_point.linalg.mumps_interface',
-        'Interior point requires mumps')
+mumps, mumps_available = attempt_import('mumps')
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest('Interior point tests require numpy and scipy')
-
-from pyomo.contrib.pynumero.asl import AmplInterface
-asl_available = AmplInterface.available()
-
-from pyomo.contrib.interior_point.interior_point import InteriorPointSolver
-from pyomo.contrib.interior_point.interface import InteriorPointInterface
-
 from scipy.sparse import coo_matrix
+import pyomo.contrib.interior_point as ip
 
 
 class TestReallocation(unittest.TestCase):
-
     @unittest.skipIf(not mumps_available, 'mumps is not available')
     def test_reallocate_memory_mumps(self):
 
@@ -44,20 +34,21 @@ class TestReallocation(unittest.TestCase):
 
         matrix = coo_matrix((ent, (irn, jcn)), shape=(n,n))
 
-        linear_solver = mumps_interface.MumpsInterface()
+        linear_solver = ip.linalg.MumpsInterface()
         linear_solver.do_symbolic_factorization(matrix)
 
         predicted = linear_solver.get_infog(16)
 
-        with self.assertRaisesRegex(RuntimeError, 'MUMPS error: -9'):
-            linear_solver.do_numeric_factorization(matrix)
+        res = linear_solver.do_numeric_factorization(matrix, raise_on_error=False)
+        self.assertEqual(res.status, ip.linalg.LinearSolverStatus.not_enough_memory)
 
         linear_solver.do_symbolic_factorization(matrix)
 
         factor = 2
         linear_solver.increase_memory_allocation(factor)
 
-        linear_solver.do_numeric_factorization(matrix)
+        res = linear_solver.do_numeric_factorization(matrix)
+        self.assertEqual(res.status, ip.linalg.LinearSolverStatus.successful)
 
         # Expected memory allocation (MB)
         self.assertEqual(linear_solver._prev_allocation, 6)

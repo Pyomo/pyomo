@@ -4,7 +4,7 @@ from pyomo.common.dependencies import attempt_import
 from scipy.sparse import isspmatrix_coo, tril
 from collections import OrderedDict
 import logging
-mumps, mumps_available = attempt_import('pyomo.contrib.pynumero.linalg.mumps')
+mumps, mumps_available = attempt_import('pyomo.contrib.pynumero.linalg.mumps_interface')
 
 
 class MumpsInterface(LinearSolverInterface):
