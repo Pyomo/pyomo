@@ -102,8 +102,8 @@ if test -z "$MODE" -o "$MODE" == setup; then
         # Set up coverage for this build
         export COVERAGE_PROCESS_START=${WORKSPACE}/coveragerc
         cp ${WORKSPACE}/pyomo/.coveragerc ${COVERAGE_PROCESS_START}
-        echo "source=${WORKSPACE}/pyomo" >> ${COVERAGE_PROCESS_START}
-        echo "data_file=${WORKSPACE}/pyomo/.coverage" >> ${COVERAGE_PROCESS_START}
+        echo "data_file=${WORKSPACE}/pyomo/.coverage" \
+            >> ${COVERAGE_PROCESS_START}
         echo 'import coverage; coverage.process_startup()' \
             > "${LOCAL_SITE_PACKAGES}/run_coverage_at_startup.pth"
     fi

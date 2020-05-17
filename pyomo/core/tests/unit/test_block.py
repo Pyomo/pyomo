@@ -61,6 +61,7 @@ class TestGenerators(unittest.TestCase):
         model = ConcreteModel()
         model.q = Set(initialize=[1,2])
         model.Q = Set(model.q,initialize=[1,2])
+        model.qq = NonNegativeIntegers*model.q
         model.x = Var(initialize=-1)
         model.X = Var(model.q,initialize=-1)
         model.e = Expression(initialize=-1)
@@ -152,8 +153,8 @@ class TestGenerators(unittest.TestCase):
 
         model.component_lists = {}
         model.component_data_lists = {}
-        model.component_lists[Set] = [model.q, model.Q]
-        model.component_data_lists[Set] = [model.q, model.Q[1], model.Q[2]]
+        model.component_lists[Set] = [model.q, model.Q, model.qq]
+        model.component_data_lists[Set] = [model.q, model.Q[1], model.Q[2], model.qq]
         model.component_lists[Var] = [model.x, model.X]
         model.component_data_lists[Var] = [model.x, model.X[1], model.X[2]]
         model.component_lists[Expression] = [model.e, model.E]
@@ -186,7 +187,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_objects(ctype, active=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("component_objects(active=True) failed with ctype %s" % ctype)
+                    print("component_objects(active=True) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("component_objects(active=True) should have failed with ctype %s" % ctype)
@@ -205,7 +207,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_objects(ctype, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("components failed with ctype %s" % ctype)
+                    print("components failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("components should have failed with ctype %s" % ctype)
@@ -224,7 +227,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, active=True, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("component_data_objects(active=True, sort_by_keys=False) failed with ctype %s" % ctype)
+                    print("component_data_objects(active=True, sort_by_keys=False) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("component_data_objects(active=True, sort_by_keys=False) should have failed with ctype %s" % ctype)
@@ -243,7 +247,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, active=True, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("component_data_objects(active=True, sort=True) failed with ctype %s" % ctype)
+                    print("component_data_objects(active=True, sort=True) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("component_data_objects(active=True, sort=True) should have failed with ctype %s" % ctype)
@@ -262,7 +267,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("components_data(sort_by_keys=True) failed with ctype %s" % ctype)
+                    print("components_data(sort_by_keys=True) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=True) should have failed with ctype %s" % ctype)
@@ -281,7 +287,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("components_data(sort_by_keys=False) failed with ctype %s" % ctype)
+                    print("components_data(sort_by_keys=False) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=False) should have failed with ctype %s" % ctype)
