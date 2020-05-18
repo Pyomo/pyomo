@@ -104,6 +104,8 @@ after_success:
     # Combine coverage reports over all subprocesses and upload
   - ${DOC} find . -maxdepth 10 -name ".cov*"
   - ${DOC} coverage combine
+  - ${DOC} coverage report -i
+  - ${DOC} coverage xml -i
   - ${DOC} codecov --env TAG -X gcov
     # Trigger PyomoGallery build, but only when building the master branch
     # Note: this is disabled unless a token is injected through an
