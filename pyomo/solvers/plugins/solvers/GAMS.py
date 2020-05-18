@@ -805,26 +805,38 @@ class GAMSShell(_GAMSSolver):
             if not ret[0]:
                 raise RuntimeError("GAMS GDX failure (gdxCreate): %s." % ret[1])
 
-            ret = gdxOpenRead(pgdx, statresults_filename)
-            if not ret[0]:
-                raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
+            if os.path.exists(statresults_filename):
+                ret = gdxOpenRead(pgdx, statresults_filename)
+                if not ret[0]:
+                    raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
 
-            for i, stat in enumerate(stat_vars):
-                ret = gdxDataReadRawStart(pgdx, i+1)
-                if not ret[0] and ret[1] != 1:
-                    raise RuntimeError("GAMS GDX failure (gdxDataReadRawStart).")
+                i = 0
+                while True:
+                    i += 1
+                    ret = gdxDataReadRawStart(pgdx, i)
+                    if not ret[0]:
+                        break
 
-                ret = gdxDataReadRaw(pgdx)
-                if not ret[0] or len(ret[2]) == 0:
-                    raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
+                    ret = gdxSymbolInfo(pgdx, i)
+                    if not ret[0]:
+                        break
+                    if len(ret) < 2:
+                        raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
+                    stat = ret[1]
+                    if not stat in stat_vars:
+                        continue
 
-                if stat in ('OBJEST', 'OBJVAL', 'ETSOLVE'):
-                    stat_vars[stat] = self._parse_special_values(ret[2][0])
-                else:
-                    stat_vars[stat] = int(ret[2][0])
+                    ret = gdxDataReadRaw(pgdx)
+                    if not ret[0] or len(ret[2]) == 0:
+                        raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
 
-            gdxDataReadDone(pgdx)
-            gdxClose(pgdx)
+                    if stat in ('OBJEST', 'OBJVAL', 'ETSOLVE'):
+                        stat_vars[stat] = self._parse_special_values(ret[2][0])
+                    else:
+                        stat_vars[stat] = int(ret[2][0])
+
+                gdxDataReadDone(pgdx)
+                gdxClose(pgdx)
 
             if os.path.exists(results_filename):
                 ret = gdxOpenRead(pgdx, results_filename)
@@ -853,6 +865,7 @@ class GAMSShell(_GAMSSolver):
 
                 gdxDataReadDone(pgdx)
                 gdxClose(pgdx)
+                
             gdxFree(pgdx)
 
         finally:
