@@ -9,8 +9,13 @@
 #  ___________________________________________________________________________
 
 from collections import Counter
-from pyomo.kernel import ComponentSet
+from pyomo.core.base import Constraint, Block
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.base.set import SetProduct
+
+
+def index_warning(name, index):
+    return 'WARNING: %s has no index %s' % (name, index)
 
 
 def is_explicitly_indexed_by(comp, *sets, **kwargs):
@@ -137,8 +142,10 @@ def get_index_set_except(comp, *sets):
                 raise ValueError(msg)
         # Need to know the location of each set within comp's index_set
         # location will map:
-        #     location_in_comp_index_set -> location_in_sets
+        #     location in comp's subsets() -> location in input sets
         location = {}
+        # location should be well defined even for higher dimension sets
+        # because this maps between lists of sets, not lists of indices
         other_ind_sets = []
         for ind_loc, ind_set in enumerate(projection_sets):
             found_set = False
@@ -150,8 +157,8 @@ def get_index_set_except(comp, *sets):
             if not found_set:
                 other_ind_sets.append(ind_set)
     else:
-        # If index_set has no set_tuple, it must be a SimpleSet, and 
-        # len(sets) == 1 (because comp is indexed by every set in sets). 
+        # If index_set is not a SetProduct, only one set must have been
+        # provided, so len(sets) == 1
         # Location in sets and in comp's indexing set are the same.
         location = {0: 0}
         other_ind_sets = []
@@ -219,3 +226,59 @@ def _complete_index(loc, index, *newvals):
             newval = (newval,)
         index = index[0:i] + newval + index[i:]
     return index
+
+
+def deactivate_model_at(b, cset, pts, allow_skip=True, 
+        suppress_warnings=False):
+    """
+    Finds any block or constraint in block b, indexed explicitly (and not 
+    implicitly) by cset, and deactivates it at points specified. 
+    Implicitly indexed components are excluded because one of their parent 
+    blocks will be deactivated, so deactivating them too would be redundant.
+
+    Args:
+        b : Block to search
+        cset : ContinuousSet of interest
+        pts : Value or list of values, in ContinuousSet, to deactivate at
+
+    Returns:
+        A dictionary mapping points in pts to lists of
+        component data that have been deactivated there
+    """
+    if type(pts) is not list:
+        pts = [pts]
+    for pt in pts:
+        if pt not in cset:
+            msg = str(pt) + ' is not in ContinuousSet ' + cset.name
+            raise ValueError(msg)
+    deactivated = {pt: [] for pt in pts}
+
+    visited = set()
+    for comp in b.component_objects([Block, Constraint], active=True):
+        # Record components that have been visited in case component_objects
+        # contains duplicates (due to references)
+        if id(comp) in visited:
+            continue
+        visited.add(id(comp))
+
+        if (is_explicitly_indexed_by(comp, cset) and
+                not is_in_block_indexed_by(comp, cset)):
+            info = get_index_set_except(comp, cset)
+            non_cset_set = info['set_except']
+            index_getter = info['index_getter']
+
+            for non_cset_index in non_cset_set:
+                for pt in pts:
+                    index = index_getter(non_cset_index, pt)
+                    try:
+                        comp[index].deactivate()
+                        deactivated[pt].append(comp[index])
+                    except KeyError:
+                        # except KeyError to allow Constraint/Block.Skip
+                        if not suppress_warnings:
+                            print(index_warning(comp.name, index))
+                        if not allow_skip:
+                            raise
+                        continue
+
+    return deactivated
