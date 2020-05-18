@@ -12,7 +12,8 @@ from pyomo.common.plugin import alias
 import pyomo.environ as aml
 import os
 
-from .. import numpy_available, scipy_available
+#from .. import numpy_available, scipy_available
+numpy_available, scipy_available = True, True
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
