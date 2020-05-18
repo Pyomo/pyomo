@@ -826,7 +826,7 @@ class GAMSShell(_GAMSSolver):
             gdxDataReadDone(pgdx)
             gdxClose(pgdx)
 
-            if stat_vars["MODELSTAT"] not in (10,11,13,14,18,19):
+            if os.path.exists(results_filename):
                 ret = gdxOpenRead(pgdx, results_filename)
                 if not ret[0]:
                     raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
@@ -1024,7 +1024,7 @@ class GAMSShell(_GAMSSolver):
                 rec = model_soln[sym]
             except KeyError:
                 # no solution returned
-                rec = (float("nan"), float("nan"))
+                rec = (None, None)
             # obj.value = float(rec[0])
             soln.variable[sym] = {"Value": float(rec[0])}
             if extract_rc and has_rc_info:
@@ -1047,7 +1047,7 @@ class GAMSShell(_GAMSSolver):
                         rec = model_soln[sym]
                     except KeyError:
                         # no solution returned
-                        rec = (float("nan"), float("nan"))
+                        rec = (None, None)
                     try:
                         # model.dual[c] = float(rec[1])
                         soln.constraint[sym] = {'dual': float(rec[1])}
@@ -1065,7 +1065,7 @@ class GAMSShell(_GAMSSolver):
                             rec_lo = model_soln[sym + '_lo']
                         except KeyError:
                             # no solution returned
-                            rec_lo = (float("nan"), float("nan"))
+                            rec_lo = (None, None)
                         try:
                             marg -= float(rec_lo[1])
                         except ValueError:
@@ -1076,7 +1076,7 @@ class GAMSShell(_GAMSSolver):
                             rec_hi = model_soln[sym + '_hi']
                         except KeyError:
                             # no solution returned
-                            rec_hi = (float("nan"), float("nan"))
+                            rec_hi = (None, None)
                         try:
                             marg += float(rec_hi[1])
                         except ValueError:
