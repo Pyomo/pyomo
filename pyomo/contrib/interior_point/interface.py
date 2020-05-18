@@ -549,4 +549,13 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         if full_duals_primals_ub is None:
             full_duals_primals_ub = np.ones(self._nlp.n_primals())
 
-        return full_duals_primals_lb, full_duals_primals_ub    
+        return full_duals_primals_lb, full_duals_primals_ub
+
+    def load_primals_into_pyomo_model(self):
+        if not isinstance(self._nlp, pyomo_nlp.PyomoNLP):
+            raise RuntimeError('Can only load primals into a pyomo model if a pyomo model was used in the constructor.')
+
+        pyomo_variables = self._nlp.get_pyomo_variables()
+        primals = self._nlp.get_primals()
+        for i, v in enumerate(pyomo_variables):
+            v.value = primals[i]

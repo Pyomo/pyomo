@@ -109,14 +109,12 @@ class InteriorPointSolver(object):
                  linear_solver,
                  max_iter=100,
                  tol=1e-8,
-                 regularize_kkt=True,
                  linear_solver_log_filename=None,
                  max_reallocation_iterations=5,
                  reallocation_factor=2):
         self.linear_solver = linear_solver
         self.max_iter = max_iter
         self.tol = tol
-        self.regularize_kkt = regularize_kkt
         self.linear_solver_log_filename = linear_solver_log_filename
         self.max_reallocation_iterations = max_reallocation_iterations
         self.reallocation_factor = reallocation_factor
@@ -157,25 +155,21 @@ class InteriorPointSolver(object):
     def set_interface(self, interface):
         self.interface = interface
 
-    def solve(self, interface, **kwargs):
+    def solve(self, interface, timer=None, report_timing=False):
         """
         Parameters
         ----------
         interface: pyomo.contrib.interior_point.interface.BaseInteriorPointInterface
             The interior point interface. This object handles the function evaluation, 
             building the KKT matrix, and building the KKT right hand side.
-        linear_solver: pyomo.contrib.interior_point.linalg.base_linear_solver_interface.LinearSolverInterface
-            A linear solver with the interface defined by LinearSolverInterface.
-        max_iter: int
-            The maximum number of iterations
-        tol: float
-            The tolerance for terminating the algorithm.
+        timer: HierarchicalTimer
+        report_timing: bool
         """
         linear_solver = self.linear_solver
-        max_iter = kwargs.pop('max_iter', self.max_iter)
-        tol = kwargs.pop('tol', self.tol)
-        report_timing = kwargs.pop('report_timing', False)
-        timer = kwargs.pop('timer', HierarchicalTimer())
+        max_iter = self.max_iter
+        tol = self.tol
+        if timer is None:
+            timer = HierarchicalTimer()
 
         timer.start('IP solve')
         timer.start('init')

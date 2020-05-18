@@ -39,6 +39,9 @@ class TestSolveInteriorPoint(unittest.TestCase):
         self.assertAlmostEqual(x[1], 1)
         self.assertAlmostEqual(duals_eq[0], -1-1.0/3.0)
         self.assertAlmostEqual(duals_ineq[0], 2.0/3.0)
+        interface.load_primals_into_pyomo_model()
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
 
     def _test_solve_interior_point_2(self, linear_solver):
         m = pe.ConcreteModel()
@@ -49,6 +52,8 @@ class TestSolveInteriorPoint(unittest.TestCase):
 #        x, duals_eq, duals_ineq = solve_interior_point(interface, linear_solver)
         x, duals_eq, duals_ineq = ip_solver.solve(interface)
         self.assertAlmostEqual(x[0], 1)
+        interface.load_primals_into_pyomo_model()
+        self.assertAlmostEqual(m.x.value, 1)
 
     def test_ip1_scipy(self):
         solver = ip.linalg.ScipyInterface()
