@@ -10,14 +10,13 @@
 import pyutilib.th as unittest
 import os
 
-from pyomo.contrib.pynumero import numpy_available, scipy_available
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available, scipy_available
+)
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-import scipy.sparse as sp
-import numpy as np
-
-from pyomo.contrib.pynumero.extensions.asl import AmplInterface
+from pyomo.contrib.pynumero.asl import AmplInterface
 if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run NLP tests")

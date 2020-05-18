@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 
-from pyomo.contrib.pynumero import (
+from pyomo.contrib.pynumero.dependencies import (
     numpy_available, scipy_available, numpy as np
 )
 

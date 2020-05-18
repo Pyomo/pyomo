@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-#from .. import numpy_available, scipy_available
+#from ..dependencies import numpy_available, scipy_available
 
 # TODO: What do we want to import from interfaces?
 #if numpy_available and scipy_available:
