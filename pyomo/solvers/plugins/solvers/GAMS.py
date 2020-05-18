@@ -826,28 +826,29 @@ class GAMSShell(_GAMSSolver):
             gdxDataReadDone(pgdx)
             gdxClose(pgdx)
 
-            ret = gdxOpenRead(pgdx, results_filename)
-            if not ret[0]:
-                raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
+            if stat_vars["MODELSTAT"] not in (10,11,13,14,18,19):
+                ret = gdxOpenRead(pgdx, results_filename)
+                if not ret[0]:
+                    raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
 
-            for i in range(stat_vars['NUMEQU'] + stat_vars['NUMVAR']):
-                ret = gdxDataReadRawStart(pgdx, i+1)
-                if not ret[0] and ret[1] != 1:
-                    raise RuntimeError("GAMS GDX failure (gdxDataReadRawStart).")
+                for i in range(stat_vars['NUMEQU'] + stat_vars['NUMVAR']):
+                    ret = gdxDataReadRawStart(pgdx, i+1)
+                    if not ret[0] and ret[1] != 1:
+                        raise RuntimeError("GAMS GDX failure (gdxDataReadRawStart).")
 
-                ret = gdxDataReadRaw(pgdx)
-                if not ret[0] or len(ret[2]) < 2:
-                    raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
-                level = self._parse_special_values(ret[2][0])
-                dual = self._parse_special_values(ret[2][1])
+                    ret = gdxDataReadRaw(pgdx)
+                    if not ret[0] or len(ret[2]) < 2:
+                        raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
+                    level = self._parse_special_values(ret[2][0])
+                    dual = self._parse_special_values(ret[2][1])
 
-                ret = gdxSymbolInfo(pgdx, i+1)
-                if not ret[0] or len(ret) < 2:
-                    raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
-                model_soln[ret[1]] = (level, dual)
+                    ret = gdxSymbolInfo(pgdx, i+1)
+                    if not ret[0] or len(ret) < 2:
+                        raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
+                    model_soln[ret[1]] = (level, dual)
 
-            gdxDataReadDone(pgdx)
-            gdxClose(pgdx)
+                gdxDataReadDone(pgdx)
+                gdxClose(pgdx)
             gdxFree(pgdx)
 
         finally:
@@ -1019,7 +1020,11 @@ class GAMSShell(_GAMSSolver):
                     soln.objective[sym] = {'Value': objctvval}
                 if obj.parent_component().ctype is not Var:
                     continue
-            rec = model_soln[sym]
+            try:
+                rec = model_soln[sym]
+            except KeyError:
+                # no solution returned
+                rec = (float("nan"), float("nan"))
             # obj.value = float(rec[0])
             soln.variable[sym] = {"Value": float(rec[0])}
             if extract_rc and has_rc_info:
@@ -1038,7 +1043,11 @@ class GAMSShell(_GAMSSolver):
                     continue
                 sym = symbolMap.getSymbol(c)
                 if c.equality:
-                    rec = model_soln[sym]
+                    try:
+                        rec = model_soln[sym]
+                    except KeyError:
+                        # no solution returned
+                        rec = (float("nan"), float("nan"))
                     try:
                         # model.dual[c] = float(rec[1])
                         soln.constraint[sym] = {'dual': float(rec[1])}
@@ -1052,14 +1061,22 @@ class GAMSShell(_GAMSSolver):
                     # Negate marginal for _lo equations
                     marg = 0
                     if c.lower is not None:
-                        rec_lo = model_soln[sym + '_lo']
+                        try:
+                            rec_lo = model_soln[sym + '_lo']
+                        except KeyError:
+                            # no solution returned
+                            rec_lo = (float("nan"), float("nan"))
                         try:
                             marg -= float(rec_lo[1])
                         except ValueError:
                             # Solver didn't provide marginals
                             marg = float('nan')
                     if c.upper is not None:
-                        rec_hi = model_soln[sym + '_hi']
+                        try:
+                            rec_hi = model_soln[sym + '_hi']
+                        except KeyError:
+                            # no solution returned
+                            rec_hi = (float("nan"), float("nan"))
                         try:
                             marg += float(rec_hi[1])
                         except ValueError:
