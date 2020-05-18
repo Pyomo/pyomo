@@ -309,7 +309,7 @@ class ComplementarityList(IndexedComplementarity):
         args = (Set(),)
         self._nconditions = 0
         Complementarity.__init__(self, *args, **kwargs)
-        # disable the implicit rule; construct will exhause the
+        # disable the implicit rule; construct will exhaust the
         # user-provided rule, and then subsequent attempts to add a CC
         # will bypass the rule
         self._rule = None
