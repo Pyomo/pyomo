@@ -165,6 +165,8 @@ jobs:
         fi
         pip install --cache-dir cache/pip cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
+        pip install --cache-dir cache/pip xpress \
+            || echo "WARNING: Xpress Community Edition is not available"
         python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
             % (sys.executable,))'
 
@@ -184,6 +186,8 @@ jobs:
         #    Python 2.7) causes a seg fault in the tests.
         conda install -q -y -c ibmdecisionoptimization cplex=12.10 \
             || echo "WARNING: CPLEX Community Edition is not available"
+        conda install -q -y -c fico-xpress xpress \
+            || echo "WARNING: Xpress Community Edition is not available"
         python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
             % (sys.executable,))'
 
