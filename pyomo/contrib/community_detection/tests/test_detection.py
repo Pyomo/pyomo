@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 from __future__ import division
 import pyutilib.th as unittest
+from pyutilib.misc import import_file
+
 from pyomo.environ import *
 from pyomo.contrib.community_detection.detection import *
 from pyomo.core import ConcreteModel

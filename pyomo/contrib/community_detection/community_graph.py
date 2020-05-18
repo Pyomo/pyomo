@@ -1,6 +1,4 @@
 """
-Created on Mon Nov 11 17:34:37 2019
-
 @author: Rahul
 """
 import os
@@ -58,8 +56,7 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
                 edge_set.update(set(edges_between_variables))
 
         if with_objective:
-            # NOW WITH OBJECTIVE FUNCTION
-            objective_function = (list(model.component_data_objects(Objective, descend_into=True))[0])
+            objective_function = list(model.component_data_objects(Objective, descend_into=True))[0]
             variable_list = [str(variable) for variable in list(identify_variables(objective_function))]
             edges_between_variables = list(combinations(sorted(variable_list), 2))
             if weighted_graph:
@@ -73,7 +70,8 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
             model_graph.add_node(str(constraint), variable_name=str(constraint))
 
         if with_objective:
-            model_graph.add_node(str(model.obj), variable_name=str(model.obj))
+            objective_function = list(model.component_data_objects(Objective, descend_into=True))[0]
+            model_graph.add_node(str(objective_function), variable_name=str(objective_function))
 
         # Go through all variables
         for variable in model.component_data_objects(Var, descend_into=True):
@@ -82,8 +80,8 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
                                model.component_data_objects(Constraint, descend_into=True) if
                                str(variable) in [str(var) for var in identify_variables(constraint.body)]]
 
-            if with_objective and str(variable) in [str(var) for var in identify_variables(model.obj)]:
-                constraint_list.append(str(model.obj))
+            if with_objective and str(variable) in [str(var) for var in list(identify_variables(objective_function))]:
+                constraint_list.append(str(objective_function))
 
             edges_between_constraints = list(combinations(sorted(constraint_list), 2))
 
