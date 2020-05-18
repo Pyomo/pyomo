@@ -19,7 +19,7 @@ try:
 except:
     numdiff_available = False
 
-
+                 
 class TestInverseReducedHessian(unittest.TestCase):
     # the original test
     def test_invrh_zavala_thesis(self):
@@ -34,33 +34,9 @@ class TestInverseReducedHessian(unittest.TestCase):
         np.testing.assert_array_almost_equal(invrh, expected_invrh)
 
     # test by DLW, April 2020
-    def simple_model(self,data):
+    def _simple_model(self, add_constraint=False):
         # Hardwired to have two x columns and one y
-        model = pe.ConcreteModel()
-
-        model.b0 = pe.Var(initialize = 0)
-        model.bindexes = pe.Set(initialize=['tofu', 'chard'])
-        model.b = pe.Var(model.bindexes, initialize = 1)
-
-        # The columns need to have unique values (or you get warnings)
-        def response_rule(m, t, c):
-            expr = m.b0 + m.b['tofu']*t + m.b['chard']*c
-            return expr
-        model.response_function = pe.Expression(data.tofu, data.chard, rule = response_rule)
-
-        def SSE_rule(m):
-            return sum((data.y[i] - m.response_function[data.tofu[i], data.chard[i]])**2\
-                            for i in data.index)
-        model.SSE = pe.Objective(rule = SSE_rule, sense=pe.minimize)
-
-        return model
-
-
-    @unittest.skipIf(not numdiff_available, "numdiff missing")
-    @unittest.skipIf(not pandas_available, "pandas missing")
-    def test_3x3_using_linear_regression(self):
-        """ simple linear regression with two x columns, so 3x3 Hessian"""
-        ### TBD: do some edge cases
+        # if add_constraint is true, there is a binding constraint on b0
         data = pd.DataFrame([[1, 1.1, 0.365759306],
                              [2, 1.2, 4],
                              [3, 1.3, 4.8876684],
@@ -81,7 +57,35 @@ class TestInverseReducedHessian(unittest.TestCase):
                              [18, 1.29, 15.60649164]],
                              columns=['tofu','chard', 'y'])
 
-        model = self.simple_model(data)
+        model = pe.ConcreteModel()
+
+        model.b0 = pe.Var(initialize = 0)
+        model.bindexes = pe.Set(initialize=['tofu', 'chard'])
+        model.b = pe.Var(model.bindexes, initialize = 1)
+
+        # try to make trouble
+        if add_constraint:
+            model.binding_constraint = pe.Constraint(expr=model.b0>=10)
+
+        # The columns need to have unique values (or you get warnings)
+        def response_rule(m, t, c):
+            expr = m.b0 + m.b['tofu']*t + m.b['chard']*c
+            return expr
+        model.response_function = pe.Expression(data.tofu, data.chard, rule = response_rule)
+
+        def SSE_rule(m):
+            return sum((data.y[i] - m.response_function[data.tofu[i], data.chard[i]])**2\
+                            for i in data.index)
+        model.SSE = pe.Objective(rule = SSE_rule, sense=pe.minimize)
+
+        return model
+
+    @unittest.skipIf(not numdiff_available, "numdiff missing")
+    @unittest.skipIf(not pandas_available, "pandas missing")
+    def test_3x3_using_linear_regression(self):
+        """ simple linear regression with two x columns, so 3x3 Hessian"""        
+
+        model = self._simple_model()
         solver = pe.SolverFactory("ipopt")
         status = solver.solve(model)
         self.assertTrue(check_optimal_termination(status))
@@ -109,5 +113,20 @@ class TestInverseReducedHessian(unittest.TestCase):
         # this passes at decimal=6, BTW
         np.testing.assert_array_almost_equal(HInv, H_inv_red_hess, decimal=3)
 
+
+    @unittest.skipIf(not numdiff_available, "numdiff missing")
+    @unittest.skipIf(not pandas_available, "pandas missing")
+    def test_with_binding_constraint(self):
+        """ there is a binding constraint"""        
+
+        model = self._simple_model(add_constraint=True)
+
+        status, H_inv_red_hess = inv_reduced_hessian_barrier(model,
+                                                             [model.b0,
+                                                              model.b["tofu"],
+                                                              model.b["chard"]])
+        print("test_with_binding_constraint should see an error raised.")
+
+        
 if __name__ == '__main__':
     unittest.main()
