@@ -290,7 +290,7 @@ class GAMSDirect(_GAMSSolver):
                 if keepfiles and tee:
                     print("\nGAMS WORKING DIRECTORY: %s\n" %
                           ws.working_directory)
-                elif tmpdir is not None:
+                elif not keepfiles and tmpdir is not None:
                     # Garbage collect all references to t1.out_db
                     # So that .gdx file can be deleted
                     t1 = rec = rec_lo = rec_hi = None
@@ -300,7 +300,7 @@ class GAMSDirect(_GAMSSolver):
             # Catch other errors and remove files first
             if keepfiles and tee:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
-            elif tmpdir is not None:
+            elif not keepfiles and tmpdir is not None:
                 # Garbage collect all references to t1.out_db
                 # So that .gdx file can be deleted
                 t1 = rec = rec_lo = rec_hi = None
@@ -517,7 +517,7 @@ class GAMSDirect(_GAMSSolver):
 
         if keepfiles and tee:
             print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
-        elif tmpdir is not None:
+        elif not keepfiles and tmpdir is not None:
             # Garbage collect all references to t1.out_db
             # So that .gdx file can be deleted
             t1 = rec = rec_lo = rec_hi = None
