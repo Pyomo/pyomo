@@ -12,6 +12,10 @@ asl_available = AmplInterface.available()
 if not (numpy_available and scipy_available and asl_available):
     raise unittest.SkipTest('inverse_reduced_hessian tests require numpy, scipy, and asl')
 from pyomo.common.dependencies import(pandas as pd, pandas_available)
+import pyomo.environ as pe
+ipopt_solver = pe.SolverFactory('ipopt')
+if not ipopt_solver.available(exception_flag=False):
+    raise unittest.SkipTest('ipopt is not available')
 
 numdiff_available = True
 try:
