@@ -331,7 +331,7 @@ class GAMSDirect(_GAMSSolver):
         extract_rc = ('rc' in model_suffixes)
 
         results = SolverResults()
-        results.problem.name = t1.name
+        results.problem.name = os.path.join(ws.working_directory, t1.name + '.gms')
         results.problem.lower_bound = t1.out_db["OBJEST"].find_record().value
         results.problem.upper_bound = t1.out_db["OBJEST"].find_record().value
         results.problem.number_of_variables = \
