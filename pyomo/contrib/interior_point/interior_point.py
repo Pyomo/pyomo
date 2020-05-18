@@ -244,7 +244,7 @@ class InteriorPointSolver(object):
 
             timer.start('convergence check')
             primal_inf, dual_inf, complimentarity_inf = \
-                    self.check_convergence(barrier=0)
+                    self.check_convergence(barrier=0, timer=timer)
             timer.stop('convergence check')
             objective = interface.evaluate_objective()
             self.logger.info('{_iter:<6}'
@@ -271,7 +271,7 @@ class InteriorPointSolver(object):
                 break
             timer.start('convergence check')
             primal_inf, dual_inf, complimentarity_inf = \
-                    self.check_convergence(barrier=self._barrier_parameter)
+                    self.check_convergence(barrier=self._barrier_parameter, timer=timer)
             timer.stop('convergence check')
             if max(primal_inf, dual_inf, complimentarity_inf) \
                     <= 0.1 * self._barrier_parameter:
@@ -285,13 +285,13 @@ class InteriorPointSolver(object):
             kkt = interface.evaluate_primal_dual_kkt_matrix(timer=timer)
             timer.stop('eval kkt')
             timer.start('eval rhs')
-            rhs = interface.evaluate_primal_dual_kkt_rhs()
+            rhs = interface.evaluate_primal_dual_kkt_rhs(timer=timer)
             timer.stop('eval rhs')
             timer.stop('eval')
 
             # Factorize linear system
             timer.start('factorize')
-            reg_coef = self.factorize(kkt=kkt)
+            reg_coef = self.factorize(kkt=kkt, timer=timer)
             timer.stop('factorize')
 
             timer.start('back solve')
@@ -328,7 +328,7 @@ class InteriorPointSolver(object):
             print(timer)
         return primals, duals_eq, duals_ineq
 
-    def factorize(self, kkt):
+    def factorize(self, kkt, timer=None):
         desired_n_neg_evals = (self.interface.n_eq_constraints() +
                                self.interface.n_ineq_constraints())
         reg_iter = 0
@@ -336,7 +336,8 @@ class InteriorPointSolver(object):
             status, num_realloc = try_factorization_and_reallocation(kkt=kkt,
                                                                      linear_solver=self.linear_solver,
                                                                      reallocation_factor=self.reallocation_factor,
-                                                                     max_iter=self.max_reallocation_iterations)
+                                                                     max_iter=self.max_reallocation_iterations,
+                                                                     timer=timer)
             if status not in {LinearSolverStatus.successful, LinearSolverStatus.singular}:
                 raise RuntimeError('Could not factorize KKT system; linear solver status: ' + str(status))
 
@@ -363,7 +364,8 @@ class InteriorPointSolver(object):
                 status, num_realloc = try_factorization_and_reallocation(kkt=kkt,
                                                                          linear_solver=self.linear_solver,
                                                                          reallocation_factor=self.reallocation_factor,
-                                                                         max_iter=self.max_reallocation_iterations)
+                                                                         max_iter=self.max_reallocation_iterations,
+                                                                         timer=timer)
                 if status != LinearSolverStatus.successful:
                     raise RuntimeError('Could not factorize KKT system; linear solver status: ' + str(status))
                 neg_eig = self.linear_solver.get_inertia()[1]
@@ -386,11 +388,12 @@ class InteriorPointSolver(object):
     def process_init_duals_ub(self, x, ub):
         process_init_duals_ub(x, ub)
 
-    def check_convergence(self, barrier):
+    def check_convergence(self, barrier, timer=None):
         """
         Parameters
         ----------
         barrier: float
+        timer: HierarchicalTimer
     
         Returns
         -------
@@ -398,12 +401,27 @@ class InteriorPointSolver(object):
         dual_inf: float
         complimentarity_inf: float
         """
+        if timer is None:
+            timer = HierarchicalTimer()
+
         interface = self.interface
-        grad_obj = interface.evaluate_grad_objective()
-        jac_eq = interface.evaluate_jacobian_eq()
-        jac_ineq = interface.evaluate_jacobian_ineq()
-        primals = interface.get_primals()
         slacks = interface.get_slacks()
+        timer.start('grad obj')
+        grad_obj = interface.evaluate_grad_objective()
+        timer.stop('grad obj')
+        timer.start('jac eq')
+        jac_eq = interface.evaluate_jacobian_eq()
+        timer.stop('jac eq')
+        timer.start('jac ineq')
+        jac_ineq = interface.evaluate_jacobian_ineq()
+        timer.stop('jac ineq')
+        timer.start('eq cons')
+        eq_resid = interface.evaluate_eq_constraints()
+        timer.stop('eq cons')
+        timer.start('ineq cons')
+        ineq_resid = interface.evaluate_ineq_constraints() - slacks
+        timer.stop('ineq cons')
+        primals = interface.get_primals()
         duals_eq = interface.get_duals_eq()
         duals_ineq = interface.get_duals_ineq()
         duals_primals_lb = interface.get_duals_primals_lb()
@@ -425,16 +443,19 @@ class InteriorPointSolver(object):
         ineq_lb_mod[np.isneginf(ineq_lb)] = 0  # these entries get multiplied by 0
         ineq_ub_mod[np.isinf(ineq_ub)] = 0  # these entries get multiplied by 0
 
+        timer.start('grad_lag_primals')
         grad_lag_primals = (grad_obj +
                             jac_eq.transpose() * duals_eq +
                             jac_ineq.transpose() * duals_ineq -
                             duals_primals_lb +
                             duals_primals_ub)
+        timer.stop('grad_lag_primals')
+        timer.start('grad_lag_slacks')
         grad_lag_slacks = (-duals_ineq -
                            duals_slacks_lb +
                            duals_slacks_ub)
-        eq_resid = interface.evaluate_eq_constraints()
-        ineq_resid = interface.evaluate_ineq_constraints() - slacks
+        timer.stop('grad_lag_slacks')
+        timer.start('bound resids')
         primals_lb_resid = (primals - primals_lb_mod) * duals_primals_lb - barrier
         primals_ub_resid = (primals_ub_mod - primals) * duals_primals_ub - barrier
         primals_lb_resid[np.isneginf(primals_lb)] = 0
@@ -443,6 +464,7 @@ class InteriorPointSolver(object):
         slacks_ub_resid = (ineq_ub_mod - slacks) * duals_slacks_ub - barrier
         slacks_lb_resid[np.isneginf(ineq_lb)] = 0
         slacks_ub_resid[np.isinf(ineq_ub)] = 0
+        timer.stop('bound resids')
 
         if eq_resid.size == 0:
             max_eq_resid = 0
@@ -486,12 +508,24 @@ class InteriorPointSolver(object):
         return fraction_to_the_boundary(self.interface, 1 - self._barrier_parameter)
 
 
-def try_factorization_and_reallocation(kkt, linear_solver, reallocation_factor, max_iter):
+def try_factorization_and_reallocation(kkt, linear_solver, reallocation_factor, max_iter, timer=None):
+    if timer is None:
+        timer = HierarchicalTimer()
+
     assert max_iter >= 1
     for count in range(max_iter):
+        timer.start('symbolic')
+        """
+        Performance could be improved significantly by only performing symbolic factorization once. 
+        However, we first have to make sure the nonzero structure (and ordering of row and column arrays) 
+        of the KKT matrix never changes. We have not had time to test this thoroughly, yet. 
+        """
         res = linear_solver.do_symbolic_factorization(matrix=kkt, raise_on_error=False)
+        timer.stop('symbolic')
         if res.status == LinearSolverStatus.successful:
+            timer.start('numeric')
             res = linear_solver.do_numeric_factorization(matrix=kkt, raise_on_error=False)
+            timer.stop('numeric')
         status = res.status
         if status == LinearSolverStatus.not_enough_memory:
             linear_solver.increase_memory_allocation(reallocation_factor)
