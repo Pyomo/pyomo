@@ -106,7 +106,7 @@ after_success:
   - ${DOC} coverage combine
   - ${DOC} coverage report -i
   - ${DOC} coverage xml -i
-  - ${DOC} codecov --env TAG -X gcov
+  - ${DOC} codecov --env TAG -X gcov -X s3
     # Trigger PyomoGallery build, but only when building the master branch
     # Note: this is disabled unless a token is injected through an
     # environment variable
