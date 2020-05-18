@@ -3,7 +3,7 @@ from scipy.sparse import coo_matrix, identity
 import numpy as np
 import logging
 import time
-from pyomo.contrib.interior_point.linalg.results import LinearSolverStatus
+from .linalg.results import LinearSolverStatus
 from pyutilib.misc.timing import HierarchicalTimer
 
 

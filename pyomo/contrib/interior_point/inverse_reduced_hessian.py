@@ -1,10 +1,11 @@
 import pyomo.environ as pyo
 from pyomo.opt import check_optimal_termination
 from pyomo.common.dependencies import attempt_import
-import pyomo.contrib.interior_point.interface as ip_interface
-from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
+from .interface import InteriorPointInterface
+from .linalg.scipy_interface import ScipyInterface
 
 np, numpy_available = attempt_import('numpy', 'Interior point requires numpy', minimum_version='1.13.0')
+
 
 # Todo: This function currently used IPOPT for the initial solve - should accept solver
 def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e-6, tee=False):
@@ -98,7 +99,7 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
                                  " independent variables should be in their interior.".format(v))
 
     # find the list of indices that we need to make up the reduced hessian
-    kkt_builder = ip_interface.InteriorPointInterface(m)
+    kkt_builder = InteriorPointInterface(m)
     pyomo_nlp = kkt_builder.pyomo_nlp()
     ind_var_indices = pyomo_nlp.get_primal_indices(ind_vardatas)
 
