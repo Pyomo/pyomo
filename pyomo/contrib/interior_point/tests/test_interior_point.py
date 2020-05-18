@@ -4,7 +4,7 @@ from pyomo.common.dependencies import attempt_import
 
 np, numpy_availalbe = attempt_import('numpy', 'Interior point requires numpy', minimum_version='1.13.0')
 scipy, scipy_available = attempt_import('scipy', 'Interior point requires scipy')
-mumps_interface, mumps_available = attempt_import('pyomo.contrib.interior_point.linalg.mumps_interface', 'Interior point requires mumps')
+mumps, mumps_available = attempt_import('mumps', 'Interior point requires mumps')
 if not (numpy_availalbe and scipy_available):
     raise unittest.SkipTest('Interior point tests require numpy and scipy')
 
@@ -12,32 +12,27 @@ import numpy as np
 
 from pyomo.contrib.pynumero.asl import AmplInterface
 asl_available = AmplInterface.available()
-
-from pyomo.contrib.interior_point.interior_point import (InteriorPointSolver,
-                                                         process_init,
+import pyomo.contrib.interior_point as ip
+from pyomo.contrib.interior_point.interior_point import (process_init,
                                                          process_init_duals_lb,
                                                          process_init_duals_ub,
-                                                         fraction_to_the_boundary,
                                                          _fraction_to_the_boundary_helper_lb,
                                                          _fraction_to_the_boundary_helper_ub)
-from pyomo.contrib.interior_point.interface import InteriorPointInterface
-from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
-from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
+from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
+ma27_available = MA27Interface.available()
 
 
+@unittest.skipIf(not asl_available, 'asl is not available')
 class TestSolveInteriorPoint(unittest.TestCase):
-    @unittest.skipIf(not asl_available, 'asl is not available')
-    def test_solve_interior_point_1(self):
+    def _test_solve_interior_point_1(self, linear_solver):
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pe.Constraint(expr=m.y == pe.exp(m.x))
         m.c2 = pe.Constraint(expr=m.y >= (m.x - 1)**2)
-        interface = InteriorPointInterface(m)
-        linear_solver = ScipyInterface()
-        linear_solver.compute_inertia = True
-        ip_solver = InteriorPointSolver(linear_solver)
+        interface = ip.InteriorPointInterface(m)
+        ip_solver = ip.InteriorPointSolver(linear_solver)
 #        x, duals_eq, duals_ineq = solve_interior_point(interface, linear_solver)
         x, duals_eq, duals_ineq = ip_solver.solve(interface)
         self.assertAlmostEqual(x[0], 0)
@@ -45,18 +40,45 @@ class TestSolveInteriorPoint(unittest.TestCase):
         self.assertAlmostEqual(duals_eq[0], -1-1.0/3.0)
         self.assertAlmostEqual(duals_ineq[0], 2.0/3.0)
 
-    @unittest.skipIf(not asl_available, 'asl is not available')
-    @unittest.skipIf(not mumps_available, 'mumps is not available')
-    def test_solve_interior_point_2(self):
+    def _test_solve_interior_point_2(self, linear_solver):
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(1, 4))
         m.obj = pe.Objective(expr=m.x**2)
-        interface = InteriorPointInterface(m)
-        linear_solver = mumps_interface.MumpsInterface()
-        ip_solver = InteriorPointSolver(linear_solver)
+        interface = ip.InteriorPointInterface(m)
+        ip_solver = ip.InteriorPointSolver(linear_solver)
 #        x, duals_eq, duals_ineq = solve_interior_point(interface, linear_solver)
         x, duals_eq, duals_ineq = ip_solver.solve(interface)
         self.assertAlmostEqual(x[0], 1)
+
+    def test_ip1_scipy(self):
+        solver = ip.linalg.ScipyInterface()
+        solver.compute_inertia = True
+        self._test_solve_interior_point_1(solver)
+
+    def test_ip2_scipy(self):
+        solver = ip.linalg.ScipyInterface()
+        solver.compute_inertia = True
+        self._test_solve_interior_point_2(solver)
+
+    @unittest.skipIf(not mumps_available, 'Mumps is not available')
+    def test_ip1_mumps(self):
+        solver = ip.linalg.MumpsInterface()
+        self._test_solve_interior_point_1(solver)
+
+    @unittest.skipIf(not mumps_available, 'Mumps is not available')
+    def test_ip2_mumps(self):
+        solver = ip.linalg.MumpsInterface()
+        self._test_solve_interior_point_2(solver)
+
+    @unittest.skipIf(not ma27_available, 'MA27 is not available')
+    def test_ip1_ma27(self):
+        solver = ip.linalg.InteriorPointMA27Interface()
+        self._test_solve_interior_point_1(solver)
+
+    @unittest.skipIf(not ma27_available, 'MA27 is not available')
+    def test_ip2_ma27(self):
+        solver = ip.linalg.InteriorPointMA27Interface()
+        self._test_solve_interior_point_2(solver)
 
 
 class TestProcessInit(unittest.TestCase):

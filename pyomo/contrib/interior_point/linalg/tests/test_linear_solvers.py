@@ -9,8 +9,7 @@ import numpy as np
 from scipy.sparse import coo_matrix, tril
 from pyomo.contrib import interior_point as ip
 from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
-_tmp = MA27Interface()
-ma27_available = _tmp.available()
+ma27_available = MA27Interface.available()
 
 
 def get_base_matrix(use_tril):
@@ -37,14 +36,6 @@ def get_base_matrix_wrong_order(use_tril):
         data = [7, 7, 3, 1, 4, 3, 6]
     mat = coo_matrix((data, (row, col)), shape=(3,3), dtype=np.double)
     return mat
-
-
-# def get_base_matrix_extra_0():
-#     row = [0, 0, 1, 1, 2, 2]
-#     col = [1, 2, 0, 1, 0, 2]
-#     data = [7, 3, 7, 4, 3, 6]
-#     mat = coo_matrix((data, (row, col)), shape=(3,3), dtype=np.double)
-#     return mat
 
 
 class TestTrilBehavior(unittest.TestCase):
@@ -127,24 +118,3 @@ class TestWrongNonzeroOrdering(unittest.TestCase):
     def test_ma27(self):
         solver = ip.linalg.InteriorPointMA27Interface()
         self._test_solvers(solver, use_tril=True)
-
-
-# class TestMissingExplicitZero(unittest.TestCase):
-#     def _test_extra_zero(self, solver):
-#         base_mat = get_base_matrix()
-#         extra_0_mat = get_base_matrix_extra_0()
-#         stat = solver.do_symbolic_factorization(base_mat)
-#         stat = solver.do_numeric_factorization(extra_0_mat)
-#         self.assertEqual(stat.status, LinearSolverStatus.successful)
-#         x_true = np.array([1, 2, 3], dtype=np.double)
-#         rhs = extra_0_mat * x_true
-#         x = solver.do_back_solve(rhs)
-#         self.assertTrue(np.allclose(x, x_true))
-#
-#     def test_extra_zero_scipy(self):
-#         solver = ScipyInterface()
-#         self._test_extra_zero(solver)
-#
-#     # def test_extra_zero_mumps(self):
-#     #     solver = MumpsInterface()
-#     #     self._test_extra_zero(solver)
