@@ -15,7 +15,7 @@ except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run linear solver tests")
 
 try:
-    from pyomo.contrib.pynumero.linalg.mumps_solver import MumpsCentralizedAssembledLinearSolver
+    from pyomo.contrib.pynumero.linalg.mumps_interface import MumpsCentralizedAssembledLinearSolver
 except ImportError:
     raise unittest.SkipTest("Pynumero needs pymumps to run linear solver tests")
 
