@@ -8,13 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.common.fileutils import find_library
-from pyomo.contrib.pynumero.extensions.utils import (validate_index, 
+from pyomo.contrib.pynumero.linalg.utils import (validate_index,
         validate_value, _NotSet)
 import numpy.ctypeslib as npct
 import numpy as np
 import ctypes 
-import sys
 import os
+
 
 class MA27Interface(object):
 
@@ -30,8 +30,7 @@ class MA27Interface(object):
 
     def __init__(self,
                  iw_factor=None,
-                 a_factor=None,
-                 memory_increase_factor=2.):
+                 a_factor=None):
 
         if not MA27Interface.available():
             raise RuntimeError(
@@ -39,7 +38,6 @@ class MA27Interface(object):
 
         self.iw_factor = iw_factor
         self.a_factor = a_factor
-        self.memory_increase_factor = memory_increase_factor
 
         self.lib = ctypes.cdll.LoadLibrary(self.libname)
 
@@ -82,7 +80,6 @@ class MA27Interface(object):
         self.info_len = 20
 
         self._ma27 = self.lib.new_MA27_struct()
-
 
     def __del__(self):
         self.lib.free_MA27_struct(self._ma27)
@@ -175,7 +172,3 @@ class MA27Interface(object):
         self.lib.do_backsolve(self._ma27, rhs_dim, rhs)
 
         return rhs
-    
-
-if __name__ == '__main__':
-    ma27 = MA27Interface()

@@ -7,18 +7,11 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import sys
-import os
-import ctypes
 import pyutilib.th as unittest
-
 from pyomo.contrib.pynumero.dependencies import numpy as np, numpy_available
 if not numpy_available:
     raise unittest.SkipTest('pynumero MA27 tests require numpy')
-
-import numpy.ctypeslib as npct
-
-from pyomo.contrib.pynumero.extensions.ma27_interface import *
+from pyomo.contrib.pynumero.linalg.ma27 import *
 
 
 @unittest.skipIf(not MA27Interface.available(), reason='MA27 not available')

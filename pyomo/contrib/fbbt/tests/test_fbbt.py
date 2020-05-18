@@ -797,3 +797,22 @@ class TestFBBT(unittest.TestCase):
         self.assertEqual(m.x.ub, None)
         self.assertEqual(m.y.lb, None)
         self.assertEqual(m.y.ub, None)
+
+    def test_encountered_bugs3(self):
+        xl = 0.033689710575092756
+        xu = 0.04008169994804723
+        yl = 0.03369608678342047
+        yu = 0.04009243987444148
+
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(xl, xu))
+        m.y = pe.Var(bounds=(yl, yu))
+
+        m.c = pe.Constraint(expr=m.x == pe.sin(m.y))
+
+        fbbt(m.c)
+
+        self.assertAlmostEqual(m.x.lb, xl)
+        self.assertAlmostEqual(m.x.ub, xu)
+        self.assertAlmostEqual(m.y.lb, yl)
+        self.assertAlmostEqual(m.y.ub, yu)
