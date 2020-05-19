@@ -21,6 +21,7 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
     If the user chooses constraint nodes, then the edge between two given nodes is created if those two constraint
     equations share a common variable. The weight of each edge depends on the number of variables common to the two
     constraint equations.
+    This function is designed to be called by detect_communities.
 
     Args:
         model (Block): a Pyomo model or block to be used for community detection
