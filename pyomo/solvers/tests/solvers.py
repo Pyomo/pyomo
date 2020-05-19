@@ -326,7 +326,7 @@ def test_solver_cases(*args):
         _test_solver_cases['xpress_persistent', 'python'] = initialize(
             name='xpress_persistent',
             io='python',
-            capabilities=_gurobi_capabilities,
+            capabilities=_xpress_capabilities,
             import_suffixes=['slack', 'dual', 'rc'])
 
         #
