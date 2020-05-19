@@ -105,7 +105,7 @@ class GDPoptSolver(object):
             model (Block): a Pyomo model or block to be solved
 
         """
-        config = self.CONFIG(kwds.pop('options', {}))
+        config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
 
         with setup_solver_environment(model, config) as solve_data:

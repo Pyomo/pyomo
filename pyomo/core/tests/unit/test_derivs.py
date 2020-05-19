@@ -1,6 +1,7 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_ad, reverse_sd
+from pyomo.common.getGSL import find_GSL
 
 
 tol = 6
@@ -190,3 +191,32 @@ class TestDerivs(unittest.TestCase):
         derivs = reverse_ad(m.o.expr)
         symbolic = reverse_sd(m.o.expr)
         self.assertAlmostEqual(derivs[m.x], pe.value(symbolic[m.x]), tol)
+
+    def test_multiple_named_expressions(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.x.value = 1
+        m.y.value = 1
+        m.E = pe.Expression(expr=m.x*m.y)
+        e = m.E - m.E
+        derivs = reverse_ad(e)
+        self.assertAlmostEqual(derivs[m.x], 0)
+        self.assertAlmostEqual(derivs[m.y], 0)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(pe.value(symbolic[m.x]), 0)
+        self.assertAlmostEqual(pe.value(symbolic[m.y]), 0)
+
+    def test_external(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest('Could not find the amplgsl.dll library')
+
+        m = pe.ConcreteModel()
+        m.hypot = pe.ExternalFunction(library=DLL, function='gsl_hypot')
+        m.x = pe.Var(initialize=0.5)
+        m.y = pe.Var(initialize=1.5)
+        e = 2 * m.hypot(m.x, m.x*m.y)
+        derivs = reverse_ad(e)
+        self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
+        self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
