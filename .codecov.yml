@@ -15,5 +15,5 @@ coverage:
 codecov:
   notify:
     # GHA: 18, Travis: 13, Jenkins: 6
-    after_n_builds: 35
+    after_n_builds: 33
     wait_for_ci: yes
