@@ -605,7 +605,7 @@ class XpressDirect(DirectSolver):
                 if extract_reduced_costs:
                     vals = xprob.getRCost(xpress_vars)
                     for xpress_var, val in zip(xpress_vars, vals):
-                        pyomo_var = self._solver_var_to_pyomo_var_map[xpress_vars]
+                        pyomo_var = self._solver_var_to_pyomo_var_map[xpress_var]
                         if self._referenced_variables[pyomo_var] > 0:
                             soln_variables[xpress_var.name]["Rc"] = val
 
