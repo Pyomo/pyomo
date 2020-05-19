@@ -154,10 +154,15 @@ def _write_to_file(model_graph, node_type, with_objective, weighted_graph, file_
     """
     Saves an edge list and adjacency list in a new directory at a specified destination
 
-    This function
+    This function takes in model_graph, a networkX graph created from a Pyomo optimization model, and its relevant
+    characteristics, and then uses the user-provided file_destination as a path to write an edge list and adjacency
+    list for the given model_graph. If an invalid file path is given, this will be handled by making intermediate
+    directories.
+    This function is designed to be called by _generate_community_graph, which is in turn designed to be called by
+    detect_communities
 
     Args:
-        model_graph:
+        model_graph: a networkX graph created from a Pyomo optimization model
         node_type : a string that specifies the node_type of the graph; node_type='v' creates a graph with variable
         nodes and constraint edges. node_type='c' returns a graph with constraint nodes and variable edges, and any
         other input returns an error message
@@ -167,26 +172,43 @@ def _write_to_file(model_graph, node_type, with_objective, weighted_graph, file_
         created from the Pyomo model
         file_destination: an optional argument that takes in a path if the user wants to save an edge and adjacency
         list based on the model
+
+    Returns:
+        This function returns nothing. Its only purpose is to write an edge list and adjacency list
+        based on model_graph.
     """
-    community_detection_dir = os.path.join(file_destination, 'community_detection_graphs')
+
+    # Create a path based on the user-provided file_destination and the directory where the function will store the
+    # edge list and adjacency list (community_detection_graph_info)
+    community_detection_dir = os.path.join(file_destination, 'community_detection_graph_info')
+
+    # In case the user-provided file_destination does not exist, create intermediate directories so that
+    # community_detection_dir is now a valid path
     if not os.path.exists(community_detection_dir):
         os.makedirs(community_detection_dir)
 
+    # Collect information for naming the edge and adjacency lists:
+
+    # Based on node_type, determine the type of node
     if node_type == 'v':
         type_of_node = 'variable'
     else:
         type_of_node = 'constraint'
 
+    # Based on whether the objective function was included in creating the model graph, determine objective status
     if with_objective:
         obj_status = 'with_obj'
     else:
         obj_status = 'without_obj'
 
+    # Based on whether the model graph was weighted or unweighted, determine weight status
     if weighted_graph:
         weight_status = 'weighted'
     else:
         weight_status = 'unweighted'
 
+    # Now, using all of this information, use the networkX functions to write the edge and adjacency lists to the
+    # file path determined above and name them using the relevant graph information organized above
     nx.write_edgelist(model_graph, os.path.join(community_detection_dir, 'community_detection') +
                       '.%s_%s_edge_list_%s' % (type_of_node, weight_status, obj_status))
     nx.write_adjlist(model_graph, os.path.join(community_detection_dir, 'community_detection') +
