@@ -10,5 +10,8 @@ coverage:
       default:
         # Force patches to be covered at the level of the codebase
         threshold: 0%
+  notify:
+    # GHA: 18, Travis: 13, Jenkins: 6
+    after_n_builds: 37
 #  ci:
 #    - !ci.appveyor.com
