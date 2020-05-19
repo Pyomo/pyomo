@@ -18,13 +18,68 @@ from six import StringIO
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.core.base import (Block, Constraint, ConcreteModel, Var, Set,
+        TransformationFactory)
 from pyomo.common.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.set_utils import *
 from pyomo.core.kernel.component_map import ComponentMap
 
 currdir = dirname(abspath(__file__)) + os.sep
+
+
+def make_model():
+    m = ConcreteModel()
+    m.time = ContinuousSet(bounds=(0, 10))
+    m.space = ContinuousSet(bounds=(0, 5))
+    m.set1 = Set(initialize=['a', 'b', 'c'])
+    m.set2 = Set(initialize=['d', 'e', 'f'])
+    m.fs = Block()
+
+    m.fs.v0 = Var(m.space, initialize=1)
+
+    @m.fs.Block()
+    def b1(b):
+        b.v = Var(m.time, m.space, initialize=1)
+        b.dv = DerivativeVar(b.v, wrt=m.time, initialize=0)
+
+        b.con = Constraint(m.time, m.space,
+                rule=lambda b, t, x: b.dv[t, x] == 7 - b.v[t, x])
+        # Inconsistent
+
+        @b.Block(m.time)
+        def b2(b, t):
+            b.v = Var(initialize=2)
+
+    @m.fs.Block(m.time, m.space)
+    def b2(b, t, x):
+        b.v = Var(m.set1, initialize=2)
+
+        @b.Block(m.set1)
+        def b3(b, c):
+            b.v = Var(m.set2, initialize=3)
+
+            @b.Constraint(m.set2)
+            def con(b, s):
+                return (5*b.v[s] ==
+                        m.fs.b2[m.time.first(), m.space.first()].v[c])
+                # inconsistent
+
+    @m.fs.Constraint(m.time)
+    def con1(fs, t):
+        return fs.b1.v[t, m.space.last()] == 5
+    # Will be inconsistent
+
+    @m.fs.Constraint(m.space)
+    def con2(fs, x):
+        return fs.b1.v[m.time.first(), x] == fs.v0[x]
+    # will be consistent
+
+    disc = TransformationFactory('dae.collocation')
+    disc.apply_to(m, wrt=m.time, nfe=5, ncp=2, scheme='LAGRANGE-RADAU')
+    disc.apply_to(m, wrt=m.space, nfe=5, ncp=2, scheme='LAGRANGE-RADAU')
+
+    return m
 
 
 class TestDaeSetUtils(unittest.TestCase):
@@ -255,6 +310,28 @@ class TestDaeSetUtils(unittest.TestCase):
             info = get_index_set_except(m.v8, m.time)
         with self.assertRaises(ValueError):
             info = get_index_set_except(m.v8, m.space)
+
+    def test_deactivate_model_at(self):
+        m = make_model()
+
+        deactivate_model_at(m, m.time, m.time[2])
+        self.assertTrue(m.fs.con1[m.time[1]].active)
+        self.assertFalse(m.fs.con1[m.time[2]].active)
+        self.assertTrue(m.fs.con2[m.space[1]].active)
+        self.assertFalse(m.fs.b1.con[m.time[2], m.space[1]].active)
+        self.assertFalse(m.fs.b2[m.time[2], m.space.last()].active)
+        self.assertTrue(m.fs.b2[m.time[2], m.space.last()].b3['a'].con['e'].active)
+
+        deactivate_model_at(m, m.time, [m.time[1], m.time[3]])
+        # disc equations at time.first()
+        self.assertFalse(m.fs.con1[m.time[1]].active)
+        self.assertFalse(m.fs.con1[m.time[3]].active)
+        self.assertFalse(m.fs.b1.con[m.time[1], m.space[1]].active)
+        self.assertFalse(m.fs.b1.con[m.time[3], m.space[1]].active)
+
+        with self.assertRaises(KeyError):
+            deactivate_model_at(m, m.time, m.time[1], allow_skip=False,
+                    suppress_warnings=True)
 
 
 if __name__ == "__main__":

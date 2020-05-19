@@ -165,6 +165,8 @@ jobs:
         fi
         pip install --cache-dir cache/pip cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
+        pip install --cache-dir cache/pip xpress \
+            || echo "WARNING: Xpress Community Edition is not available"
         python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
             % (sys.executable,))'
 
@@ -184,6 +186,8 @@ jobs:
         #    Python 2.7) causes a seg fault in the tests.
         conda install -q -y -c ibmdecisionoptimization cplex=12.10 \
             || echo "WARNING: CPLEX Community Edition is not available"
+        conda install -q -y -c fico-xpress xpress \
+            || echo "WARNING: Xpress Community Edition is not available"
         python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
             % (sys.executable,))'
 
@@ -387,15 +391,15 @@ jobs:
         coverage report -i
         coverage xml -i
         i=0
-        while /bin/true; do
+        while : ; do
             curl --retry 8 -L https://codecov.io/bash -o codecov.sh
-            bash codecov.sh -X gcov -f coverage.xml | tee .cover.upload
+            bash codecov.sh -Z -X gcov -f coverage.xml | tee .cover.upload
             if test $? == 0; then
                 break
-            elif test $i -ge 3; then
+            elif test $i -ge 4; then
                 exit 1
             fi
-            DELAY=$(( RANDOM % 30 + 15))
+            DELAY=$(( RANDOM % 30 + 30))
             echo "Pausing $DELAY seconds before re-attempting upload"
             sleep $DELAY
         done

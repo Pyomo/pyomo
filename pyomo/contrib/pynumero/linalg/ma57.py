@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.common.fileutils import find_library
-from pyomo.contrib.pynumero.extensions.utils import (validate_index,
+from pyomo.contrib.pynumero.linalg.utils import (validate_index,
         validate_value, _NotSet)
 import numpy.ctypeslib as npct
 import numpy as np
@@ -31,8 +31,7 @@ class MA57Interface(object):
     def __init__(self,
                  work_factor=None,
                  fact_factor=None,
-                 ifact_factor=None,
-                 memory_increase_factor=2.):
+                 ifact_factor=None):
 
         if not MA57Interface.available():
             raise RuntimeError(
@@ -41,7 +40,6 @@ class MA57Interface(object):
         self.work_factor = work_factor
         self.fact_factor = fact_factor
         self.ifact_factor = ifact_factor
-        self.memory_increase_factor = memory_increase_factor
 
         self.lib = ctypes.cdll.LoadLibrary(self.libname)
 
@@ -217,7 +215,3 @@ class MA57Interface(object):
             rhs = rhs[0, :]
 
         return rhs
-    
-
-if __name__ == '__main__':
-    ma57 = MA57Interface()

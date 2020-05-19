@@ -9,33 +9,35 @@
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
+from pyomo.common.log import LoggingIntercept
+import logging
 
 from pyomo.environ import *
+from pyomo.core.base import constraint
 from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import *
 import pyomo.gdp.tests.models as models
+import pyomo.gdp.tests.common_tests as ct
 
 import pyomo.opt
 linear_solvers = pyomo.opt.check_available_solvers(
     'glpk','cbc','gurobi','cplex')
 
 import random
-from six import iteritems, iterkeys
-
+from six import iteritems, iterkeys, StringIO
 
 EPS = TransformationFactory('gdp.chull').CONFIG.EPS
 
-def check_linear_coef(self, repn, var, coef):
-    var_id = None
-    for i,v in enumerate(repn.linear_vars):
-        if v is var:
-            var_id = i
-    self.assertIsNotNone(var_id)
-    self.assertEqual(repn.linear_coefs[var_id], coef)
+class CommonTests:
+    def setUp(self):
+        # set seed so we can test name collisions predictably
+        random.seed(666)
 
+    def diff_apply_to_and_create_using(self, model):
+        ct.diff_apply_to_and_create_using(self, model, 'gdp.chull')
 
-class TwoTermDisj(unittest.TestCase):
+class TwoTermDisj(unittest.TestCase, CommonTests):
     def setUp(self):
         # set seed to test unique namer
         random.seed(666)
@@ -55,49 +57,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(len(disjBlock), 2)
 
     def test_transformation_block_name_collision(self):
-        m = models.makeTwoTermDisj_Nonlinear()
-        # add block with the name we are about to try to use
-        m._pyomo_gdp_chull_relaxation = Block(Any)
-        TransformationFactory('gdp.chull').apply_to(m)
-
-        # check that we got a uniquely named block
-        transBlock = m.component("_pyomo_gdp_chull_relaxation_4")
-        self.assertIsInstance(transBlock, Block)
-
-        # check that the relaxed disjuncts really are here.
-        disjBlock = transBlock.relaxedDisjuncts
-        self.assertIsInstance(disjBlock, Block)
-        self.assertEqual(len(disjBlock), 2)
-        self.assertIsInstance(disjBlock[0].component("d[0].c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("d[1].c1"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("d[1].c2"), Constraint)
-
-        # we didn't add to the block that wasn't ours
-        self.assertEqual(len(m._pyomo_gdp_chull_relaxation), 0)
-
-    def test_info_dict_name_collision(self):
-        m = models.makeTwoTermDisj_Nonlinear()
-        # we never have a way to know if the dictionary we made was ours. But we
-        # should yell if there is a non-dictionary component of the same name.
-        m._gdp_transformation_info = Block()
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Component unknown contains an attribute named "
-            "_gdp_transformation_info. The transformation requires that it can "
-            "create this attribute!*",
-            TransformationFactory('gdp.chull').apply_to,
-            m)
-
-    def test_indicator_vars_still_active(self):
-        m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
-
-        self.assertIsInstance(m.d[0].indicator_var, Var)
-        self.assertTrue(m.d[0].indicator_var.active)
-        self.assertTrue(m.d[0].indicator_var.is_binary())
-        self.assertIsInstance(m.d[1].indicator_var, Var)
-        self.assertTrue(m.d[1].indicator_var.active)
-        self.assertTrue(m.d[1].indicator_var.is_binary())
+        ct.check_transformation_block_name_collision(self, 'chull')
 
     def test_disaggregated_vars(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -180,8 +140,8 @@ class TwoTermDisj(unittest.TestCase):
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, disjBlock[1].x, -1)
-        check_linear_coef(self, repn, m.d[1].indicator_var, 2)
+        ct.check_linear_coef(self, repn, disjBlock[1].x, -1)
+        ct.check_linear_coef(self, repn, m.d[1].indicator_var, 2)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(disjBlock[1].x.lb, 0)
         self.assertEqual(disjBlock[1].x.ub, 8)
@@ -195,8 +155,8 @@ class TwoTermDisj(unittest.TestCase):
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, disjBlock[1].w, 1)
-        check_linear_coef(self, repn, m.d[1].indicator_var, -3)
+        ct.check_linear_coef(self, repn, disjBlock[1].w, 1)
+        ct.check_linear_coef(self, repn, m.d[1].indicator_var, -3)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(disjBlock[1].w.lb, 0)
         self.assertEqual(disjBlock[1].w.ub, 7)
@@ -210,8 +170,8 @@ class TwoTermDisj(unittest.TestCase):
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, disjBlock[1].x, -1)
-        check_linear_coef(self, repn, m.d[1].indicator_var, 1)
+        ct.check_linear_coef(self, repn, disjBlock[1].x, -1)
+        ct.check_linear_coef(self, repn, m.d[1].indicator_var, 1)
         self.assertEqual(repn.constant, 0)
 
         cons = c3['ub']
@@ -220,8 +180,8 @@ class TwoTermDisj(unittest.TestCase):
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, disjBlock[1].x, 1)
-        check_linear_coef(self, repn, m.d[1].indicator_var, -3)
+        ct.check_linear_coef(self, repn, disjBlock[1].x, 1)
+        ct.check_linear_coef(self, repn, m.d[1].indicator_var, -3)
         self.assertEqual(repn.constant, 0)
 
     def check_bound_constraints(self, cons, disvar, indvar, lb, ub):
@@ -235,8 +195,8 @@ class TwoTermDisj(unittest.TestCase):
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, indvar, lb)
-        check_linear_coef(self, repn, disvar, -1)
+        ct.check_linear_coef(self, repn, indvar, lb)
+        ct.check_linear_coef(self, repn, disvar, -1)
 
         varub = cons['ub']
         self.assertIsNone(varub.lower)
@@ -245,8 +205,8 @@ class TwoTermDisj(unittest.TestCase):
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, indvar, -ub)
-        check_linear_coef(self, repn, disvar, 1)
+        ct.check_linear_coef(self, repn, indvar, -ub)
+        ct.check_linear_coef(self, repn, disvar, 1)
 
     def test_disaggregatedVar_bounds(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -263,29 +223,14 @@ class TwoTermDisj(unittest.TestCase):
             self.check_bound_constraints(disjBlock[i].y_bounds, disjBlock[i].y,
                                          m.d[i].indicator_var, -10, -3)
 
-    def test_xor_constraint(self):
-        m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
-
-        xorC = m._gdp_chull_relaxation_disjunction_xor
-        self.assertIsInstance(xorC, Constraint)
-        self.assertEqual(len(xorC), 1)
-
-        repn = generate_standard_repn(xorC.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_vars), 2)
-        check_linear_coef(self, repn, m.d[0].indicator_var, 1)
-        check_linear_coef(self, repn, m.d[1].indicator_var, 1)
-
     def test_error_for_or(self):
         m = models.makeTwoTermDisj_Nonlinear()
         m.disjunction.xor = False
 
         self.assertRaisesRegexp(
             GDP_Error,
-            "Cannot do convex hull transformation for disjunction disjunction "
-            "with or constraint. Must be an xor!*",
+            "Cannot do convex hull transformation for Disjunction "
+            "'disjunction' with OR constraint.  Must be an XOR!*",
             TransformationFactory('gdp.chull').apply_to,
             m)
 
@@ -294,165 +239,281 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(cons.lower, 0)
         self.assertEqual(cons.upper, 0)
         self.assertEqual(len(repn.linear_vars), 3)
-        check_linear_coef(self, repn, var, 1)
-        check_linear_coef(self, repn, disvar1, -1)
-        check_linear_coef(self, repn, disvar2, -1)
+        ct.check_linear_coef(self, repn, var, 1)
+        ct.check_linear_coef(self, repn, disvar1, -1)
+        ct.check_linear_coef(self, repn, disvar2, -1)
 
     def test_disaggregation_constraint(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
-        disCons = m._gdp_chull_relaxation_disjunction_disaggregation
-        self.assertIsInstance(disCons, Constraint)
-        # one for each of the variables
-        self.assertEqual(len(disCons), 3)
-        self.check_disaggregation_constraint(disCons[2], m.w, disjBlock[0].w,
-                                             disjBlock[1].w)
-        self.check_disaggregation_constraint(disCons[0], m.x, disjBlock[0].x,
-                                             disjBlock[1].x)
-        self.check_disaggregation_constraint(disCons[1], m.y, disjBlock[0].y,
-                                             disjBlock[1].y)
+        self.check_disaggregation_constraint(
+            chull.get_disaggregation_constraint(m.w, m.disjunction), m.w,
+            disjBlock[0].w, disjBlock[1].w)
+        self.check_disaggregation_constraint(
+            chull.get_disaggregation_constraint(m.x, m.disjunction), m.x,
+            disjBlock[0].x, disjBlock[1].x)
+        self.check_disaggregation_constraint(
+            chull.get_disaggregation_constraint(m.y, m.disjunction), m.y,
+            disjBlock[0].y, disjBlock[1].y)
 
-    def test_original_disjuncts_deactivated(self):
-        m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m, targets=(m,))
+    def test_xor_constraint_mapping(self):
+        ct.check_xor_constraint_mapping(self, 'chull')
 
-        self.assertFalse(m.d.active)
-        self.assertFalse(m.d[0].active)
-        self.assertFalse(m.d[1].active)
-        # COnstraints aren't deactived: only disjuncts
-        self.assertTrue(m.d[0].c.active)
-        self.assertTrue(m.d[1].c1.active)
-        self.assertTrue(m.d[1].c2.active)
+    def test_xor_constraint_mapping_two_disjunctions(self):
+        ct.check_xor_constraint_mapping_two_disjunctions(self, 'chull')
 
     def test_transformed_disjunct_mappings(self):
-        m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
-
-        disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
-
-        # the disjuncts will always be transformed in the same order,
-        # and d[0] goes first, so we can check in a loop.
-        for i in [0,1]:
-            infodict = disjBlock[i]._gdp_transformation_info
-            self.assertIsInstance(infodict, dict)
-            self.assertEqual(len(infodict), 4)
-            self.assertIs(infodict['src'], m.d[i])
-            self.assertIsInstance(infodict['srcConstraints'], ComponentMap)
-            self.assertIsInstance(infodict['srcVars'], ComponentMap)
-            self.assertIsInstance(
-                infodict['boundConstraintToSrcVar'], ComponentMap)
-
-            disjDict = m.d[i]._gdp_transformation_info
-            self.assertIsInstance(disjDict, dict)
-            self.assertEqual(sorted(iterkeys(disjDict)), ['chull','relaxed'])
-            self.assertTrue(disjDict['relaxed'])
-            self.assertIs(disjDict['chull']['relaxationBlock'], disjBlock[i])
-            disaggregatedVars = disjDict['chull']['disaggregatedVars']
-            self.assertIsInstance(disaggregatedVars, ComponentMap)
-            bigmConstraints = disjDict['chull']['bigmConstraints']
-            self.assertIsInstance(bigmConstraints, ComponentMap)
-            relaxedConstraints = disjDict['chull']['relaxedConstraints']
-            self.assertIsInstance(relaxedConstraints, ComponentMap)
+        ct.check_disjunct_mapping(self, 'chull')
 
     def test_transformed_constraint_mappings(self):
+        # ESJ: Letting bigm and chull test their own constraint mappings
+        # because, though the paradigm is the same, chull doesn't always create
+        # a transformed constraint when it can instead accomplish an x == 0
+        # constraint by fixing the disaggregated variable.
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
         # first disjunct
-        srcConsdict = disjBlock[0]._gdp_transformation_info['srcConstraints']
-        transConsdict = m.d[0]._gdp_transformation_info['chull'][
-            'relaxedConstraints']
-
-        self.assertEqual(len(srcConsdict), 1)
-        self.assertEqual(len(transConsdict), 1)
         orig1 = m.d[0].c
         trans1 = disjBlock[0].component("d[0].c")
-        self.assertIs(srcConsdict[trans1], orig1)
-        self.assertIs(transConsdict[orig1], trans1)
+        self.assertIs(chull.get_src_constraint(trans1), orig1)
+        self.assertIs(chull.get_src_constraint(trans1['ub']), orig1)
+        trans_list = chull.get_transformed_constraints(orig1)
+        self.assertEqual(len(trans_list), 1)
+        self.assertIs(trans_list[0], trans1['ub'])
 
         # second disjunct
-        srcConsdict = disjBlock[1]._gdp_transformation_info['srcConstraints']
-        transConsdict = m.d[1]._gdp_transformation_info['chull'][
-            'relaxedConstraints']
 
-        self.assertEqual(len(srcConsdict), 3)
-        self.assertEqual(len(transConsdict), 3)
         # first constraint
         orig1 = m.d[1].c1
         trans1 = disjBlock[1].component("d[1].c1")
-        self.assertIs(srcConsdict[trans1], orig1)
-        self.assertIs(transConsdict[orig1], trans1)
+        self.assertIs(chull.get_src_constraint(trans1), orig1)
+        self.assertIs(chull.get_src_constraint(trans1['lb']), orig1)
+        trans_list = chull.get_transformed_constraints(orig1)
+        self.assertEqual(len(trans_list), 1)
+        self.assertIs(trans_list[0], trans1['lb'])
+
         # second constraint
         orig2 = m.d[1].c2
         trans2 = disjBlock[1].component("d[1].c2")
-        self.assertIs(srcConsdict[trans2], orig2)
-        self.assertIs(transConsdict[orig2], trans2)
+        self.assertIs(chull.get_src_constraint(trans2), orig2)
+        self.assertIs(chull.get_src_constraint(trans2['eq']), orig2)
+        trans_list = chull.get_transformed_constraints(orig2)
+        self.assertEqual(len(trans_list), 1)
+        self.assertIs(trans_list[0], trans2['eq'])
+
         # third constraint
         orig3 = m.d[1].c3
         trans3 = disjBlock[1].component("d[1].c3")
-        self.assertIs(srcConsdict[trans3], orig3)
-        self.assertIs(transConsdict[orig3], trans3)
+        self.assertIs(chull.get_src_constraint(trans3), orig3)
+        self.assertIs(chull.get_src_constraint(trans3['lb']), orig3)
+        self.assertIs(chull.get_src_constraint(trans3['ub']), orig3)
+        trans_list = chull.get_transformed_constraints(orig3)
+        self.assertEqual(len(trans_list), 2)
+        self.assertIs(trans_list[0], trans3['lb'])
+        self.assertIs(trans_list[1], trans3['ub'])
 
     def test_disaggregatedVar_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
         for i in [0,1]:
-            srcVars = disjBlock[i]._gdp_transformation_info['srcVars']
-            disVars = m.d[i]._gdp_transformation_info['chull'][
-                'disaggregatedVars']
-            self.assertEqual(len(srcVars), 3)
-            self.assertEqual(len(disVars), 3)
-            # TODO: there has got to be better syntax for this??
             mappings = ComponentMap()
             mappings[m.w] = disjBlock[i].w
             mappings[m.y] = disjBlock[i].y
             mappings[m.x] = disjBlock[i].x
+
             for orig, disagg in iteritems(mappings):
-                self.assertIs(srcVars[disagg], orig)
-                self.assertIs(disVars[orig], disagg)
+                self.assertIs(chull.get_src_var(disagg), orig)
+                self.assertIs(chull.get_disaggregated_var(orig, m.d[i]), disagg)
 
     def test_bigMConstraint_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
 
         for i in [0,1]:
-            srcBigm = disjBlock[i]._gdp_transformation_info[
-                'boundConstraintToSrcVar']
-            bigm = m.d[i]._gdp_transformation_info['chull']['bigmConstraints']
-            self.assertEqual(len(srcBigm), 3)
-            self.assertEqual(len(bigm), 3)
-            # TODO: this too...
             mappings = ComponentMap()
-            mappings[m.w] = disjBlock[i].w_bounds
-            mappings[m.y] = disjBlock[i].y_bounds
-            mappings[m.x] = disjBlock[i].x_bounds
+            # [ESJ 11/05/2019] I think this test was useless before... I think
+            # this *map* was useless before. It should be disaggregated variable
+            # to the constraints, not the original variable? Why did this even
+            # work??
+            mappings[disjBlock[i].w] = disjBlock[i].w_bounds
+            mappings[disjBlock[i].y] = disjBlock[i].y_bounds
+            mappings[disjBlock[i].x] = disjBlock[i].x_bounds
             for var, cons in iteritems(mappings):
-                self.assertIs(srcBigm[cons], var)
-                self.assertIs(bigm[var], cons)
+                self.assertIs(chull.get_var_bounds_constraint(var), cons)
 
-    def test_target_not_a_component_err(self):
-        decoy = ConcreteModel()
-        decoy.block = Block()
-        m = models.makeTwoSimpleDisjunctions()
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Target block is not a component on instance unknown!",
-            TransformationFactory('gdp.chull').apply_to,
-            m,
-            targets=[decoy.block])
+    def test_create_using_nonlinear(self):
+        m = models.makeTwoTermDisj_Nonlinear()
+        self.diff_apply_to_and_create_using(m)
+
+    # [ESJ 02/14/2020] In order to match bigm and the (unfortunate) expectation
+    # we have established, we never decide something is local based on where it
+    # is declared. We treat variables declared on Disjuncts as if they are
+    # declared globally. We need to use the bounds as if they are global and
+    # also disaggregate the variable
+    def test_locally_declared_var_bounds_used_globally(self):
+        m = models.localVar()
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        # check that we used the bounds on the local variable as if they are
+        # global. Which means checking the bounds constraints...
+        y_disagg = m.disj2.transformation_block().y
+        cons = chull.get_var_bounds_constraint(y_disagg)
+        lb = cons['lb']
+        self.assertIsNone(lb.lower)
+        self.assertEqual(value(lb.upper), 0)
+        repn = generate_standard_repn(lb.body)
+        self.assertTrue(repn.is_linear())
+        ct.check_linear_coef(self, repn, m.disj2.indicator_var, 1)
+        ct.check_linear_coef(self, repn, y_disagg, -1)
+
+        ub = cons['ub']
+        self.assertIsNone(ub.lower)
+        self.assertEqual(value(ub.upper), 0)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        ct.check_linear_coef(self, repn, y_disagg, 1)
+        ct.check_linear_coef(self, repn, m.disj2.indicator_var, -3)
+
+    def test_locally_declared_variables_disaggregated(self):
+        m = models.localVar()
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        # two birds one stone: test the mappings too
+        disj1y = chull.get_disaggregated_var(m.disj2.y, m.disj1)
+        disj2y = chull.get_disaggregated_var(m.disj2.y, m.disj2)
+        self.assertIs(disj1y, m.disj1._transformation_block().y)
+        self.assertIs(disj2y, m.disj2._transformation_block().y)
+        self.assertIs(chull.get_src_var(disj1y), m.disj2.y)
+        self.assertIs(chull.get_src_var(disj2y), m.disj2.y)
+
+    def test_global_vars_local_to_a_disjunction_disaggregated(self):
+        # The point of this is that where a variable is declared has absolutely
+        # nothing to do with whether or not it should be disaggregated. With the
+        # only exception being that we can tell disaggregated variables and we
+        # know they are really and truly local to only one disjunct (EVER, in the
+        # whole model) because we declared them.
+
+        # So here, for some perverse reason, we declare the variables on disj1,
+        # but we use them in disj2. Both of them need to be disaggregated in
+        # both disjunctions though: Neither is local. (And, unless we want to do
+        # a search of the whole model (or disallow this kind of insanity) we
+        # can't be smarter because what if you transformed this one disjunction
+        # at a time? You can never assume a variable isn't used elsewhere in the
+        # model, and if it is, you must disaggregate it.)
+        m = ConcreteModel()
+        m.disj1 = Disjunct()
+        m.disj1.x = Var(bounds=(1, 10))
+        m.disj1.y = Var(bounds=(2, 11))
+        m.disj1.cons1 = Constraint(expr=m.disj1.x + m.disj1.y <= 5)
+        m.disj2 = Disjunct()
+        m.disj2.cons = Constraint(expr=m.disj1.y >= 8)
+        m.disjunction1 = Disjunction(expr=[m.disj1, m.disj2])
+
+        m.disj3 = Disjunct()
+        m.disj3.cons = Constraint(expr=m.disj1.x >= 7)
+        m.disj4 = Disjunct()
+        m.disj4.cons = Constraint(expr=m.disj1.y == 3)
+        m.disjunction2 = Disjunction(expr=[m.disj3, m.disj4])
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+        # check that all the variables are disaggregated
+        for disj in [m.disj1, m.disj2, m.disj3, m.disj4]:
+            transBlock = disj.transformation_block()
+            self.assertEqual(len([v for v in
+                                  transBlock.component_data_objects(Var)]), 2)
+            x = transBlock.component("x")
+            y = transBlock.component("y")
+            self.assertIsInstance(x, Var)
+            self.assertIsInstance(y, Var)
+            self.assertIs(chull.get_disaggregated_var(m.disj1.x, disj), x)
+            self.assertIs(chull.get_src_var(x), m.disj1.x)
+            self.assertIs(chull.get_disaggregated_var(m.disj1.y, disj), y)
+            self.assertIs(chull.get_src_var(y), m.disj1.y)
+
+    def check_name_collision_disaggregated_vars(self, m, disj, name):
+        chull = TransformationFactory('gdp.chull')
+        transBlock = disj.transformation_block()
+        self.assertEqual(len([v for v in
+                              transBlock.component_data_objects(Var)]), 2)
+        x = transBlock.component("x")
+        x2 = transBlock.component(name)
+        self.assertIsInstance(x, Var)
+        self.assertIsInstance(x2, Var)
+        self.assertIs(chull.get_disaggregated_var(m.disj1.x, disj), x)
+        self.assertIs(chull.get_src_var(x), m.disj1.x)
+        self.assertIs(chull.get_disaggregated_var(m.x, disj), x2)
+        self.assertIs(chull.get_src_var(x2), m.x)
+
+    def test_disaggregated_var_name_collision(self):
+        # same model as the test above, but now I am putting what was disj1.y
+        # as m.x, just to invite disaster.
+        m = ConcreteModel()
+        m.x = Var(bounds=(2, 11))
+        m.disj1 = Disjunct()
+        m.disj1.x = Var(bounds=(1, 10))
+        m.disj1.cons1 = Constraint(expr=m.disj1.x + m.x <= 5)
+        m.disj2 = Disjunct()
+        m.disj2.cons = Constraint(expr=m.x >= 8)
+        m.disjunction1 = Disjunction(expr=[m.disj1, m.disj2])
+
+        m.disj3 = Disjunct()
+        m.disj3.cons = Constraint(expr=m.disj1.x >= 7)
+        m.disj4 = Disjunct()
+        m.disj4.cons = Constraint(expr=m.x == 3)
+        m.disjunction2 = Disjunction(expr=[m.disj3, m.disj4])
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+        for disj, nm in ((m.disj1, "x_4"), (m.disj2, "x_9"),
+                         (m.disj3, "x_5"), (m.disj4, "x_8")):
+            self.check_name_collision_disaggregated_vars(m, disj, nm)
 
     def test_do_not_transform_user_deactivated_disjuncts(self):
-        # TODO
-        pass
+        ct.check_user_deactivated_disjuncts(self, 'chull')
+
+    def test_improperly_deactivated_disjuncts(self):
+        ct.check_improperly_deactivated_disjuncts(self, 'chull')
+
+    def test_do_not_transform_userDeactivated_IndexedDisjunction(self):
+        ct.check_do_not_transform_userDeactivated_indexedDisjunction(self,
+                                                                     'chull')
+
+    def test_disjunction_deactivated(self):
+        ct.check_disjunction_deactivated(self, 'chull')
+
+    def test_disjunctDatas_deactivated(self):
+        ct.check_disjunctDatas_deactivated(self, 'chull')
+
+    def test_deactivated_constraints(self):
+        ct.check_deactivated_constraints(self, 'chull')
+
+    def check_no_double_transformation(self):
+        ct.check_do_not_transform_twice_if_disjunction_reactivated(self,
+                                                                   'chull')
+
+    def test_indicator_vars(self):
+        ct.check_indicator_vars(self, 'chull')
+
+    def test_xor_constraints(self):
+        ct.check_xor_constraint(self, 'chull')
 
     def test_unbounded_var_error(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -525,42 +586,393 @@ class TwoTermDisj(unittest.TestCase):
                 len(list(relaxed.component_data_objects(Constraint))), 3*2+i)
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
+    def test_do_not_transform_deactivated_constraintDatas(self):
+        m = models.makeTwoTermDisj_IndexedConstraints()
+        m.a[1].setlb(0)
+        m.a[1].setub(100)
+        m.a[2].setlb(0)
+        m.a[2].setub(100)
+        m.b.simpledisj1.c[1].deactivate()
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+        # can't ask for simpledisj1.c[1]: it wasn't transformed
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
+            self.assertRaisesRegexp(
+                KeyError,
+                ".*b.simpledisj1.c\[1\]",
+                chull.get_transformed_constraints,
+                m.b.simpledisj1.c[1])
+        self.assertRegexpMatches(log.getvalue(),
+                                 ".*Constraint 'b.simpledisj1.c\[1\]' has not "
+                                 "been transformed.")
 
-class IndexedDisjunction(unittest.TestCase):
+        # this fixes a[2] to 0, so we should get the disggregated var
+        transformed = chull.get_transformed_constraints(m.b.simpledisj1.c[2])
+        self.assertEqual(len(transformed), 1)
+        disaggregated_a2 = chull.get_disaggregated_var(m.a[2], m.b.simpledisj1)
+        self.assertIs(transformed[0], disaggregated_a2)
+        self.assertIsInstance(disaggregated_a2, Var)
+        self.assertTrue(disaggregated_a2.is_fixed())
+        self.assertEqual(value(disaggregated_a2), 0)
+
+        transformed = chull.get_transformed_constraints(m.b.simpledisj2.c[1])
+        # simpledisj2.c[1] is a <= constraint
+        self.assertEqual(len(transformed), 1)
+        self.assertIs(transformed[0],
+                      m.b.simpledisj2.transformation_block().\
+                      component("b.simpledisj2.c")[(1,'ub')])
+
+        transformed = chull.get_transformed_constraints(m.b.simpledisj2.c[2])
+        # simpledisj2.c[2] is a <= constraint
+        self.assertEqual(len(transformed), 1)
+        self.assertIs(transformed[0],
+                      m.b.simpledisj2.transformation_block().\
+                      component("b.simpledisj2.c")[(2,'ub')])
+
+
+class MultiTermDisj(unittest.TestCase, CommonTests):
+    def test_xor_constraint(self):
+        ct.check_three_term_xor_constraint(self, 'chull')
+
+    def test_create_using(self):
+        m = models.makeThreeTermIndexedDisj()
+        self.diff_apply_to_and_create_using(m)
+
+class IndexedDisjunction(unittest.TestCase, CommonTests):
+    def setUp(self):
+        # set seed so we can test name collisions predictably
+        random.seed(666)
 
     def test_disaggregation_constraints(self):
         m = models.makeTwoTermIndexedDisjunction()
-        TransformationFactory('gdp.chull').apply_to(m)
-
-        disaggregationCons = m._gdp_chull_relaxation_disjunction_disaggregation
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
         relaxedDisjuncts = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
-        self.assertIsInstance(disaggregationCons, Constraint)
-        self.assertEqual(len(disaggregationCons), 3)
 
         disaggregatedVars = {
-            (1, 0): [relaxedDisjuncts[0].component('x[1]'),
-                          relaxedDisjuncts[1].component('x[1]')],
-            (2, 0): [relaxedDisjuncts[2].component('x[2]'),
-                          relaxedDisjuncts[3].component('x[2]')],
-            (3, 0): [relaxedDisjuncts[4].component('x[3]'),
-                          relaxedDisjuncts[5].component('x[3]')],
+            1: [relaxedDisjuncts[0].component('x[1]'),
+                relaxedDisjuncts[1].component('x[1]')],
+            2: [relaxedDisjuncts[2].component('x[2]'),
+                relaxedDisjuncts[3].component('x[2]')],
+            3: [relaxedDisjuncts[4].component('x[3]'),
+                relaxedDisjuncts[5].component('x[3]')],
         }
 
         for i, disVars in iteritems(disaggregatedVars):
-            cons = disaggregationCons[i]
+            cons = chull.get_disaggregation_constraint(m.x[i],
+                                                       m.disjunction[i])
             self.assertEqual(cons.lower, 0)
             self.assertEqual(cons.upper, 0)
             repn = generate_standard_repn(cons.body)
             self.assertTrue(repn.is_linear())
             self.assertEqual(repn.constant, 0)
             self.assertEqual(len(repn.linear_vars), 3)
-            check_linear_coef(self, repn, m.x[i[0]], 1)
-            check_linear_coef(self, repn, disVars[0], -1)
-            check_linear_coef(self, repn, disVars[1], -1)
+            ct.check_linear_coef(self, repn, m.x[i], 1)
+            ct.check_linear_coef(self, repn, disVars[0], -1)
+            ct.check_linear_coef(self, repn, disVars[1], -1)
 
-    # TODO: also test disaggregation constraints for when we have a disjunction
-    # where the indices are tuples. (This is to test that when we combine the
-    # indices and the constraint name we get what we expect in both cases.)
+    def test_disaggregation_constraints_tuple_indices(self):
+        m = models.makeTwoTermMultiIndexedDisjunction()
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+        relaxedDisjuncts = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
+
+        disaggregatedVars = {
+            (1,'A'): [relaxedDisjuncts[0].component('a[1,A]'),
+                      relaxedDisjuncts[1].component('a[1,A]')],
+            (1,'B'): [relaxedDisjuncts[2].component('a[1,B]'),
+                      relaxedDisjuncts[3].component('a[1,B]')],
+            (2,'A'): [relaxedDisjuncts[4].component('a[2,A]'),
+                      relaxedDisjuncts[5].component('a[2,A]')],
+            (2,'B'): [relaxedDisjuncts[6].component('a[2,B]'),
+                      relaxedDisjuncts[7].component('a[2,B]')],
+        }
+
+        for i, disVars in iteritems(disaggregatedVars):
+            cons = chull.get_disaggregation_constraint(m.a[i],
+                                                       m.disjunction[i])
+            self.assertEqual(cons.lower, 0)
+            self.assertEqual(cons.upper, 0)
+            # NOTE: fixed variables are evaluated here.
+            repn = generate_standard_repn(cons.body)
+            self.assertTrue(repn.is_linear())
+            self.assertEqual(repn.constant, 0)
+            # The flag=1 disjunct disaggregated variable is fixed to 0, so the
+            # below is actually correct:
+            self.assertEqual(len(repn.linear_vars), 2)
+            ct.check_linear_coef(self, repn, m.a[i], 1)
+            ct.check_linear_coef(self, repn, disVars[0], -1)
+            self.assertTrue(disVars[1].is_fixed())
+            self.assertEqual(value(disVars[1]), 0)
+
+    def test_xor_constraints(self):
+        ct.check_indexed_xor_constraints(self, 'chull')
+
+    def test_xor_constraints_with_targets(self):
+        ct.check_indexed_xor_constraints_with_targets(self, 'chull')
+
+    def test_create_using(self):
+        m = models.makeTwoTermMultiIndexedDisjunction()
+        ct.diff_apply_to_and_create_using(self, m, 'gdp.chull')
+
+    def test_deactivated_constraints(self):
+        ct.check_constraints_deactivated_indexedDisjunction(self, 'chull')
+
+    def test_deactivated_disjuncts(self):
+        ct.check_deactivated_disjuncts(self, 'chull')
+
+    def test_deactivated_disjunctions(self):
+        ct.check_deactivated_disjunctions(self, 'chull')
+
+    def test_partial_deactivate_indexed_disjunction(self):
+        ct.check_partial_deactivate_indexed_disjunction(self, 'chull')
+
+    def test_disjunction_data_target(self):
+        ct.check_disjunction_data_target(self, 'chull')
+
+    def test_disjunction_data_target_any_index(self):
+        ct.check_disjunction_data_target_any_index(self, 'chull')
+
+    def test_targets_with_container_as_arg(self):
+        ct.check_targets_with_container_as_arg(self, 'chull')
+
+    def check_trans_block_disjunctions_of_disjunct_datas(self, m):
+        transBlock1 = m.component("_pyomo_gdp_chull_relaxation")
+        self.assertIsInstance(transBlock1, Block)
+        self.assertIsInstance(transBlock1.component("relaxedDisjuncts"), Block)
+        # We end up with a transformation block for every SimpleDisjunction or
+        # IndexedDisjunction.
+        self.assertEqual(len(transBlock1.relaxedDisjuncts), 2)
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[0].component("x"),
+                              Var)
+        self.assertTrue(transBlock1.relaxedDisjuncts[0].x.is_fixed())
+        self.assertEqual(value(transBlock1.relaxedDisjuncts[0].x), 0)
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[0].component(
+            "firstTerm[1].cons"), Constraint)
+        # No constraint becuase disaggregated variable fixed to 0
+        self.assertEqual(len(transBlock1.relaxedDisjuncts[0].component(
+            "firstTerm[1].cons")), 0)
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[0].component(
+            "x_bounds"), Constraint)
+        self.assertEqual(len(transBlock1.relaxedDisjuncts[0].component(
+            "x_bounds")), 2)
+
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[1].component("x"),
+                              Var)
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[1].component(
+            "secondTerm[1].cons"), Constraint)
+        self.assertEqual(len(transBlock1.relaxedDisjuncts[1].component(
+            "secondTerm[1].cons")), 1)
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[1].component(
+            "x_bounds"), Constraint)
+        self.assertEqual(len(transBlock1.relaxedDisjuncts[1].component(
+            "x_bounds")), 2)
+
+        transBlock2 = m.component("_pyomo_gdp_chull_relaxation_4")
+        self.assertIsInstance(transBlock2, Block)
+        self.assertIsInstance(transBlock2.component("relaxedDisjuncts"), Block)
+        self.assertEqual(len(transBlock2.relaxedDisjuncts), 2)
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[0].component("x"),
+                              Var)
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[0].component(
+            "firstTerm[2].cons"), Constraint)
+        # we have an equality constraint
+        self.assertEqual(len(transBlock2.relaxedDisjuncts[0].component(
+            "firstTerm[2].cons")), 1)
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[0].component(
+            "x_bounds"), Constraint)
+        self.assertEqual(len(transBlock2.relaxedDisjuncts[0].component(
+            "x_bounds")), 2)
+
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[1].component("x"),
+                              Var)
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[1].component(
+            "secondTerm[2].cons"), Constraint)
+        self.assertEqual(len(transBlock2.relaxedDisjuncts[1].component(
+            "secondTerm[2].cons")), 1)
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[1].component(
+            "x_bounds"), Constraint)
+        self.assertEqual(len(transBlock2.relaxedDisjuncts[1].component(
+            "x_bounds")), 2)
+
+    def test_simple_disjunction_of_disjunct_datas(self):
+        ct.check_simple_disjunction_of_disjunct_datas(self, 'chull')
+
+    def test_any_indexed_disjunction_of_disjunct_datas(self):
+        m = models.makeAnyIndexedDisjunctionOfDisjunctDatas()
+        TransformationFactory('gdp.chull').apply_to(m)
+
+        transBlock = m.component("_pyomo_gdp_chull_relaxation")
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 4)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].component("x"),
+                              Var)
+        self.assertTrue(transBlock.relaxedDisjuncts[0].x.is_fixed())
+        self.assertEqual(value(transBlock.relaxedDisjuncts[0].x), 0)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm[1].cons"), Constraint)
+        # No constraint becuase disaggregated variable fixed to 0
+        self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm[1].cons")), 0)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
+            "x_bounds"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
+            "x_bounds")), 2)
+
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].component("x"),
+                              Var)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm[1].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm[1].cons")), 1)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
+            "x_bounds"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[1].component(
+            "x_bounds")), 2)
+
+        self.assertIsInstance(transBlock.relaxedDisjuncts[2].component("x"),
+                              Var)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[2].component(
+            "firstTerm[2].cons"), Constraint)
+        # we have an equality constraint
+        self.assertEqual(len(transBlock.relaxedDisjuncts[2].component(
+            "firstTerm[2].cons")), 1)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[2].component(
+            "x_bounds"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[2].component(
+            "x_bounds")), 2)
+
+        self.assertIsInstance(transBlock.relaxedDisjuncts[3].component("x"),
+                              Var)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[3].component(
+            "secondTerm[2].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[3].component(
+            "secondTerm[2].cons")), 1)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[3].component(
+            "x_bounds"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[3].component(
+            "x_bounds")), 2)
+
+        self.assertIsInstance(transBlock.component("disjunction_xor"),
+                              Constraint)
+        self.assertEqual(len(transBlock.component("disjunction_xor")), 2)
+
+    def check_first_iteration(self, model):
+        transBlock = model.component("_pyomo_gdp_chull_relaxation")
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(
+            transBlock.component("disjunctionList_xor"), Constraint)
+        self.assertEqual(len(transBlock.disjunctionList_xor), 1)
+        self.assertFalse(model.disjunctionList[0].active)
+
+        self.assertIsInstance(transBlock.relaxedDisjuncts, Block)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
+
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].x, Var)
+        self.assertTrue(transBlock.relaxedDisjuncts[0].x.is_fixed())
+        self.assertEqual(value(transBlock.relaxedDisjuncts[0].x), 0)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm[0].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
+            "firstTerm[0].cons")), 0)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].x_bounds,
+                              Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[0].x_bounds), 2)
+
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].x, Var)
+        self.assertFalse(transBlock.relaxedDisjuncts[1].x.is_fixed())
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm[0].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[1].component(
+            "secondTerm[0].cons")), 1)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].x_bounds,
+                              Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[1].x_bounds), 2)
+
+    def check_second_iteration(self, model):
+        transBlock = model.component("_pyomo_gdp_chull_relaxation")
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 4)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[2].component(
+            "firstTerm[1].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[2].component(
+            "firstTerm[1].cons")), 1)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[3].component(
+            "secondTerm[1].cons"), Constraint)
+        self.assertEqual(len(transBlock.relaxedDisjuncts[3].component(
+            "secondTerm[1].cons")), 1)
+        self.assertEqual(
+            len(transBlock.disjunctionList_xor), 2)
+        self.assertFalse(model.disjunctionList[1].active)
+        self.assertFalse(model.disjunctionList[0].active)
+
+    def test_disjunction_and_disjuncts_indexed_by_any(self):
+        ct.check_disjunction_and_disjuncts_indexed_by_any(self, 'chull')
+
+    def test_iteratively_adding_disjunctions_transform_container(self):
+        ct.check_iteratively_adding_disjunctions_transform_container(self,
+                                                                     'chull')
+
+    def test_iteratively_adding_disjunctions_transform_model(self):
+        ct.check_iteratively_adding_disjunctions_transform_model(self, 'chull')
+
+    def test_iteratively_adding_to_indexed_disjunction_on_block(self):
+        ct.check_iteratively_adding_to_indexed_disjunction_on_block(self,
+                                                                    'chull')
+
+class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
+    def test_only_targets_inactive(self):
+        ct.check_only_targets_inactive(self, 'chull')
+
+    def test_only_targets_transformed(self):
+        ct.check_only_targets_get_transformed(self, 'chull')
+
+    def test_target_not_a_component_err(self):
+        ct.check_target_not_a_component_error(self, 'chull')
+
+    def test_targets_cannot_be_cuids(self):
+        ct.check_targets_cannot_be_cuids(self, 'chull')
+
+class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
+    # There are a couple tests for targets above, but since I had the patience
+    # to make all these for bigm also, I may as well reap the benefits here too.
+    def test_indexedDisj_targets_inactive(self):
+        ct.check_indexedDisj_targets_inactive(self, 'chull')
+
+    def test_indexedDisj_only_targets_transformed(self):
+        ct.check_indexedDisj_only_targets_transformed(self, 'chull')
+
+    def test_warn_for_untransformed(self):
+        ct.check_warn_for_untransformed(self, 'chull')
+
+    def test_disjData_targets_inactive(self):
+        ct.check_disjData_targets_inactive(self, 'chull')
+        m = models.makeDisjunctionsOnIndexedBlock()
+
+    def test_disjData_only_targets_transformed(self):
+        ct.check_disjData_only_targets_transformed(self, 'chull')
+
+    def test_indexedBlock_targets_inactive(self):
+        ct.check_indexedBlock_targets_inactive(self, 'chull')
+
+    def test_indexedBlock_only_targets_transformed(self):
+        ct.check_indexedBlock_only_targets_transformed(self, 'chull')
+
+    def test_blockData_targets_inactive(self):
+        ct.check_blockData_targets_inactive(self, 'chull')
+
+    def test_blockData_only_targets_transformed(self):
+        ct.check_blockData_only_targets_transformed(self, 'chull')
+
+    def test_do_not_transform_deactivated_targets(self):
+        ct.check_do_not_transform_deactivated_targets(self, 'chull')
+
+    def test_create_using(self):
+        m = models.makeDisjunctionsOnIndexedBlock()
+        ct.diff_apply_to_and_create_using(self, m, 'gdp.chull')
 
 class DisaggregatedVarNamingConflict(unittest.TestCase):
     @staticmethod
@@ -583,55 +995,59 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
 
     def test_disaggregation_constraints(self):
         m = self.makeModel()
-        TransformationFactory('gdp.chull').apply_to(m)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
 
-        disCons = m._gdp_chull_relaxation_disjunction_disaggregation
-        self.assertIsInstance(disCons, Constraint)
-        self.assertEqual(len(disCons), 2)
-        # TODO: the above thing fails because the index gets overwritten. I
-        # don't know how to keep them unique at the moment. When I do, I also
-        # need to test that the indices are actually what we expect.
+        disaggregationConstraints = m._pyomo_gdp_chull_relaxation.\
+                                    disaggregationConstraints
+        disaggregationConstraints.pprint()
+        consmap = [
+            (m.component("b.x"), disaggregationConstraints[(0, None)]),
+            (m.b.x, disaggregationConstraints[(1, None)])
+        ]
 
-class NestedDisjunction(unittest.TestCase):
+        for v, cons in consmap:
+            disCons = chull.get_disaggregation_constraint(v, m.disjunction)
+            self.assertIs(disCons, cons)
+
+class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
+    def test_error_for_same_disjunct_in_multiple_disjunctions(self):
+        ct.check_error_for_same_disjunct_in_multiple_disjunctions(self, 'chull')
+
+class NestedDisjunction(unittest.TestCase, CommonTests):
+    def setUp(self):
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def test_disjuncts_inactive(self):
+        ct.check_disjuncts_inactive_nested(self, 'chull')
 
     def test_deactivated_disjunct_leaves_nested_disjuncts_active(self):
-        m = models.makeNestedDisjunctions_FlatDisjuncts()
-        m.d1.deactivate()
-        # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
-        # transformation of Disjuncts to Blocks
-        TransformationFactory('gdp.chull').apply_to(m, targets=[m])
+        ct.check_deactivated_disjunct_leaves_nested_disjunct_active(self,
+                                                                    'chull')
 
-        self.assertFalse(m.d1.active)
-        self.assertTrue(m.d1.indicator_var.fixed)
-        self.assertEqual(m.d1.indicator_var.value, 0)
+    def test_mappings_between_disjunctions_and_xors(self):
+        # For the sake of not second-guessing anyone, we will let the inner
+        # disjunction point to its original XOR constraint. This constraint
+        # itself will be transformed by the outer disjunction, so if you want to
+        # find what it became you will have to follow its map to the transformed
+        # version. (But this behaves the same as bigm)
+        ct.check_mappings_between_disjunctions_and_xors(self, 'chull')
 
-        self.assertFalse(m.d2.active)
-        self.assertFalse(m.d2.indicator_var.fixed)
+    def test_disjunct_targets_inactive(self):
+        ct.check_disjunct_targets_inactive(self, 'chull')
 
-        self.assertTrue(m.d3.active)
-        self.assertFalse(m.d3.indicator_var.fixed)
+    def test_disjunct_only_targets_transformed(self):
+        ct.check_disjunct_only_targets_transformed(self, 'chull')
 
-        self.assertTrue(m.d4.active)
-        self.assertFalse(m.d4.indicator_var.fixed)
+    def test_disjunctData_targets_inactive(self):
+        ct.check_disjunctData_targets_inactive(self, 'chull')
 
-        m = models.makeNestedDisjunctions_NestedDisjuncts()
-        m.d1.deactivate()
-        # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
-        # transformation of Disjuncts to Blocks
-        TransformationFactory('gdp.chull').apply_to(m, targets=[m])
+    def test_disjunctData_only_targets_transformed(self):
+        ct.check_disjunctData_only_targets_transformed(self, 'chull')
 
-        self.assertFalse(m.d1.active)
-        self.assertTrue(m.d1.indicator_var.fixed)
-        self.assertEqual(m.d1.indicator_var.value, 0)
-
-        self.assertFalse(m.d2.active)
-        self.assertFalse(m.d2.indicator_var.fixed)
-
-        self.assertTrue(m.d1.d3.active)
-        self.assertFalse(m.d1.d3.indicator_var.fixed)
-
-        self.assertTrue(m.d1.d4.active)
-        self.assertFalse(m.d1.d4.indicator_var.fixed)
+    def test_disjunction_target_err(self):
+        ct.check_disjunction_target_err(self, 'chull')
 
     @unittest.skipIf(not linear_solvers, "No linear solver available")
     def test_relaxation_feasibility(self):
@@ -658,7 +1074,6 @@ class NestedDisjunction(unittest.TestCase):
             m.d3.indicator_var.fix(case[2])
             m.d4.indicator_var.fix(case[3])
             results = solver.solve(m)
-            print(case, results.solver)
             if case[4] is None:
                 self.assertEqual(results.solver.termination_condition,
                                  pyomo.opt.TerminationCondition.infeasible)
@@ -667,57 +1082,371 @@ class NestedDisjunction(unittest.TestCase):
                                  pyomo.opt.TerminationCondition.optimal)
                 self.assertEqual(value(m.obj), case[4])
 
+    def test_create_using(self):
+        m = models.makeNestedDisjunctions_FlatDisjuncts()
+        self.diff_apply_to_and_create_using(m)
+
+    # TODO: test disjunct mappings: This is not the same as bigm because you
+    # don't move these blocks around in chull the way you do in bigm.
+
+    # And I think it is worth it to go through a full test case for this and
+    # actually make sure of the transformed constraints too.
+
+    def check_outer_disaggregation_constraint(self, cons, var, disj1, disj2):
+        chull = TransformationFactory('gdp.chull')
+        self.assertTrue(cons.active)
+        self.assertEqual(cons.lower, 0)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        ct.check_linear_coef(self, repn, var, 1)
+        ct.check_linear_coef(self, repn, chull.get_disaggregated_var(var, disj1),
+                             -1)
+        ct.check_linear_coef(self, repn, chull.get_disaggregated_var(var, disj2),
+                             -1)
+
+    def check_bounds_constraint_ub(self, constraint, ub, dis_var, ind_var):
+        chull = TransformationFactory('gdp.chull')
+        self.assertIsInstance(constraint, Constraint)
+        self.assertTrue(constraint.active)
+        self.assertEqual(len(constraint), 1)
+        self.assertTrue(constraint['ub'].active)
+        self.assertEqual(constraint['ub'].upper, 0)
+        self.assertIsNone(constraint['ub'].lower)
+        repn = generate_standard_repn(constraint['ub'].body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, dis_var, 1)
+        ct.check_linear_coef(self, repn, ind_var, -ub)
+        self.assertIs(constraint, chull.get_var_bounds_constraint(dis_var))
+
+    def check_inner_disaggregated_var_bounds(self, cons, dis, ind_var,
+                                             original_cons):
+        chull = TransformationFactory('gdp.chull')
+        self.assertIsInstance(cons, Constraint)
+        self.assertTrue(cons.active)
+        self.assertEqual(len(cons), 1)
+        self.assertTrue(cons[('ub', 'ub')].active)
+        self.assertIsNone(cons[('ub', 'ub')].lower)
+        self.assertEqual(cons[('ub', 'ub')].upper, 0)
+        repn = generate_standard_repn(cons[('ub', 'ub')].body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, dis, 1)
+        ct.check_linear_coef(self, repn, ind_var, -2)
+
+        self.assertIs(chull.get_var_bounds_constraint(dis), original_cons)
+        transformed_list = chull.get_transformed_constraints(original_cons['ub'])
+        self.assertEqual(len(transformed_list), 1)
+        self.assertIs(transformed_list[0], cons[('ub', 'ub')])
+
+    def check_inner_transformed_constraint(self, cons, dis, lb, ind_var,
+                                           first_transformed, original):
+        chull = TransformationFactory('gdp.chull')
+        self.assertIsInstance(cons, Constraint)
+        self.assertTrue(cons.active)
+        self.assertEqual(len(cons), 1)
+        # Ha, this really isn't lovely, but its just chance that it's ub the
+        # second time.
+        self.assertTrue(cons[('lb', 'ub')].active)
+        self.assertIsNone(cons[('lb', 'ub')].lower)
+        self.assertEqual(cons[('lb', 'ub')].upper, 0)
+        repn = generate_standard_repn(cons[('lb', 'ub')].body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, dis, -1)
+        ct.check_linear_coef(self, repn, ind_var, lb)
+
+        self.assertIs(chull.get_src_constraint(first_transformed),
+                      original)
+        trans_list = chull.get_transformed_constraints(original)
+        self.assertEqual(len(trans_list), 1)
+        self.assertIs(trans_list[0], first_transformed['lb'])
+        self.assertIs(chull.get_src_constraint(first_transformed['lb']),
+                      original)
+        self.assertIs(chull.get_src_constraint(cons), first_transformed)
+        trans_list = chull.get_transformed_constraints(first_transformed['lb'])
+        self.assertEqual(len(trans_list), 1)
+        self.assertIs(trans_list[0], cons[('lb', 'ub')])
+        self.assertIs(chull.get_src_constraint(cons[('lb', 'ub')]),
+                      first_transformed['lb'])
+
+    def check_outer_transformed_constraint(self, cons, dis, lb, ind_var):
+        chull = TransformationFactory('gdp.chull')
+        self.assertIsInstance(cons, Constraint)
+        self.assertTrue(cons.active)
+        self.assertEqual(len(cons), 1)
+        self.assertTrue(cons['lb'].active)
+        self.assertIsNone(cons['lb'].lower)
+        self.assertEqual(cons['lb'].upper, 0)
+        repn = generate_standard_repn(cons['lb'].body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, dis, -1)
+        ct.check_linear_coef(self, repn, ind_var, lb)
+
+        orig = ind_var.parent_block().c
+        self.assertIs(chull.get_src_constraint(cons), orig)
+        trans_list = chull.get_transformed_constraints(orig)
+        self.assertEqual(len(trans_list), 1)
+        self.assertIs(trans_list[0], cons['lb'])
+
+    def test_transformed_model_nestedDisjuncts(self):
+        # This test tests *everything* for a simple nested disjunction case.
+        m = models.makeNestedDisjunctions_NestedDisjuncts()
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        transBlock = m._pyomo_gdp_chull_relaxation
+        self.assertTrue(transBlock.active)
+
+        # outer xor should be on this block
+        xor = transBlock.disj_xor
+        self.assertIsInstance(xor, Constraint)
+        self.assertTrue(xor.active)
+        self.assertEqual(xor.lower, 1)
+        self.assertEqual(xor.upper, 1)
+        repn = generate_standard_repn(xor.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        ct.check_linear_coef(self, repn, m.d1.indicator_var, 1)
+        ct.check_linear_coef(self, repn, m.d2.indicator_var, 1)
+        self.assertIs(xor, m.disj.algebraic_constraint())
+        self.assertIs(m.disj, chull.get_src_disjunction(xor))
+
+        # so should the outer disaggregation constraint
+        dis = transBlock.disaggregationConstraints
+        self.assertIsInstance(dis, Constraint)
+        self.assertTrue(dis.active)
+        self.assertEqual(len(dis), 3)
+        self.check_outer_disaggregation_constraint(dis[0,None], m.x, m.d1,
+                                                   m.d2)
+        self.assertIs(chull.get_disaggregation_constraint(m.x, m.disj),
+                      dis[0, None])
+        self.check_outer_disaggregation_constraint(dis[1,None],
+                                                   m.d1.d3.indicator_var, m.d1,
+                                                   m.d2)
+        self.assertIs(chull.get_disaggregation_constraint(m.d1.d3.indicator_var,
+                                                          m.disj), dis[1,None])
+        self.check_outer_disaggregation_constraint(dis[2,None],
+                                                   m.d1.d4.indicator_var, m.d1,
+                                                   m.d2)
+        self.assertIs(chull.get_disaggregation_constraint(m.d1.d4.indicator_var,
+                                                          m.disj), dis[2,None])
+
+        # we should have two disjunct transformation blocks
+        disjBlocks = transBlock.relaxedDisjuncts
+        self.assertTrue(disjBlocks.active)
+        self.assertEqual(len(disjBlocks), 2)
+
+        disj1 = disjBlocks[0]
+        self.assertTrue(disj1.active)
+        self.assertIs(disj1, m.d1.transformation_block())
+        self.assertIs(m.d1, chull.get_src_disjunct(disj1))
+
+        # check the disaggregated vars are here
+        self.assertIsInstance(disj1.x, Var)
+        self.assertEqual(disj1.x.lb, 0)
+        self.assertEqual(disj1.x.ub, 2)
+        self.assertIs(disj1.x, chull.get_disaggregated_var(m.x, m.d1))
+        self.assertIs(m.x, chull.get_src_var(disj1.x))
+        d3 = disj1.component("indicator_var")
+        self.assertEqual(d3.lb, 0)
+        self.assertEqual(d3.ub, 1)
+        self.assertIsInstance(d3, Var)
+        self.assertIs(d3, chull.get_disaggregated_var(m.d1.d3.indicator_var,
+                                                      m.d1))
+        self.assertIs(m.d1.d3.indicator_var, chull.get_src_var(d3))
+        d4 = disj1.component("indicator_var_4")
+        self.assertIsInstance(d4, Var)
+        self.assertEqual(d4.lb, 0)
+        self.assertEqual(d4.ub, 1)
+        self.assertIs(d4, chull.get_disaggregated_var(m.d1.d4.indicator_var,
+                                                      m.d1))
+        self.assertIs(m.d1.d4.indicator_var, chull.get_src_var(d4))
+
+        # check inner disjunction disaggregated vars
+        x3 = m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[0].x
+        self.assertIsInstance(x3, Var)
+        self.assertEqual(x3.lb, 0)
+        self.assertEqual(x3.ub, 2)
+        self.assertIs(chull.get_disaggregated_var(m.x, m.d1.d3), x3)
+        self.assertIs(chull.get_src_var(x3), m.x)
+
+        x4 = m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1].x
+        self.assertIsInstance(x4, Var)
+        self.assertEqual(x4.lb, 0)
+        self.assertEqual(x4.ub, 2)
+        self.assertIs(chull.get_disaggregated_var(m.x, m.d1.d4), x4)
+        self.assertIs(chull.get_src_var(x4), m.x)
+
+        # check the bounds constraints
+        self.check_bounds_constraint_ub(disj1.x_bounds, 2, disj1.x,
+                                        m.d1.indicator_var)
+        self.check_bounds_constraint_ub(disj1.indicator_var_bounds, 1,
+                                        disj1.indicator_var,
+                                        m.d1.indicator_var)
+        self.check_bounds_constraint_ub(disj1.indicator_var_4_bounds, 1,
+                                        disj1.indicator_var_4,
+                                        m.d1.indicator_var)
+
+        # check the transformed constraints
+
+        # transformed xor
+        xor = disj1.component("d1._pyomo_gdp_chull_relaxation.d1.disj2_xor")
+        self.assertIsInstance(xor, Constraint)
+        self.assertTrue(xor.active)
+        self.assertEqual(len(xor), 1)
+        self.assertTrue(xor['eq'].active)
+        self.assertEqual(xor['eq'].lower, 0)
+        self.assertEqual(xor['eq'].upper, 0)
+        repn = generate_standard_repn(xor['eq'].body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 3)
+        ct.check_linear_coef(self, repn, disj1.indicator_var, 1)
+        ct.check_linear_coef(self, repn, disj1.indicator_var_4, 1)
+        ct.check_linear_coef(self, repn, m.d1.indicator_var, -1)
+
+        # inner disjunction disaggregation constraint
+        dis_cons_inner_disjunction = disj1.component(
+            "d1._pyomo_gdp_chull_relaxation.disaggregationConstraints")
+        self.assertIsInstance(dis_cons_inner_disjunction, Constraint)
+        self.assertTrue(dis_cons_inner_disjunction.active)
+        self.assertEqual(len(dis_cons_inner_disjunction), 1)
+        dis_cons_inner_disjunction.pprint()
+        self.assertTrue(dis_cons_inner_disjunction[(0,None,'eq')].active)
+        self.assertEqual(dis_cons_inner_disjunction[(0,None,'eq')].lower, 0)
+        self.assertEqual(dis_cons_inner_disjunction[(0,None,'eq')].upper, 0)
+        repn = generate_standard_repn(dis_cons_inner_disjunction[(0, None,
+                                                                  'eq')].body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 3)
+        ct.check_linear_coef(self, repn, x3, -1)
+        ct.check_linear_coef(self, repn, x4, -1)
+        ct.check_linear_coef(self, repn, disj1.x, 1)
+
+        # disaggregated d3.x bounds constraints
+        x3_bounds = disj1.component(
+            "d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[0].x_bounds")
+        original_cons = m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[0].\
+                        x_bounds
+        self.check_inner_disaggregated_var_bounds(x3_bounds, x3,
+                                                  disj1.indicator_var,
+                                                  original_cons)
+
+
+        # disaggregated d4.x bounds constraints
+        x4_bounds = disj1.component(
+            "d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1].x_bounds")
+        original_cons = m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1].\
+                        x_bounds
+        self.check_inner_disaggregated_var_bounds(x4_bounds, x4,
+                                                  disj1.indicator_var_4,
+                                                  original_cons)
+
+        # transformed x >= 1.2
+        cons = disj1.component(
+            "d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[0].d1.d3.c")
+        first_transformed = m.d1._pyomo_gdp_chull_relaxation.\
+                            relaxedDisjuncts[0].component("d1.d3.c")
+        original = m.d1.d3.c
+        self.check_inner_transformed_constraint(cons, x3, 1.2,
+                                                disj1.indicator_var,
+                                                first_transformed, original)
+
+        # transformed x >= 1.3
+        cons = disj1.component(
+            "d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1].d1.d4.c")
+        first_transformed = m.d1._pyomo_gdp_chull_relaxation.\
+                            relaxedDisjuncts[1].component("d1.d4.c")
+        original = m.d1.d4.c
+        self.check_inner_transformed_constraint(cons, x4, 1.3,
+                                                disj1.indicator_var_4,
+                                                first_transformed, original)
+
+        # outer disjunction transformed constraint
+        cons = disj1.component("d1.c")
+        self.check_outer_transformed_constraint(cons, disj1.x, 1,
+                                                m.d1.indicator_var)
+
+        # and last, check the second transformed outer disjunct
+        disj2 = disjBlocks[1]
+        self.assertTrue(disj2.active)
+        self.assertIs(disj2, m.d2.transformation_block())
+        self.assertIs(m.d2, chull.get_src_disjunct(disj2))
+
+        # disaggregated var
+        x2 = disj2.x
+        self.assertIsInstance(x2, Var)
+        self.assertEqual(x2.lb, 0)
+        self.assertEqual(x2.ub, 2)
+        self.assertIs(chull.get_disaggregated_var(m.x, m.d2), x2)
+        self.assertIs(chull.get_src_var(x2), m.x)
+
+        # bounds constraint
+        x_bounds = disj2.x_bounds
+        self.check_bounds_constraint_ub(x_bounds, 2, x2, m.d2.indicator_var)
+
+        # transformed constraint x >= 1.1
+        cons = disj2.component("d2.c")
+        self.check_outer_transformed_constraint(cons, x2, 1.1,
+                                                m.d2.indicator_var)
+
+        # check inner xor mapping: Note that this maps to a now deactivated
+        # (transformed again) constraint, but that it is possible to go full
+        # circle, like so:
+        orig_inner_xor = m.d1._pyomo_gdp_chull_relaxation.component(
+            "d1.disj2_xor")
+        self.assertIs(m.d1.disj2.algebraic_constraint(), orig_inner_xor)
+        self.assertFalse(orig_inner_xor.active)
+        trans_list = chull.get_transformed_constraints(orig_inner_xor)
+        self.assertEqual(len(trans_list), 1)
+        self.assertIs(trans_list[0], xor['eq'])
+        self.assertIs(chull.get_src_constraint(xor), orig_inner_xor)
+        self.assertIs(chull.get_src_disjunction(orig_inner_xor), m.d1.disj2)
+
+        # the same goes for the disaggregation constraint
+        orig_dis_container = m.d1._pyomo_gdp_chull_relaxation.\
+                             disaggregationConstraints
+        orig_dis = orig_dis_container[0,None]
+        self.assertIs(chull.get_disaggregation_constraint(m.x, m.d1.disj2),
+                      orig_dis)
+        self.assertFalse(orig_dis.active)
+        transformedList = chull.get_transformed_constraints(orig_dis)
+        self.assertEqual(len(transformedList), 1)
+        self.assertIs(transformedList[0], dis_cons_inner_disjunction[(0, None,
+                                                                      'eq')])
+
+        self.assertIs(chull.get_src_constraint(
+            dis_cons_inner_disjunction[(0, None, 'eq')]), orig_dis)
+        self.assertIs(chull.get_src_constraint( dis_cons_inner_disjunction),
+                      orig_dis_container)
+        # though we don't have a map back from the disaggregation constraint to
+        # the variable because I'm not sure why you would... The variable is in
+        # the constraint.
+
+        # check the inner disjunct mappings
+        self.assertIs(m.d1.d3.transformation_block(),
+                      m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[0])
+        self.assertIs(chull.get_src_disjunct(
+            m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[0]), m.d1.d3)
+        self.assertIs(m.d1.d4.transformation_block(),
+                      m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1])
+        self.assertIs(chull.get_src_disjunct(
+            m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1]), m.d1.d4)
 
 class TestSpecialCases(unittest.TestCase):
-    def test_warn_for_untransformed(self):
-        m = models.makeDisjunctionsOnIndexedBlock()
-        def innerdisj_rule(d, flag):
-            m = d.model()
-            if flag:
-                d.c = Constraint(expr=m.a[1] <= 2)
-            else:
-                d.c = Constraint(expr=m.a[1] >= 65)
-        m.disjunct1[1,1].innerdisjunct = Disjunct([0,1], rule=innerdisj_rule)
-        m.disjunct1[1,1].innerdisjunction = Disjunction([0],
-            rule=lambda a,i: [m.disjunct1[1,1].innerdisjunct[0],
-                              m.disjunct1[1,1].innerdisjunct[1]])
-        # This test relies on the order that the component objects of
-        # the disjunct get considered. In this case, the disjunct
-        # causes the error, but in another world, it could be the
-        # disjunction, which is also active.
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Found active disjunct disjunct1\[1,1\].innerdisjunct\[0\] "
-            "in disjunct disjunct1\[1,1\]!.*",
-            TransformationFactory('gdp.chull').create_using,
-            m,
-            targets=[m.disjunction1[1]])
-        #
-        # we will make that disjunction come first now...
-        #
-        tmp = m.disjunct1[1,1].innerdisjunct
-        m.disjunct1[1,1].del_component(tmp)
-        m.disjunct1[1,1].add_component('innerdisjunct', tmp)
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Found untransformed disjunction disjunct1\[1,1\]."
-            "innerdisjunction\[0\] in disjunct disjunct1\[1,1\]!.*",
-            TransformationFactory('gdp.chull').create_using,
-            m,
-            targets=[m.disjunction1[1]])
-        # Deactivating the disjunction will allow us to get past it back
-        # to the Disjunct (after we realize there are no active
-        # DisjunctionData within the active Disjunction)
-        m.disjunct1[1,1].innerdisjunction[0].deactivate()
-        self.assertRaisesRegexp(
-            GDP_Error,
-            "Found active disjunct disjunct1\[1,1\].innerdisjunct\[0\] "
-            "in disjunct disjunct1\[1,1\]!.*",
-            TransformationFactory('gdp.chull').create_using,
-            m,
-            targets=[m.disjunction1[1]])
-
     def test_local_vars(self):
+        """ checks that if nothing is marked as local, we assume it is all
+        global. We disaggregate everything to be safe."""
         m = ConcreteModel()
         m.x = Var(bounds=(5,100))
         m.y = Var(bounds=(0,100))
@@ -743,16 +1472,22 @@ class TestSpecialCases(unittest.TestCase):
 
         i = TransformationFactory('gdp.chull').create_using(m)
         rd = i._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1]
-        self.assertEqual(sorted(rd.component_map(Var)), ['x','y'])
+        # z should be disaggregated becuase we can't be sure it's not somewhere
+        # else on the model
+        self.assertEqual(sorted(rd.component_map(Var)), ['x','y','z'])
         self.assertEqual(len(rd.component_map(Constraint)), 4)
-        self.assertEqual(i.d2.z.bounds, (0,9))
+        # bounds haven't changed on original
+        self.assertEqual(i.d2.z.bounds, (7,9))
+        # check disaggregated variable
+        self.assertIsInstance(rd.component("z"), Var)
+        self.assertEqual(rd.z.bounds, (0,9))
         self.assertEqual(len(rd.z_bounds), 2)
         self.assertEqual(rd.z_bounds['lb'].lower, None)
         self.assertEqual(rd.z_bounds['lb'].upper, 0)
         self.assertEqual(rd.z_bounds['ub'].lower, None)
         self.assertEqual(rd.z_bounds['ub'].upper, 0)
         i.d2.indicator_var = 1
-        i.d2.z = 2
+        rd.z = 2
         self.assertEqual(rd.z_bounds['lb'].body(), 5)
         self.assertEqual(rd.z_bounds['ub'].body(), -7)
 
@@ -760,29 +1495,408 @@ class TestSpecialCases(unittest.TestCase):
         m.d2.z.setub(-7)
         i = TransformationFactory('gdp.chull').create_using(m)
         rd = i._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1]
-        self.assertEqual(sorted(rd.component_map(Var)), ['x','y'])
+        self.assertEqual(sorted(rd.component_map(Var)), ['x','y','z'])
         self.assertEqual(len(rd.component_map(Constraint)), 4)
-        self.assertEqual(i.d2.z.bounds, (-9,0))
+        # original bounds unchanged
+        self.assertEqual(i.d2.z.bounds, (-9,-7))
+        # check disaggregated variable
+        self.assertIsInstance(rd.component("z"), Var)
+        self.assertEqual(rd.z.bounds, (-9,0))
         self.assertEqual(len(rd.z_bounds), 2)
         self.assertEqual(rd.z_bounds['lb'].lower, None)
         self.assertEqual(rd.z_bounds['lb'].upper, 0)
         self.assertEqual(rd.z_bounds['ub'].lower, None)
         self.assertEqual(rd.z_bounds['ub'].upper, 0)
         i.d2.indicator_var = 1
-        i.d2.z = 2
+        rd.z = 2
         self.assertEqual(rd.z_bounds['lb'].body(), -11)
         self.assertEqual(rd.z_bounds['ub'].body(), 9)
 
+    def test_local_var_suffix(self):
+        chull = TransformationFactory('gdp.chull')
 
-class RangeSetOnDisjunct(unittest.TestCase):
+        model = ConcreteModel()
+        model.x = Var(bounds=(5,100))
+        model.y = Var(bounds=(0,100))
+        model.d1 = Disjunct()
+        model.d1.c = Constraint(expr=model.y >= model.x)
+        model.d2 = Disjunct()
+        model.d2.z = Var(bounds=(-9, -7))
+        model.d2.c = Constraint(expr=model.y >= model.d2.z)
+        model.disj = Disjunction(expr=[model.d1, model.d2])
+
+        # we don't declare z local
+        m = chull.create_using(model)
+        self.assertEqual(m.d2.z.lb, -9)
+        self.assertEqual(m.d2.z.ub, -7)
+        self.assertIsInstance(m.d2.transformation_block().component("z"), Var)
+        self.assertIs(m.d2.transformation_block().z,
+                      chull.get_disaggregated_var(m.d2.z, m.d2))
+
+        # we do declare z local
+        model.d2.LocalVars = Suffix(direction=Suffix.LOCAL)
+        model.d2.LocalVars[model.d2] = [model.d2.z]
+
+        m = chull.create_using(model)
+
+        # make sure we did not disaggregate z
+        self.assertEqual(m.d2.z.lb, -9)
+        self.assertEqual(m.d2.z.ub, 0)
+        # it is its own disaggregated variable
+        self.assertIs(chull.get_disaggregated_var(m.d2.z, m.d2), m.d2.z)
+        # it does not exist on the transformation block
+        self.assertIsNone(m.d2.transformation_block().component("z"))
+
+class UntransformableObjectsOnDisjunct(unittest.TestCase):
     def test_RangeSet(self):
-        m = models.makeDisjunctWithRangeSet()
-        TransformationFactory('gdp.chull').apply_to(m)
-        self.assertIsInstance(m.d1.s, RangeSet)
+        ct.check_RangeSet(self, 'chull')
 
+    def test_Expression(self):
+        ct.check_Expression(self, 'chull')
 
-# TODO (based on coverage):
+class TransformABlock(unittest.TestCase, CommonTests):
+    def test_transformation_simple_block(self):
+        ct.check_transformation_simple_block(self, 'chull')
 
-# test targets of all flavors
-# test container deactivation
-# test something with multiple indices
+    def test_transform_block_data(self):
+        ct.check_transform_block_data(self, 'chull')
+
+    def test_simple_block_target(self):
+        ct.check_simple_block_target(self, 'chull')
+
+    def test_block_data_target(self):
+        ct.check_block_data_target(self, 'chull')
+
+    def test_indexed_block_target(self):
+        ct.check_indexed_block_target(self, 'chull')
+
+    def test_block_targets_inactive(self):
+        ct.check_block_targets_inactive(self, 'chull')
+
+    def test_block_only_targets_transformed(self):
+        ct.check_block_only_targets_transformed(self, 'chull')
+
+    def test_create_using(self):
+        m = models.makeTwoTermDisjOnBlock()
+        ct.diff_apply_to_and_create_using(self, m, 'gdp.chull')
+
+class DisjOnBlock(unittest.TestCase, CommonTests):
+    # when the disjunction is on a block, we want all of the stuff created by
+    # the transformation to go on that block also so that solving the block
+    # maintains its meaning
+
+    def test_xor_constraint_added(self):
+        ct.check_xor_constraint_added(self, 'chull')
+
+    def test_trans_block_created(self):
+        ct.check_trans_block_created(self, 'chull')
+
+class TestErrors(unittest.TestCase):
+    def setUp(self):
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def test_ask_for_transformed_constraint_from_untransformed_disjunct(self):
+        ct.check_ask_for_transformed_constraint_from_untransformed_disjunct(
+            self, 'chull')
+
+    def test_silly_target(self):
+        ct.check_silly_target(self, 'chull')
+
+    def test_retrieving_nondisjunctive_components(self):
+        ct.check_retrieving_nondisjunctive_components(self, 'chull')
+
+    def test_transform_empty_disjunction(self):
+        ct.check_transform_empty_disjunction(self, 'chull')
+
+    def test_deactivated_disjunct_nonzero_indicator_var(self):
+        ct.check_deactivated_disjunct_nonzero_indicator_var(self,
+                                                            'chull')
+
+    def test_deactivated_disjunct_unfixed_indicator_var(self):
+        ct.check_deactivated_disjunct_unfixed_indicator_var(self, 'chull')
+
+    def test_infeasible_xor_because_all_disjuncts_deactivated(self):
+        m = ct.setup_infeasible_xor_because_all_disjuncts_deactivated(self,
+                                                                      'chull')
+        chull = TransformationFactory('gdp.chull')
+        transBlock = m.component("_pyomo_gdp_chull_relaxation")
+        self.assertIsInstance(transBlock, Block)
+        self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
+        self.assertIsInstance(transBlock.component("disjunction_xor"),
+                              Constraint)
+        disjunct1 = transBlock.relaxedDisjuncts[0]
+        # we disaggregated the (deactivated) indicator variables
+        d3_ind = m.disjunction_disjuncts[0].nestedDisjunction_disjuncts[0].\
+                 indicator_var
+        d4_ind = m.disjunction_disjuncts[0].nestedDisjunction_disjuncts[1].\
+                 indicator_var
+        self.assertIs(chull.get_disaggregated_var(d3_ind,
+                                                  m.disjunction_disjuncts[0]),
+                      disjunct1.indicator_var)
+        self.assertIs(chull.get_src_var(disjunct1.indicator_var), d3_ind)
+        self.assertIs(chull.get_disaggregated_var(d4_ind,
+                                                  m.disjunction_disjuncts[0]),
+                      disjunct1.indicator_var_4)
+        self.assertIs(chull.get_src_var(disjunct1.indicator_var_4), d4_ind)
+
+        relaxed_xor = disjunct1.component(
+            "disjunction_disjuncts[0]._pyomo_gdp_chull_relaxation."
+            "disjunction_disjuncts[0].nestedDisjunction_xor")
+        self.assertIsInstance(relaxed_xor, Constraint)
+        self.assertEqual(len(relaxed_xor), 1)
+        repn = generate_standard_repn(relaxed_xor['eq'].body)
+        self.assertEqual(relaxed_xor['eq'].lower, 0)
+        self.assertEqual(relaxed_xor['eq'].upper, 0)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 3)
+        # constraint says that the disaggregated indicator variables of the
+        # nested disjuncts sum to the indicator variable of the outer disjunct.
+        ct.check_linear_coef( self, repn,
+                              m.disjunction.disjuncts[0].indicator_var, -1)
+        ct.check_linear_coef(self, repn, disjunct1.indicator_var, 1)
+        ct.check_linear_coef(self, repn, disjunct1.indicator_var_4, 1)
+        self.assertEqual(repn.constant, 0)
+
+        # but the disaggregation constraints are going to force them to 0 (which
+        # will in turn force the outer disjunct indicator variable to 0, which
+        # is what we want)
+        d3_ind_dis = transBlock.disaggregationConstraints[1, None]
+        self.assertEqual(d3_ind_dis.lower, 0)
+        self.assertEqual(d3_ind_dis.upper, 0)
+        repn = generate_standard_repn(d3_ind_dis.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertEqual(repn.constant, 0)
+        ct.check_linear_coef(self, repn, disjunct1.indicator_var, -1)
+        ct.check_linear_coef(self, repn,
+                             transBlock.relaxedDisjuncts[1].indicator_var, -1)
+        d4_ind_dis = transBlock.disaggregationConstraints[2, None]
+        self.assertEqual(d4_ind_dis.lower, 0)
+        self.assertEqual(d4_ind_dis.upper, 0)
+        repn = generate_standard_repn(d4_ind_dis.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertEqual(repn.constant, 0)
+        ct.check_linear_coef(self, repn, disjunct1.indicator_var_4, -1)
+        ct.check_linear_coef(self, repn,
+                             transBlock.relaxedDisjuncts[1].indicator_var_9, -1)
+
+    def test_mapping_method_errors(self):
+        m = models.makeTwoTermDisj_Nonlinear()
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
+            self.assertRaisesRegexp(
+                AttributeError,
+                "'ConcreteModel' object has no attribute '_bigMConstraintMap'",
+                chull.get_var_bounds_constraint,
+                m.w)
+        self.assertRegexpMatches(
+            log.getvalue(),
+            ".*Either 'w' is not a disaggregated variable, "
+            "or the disjunction that disaggregates it has "
+            "not been properly transformed.")
+
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
+            self.assertRaisesRegexp(
+                KeyError,
+                ".*_pyomo_gdp_chull_relaxation.relaxedDisjuncts\[1\].w",
+                chull.get_disaggregation_constraint,
+                m.d[1].transformation_block().w,
+                m.disjunction)
+        self.assertRegexpMatches(log.getvalue(), ".*It doesn't appear that "
+                                 "'_pyomo_gdp_chull_relaxation."
+                                 "relaxedDisjuncts\[1\].w' is a "
+                                 "variable that was disaggregated by "
+                                 "Disjunction 'disjunction'")
+
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
+            self.assertRaisesRegexp(
+                AttributeError,
+                "'ConcreteModel' object has no attribute '_disaggregatedVarMap'",
+                chull.get_src_var,
+                m.w)
+        self.assertRegexpMatches(
+            log.getvalue(),
+            ".*'w' does not appear to be a disaggregated variable")
+
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
+            self.assertRaisesRegexp(
+                KeyError,
+                ".*_pyomo_gdp_chull_relaxation.relaxedDisjuncts\[1\].w",
+                chull.get_disaggregated_var,
+                m.d[1].transformation_block().w,
+                m.d[1])
+        self.assertRegexpMatches(log.getvalue(),
+                                 ".*It does not appear "
+                                 "'_pyomo_gdp_chull_relaxation."
+                                 "relaxedDisjuncts\[1\].w' is a "
+                                 "variable which appears in disjunct 'd\[1\]'")
+
+        m.random_disjunction = Disjunction(expr=[m.w == 2, m.w >= 7])
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Disjunction 'random_disjunction' has not been properly "
+            "transformed: None of its disjuncts are transformed.",
+            chull.get_disaggregation_constraint,
+            m.w,
+            m.random_disjunction)
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Disjunct 'random_disjunction_disjuncts\[0\]' has not been "
+            "transformed",
+            chull.get_disaggregated_var,
+            m.w,
+            m.random_disjunction.disjuncts[0])
+
+class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
+    def test_activeInnerDisjunction_err(self):
+        ct.check_activeInnerDisjunction_err(self, 'chull')
+
+class BlocksOnDisjuncts(unittest.TestCase):
+    def setUp(self):
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def makeModel(self):
+        # I'm going to multi-task and also check some types of constraints
+        # whose expressions need to be tested
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 5))
+        m.y = Var(bounds=(0, 9))
+        m.disj1 = Disjunct()
+        m.disj1.add_component("b.any_index", Constraint(expr=m.x >= 1.5))
+        m.disj1.b = Block()
+        m.disj1.b.any_index = Constraint(Any)
+        m.disj1.b.any_index['local'] = m.x <= 2
+        m.disj1.b.LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.disj1.b.LocalVars[m.disj1] = [m.x]
+        m.disj1.b.any_index['nonlin-ub'] = m.y**2 <= 4
+        m.disj2 = Disjunct()
+        m.disj2.non_lin_lb = Constraint(expr=log(1 + m.y) >= 1)
+        m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+        return m
+
+    def test_transformed_constraint_name_conflict(self):
+        m = self.makeModel()
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        transBlock = m.disj1.transformation_block()
+        self.assertIsInstance(transBlock.component("disj1.b.any_index"),
+                              Constraint)
+        self.assertIsInstance(transBlock.component("disj1.b.any_index_4"),
+                              Constraint)
+        xformed = chull.get_transformed_constraints(
+            m.disj1.component("b.any_index"))
+        self.assertEqual(len(xformed), 1)
+        self.assertIs(xformed[0],
+                      transBlock.component("disj1.b.any_index")['lb'])
+
+        xformed = chull.get_transformed_constraints(m.disj1.b.any_index['local'])
+        self.assertEqual(len(xformed), 1)
+        self.assertIs(xformed[0],
+                      transBlock.component("disj1.b.any_index_4")[
+                          ('local','ub')])
+        xformed = chull.get_transformed_constraints(
+            m.disj1.b.any_index['nonlin-ub'])
+        self.assertEqual(len(xformed), 1)
+        self.assertIs(xformed[0],
+                      transBlock.component("disj1.b.any_index_4")[
+                          ('nonlin-ub','ub')])
+
+    def test_local_var_handled_correctly(self):
+        m = self.makeModel()
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        # test the local variable was handled correctly.
+        self.assertIs(chull.get_disaggregated_var(m.x, m.disj1), m.x)
+        self.assertEqual(m.x.lb, 0)
+        self.assertEqual(m.x.ub, 5)
+        self.assertIsNone(m.disj1.transformation_block().component("x"))
+        self.assertIsInstance(m.disj1.transformation_block().component("y"),
+                              Var)
+
+    # this doesn't require the block, I'm just coopting this test to make sure
+    # of some nonlinear expressions.
+    def test_transformed_constraints(self):
+        m = self.makeModel()
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+
+        # test the transformed nonlinear constraints
+        nonlin_ub_list = chull.get_transformed_constraints(
+            m.disj1.b.any_index['nonlin-ub'])
+        self.assertEqual(len(nonlin_ub_list), 1)
+        cons = nonlin_ub_list[0]
+        self.assertEqual(cons.index(), ('nonlin-ub', 'ub'))
+        self.assertIs(cons.ctype, Constraint)
+        self.assertIsNone(cons.lower)
+        self.assertEqual(value(cons.upper), 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertEqual(str(repn.nonlinear_expr),
+                         "(0.9999*disj1.indicator_var + 0.0001)*"
+                         "(_pyomo_gdp_chull_relaxation.relaxedDisjuncts[0].y/"
+                         "(0.9999*disj1.indicator_var + 0.0001))**2")
+        self.assertEqual(len(repn.nonlinear_vars), 2)
+        self.assertIs(repn.nonlinear_vars[0], m.disj1.indicator_var)
+        self.assertIs(repn.nonlinear_vars[1],
+                      chull.get_disaggregated_var(m.y, m.disj1))
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], m.disj1.indicator_var)
+        self.assertEqual(repn.linear_coefs[0], -4)
+
+        nonlin_lb_list = chull.get_transformed_constraints(m.disj2.non_lin_lb)
+        self.assertEqual(len(nonlin_lb_list), 1)
+        cons = nonlin_lb_list[0]
+        self.assertEqual(cons.index(), 'lb')
+        self.assertIs(cons.ctype, Constraint)
+        self.assertIsNone(cons.lower)
+        self.assertEqual(value(cons.upper), 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertEqual(str(repn.nonlinear_expr),
+                         "- ((0.9999*disj2.indicator_var + 0.0001)*"
+                         "log(1 + "
+                         "_pyomo_gdp_chull_relaxation.relaxedDisjuncts[1].y/"
+                         "(0.9999*disj2.indicator_var + 0.0001)))")
+        self.assertEqual(len(repn.nonlinear_vars), 2)
+        self.assertIs(repn.nonlinear_vars[0], m.disj2.indicator_var)
+        self.assertIs(repn.nonlinear_vars[1],
+                      chull.get_disaggregated_var(m.y, m.disj2))
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], m.disj2.indicator_var)
+        self.assertEqual(repn.linear_coefs[0], 1)
+
+class DisaggregatingFixedVars(unittest.TestCase):
+    def test_disaggregate_fixed_variables(self):
+        m = models.makeTwoTermDisj()
+        m.x.fix(6)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+        # check that we did indeed disaggregate x
+        transBlock = m.d[1]._transformation_block()
+        self.assertIsInstance(transBlock.component("x"), Var)
+        self.assertIs(chull.get_disaggregated_var(m.x, m.d[1]), transBlock.x)
+        self.assertIs(chull.get_src_var(transBlock.x), m.x)
+
+    def test_do_not_disaggregate_fixed_variables(self):
+        m = models.makeTwoTermDisj()
+        m.x.fix(6)
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m, assume_fixed_vars_permanent=True)
+        # check that we didn't disaggregate x
+        transBlock = m.d[1]._transformation_block()
+        self.assertIsNone(transBlock.component("x"))
