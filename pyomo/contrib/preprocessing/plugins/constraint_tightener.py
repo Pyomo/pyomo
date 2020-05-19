@@ -9,8 +9,9 @@ from pyomo.repn.standard_repn import generate_standard_repn
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
 
-@TransformationFactory.register('core.tighten_constraints_from_vars',
-          doc="Tightens upper and lower bound on linear constraints.")
+@TransformationFactory.register(
+    'core.tighten_constraints_from_vars',
+    doc="Tightens upper and lower bound on linear constraints.")
 class TightenContraintFromVars(IsomorphicTransformation):
     """Tightens upper and lower bound on constraints based on variable bounds.
 
@@ -20,15 +21,9 @@ class TightenContraintFromVars(IsomorphicTransformation):
     For now, this only operates on linear constraints.
 
     """
-    class _MissingArg(object):
-        pass
 
-    def _apply_to(self, model, rounding_ndigits=_MissingArg, **kwds):
-        """Apply the transformation.
-
-        Kwargs:
-            rounding_ndigits: if provided, passed to `builtins.round(..., rounding_ndigits)` for each of the new bounds.
-        """
+    def _apply_to(self, model):
+        """Apply the transformation."""
         for constr in model.component_data_objects(
                 ctype=Constraint, active=True, descend_into=True):
             repn = generate_standard_repn(constr.body)
@@ -66,10 +61,6 @@ class TightenContraintFromVars(IsomorphicTransformation):
             # if inferred bound is tighter, replace bound
             new_ub = min(value(constr.upper), UB) if constr.has_ub() else UB
             new_lb = max(value(constr.lower), LB) if constr.has_lb() else LB
-
-            if rounding_ndigits is not self._MissingArg:
-                new_ub = round(new_ub, rounding_ndigits)
-                new_lb = round(new_lb, rounding_ndigits)
 
             constr.set_value((new_lb, constr.body, new_ub))
 
