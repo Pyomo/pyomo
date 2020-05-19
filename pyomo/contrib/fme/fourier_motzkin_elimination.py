@@ -10,7 +10,7 @@
 
 from pyomo.core import (Var, Block, Constraint, Param, Set, Suffix, Expression,
                         Objective, SortComponents, value, ConstraintList)
-from pyomo.core.base import (TransformationFactory, _VarData)
+from pyomo.core.base import TransformationFactory, _VarData
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import _ConstraintData
