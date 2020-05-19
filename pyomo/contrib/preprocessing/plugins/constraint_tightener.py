@@ -2,6 +2,7 @@ import logging
 
 from six.moves import zip
 
+from pyomo.common import deprecated
 from pyomo.core import Constraint, value, TransformationFactory
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
@@ -21,6 +22,14 @@ class TightenContraintFromVars(IsomorphicTransformation):
     For now, this only operates on linear constraints.
 
     """
+
+    @deprecated(
+        "Use of the constraint tightener transformation is deprecated. "
+        "Its functionality may be partially replicated using "
+        "`pyomo.contrib.fbbt.compute_bounds_on_expr(constraint.body)`.",
+        version='TBD', remove_in='TBD')
+    def __init__(self):
+        super(TightenContraintFromVars, self).__init__()
 
     def _apply_to(self, model):
         """Apply the transformation."""
