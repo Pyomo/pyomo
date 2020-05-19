@@ -565,7 +565,7 @@ class XpressDirect(DirectSolver):
             except (self._XpressException, AttributeError):
                 pass
         else:
-            raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
+            raise RuntimeError('Unrecognized xpress objective sense: {0}'.format(xprob_attrs.objsense))
 
         try:
             soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
@@ -604,8 +604,8 @@ class XpressDirect(DirectSolver):
 
                 if extract_reduced_costs:
                     vals = xprob.getRCost(xpress_vars)
-                    for xpress_var, val, name in zip(xpress_vars, vals):
-                        pyomo_var = self._solver_var_to_pyomo_var_map[gurobi_var]
+                    for xpress_var, val in zip(xpress_vars, vals):
+                        pyomo_var = self._solver_var_to_pyomo_var_map[xpress_vars]
                         if self._referenced_variables[pyomo_var] > 0:
                             soln_variables[xpress_var.name]["Rc"] = val
 
