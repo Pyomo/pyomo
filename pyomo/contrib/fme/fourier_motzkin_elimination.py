@@ -38,13 +38,14 @@ def _check_var_bounds_filter(constraint):
             if v.lb is None:
                 return True # we don't have var bounds with which to imply the
                             # constraint...
-            min_lhs += value(coef)*value(v.lb)
+            min_lhs += coef*v.lb
         elif coef < 0:
             if v.ub is None:
                 return True # we don't have var bounds with which to imply the
                             # constraint...
-            min_lhs += value(coef)*value(v.ub)
-    if min_lhs >= value(constraint['lower']):
+            min_lhs += coef*v.ub
+    # we do need value here since we didn't control v.lb and v.ub above.
+    if value(min_lhs) >= constraint['lower']:
         return False # constraint implied by var bounds
     return True
 
@@ -205,7 +206,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 projected_constraints.add(lhs >= lower)
 
     def _process_constraint(self, constraint):
-        """Transforms a pyomo Constraint objective into a list of dictionaries
+        """Transforms a pyomo Constraint object into a list of dictionaries
         representing only >= constraints. That is, if the constraint has both an
         ub and a lb, it is transformed into two constraints. Otherwise it is
         flipped if it is <=. Each dictionary contains the keys 'lower',
@@ -215,10 +216,12 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         """
         body = constraint.body
         std_repn = generate_standard_repn(body)
-        cons_dict = {'lower': constraint.lower,
+        # make sure that we store the lower bound's value so that we need not
+        # worry again during the transformation
+        cons_dict = {'lower': value(constraint.lower),
                      'body': std_repn
                      }
-        upper = constraint.upper
+        upper = value(constraint.upper)
         constraints_to_add = [cons_dict]
         if upper is not None:
             # if it has both bounds
@@ -243,14 +246,18 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         and moves the constant to the RHS
         """
         body = cons_dict['body']
-        constant = body.constant
+        constant = value(body.constant)
         cons_dict['lower'] -= constant
         body.constant = 0
 
         # store a map of vars to coefficients. We can't use this in place of
         # standard repn because determinism, but this will save a lot of linear
-        # time searches later.
-        cons_dict['map'] = ComponentMap(zip(body.linear_vars, body.linear_coefs))
+        # time searches later. Note also that we will take the value of the
+        # coeficient here so that we never have to worry about it again during
+        # the transformation.
+        cons_dict['map'] = ComponentMap(zip(body.linear_vars, 
+                                            [value(coef) for coef in
+                                             body.linear_coefs]))
 
     def _fourier_motzkin_elimination(self, constraints, vars_to_eliminate):
         """Performs FME on the constraint list in the argument 
