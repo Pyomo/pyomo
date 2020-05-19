@@ -16,121 +16,257 @@ from pyomo.contrib.community_detection.detection import *
 from pyomo.core import ConcreteModel
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
-from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
-from pyomo.solvers.tests.models.MILP_simple import MILP_simple
+from pyomo.solvers.tests.models.LP_inactive_index import LP_inactive_index
 from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
 from pyomo.core.expr.current import identify_variables
 
 
 class TestDecomposition(unittest.TestCase):
-    """
-        def test_communities_1(self):
-            model = LP_unbounded()._generate_model
-
-            community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                                    weighted_graph=False, random_seed=5)
-            community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                                  weighted_graph=True, random_seed=5)
-            community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                                 weighted_graph=False, random_seed=5)
-            community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                               weighted_graph=True, random_seed=5)
-            community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                                    weighted_graph=False, random_seed=5)
-            community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                                  weighted_graph=True, random_seed=5)
-            community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                                 weighted_graph=False, random_seed=5)
-            community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                               weighted_graph=True, random_seed=5)
-
-            results = (community_map_v_unweighted_without,
-                       community_map_v_weighted_without,
-                       community_map_v_unweighted_with,
-                       community_map_v_weighted_with,
-                       community_map_c_unweighted_without,
-                       community_map_c_weighted_without,
-                       community_map_c_unweighted_with,
-                       community_map_c_weighted_with)
-
-            correct_community_maps =
-    """
-
     def test_communities_1(self):
-        # First test case
-        models_location = 'D:\College\Sophomore Year\PSE Research\Current Work\Relevant\Rewritten Models'
-        file = 'ball_mk2_10.py'
-        exfile = import_file(models_location + '\\' + file)
-        model = exfile.create_model()
+        m_class = LP_unbounded()
+        m_class._generate_model()
+        model = m_class.model
 
-        results_with_obj = (detect_communities(model, 'v'), detect_communities(model, 'c'))
-        correct_dicts_with_obj = ({0: ['i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'i8', 'i9', 'i10', 'i11']},
-                                  {0: ['c2', 'obj']})
-        self.assertEqual(correct_dicts_with_obj, results_with_obj)
+        community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
 
-        results_without_obj = (detect_communities(model, 'v', False), detect_communities(model, 'c', False))
-        correct_dicts_without_obj = ({0: ['i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'i8', 'i9', 'i10', 'i11']}, {0: ['c2']})
-        self.assertEqual(correct_dicts_without_obj, results_without_obj)
+        test_results = (community_map_v_unweighted_without,
+                   community_map_v_weighted_without,
+                   community_map_v_unweighted_with,
+                   community_map_v_weighted_with,
+                   community_map_c_unweighted_without,
+                   community_map_c_weighted_without,
+                   community_map_c_unweighted_with,
+                   community_map_c_weighted_with)
+
+        correct_community_maps = ({0: ['x'], 1: ['y']}, {0: ['x'], 1: ['y']}, {0: ['x', 'y']}, {0: ['x', 'y']},
+                                  {}, {}, {0: ['o']}, {0: ['o']})
+
+        self.assertEqual(correct_community_maps, test_results)
 
     def test_communities_2(self):
-        # Fourth test case
-        models_location = 'D:\College\Sophomore Year\PSE Research\Current Work\Relevant\Rewritten Models'
-        file = 'gbd.py'
-        exfile = import_file(models_location + '\\' + file)
-        model = exfile.create_model()
+        m_class = QCP_simple()
+        m_class._generate_model()
+        model = m_class.model
 
-        results_with_obj = (detect_communities(model, 'v'), detect_communities(model, 'c'))
-        correct_dicts_with_obj = ({0: ['x2', 'b3', 'b4', 'b5']}, {0: ['c2', 'c3', 'c4', 'c5', 'obj']})
-        self.assertEqual(correct_dicts_with_obj, results_with_obj)
+        community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
 
-        results_without_obj = (detect_communities(model, 'v', False), detect_communities(model, 'c', False))
-        correct_dicts_without_obj = ({0: ['x2', 'b3', 'b4', 'b5']}, {0: ['c2', 'c3', 'c4', 'c5']})
-        self.assertEqual(correct_dicts_without_obj, results_without_obj)
+        test_results = (community_map_v_unweighted_without,
+                   community_map_v_weighted_without,
+                   community_map_v_unweighted_with,
+                   community_map_v_weighted_with,
+                   community_map_c_unweighted_without,
+                   community_map_c_weighted_without,
+                   community_map_c_unweighted_with,
+                   community_map_c_weighted_with)
+
+        correct_community_maps = ({0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
+                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
+                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
+                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
+                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]']},
+                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]']},
+                                  {0: ['c0', 'qc1', 'obj'], 1: ['qc0', 'c[1]', 'c[2]']},
+                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]', 'obj']})
+
+        correct_community_maps = ({0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
+                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
+                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
+                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
+                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]']},
+                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]']},
+                                  {0: ['c0', 'qc1', 'obj'], 1: ['qc0', 'c[1]', 'c[2]']},
+                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]', 'obj']})
+
+
+        self.assertEqual(correct_community_maps, test_results)
 
     def test_communities_3(self):
-        # Third test case
-        models_location = 'D:\College\Sophomore Year\PSE Research\Current Work\Relevant\Rewritten Models'
-        file = 'ball_mk3_30.py'
-        exfile = import_file(models_location + '\\' + file)
-        model = exfile.create_model()
+        m_class = LP_inactive_index()
+        m_class._generate_model()
+        model = m_class.model
 
-        results_with_obj = (detect_communities(model, 'v'), detect_communities(model, 'c'))
-        correct_dicts_with_obj = ({0: ['i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'i8', 'i9', 'i10', 'i11', 'i12', 'i13',
-                                       'i14', 'i15', 'i16', 'i17', 'i18', 'i19', 'i20', 'i21', 'i22', 'i23', 'i24',
-                                       'i25', 'i26', 'i27', 'i28', 'i29', 'i30', 'i31']}, {0: ['c2', 'obj']})
-        self.assertEqual(correct_dicts_with_obj, results_with_obj)
+        community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
 
-        results_without_obj = (detect_communities(model, 'v', False), detect_communities(model, 'c', False))
-        correct_dicts_without_obj = ({0: ['i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'i8', 'i9', 'i10', 'i11', 'i12', 'i13',
-                                          'i14', 'i15', 'i16', 'i17', 'i18', 'i19', 'i20', 'i21', 'i22', 'i23', 'i24',
-                                          'i25', 'i26', 'i27', 'i28', 'i29', 'i30', 'i31']}, {0: ['c2']})
-        self.assertEqual(correct_dicts_without_obj, results_without_obj)
+        test_results = (community_map_v_unweighted_without,
+                   community_map_v_weighted_without,
+                   community_map_v_unweighted_with,
+                   community_map_v_weighted_with,
+                   community_map_c_unweighted_without,
+                   community_map_c_weighted_without,
+                   community_map_c_unweighted_with,
+                   community_map_c_weighted_with)
+
+        correct_community_maps = ({0: ['x'], 1: ['y'], 2: ['z']}, {0: ['x'], 1: ['y'], 2: ['z']},
+                                  {0: ['x', 'y', 'z']}, {0: ['x', 'y', 'z']},
+                                  {0: ['c1[1]', 'c1[2]', 'c2[2]'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
+                                   2: ['b.c', 'B[1].c', 'B[2].c']},
+                                  {0: ['c1[1]', 'c1[2]', 'c2[2]'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
+                                   2: ['b.c', 'B[1].c', 'B[2].c']},
+                                  {0: ['c1[1]', 'c1[2]', 'c2[2]', 'obj[1]', 'OBJ'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
+                                   2: ['b.c', 'B[1].c', 'B[2].c', 'obj[2]']},
+                                  {0: ['c1[1]', 'c1[2]', 'c2[2]', 'obj[1]', 'OBJ'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
+                                   2: ['b.c', 'B[1].c', 'B[2].c', 'obj[2]']})
+
+        self.assertEqual(correct_community_maps, test_results)
 
     def test_communities_4(self):
-        # Second test case
-        model = create_model_4()
+        m_class = SOS1_simple()
+        m_class._generate_model()
+        model = m_class.model
 
-        results_with_obj = (detect_communities(model, 'v'), detect_communities(model, 'c'))
-        correct_dicts_with_obj = ({0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']}, {0: ['c1', 'c2', 'c3', 'c4', 'c5', 'obj']})
-        self.assertEqual(correct_dicts_with_obj, results_with_obj)
+        community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
 
-        results_without_obj = (detect_communities(model, 'v', False), detect_communities(model, 'c', False))
-        correct_dicts_without_obj = ({0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']}, {0: ['c1', 'c2', 'c3', 'c4', 'c5']})
-        self.assertEqual(correct_dicts_without_obj, results_without_obj)
+        test_results = (community_map_v_unweighted_without,
+                   community_map_v_weighted_without,
+                   community_map_v_unweighted_with,
+                   community_map_v_weighted_with,
+                   community_map_c_unweighted_without,
+                   community_map_c_weighted_without,
+                   community_map_c_unweighted_with,
+                   community_map_c_weighted_with)
+
+        correct_community_maps = ({0: ['x'], 1: ['y[1]', 'y[2]']}, {0: ['x'], 1: ['y[1]', 'y[2]']},
+                                  {0: ['x', 'y[1]', 'y[2]']}, {0: ['x', 'y[1]', 'y[2]']}, {0: ['c1', 'c4'], 1: ['c2']},
+                                  {0: ['c1', 'c4'], 1: ['c2']}, {0: ['c1', 'c4'], 1: ['c2', 'obj']},
+                                  {0: ['c1', 'c2', 'c4', 'obj']})
+
+        self.assertEqual(correct_community_maps, test_results)
 
     def test_communities_5(self):
-        # Fifth test case
         model = create_model_5()
-        results_with_obj = (detect_communities(model, 'v'), detect_communities(model, 'c'))
-        correct_dicts_with_obj = ({0: ['x1', 'x2'], 1: ['x3', 'x4']}, {0: ['c1', 'obj'], 1: ['c2']})
-        self.assertEqual(correct_dicts_with_obj, results_with_obj)
 
-        results_without_obj = (detect_communities(model, 'v', False), detect_communities(model, 'c', False))
-        correct_dicts_without_obj = ({0: ['x1', 'x2'], 1: ['x3', 'x4']}, {0: ['c1'], 1: ['c2']})
-        self.assertEqual(correct_dicts_without_obj, results_without_obj)
+        community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
+
+        test_results = (community_map_v_unweighted_without,
+                   community_map_v_weighted_without,
+                   community_map_v_unweighted_with,
+                   community_map_v_weighted_with,
+                   community_map_c_unweighted_without,
+                   community_map_c_weighted_without,
+                   community_map_c_unweighted_with,
+                   community_map_c_weighted_with)
+
+        correct_community_maps = ({0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']}, {0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']},
+                                  {0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']}, {0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']},
+                                  {0: ['c1', 'c2', 'c3', 'c4', 'c5']}, {0: ['c1', 'c2', 'c3', 'c4', 'c5']},
+                                  {0: ['c1', 'c2', 'c3', 'c4', 'c5', 'obj']},
+                                  {0: ['c1', 'c2', 'c3', 'c4', 'c5', 'obj']})
+
+        self.assertEqual(correct_community_maps, test_results)
+
+    def test_communities_6(self):
+        model = create_model_6()
+
+        community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                                weighted_graph=False, random_seed=5)
+        community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
+                                                              weighted_graph=True, random_seed=5)
+        community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                             weighted_graph=False, random_seed=5)
+        community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
+                                                           weighted_graph=True, random_seed=5)
+
+        test_results = (community_map_v_unweighted_without,
+                   community_map_v_weighted_without,
+                   community_map_v_unweighted_with,
+                   community_map_v_weighted_with,
+                   community_map_c_unweighted_without,
+                   community_map_c_weighted_without,
+                   community_map_c_unweighted_with,
+                   community_map_c_weighted_with)
+
+        correct_community_maps = ({0: ['x1', 'x2'], 1: ['x3', 'x4']}, {0: ['x1', 'x2'], 1: ['x3', 'x4']},
+                                  {0: ['x1', 'x2'], 1: ['x3', 'x4']}, {0: ['x1', 'x2'], 1: ['x3', 'x4']},
+                                  {0: ['c1'], 1: ['c2']}, {0: ['c1'], 1: ['c2']}, {0: ['c1', 'obj'], 1: ['c2']},
+                                  {0: ['c1', 'obj'], 1: ['c2']})
+
+        self.assertEqual(correct_community_maps, test_results)
 
 
-def create_model_4():  # MINLP written by GAMS Convert at 05/10/19 14:22:56
+def create_model_5():  # MINLP written by GAMS Convert at 05/10/19 14:22:56
     #
     #  Equation counts
     #      Total        E        G        L        N        X        C        B
@@ -165,7 +301,7 @@ def create_model_4():  # MINLP written by GAMS Convert at 05/10/19 14:22:56
     return model
 
 
-def create_model_5():
+def create_model_6():
     model = m = ConcreteModel()
     m.x1 = Var(bounds=(0, 1))
     m.x2 = Var(bounds=(0, 1))
