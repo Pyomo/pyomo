@@ -287,10 +287,10 @@ class GAMSDirect(_GAMSSolver):
             finally:
                 # Always name working directory or delete files,
                 # regardless of any errors.
-                if keepfiles and tee:
+                if keepfiles:
                     print("\nGAMS WORKING DIRECTORY: %s\n" %
                           ws.working_directory)
-                elif not keepfiles and tmpdir is not None:
+                elif tmpdir is not None:
                     # Garbage collect all references to t1.out_db
                     # So that .gdx file can be deleted
                     t1 = rec = rec_lo = rec_hi = None
@@ -298,9 +298,9 @@ class GAMSDirect(_GAMSSolver):
                 raise
         except:
             # Catch other errors and remove files first
-            if keepfiles and tee:
+            if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
-            elif not keepfiles and tmpdir is not None:
+            elif tmpdir is not None:
                 # Garbage collect all references to t1.out_db
                 # So that .gdx file can be deleted
                 t1 = rec = rec_lo = rec_hi = None
@@ -515,9 +515,9 @@ class GAMSDirect(_GAMSSolver):
 
         results.solution.insert(soln)
 
-        if keepfiles and tee:
+        if keepfiles:
             print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
-        elif not keepfiles and tmpdir is not None:
+        elif tmpdir is not None:
             # Garbage collect all references to t1.out_db
             # So that .gdx file can be deleted
             t1 = rec = rec_lo = rec_hi = None
@@ -774,7 +774,7 @@ class GAMSShell(_GAMSSolver):
         try:
             rc, txt = pyutilib.subprocess.run(command, tee=tee)
 
-            if keepfiles and tee:
+            if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
 
             if rc == 1 or rc == 127:
