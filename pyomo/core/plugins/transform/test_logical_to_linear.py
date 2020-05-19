@@ -6,7 +6,6 @@ from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_f
 from pyomo.environ import ConcreteModel, BooleanVar, LogicalStatement, TransformationFactory, RangeSet, \
     Var, Constraint, ComponentMap, value, BooleanSet
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.gdp.tests.test_bigm import check_linear_coef
 from pyomo.repn import generate_standard_repn
 
 
