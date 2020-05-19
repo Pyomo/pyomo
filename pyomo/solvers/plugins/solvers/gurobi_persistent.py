@@ -652,7 +652,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         ## set-up add var
         varname = self._symbol_map.getSymbol(var, self._labeler)
-        vartype = self._gurobi_vtype_from_var(var)
+        vtype = self._gurobi_vtype_from_var(var)
         if var.has_lb():
             lb = value(var.lb)
         else:
