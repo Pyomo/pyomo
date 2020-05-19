@@ -37,6 +37,8 @@ from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecation_warning
+
+from functools import wraps
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
 
@@ -806,19 +808,24 @@ class BigM_Transformation(Transformation):
 
         return tuple(M)
 
-    # These are all functions to retrieve transformed components from original
-    # ones and vice versa.
+    # These are all functions to retrieve transformed components from
+    # original ones and vice versa.
+
+    @wraps(get_src_disjunct)
     def get_src_disjunct(self, transBlock):
         return get_src_disjunct(transBlock)
 
+    @wraps(get_src_disjunction)
+    def get_src_disjunction(self, xor_constraint):
+        return get_src_disjunction(xor_constraint)
+
+    @wraps(get_src_constraint)
     def get_src_constraint(self, transformedConstraint):
         return get_src_constraint(transformedConstraint)
 
+    @wraps(get_transformed_constraints)
     def get_transformed_constraints(self, srcConstraint):
         return get_transformed_constraints(srcConstraint)
-
-    def get_src_disjunction(self, xor_constraint):
-        return get_src_disjunction(xor_constraint)
 
     def get_m_value_src(self, constraint):
         """Return a tuple indicating how the M value used to transform 

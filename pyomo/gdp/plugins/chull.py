@@ -31,6 +31,7 @@ from pyomo.gdp.util import (clone_without_expression_components, target_list,
                             _warn_for_active_disjunct)
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
+from functools import wraps
 from six import iteritems, iterkeys
 from weakref import ref as weakref_ref
 
@@ -876,15 +877,22 @@ class ConvexHull_Transformation(Transformation):
         # deactivate now that we have transformed
         obj.deactivate()
 
+    # These are all functions to retrieve transformed components from
+    # original ones and vice versa.
+
+    @wraps(get_src_disjunct)
     def get_src_disjunct(self, transBlock):
         return get_src_disjunct(transBlock)
 
+    @wraps(get_src_disjunction)
     def get_src_disjunction(self, xor_constraint):
         return get_src_disjunction(xor_constraint)
 
+    @wraps(get_src_constraint)
     def get_src_constraint(self, transformedConstraint):
         return get_src_constraint(transformedConstraint)
 
+    @wraps(get_transformed_constraints)
     def get_transformed_constraints(self, srcConstraint):
         return get_transformed_constraints(srcConstraint)
 
