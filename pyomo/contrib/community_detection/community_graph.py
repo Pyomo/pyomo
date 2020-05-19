@@ -13,8 +13,8 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
     Creates a graph of nodes and edges based on a Pyomo optimization model
 
     This function takes in a Pyomo optimization model, then creates a graphical representation of the model with
-     variables as nodes and constraints as edges. Whether or not the objective function is included as a constraint
-     equation can be specified, as well as whether or not to create edge and adjacency lists
+    variables as nodes and constraints as edges. Whether or not the objective function is included as a constraint
+    equation can be specified, as well as whether or not to create edge and adjacency lists
 
     Args:
         model (Block): a Pyomo model or block to be used for community detection
@@ -40,56 +40,60 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
 
     if node_type == 'v':
         # Create nodes as variables
-        for variable in model.component_data_objects(Var, descend_into=True):
-            model_graph.add_node(str(variable), variable_name=str(variable))
+        for model_variable in model.component_data_objects(Var, descend_into=True):
+            model_graph.add_node(str(model_variable), node_name=str(model_variable))
 
         # Go through all constraints:
-        for constraint in model.component_data_objects(Constraint, descend_into=True):
+        for model_constraint in model.component_data_objects(Constraint, descend_into=True):
             # Create a list of the variables that occur in the given constraint equation
-            variable_list = [str(variable) for variable in list(identify_variables(constraint.body))]
-            edges_between_variables = list(combinations(sorted(variable_list), 2))
+            variables_in_constraint_equation = [str(constraint_variable) for constraint_variable in
+                                                list(identify_variables(model_constraint.body))]
+            edges_between_nodes = list(combinations(sorted(variables_in_constraint_equation), 2))
 
             # Update the edge weight dictionary based on this equation
             if weighted_graph:
-                edge_weight_dict = _update_edge_weight_dict(edges_between_variables, edge_weight_dict)
+                edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
             else:
-                edge_set.update(set(edges_between_variables))
+                edge_set.update(set(edges_between_nodes))
 
         if with_objective:
             objective_function = list(model.component_data_objects(Objective, descend_into=True))[0]
-            variable_list = [str(variable) for variable in list(identify_variables(objective_function))]
-            edges_between_variables = list(combinations(sorted(variable_list), 2))
+            variables_in_objective_function = [str(objective_variable) for objective_variable in list(identify_variables(objective_function))]
+            edges_between_nodes = list(combinations(sorted(variables_in_objective_function), 2))
+
             if weighted_graph:
-                edge_weight_dict = _update_edge_weight_dict(edges_between_variables, edge_weight_dict)
+                edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
             else:
-                edge_set.update(set(edges_between_variables))
+                edge_set.update(set(edges_between_nodes))
 
     elif node_type == 'c': # Constraint nodes
         # Create nodes as constraints
-        for constraint in model.component_data_objects(Constraint, descend_into=True):
-            model_graph.add_node(str(constraint), variable_name=str(constraint))
+        for model_constraint in model.component_data_objects(Constraint, descend_into=True):
+            model_graph.add_node(str(model_constraint), node_name=str(model_constraint))
 
         if with_objective:
             objective_function = list(model.component_data_objects(Objective, descend_into=True))[0]
-            model_graph.add_node(str(objective_function), variable_name=str(objective_function))
+            model_graph.add_node(str(objective_function), node_name=str(objective_function))
 
         # Go through all variables
-        for variable in model.component_data_objects(Var, descend_into=True):
+        for model_variable in model.component_data_objects(Var, descend_into=True):
             # Create a list of the constraints that occur with the given variable
-            constraint_list = [str(constraint) for constraint in
-                               model.component_data_objects(Constraint, descend_into=True) if
-                               str(variable) in [str(var) for var in identify_variables(constraint.body)]]
+            constraints_with_given_variable = [str(model_constraint) for model_constraint in
+                                               model.component_data_objects(Constraint, descend_into=True) if
+                                               str(model_variable) in [str(constraint_variable) for constraint_variable
+                                                                       in identify_variables(model_constraint.body)]]
 
-            if with_objective and str(variable) in [str(var) for var in list(identify_variables(objective_function))]:
-                constraint_list.append(str(objective_function))
+            if with_objective and str(model_variable) in [str(objective_variable) for objective_variable in
+                                                          list(identify_variables(objective_function))]:
+                constraints_with_given_variable.append(str(objective_function))
 
-            edges_between_constraints = list(combinations(sorted(constraint_list), 2))
+            edges_between_nodes = list(combinations(sorted(constraints_with_given_variable), 2))
 
             # Update the edge weight dictionary based on this equation
             if weighted_graph:
-                edge_weight_dict = _update_edge_weight_dict(edges_between_constraints, edge_weight_dict)
+                edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
             else:
-                edge_set.update(edges_between_constraints)
+                edge_set.update(edges_between_nodes)
 
     else:
         # This case should never get executed because of the way this function is called by detect communities
@@ -113,10 +117,10 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
 def _write_to_file(model_graph, node_type, with_objective, weighted_graph, write_to_path):
     """
 
-    :param model_graph:
-    :param write_to_path:
-    :param node_type:
-    :param with_objective:
+    model_graph:
+    write_to_path:
+    node_type:
+    with_objective:
     """
     community_detection_dir = os.path.join(write_to_path, 'community_detection_graphs')
     if not os.path.exists(community_detection_dir):
