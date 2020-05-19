@@ -204,7 +204,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         self._add_column(var, obj_coef, constraints, coefficients)
 
     """ This method should be implemented by subclasses."""
-    def _add_colunm(self, var, obj_coef, constraints, coefficients):
+    def _add_column(self, var, obj_coef, constraints, coefficients):
         raise NotImplementedError('This method should be implemented by subclasses.')
 
     def _add_and_collect_column_data(self, var, obj_coef, constraints, coefficients):
