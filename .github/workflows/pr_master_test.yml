@@ -393,7 +393,7 @@ jobs:
         i=0
         while : ; do
             curl --retry 8 -L https://codecov.io/bash -o codecov.sh
-            bash codecov.sh -X gcov -f coverage.xml | tee .cover.upload
+            bash codecov.sh -Z -X gcov -f coverage.xml | tee .cover.upload
             if test $? == 0; then
                 break
             elif test $i -ge 3; then
