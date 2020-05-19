@@ -1,3 +1,6 @@
+"""Community Detection Test File"""
+
+# Structure for this file was adapted from:
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -7,10 +10,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from __future__ import division
-import pyutilib.th as unittest
-from pyutilib.misc import import_file
 
+from __future__ import division
 from pyomo.environ import *
 from pyomo.contrib.community_detection.detection import *
 from pyomo.core import ConcreteModel
@@ -18,7 +19,7 @@ from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.solvers.tests.models.LP_inactive_index import LP_inactive_index
 from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
-from pyomo.core.expr.current import identify_variables
+import pyutilib.th as unittest
 
 
 class TestDecomposition(unittest.TestCase):
@@ -45,13 +46,13 @@ class TestDecomposition(unittest.TestCase):
                                                            weighted_graph=True, random_seed=5)
 
         test_results = (community_map_v_unweighted_without,
-                   community_map_v_weighted_without,
-                   community_map_v_unweighted_with,
-                   community_map_v_weighted_with,
-                   community_map_c_unweighted_without,
-                   community_map_c_weighted_without,
-                   community_map_c_unweighted_with,
-                   community_map_c_weighted_with)
+                        community_map_v_weighted_without,
+                        community_map_v_unweighted_with,
+                        community_map_v_weighted_with,
+                        community_map_c_unweighted_without,
+                        community_map_c_weighted_without,
+                        community_map_c_unweighted_with,
+                        community_map_c_weighted_with)
 
         correct_community_maps = ({0: ['x'], 1: ['y']}, {0: ['x'], 1: ['y']}, {0: ['x', 'y']}, {0: ['x', 'y']},
                                   {}, {}, {0: ['o']}, {0: ['o']})
@@ -81,13 +82,13 @@ class TestDecomposition(unittest.TestCase):
                                                            weighted_graph=True, random_seed=5)
 
         test_results = (community_map_v_unweighted_without,
-                   community_map_v_weighted_without,
-                   community_map_v_unweighted_with,
-                   community_map_v_weighted_with,
-                   community_map_c_unweighted_without,
-                   community_map_c_weighted_without,
-                   community_map_c_unweighted_with,
-                   community_map_c_weighted_with)
+                        community_map_v_weighted_without,
+                        community_map_v_unweighted_with,
+                        community_map_v_weighted_with,
+                        community_map_c_unweighted_without,
+                        community_map_c_weighted_without,
+                        community_map_c_unweighted_with,
+                        community_map_c_weighted_with)
 
         correct_community_maps = ({0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
                                   {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
@@ -106,7 +107,6 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]']},
                                   {0: ['c0', 'qc1', 'obj'], 1: ['qc0', 'c[1]', 'c[2]']},
                                   {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]', 'obj']})
-
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -133,13 +133,13 @@ class TestDecomposition(unittest.TestCase):
                                                            weighted_graph=True, random_seed=5)
 
         test_results = (community_map_v_unweighted_without,
-                   community_map_v_weighted_without,
-                   community_map_v_unweighted_with,
-                   community_map_v_weighted_with,
-                   community_map_c_unweighted_without,
-                   community_map_c_weighted_without,
-                   community_map_c_unweighted_with,
-                   community_map_c_weighted_with)
+                        community_map_v_weighted_without,
+                        community_map_v_unweighted_with,
+                        community_map_v_weighted_with,
+                        community_map_c_unweighted_without,
+                        community_map_c_weighted_without,
+                        community_map_c_unweighted_with,
+                        community_map_c_weighted_with)
 
         correct_community_maps = ({0: ['x'], 1: ['y'], 2: ['z']}, {0: ['x'], 1: ['y'], 2: ['z']},
                                   {0: ['x', 'y', 'z']}, {0: ['x', 'y', 'z']},
@@ -177,13 +177,13 @@ class TestDecomposition(unittest.TestCase):
                                                            weighted_graph=True, random_seed=5)
 
         test_results = (community_map_v_unweighted_without,
-                   community_map_v_weighted_without,
-                   community_map_v_unweighted_with,
-                   community_map_v_weighted_with,
-                   community_map_c_unweighted_without,
-                   community_map_c_weighted_without,
-                   community_map_c_unweighted_with,
-                   community_map_c_weighted_with)
+                        community_map_v_weighted_without,
+                        community_map_v_unweighted_with,
+                        community_map_v_weighted_with,
+                        community_map_c_unweighted_without,
+                        community_map_c_weighted_without,
+                        community_map_c_unweighted_with,
+                        community_map_c_weighted_with)
 
         correct_community_maps = ({0: ['x'], 1: ['y[1]', 'y[2]']}, {0: ['x'], 1: ['y[1]', 'y[2]']},
                                   {0: ['x', 'y[1]', 'y[2]']}, {0: ['x', 'y[1]', 'y[2]']}, {0: ['c1', 'c4'], 1: ['c2']},
@@ -213,13 +213,13 @@ class TestDecomposition(unittest.TestCase):
                                                            weighted_graph=True, random_seed=5)
 
         test_results = (community_map_v_unweighted_without,
-                   community_map_v_weighted_without,
-                   community_map_v_unweighted_with,
-                   community_map_v_weighted_with,
-                   community_map_c_unweighted_without,
-                   community_map_c_weighted_without,
-                   community_map_c_unweighted_with,
-                   community_map_c_weighted_with)
+                        community_map_v_weighted_without,
+                        community_map_v_unweighted_with,
+                        community_map_v_weighted_with,
+                        community_map_c_unweighted_without,
+                        community_map_c_weighted_without,
+                        community_map_c_unweighted_with,
+                        community_map_c_weighted_with)
 
         correct_community_maps = ({0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']}, {0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']},
                                   {0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']}, {0: ['i1', 'i2', 'i3', 'i4', 'i5', 'i6']},
@@ -250,13 +250,13 @@ class TestDecomposition(unittest.TestCase):
                                                            weighted_graph=True, random_seed=5)
 
         test_results = (community_map_v_unweighted_without,
-                   community_map_v_weighted_without,
-                   community_map_v_unweighted_with,
-                   community_map_v_weighted_with,
-                   community_map_c_unweighted_without,
-                   community_map_c_weighted_without,
-                   community_map_c_unweighted_with,
-                   community_map_c_weighted_with)
+                        community_map_v_weighted_without,
+                        community_map_v_unweighted_with,
+                        community_map_v_weighted_with,
+                        community_map_c_unweighted_without,
+                        community_map_c_weighted_without,
+                        community_map_c_unweighted_with,
+                        community_map_c_weighted_with)
 
         correct_community_maps = ({0: ['x1', 'x2'], 1: ['x3', 'x4']}, {0: ['x1', 'x2'], 1: ['x3', 'x4']},
                                   {0: ['x1', 'x2'], 1: ['x3', 'x4']}, {0: ['x1', 'x2'], 1: ['x3', 'x4']},
