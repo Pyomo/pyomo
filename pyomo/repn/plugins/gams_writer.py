@@ -343,6 +343,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # If None, will chose from lp, nlp, mip, and minlp.
         mtype = io_options.pop("mtype", None)
 
+        # Improved GAMS calling options
+        solprint = io_options.pop("solprint", "off")
+        limrow = io_options.pop("limrow", 0)
+        limcol = io_options.pop("limcol", 0)
+        solvelink = io_options.pop("solvelink", 5)
+
         # Lines to add before solve statement.
         add_options = io_options.pop("add_options", None)
 
@@ -461,6 +467,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     warmstart=warmstart,
                     solver=solver,
                     mtype=mtype,
+                    solprint=solprint,
+                    limrow=limrow,
+                    limcol=limcol,
+                    solvelink=solvelink,
                     add_options=add_options,
                     put_results=put_results
                 )
@@ -483,6 +493,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
                      warmstart,
                      solver,
                      mtype,
+                     solprint,
+                     limrow,
+                     limcol,
+                     solvelink,
                      add_options,
                      put_results):
         constraint_names = []
@@ -680,14 +694,19 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                  % (solver, mtype))
             output_file.write("option %s=%s;\n" % (mtype, solver))
 
+        output_file.write("option solprint=%s;\n" % solprint)
+        output_file.write("option limrow=%d;\n" % limrow)
+        output_file.write("option limcol=%d;\n" % limcol)
+        output_file.write("option solvelink=%d;\n" % solvelink)
+        
+        if put_results is not None:
+            output_file.write("option savepoint=1;\n")
+
         if add_options is not None:
             output_file.write("\n* START USER ADDITIONAL OPTIONS\n")
             for line in add_options:
                 output_file.write('\n' + line)
             output_file.write("\n\n* END USER ADDITIONAL OPTIONS\n\n")
-
-        if put_results is not None:
-            output_file.write("\n\noption savepoint=1;\n\n")
 
         output_file.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n\n"
