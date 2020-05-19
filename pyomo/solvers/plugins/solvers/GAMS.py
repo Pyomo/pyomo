@@ -31,6 +31,8 @@ import pyomo.core.kernel.suffix
 from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
     SolutionStatus, TerminationCondition, ProblemSense)
 
+from pyomo.common.dependencies import attempt_import
+gdxcc, gdxcc_available = attempt_import('gdxcc', defer_check=True)
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -584,25 +586,14 @@ class GAMSShell(_GAMSSolver):
                     "No 'gams' command found on system PATH - GAMS shell "
                     "solver functionality is not available.")
 
-        try:
-            from gdxcc import new_gdxHandle_tp, gdxCreateD, gdxClose, gdxFree
-            from gdxcc import gdxOpenRead, gdxDataReadRawStart, gdxDataReadRaw
-            from gdxcc import gdxDataReadDone, gdxSymbolInfo
+        if gdxcc_available:
             return True
-        except ImportError as e:
-            if not exception_flag:
-                return False
-            else:
-                raise ImportError("Import of gams failed - GAMS direct "
-                                  "solver functionality is not available.\n"
-                                  "GAMS message: %s" % (e,))
-        except:
-            logger.warning(
-                "Attempting to import gams generated unexpected exception:\n"
-                "\t%s: %s" % (sys.exc_info()[0].__name__, sys.exc_info()[1]))
-            if not exception_flag:
-                return False
-            raise
+        elif exception_flag:
+            raise ImportError("Import of gams failed - GAMS direct "
+                            "solver functionality is not available.\n"
+                            "GAMS message: %s" % (e,))
+        else:
+            return False
 
     def _default_executable(self):
         executable = pyomo.common.Executable("gams")
@@ -672,10 +663,6 @@ class GAMSShell(_GAMSSolver):
 
         # Make sure available() doesn't crash
         self.available()
-
-        from gdxcc import new_gdxHandle_tp, gdxCreateD, gdxClose, gdxFree
-        from gdxcc import gdxOpenRead, gdxDataReadRawStart, gdxDataReadRaw
-        from gdxcc import gdxDataReadDone, gdxSymbolInfo
 
         if len(args) != 1:
             raise ValueError('Exactly one model must be passed '
@@ -799,24 +786,24 @@ class GAMSShell(_GAMSSolver):
                                        'OBJVAL', 'NUMVAR', 'NUMEQU', 'NUMDVAR',
                                        'NUMNZ', 'ETSOLVE'])
 
-            pgdx = new_gdxHandle_tp()
-            ret = gdxCreateD(pgdx, os.path.dirname(self.executable()), 128)
+            pgdx = gdxcc.new_gdxHandle_tp()
+            ret = gdxcc.gdxCreateD(pgdx, os.path.dirname(self.executable()), 128)
             if not ret[0]:
                 raise RuntimeError("GAMS GDX failure (gdxCreate): %s." % ret[1])
 
             if os.path.exists(statresults_filename):
-                ret = gdxOpenRead(pgdx, statresults_filename)
+                ret = gdxcc.gdxOpenRead(pgdx, statresults_filename)
                 if not ret[0]:
                     raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
 
                 i = 0
                 while True:
                     i += 1
-                    ret = gdxDataReadRawStart(pgdx, i)
+                    ret = gdxcc.gdxDataReadRawStart(pgdx, i)
                     if not ret[0]:
                         break
 
-                    ret = gdxSymbolInfo(pgdx, i)
+                    ret = gdxcc.gdxSymbolInfo(pgdx, i)
                     if not ret[0]:
                         break
                     if len(ret) < 2:
@@ -825,7 +812,7 @@ class GAMSShell(_GAMSSolver):
                     if not stat in stat_vars:
                         continue
 
-                    ret = gdxDataReadRaw(pgdx)
+                    ret = gdxcc.gdxDataReadRaw(pgdx)
                     if not ret[0] or len(ret[2]) == 0:
                         raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
 
@@ -834,38 +821,38 @@ class GAMSShell(_GAMSSolver):
                     else:
                         stat_vars[stat] = int(ret[2][0])
 
-                gdxDataReadDone(pgdx)
-                gdxClose(pgdx)
+                gdxcc.gdxDataReadDone(pgdx)
+                gdxcc.gdxClose(pgdx)
 
             if os.path.exists(results_filename):
-                ret = gdxOpenRead(pgdx, results_filename)
+                ret = gdxcc.gdxOpenRead(pgdx, results_filename)
                 if not ret[0]:
                     raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
 
                 i = 0
                 while True:
                     i += 1
-                    ret = gdxDataReadRawStart(pgdx, i)
+                    ret = gdxcc.gdxDataReadRawStart(pgdx, i)
                     if not ret[0]:
                         break
 
-                    ret = gdxDataReadRaw(pgdx)
+                    ret = gdxcc.gdxDataReadRaw(pgdx)
                     if not ret[0] or len(ret[2]) < 2:
                         raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
                     level = self._parse_special_values(ret[2][0])
                     dual = self._parse_special_values(ret[2][1])
 
-                    ret = gdxSymbolInfo(pgdx, i)
+                    ret = gdxcc.gdxSymbolInfo(pgdx, i)
                     if not ret[0]:
                         break
                     if len(ret) < 2:
                         raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
                     model_soln[ret[1]] = (level, dual)
 
-                gdxDataReadDone(pgdx)
-                gdxClose(pgdx)
+                gdxcc.gdxDataReadDone(pgdx)
+                gdxcc.gdxClose(pgdx)
                 
-            gdxFree(pgdx)
+            gdxcc.gdxFree(pgdx)
 
         finally:
             if not keepfiles:
