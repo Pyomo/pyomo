@@ -594,7 +594,7 @@ class XpressDirect(DirectSolver):
                 soln_variables = soln.variable
                 soln_constraints = soln.constraint
 
-                xpress_vars = xprob.getVariable()
+                xpress_vars = list(self._solver_var_to_pyomo_var_map.keys())
                 var_vals = xprob.getSolution(xpress_vars)
                 for xpress_var, val in zip(xpress_vars, var_vals):
                     pyomo_var = self._solver_var_to_pyomo_var_map[xpress_var]
@@ -610,7 +610,7 @@ class XpressDirect(DirectSolver):
                             soln_variables[xpress_var.name]["Rc"] = val
 
                 if extract_duals or extract_slacks:
-                    xpress_cons = xprob.getConstraint()
+                    xpress_cons = list(self._solver_con_to_pyomo_con_map.keys())
                     for con in xpress_cons:
                         soln_constraints[con.name] = {}
 
