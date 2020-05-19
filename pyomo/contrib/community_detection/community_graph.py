@@ -8,97 +8,130 @@ from pyomo.core.expr.current import identify_variables
 from itertools import combinations
 
 
-def _generate_model_graph(model, node_type='v', with_objective=True, weighted_graph=True, write_to_path=None):
+def _generate_model_graph(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None):
     """
-    Creates a graph of nodes and edges based on a Pyomo optimization model
+    Creates a networkX graph of nodes and edges based on a Pyomo optimization model
 
     This function takes in a Pyomo optimization model, then creates a graphical representation of the model with
-    variables as nodes and constraints as edges. Whether or not the objective function is included as a constraint
-    equation can be specified, as well as whether or not to create edge and adjacency lists
+    specific features of the graph determined by the user; the default graph is weighted, has variable nodes, and treats
+    the objective function as a constraint in the graph.
+    If the user chooses variable nodes, then the edge between two given nodes is created if those two variables occur
+    together in the same constraint equation. The weight of each edge depends on the number of constraint equations
+    in which the two variables occur together.
+    If the user chooses constraint nodes, then the edge between two given nodes is created if those two constraint
+    equations share a common variable. The weight of each edge depends on the number of variables common to the two
+    constraint equations.
 
     Args:
         model (Block): a Pyomo model or block to be used for community detection
-        node_type : a string that specifies the node_type of graph to be returned; 'v' returns a graph with variable
-        nodes and constraint edges, 'c' returns a graph with constraint nodes and variable edges, and any other input
-        returns an error message
-        with_objective: an optional Boolean argument that specifies whether or not the objective function will be
-        treated as a node/constraint (depending on what node_type is specified (see prior argument))
-        weighted_graph: an optional Boolean argument that specifies whether a weighted or unweighted graph is to be
+        node_type : a string that specifies the node_type of the graph; node_type='v' creates a graph with variable
+        nodes and constraint edges. node_type='c' returns a graph with constraint nodes and variable edges, and any
+        other input returns an error message
+        with_objective: a Boolean argument that specifies whether or not the objective function will be
+        treated as a node/constraint (depending on what node_type is specified as (see prior argument))
+        weighted_graph: a Boolean argument that specifies whether a weighted or unweighted graph is to be
         created from the Pyomo model
-        write_to_path: an optional argument that takes in a path for edge lists and adjacency lists to be saved
+        file_destination: an optional argument that takes in a path if the user wants to save an edge and adjacency
+        list based on the model
 
-    Return:
-        model_graph: a weighted or unweighted networkX graph with variable or constraint nodes and edges
+    Returns:
+        model_graph: a networkX graph with nodes and edges based on the given Pyomo optimization model
     """
 
-    # Detect_communities only calls generate_model_graph with a node_type of 'c' or 'v'
-    # Note that if this function is called with a node_type that is not 'c' or 'v', this will execute as if a node
-    # type of 'c' was given
     model_graph = nx.Graph()
-    edge_weight_dict = dict()
-    edge_set = set()
+    if weighted_graph:
+        edge_weight_dict = dict()
+    else:
+        edge_set = set()
 
+    # Variable nodes
     if node_type == 'v':
-        # Create nodes as variables
+        # Create nodes based on variables in the Pyomo model
         for model_variable in model.component_data_objects(Var, descend_into=True):
             model_graph.add_node(str(model_variable), node_name=str(model_variable))
 
-        # Go through all constraints:
+        # Loop through all constraints in the Pyomo model
         for model_constraint in model.component_data_objects(Constraint, descend_into=True):
             # Create a list of the variables that occur in the given constraint equation
             variables_in_constraint_equation = [str(constraint_variable) for constraint_variable in
                                                 list(identify_variables(model_constraint.body))]
+
+            # Create a list of all the edges that need to be created based on this constraint equation
             edges_between_nodes = list(combinations(sorted(variables_in_constraint_equation), 2))
 
-            # Update the edge weight dictionary based on this equation
+            # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
             if weighted_graph:
                 edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
             else:
                 edge_set.update(set(edges_between_nodes))
 
+        # This if statement will be executed if the user chooses to treat the objective function as a constraint in
+        # this model graph
         if with_objective:
+            # Obtain a convenient form for the objective function
             objective_function = list(model.component_data_objects(Objective, descend_into=True))[0]
-            variables_in_objective_function = [str(objective_variable) for objective_variable in list(identify_variables(objective_function))]
+
+            # Create a list of the variables that occur in the objective function
+            variables_in_objective_function = [str(objective_variable) for objective_variable in
+                                               list(identify_variables(objective_function))]
+
+            # Create a list of all the edges that need to be created based on the objective equation
             edges_between_nodes = list(combinations(sorted(variables_in_objective_function), 2))
 
+            # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
             if weighted_graph:
                 edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
             else:
                 edge_set.update(set(edges_between_nodes))
 
     elif node_type == 'c': # Constraint nodes
-        # Create nodes as constraints
+        # Create nodes based on constraints in the Pyomo model
         for model_constraint in model.component_data_objects(Constraint, descend_into=True):
             model_graph.add_node(str(model_constraint), node_name=str(model_constraint))
 
+        # If the user chooses to include the objective function as a constraint in the model graph
         if with_objective:
+            # Obtain a convenient form for the objective function
             objective_function = list(model.component_data_objects(Objective, descend_into=True))[0]
+
+            # Add objective_function as a node in model_graph
             model_graph.add_node(str(objective_function), node_name=str(objective_function))
 
-        # Go through all variables
+        # Loop through all variables in the Pyomo model
         for model_variable in model.component_data_objects(Var, descend_into=True):
-            # Create a list of the constraints that occur with the given variable
+            # Create a list of the constraint equations that contain the given variable
+
+            # This list comprehension is saying to add a constraint to the list constraints_with_given_variable only
+            # if the given model_variable occurs in that constraint
             constraints_with_given_variable = [str(model_constraint) for model_constraint in
                                                model.component_data_objects(Constraint, descend_into=True) if
                                                str(model_variable) in [str(constraint_variable) for constraint_variable
                                                                        in identify_variables(model_constraint.body)]]
 
+            # Now, if the user is including the objective function as a constraint in the graph, we will add the
+            # objective function to the list constraints_with_given_variable only if the given model_variable occurs
+            # in the objective function
             if with_objective and str(model_variable) in [str(objective_variable) for objective_variable in
                                                           list(identify_variables(objective_function))]:
                 constraints_with_given_variable.append(str(objective_function))
 
+            # Create a list of all the edges that need to be created based on the constraints that contain the given
+            # model_variable
             edges_between_nodes = list(combinations(sorted(constraints_with_given_variable), 2))
 
-            # Update the edge weight dictionary based on this equation
+            # # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
             if weighted_graph:
                 edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
             else:
                 edge_set.update(edges_between_nodes)
 
+    # Detect_communities only ever calls _generate_model_graph with a node_type of 'c' or 'v'
+    # This case should never get executed because of the way this function is called by detect communities
     else:
-        # This case should never get executed because of the way this function is called by detect communities
         print("Node type must be specified as 'v' or 'c' (variable nodes or constraint nodes).")
 
+    # Now, using edge_weight_dict or edge_set (based on whether the user wants a weighted or unweighted graph,
+    # respectively), the networkX graph (model_graph) will be updated with the edges determined above
     if weighted_graph:
         for edge in edge_weight_dict:
             model_graph.add_edge(edge[0], edge[1], weight=edge_weight_dict[edge])
@@ -107,22 +140,35 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
         model_graph.add_edges_from(edge_set)
         edge_set.clear()
 
-    if write_to_path is not None:
+    # If the user provided an argument for file_destination, an edge list and adjacency list will be
+    # saved in a directory at this location
+    if file_destination is not None:
         _write_to_file(model_graph, node_type=node_type, with_objective=with_objective,
-                       weighted_graph=weighted_graph, write_to_path=write_to_path)
+                       weighted_graph=weighted_graph, file_destination=file_destination)
 
+    # Return the networkX graph based on the given Pyomo optimization model
     return model_graph
 
 
-def _write_to_file(model_graph, node_type, with_objective, weighted_graph, write_to_path):
+def _write_to_file(model_graph, node_type, with_objective, weighted_graph, file_destination):
     """
+    Saves an edge list and adjacency list in a new directory at a specified destination
 
-    model_graph:
-    write_to_path:
-    node_type:
-    with_objective:
+    This function
+
+    Args:
+        model_graph:
+        node_type : a string that specifies the node_type of the graph; node_type='v' creates a graph with variable
+        nodes and constraint edges. node_type='c' returns a graph with constraint nodes and variable edges, and any
+        other input returns an error message
+        with_objective: a Boolean argument that specifies whether or not the objective function will be
+        treated as a node/constraint (depending on what node_type is specified as (see prior argument))
+        weighted_graph: a Boolean argument that specifies whether a weighted or unweighted graph is to be
+        created from the Pyomo model
+        file_destination: an optional argument that takes in a path if the user wants to save an edge and adjacency
+        list based on the model
     """
-    community_detection_dir = os.path.join(write_to_path, 'community_detection_graphs')
+    community_detection_dir = os.path.join(file_destination, 'community_detection_graphs')
     if not os.path.exists(community_detection_dir):
         os.makedirs(community_detection_dir)
 
@@ -149,21 +195,20 @@ def _write_to_file(model_graph, node_type, with_objective, weighted_graph, write
 
 def _update_edge_weight_dict(edge_list, edge_weight_dict):
     """
-    Updates a dictionary of edge weights given a list of edges
+    Updates a dictionary of edge weights based on a given list of edges
 
     This function takes in a list of edges on a graph and an existing dictionary that maps edges to weights. Then,
-    using the edge list, the dictionary of edge weights is updated and returned
+    using edge_list, the dictionary of edge weights is updated and then  returned
 
     Args:
         edge_list : a Python list containing a list of nodes in tuples (two nodes in a tuple indicate an edge that
         needs to be drawn)
-        edge_weight_dict : a Python dictionary containing all of the existing edges to be drawn on the graph mapped to
-        their weights (an edge that occurs n times has a weight of n)
+        edge_weight_dict : a Python dictionary containing all of the existing edges to be created in the graph, mapped
+        to their weights (an edge that occurs n times has a weight of n)
 
     Return:
-        edge_weight_dict : a Python dictionary containing all of the existing edges to be drawn on the graph mapped to
-        their weights (an edge that occurs n times has a weight of n); when it is returned, it has been updated with
-        the edges in edge_list
+        edge_weight_dict : a Python dictionary containing all of the existing edges to be drawn on the graph, mapped to
+        their weights, updated with the edges in edge_list
     """
     for edge in edge_list:
         if edge not in edge_weight_dict:
