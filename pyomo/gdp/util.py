@@ -146,8 +146,8 @@ def get_src_disjunction(xor_constraint):
 
     Parameters
     ----------
-    xor_constraint: Constraint, which must be the logical constraint 
-                    (located on the transformation block) of some 
+    xor_constraint: Constraint, which must be the logical constraint
+                    (located on the transformation block) of some
                     Disjunction
     """
     # NOTE: This is indeed a linear search through the Disjunctions on the
@@ -162,7 +162,7 @@ def get_src_disjunction(xor_constraint):
         if disjunction._algebraic_constraint:
             if disjunction._algebraic_constraint() is xor_constraint:
                 return disjunction
-    raise GDP_Error("It appears that %s is not an XOR or OR constraint "
+    raise GDP_Error("It appears that '%s' is not an XOR or OR constraint "
                     "resulting from transforming a Disjunction."
                     % xor_constraint.name)
 
@@ -177,8 +177,8 @@ def get_src_disjunct(transBlock):
     """
     if not hasattr(transBlock, "_srcDisjunct") or \
        type(transBlock._srcDisjunct) is not weakref_ref:
-        raise GDP_Error("Block %s doesn't appear to be a transformation "
-                        "block for a disjunct. No source disjunct found." 
+        raise GDP_Error("Block '%s' doesn't appear to be a transformation "
+                        "block for a disjunct. No source disjunct found."
                         % transBlock.name)
     return transBlock._srcDisjunct()
 
@@ -188,8 +188,8 @@ def get_src_constraint(transformedConstraint):
 
     Parameters
     ----------
-    transformedConstraint: Constraint, which must be a component on one of 
-    the BlockDatas in the relaxedDisjuncts Block of 
+    transformedConstraint: Constraint, which must be a component on one of
+    the BlockDatas in the relaxedDisjuncts Block of
     a transformation block
     """
     transBlock = transformedConstraint.parent_block()
@@ -197,7 +197,7 @@ def get_src_constraint(transformedConstraint):
     # us the wrong thing. If they happen to also have a _constraintMap then
     # the world is really against us.
     if not hasattr(transBlock, "_constraintMap"):
-        raise GDP_Error("Constraint %s is not a transformed constraint" 
+        raise GDP_Error("Constraint '%s' is not a transformed constraint"
                         % transformedConstraint.name)
     # if something goes wrong here, it's a bug in the mappings.
     return transBlock._constraintMap['srcConstraints'][transformedConstraint]
@@ -208,7 +208,7 @@ def _find_parent_disjunct(constraint):
     while not isinstance(parent_disjunct, _DisjunctData):
         if parent_disjunct is None:
             raise GDP_Error(
-                "Constraint %s is not on a disjunct and so was not "
+                "Constraint '%s' is not on a disjunct and so was not "
                 "transformed" % constraint.name)
         parent_disjunct = parent_disjunct.parent_block()
 
@@ -220,7 +220,7 @@ def _get_constraint_transBlock(constraint):
     # so the below is OK
     transBlock = parent_disjunct._transformation_block
     if transBlock is None:
-        raise GDP_Error("Constraint %s is on a disjunct which has not been "
+        raise GDP_Error("Constraint '%s' is on a disjunct which has not been "
                         "transformed" % constraint.name)
     # if it's not None, it's the weakref we wanted.
     transBlock = transBlock()
@@ -232,7 +232,7 @@ def get_transformed_constraints(srcConstraint):
 
     Parameters
     ----------
-    srcConstraint: SimpleConstraint or _ConstraintData, which must be in 
+    srcConstraint: SimpleConstraint or _ConstraintData, which must be in
     the subtree of a transformed Disjunct
     """
     if srcConstraint.is_indexed():
@@ -246,7 +246,7 @@ def get_transformed_constraints(srcConstraint):
     try:
         return transBlock._constraintMap['transformedConstraints'][srcConstraint]
     except:
-        logger.error("Constraint %s has not been transformed." 
+        logger.error("Constraint '%s' has not been transformed."
                      % srcConstraint.name)
         raise
 
@@ -268,7 +268,7 @@ def _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER):
     _probDisjName = problemdisj.getname(
         fully_qualified=True, name_buffer=NAME_BUFFER)
     _disjName = disjunct.getname(fully_qualified=True, name_buffer=NAME_BUFFER)
-    raise GDP_Error("Found untransformed disjunction %s in disjunct %s! "
+    raise GDP_Error("Found untransformed disjunction '%s' in disjunct '%s'! "
                     "The disjunction must be transformed before the "
                     "disjunct. If you are using targets, put the "
                     "disjunction before the disjunct in the list."
@@ -284,12 +284,13 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
                 problemdisj = innerdisjunct[i]
                 break
 
-    raise GDP_Error("Found active disjunct {0} in disjunct {1}! Either {0} "
+    raise GDP_Error("Found active disjunct '{0}' in disjunct '{1}'! Either {0} "
                     "is not in a disjunction or the disjunction it is in "
                     "has not been transformed. {0} needs to be deactivated "
                     "or its disjunction transformed before {1} can be "
-                    "transformed.".format(problemdisj.getname(
-                        fully_qualified=True, name_buffer = NAME_BUFFER),
-                                          outerdisjunct.getname(
-                                              fully_qualified=True, 
-                                              name_buffer=NAME_BUFFER)))
+                    "transformed.".format(
+                        problemdisj.getname(
+                            fully_qualified=True, name_buffer = NAME_BUFFER),
+                        outerdisjunct.getname(
+                            fully_qualified=True,
+                            name_buffer=NAME_BUFFER)))

@@ -229,8 +229,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         self.assertRaisesRegexp(
             GDP_Error,
-            "Cannot do convex hull transformation for disjunction disjunction "
-            "with OR constraint. Must be an XOR!*",
+            "Cannot do convex hull transformation for Disjunction "
+            "'disjunction' with OR constraint.  Must be an XOR!*",
             TransformationFactory('gdp.chull').apply_to,
             m)
 
@@ -289,7 +289,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIs(trans_list[0], trans1['ub'])
 
         # second disjunct
-        
+
         # first constraint
         orig1 = m.d[1].c1
         trans1 = disjBlock[1].component("d[1].c1")
@@ -298,7 +298,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         trans_list = chull.get_transformed_constraints(orig1)
         self.assertEqual(len(trans_list), 1)
         self.assertIs(trans_list[0], trans1['lb'])
-        
+
         # second constraint
         orig2 = m.d[1].c2
         trans2 = disjBlock[1].component("d[1].c2")
@@ -307,7 +307,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         trans_list = chull.get_transformed_constraints(orig2)
         self.assertEqual(len(trans_list), 1)
         self.assertIs(trans_list[0], trans2['eq'])
-        
+
         # third constraint
         orig3 = m.d[1].c3
         trans3 = disjBlock[1].component("d[1].c3")
@@ -603,8 +603,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 ".*b.simpledisj1.c\[1\]",
                 chull.get_transformed_constraints,
                 m.b.simpledisj1.c[1])
-        self.assertRegexpMatches(log.getvalue(), 
-                                 ".*Constraint b.simpledisj1.c\[1\] has not "
+        self.assertRegexpMatches(log.getvalue(),
+                                 ".*Constraint 'b.simpledisj1.c\[1\]' has not "
                                  "been transformed.")
 
         # this fixes a[2] to 0, so we should get the disggregated var
@@ -629,7 +629,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIs(transformed[0],
                       m.b.simpledisj2.transformation_block().\
                       component("b.simpledisj2.c")[(2,'ub')])
-        
+
 
 class MultiTermDisj(unittest.TestCase, CommonTests):
     def test_xor_constraint(self):
@@ -736,7 +736,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
 
     def test_targets_with_container_as_arg(self):
         ct.check_targets_with_container_as_arg(self, 'chull')
-    
+
     def check_trans_block_disjunctions_of_disjunct_datas(self, m):
         transBlock1 = m.component("_pyomo_gdp_chull_relaxation")
         self.assertIsInstance(transBlock1, Block)
@@ -795,7 +795,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
             "x_bounds"), Constraint)
         self.assertEqual(len(transBlock2.relaxedDisjuncts[1].component(
             "x_bounds")), 2)
-                        
+
     def test_simple_disjunction_of_disjunct_datas(self):
         ct.check_simple_disjunction_of_disjunct_datas(self, 'chull')
 
@@ -944,13 +944,13 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
 
     def test_indexedDisj_only_targets_transformed(self):
         ct.check_indexedDisj_only_targets_transformed(self, 'chull')
-        
+
     def test_warn_for_untransformed(self):
         ct.check_warn_for_untransformed(self, 'chull')
 
     def test_disjData_targets_inactive(self):
         ct.check_disjData_targets_inactive(self, 'chull')
-        m = models.makeDisjunctionsOnIndexedBlock()        
+        m = models.makeDisjunctionsOnIndexedBlock()
 
     def test_disjData_only_targets_transformed(self):
         ct.check_disjData_only_targets_transformed(self, 'chull')
@@ -1003,7 +1003,7 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
         disaggregationConstraints.pprint()
         consmap = [
             (m.component("b.x"), disaggregationConstraints[(0, None)]),
-            (m.b.x, disaggregationConstraints[(1, None)]) 
+            (m.b.x, disaggregationConstraints[(1, None)])
         ]
 
         for v, cons in consmap:
@@ -1137,7 +1137,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, dis, 1)
         ct.check_linear_coef(self, repn, ind_var, -2)
-        
+
         self.assertIs(chull.get_var_bounds_constraint(dis), original_cons)
         transformed_list = chull.get_transformed_constraints(original_cons['ub'])
         self.assertEqual(len(transformed_list), 1)
@@ -1161,7 +1161,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, dis, -1)
         ct.check_linear_coef(self, repn, ind_var, lb)
 
-        self.assertIs(chull.get_src_constraint(first_transformed), 
+        self.assertIs(chull.get_src_constraint(first_transformed),
                       original)
         trans_list = chull.get_transformed_constraints(original)
         self.assertEqual(len(trans_list), 1)
@@ -1189,7 +1189,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, dis, -1)
         ct.check_linear_coef(self, repn, ind_var, lb)
-        
+
         orig = ind_var.parent_block().c
         self.assertIs(chull.get_src_constraint(cons), orig)
         trans_list = chull.get_transformed_constraints(orig)
@@ -1285,7 +1285,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(x4.ub, 2)
         self.assertIs(chull.get_disaggregated_var(m.x, m.d1.d4), x4)
         self.assertIs(chull.get_src_var(x4), m.x)
-        
+
         # check the bounds constraints
         self.check_bounds_constraint_ub(disj1.x_bounds, 2, disj1.x,
                                         m.d1.indicator_var)
@@ -1341,7 +1341,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.check_inner_disaggregated_var_bounds(x3_bounds, x3,
                                                   disj1.indicator_var,
                                                   original_cons)
-        
+
 
         # disaggregated d4.x bounds constraints
         x4_bounds = disj1.component(
@@ -1376,7 +1376,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         cons = disj1.component("d1.c")
         self.check_outer_transformed_constraint(cons, disj1.x, 1,
                                                 m.d1.indicator_var)
-        
+
         # and last, check the second transformed outer disjunct
         disj2 = disjBlocks[1]
         self.assertTrue(disj2.active)
@@ -1412,7 +1412,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertIs(trans_list[0], xor['eq'])
         self.assertIs(chull.get_src_constraint(xor), orig_inner_xor)
         self.assertIs(chull.get_src_disjunction(orig_inner_xor), m.d1.disj2)
-        
+
         # the same goes for the disaggregation constraint
         orig_dis_container = m.d1._pyomo_gdp_chull_relaxation.\
                              disaggregationConstraints
@@ -1432,7 +1432,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         # though we don't have a map back from the disaggregation constraint to
         # the variable because I'm not sure why you would... The variable is in
         # the constraint.
-                      
+
         # check the inner disjunct mappings
         self.assertIs(m.d1.d3.transformation_block(),
                       m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[0])
@@ -1442,10 +1442,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
                       m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1])
         self.assertIs(chull.get_src_disjunct(
             m.d1._pyomo_gdp_chull_relaxation.relaxedDisjuncts[1]), m.d1.d4)
-    
+
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):
-        """ checks that if nothing is marked as local, we assume it is all 
+        """ checks that if nothing is marked as local, we assume it is all
         global. We disaggregate everything to be safe."""
         m = ConcreteModel()
         m.x = Var(bounds=(5,100))
@@ -1524,13 +1524,13 @@ class TestSpecialCases(unittest.TestCase):
         model.d2.z = Var(bounds=(-9, -7))
         model.d2.c = Constraint(expr=model.y >= model.d2.z)
         model.disj = Disjunction(expr=[model.d1, model.d2])
-        
+
         # we don't declare z local
         m = chull.create_using(model)
         self.assertEqual(m.d2.z.lb, -9)
         self.assertEqual(m.d2.z.ub, -7)
         self.assertIsInstance(m.d2.transformation_block().component("z"), Var)
-        self.assertIs(m.d2.transformation_block().z, 
+        self.assertIs(m.d2.transformation_block().z,
                       chull.get_disaggregated_var(m.d2.z, m.d2))
 
         # we do declare z local
@@ -1546,7 +1546,7 @@ class TestSpecialCases(unittest.TestCase):
         self.assertIs(chull.get_disaggregated_var(m.d2.z, m.d2), m.d2.z)
         # it does not exist on the transformation block
         self.assertIsNone(m.d2.transformation_block().component("z"))
-        
+
 class UntransformableObjectsOnDisjunct(unittest.TestCase):
     def test_RangeSet(self):
         ct.check_RangeSet(self, 'chull')
@@ -1584,7 +1584,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
     # when the disjunction is on a block, we want all of the stuff created by
     # the transformation to go on that block also so that solving the block
     # maintains its meaning
-    
+
     def test_xor_constraint_added(self):
         ct.check_xor_constraint_added(self, 'chull')
 
@@ -1694,10 +1694,11 @@ class TestErrors(unittest.TestCase):
                 "'ConcreteModel' object has no attribute '_bigMConstraintMap'",
                 chull.get_var_bounds_constraint,
                 m.w)
-        self.assertRegexpMatches(log.getvalue(),
-                                 ".*Either w is not a disaggregated variable, "
-                                 "or the disjunction that disaggregates it has "
-                                 "not been properly transformed.")
+        self.assertRegexpMatches(
+            log.getvalue(),
+            ".*Either 'w' is not a disaggregated variable, "
+            "or the disjunction that disaggregates it has "
+            "not been properly transformed.")
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
@@ -1708,10 +1709,10 @@ class TestErrors(unittest.TestCase):
                 m.d[1].transformation_block().w,
                 m.disjunction)
         self.assertRegexpMatches(log.getvalue(), ".*It doesn't appear that "
-                                 "_pyomo_gdp_chull_relaxation."
-                                 "relaxedDisjuncts\[1\].w is a "
+                                 "'_pyomo_gdp_chull_relaxation."
+                                 "relaxedDisjuncts\[1\].w' is a "
                                  "variable that was disaggregated by "
-                                 "Disjunction disjunction")
+                                 "Disjunction 'disjunction'")
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
@@ -1720,8 +1721,9 @@ class TestErrors(unittest.TestCase):
                 "'ConcreteModel' object has no attribute '_disaggregatedVarMap'",
                 chull.get_src_var,
                 m.w)
-        self.assertRegexpMatches(log.getvalue(), ".*w does not appear to be a "
-                                 "disaggregated variable")
+        self.assertRegexpMatches(
+            log.getvalue(),
+            ".*'w' does not appear to be a disaggregated variable")
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.chull', logging.ERROR):
@@ -1733,14 +1735,14 @@ class TestErrors(unittest.TestCase):
                 m.d[1])
         self.assertRegexpMatches(log.getvalue(),
                                  ".*It does not appear "
-                                 "_pyomo_gdp_chull_relaxation."
-                                 "relaxedDisjuncts\[1\].w is a "
-                                 "variable which appears in disjunct d\[1\]")
+                                 "'_pyomo_gdp_chull_relaxation."
+                                 "relaxedDisjuncts\[1\].w' is a "
+                                 "variable which appears in disjunct 'd\[1\]'")
 
         m.random_disjunction = Disjunction(expr=[m.w == 2, m.w >= 7])
         self.assertRaisesRegexp(
             GDP_Error,
-            "Disjunction random_disjunction has not been properly "
+            "Disjunction 'random_disjunction' has not been properly "
             "transformed: None of its disjuncts are transformed.",
             chull.get_disaggregation_constraint,
             m.w,
@@ -1748,7 +1750,7 @@ class TestErrors(unittest.TestCase):
 
         self.assertRaisesRegexp(
             GDP_Error,
-            "Disjunct random_disjunction_disjuncts\[0\] has not been "
+            "Disjunct 'random_disjunction_disjuncts\[0\]' has not been "
             "transformed",
             chull.get_disaggregated_var,
             m.w,
@@ -1764,7 +1766,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
         random.seed(666)
 
     def makeModel(self):
-        # I'm going to multi-task and also check some types of constraints 
+        # I'm going to multi-task and also check some types of constraints
         # whose expressions need to be tested
         m = ConcreteModel()
         m.x = Var(bounds=(1, 5))
@@ -1796,18 +1798,18 @@ class BlocksOnDisjuncts(unittest.TestCase):
         xformed = chull.get_transformed_constraints(
             m.disj1.component("b.any_index"))
         self.assertEqual(len(xformed), 1)
-        self.assertIs(xformed[0], 
+        self.assertIs(xformed[0],
                       transBlock.component("disj1.b.any_index")['lb'])
 
         xformed = chull.get_transformed_constraints(m.disj1.b.any_index['local'])
         self.assertEqual(len(xformed), 1)
-        self.assertIs(xformed[0], 
+        self.assertIs(xformed[0],
                       transBlock.component("disj1.b.any_index_4")[
                           ('local','ub')])
         xformed = chull.get_transformed_constraints(
             m.disj1.b.any_index['nonlin-ub'])
         self.assertEqual(len(xformed), 1)
-        self.assertIs(xformed[0], 
+        self.assertIs(xformed[0],
                       transBlock.component("disj1.b.any_index_4")[
                           ('nonlin-ub','ub')])
 
@@ -1849,13 +1851,13 @@ class BlocksOnDisjuncts(unittest.TestCase):
                          "(0.9999*disj1.indicator_var + 0.0001))**2")
         self.assertEqual(len(repn.nonlinear_vars), 2)
         self.assertIs(repn.nonlinear_vars[0], m.disj1.indicator_var)
-        self.assertIs(repn.nonlinear_vars[1], 
+        self.assertIs(repn.nonlinear_vars[1],
                       chull.get_disaggregated_var(m.y, m.disj1))
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 1)
         self.assertIs(repn.linear_vars[0], m.disj1.indicator_var)
         self.assertEqual(repn.linear_coefs[0], -4)
-        
+
         nonlin_lb_list = chull.get_transformed_constraints(m.disj2.non_lin_lb)
         self.assertEqual(len(nonlin_lb_list), 1)
         cons = nonlin_lb_list[0]
@@ -1871,7 +1873,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
                          "(0.9999*disj2.indicator_var + 0.0001)))")
         self.assertEqual(len(repn.nonlinear_vars), 2)
         self.assertIs(repn.nonlinear_vars[0], m.disj2.indicator_var)
-        self.assertIs(repn.nonlinear_vars[1], 
+        self.assertIs(repn.nonlinear_vars[1],
                       chull.get_disaggregated_var(m.y, m.disj2))
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 1)

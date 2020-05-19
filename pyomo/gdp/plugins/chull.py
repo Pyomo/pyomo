@@ -39,7 +39,7 @@ logger = logging.getLogger('pyomo.gdp.chull')
 
 NAME_BUFFER = {}
 
-@TransformationFactory.register('gdp.chull', 
+@TransformationFactory.register('gdp.chull',
                                 doc="Relax disjunctive model by forming "
                                 "the convex hull.")
 
@@ -69,7 +69,7 @@ class ConvexHull_Transformation(Transformation):
     the relaxed disjuncts.  This block is indexed by an integer
     indicating the order in which the disjuncts were relaxed.
     Each block has a dictionary "_constraintMap":
-    
+
         'srcConstraints': ComponentMap(<transformed constraint>:
                                        <src constraint>),
         'transformedConstraints':ComponentMap(<src constraint container>:
@@ -87,7 +87,7 @@ class ConvexHull_Transformation(Transformation):
         <disaggregated var>:<bounds constraint>
 
     All transformed Disjuncts will have a pointer to the block their transformed
-    constraints are on, and all transformed Disjunctions will have a 
+    constraints are on, and all transformed Disjunctions will have a
     pointer to the corresponding OR or XOR constraint.
 
     The _pyomo_gdp_chull_relaxation block will have a ComponentMap
@@ -169,7 +169,7 @@ class ConvexHull_Transformation(Transformation):
         "the transformed model will still be valid when fixed Vars are unfixed.",
         doc="""
         If True, the transformation will not disaggregate fixed variables.
-        This means that if a fixed variable is unfixed after transformation, 
+        This means that if a fixed variable is unfixed after transformation,
         the transformed model is no longer valid. By default, the transformation
         will disagregate fixed variables so that any later fixing and unfixing
         will be valid in the transformed model.
@@ -243,8 +243,9 @@ class ConvexHull_Transformation(Transformation):
             # check that t is in fact a child of instance
             if not is_child_of(parent=instance, child=t,
                                knownBlocks=knownBlocks):
-                raise GDP_Error("Target %s is not a component on instance %s!"
-                                % (t.name, instance.name))
+                raise GDP_Error(
+                    "Target '%s' is not a component on instance '%s'!"
+                    % (t.name, instance.name))
             elif t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(t)
@@ -257,7 +258,7 @@ class ConvexHull_Transformation(Transformation):
                     self._transform_blockData(t)
             else:
                 raise GDP_Error(
-                    "Target %s was not a Block, Disjunct, or Disjunction. "
+                    "Target '%s' was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)) )
 
@@ -323,7 +324,7 @@ class ConvexHull_Transformation(Transformation):
         # unique name) It's indexed if this is an
         # IndexedDisjunction, not otherwise
         orC = Constraint(disjunction.index_set())
-        transBlock.add_component( 
+        transBlock.add_component(
             unique_component_name(transBlock,
                                   disjunction.getname(fully_qualified=True,
                                                       name_buffer=NAME_BUFFER) +\
@@ -364,9 +365,9 @@ class ConvexHull_Transformation(Transformation):
         # xor is false, give up
         if not obj.xor:
             raise GDP_Error("Cannot do convex hull transformation for "
-                            "disjunction %s with OR constraint. Must be an XOR!"
-                            % obj.name)
-        
+                            "Disjunction '%s' with OR constraint.  "
+                            "Must be an XOR!" % obj.name)
+
         if transBlock is None:
             # It's possible that we have already created a transformation block
             # for another disjunctionData from this same container. If that's
@@ -380,14 +381,14 @@ class ConvexHull_Transformation(Transformation):
                 transBlock = self._add_transformation_block(obj.parent_block())
 
         parent_component = obj.parent_component()
-        
+
         orConstraint = self._add_xor_constraint(parent_component, transBlock)
         disaggregationConstraint = transBlock.disaggregationConstraints
         disaggregationConstraintMap = transBlock._disaggregationConstraintMap
 
-        # Just because it's unlikely this is what someone meant to do...    
+        # Just because it's unlikely this is what someone meant to do...
         if len(obj.disjuncts) == 0:
-            raise GDP_Error("Disjunction %s is empty. This is " 
+            raise GDP_Error("Disjunction '%s' is empty. This is "
                             "likely indicative of a modeling error."  %
                             obj.getname(fully_qualified=True,
                                         name_buffer=NAME_BUFFER))
@@ -413,7 +414,7 @@ class ConvexHull_Transformation(Transformation):
                 # with their transformed model. However, the user may have set
                 # assume_fixed_vars_permanent to True in which case we will skip
                 # them
-                for var in EXPR.identify_variables( 
+                for var in EXPR.identify_variables(
                         cons.body, include_fixed=include_fixed_vars):
                     # Note the use of a list so that we will
                     # eventually disaggregate the vars in a
@@ -437,10 +438,10 @@ class ConvexHull_Transformation(Transformation):
         localVars = []
         for var in varOrder:
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
-            # clearly not local if used in more than one disjunct 
+            # clearly not local if used in more than one disjunct
             if len(disjuncts) > 1:
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                    logger.debug("Assuming %s is not a local var since it is"
+                    logger.debug("Assuming '%s' is not a local var since it is"
                                  "used in multiple disjuncts." %
                                  var.getname(fully_qualified=True,
                                              name_buffer=NAME_BUFFER))
@@ -487,7 +488,7 @@ class ConvexHull_Transformation(Transformation):
             else:
                 thismap = disaggregationConstraintMap[var] = ComponentMap()
                 thismap[obj] = disaggregationConstraint[(i, index)]
-                
+
         # deactivate for the writers
         obj.deactivate()
 
@@ -501,12 +502,12 @@ class ConvexHull_Transformation(Transformation):
                     return
                 else:
                     raise GDP_Error(
-                        "The disjunct %s is deactivated, but the "
+                        "The disjunct '%s' is deactivated, but the "
                         "indicator_var is fixed to %s. This makes no sense."
                         % ( obj.name, value(obj.indicator_var) ))
             if obj._transformation_block is None:
                 raise GDP_Error(
-                    "The disjunct %s is deactivated, but the "
+                    "The disjunct '%s' is deactivated, but the "
                     "indicator_var is not fixed and the disjunct does not "
                     "appear to have been relaxed. This makes no sense. "
                     "(If the intent is to deactivate the disjunct, fix its "
@@ -517,7 +518,7 @@ class ConvexHull_Transformation(Transformation):
             # we've transformed it, which means this is the second time it's
             # appearing in a Disjunction
             raise GDP_Error(
-                    "The disjunct %s has been transformed, but a disjunction "
+                    "The disjunct '%s' has been transformed, but a disjunction "
                     "it appears in has not. Putting the same disjunct in "
                     "multiple disjunctions is not supported." % obj.name)
 
@@ -576,7 +577,7 @@ class ConvexHull_Transformation(Transformation):
             # of variables from different blocks coming together, so we
             # get a unique name
             disaggregatedVarName = unique_component_name(
-                relaxationBlock, 
+                relaxationBlock,
                 var.getname(fully_qualified=False, name_buffer=NAME_BUFFER),
             )
             relaxationBlock.add_component( disaggregatedVarName,
@@ -635,7 +636,7 @@ class ConvexHull_Transformation(Transformation):
             if ub:
                 bigmConstraint.add('ub', var <= obj.indicator_var*ub)
             relaxationBlock._bigMConstraintMap[var] = bigmConstraint
-            
+
         var_substitute_map = dict((id(v), newV) for v, newV in iteritems(
             relaxationBlock._disaggregatedVarMap['disaggregatedVar']))
         zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in \
@@ -658,7 +659,7 @@ class ConvexHull_Transformation(Transformation):
         # variables of the inner disjunction will need to be disaggregated again
         # anyway, and nothing will get double-bigm-ed. (If an untransformed
         # disjunction is lurking here, we will catch it below).
-        
+
         # Look through the component map of block and transform everything we
         # have a handler for. Yell if we don't know how to handle it. (Note that
         # because we only iterate through active components, this means
@@ -669,7 +670,7 @@ class ConvexHull_Transformation(Transformation):
                 if handler is None:
                     raise GDP_Error(
                         "No chull transformation handler registered "
-                        "for modeling components of type %s. If your " 
+                        "for modeling components of type %s. If your "
                         "disjuncts contain non-GDP Pyomo components that "
                         "require transformation, please transform them first."
                         % obj.ctype )
@@ -909,34 +910,34 @@ class ConvexHull_Transformation(Transformation):
         disjunct: a transformed Disjunct in which v appears
         """
         if disjunct._transformation_block is None:
-            raise GDP_Error("Disjunct %s has not been transformed" 
+            raise GDP_Error("Disjunct '%s' has not been transformed"
                             % disjunct.name)
         transBlock = disjunct._transformation_block()
         try:
             return transBlock._disaggregatedVarMap['disaggregatedVar'][v]
         except:
-            logger.error("It does not appear %s is a "
-                         "variable which appears in disjunct %s"
+            logger.error("It does not appear '%s' is a "
+                         "variable which appears in disjunct '%s'"
                          % (v.name, disjunct.name))
             raise
-        
+
     def get_src_var(self, disaggregated_var):
         """
-        Returns the original model variable to which disaggregated_var 
+        Returns the original model variable to which disaggregated_var
         corresponds.
 
         Parameters
         ----------
-        disaggregated_var: a Var which was created by the chull 
-                           transformation as a disaggregated variable 
-                           (and so appears on a transformation block 
+        disaggregated_var: a Var which was created by the chull
+                           transformation as a disaggregated variable
+                           (and so appears on a transformation block
                            of some Disjunct)
         """
         transBlock = disaggregated_var.parent_block()
         try:
             return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
         except:
-            logger.error("%s does not appear to be a disaggregated variable" 
+            logger.error("'%s' does not appear to be a disaggregated variable"
                          % disaggregated_var.name)
             raise
 
@@ -944,8 +945,8 @@ class ConvexHull_Transformation(Transformation):
     # transforming disjunction
     def get_disaggregation_constraint(self, original_var, disjunction):
         """
-        Returns the disaggregation (re-aggregation?) constraint 
-        (which links the disaggregated variables to their original) 
+        Returns the disaggregation (re-aggregation?) constraint
+        (which links the disaggregated variables to their original)
         corresponding to original_var and the transformation of disjunction.
 
         Parameters
@@ -959,16 +960,16 @@ class ConvexHull_Transformation(Transformation):
             if transBlock is not None:
                 break
         if transBlock is None:
-            raise GDP_Error("Disjunction %s has not been properly transformed: "
-                            "None of its disjuncts are transformed." 
+            raise GDP_Error("Disjunction '%s' has not been properly transformed: "
+                            "None of its disjuncts are transformed."
                             % disjunction.name)
-        
+
         try:
             return transBlock().parent_block()._disaggregationConstraintMap[
                 original_var][disjunction]
         except:
-            logger.error("It doesn't appear that %s is a variable that was "
-                         "disaggregated by Disjunction %s" % 
+            logger.error("It doesn't appear that '%s' is a variable that was "
+                         "disaggregated by Disjunction '%s'" %
                          (original_var.name, disjunction.name))
             raise
 
@@ -978,11 +979,11 @@ class ConvexHull_Transformation(Transformation):
         variable to be within its bounds when its Disjunct is active and to
         be 0 otherwise. (It is always an IndexedConstraint because each
         bound becomes a separate constraint.)
-        
+
         Parameters
         ----------
-        v: a Var which was created by the chull  transformation as a 
-           disaggregated variable (and so appears on a transformation 
+        v: a Var which was created by the chull  transformation as a
+           disaggregated variable (and so appears on a transformation
            block of some Disjunct)
         """
         # This can only go well if v is a disaggregated var
@@ -990,7 +991,7 @@ class ConvexHull_Transformation(Transformation):
         try:
             return transBlock._bigMConstraintMap[v]
         except:
-            logger.error("Either %s is not a disaggregated variable, or "
+            logger.error("Either '%s' is not a disaggregated variable, or "
                          "the disjunction that disaggregates it has not "
                          "been properly transformed." % v.name)
             raise

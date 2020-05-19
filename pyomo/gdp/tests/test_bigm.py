@@ -91,7 +91,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         for i in [0,1]:
             self.assertIs(oldblock[i].transformation_block(), disjBlock[i])
             self.assertIs(bigm.get_src_disjunct(disjBlock[i]), oldblock[i])
-            
+
         # check the constraint mappings
         constraintdict1 = disjBlock[0]._constraintMap
         self.assertIsInstance(constraintdict1, dict)
@@ -100,7 +100,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         constraintdict2 = disjBlock[1]._constraintMap
         self.assertIsInstance(constraintdict2, dict)
         self.assertEqual(len(constraintdict2), 2)
-        
+
         # original -> transformed
         transformedConstraints1 = constraintdict1['transformedConstraints']
         self.assertIsInstance(transformedConstraints1, ComponentMap)
@@ -494,7 +494,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 len(list(relaxed.component_objects(Constraint))), 1)
             self.assertEqual(
                 len(list(relaxed.component_data_objects(Constraint))), i)
-            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)        
+            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
     def test_local_var(self):
         m = models.localVar()
@@ -540,7 +540,7 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
             GDP_Error,
             "Cannot estimate M for unbounded nonlinear "
             "expressions.\n\t\(found while processing "
-            "constraint d\[0\].c\)",
+            "constraint 'd\[0\].c'\)",
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
@@ -678,7 +678,7 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
                     disjBlock[dest].component(srcDisjunct.c.name)['ub']),
                               srcDisjunct.c)
             else:
-                # >= 
+                # >=
                 self.assertEqual(len(transformed), 1)
                 self.assertIsInstance(transformed[0], _ConstraintData)
                 self.assertIs(
@@ -777,7 +777,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
         # check m values
         self.checkMs(m, -34, 34, 34, -3, 1.5)
-        
+
         # check the source of the values
         (src, key) = bigm.get_m_value_src(m.simpledisj.c)
         self.assertEqual(src, -3)
@@ -864,7 +864,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
             TransformationFactory('gdp.bigm').apply_to(
-                m, 
+                m,
                 bigM={m: 100,
                       m.b.disjunct[1].c: 13})
         self.checkMs(m, -100, 100, 13, -100, 100)
@@ -877,7 +877,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
             TransformationFactory('gdp.bigm').apply_to(
-                m, 
+                m,
                 bigM={m: 100,
                       m.b.disjunct[1].c: 13,
                       None: 34})
@@ -925,12 +925,12 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.gdp.bigm'):
-            TransformationFactory('gdp.bigm').apply_to( 
-                m.b, 
-                bigM={m: 100, 
+            TransformationFactory('gdp.bigm').apply_to(
+                m.b,
+                bigM={m: 100,
                       m.b: 13,
                       m.simpledisj2.c: 10})
-            
+
         self.checkFirstDisjMs(m, -13, 13, 13)
 
         # The order these get printed depends on a dictionary order, so test
@@ -1048,8 +1048,8 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
                 ".*b.simpledisj1.c\[1\]",
                 bigm.get_transformed_constraints,
                 m.b.simpledisj1.c[1])
-        self.assertRegexpMatches(log.getvalue(), 
-                                 ".*Constraint b.simpledisj1.c\[1\] "
+        self.assertRegexpMatches(log.getvalue(),
+                                 ".*Constraint 'b.simpledisj1.c\[1\]' "
                                  "has not been transformed.")
 
         # and the rest of the container was transformed
@@ -1152,8 +1152,8 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
         self.assertRaisesRegexp(
             GDP_Error,
             "Cannot estimate M for expressions with unbounded variables."
-            "\n\t\(found unbounded var a\[1\] while processing constraint "
-            "b.simpledisj1.c\)",
+            "\n\t\(found unbounded var 'a\[1\]' while processing constraint "
+            "'b.simpledisj1.c'\)",
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
@@ -1462,7 +1462,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                           component("relaxedDisjuncts"))
         self.assertIsNone(m.simpledisjunct._pyomo_gdp_bigm_relaxation.\
                           component("relaxedDisjuncts"))
-        
+
     def test_mappings_between_disjunctions_and_xors(self):
         # Note this test actually checks that the inner disjunction maps to its
         # original xor (which will be transformed again by the outer
@@ -1758,7 +1758,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
         m.evil[1].b.BigM[m.evil[1].b.c] = 2000
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m)
-        
+
         # check that the m value got used
         cons_list = bigm.get_transformed_constraints(m.evil[1].b.c)
         ub = cons_list[1]
@@ -1878,7 +1878,7 @@ class IndexedDisjunctions(unittest.TestCase):
             "secondTerm[2].cons"), Constraint)
         self.assertEqual(len(transBlock2.relaxedDisjuncts[1].component(
             "secondTerm[2].cons")), 1)
-                        
+
     def test_simple_disjunction_of_disjunct_datas(self):
         ct.check_simple_disjunction_of_disjunct_datas(self, 'bigm')
 
