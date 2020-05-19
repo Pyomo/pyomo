@@ -22,8 +22,12 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import TerminationCondition
 
+import logging
+
 from six import iteritems
 import inspect
+
+logger = logging.getLogger('pyomo.contrib.fourier_motzkin_elimination')
 
 def _check_var_bounds_filter(constraint):
     """Check if the constraint is already implied by the variable bounds"""
@@ -62,13 +66,6 @@ def vars_to_eliminate_list(x):
             "Expected Var or list of Vars."
             "\n\tRecieved %s" % type(x))
 
-def constraint_filtering_function(f):
-    if f is None:
-        return
-    if not inspect.isfunction(f):
-        raise ValueError("Expected function. \n\tRecieved %s" % type(f))
-    return f
-
 @TransformationFactory.register('contrib.fourier_motzkin_elimination',
                                 doc="Project out specified (continuous) "
                                 "variables from a linear model.")
@@ -100,7 +97,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
     ))
     CONFIG.declare('constraint_filtering_callback', ConfigValue(
         default=_check_var_bounds_filter,
-        domain=constraint_filtering_function,
         description="Specifies whether or not and how the transformation should"
         " filter out trivial constraints during the transformation.",
         doc="""
@@ -178,9 +174,16 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
 
         # put the new constraints on the transformation block
         for cons in new_constraints:
-            if self.constraint_filter is not None and not \
-               self.constraint_filter(cons):
-                continue
+            if self.constraint_filter is not None:
+                try:
+                    keep = self.constraint_filter(cons)
+                except:
+                    logger.error("Problem calling constraint filter callback "
+                                 "on constraint with right-hand side %s and "
+                                 "body:\n%s" % (cons['lower'], cons['body']))
+                    raise
+                if not keep:
+                    continue
             body = cons['body']
             lhs = sum(coef*var for (coef, var) in zip(body.linear_coefs,
                                                       body.linear_vars)) + \

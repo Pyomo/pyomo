@@ -13,6 +13,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
+from pyomo.common.log import LoggingIntercept
 from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
                         Binary, value, Block, Objective)
 from pyomo.core.base import TransformationFactory
@@ -21,6 +22,9 @@ from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory, check_available_solvers
+
+from six import StringIO
+import logging
 
 solvers = check_available_solvers('glpk')
 
@@ -240,6 +244,44 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             apply_to,
             m, 
             vars_to_eliminate=m.x)
+
+    def test_bad_constraint_filtering_callback_error(self):
+        m = self.makeModel()
+        def not_a_callback(cons):
+            raise RuntimeError("I don't know how to do my job.")
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.contrib.fourier_motzkin_elimination',
+                              logging.ERROR):
+            self.assertRaisesRegexp(
+                RuntimeError,
+                "I don't know how to do my job.",
+                fme.apply_to,
+                m,
+                vars_to_eliminate=m.x,
+                constraint_filtering_callback=not_a_callback)
+        self.assertRegexpMatches(
+            log.getvalue(),
+            "Problem calling constraint filter callback "
+            "on constraint with right-hand side -1.0 and body:*")
+
+    def test_constraint_filtering_callback_not_callable_error(self):
+        m = self.makeModel()
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.contrib.fourier_motzkin_elimination',
+                              logging.ERROR):
+            self.assertRaisesRegexp(
+                TypeError,
+                "'int' object is not callable",
+                fme.apply_to,
+                m,
+                vars_to_eliminate=m.x,
+                constraint_filtering_callback=5)
+        self.assertRegexpMatches(
+            log.getvalue(),
+            "Problem calling constraint filter callback "
+            "on constraint with right-hand side -1.0 and body:*")
 
     def test_combine_three_inequalities_and_flatten_blocks(self):
         m = ConcreteModel()
