@@ -691,7 +691,7 @@ class ConvexHull_Transformation(Transformation):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER)
 
     def _warn_for_active_logical_statement(
-            self, logical_statment, disjunct, infodict, var_substitute_map,
+            self, logical_statment, disjunct, var_substitute_map,
             zero_substitute_map):
         _warn_for_active_logical_statement(logical_statment, disjunct, NAME_BUFFER)
 
