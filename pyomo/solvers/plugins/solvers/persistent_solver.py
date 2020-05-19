@@ -200,7 +200,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         coefficients: the coefficient to put on var in the associated constraint
         """
         if self._pyomo_model is None:
-            raise RuntimeError('You must call set_instance before calling add_var.')
+            raise RuntimeError('You must call set_instance before calling add_column.')
         self._add_column(var, obj_coef, constraints, coefficients)
 
     """ This method should be implemented by subclasses."""
