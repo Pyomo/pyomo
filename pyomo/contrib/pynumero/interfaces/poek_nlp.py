@@ -11,10 +11,8 @@
 This module defines the classes that provide an NLP interface via POEK
 """
 
-#import pyomo
 import pyomo.environ as aml
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
-#from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 #import pyutilib
 
 #from scipy.sparse import coo_matrix
@@ -32,29 +30,65 @@ except:
 
 class PoekNLP(NLP):
 
-    def __init__(self, model):
+    def __init__(self, poek_nlpmodel):
         """
         POEK nonlinear program interface
 
         Parameters
         ----------
-        model: peok.ConcreteModel
-            POEK model
+        poek_nlpmodel: peok.ConcreteModel
+            POEK NLP model
         """
         super(NLP, self).__init__()
-        self._model = model
+        self._model = poek_nlpmodel
+
+        #
+        # NOTE - We may want to allow parameters to change these values
+        #
+        # get the primal bounds
+        self._n_primals = poek_nlpmodel.num_variables()
+        self._primals_lb = np.zeros(self._n_primals, dtype=np.float64)
+        self._primals_ub = np.zeros(self._n_primals, dtype=np.float64)
+        for i in range(self._n_primals):
+            self._primals_lb[i] = poek_nlpmodel.get_variable(i).lb
+            self._primals_ub[i] = poek_nlpmodel.get_variable(i).ub
+        self._primals_lb.flags.writeable = False
+        self._primals_ub.flags.writeable = False
+
+        # get the constraint bounds
+        self._n_con_full = poek_nlpmodel.num_constraints()
+        self._con_full_lb = np.zeros(self._n_con_full, dtype=np.float64)
+        self._con_full_ub = np.zeros(self._n_con_full, dtype=np.float64)
+        for i in range(self._n_con_full):
+            self._con_full_lb[i] = poek_nlpmodel.get_constraint(i).lb
+            self._con_full_ub[i] = poek_nlpmodel.get_constraint(i).ub
+        self._con_full_lb.flags.writeable = False
+        self._con_full_ub.flags.writeable = False
+
+        # get the initial values for the primals 
+        # TODO - manage dual values explicitly
+        self._init_primals = np.zeros(self._n_primals, dtype=np.float64)
+        self._init_duals_full = np.zeros(self._n_con_full, dtype=np.float64)
+        for i in range(self._n_primals):
+            self._init_primals[i] = poek_nlpmodel.get_variable[i].value
+        #self._asl.get_init_multipliers(self._init_duals_full)
+        self._init_primals.flags.writeable = False
+        self._init_duals_full.flags.writeable = False
+
+        self._primals = self._init_primals.copy()
+        self._duals = self._init_duals.copy()
 
     def n_primals(self):
         """
         Returns number of primal variables
         """
-        return self._model.num_variables()
+        return self._n_primals
 
     def n_constraints(self):
         """
         Returns number of constraints
         """
-        return self._model.num_constraints()
+        return self._n_con_full
 
     def nnz_jacobian(self):
         """
@@ -77,7 +111,7 @@ class PoekNLP(NLP):
         vector-like
 
         """
-        pass
+        return self._primals_lb
 
     def primals_ub(self):
         """
@@ -88,7 +122,7 @@ class PoekNLP(NLP):
         vector-like
 
         """
-        pass
+        return self._primals_lb
 
     def constraints_lb(self):
         """
@@ -99,7 +133,7 @@ class PoekNLP(NLP):
         vector-like
 
         """
-        pass
+        return self._con_full_lb
 
     def constraints_ub(self):
         """
@@ -110,20 +144,20 @@ class PoekNLP(NLP):
         vector-like
 
         """
-        pass
+        return self._con_full_ub
 
     def init_primals(self):
         """
         Returns vector with initial values for the primal variables
         """
-        pass
+        return self._init_primals
 
     def init_duals(self):
         """
         Returns vector with initial values for the dual variables 
         of the constraints
         """
-        pass
+        return self._init_duals_full
 
     def create_new_vector(self, vector_type):
         """
@@ -139,8 +173,14 @@ class PoekNLP(NLP):
         -------
         vector-like
         """
-        pass
-
+        if vector_type == 'primals':
+            return np.zeros(self._n_primals, dtype=np.float64)
+        elif vector_type == 'constraints':
+            return np.zeros(self._n_con_full, dtype=np.float64)
+        elif vector_type == 'duals':
+            return np.zeros(self._n_con_full, dtype=np.float64)
+        else:
+            return None
 
     def set_primals(self, primals):
         """Set the value of the primal variables to be used
@@ -151,14 +191,15 @@ class PoekNLP(NLP):
         primals: vector_like
             Vector with the values of primal variables.
         """
-        pass
+        self._model.set_variables(primals)
+        np.copyto(self._primals, primals)
 
     def get_primals(self):
         """Get a copy of the values of the primal variables as
         provided in set_primals. These are the values that will
         be used in calls to the evaluation methods
         """
-        pass
+        return self._primals.copy()
 
     def set_duals(self, duals):
         """Set the value of the dual variables for the constraints
@@ -169,14 +210,15 @@ class PoekNLP(NLP):
         duals: vector_like
             Vector with the values of dual variables for the equality constraints
         """
-        pass
+        self._model.set_duals(duals)
+        np.copyto(self._duals, duals)
 
     def get_duals(self):
         """Get a copy of the values of the dual variables as
         provided in set_duals. These are the values that will
         be used in calls to the evaluation methods.
         """
-        pass
+        return self._duals.copy()
 
     def set_obj_factor(self, obj_factor):
         """Set the value of the objective function factor
@@ -189,6 +231,7 @@ class PoekNLP(NLP):
             Value of the objective function factor used
             in the evaluation of the hessian of the lagrangian
         """
+        # TODO
         pass
 
     def get_obj_factor(self):
@@ -197,6 +240,7 @@ class PoekNLP(NLP):
         be used in calls to the evaluation of the hessian
         of the lagrangian (evaluate_hessian_lag)
         """
+        # TODO
         pass
 
     def evaluate_objective(self):
@@ -207,7 +251,7 @@ class PoekNLP(NLP):
         -------
         float
         """
-        pass
+        return self._model.compute_f()
 
     def evaluate_grad_objective(self, out=None):
         """Returns gradient of the objective function evaluated at the 

@@ -12,7 +12,6 @@
 This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
 """
-import poek as pk
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 import pyutilib
 
@@ -20,7 +19,14 @@ from scipy.sparse import coo_matrix
 import numpy as np
 import six
 
-__all__ = ['PoekNL_NLP']
+try:
+    import poek as pk
+    poek_available=True
+    __all__ = ['PoekNLP_NLP']
+except:
+    poek_available=False
+    __all__ = []
+
 
 class PoekNL_NLP(AslNLP):
 

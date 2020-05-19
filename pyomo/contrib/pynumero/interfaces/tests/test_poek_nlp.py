@@ -25,11 +25,8 @@ try:
 except:
     poek_available=False
 
-#from pyomo.opt.base import WriterFactory
 from pyomo.contrib.pynumero.interfaces.poeknl_nlp import PoekNL_NLP
-#import tempfile
-
-#from scipy.sparse import coo_matrix
+from pyomo.contrib.pynumero.interfaces.poek_nlp import Poek_NLP
 
 #from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix, \
     #build_compression_mask_for_finite_values, full_to_compressed, compressed_to_full
@@ -356,6 +353,24 @@ def execute_extended_nlp_interface(self, anlp):
     expected_hess = [ [4.0*i*j for j in range(1, 10)] for i in range(1,10) ]
     expected_hess = np.asarray(expected_hess, dtype=np.float64)
     self.assertTrue(np.array_equal(dense_hess, expected_hess))
+
+
+class TestPoek_NLP(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # test problem
+        cls.x, cls.pm = create_poek_model1()
+        cls.c = {i+1:cls.pm.get_constraint(i) for i in range(cls.pm.num_constraints())}
+        
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+    def test_nlp_interface(self):
+        nlp = Poek_NLP(self.pm)
+        execute_extended_nlp_interface(self, nlp)
+        self.assertTrue(nlp.poek_nlpmodel() is self.pm)
 
 
 class TestPoekNL_NLP(unittest.TestCase):
