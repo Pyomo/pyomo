@@ -294,3 +294,28 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
                         outerdisjunct.getname(
                             fully_qualified=True,
                             name_buffer=NAME_BUFFER)))
+
+
+def _warn_for_active_logical_statement(logical_statement, disjunct, NAME_BUFFER):
+    # this should only have gotten called if the logical statement is active
+    assert logical_statement.active
+    problem_statement = logical_statement
+    if logical_statement.is_indexed():
+        for i in logical_statement:
+            if logical_statement[i].active:
+                # a _LogicalStatementData is active, we will yell about
+                # it specifically.
+                problem_statement = logical_statement[i]
+                break
+        # None of the _LogicalStatmentDatas were actually active. We
+        # are OK and we can deactivate the container.
+        else:
+            logical_statement.deactivate()
+            return
+    # the logical statement should only have been active if it wasn't transformed
+    _probStatementName = problem_statement.getname(
+        fully_qualified=True, name_buffer=NAME_BUFFER)
+    raise GDP_Error("Found untransformed logical statment %s in disjunct %s! "
+                    "The logical statment must be transformed before the "
+                    "disjunct. Use the logical_to_linear transformation."
+                    % (_probStatementName, disjunct.name))
