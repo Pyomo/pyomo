@@ -4,7 +4,8 @@ from contrib.community_detection import community_graph
 import community
 
 
-def detect_communities(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None, random_seed=None):
+def detect_communities(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None,
+                       random_seed=None):
     """
     Detects communities in a graph of variables and constraints
 
@@ -34,15 +35,16 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
         print("Invalid input: Specify node_type 'v' or 'c' for function detect_communities")
         return None
 
-    # Generate the model_graph (a networkX graph)
+    # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
     model_graph = community_graph._generate_model_graph(model, node_type=node_type, with_objective=with_objective,
-                                                        weighted_graph=weighted_graph, file_destination=file_destination)
+                                                        weighted_graph=weighted_graph,
+                                                        file_destination=file_destination)
 
     # Use Louvain community detection to determine which community each node belongs to
     partition_of_graph = community.best_partition(model_graph, random_state=random_seed)
 
-    # Use partition_of_graph to create a dictionary that maps communities to nodes (Louvain community detection returns
-    # a dictionary that maps individual nodes to their communities)
+    # Use partition_of_graph to create a dictionary that maps communities to nodes (because Louvain community detection
+    # returns a dictionary that maps individual nodes to their communities)
     number_of_communities = len(set(partition_of_graph.values()))
     community_map = {nth_community: [] for nth_community in range(number_of_communities)}
     for node in partition_of_graph:

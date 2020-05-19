@@ -69,34 +69,34 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
         # This if statement will be executed if the user chooses to treat the objective function as a constraint in
         # this model graph
         if with_objective:
-            # Obtain a convenient form for the objective function
-            objective_function = list(model.component_data_objects(Objective, descend_into=True))[0]
+            # Use a for loop to account for the possibility of multiple objective functions
+            for objective_function in model.component_data_objects(Objective, descend_into=True):
 
-            # Create a list of the variables that occur in the objective function
-            variables_in_objective_function = [str(objective_variable) for objective_variable in
-                                               list(identify_variables(objective_function))]
+                # Create a list of the variables that occur in the given objective function
+                variables_in_objective_function = [str(objective_variable) for objective_variable in
+                                                   list(identify_variables(objective_function))]
 
-            # Create a list of all the edges that need to be created based on the objective equation
-            edges_between_nodes = list(combinations(sorted(variables_in_objective_function), 2))
+                # Create a list of all the edges that need to be created based on the variables in the objective
+                edges_between_nodes = list(combinations(sorted(variables_in_objective_function), 2))
 
-            # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
-            if weighted_graph:
-                edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
-            else:
-                edge_set.update(set(edges_between_nodes))
+                # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
+                if weighted_graph:
+                    edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
+                else:
+                    edge_set.update(set(edges_between_nodes))
 
-    elif node_type == 'c': # Constraint nodes
+    # Constraint nodes
+    elif node_type == 'c':  # Constraint nodes
         # Create nodes based on constraints in the Pyomo model
         for model_constraint in model.component_data_objects(Constraint, descend_into=True):
             model_graph.add_node(str(model_constraint), node_name=str(model_constraint))
 
         # If the user chooses to include the objective function as a constraint in the model graph
         if with_objective:
-            # Obtain a convenient form for the objective function
-            objective_function = list(model.component_data_objects(Objective, descend_into=True))[0]
-
-            # Add objective_function as a node in model_graph
-            model_graph.add_node(str(objective_function), node_name=str(objective_function))
+            # Use a loop to account for the possibility of multiple objective functions
+            for objective_function in model.component_data_objects(Objective, descend_into=True):
+                # Add objective_function as a node in model_graph
+                model_graph.add_node(str(objective_function), node_name=str(objective_function))
 
         # Loop through all variables in the Pyomo model
         for model_variable in model.component_data_objects(Var, descend_into=True):
@@ -111,28 +111,40 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
 
             # Now, if the user is including the objective function as a constraint in the graph, we will add the
             # objective function to the list constraints_with_given_variable only if the given model_variable occurs
-            # in the objective function
-            if with_objective and str(model_variable) in [str(objective_variable) for objective_variable in
-                                                          list(identify_variables(objective_function))]:
-                constraints_with_given_variable.append(str(objective_function))
+            # in the given objective function
+            if with_objective:
+                # Though this looks confusing, it is structurally and logically identical to the list comprehension
+                # used to create a list of the constraints that contain the given model_variable
+
+                # This list comprehension is just saying that the objective function will be added to this list
+                # if the model_variable occurs in the given objective_function and the structure reflects the
+                # possibility of multiple objective functions
+                objective_functions_with_given_variable = [str(objective_function) for objective_function in
+                                                           model.component_data_objects(Objective, descend_into=True) if
+                                                           str(model_variable) in
+                                                           [str(objective_variable) for objective_variable in
+                                                            identify_variables(objective_function)]]
+
+                # Now, we add the relevant objective function(s) to the list of constraints containing model_variable
+                constraints_with_given_variable.extend(objective_functions_with_given_variable)
 
             # Create a list of all the edges that need to be created based on the constraints that contain the given
             # model_variable
             edges_between_nodes = list(combinations(sorted(constraints_with_given_variable), 2))
 
-            # # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
+            # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
             if weighted_graph:
                 edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
             else:
                 edge_set.update(edges_between_nodes)
 
-    # Detect_communities only ever calls _generate_model_graph with a node_type of 'c' or 'v'
-    # This case should never get executed because of the way this function is called by detect communities
+    # Detect_communities only calls _generate_model_graph if given a node_type of 'c' or 'v'
+    # Thus, this case should never get executed
     else:
         print("Node type must be specified as 'v' or 'c' (variable nodes or constraint nodes).")
 
     # Now, using edge_weight_dict or edge_set (based on whether the user wants a weighted or unweighted graph,
-    # respectively), the networkX graph (model_graph) will be updated with the edges determined above
+    # respectively), the networkX graph (model_graph) will be updated with all of the edges determined above
     if weighted_graph:
         for edge in edge_weight_dict:
             model_graph.add_edge(edge[0], edge[1], weight=edge_weight_dict[edge])

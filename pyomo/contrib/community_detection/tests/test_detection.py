@@ -23,7 +23,6 @@ from pyomo.core.expr.current import identify_variables
 
 
 class TestDecomposition(unittest.TestCase):
-
     """
         def test_communities_1(self):
             model = LP_unbounded()._generate_model
@@ -72,7 +71,6 @@ class TestDecomposition(unittest.TestCase):
         results_without_obj = (detect_communities(model, 'v', False), detect_communities(model, 'c', False))
         correct_dicts_without_obj = ({0: ['i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'i8', 'i9', 'i10', 'i11']}, {0: ['c2']})
         self.assertEqual(correct_dicts_without_obj, results_without_obj)
-
 
     def test_communities_2(self):
         # Fourth test case
