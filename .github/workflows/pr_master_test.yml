@@ -391,7 +391,7 @@ jobs:
         coverage report -i
         coverage xml -i
         i=0
-        while /bin/true; do
+        while : ; do
             curl --retry 8 -L https://codecov.io/bash -o codecov.sh
             bash codecov.sh -X gcov -f coverage.xml | tee .cover.upload
             if test $? == 0; then
