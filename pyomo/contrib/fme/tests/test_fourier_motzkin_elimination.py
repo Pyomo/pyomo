@@ -22,6 +22,7 @@ from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory, check_available_solvers
+import pyomo.contrib.fme.fourier_motzkin_elimination
 
 from six import StringIO
 import logging
