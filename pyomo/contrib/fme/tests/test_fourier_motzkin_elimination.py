@@ -25,10 +25,16 @@ from pyomo.opt import SolverFactory, check_available_solvers
 
 from six import StringIO
 import logging
+import random
 
 solvers = check_available_solvers('glpk')
 
 class TestFourierMotzkinElimination(unittest.TestCase):
+    def setUp(self):
+        # will need this so we know transformation block names in the test that
+        # includes chull transformation
+        random.seed(666)
+
     @staticmethod
     def makeModel():
         """
@@ -485,16 +491,29 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         m.obj = Objective(expr=m.p[1] + m.p[2])
 
-        TransformationFactory('gdp.chull').apply_to(m)
-        relaxationBlocks = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
-        disaggregatedVars = ComponentSet([relaxationBlocks[0].component("p[1]"),
-                                          relaxationBlocks[1].component("p[1]"),
-                                          relaxationBlocks[2].component("p[1]"),
-                                          relaxationBlocks[2].component("p[2]"),
-                                          relaxationBlocks[3].component("p[1]"),
-                                          relaxationBlocks[3].component("p[2]"),
-                                          relaxationBlocks[4].component("p[1]"),
-                                          relaxationBlocks[4].component("p[2]")])
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+        disaggregatedVars = ComponentSet(
+            [chull.get_disaggregated_var(m.p[1], m.time1.disjuncts[0]),
+             chull.get_disaggregated_var(m.p[1], m.time1.disjuncts[1]),
+             chull.get_disaggregated_var(m.p[1], m.on),
+             chull.get_disaggregated_var(m.p[2], m.on),
+             chull.get_disaggregated_var(m.p[1], m.startup),
+             chull.get_disaggregated_var(m.p[2], m.startup),
+             chull.get_disaggregated_var(m.p[1], m.off),
+             chull.get_disaggregated_var(m.p[2], m.off)
+         ])
+                                          
+        # from nose.tools import set_trace
+        # set_trace()
+        # disaggregatedVars = ComponentSet([relaxationBlocks[0].component("p[1]"),
+        #                                   relaxationBlocks[1].component("p[1]"),
+        #                                   relaxationBlocks[2].component("p[1]"),
+        #                                   relaxationBlocks[2].component("p[2]"),
+        #                                   relaxationBlocks[3].component("p[1]"),
+        #                                   relaxationBlocks[3].component("p[2]"),
+        #                                   relaxationBlocks[4].component("p[1]"),
+        #                                   relaxationBlocks[4].component("p[2]")])
 
         return m, disaggregatedVars
 
@@ -516,7 +535,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # what should be here is:
         self.check_chull_projected_constraints(m, constraints, [22, 20, 58, 61,
                                                                 56, 38, 32, 1, 2,
-                                                                3, 4])
+                                                                4, 5])
         # and when we filter, it's still there.
         constraints = filtered._pyomo_contrib_fme_transformation.\
                       projected_constraints

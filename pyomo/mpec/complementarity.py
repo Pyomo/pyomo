@@ -21,6 +21,9 @@ from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.numvalue import ZeroConstant, _sub
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.block import _BlockData
+from pyomo.core.base.util import (
+    disable_methods, Initializer, IndexedCallInitializer, CountedCallInitializer
+)
 
 import logging
 logger = logging.getLogger('pyomo.core')
@@ -132,84 +135,7 @@ class _ComplementarityData(_BlockData):
             self.v = Var(bounds=(0, None))
             self.ve = Constraint(expr=self.v == _e1[2] - _e1[1])
 
-
-@ModelComponentFactory.register("Complementarity conditions.")
-class Complementarity(Block):
-
-    Skip = (1000,)
-
-    def __new__(cls, *args, **kwds):
-        if cls != Complementarity:
-            return super(Complementarity, cls).__new__(cls)
-        if args == ():
-            return SimpleComplementarity.__new__(SimpleComplementarity)
-        else:
-            return IndexedComplementarity.__new__(IndexedComplementarity)
-
-    def __init__(self, *args, **kwargs):
-        self._expr = kwargs.pop('expr', None )
-        #
-        kwargs.setdefault('ctype', Complementarity)
-        #
-        # The attribute _rule is initialized here.
-        #
-        Block.__init__(self, *args, **kwargs)
-
-    def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
-            logger.debug("Constructing %s '%s', from data=%s",
-                         self.__class__.__name__, self.name, str(data))
-        if self._constructed:                                       #pragma:nocover
-            return
-        timer = ConstructionTimer(self)
-
-        #
-        _self_rule = self._rule
-        self._rule = None
-        super(Complementarity, self).construct()
-        self._rule = _self_rule
-        #
-        if _self_rule is None and self._expr is None:
-            # No construction rule or expression specified.
-            return
-        #
-        if not self.is_indexed():
-            #
-            # Scalar component
-            #
-            if _self_rule is None:
-                self.add(None, self._expr)
-            else:
-                try:
-                    tmp = _self_rule(self.parent_block())
-                    self.add(None, tmp)
-                except Exception:
-                    err = sys.exc_info()[1]
-                    logger.error(
-                        "Rule failed when generating expression for "
-                        "complementarity %s:\n%s: %s"
-                        % ( self.name, type(err).__name__, err ) )
-                    raise
-        else:
-            if not self._expr is None:
-                raise IndexError(
-                    "Cannot initialize multiple indices of a Complementarity "
-                    "component with a single expression")
-            _self_parent = self._parent()
-            for idx in self._index:
-                try:
-                    tmp = apply_indexed_rule( self, _self_rule, _self_parent, idx )
-                    self.add(idx, tmp)
-                except Exception:
-                    err = sys.exc_info()[1]
-                    logger.error(
-                        "Rule failed when generating expression for "
-                        "complementarity %s with index %s:\n%s: %s"
-                        % ( self.name, idx, type(err).__name__, err ) )
-                    raise
-        timer.report()
-
-    def add(self, index, cc):
+    def set_value(self, cc):
         """
         Add a complementarity condition with a specified index.
         """
@@ -218,37 +144,98 @@ class Complementarity(Block):
             # The ComplementarityTuple has a fixed length, so we initialize
             # the _args component and return
             #
-            self[index]._args = ( as_numeric(cc.arg0), as_numeric(cc.arg1) )
-            return self[index]
+            self._args = ( as_numeric(cc.arg0), as_numeric(cc.arg1) )
         #
-        if cc.__class__ is tuple:
+        elif cc.__class__ is tuple:
             if cc is Complementarity.Skip:
-                return
+                del self.parent_component()[self.index()]
             elif len(cc) != 2:
                 raise ValueError(
                     "Invalid tuple for Complementarity %s (expected 2-tuple):"
                     "\n\t%s" % (self.name, cc) )
+            else:
+                self._args = tuple( as_numeric(x) for x in cc )
         elif cc.__class__ is list:
             #
-            # Call add() recursively to apply the error same error
+            # Call set_value() recursively to apply the error same error
             # checks.
             #
-            return self.add(index, tuple(cc))
-        elif cc is None:
-                raise ValueError("""
+            return self.set_value(tuple(cc))
+        else:
+            raise ValueError(
+                "Unexpected value for Complementarity %s:\n\t%s"
+                % (self.name, cc) )
+
+
+@ModelComponentFactory.register("Complementarity conditions.")
+class Complementarity(Block):
+
+    Skip = (1000,)
+    _ComponentDataClass = _ComplementarityData
+
+    def __new__(cls, *args, **kwds):
+        if cls != Complementarity:
+            return super(Complementarity, cls).__new__(cls)
+        if args == ():
+            return super(Complementarity, cls).__new__(AbstractSimpleComplementarity)
+        else:
+            return super(Complementarity, cls).__new__(IndexedComplementarity)
+
+    @staticmethod
+    def _complementarity_rule(b, *idx):
+        _rule = b.parent_component()._init_rule
+        if _rule is None:
+            return
+        cc = _rule(b.parent_block(), idx)
+        if cc is None:
+            raise ValueError("""
 Invalid complementarity condition.  The complementarity condition
 is None instead of a 2-tuple.  Please modify your rule to return
 Complementarity.Skip instead of None.
 
-Error thrown for Complementarity "%s"
-""" % ( self.name, ) )
-        else:
+Error thrown for Complementarity "%s".""" % ( b.name, ) )
+        b.set_value(cc)
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('ctype', Complementarity)
+        _init = tuple( _arg for _arg in (
+            kwargs.pop('initialize', None),
+            kwargs.pop('rule', None),
+            kwargs.pop('expr', None) ) if _arg is not None )
+        if len(_init) > 1:
             raise ValueError(
-                "Unexpected argument declaring Complementarity %s:\n\t%s"
-                % (self.name, cc) )
-        #
-        self[index]._args = tuple( as_numeric(x) for x in cc )
-        return self[index]
+                "Duplicate initialization: Complementarity() only accepts "
+                "one of 'initialize=', 'rule=', and 'expr='")
+        elif _init:
+            _init = _init[0]
+        else:
+            _init = None
+
+        self._init_rule = Initializer(
+            _init, treat_sequences_as_mappings=False, allow_generators=True
+        )
+
+        if self._init_rule is not None:
+            kwargs['rule'] = Complementarity._complementarity_rule
+        Block.__init__(self, *args, **kwargs)
+
+        # HACK to make the "counted call" syntax work.  We wait until
+        # after the base class is set up so that is_indexed() is
+        # reliable.
+        if self._init_rule is not None \
+           and self._init_rule.__class__ is IndexedCallInitializer:
+            self._init_rule = CountedCallInitializer(self, self._init_rule)
+
+
+    def add(self, index, cc):
+        """
+        Add a complementarity condition with a specified index.
+        """
+        if cc is Complementarity.Skip:
+            return
+        _block = self[index]
+        _block.set_value(cc)
+        return _block
 
     def _pprint(self):
         """
@@ -298,10 +285,13 @@ class SimpleComplementarity(_ComplementarityData, Complementarity):
         self._data[None] = self
 
 
-class IndexedComplementarity(Complementarity):
+@disable_methods({'add', 'set_value', 'to_standard_form'})
+class AbstractSimpleComplementarity(SimpleComplementarity):
+    pass
 
-    def _getitem_when_not_present(self, idx):
-        return self._data.setdefault(idx, _ComplementarityData(self))
+
+class IndexedComplementarity(Complementarity):
+    pass
 
 
 @ModelComponentFactory.register("A list of complementarity conditions.")
@@ -319,6 +309,10 @@ class ComplementarityList(IndexedComplementarity):
         args = (Set(),)
         self._nconditions = 0
         Complementarity.__init__(self, *args, **kwargs)
+        # disable the implicit rule; construct will exhaust the
+        # user-provided rule, and then subsequent attempts to add a CC
+        # will bypass the rule
+        self._rule = None
 
     def add(self, expr):
         """
@@ -333,41 +327,21 @@ class ComplementarityList(IndexedComplementarity):
         Construct the expression(s) for this complementarity condition.
         """
         generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
-        if generate_debug_messages:         #pragma:nocover
+        if generate_debug_messages:
             logger.debug("Constructing complementarity list %s", self.name)
-        if self._constructed:               #pragma:nocover
+        if self._constructed:
             return
         timer = ConstructionTimer(self)
-        _self_rule = self._rule
         self._constructed=True
-        if _self_rule is None:
-            return
-        #
-        _generator = None
-        _self_parent = self._parent()
-        if inspect.isgeneratorfunction(_self_rule):
-            _generator = _self_rule(_self_parent)
-        elif inspect.isgenerator(_self_rule):
-            _generator = _self_rule
-        if _generator is None:
-            while True:
-                val = self._nconditions + 1
-                if generate_debug_messages:     #pragma:nocover
-                    logger.debug("   Constructing complementarity index "+str(val))
-                expr = apply_indexed_rule( self, _self_rule, _self_parent, val )
-                if expr is None:
-                    raise ValueError( "Complementarity rule returned None "
-                                      "instead of ComplementarityList.End" )
-                if (expr.__class__ is tuple and expr == ComplementarityList.End):
-                    return
-                self.add(expr)
-        else:
-            for expr in _generator:
-                if expr is None:
-                    raise ValueError( "Complementarity generator returned None "
-                                      "instead of ComplementarityList.End" )
-                if (expr.__class__ is tuple and expr == ComplementarityList.End):
-                    return
-                self.add(expr)
+
+        if self._init_rule is not None:
+            _init = self._init_rule(self.parent_block(), ())
+            for cc in iter(_init):
+                if cc is ComplementarityList.End:
+                    break
+                if cc is Complementarity.Skip:
+                    continue
+                self.add(cc)
+
         timer.report()
 

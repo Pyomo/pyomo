@@ -319,7 +319,7 @@ def _prop_bnds_leaf_to_root_asin(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.asin(lb1, ub1, -interval.inf, interval.inf)
+    bnds_dict[node] = interval.asin(lb1, ub1, -interval.inf, interval.inf, feasibility_tol)
 
 
 def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
@@ -339,7 +339,7 @@ def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.acos(lb1, ub1, -interval.inf, interval.inf)
+    bnds_dict[node] = interval.acos(lb1, ub1, -interval.inf, interval.inf, feasibility_tol)
 
 
 def _prop_bnds_leaf_to_root_atan(node, bnds_dict, feasibility_tol):
@@ -809,7 +809,7 @@ def _prop_bnds_root_to_leaf_sin(node, bnds_dict, feasibility_tol):
     arg = node.args[0]
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg]
-    _lb1, _ub1 = interval.asin(lb0, ub0, lb1, ub1)
+    _lb1, _ub1 = interval.asin(lb0, ub0, lb1, ub1, feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
@@ -835,7 +835,7 @@ def _prop_bnds_root_to_leaf_cos(node, bnds_dict, feasibility_tol):
     arg = node.args[0]
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg]
-    _lb1, _ub1 = interval.acos(lb0, ub0, lb1, ub1)
+    _lb1, _ub1 = interval.acos(lb0, ub0, lb1, ub1, feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
