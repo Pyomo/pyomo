@@ -375,7 +375,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
 
         return ans
 
-    def post_process_fme_constraints(self, m, solver_factory):
+    def post_process_fme_constraints(self, m, solver_factory, tolerance=0):
         """Function that solves a sequence of LPs problems to check if
         constraints are implied by each other. Deletes any that are.
 
@@ -392,6 +392,12 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                         had nonlinear constraints unrelated to the variables 
                         being projected, you need to either deactivate them or 
                         provide a solver which will do the right thing.)
+        tolerance: Tolerance at which we decide a constraint is implied by the
+                   others. Default is 0, meaning we remove the constraint if 
+                   the LP solve finds the constraint can be tight but not 
+                   violated. Setting this to a small positive value would
+                   remove constraints more conservatively. Setting it to a 
+                   negative value would result in a relaxed problem.
         """
         # make sure m looks like what we expect
         if not hasattr(m, "_pyomo_contrib_fme_transformation"):
@@ -442,7 +448,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             else:
                 obj_val = value(obj)
             # if we couldn't make it infeasible, it's useless
-            if obj_val >= 0:
+            if obj_val >= tolerance:
                 m.del_component(constraints[i])
                 del constraints[i]
             else:
