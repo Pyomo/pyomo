@@ -9,6 +9,50 @@ from pyutilib.misc.timing import HierarchicalTimer
 
 class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
     @abstractmethod
+    def n_primals(self):
+        pass
+
+    @abstractmethod
+    def nnz_hessian_lag(self):
+        pass
+
+    @abstractmethod
+    def primals_lb(self):
+        pass
+
+    @abstractmethod
+    def primals_ub(self):
+        pass
+
+    @abstractmethod
+    def init_primals(self):
+        pass
+
+    @abstractmethod
+    def set_primals(self, primals):
+        pass
+
+    @abstractmethod
+    def get_primals(self):
+        pass
+
+    @abstractmethod
+    def get_obj_factor(self):
+        pass
+
+    @abstractmethod
+    def set_obj_factor(self, obj_factor):
+        pass
+
+    @abstractmethod
+    def evaluate_objective(self):
+        pass
+
+    @abstractmethod
+    def evaluate_grad_objective(self):
+        pass
+
+    @abstractmethod
     def n_eq_constraints(self):
         pass
 
@@ -17,11 +61,19 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
         pass
 
     @abstractmethod
-    def init_primals(self):
+    def nnz_jacobian_eq(self):
         pass
 
     @abstractmethod
-    def init_slacks(self):
+    def nnz_jacobian_ineq(self):
+        pass
+
+    @abstractmethod
+    def ineq_lb(self):
+        pass
+
+    @abstractmethod
+    def ineq_ub(self):
         pass
 
     @abstractmethod
@@ -30,6 +82,42 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
 
     @abstractmethod
     def init_duals_ineq(self):
+        pass
+
+    @abstractmethod
+    def set_duals_eq(self, duals_eq):
+        pass
+
+    @abstractmethod
+    def set_duals_ineq(self, duals_ineq):
+        pass
+
+    @abstractmethod
+    def get_duals_eq(self):
+        pass
+
+    @abstractmethod
+    def get_duals_ineq(self):
+        pass
+
+    @abstractmethod
+    def evaluate_eq_constraints(self):
+        pass
+
+    @abstractmethod
+    def evaluate_ineq_constraints(self):
+        pass
+
+    @abstractmethod
+    def evaluate_jacobian_eq(self):
+        pass
+
+    @abstractmethod
+    def evaluate_jacobian_ineq(self):
+        pass
+
+    @abstractmethod
+    def init_slacks(self):
         pass
 
     @abstractmethod
@@ -49,19 +137,7 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
         pass
 
     @abstractmethod
-    def set_primals(self, primals):
-        pass
-
-    @abstractmethod
     def set_slacks(self, slacks):
-        pass
-
-    @abstractmethod
-    def set_duals_eq(self, duals):
-        pass
-
-    @abstractmethod
-    def set_duals_ineq(self, duals):
         pass
 
     @abstractmethod
@@ -81,19 +157,7 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
         pass
 
     @abstractmethod
-    def get_primals(self):
-        pass
-
-    @abstractmethod
     def get_slacks(self):
-        pass
-
-    @abstractmethod
-    def get_duals_eq(self):
-        pass
-
-    @abstractmethod
-    def get_duals_ineq(self):
         pass
 
     @abstractmethod
@@ -110,22 +174,6 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
 
     @abstractmethod
     def get_duals_slacks_ub(self):
-        pass
-
-    @abstractmethod
-    def get_primals_lb(self):
-        pass
-
-    @abstractmethod
-    def get_primals_ub(self):
-        pass
-
-    @abstractmethod
-    def get_ineq_lb(self):
-        pass
-
-    @abstractmethod
-    def get_ineq_ub(self):
         pass
 
     @abstractmethod
@@ -176,30 +224,6 @@ class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
     def get_delta_duals_slacks_ub(self):
         pass
 
-    @abstractmethod
-    def evaluate_objective(self):
-        pass
-
-    @abstractmethod
-    def evaluate_eq_constraints(self):
-        pass
-
-    @abstractmethod
-    def evaluate_ineq_constraints(self):
-        pass
-
-    @abstractmethod
-    def evaluate_grad_objective(self):
-        pass
-
-    @abstractmethod
-    def evaluate_jacobian_eq(self):
-        pass
-
-    @abstractmethod
-    def evaluate_jacobian_ineq(self):
-        pass
-
     def regularize_equality_gradient(self, kkt, coef, copy_kkt=True):
         raise RuntimeError(
             'Equality gradient regularization is necessary but no '
@@ -248,11 +272,29 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         self._delta_duals_ineq = None
         self._barrier = None
 
+    def n_primals(self):
+        return self._nlp.n_primals()
+
+    def nnz_hessian_lag(self):
+        return self._nlp.nnz_hessian_lag()
+
+    def set_obj_factor(self, obj_factor):
+        self._nlp.set_obj_factor(obj_factor)
+
+    def get_obj_factor(self):
+        return self._nlp.get_obj_factor()
+
     def n_eq_constraints(self):
         return self._nlp.n_eq_constraints()
 
     def n_ineq_constraints(self):
         return self._nlp.n_ineq_constraints()
+
+    def nnz_jacobian_eq(self):
+        return self._nlp.nnz_jacobian_eq()
+
+    def nnz_jacobian_ineq(self):
+        return self._nlp.nnz_jacobian_ineq()
 
     def init_primals(self):
         primals = self._nlp.init_primals()
@@ -328,16 +370,16 @@ class InteriorPointInterface(BaseInteriorPointInterface):
     def get_duals_slacks_ub(self):
         return self._duals_slacks_ub
 
-    def get_primals_lb(self):
+    def primals_lb(self):
         return self._nlp.primals_lb()
 
-    def get_primals_ub(self):
+    def primals_ub(self):
         return self._nlp.primals_ub()
 
-    def get_ineq_lb(self):
+    def ineq_lb(self):
         return self._nlp.ineq_lb()
 
-    def get_ineq_ub(self):
+    def ineq_ub(self):
         return self._nlp.ineq_ub()
 
     def set_barrier_parameter(self, barrier):
@@ -401,7 +443,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         if timer is None:
             timer = HierarchicalTimer()
         timer.start('eval grad obj')
-        grad_obj = self.evaluate_grad_objective()
+        grad_obj = self.get_obj_factor() * self.evaluate_grad_objective()
         timer.stop('eval grad obj')
         timer.start('eval jac')
         jac_eq = self._nlp.evaluate_jacobian_eq()
@@ -486,7 +528,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         return self._nlp.evaluate_ineq_constraints()
 
     def evaluate_grad_objective(self):
-        return self._nlp.get_obj_factor() * self._nlp.evaluate_grad_objective()
+        return self._nlp.evaluate_grad_objective()
 
     def evaluate_jacobian_eq(self):
         return self._nlp.evaluate_jacobian_eq()

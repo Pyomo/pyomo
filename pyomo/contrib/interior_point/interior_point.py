@@ -188,12 +188,12 @@ class InteriorPointSolver(object):
         duals_slacks_lb = interface.init_duals_slacks_lb().copy()
         duals_slacks_ub = interface.init_duals_slacks_ub().copy()
 
-        self.process_init(primals, interface.get_primals_lb(), interface.get_primals_ub())
-        self.process_init(slacks, interface.get_ineq_lb(), interface.get_ineq_ub())
-        self.process_init_duals_lb(duals_primals_lb, self.interface.get_primals_lb())
-        self.process_init_duals_ub(duals_primals_ub, self.interface.get_primals_ub())
-        self.process_init_duals_lb(duals_slacks_lb, self.interface.get_ineq_lb())
-        self.process_init_duals_ub(duals_slacks_ub, self.interface.get_ineq_ub())
+        self.process_init(primals, interface.primals_lb(), interface.primals_ub())
+        self.process_init(slacks, interface.ineq_lb(), interface.ineq_ub())
+        self.process_init_duals_lb(duals_primals_lb, self.interface.primals_lb())
+        self.process_init_duals_ub(duals_primals_ub, self.interface.primals_ub())
+        self.process_init_duals_lb(duals_slacks_lb, self.interface.ineq_lb())
+        self.process_init_duals_ub(duals_slacks_ub, self.interface.ineq_ub())
         
         interface.set_barrier_parameter(self._barrier_parameter)
 
@@ -401,7 +401,7 @@ class InteriorPointSolver(object):
         interface = self.interface
         slacks = interface.get_slacks()
         timer.start('grad obj')
-        grad_obj = interface.evaluate_grad_objective()
+        grad_obj = interface.get_obj_factor() * interface.evaluate_grad_objective()
         timer.stop('grad obj')
         timer.start('jac eq')
         jac_eq = interface.evaluate_jacobian_eq()
@@ -423,15 +423,15 @@ class InteriorPointSolver(object):
         duals_slacks_lb = interface.get_duals_slacks_lb()
         duals_slacks_ub = interface.get_duals_slacks_ub()
 
-        primals_lb = interface.get_primals_lb()
-        primals_ub = interface.get_primals_ub()
+        primals_lb = interface.primals_lb()
+        primals_ub = interface.primals_ub()
         primals_lb_mod = primals_lb.copy()
         primals_ub_mod = primals_ub.copy()
         primals_lb_mod[np.isneginf(primals_lb)] = 0  # these entries get multiplied by 0
         primals_ub_mod[np.isinf(primals_ub)] = 0  # these entries get multiplied by 0
 
-        ineq_lb = interface.get_ineq_lb()
-        ineq_ub = interface.get_ineq_ub()
+        ineq_lb = interface.ineq_lb()
+        ineq_ub = interface.ineq_ub()
         ineq_lb_mod = ineq_lb.copy()
         ineq_ub_mod = ineq_ub.copy()
         ineq_lb_mod[np.isneginf(ineq_lb)] = 0  # these entries get multiplied by 0
@@ -576,10 +576,10 @@ def fraction_to_the_boundary(interface, tau):
     delta_duals_slacks_lb = interface.get_delta_duals_slacks_lb()
     delta_duals_slacks_ub = interface.get_delta_duals_slacks_ub()
 
-    primals_lb = interface.get_primals_lb()
-    primals_ub = interface.get_primals_ub()
-    ineq_lb = interface.get_ineq_lb()
-    ineq_ub = interface.get_ineq_ub()
+    primals_lb = interface.primals_lb()
+    primals_ub = interface.primals_ub()
+    ineq_lb = interface.ineq_lb()
+    ineq_ub = interface.ineq_ub()
 
     alpha_primal_max_a = _fraction_to_the_boundary_helper_lb(
         tau=tau,
