@@ -16,13 +16,14 @@ from pyomo.environ import *
 from pyomo.contrib.community_detection.detection import *
 from pyomo.core import ConcreteModel
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
-from pyomo.solvers.tests.models.QCP_simple import QCP_simple
+from pyomo.solvers.tests.models.QP_simple import QP_simple
 from pyomo.solvers.tests.models.LP_inactive_index import LP_inactive_index
 from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
 import pyutilib.th as unittest
 
 
 class TestDecomposition(unittest.TestCase):
+
     def test_communities_1(self):
         m_class = LP_unbounded()
         m_class._generate_model()
@@ -60,7 +61,7 @@ class TestDecomposition(unittest.TestCase):
         self.assertEqual(correct_community_maps, test_results)
 
     def test_communities_2(self):
-        m_class = QCP_simple()
+        m_class = QP_simple()
         m_class._generate_model()
         model = m_class.model
 
@@ -90,23 +91,9 @@ class TestDecomposition(unittest.TestCase):
                         community_map_c_unweighted_with,
                         community_map_c_weighted_with)
 
-        correct_community_maps = ({0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
-                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
-                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
-                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
-                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]']},
-                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]']},
-                                  {0: ['c0', 'qc1', 'obj'], 1: ['qc0', 'c[1]', 'c[2]']},
-                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]', 'obj']})
-
-        correct_community_maps = ({0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
-                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
-                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
-                                  {0: ['x', 'y', 'z'], 1: ['fixed_var', 'q1', 'q2']},
-                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]']},
-                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]']},
-                                  {0: ['c0', 'qc1', 'obj'], 1: ['qc0', 'c[1]', 'c[2]']},
-                                  {0: ['c0', 'qc0', 'qc1'], 1: ['c[1]', 'c[2]', 'obj']})
+        correct_community_maps = ({0: ['x', 'y']}, {0: ['x', 'y']}, {0: ['x', 'y']}, {0: ['x', 'y']}, {0: ['c1', 'c2']},
+                                  {0: ['c1', 'c2']}, {0: ['c1', 'c2', 'inactive_obj', 'obj']},
+                                  {0: ['c1', 'c2', 'inactive_obj', 'obj']})
 
         self.assertEqual(correct_community_maps, test_results)
 
