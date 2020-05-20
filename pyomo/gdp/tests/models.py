@@ -1,5 +1,5 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param,
-                        Set, Var, inequality, RangeSet, Any)
+                        Set, Var, inequality, RangeSet, Any, Expression)
 from pyomo.gdp import Disjunct, Disjunction
 
 
@@ -266,6 +266,17 @@ def makeTwoTermDisjOnBlock():
 
     return m
 
+def add_disj_not_on_block(m):
+    def simpdisj_rule(disjunct):
+        m = disjunct.model()
+        disjunct.c = Constraint(expr=m.a >= 3)
+    m.simpledisj = Disjunct(rule=simpdisj_rule)
+    def simpledisj2_rule(disjunct):
+        m = disjunct.model()
+        disjunct.c = Constraint(expr=m.a <= 3.5)
+    m.simpledisj2 = Disjunct(rule=simpledisj2_rule)
+    m.disjunction2 = Disjunction(expr=[m.simpledisj, m.simpledisj2])
+    return m
 
 def makeDisjunctionsOnIndexedBlock():
     """Two disjunctions (one indexed an one not), each on a separate 
@@ -343,7 +354,7 @@ def makeNestedDisjunctions():
 
     (makeNestedDisjunctions_NestedDisjuncts is a much simpler model. All 
     this adds is that it has a nested disjunction on a DisjunctData as well
-    as on a SimpleDisjunct. So mostly exists for historical reasons.)
+    as on a SimpleDisjunct. So mostly it exists for historical reasons.)
     """
     m = ConcreteModel()
     m.x = Var(bounds=(-9, 9))
@@ -520,6 +531,19 @@ def makeDisjunctWithRangeSet():
     m.x = Var(bounds=(0, 1))
     m.d1 = Disjunct()
     m.d1.s = RangeSet(1)
+    m.d1.c = Constraint(rule=lambda _: m.x == 1)
+    m.d2 = Disjunct()
+    m.disj = Disjunction(expr=[m.d1, m.d2])
+    return m
+
+def makeDisjunctWithExpression():
+    """Two-term SimpleDisjunction where one of the disjuncts contains an 
+    Expression. This is used to make sure that we correctly handle types we 
+    hit in disjunct.component_objects(active=True)"""
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 1))
+    m.d1 = Disjunct()
+    m.d1.e = Expression(expr=m.x**2)
     m.d1.c = Constraint(rule=lambda _: m.x == 1)
     m.d2 = Disjunct()
     m.disj = Disjunction(expr=[m.d1, m.d2])

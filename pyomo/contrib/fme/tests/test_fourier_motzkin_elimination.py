@@ -20,8 +20,14 @@ from pyomo.core.expr.current import log
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
+import random
 
 class TestFourierMotzkinElimination(unittest.TestCase):
+    def setUp(self):
+        # will need this so we know transformation block names in the test that
+        # includes chull transformation
+        random.seed(666)
+
     @staticmethod
     def makeModel():
         """
@@ -266,15 +272,17 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.time2 = Disjunction(expr=[m.on, m.startup, m.off])
 
         TransformationFactory('gdp.chull').apply_to(m)
-        relaxationBlocks = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
-        disaggregatedVars = ComponentSet([relaxationBlocks[0].component("p[1]"),
-                                          relaxationBlocks[1].component("p[1]"),
-                                          relaxationBlocks[2].component("p[1]"),
-                                          relaxationBlocks[2].component("p[2]"),
-                                          relaxationBlocks[3].component("p[1]"),
-                                          relaxationBlocks[3].component("p[2]"),
-                                          relaxationBlocks[4].component("p[1]"),
-                                          relaxationBlocks[4].component("p[2]")])
+        relaxationBlocks1 = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
+        relaxationBlocks2 = m._pyomo_gdp_chull_relaxation_4.relaxedDisjuncts
+        disaggregatedVars = ComponentSet(
+            [relaxationBlocks1[0].component("p[1]"),
+             relaxationBlocks1[1].component("p[1]"),
+             relaxationBlocks2[0].component("p[1]"),
+             relaxationBlocks2[0].component("p[2]"),
+             relaxationBlocks2[1].component("p[1]"),
+             relaxationBlocks2[1].component("p[2]"),
+             relaxationBlocks2[2].component("p[1]"),
+             relaxationBlocks2[2].component("p[2]")])
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
             m, vars_to_eliminate=disaggregatedVars)
 
@@ -410,7 +418,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[1], -1)
 
         # 1 <= on.ind_var + startup.ind_var + off.ind_var
-        cons = constraints[3]
+        cons = constraints[4]
         self.assertEqual(cons.lower, 1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -425,7 +433,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[2], 1)
 
         # 1 >= on.ind_var + startup.ind_var + off.ind_var
-        cons = constraints[4]
+        cons = constraints[5]
         self.assertEqual(cons.lower, -1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)

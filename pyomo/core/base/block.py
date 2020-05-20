@@ -1051,8 +1051,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # NB: we don't have to construct the temporary / implicit
             # sets here: if necessary, that happens when
             # _add_implicit_sets() calls add_component().
-            if id(self) in _BlockConstruction.data:
-                data = _BlockConstruction.data[id(self)].get(name, None)
+            if _BlockConstruction.data:
+                data = _BlockConstruction.data.get(id(self), None)
+                if data is not None:
+                    data = data.get(name, None)
             else:
                 data = None
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -1829,7 +1831,35 @@ class Block(ActiveIndexedComponent):
             self.construct()
 
     def _getitem_when_not_present(self, idx):
-        return self._setitem_when_not_present(idx)
+        _block = self._setitem_when_not_present(idx)
+        if self._rule is None:
+            return _block
+
+        if _BlockConstruction.data:
+            data = _BlockConstruction.data.get(id(self), None)
+            if data is not None:
+                data = data.get(idx, None)
+            if data is not None:
+                _BlockConstruction.data[id(_block)] = data
+        else:
+            data = None
+
+        try:
+            obj = apply_indexed_rule(
+                self, self._rule, _block, idx, self._options)
+        finally:
+            if data is not None:
+                del _BlockConstruction.data[id(_block)]
+
+        if obj is not _block and isinstance(obj, _BlockData):
+            # If the user returns a block, transfer over everything
+            # they defined into the empty one we created.
+            _block.transfer_attributes_from(obj)
+
+        # TBD: Should we allow skipping Blocks???
+        # if obj is Block.Skip and idx is not None:
+        #   del self._data[idx]
+        return _block
 
     def find_component(self, label_or_component):
         """
@@ -1849,54 +1879,57 @@ class Block(ActiveIndexedComponent):
         timer = ConstructionTimer(self)
         self._constructed = True
 
-        # We must check that any pre-existing components are
-        # constructed.  This catches the case where someone is building
-        # a Concrete model by building (potentially pseudo-abstract)
-        # sub-blocks and then adding them to a Concrete model block.
-        for idx in self._data:
-            _block = self[idx]
-            for name, obj in iteritems(_block.component_map()):
-                if not obj._constructed:
-                    if data is None:
-                        _data = None
-                    else:
-                        _data = data.get(name, None)
-                    obj.construct(_data)
+        # Constructing blocks is tricky.  Scalar blocks are already
+        # partially constructed (they have _data[None] == self) in order
+        # to support Abstract blocks.  The block may therefore already
+        # have components declared on it.  In order to preserve
+        # decl_order, we must construct those components *first* before
+        # firing any rule.  Indexed blocks should be empty, so we only
+        # need to fire the rule in order.
+        #
+        #  Since the rule does not pass any "data" on, we build a scalar
+        #  "stack" of pointers to block data (_BlockConstruction.data)
+        #  that the individual blocks' add_component() can refer back to
+        #  to handle component construction.
+        if data is not None:
+            _BlockConstruction.data[id(self)] = data
+        try:
+            if self.is_indexed():
+                # We can only populate Blocks with finite indexing sets
+                if self._rule is not None and self.index_set().isfinite():
+                    for _idx in self.index_set():
+                        # Trigger population & call the rule
+                        self._getitem_when_not_present(_idx)
+            else:
+                # We must check that any pre-existing components are
+                # constructed.  This catches the case where someone is
+                # building a Concrete model by building (potentially
+                # pseudo-abstract) sub-blocks and then adding them to a
+                # Concrete model block.
+                _idx = next(iter(UnindexedComponent_set))
+                _block = self[_idx]
+                for name, obj in iteritems(_block.component_map()):
+                    if not obj._constructed:
+                        if data is None:
+                            _data = None
+                        else:
+                            _data = data.get(name, None)
+                        obj.construct(_data)
+                if self._rule is not None:
+                    obj = apply_indexed_rule(
+                        self, self._rule, _block, _idx, self._options)
+                    if obj is not _block and isinstance(obj, _BlockData):
+                        # If the user returns a block, transfer over
+                        # everything they defined into the empty one we
+                        # created.
+                        _block.transfer_attributes_from(obj)
 
-        if self._rule is None:
-            # Ensure the _data dictionary is populated for singleton
-            # blocks
-            if not self.is_indexed():
-                self[None]
-            timer.report()
-            return
-        # If we have a rule, fire the rule for all indices.
-        # Notes:
-        #  - Since this block is now concrete, any components added to
-        #    it will be immediately constructed by
-        #    block.add_component().
-        #  - Since the rule does not pass any "data" on, we build a
-        #    scalar "stack" of pointers to block data
-        #    (_BlockConstruction.data) that the individual blocks'
-        #    add_component() can refer back to to handle component
-        #    construction.
-        for idx in self._index:
-            _block = self[idx]
-            if data is not None and idx in data:
-                _BlockConstruction.data[id(_block)] = data[idx]
-            obj = apply_indexed_rule(
-                self, self._rule, _block, idx, self._options)
-            if id(_block) in _BlockConstruction.data:
-                del _BlockConstruction.data[id(_block)]
-
-            if obj is not _block and isinstance(obj, _BlockData):
-                # If the user returns a block, transfer over everything
-                # they defined into the empty one we created.
-                _block.transfer_attributes_from(obj)
-
-            # TBD: Should we allow skipping Blocks???
-            # if obj is Block.Skip and idx is not None:
-            #   del self._data[idx]
+        finally:
+            # We must check if data is still in the dictionary, as
+            # scalar blocks will have already removed the entry (as
+            # the _data and the component are the same object)
+            if data is not None and id(self) in _BlockConstruction.data:
+                del _BlockConstruction.data[id(self)]
         timer.report()
 
     def _pprint_callback(self, ostream, idx, data):
@@ -1940,6 +1973,10 @@ class SimpleBlock(_BlockData, Block):
     def __init__(self, *args, **kwds):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
+        # Iniitalize the data dict so that (abstract) attribute
+        # assignment will work.  Note that we do not trigger
+        # get/setitem_when_not_present so that we do not (implicitly)
+        # trigger the Block rule
         self._data[None] = self
 
     def display(self, filename=None, ostream=None, prefix=""):
