@@ -299,25 +299,29 @@ def test_solver_cases(*args):
             name='xpress',
             io='lp',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'])
+            import_suffixes=['dual','rc','slack'],
+            options={'bargapstop':1e-9,})
 
         _test_solver_cases['xpress', 'mps'] = initialize(
             name='xpress',
             io='mps',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'])
+            import_suffixes=['dual','rc','slack'],
+            options={'bargapstop':1e-9,})
 
         _test_solver_cases['xpress', 'nl'] = initialize(
             name='xpress',
             io='nl',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual'])
+            import_suffixes=['dual'],
+            options={'bargapstop':1e-9,})
 
         _test_solver_cases['xpress', 'python'] = initialize(
             name='xpress',
             io='mps',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'])
+            import_suffixes=['dual','rc','slack'],
+            options={'bargapstop':1e-9,})
 
         #
         # XPRESS PERSISTENT 
@@ -327,7 +331,8 @@ def test_solver_cases(*args):
             name='xpress_persistent',
             io='python',
             capabilities=_xpress_capabilities,
-            import_suffixes=['slack', 'dual', 'rc'])
+            import_suffixes=['slack', 'dual', 'rc'],
+            options={'bargapstop':1e-9,})
 
         #
         # IPOPT
