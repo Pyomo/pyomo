@@ -482,8 +482,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     limcol=limcol,
                     solvelink=solvelink,
                     add_options=add_options,
-                    put_results=put_results
-                    put_results_format=put_results_format
+                    put_results=put_results,
+                    put_results_format=put_results_format,
                 )
             finally:
                 if isinstance(output_filename, string_types):
