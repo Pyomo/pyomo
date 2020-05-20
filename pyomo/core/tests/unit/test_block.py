@@ -2487,6 +2487,27 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(_b.x), 3)
         self.assertEqual(len(_b.y), 5)
 
+    def test_derived_block_construction(self):
+        # This tests a case where a derived block doesn't follow the
+        # assumption that unconstructed scalar blocks initialize
+        # `_data[None] = self` (therefore doesn't fully support abstract
+        # models).  At one point, that was causing the block rule to
+        # fire twice during construction.
+        class ConcreteBlock(Block):
+            pass
+
+        class ScalarConcreteBlock(_BlockData, ConcreteBlock):
+            def __init__(self, *args, **kwds):
+                _BlockData.__init__(self, component=self)
+                ConcreteBlock.__init__(self, *args, **kwds)
+
+        _buf = []
+        def _rule(b):
+            _buf.append(1)
+
+        m = ConcreteModel()
+        m.b = ScalarConcreteBlock(rule=_rule)
+        self.assertEqual(_buf, [1])
 
 if __name__ == "__main__":
     unittest.main()
