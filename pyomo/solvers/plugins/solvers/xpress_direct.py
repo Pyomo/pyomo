@@ -118,11 +118,11 @@ class XpressDirect(DirectSolver):
         # setting a log file in xpress disables all output
         # this callback prints all messages to stdout
         if self._tee:
-            def _print_message(xp_prob, self, msg, *args):
+            def _print_message(xp_prob, _, msg, *args):
                 if msg is not None:
                     sys.stdout.write(msg+'\n')
                     sys.stdout.flush()
-            self._solver_model.addcbmessage(_print_message, self, 0)
+            self._solver_model.addcbmessage(_print_message, None, 0)
 
         # set xpress options
         # xpress is picky about the type which is passed
@@ -146,6 +146,8 @@ class XpressDirect(DirectSolver):
         self._opt_time = time.time() - start_time
 
         self._solver_model.setlogfile('')
+        if self._tee:
+            self._solver_model.removecbmessage(_print_message, None)
 
         # FIXME: can we get a return code indicating if XPRESS had a significant failure?
         return Bunch(rc=None, log=None)
