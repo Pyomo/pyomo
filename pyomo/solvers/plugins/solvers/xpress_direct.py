@@ -210,6 +210,14 @@ class XpressDirect(DirectSolver):
         xpress_var = self._xpress.var(name=varname, lb=lb, ub=ub, vartype=vartype)
         self._solver_model.addVariable(xpress_var)
 
+        ## bounds on binary variables don't seem to be set correctly
+        ## by the method above
+        if vartype == self._xpress.binary:
+            if lb == ub:
+                self._solver_model.chgbounds([xpress_var], ['B'], [lb])
+            else:
+                self._solver_model.chgbounds([xpress_var, xpress_var], ['L', 'U'], [lb,ub])
+
         self._pyomo_var_to_solver_var_map[var] = xpress_var
         self._solver_var_to_pyomo_var_map[xpress_var] = var
         self._referenced_variables[var] = 0
