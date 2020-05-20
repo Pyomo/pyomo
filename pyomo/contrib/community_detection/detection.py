@@ -1,4 +1,4 @@
-"""Community detection code"""
+"""Community Detection Code - Rahul Joglekar"""
 
 from contrib.community_detection import community_graph
 import community

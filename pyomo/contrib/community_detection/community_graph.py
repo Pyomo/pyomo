@@ -1,11 +1,10 @@
-"""
-@author: Rahul
-"""
-import os
-import networkx as nx
+"""Model Graph Generator Code - Rahul Joglekar"""
+
 from pyomo.environ import *
 from pyomo.core.expr.current import identify_variables
 from itertools import combinations
+import os
+import networkx as nx
 
 
 def _generate_model_graph(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None):

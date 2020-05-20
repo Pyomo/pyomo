@@ -1,4 +1,4 @@
-"""Community Detection Test File"""
+"""Community Detection Test File - Rahul Joglekar"""
 
 # Structure for this file was adapted from:
 #  ___________________________________________________________________________
