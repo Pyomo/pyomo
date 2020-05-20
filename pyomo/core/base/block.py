@@ -1908,6 +1908,10 @@ class Block(ActiveIndexedComponent):
                 # Concrete model block.
                 _idx = next(iter(UnindexedComponent_set))
                 if _idx not in self._data:
+                    # Derived block classes may not follow the scalar
+                    # Block convention of initializing _data to point to
+                    # itself (i.e., they are not set up to support
+                    # Abstract models)
                     self._data[_idx] = self
                 _block = self
                 for name, obj in iteritems(_block.component_map()):
