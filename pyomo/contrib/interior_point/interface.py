@@ -601,3 +601,24 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         primals = self._nlp.get_primals()
         for i, v in enumerate(pyomo_variables):
             v.value = primals[i]
+
+    def pyomo_model(self):
+        return self._nlp.pyomo_model()
+
+    def get_pyomo_variables(self):
+        return self._nlp.get_pyomo_variables()
+
+    def get_pyomo_constraints(self):
+        return self._nlp.get_pyomo_constraints()
+
+    def variable_names(self):
+        return self._nlp.variable_names()
+
+    def constraint_names(self):
+        return self._nlp.constraint_names()
+
+    def get_primal_indices(self, pyomo_variables):
+        return self._nlp.get_primal_indices(pyomo_variables)
+
+    def get_constraint_indices(self, pyomo_constraints):
+        return self._nlp.get_constraint_indices(pyomo_constraints)
