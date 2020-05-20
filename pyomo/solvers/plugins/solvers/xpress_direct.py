@@ -81,6 +81,7 @@ class XpressDirect(DirectSolver):
             print("Import of xpress failed - xpress message=" + str(e) + "\n")
             self._python_api_exists = False
             
+        self._range_constraints = set()
 
         # TODO: this isn't a limit of XPRESS, which implements an SLP
         #       method for NLPs. But it is a limit of *this* interface
@@ -117,11 +118,11 @@ class XpressDirect(DirectSolver):
         # setting a log file in xpress disables all output
         # this callback prints all messages to stdout
         if self._tee:
-            def _print_message(xp_prob, self, msg, msgtype):
+            def _print_message(xp_prob, _, msg, *args):
                 if msg is not None:
                     sys.stdout.write(msg+'\n')
                     sys.stdout.flush()
-            self._solver_model.addcbmessage(_print_message, self, 0)
+            self._solver_model.addcbmessage(_print_message, None, 0)
 
         # set xpress options
         # xpress is picky about the type which is passed
@@ -144,10 +145,9 @@ class XpressDirect(DirectSolver):
         self._solver_model.solve()
         self._opt_time = time.time() - start_time
 
-        ## this would mirror the gurobi interface, but resetting
-        ## the log file doesn't seem to work
-        #self._solver_model.setlogfile()
-        #self._solver_model.removecbmessage(_print_message, self, 0)
+        self._solver_model.setlogfile('')
+        if self._tee:
+            self._solver_model.removecbmessage(_print_message, None)
 
         # FIXME: can we get a return code indicating if XPRESS had a significant failure?
         return Bunch(rc=None, log=None)
@@ -210,11 +210,20 @@ class XpressDirect(DirectSolver):
         xpress_var = self._xpress.var(name=varname, lb=lb, ub=ub, vartype=vartype)
         self._solver_model.addVariable(xpress_var)
 
+        ## bounds on binary variables don't seem to be set correctly
+        ## by the method above
+        if vartype == self._xpress.binary:
+            if lb == ub:
+                self._solver_model.chgbounds([xpress_var], ['B'], [lb])
+            else:
+                self._solver_model.chgbounds([xpress_var, xpress_var], ['L', 'U'], [lb,ub])
+
         self._pyomo_var_to_solver_var_map[var] = xpress_var
         self._solver_var_to_pyomo_var_map[xpress_var] = var
         self._referenced_variables[var] = 0
 
     def _set_instance(self, model, kwds={}):
+        self._range_constraints = set()
         DirectOrPersistentSolver._set_instance(self, model, kwds)
         self._pyomo_con_to_solver_con_map = dict()
         self._solver_con_to_pyomo_con_map = ComponentMap()
@@ -276,6 +285,7 @@ class XpressDirect(DirectSolver):
                                                  lb=value(con.lower),
                                                  ub=value(con.upper),
                                                  name=conname)
+            self._range_constraints.add(xpress_con)
         elif con.has_lb():
             xpress_con = self._xpress.constraint(body=xpress_expr,
                                                  sense=self._xpress.geq,
@@ -455,8 +465,8 @@ class XpressDirect(DirectSolver):
                 self.results.solver.status = SolverStatus.warning
                 self.results.solver.termination_message = "LP relaxation was proven to be unbounded, " \
                                                           "but a solution is available."
-                self.results.solver.termination_condition = TerminationCondition.other
-                soln.status = SolutionStatus.feasible
+                self.results.solver.termination_condition = TerminationCondition.unbounded
+                soln.status = SolutionStatus.unbounded
             elif status == xp.mip_unbounded and mip_sols <= 0:
                 self.results.solver.status = SolverStatus.warning
                 self.results.solver.termination_message = "LP relaxation was proven to be unbounded."
@@ -594,7 +604,7 @@ class XpressDirect(DirectSolver):
                 soln_variables = soln.variable
                 soln_constraints = soln.constraint
 
-                xpress_vars = xprob.getVariable()
+                xpress_vars = list(self._solver_var_to_pyomo_var_map.keys())
                 var_vals = xprob.getSolution(xpress_vars)
                 for xpress_var, val in zip(xpress_vars, var_vals):
                     pyomo_var = self._solver_var_to_pyomo_var_map[xpress_var]
@@ -605,12 +615,12 @@ class XpressDirect(DirectSolver):
                 if extract_reduced_costs:
                     vals = xprob.getRCost(xpress_vars)
                     for xpress_var, val in zip(xpress_vars, vals):
-                        pyomo_var = self._solver_var_to_pyomo_var_map[xpress_vars]
+                        pyomo_var = self._solver_var_to_pyomo_var_map[xpress_var]
                         if self._referenced_variables[pyomo_var] > 0:
                             soln_variables[xpress_var.name]["Rc"] = val
 
                 if extract_duals or extract_slacks:
-                    xpress_cons = xprob.getConstraint()
+                    xpress_cons = list(self._solver_con_to_pyomo_con_map.keys())
                     for con in xpress_cons:
                         soln_constraints[con.name] = {}
 
@@ -622,7 +632,20 @@ class XpressDirect(DirectSolver):
                 if extract_slacks:
                     vals = xprob.getSlack(xpress_cons)
                     for con, val in zip(xpress_cons, vals):
-                        soln_constraints[con.name]["Slack"] = val
+                        if con in self._range_constraints:
+                            ## for xpress, the slack on a range constraint
+                            ## is based on the upper bound
+                            lb = con.lb
+                            ub = con.ub
+                            ub_s = val
+                            expr_val = ub-ub_s
+                            lb_s = lb-expr_val
+                            if abs(ub_s) > abs(lb_s):
+                                soln_constraints[con.name]["Slack"] = ub_s
+                            else:
+                                soln_constraints[con.name]["Slack"] = lb_s
+                        else:
+                            soln_constraints[con.name]["Slack"] = val
 
         elif self._load_solutions:
             if xprob_attrs.lpstatus == xp.lp_optimal and \
@@ -715,8 +738,21 @@ class XpressDirect(DirectSolver):
         xpress_cons_to_load = [con_map[pyomo_con] for pyomo_con in cons_to_load]
         vals = self._solver_model.getSlack(xpress_cons_to_load)
 
-        for pyomo_con, val in zip(cons_to_load, vals):
-            slack[pyomo_con] = val
+        for pyomo_con, xpress_con, val in zip(cons_to_load, xpress_cons_to_load, vals):
+            if xpress_con in self._range_constraints:
+                ## for xpress, the slack on a range constraint
+                ## is based on the upper bound
+                lb = con.lb
+                ub = con.ub
+                ub_s = val
+                expr_val = ub-ub_s
+                lb_s = lb-expr_val
+                if abs(ub_s) > abs(lb_s):
+                    slack[pyomo_con] = ub_s
+                else:
+                    slack[pyomo_con] = lb_s
+            else:
+                slack[pyomo_con] = val
 
     def load_duals(self, cons_to_load=None):
         """
