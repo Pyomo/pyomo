@@ -585,15 +585,7 @@ class GAMSShell(_GAMSSolver):
                 raise NameError(
                     "No 'gams' command found on system PATH - GAMS shell "
                     "solver functionality is not available.")
-
-        if gdxcc_available:
-            return True
-        elif exception_flag:
-            raise ImportError("Import of gams failed - GAMS direct "
-                            "solver functionality is not available.\n"
-                            "GAMS message: %s" % (e,))
-        else:
-            return False
+        return True
 
     def _default_executable(self):
         executable = pyomo.common.Executable("gams")
@@ -716,8 +708,19 @@ class GAMSShell(_GAMSSolver):
 
         put_results = "results"
         io_options["put_results"] = put_results
-        results_filename = os.path.join(tmpdir, "GAMS_MODEL_p.gdx")
-        statresults_filename = os.path.join(tmpdir, "GAMS_MODEL_s.gdx")
+        io_options.setdefault("put_results_format",
+                              'gdx' if gdxcc_available else 'dat')
+
+        if io_options['put_results_format'] == 'gdx':
+            results_filename = os.path.join(
+                tmpdir, "GAMS_MODEL_p.gdx")
+            statresults_filename = os.path.join(
+                tmpdir, "%s_s.gdx" % (put_results,))
+        else:
+            results_filename = os.path.join(
+                tmpdir, "%s.dat" % (put_results,))
+            statresults_filename = os.path.join(
+                tmpdir, "%sstat.dat" % (put_results,))
 
         if isinstance(model, IBlock):
             # Kernel blocks have slightly different write method
@@ -781,79 +784,12 @@ class GAMSShell(_GAMSSolver):
                 raise RuntimeError("GAMS encountered an error during solve. "
                                    "Check listing file for details.")
 
-            model_soln = dict()
-            stat_vars = dict.fromkeys(['MODELSTAT', 'SOLVESTAT', 'OBJEST',
-                                       'OBJVAL', 'NUMVAR', 'NUMEQU', 'NUMDVAR',
-                                       'NUMNZ', 'ETSOLVE'])
-
-            pgdx = gdxcc.new_gdxHandle_tp()
-            ret = gdxcc.gdxCreateD(pgdx, os.path.dirname(self.executable()), 128)
-            if not ret[0]:
-                raise RuntimeError("GAMS GDX failure (gdxCreate): %s." % ret[1])
-
-            if os.path.exists(statresults_filename):
-                ret = gdxcc.gdxOpenRead(pgdx, statresults_filename)
-                if not ret[0]:
-                    raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
-
-                i = 0
-                while True:
-                    i += 1
-                    ret = gdxcc.gdxDataReadRawStart(pgdx, i)
-                    if not ret[0]:
-                        break
-
-                    ret = gdxcc.gdxSymbolInfo(pgdx, i)
-                    if not ret[0]:
-                        break
-                    if len(ret) < 2:
-                        raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
-                    stat = ret[1]
-                    if not stat in stat_vars:
-                        continue
-
-                    ret = gdxcc.gdxDataReadRaw(pgdx)
-                    if not ret[0] or len(ret[2]) == 0:
-                        raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
-
-                    if stat in ('OBJEST', 'OBJVAL', 'ETSOLVE'):
-                        stat_vars[stat] = self._parse_special_values(ret[2][0])
-                    else:
-                        stat_vars[stat] = int(ret[2][0])
-
-                gdxcc.gdxDataReadDone(pgdx)
-                gdxcc.gdxClose(pgdx)
-
-            if os.path.exists(results_filename):
-                ret = gdxcc.gdxOpenRead(pgdx, results_filename)
-                if not ret[0]:
-                    raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
-
-                i = 0
-                while True:
-                    i += 1
-                    ret = gdxcc.gdxDataReadRawStart(pgdx, i)
-                    if not ret[0]:
-                        break
-
-                    ret = gdxcc.gdxDataReadRaw(pgdx)
-                    if not ret[0] or len(ret[2]) < 2:
-                        raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
-                    level = self._parse_special_values(ret[2][0])
-                    dual = self._parse_special_values(ret[2][1])
-
-                    ret = gdxcc.gdxSymbolInfo(pgdx, i)
-                    if not ret[0]:
-                        break
-                    if len(ret) < 2:
-                        raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
-                    model_soln[ret[1]] = (level, dual)
-
-                gdxcc.gdxDataReadDone(pgdx)
-                gdxcc.gdxClose(pgdx)
-                
-            gdxcc.gdxFree(pgdx)
-
+            if io_options['put_results_format'] == 'gdx':
+                model_soln, stat_vars = self._parse_gdx_results(
+                    results_filename, statresults_filename)
+            else:
+                model_soln, stat_vars = self._parse_dat_results(
+                    results_filename, statresults_filename)
         finally:
             if not keepfiles:
                 if newdir:
@@ -1137,6 +1073,106 @@ class GAMSShell(_GAMSSolver):
                   (postsolve_completion_time - initial_time))
 
         return results
+
+    def _parse_gdx_results(self, results_filename, statresults_filename):
+        model_soln = dict()
+        stat_vars = dict.fromkeys(['MODELSTAT', 'SOLVESTAT', 'OBJEST',
+                                   'OBJVAL', 'NUMVAR', 'NUMEQU', 'NUMDVAR',
+                                   'NUMNZ', 'ETSOLVE'])
+
+        pgdx = gdxcc.new_gdxHandle_tp()
+        ret = gdxcc.gdxCreateD(pgdx, os.path.dirname(self.executable()), 128)
+        if not ret[0]:
+            raise RuntimeError("GAMS GDX failure (gdxCreate): %s." % ret[1])
+
+        if os.path.exists(statresults_filename):
+            ret = gdxcc.gdxOpenRead(pgdx, statresults_filename)
+            if not ret[0]:
+                raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
+
+            i = 0
+            while True:
+                i += 1
+                ret = gdxcc.gdxDataReadRawStart(pgdx, i)
+                if not ret[0]:
+                    break
+
+                ret = gdxcc.gdxSymbolInfo(pgdx, i)
+                if not ret[0]:
+                    break
+                if len(ret) < 2:
+                    raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
+                stat = ret[1]
+                if not stat in stat_vars:
+                    continue
+
+                ret = gdxcc.gdxDataReadRaw(pgdx)
+                if not ret[0] or len(ret[2]) == 0:
+                    raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
+
+                if stat in ('OBJEST', 'OBJVAL', 'ETSOLVE'):
+                    stat_vars[stat] = self._parse_special_values(ret[2][0])
+                else:
+                    stat_vars[stat] = int(ret[2][0])
+
+            gdxcc.gdxDataReadDone(pgdx)
+            gdxcc.gdxClose(pgdx)
+
+        if os.path.exists(results_filename):
+            ret = gdxcc.gdxOpenRead(pgdx, results_filename)
+            if not ret[0]:
+                raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
+
+            i = 0
+            while True:
+                i += 1
+                ret = gdxcc.gdxDataReadRawStart(pgdx, i)
+                if not ret[0]:
+                    break
+
+                ret = gdxcc.gdxDataReadRaw(pgdx)
+                if not ret[0] or len(ret[2]) < 2:
+                    raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
+                level = self._parse_special_values(ret[2][0])
+                dual = self._parse_special_values(ret[2][1])
+
+                ret = gdxcc.gdxSymbolInfo(pgdx, i)
+                if not ret[0]:
+                    break
+                if len(ret) < 2:
+                    raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
+                model_soln[ret[1]] = (level, dual)
+
+            gdxcc.gdxDataReadDone(pgdx)
+            gdxcc.gdxClose(pgdx)
+
+        gdxcc.gdxFree(pgdx)
+        return model_soln, stat_vars
+
+    def _parse_dat_results(self, results_filename, statresults_filename):
+        with open(statresults_filename, 'r') as statresults_file:
+            statresults_text = statresults_file.read()
+
+        stat_vars = dict()
+        # Skip first line of explanatory text
+        for line in statresults_text.splitlines()[1:]:
+            items = line.split()
+            try:
+                stat_vars[items[0]] = float(items[1])
+            except ValueError:
+                # GAMS printed NA, just make it nan
+                stat_vars[items[0]] = float('nan')
+
+        with open(results_filename, 'r') as results_file:
+            results_text = results_file.read()
+
+        model_soln = dict()
+        # Skip first line of explanatory text
+        for line in results_text.splitlines()[1:]:
+            items = line.split()
+            model_soln[items[0]] = (items[1], items[2])
+
+        return model_soln, stat_vars
 
 
 class OutputStream:
