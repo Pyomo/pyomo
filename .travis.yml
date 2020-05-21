@@ -3,8 +3,7 @@ branches:
   - master
 cache: false
 language: generic
-os: linux
-dist: bionic
+
 services:
 - docker
 env:
@@ -71,7 +70,7 @@ install:
             done'
     fi
     # DEBUGGING DON'T COMMIT THIS
-  - ${DOC} pip uninstall -y xpress    
+  - ${DOC} pip uninstall -y z3-solver   
     # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
     # Install PyUtilib (master branch)
