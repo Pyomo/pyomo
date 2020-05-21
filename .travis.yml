@@ -13,8 +13,8 @@ env:
     # is both writable, and will be cleared between test runs
   - PYOMO_CONFIG_DIR=${TRAVIS_BUILD_DIR}/config
   - COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/coveragerc
-  - DOCKERENV="-e TAG -e COVERAGE_PROCESS_START -e PYOMO_CONFIG_DIR"
   - LD_LIBRARY_PATH=/root/GAMS_29.1.0/gams29.1_linux_x64_64_sfx
+  - DOCKERENV="-e TAG -e COVERAGE_PROCESS_START -e PYOMO_CONFIG_DIR -e LD_LIBRARY_PATH"
   matrix:
   - TAG=python_3.8    CATEGORY="nightly"
   - TAG=python_3.7    CATEGORY="nightly"
