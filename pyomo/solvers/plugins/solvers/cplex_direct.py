@@ -538,8 +538,6 @@ class CPLEXDirect(DirectSolver):
             self._vars_referenced_by_obj = ComponentSet()
             self._objective = None
 
-        self._solver_model.objective.set_linear([(i, 0.0) for i in range(len(self._pyomo_var_to_solver_var_map.values()))])
-
         if obj.active is False:
             raise ValueError('Cannot add inactive objective to solver.')
 
@@ -560,12 +558,33 @@ class CPLEXDirect(DirectSolver):
         self._solver_model.objective.set_sense(sense)
         if hasattr(self._solver_model.objective, 'set_offset'):
             self._solver_model.objective.set_offset(cplex_expr.offset)
-        if len(cplex_expr.coefficients) != 0:
-            self._solver_model.objective.set_linear(list(zip(cplex_expr.variables, cplex_expr.coefficients)))
-        if len(cplex_expr.q_coefficients) != 0:
-            self._solver_model.objective.set_quadratic_coefficients(list(zip(cplex_expr.q_variables1,
-                                                                             cplex_expr.q_variables2,
-                                                                             cplex_expr.q_coefficients)))
+
+        linear_objective_already_exists = any(self._solver_model.objective.get_linear())
+        quadratic_objective_already_exists = self._solver_model.objective.get_num_quadratic_nonzeros()
+
+        contains_linear_terms = any(cplex_expr.coefficients)
+        contains_quadratic_terms = any(cplex_expr.q_coefficients)
+        num_cols = len(self._pyomo_var_to_solver_var_map)
+
+        if linear_objective_already_exists or contains_linear_terms:
+            self._solver_model.objective.set_linear([(i, 0.0) for i in range(num_cols)])
+
+            if contains_linear_terms:
+                self._solver_model.objective.set_linear(list(zip(cplex_expr.variables, cplex_expr.coefficients)))
+
+        if quadratic_objective_already_exists or contains_quadratic_terms:
+            self._solver_model.objective.set_quadratic([0] * num_cols)
+
+            if contains_quadratic_terms:
+                self._solver_model.objective.set_quadratic_coefficients(
+                    list(
+                        zip(
+                            cplex_expr.q_variables1,
+                            cplex_expr.q_variables2,
+                            cplex_expr.q_coefficients
+                        )
+                    )
+                )
         self._objective = obj
         self._vars_referenced_by_obj = referenced_vars
 
