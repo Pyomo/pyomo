@@ -1409,6 +1409,17 @@ class PyomoUnitsContainer(object):
         src_pyomo_unit, src_pint_unit = self._get_units_tuple(src)
         to_pyomo_unit, to_pint_unit = self._get_units_tuple(to_units)
 
+        # check if they are both dimensionless
+        src_dimensionless = \
+            _UnitExtractionVisitor(self)._pint_unit_equivalent_to_dimensionless(src_pint_unit)
+        to_dimensionless = \
+            _UnitExtractionVisitor(self)._pint_unit_equivalent_to_dimensionless(to_pint_unit)
+        if src_dimensionless and to_dimensionless:
+            return src
+        elif src_dimensionless or to_dimensionless:
+            raise InconsistentUnitsError(src_pint_unit, to_pint_unit,
+                                         'Error in convert: units not compatible.')
+
         # check if any units have offset
         # CDL: This is no longer necessary since we don't allow
         # offset units, but let's keep the code in case we change

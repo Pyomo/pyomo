@@ -510,6 +510,23 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertAlmostEqual(value(m.dy_con.body), 0.0, places=5)
         self.assertAlmostEqual(value(m.ground.body), 0.0, places=5)
 
+    def test_convert_dimensionless(self):
+        u = units
+        m = ConcreteModel()
+        m.x = Var()
+        foo = u.convert(m.x, to_units=u.dimensionless)
+        foo = u.convert(m.x, to_units=None)
+        foo = u.convert(m.x, to_units=1.0)
+        with self.assertRaises(InconsistentUnitsError):
+            foo = u.convert(m.x, to_units=u.kg)
+        m.y = Var(units=u.kg)
+        with self.assertRaises(InconsistentUnitsError):
+            foo = u.convert(m.y, to_units=u.dimensionless)
+        with self.assertRaises(InconsistentUnitsError):
+            foo = u.convert(m.y, to_units=None)
+        with self.assertRaises(InconsistentUnitsError):
+            foo = u.convert(m.y, to_units=1.0)
+
     def test_assert_units_consistent(self):
         u = units
         m = ConcreteModel()
