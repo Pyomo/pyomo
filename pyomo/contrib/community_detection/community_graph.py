@@ -5,7 +5,7 @@ from pyomo.core.expr.current import identify_variables
 from itertools import combinations
 import os
 import networkx as nx
-
+import logging
 
 def _generate_model_graph(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None):
     """
@@ -136,11 +136,6 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
                 edge_weight_dict = _update_edge_weight_dict(edges_between_nodes, edge_weight_dict)
             else:
                 edge_set.update(edges_between_nodes)
-
-    # Detect_communities only calls _generate_model_graph if given a node_type of 'c' or 'v'
-    # Thus, this case should never get executed
-    else:
-        print("Node type must be specified as 'v' or 'c' (variable nodes or constraint nodes).")
 
     # Now, using edge_weight_dict or edge_set (based on whether the user wants a weighted or unweighted graph,
     # respectively), the networkX graph (model_graph) will be updated with all of the edges determined above

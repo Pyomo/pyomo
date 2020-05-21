@@ -2,10 +2,11 @@
 
 from contrib.community_detection import community_graph
 import community
+import logging
 
 
 def detect_communities(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None,
-                       random_seed=None):
+                       log_level=logging.WARNING, random_seed=None):
     """
     Detects communities in a graph of variables and constraints
 
@@ -24,6 +25,9 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
         created from the Pyomo model
         file_destination: an optional argument that takes in a path if the user wants to save an edge and adjacency
         list based on the model
+        log_level: determines the minimum severity of an event for it to be included in the event logger file; can be
+        specified as any of the following values (in order of increasing severity): logging.DEBUG, logging.INFO,
+        logging.WARNING, logging.ERROR, logging.CRITICAL
         random_seed : takes in an integer to use as the seed number for the heuristic Louvain community detection
 
     Returns:
@@ -31,9 +35,15 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
         with values that are lists of the nodes in the given community
     """
 
+    logging.basicConfig(filename='community_detection_event_log.log', format='%(levelname)s:%(message)s',
+                        filemode='w', level=log_level)
+
     if node_type != 'v' and node_type != 'c':
-        print("Invalid input: Specify node_type 'v' or 'c' for function detect_communities")
-        return None
+        logging.info("Invalid input: Specify node_type 'v' or 'c' for function detect_communities")
+        #return None
+
+    # Add all the checks to make sure the other arguments are of the correct type
+
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
     model_graph = community_graph._generate_model_graph(model, node_type=node_type, with_objective=with_objective,
