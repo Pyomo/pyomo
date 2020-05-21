@@ -69,7 +69,7 @@ install:
             done'
     fi
     # DEBUGGING DON'T COMMIT THIS
-  - ${DOC} pip uninstall xpress    
+  - ${DOC} pip uninstall -y xpress    
     # Clone but don't install pyomo-model-libraries
   - ${DOC} git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
     # Install PyUtilib (master branch)
