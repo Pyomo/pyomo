@@ -51,7 +51,7 @@ class _CplexExpr(object):
         self.offset = offset or 0.0
         self.q_variables1 = q_variables1 or []
         self.q_variables2 = q_variables2 or []
-        self.q_coefficients = q_coefficients or []
+        self.q_coefficients = [float(coef) for coef in q_coefficients or []]
 
 
 def _is_numeric(x):
@@ -584,7 +584,7 @@ class CPLEXDirect(DirectSolver):
                 self._solver_model.objective.set_linear(list(zip(cplex_expr.variables, cplex_expr.coefficients)))
 
         if quadratic_objective_already_exists or contains_quadratic_terms:
-            self._solver_model.objective.set_quadratic([0] * num_cols)
+            self._solver_model.objective.set_quadratic([0.0] * num_cols)
 
             if contains_quadratic_terms:
                 self._solver_model.objective.set_quadratic_coefficients(
