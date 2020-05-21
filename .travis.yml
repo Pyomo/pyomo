@@ -3,6 +3,8 @@ branches:
   - master
 cache: false
 language: generic
+os: linux
+dist: bionic
 services:
 - docker
 env:
