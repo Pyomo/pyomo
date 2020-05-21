@@ -125,13 +125,13 @@ def check_for_correct_arguments(model, node_type, with_objective, weighted_graph
         correct_arguments = False
 
     # Check file_destination
-    if not isinstance(file_destination, str):
+    if file_destination is not None and not isinstance(file_destination, str):
         logging.error(" Invalid argument for function detect_communities: 'file_destination=%s' (file_destination must "
                       "be a string)" % file_destination)
         correct_arguments = False
 
     # Check random_seed
-    if not isinstance(random_seed, int):
+    if random_seed is not None and not isinstance(random_seed, int):
         logging.error(" Invalid argument for function detect_communities: 'random_seed=%s' (random_seed must be "
                       "of type int)" % random_seed)
         correct_arguments = False
