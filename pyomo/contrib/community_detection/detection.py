@@ -26,8 +26,9 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
         file_destination: an optional argument that takes in a path if the user wants to save an edge and adjacency
         list based on the model
         log_level: determines the minimum severity of an event for it to be included in the event logger file; can be
-        specified as any of the following values (in order of increasing severity): logging.DEBUG, logging.INFO,
-        logging.WARNING, logging.ERROR, logging.CRITICAL
+        specified as any of the following (in order of increasing severity): logging.DEBUG, logging.INFO,
+        logging.WARNING, logging.ERROR, logging.CRITICAL; These levels correspond to integer values of 10, 20, 30, 40,
+        and 50 (respectively). Thus, log_level can also be specified as an integer.
         random_seed : takes in an integer to use as the seed number for the heuristic Louvain community detection
 
     Returns:
@@ -35,15 +36,9 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
         with values that are lists of the nodes in the given community
     """
 
-    logging.basicConfig(filename='community_detection_event_log.log', format='%(levelname)s:%(message)s',
-                        filemode='w', level=log_level)
-
-    if node_type != 'v' and node_type != 'c':
-        logging.info("Invalid input: Specify node_type 'v' or 'c' for function detect_communities")
-        #return None
-
-    # Add all the checks to make sure the other arguments are of the correct type
-
+    if check_for_correct_arguments(model, node_type, with_objective, weighted_graph, file_destination, log_level,
+                                       random_seed) is False:
+        return None
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
     model_graph = community_graph._generate_model_graph(model, node_type=node_type, with_objective=with_objective,
@@ -62,3 +57,85 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
         community_map[nth_community].append(node)
 
     return community_map
+
+
+def check_for_correct_arguments(model, node_type, with_objective, weighted_graph, file_destination, log_level,
+                                random_seed):
+    """
+    Determines whether the arguments given are of the correct types
+
+    This function takes in the arguments given to the function detect_communities and tests whether or not all of them
+    are of the correct type. If they are not, the function detect_communities will return None and the incorrect
+    arguments will be logged by the event logger as errors.
+
+    Args:
+        model (Block): a Pyomo model or block to be used for community detection
+        node_type : a string that specifies the dictionary to be returned; 'v' returns a dictionary with communities
+        based on variable nodes, 'c' returns a dictionary with communities based on constraint nodes, and any other
+        input returns an error message
+        with_objective: a Boolean argument that specifies whether or not the objective function will be
+        treated as a node/constraint (depending on what node_type is specified as (see prior argument))
+        weighted_graph: a Boolean argument that specifies whether a weighted or unweighted graph is to be
+        created from the Pyomo model
+        file_destination: an optional argument that takes in a path if the user wants to save an edge and adjacency
+        list based on the model
+        log_level: determines the minimum severity of an event for it to be included in the event logger file; can be
+        specified as any of the following (in order of increasing severity): logging.DEBUG, logging.INFO,
+        logging.WARNING, logging.ERROR, logging.CRITICAL; These levels correspond to integer values of 10, 20, 30, 40,
+        and 50 (respectively). Thus, log_level can also be specified as an integer.
+        random_seed : takes in an integer to use as the seed number for the heuristic Louvain community detection
+
+    Returns:
+        correct_arguments: a Boolean that indicates whether the arguments are of the correct type
+    """
+
+    # Assume the given arguments are all of the correct type and set this indicator variable to True
+    correct_arguments = True
+
+    # Check log_level
+    if not isinstance(log_level, int):
+        # Configure logger so that the error message is properly formatted
+        logging.basicConfig(filename='community_detection_event_log.log', format='%(levelname)s:%(message)s',
+                            filemode='w', level=logging.WARNING)
+        logging.error(" Invalid argument for function detect_communities: 'log_level=%s' (log_level must be "
+                      "of type int)" % log_level)
+        correct_arguments = False
+
+    # If the log_level is an int, then configure the logger as specified by the user
+    else:
+        logging.basicConfig(filename='community_detection_event_log.log', format='%(levelname)s:%(message)s',
+                            filemode='w', level=log_level)
+
+    # Check node_type
+    if node_type != 'v' and node_type != 'c':
+        logging.error(" Invalid argument for function detect_communities: 'node_type=%s' (node_type must be "
+                      "'v' or 'c')" % node_type)
+        correct_arguments = False
+
+    # Check with_objective
+    if not isinstance(with_objective, bool):
+        logging.error(" Invalid argument for function detect_communities: 'with_objective=%s' (weighted_graph must be "
+                      "a Boolean)" % with_objective)
+        correct_arguments = False
+
+    # Check weighted_graph
+    if not isinstance(weighted_graph, bool):
+        logging.error(" Invalid argument for function detect_communities: 'weighted_graph=%s' (with_objective must be "
+                      "a Boolean)" % weighted_graph)
+        correct_arguments = False
+
+    # Check file_destination
+    if not isinstance(file_destination, str):
+        logging.error(" Invalid argument for function detect_communities: 'file_destination=%s' (file_destination must "
+                      "be a string)" % file_destination)
+        correct_arguments = False
+
+    # Check random_seed
+    if not isinstance(random_seed, int):
+        logging.error(" Invalid argument for function detect_communities: 'random_seed=%s' (random_seed must be "
+                      "of type int)" % random_seed)
+        correct_arguments = False
+
+    # At this point, if any arguments were not of the correct type, then correct_arguments will be False; if all of the
+    # arguments are of the correct type, then correct_arguments will be true
+    return correct_arguments
