@@ -56,6 +56,14 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
         nth_community = partition_of_graph[node]
         community_map[nth_community].append(node)
 
+    # Log information about the number of communities found from the model
+    logging.info("%s communities were found in the model" % number_of_communities)
+    if number_of_communities == 0:
+        logging.error("in detect_communities: Empty community map was returned")
+    if number_of_communities == 1:
+        logging.warning("Community detection found that with the given parameters, the model could not be decomposed - "
+                        "only one community was found")
+
     return community_map
 
 
