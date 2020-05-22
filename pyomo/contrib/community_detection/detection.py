@@ -36,6 +36,7 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
         with values that are lists of the nodes in the given community
     """
 
+    # Use this function as a check to make sure all of the arguments are of the correct type, else return None
     if check_for_correct_arguments(model, node_type, with_objective, weighted_graph, file_destination, log_level,
                                    random_seed) is False:
         return None
