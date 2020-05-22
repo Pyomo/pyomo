@@ -1,5 +1,5 @@
 """Community Detection Code - Rahul Joglekar"""
-
+from pyomo.core import ConcreteModel
 from contrib.community_detection import community_graph
 import community
 import logging
@@ -37,7 +37,7 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
     """
 
     if check_for_correct_arguments(model, node_type, with_objective, weighted_graph, file_destination, log_level,
-                                       random_seed) is False:
+                                   random_seed) is False:
         return None
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
@@ -113,6 +113,12 @@ def check_for_correct_arguments(model, node_type, with_objective, weighted_graph
     else:
         logging.basicConfig(filename='community_detection_event_log.log', format='%(levelname)s:%(message)s',
                             filemode='w', level=log_level)
+
+    # Check that model is a ConcreteModel
+    if not isinstance(model, ConcreteModel):
+        logging.error(" Invalid argument for function detect_communities: 'model=%s' (model must be of type "
+                      "ConcreteModel)" % model)
+        correct_arguments = False
 
     # Check node_type
     if node_type != 'v' and node_type != 'c':

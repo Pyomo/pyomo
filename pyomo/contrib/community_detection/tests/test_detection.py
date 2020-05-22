@@ -12,14 +12,15 @@
 #  ___________________________________________________________________________
 
 from __future__ import division
+import pyutilib.th as unittest
+
 from pyomo.environ import *
 from pyomo.contrib.community_detection.detection import *
-from pyomo.core import ConcreteModel
+
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QP_simple import QP_simple
 from pyomo.solvers.tests.models.LP_inactive_index import LP_inactive_index
 from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
-import pyutilib.th as unittest
 
 
 class TestDecomposition(unittest.TestCase):
@@ -251,6 +252,22 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ['c1', 'obj'], 1: ['c2']})
 
         self.assertEqual(correct_community_maps, test_results)
+
+    def test_communities_7(self):
+        model = create_model_6()
+        empty_model = detect_communities(ConcreteModel())
+        bad_model = detect_communities(2)
+        bad_node_type = detect_communities(model, node_type=[])
+        bad_objective = detect_communities(model, with_objective='c')
+        bad_weighted_graph = detect_communities(model, weighted_graph=set())
+        bad_file_destination = detect_communities(model, file_destination=dict())
+        bad_log_level = detect_communities(model, log_level=[])
+        bad_seed_value = detect_communities(model, random_seed='v')
+
+        test_results = (empty_model, bad_model, bad_node_type, bad_objective, bad_weighted_graph, bad_file_destination,
+                        bad_log_level, bad_seed_value)
+
+        correct_community_maps = ({}, None, None, None, None, None, None, None)
 
 
 def create_model_5():  # MINLP written by GAMS Convert at 05/10/19 14:22:56
