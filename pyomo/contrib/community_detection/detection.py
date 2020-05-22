@@ -8,11 +8,11 @@ import logging
 def detect_communities(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None,
                        log_level=logging.WARNING, random_seed=None):
     """
-    Detects communities in a graph of variables and constraints
+    Detects communities in a Pyomo optimization model
 
     This function takes in a Pyomo optimization model, organizes the variables and constraints into a graph of nodes
-    and edges, and then uses Louvain community detection to create a dictionary of the communities of the nodes.
-    Either variables or constraints can be chosen as the nodes.
+    and edges, and then by using Louvain community detection on the graph, a dictionary is ultimately created, mapping
+    the communities to the nodes in each community.
 
     Args:
         model (Block): a Pyomo model or block to be used for community detection
@@ -33,7 +33,7 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
 
     Returns:
         community_map: a Python dictionary whose keys are integers from zero to the number of communities minus one
-        with values that are lists of the nodes in the given community
+        with values that are sorted lists of the nodes in the given community
     """
 
     # Use this function as a check to make sure all of the arguments are of the correct type, else return None
