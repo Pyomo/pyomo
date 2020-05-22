@@ -19,7 +19,8 @@ import pyutilib.th as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
                            Objective, TransformationFactory, Var, exp, log,
-                           ceil, floor, asin, acos, atan, asinh, acosh, atanh)
+                           ceil, floor, asin, acos, atan, asinh, acosh, atanh,
+                           Binary, quicksum)
 from pyomo.repn.plugins.gams_writer import (StorageTreeChecker,
                                             expression_to_string,
                                             split_long_line)
@@ -116,6 +117,19 @@ class Test(unittest.TestCase):
         model.c = Constraint(expr=model.other.a + 2 * model.x <= 0)
         model.obj = Objective(expr=model.x)
         self._check_baseline(model)
+
+    def test_fixed_linear_expr(self):
+        # Note that this checks both that a fixed variable is fixed, and
+        # that the resulting model type is correctly classified (in this
+        # case, fixing a binary makes this an LP)
+        m = ConcreteModel()
+        m.y = Var(within=Binary)
+        m.y.fix(0)
+        m.x = Var(bounds=(0,None))
+        m.c1 = Constraint(expr=quicksum([m.y, m.y], linear=True) >= 0)
+        m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
+        m.obj = Objective(expr=m.x)
+        self._check_baseline(m)
 
     def test_expr_xfrm(self):
         from pyomo.repn.plugins.gams_writer import (

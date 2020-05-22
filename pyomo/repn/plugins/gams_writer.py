@@ -180,11 +180,14 @@ class Categorizer(object):
         self.ints = []
         self.positive = []
         self.reals = []
+        self.fixed = []
 
         # categorize variables
         for var in var_list:
             v = symbol_map.getObject(var)
-            if v.is_binary():
+            if v.is_fixed():
+                self.fixed.append(var)
+            elif v.is_binary():
                 self.binary.append(var)
             elif v.is_integer():
                 if (v.has_lb() and (value(v.lb) >= 0)) and \
@@ -621,8 +624,16 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write(";\n\nPOSITIVE VARIABLES\n\t")
             output_file.write("\n\t".join(categorized_vars.positive))
         output_file.write(";\n\nVARIABLES\n\tGAMS_OBJECTIVE\n\t")
-        output_file.write("\n\t".join(categorized_vars.reals))
+        output_file.write("\n\t".join(
+            categorized_vars.reals + categorized_vars.fixed
+        ))
         output_file.write(";\n\n")
+
+        for var in categorized_vars.fixed:
+            output_file.write("%s.fx = %s;\n" % (
+                var, ftoa(value(symbolMap.getObject(var)))
+            ))
+        output_file.write("\n")
 
         for line in ConstraintIO.getvalue().splitlines():
             if len(line) > 80000:
