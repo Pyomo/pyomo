@@ -1,6 +1,5 @@
-<!--[![Travis Status](https://travis-ci.org/Pyomo/pyomo.svg?branch=master)](https://travis-ci.org/Pyomo/pyomo)-->
-[![Travis Status](https://img.shields.io/travis/Pyomo/pyomo.svg?logo=travis)](https://travis-ci.org/Pyomo/pyomo)
-[![Appveyor Status](https://ci.appveyor.com/api/projects/status/km08tbkv05ik14n9/branch/master?svg=true)](https://ci.appveyor.com/project/WilliamHart/pyomo/branch/master)
+[![Github Actions Status](https://github.com/Pyomo/pyomo/workflows/GitHub%20CI/badge.svg?event=push)](https://github.com/Pyomo/pyomo/actions?query=event%3Apush+workflow%3A%22GitHub+CI%22)
+[![Travis Status](https://img.shields.io/travis/com/Pyomo/pyomo/master?logo=travis)](https://travis-ci.com/Pyomo/pyomo)
 [![Jenkins Status](https://img.shields.io/jenkins/s/https/software.sandia.gov/downloads/pub/pyomo/jenkins/Pyomo_trunk.svg?logo=jenkins&logoColor=white)](https://jenkins-srn.sandia.gov/job/Pyomo_trunk)
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/master/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
 [![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
@@ -42,7 +41,7 @@ Pyomo is available under the BSD License, see the LICENSE.txt file.
 
 Pyomo is currently tested with the following Python implementations:
 
-* CPython: 2.7, 3.4, 3.5, 3.6, 3.7
+* CPython: 2.7, 3.4, 3.5, 3.6, 3.7, 3.8
 * PyPy: 2, 3
 
 ### Installation
@@ -54,6 +53,12 @@ Pyomo is currently tested with the following Python implementations:
 #### Anaconda [![Anaconda version](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Anaconda downloads](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
 
     conda install -c conda-forge pyomo
+
+### Tutorials and Examples
+
+* [Pyomo Workshop Slides](https://software.sandia.gov/downloads/pub/pyomo/Pyomo-Workshop-Summer-2018.pdf)
+* [Prof. Jeffrey Kantor's Pyomo Cookbook](https://jckantor.github.io/ND-Pyomo-Cookbook/)
+* [Pyomo Gallery](https://github.com/Pyomo/PyomoGallery)
 
 ### Getting Help
 

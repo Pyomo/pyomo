@@ -48,7 +48,6 @@ def generate_finite_elements(ds, nfe):
             ds.add(round(tmp, 6))
             tmp += step
         ds.set_changed(True)
-        ds._sort()
         ds._fe = list(ds)
         return
     else:
@@ -67,7 +66,6 @@ def generate_finite_elements(ds, nfe):
             _add_point(ds)
             addpts -= 1
         ds.set_changed(True)
-        ds._sort()
         ds._fe = list(ds)
         return
 
@@ -100,7 +98,6 @@ def generate_colloc_points(ds, tau):
             if pt not in ds:
                 ds.add(pt)
                 ds.set_changed(True)
-    ds._sort()
 
 
 def expand_components(block):
@@ -191,7 +188,7 @@ def update_contset_indexed_component(comp, expansion_map):
     # you must initialize it with every index you would like to have
     # access to!
 
-    if comp.type() is Suffix:
+    if comp.ctype is Suffix:
         return
     
     # Params indexed by a ContinuousSet should include an initialize
@@ -199,13 +196,13 @@ def update_contset_indexed_component(comp, expansion_map):
     # parameter value at a new point in the ContinuousSet is
     # requested. Therefore, no special processing is required for
     # Params.
-    if comp.type() is Param:
+    if comp.ctype is Param:
         return
 
     # Integral components are handled after every ContinuousSet has been
     # discretized. Import is deferred to here due to circular references.
     from pyomo.dae import Integral
-    if comp.type() is Integral:
+    if comp.ctype is Integral:
         return
 
     # Skip components that do not have a 'dim' attribute. This assumes that
@@ -221,28 +218,29 @@ def update_contset_indexed_component(comp, expansion_map):
 
     # Extract the indexing sets. Must treat components with a single
     # index separately from components with multiple indexing sets.
-    if comp._implicit_subsets is None:
-        indexset = [comp._index]
+    temp = comp.index_set()
+    if hasattr(temp, 'set_tuple'):
+        indexset = comp.index_set().set_tuple
     else:
-        indexset = comp._implicit_subsets
+        indexset = [temp,]
 
     for s in indexset:
-        if s.type() == ContinuousSet and s.get_changed():
+        if s.ctype == ContinuousSet and s.get_changed():
             if isinstance(comp, Var):  # Don't use the type() method here
                 # because we want to catch DerivativeVar components as well
                 # as Var components
                 expansion_map[comp] = _update_var
                 _update_var(comp)
-            elif comp.type() == Constraint:
+            elif comp.ctype == Constraint:
                 expansion_map[comp] = _update_constraint
                 _update_constraint(comp)
-            elif comp.type() == Expression:
+            elif comp.ctype == Expression:
                 expansion_map[comp] = _update_expression
                 _update_expression(comp)
             elif isinstance(comp, Piecewise):
                 expansion_map[comp] =_update_piecewise
                 _update_piecewise(comp)
-            elif comp.type() == Block:
+            elif comp.ctype == Block:
                 expansion_map[comp] = _update_block
                 _update_block(comp)    
             else:
@@ -253,7 +251,7 @@ def update_contset_indexed_component(comp, expansion_map):
                     "discretization transformation in pyomo.dae. "
                     "Try adding the component to the model "
                     "after discretizing. Alert the pyomo developers "
-                    "for more assistance." % (str(comp), comp.type()))
+                    "for more assistance." % (str(comp), comp.ctype))
 
 
 def _update_var(v):
@@ -335,23 +333,10 @@ def _update_block(blk):
                 'function on Block-derived components that override '
                 'construct()' % blk.name)
 
-    # Code taken from the construct() method of Block
     missing_idx = getattr(blk, '_dae_missing_idx', set([]))
     for idx in list(missing_idx):
-        _block = blk[idx]
-        obj = apply_indexed_rule(
-            blk, blk._rule, _block, idx, blk._options)
- 
-        if isinstance(obj, _BlockData) and obj is not _block:
-            # If the user returns a block, use their block instead
-            # of the empty one we just created.
-            for c in list(obj.component_objects(descend_into=False)):
-                obj.del_component(c)
-                _block.add_component(c.local_name, c)
-                # transfer over any other attributes that are not components
-            for name, val in iteritems(obj.__dict__):
-                if not hasattr(_block, name) and not hasattr(blk, name):
-                    super(_BlockData, _block).__setattr__(name, val)
+        # Trigger block creation (including calling the Block's rule)
+        blk[idx]
 
     # Remove book-keeping data after Block is discretized
     if hasattr(blk, '_dae_missing_idx'):
@@ -404,12 +389,8 @@ def add_discretization_equations(block, d):
         except IndexError:
             return Constraint.Skip
 
-    if d.dim() == 1:
-        block.add_component(d.local_name + '_disc_eq',
-                            Constraint(d._index, rule=_disc_eq))
-    else:
-        block.add_component(d.local_name + '_disc_eq',
-                            Constraint(*d._implicit_subsets, rule=_disc_eq))
+    block.add_component(d.local_name + '_disc_eq',
+                        Constraint(d.index_set(), rule=_disc_eq))
 
 
 def add_continuity_equations(block, d, i, loc):
@@ -445,11 +426,8 @@ def add_continuity_equations(block, d, i, loc):
         except IndexError:
             return Constraint.Skip
 
-    if d.dim() == 1:
-        block.add_component(nme, Constraint(d._index, rule=_cont_eq))
-    else:
-        block.add_component(nme, Constraint(*d._implicit_subsets,
-                                            rule=_cont_eq))
+    block.add_component(nme, Constraint(d.index_set(),
+                                        rule=_cont_eq))
 
 
 def block_fully_discretized(b):
@@ -480,9 +458,9 @@ def get_index_information(var, ds):
 
     if var.dim() != 1:
         indCount = 0
-        for index in var._implicit_subsets:
+        for index in var.index_set().set_tuple:
             if isinstance(index, ContinuousSet):
-                if index == ds:
+                if index is ds:
                     dsindex = indCount
                 else:
                     # If var is indexed by multiple ContinuousSets treat

@@ -22,7 +22,7 @@ import logging
 import collections
 
 from pyomo.core.kernel.block import block
-from pyomo.core.kernel.set_types import Binary
+from pyomo.core.kernel.set_types import IntegerSet
 from pyomo.core.kernel.variable import (variable,
                                         variable_dict,
                                         variable_tuple)
@@ -166,8 +166,7 @@ class PiecewiseLinearFunctionND(object):
     def __getstate__(self):
         """Required for older versions of the pickle
         protocol since this class uses __slots__"""
-        return dict((key, getattr(self, key))
-                    for key in self.__slots__)
+        return {key:getattr(self, key) for key in self.__slots__}
 
     def __setstate__(self, state):
         """Required for older versions of the pickle
@@ -349,7 +348,7 @@ class piecewise_nd_cc(TransformedPiecewiseLinearFunctionND):
         lmbda = self.v['lambda'] = variable_tuple(
             variable(lb=0) for v in vertices)
         y = self.v['y'] = variable_tuple(
-            variable(domain=Binary) for s in simplices)
+            variable(domain_type=IntegerSet, lb=0, ub=1) for s in simplices)
         lmbda_tuple = tuple(lmbda)
 
         # create constraints

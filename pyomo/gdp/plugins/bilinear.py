@@ -13,7 +13,6 @@ from six import iteritems
 
 from pyomo.core.expr.current import ProductExpression
 from pyomo.core import *
-from pyomo.core.base.set_types import BooleanSet
 from pyomo.core.base.var import _VarData
 from pyomo.gdp import *
 from pyomo.repn import generate_standard_repn
@@ -84,7 +83,7 @@ class Bilinear_Transformation(Transformation):
         if len(terms.quadratic_coefs) > 0:
             for vars_, coef_ in zip(terms.quadratic_vars, terms.quadratic_coefs):
                 #
-                if isinstance(vars_[0].domain, BooleanSet):
+                if vars_[0].is_binary():
                     v = instance.bilinear_data_.cache.get( (id(vars_[0]),id(vars_[1])), None )
                     if v is None:
                         instance.bilinear_data_.vlist_boolean.append(vars_[0])
@@ -109,7 +108,7 @@ class Bilinear_Transformation(Transformation):
                     # The disjunctive variable is the expression
                     e += coef_*v
                 #
-                elif isinstance(vars_[1].domain, BooleanSet):
+                elif vars_[1].is_binary():
                     v = instance.bilinear_data_.cache.get( (id(vars_[1]),id(vars_[0])), None )
                     if v is None:
                         instance.bilinear_data_.vlist_boolean.append(vars_[1])

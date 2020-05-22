@@ -65,8 +65,8 @@ class ComponentMap(collections_MutableMapping):
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
         self._dict = \
-            dict((id(obj), (obj,val)) \
-                 for obj, val in itervalues(state['_dict']))
+            {id(obj):(obj,val) \
+                 for obj, val in itervalues(state['_dict'])}
 
     def __getstate__(self):
         # *** Temporary hack to allow this class to be used
@@ -88,9 +88,7 @@ class ComponentMap(collections_MutableMapping):
 
     def __str__(self):
         """String representation of the mapping."""
-        tmp = dict()
-        for c,v in self.items():
-            tmp[str(c)+" (id="+str(id(c))+")"] = v
+        tmp = {str(c)+" (id="+str(id(c))+")":v for c,v in self.items()}
         return "ComponentMap("+str(tmp)+")"
 
     #
@@ -133,10 +131,10 @@ class ComponentMap(collections_MutableMapping):
     def __eq__(self, other):
         if not isinstance(other, collections_Mapping):
             return False
-        return dict(((type(key), id(key)), val)
-                    for key, val in self.items()) == \
-               dict(((type(key), id(key)), val)
-                    for key, val in other.items())
+        return {(type(key), id(key)):val
+                    for key, val in self.items()} == \
+               {(type(key), id(key)):val
+                    for key, val in other.items()}
 
     def __ne__(self, other):
         return not (self == other)

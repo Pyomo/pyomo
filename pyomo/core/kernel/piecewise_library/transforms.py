@@ -30,7 +30,7 @@ import bisect
 # handle the between sizes.
 
 from pyomo.core.expr.numvalue import value as _value
-from pyomo.core.kernel.set_types import Binary
+from pyomo.core.kernel.set_types import IntegerSet
 from pyomo.core.kernel.block import block
 from pyomo.core.kernel.expression import (expression,
                                           expression_tuple)
@@ -268,8 +268,7 @@ class PiecewiseLinearFunction(object):
     def __getstate__(self):
         """Required for older versions of the pickle
         protocol since this class uses __slots__"""
-        return dict((key, getattr(self, key))
-                    for key in self.__slots__)
+        return {key:getattr(self, key) for key in self.__slots__}
 
     def __setstate__(self, state):
         """Required for older versions of the pickle
@@ -695,7 +694,7 @@ class piecewise_dcc(TransformedPiecewiseLinearFunction):
             for p in polytopes
             for v in vertices)
         y = self.v['y'] = variable_tuple(
-            variable(domain=Binary)
+            variable(domain_type=IntegerSet, lb=0, ub=1)
             for p in polytopes)
 
         # create piecewise constraints
@@ -783,7 +782,7 @@ class piecewise_cc(TransformedPiecewiseLinearFunction):
         lmbda = self.v['lambda'] = variable_tuple(
             variable(lb=0) for v in vertices)
         y = self.v['y'] = variable_tuple(
-            variable(domain=Binary)
+            variable(domain_type=IntegerSet, lb=0, ub=1)
             for p in polytopes)
 
         lmbda_tuple = tuple(lmbda)
@@ -869,7 +868,7 @@ class piecewise_mc(TransformedPiecewiseLinearFunction):
             variable() for p in polytopes)
         lmbda_tuple = tuple(lmbda)
         y = self.v['y'] = variable_tuple(
-            variable(domain=Binary) for p in polytopes)
+            variable(domain_type=IntegerSet, lb=0, ub=1) for p in polytopes)
         y_tuple = tuple(y)
 
         # create piecewise constraints
@@ -951,7 +950,8 @@ class piecewise_inc(TransformedPiecewiseLinearFunction):
         delta[-1].lb = 0
         delta_tuple = tuple(delta)
         y = self.v['y'] = variable_tuple(
-            variable(domain=Binary) for p in polytopes[:-1])
+            variable(domain_type=IntegerSet, lb=0, ub=1)
+            for p in polytopes[:-1])
 
         # create piecewise constraints
         self.c = constraint_list()
@@ -1042,7 +1042,7 @@ class piecewise_dlog(TransformedPiecewiseLinearFunction):
             for p in polytopes
             for v in polytope_verts(p))
         y = self.v['y'] = variable_tuple(
-            variable(domain=Binary) for i in range(L))
+            variable(domain_type=IntegerSet, lb=0, ub=1) for i in range(L))
 
         # create piecewise constraints
         self.c = constraint_list()
@@ -1169,7 +1169,7 @@ class piecewise_log(TransformedPiecewiseLinearFunction):
         lmbda = self.v['lambda'] = variable_tuple(
             variable(lb=0) for v in vertices)
         y = self.v['y'] = variable_list(
-            variable(domain=Binary) for s in S)
+            variable(domain_type=IntegerSet, lb=0, ub=1) for s in S)
 
         # create piecewise constraints
         self.c = constraint_list()

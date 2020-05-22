@@ -14,6 +14,7 @@
 import os
 import sys
 import six
+import types
 
 from six import StringIO
 
@@ -27,7 +28,7 @@ import pyutilib.services
 
 from pyomo.environ import *
 from pyomo.common.log import LoggingIntercept
-from pyomo.core.base.block import SimpleBlock, SubclassOf
+from pyomo.core.base.block import SimpleBlock, SubclassOf, _BlockData, declare_custom_block
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import *
 
@@ -60,6 +61,7 @@ class TestGenerators(unittest.TestCase):
         model = ConcreteModel()
         model.q = Set(initialize=[1,2])
         model.Q = Set(model.q,initialize=[1,2])
+        model.qq = NonNegativeIntegers*model.q
         model.x = Var(initialize=-1)
         model.X = Var(model.q,initialize=-1)
         model.e = Expression(initialize=-1)
@@ -151,8 +153,8 @@ class TestGenerators(unittest.TestCase):
 
         model.component_lists = {}
         model.component_data_lists = {}
-        model.component_lists[Set] = [model.q, model.Q]
-        model.component_data_lists[Set] = [model.q, model.Q[1], model.Q[2]]
+        model.component_lists[Set] = [model.q, model.Q, model.qq]
+        model.component_data_lists[Set] = [model.q, model.Q[1], model.Q[2], model.qq]
         model.component_lists[Var] = [model.x, model.X]
         model.component_data_lists[Var] = [model.x, model.X[1], model.X[2]]
         model.component_lists[Expression] = [model.e, model.E]
@@ -185,7 +187,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_objects(ctype, active=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("component_objects(active=True) failed with ctype %s" % ctype)
+                    print("component_objects(active=True) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("component_objects(active=True) should have failed with ctype %s" % ctype)
@@ -204,7 +207,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_objects(ctype, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("components failed with ctype %s" % ctype)
+                    print("components failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("components should have failed with ctype %s" % ctype)
@@ -223,7 +227,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, active=True, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("component_data_objects(active=True, sort_by_keys=False) failed with ctype %s" % ctype)
+                    print("component_data_objects(active=True, sort_by_keys=False) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("component_data_objects(active=True, sort_by_keys=False) should have failed with ctype %s" % ctype)
@@ -242,7 +247,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, active=True, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("component_data_objects(active=True, sort=True) failed with ctype %s" % ctype)
+                    print("component_data_objects(active=True, sort=True) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("component_data_objects(active=True, sort=True) should have failed with ctype %s" % ctype)
@@ -261,7 +267,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("components_data(sort_by_keys=True) failed with ctype %s" % ctype)
+                    print("components_data(sort_by_keys=True) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=True) should have failed with ctype %s" % ctype)
@@ -280,7 +287,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("components_data(sort_by_keys=False) failed with ctype %s" % ctype)
+                    print("components_data(sort_by_keys=False) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=False) should have failed with ctype %s" % ctype)
@@ -642,6 +650,154 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(value(p), 6)
         self.block.x = None
         self.assertEqual(self.block.x._value, None)
+
+        ### creation of a circular reference
+        b = Block(concrete=True)
+        b.c = Block()
+        with self.assertRaisesRegexp(
+                ValueError, "Cannot assign the top-level block as a subblock "
+                "of one of its children \(c\): creates a circular hierarchy"):
+            b.c.d = b
+
+    def test_set_value(self):
+        b = Block(concrete=True)
+        with self.assertRaisesRegexp(
+                RuntimeError, "Block components do not support assignment "
+                "or set_value"):
+            b.set_value(None)
+
+        b.b = Block()
+        with self.assertRaisesRegexp(
+                RuntimeError, "Block components do not support assignment "
+                "or set_value"):
+            b.b = 5
+
+    def test_clear(self):
+        class DerivedBlock(SimpleBlock):
+            _Block_reserved_words = None
+
+        DerivedBlock._Block_reserved_words \
+            = set(['a','b','c']) | _BlockData._Block_reserved_words
+
+        m = ConcreteModel()
+        m.clear()
+        self.assertEqual(m._ctypes, {})
+        self.assertEqual(m._decl, {})
+        self.assertEqual(m._decl_order, [])
+
+        m.w = 5
+        m.x = Var()
+        m.y = Param()
+        m.z = Var()
+        m.clear()
+        self.assertFalse(hasattr(m, 'w'))
+        self.assertEqual(m._ctypes, {})
+        self.assertEqual(m._decl, {})
+        self.assertEqual(m._decl_order, [])
+
+        m.b = DerivedBlock()
+        m.b.a = a = Param()
+        m.b.x = Var()
+        m.b.b = b = Var()
+        m.b.y = Var()
+        m.b.z = Param()
+        m.b.c = c = Param()
+        m.b.clear()
+        self.assertEqual(m.b._ctypes, {Var: [1, 1, 1], Param:[0,2,2]})
+        self.assertEqual(m.b._decl, {'a':0, 'b':1, 'c':2})
+        self.assertEqual(len(m.b._decl_order), 3)
+        self.assertIs(m.b._decl_order[0][0], a)
+        self.assertIs(m.b._decl_order[1][0], b)
+        self.assertIs(m.b._decl_order[2][0], c)
+        self.assertEqual(m.b._decl_order[0][1], 2)
+        self.assertEqual(m.b._decl_order[1][1], None)
+        self.assertEqual(m.b._decl_order[2][1], None)
+
+    def test_transfer_attributes_from(self):
+        b = Block(concrete=True)
+        b.x = Var()
+        b.y = Var()
+        c = Block(concrete=True)
+        c.z = Param(initialize=5)
+        c.x = c_x = Param(initialize=5)
+        c.y = c_y = 5
+
+        b.clear()
+        b.transfer_attributes_from(c)
+        self.assertEqual(list(b.component_map()), ['z','x'])
+        self.assertEqual(list(c.component_map()), [])
+        self.assertIs(b.x, c_x)
+        self.assertIs(b.y, c_y)
+
+        class DerivedBlock(SimpleBlock):
+            _Block_reserved_words = set()
+            def __init__(self, *args, **kwds):
+                super(DerivedBlock, self).__init__(*args, **kwds)
+                self.x = Var()
+                self.y = Var()
+        DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
+
+        b = DerivedBlock(concrete=True)
+        b_x = b.x
+        b_y = b.y
+        c = Block(concrete=True)
+        c.z = Param(initialize=5)
+        c.x = c_x = Param(initialize=5)
+        c.y = c_y = 5
+
+        b.clear()
+        b.transfer_attributes_from(c)
+        self.assertEqual(list(b.component_map()), ['y','z','x'])
+        self.assertEqual(list(c.component_map()), [])
+        self.assertIs(b.x, c_x)
+        self.assertIsNot(b.y, c_y)
+        self.assertIs(b.y, b_y)
+        self.assertEqual(value(b.y), value(c_y))
+
+        ### assignment of dict
+        b = DerivedBlock(concrete=True)
+        b_x = b.x
+        b_y = b.y
+        c = { 'z': Param(initialize=5),
+              'x': Param(initialize=5),
+              'y': 5 }
+
+        b.clear()
+        b.transfer_attributes_from(c)
+        self.assertEqual(list(b.component_map()), ['y','x','z'])
+        self.assertEqual(sorted(list(iterkeys(c))), ['x','y','z'])
+        self.assertIs(b.x, c['x'])
+        self.assertIsNot(b.y, c['y'])
+        self.assertIs(b.y, b_y)
+        self.assertEqual(value(b.y), value(c_y))
+
+        ### assignment of self
+        b = Block(concrete=True)
+        b.x = b_x = Var()
+        b.y = b_y = Var()
+        b.transfer_attributes_from(b)
+
+        self.assertEqual(list(b.component_map()), ['x','y'])
+        self.assertIs(b.x, b_x)
+        self.assertIs(b.y, b_y)
+
+        ### creation of a circular reference
+        b = Block(concrete=True)
+        b.c = Block()
+        b.c.d = Block()
+        b.c.d.e = Block()
+        with self.assertRaisesRegexp(
+                ValueError, '_BlockData.transfer_attributes_from\(\): '
+                'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
+            b.c.d.e.transfer_attributes_from(b.c)
+
+        ### bad data type
+        b = Block(concrete=True)
+        with self.assertRaisesRegexp(
+                ValueError,
+                '_BlockData.transfer_attributes_from\(\): expected a Block '
+                'or dict; received str'):
+            b.transfer_attributes_from('foo')
 
     def test_iterate_hierarchy_defaults(self):
         self.assertIs( TraversalStrategy.BFS,
@@ -2005,12 +2161,15 @@ class TestBlock(unittest.TestCase):
         buf = StringIO()
         m.pprint(ostream=buf)
         ref = """3 Set Declarations
-    a1_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(4, 5)
-        [5, 4]
-    a3_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(6, 7)
-        [6, 7]
-    a_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
+    a1_IDX : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {5, 4}
+    a3_IDX : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {6, 7}
+    a_index : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
 
 3 Block Declarations
     a : Size=3, Index=a_index, Active=True
@@ -2209,16 +2368,18 @@ class TestBlock(unittest.TestCase):
             return m.x[1]**2 <= 0
 
         self.assertTrue(hasattr(model, 'scalar_constraint'))
-        self.assertIs(model.scalar_constraint._type, Constraint)
+        self.assertIs(model.scalar_constraint.ctype, Constraint)
         self.assertEqual(len(model.scalar_constraint), 1)
+        self.assertIs(type(scalar_constraint), types.FunctionType)
 
         @model.Constraint(model.I)
         def vector_constraint(m, i):
             return m.x[i]**2 <= 0
 
         self.assertTrue(hasattr(model, 'vector_constraint'))
-        self.assertIs(model.vector_constraint._type, Constraint)
+        self.assertIs(model.vector_constraint.ctype, Constraint)
         self.assertEqual(len(model.vector_constraint), 3)
+        self.assertIs(type(vector_constraint), types.FunctionType)
 
     def test_reserved_words(self):
         m = ConcreteModel()
@@ -2261,7 +2422,92 @@ class TestBlock(unittest.TestCase):
                 ValueError, ".*Cannot write model in format"):
             m.write(format="bogus")
 
+    def test_override_pprint(self):
+        @declare_custom_block('TempBlock')
+        class TempBlockData(_BlockData):
+            def pprint(self, ostream=None, verbose=False, prefix=""):
+                ostream.write('Testing pprint of a custom block.')
 
+        correct_s = 'Testing pprint of a custom block.'
+        b = TempBlock(concrete=True)
+        stream = StringIO()
+        b.pprint(ostream=stream)
+        self.assertEqual(correct_s, stream.getvalue())
+
+    def test_block_rules(self):
+        m = ConcreteModel()
+        m.I = Set()
+        _rule_ = []
+        def _block_rule(b,i):
+            _rule_.append(i)
+            b.x = Var(range(i))
+        m.b = Block(m.I, rule=_block_rule)
+        # I is empty: no rules called
+        self.assertEqual(_rule_, [])
+        m.I.update([1,3,5])
+        # Fetching a new block will call the rule
+        _b = m.b[3]
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(_rule_, [3])
+        self.assertIn('x', _b.component_map())
+        self.assertIn('x', m.b[3].component_map())
+
+        # If you transfer the attributes directly, the rule will still
+        # be called.
+        _tmp = Block()
+        _tmp.y = Var(range(3))
+        m.b[5].transfer_attributes_from(_tmp)
+        self.assertEqual(len(m.b), 2)
+        self.assertEqual(_rule_, [3,5])
+        self.assertIn('x', m.b[5].component_map())
+        self.assertIn('y', m.b[5].component_map())
+
+        # We do not support block assignment (and the rule will NOT be
+        # called)
+        _tmp = Block()
+        _tmp.y = Var(range(3))
+        with self.assertRaisesRegex(
+                RuntimeError, "Block components do not support "
+                "assignment or set_value"):
+            m.b[1] = _tmp
+        self.assertEqual(len(m.b), 2)
+        self.assertEqual(_rule_, [3,5])
+
+        # Blocks with non-finite indexing sets cannot be automatically
+        # populated (even if they have a rule!)
+        def _bb_rule(b, i, j):
+            _rule_.append((i,j))
+            b.x = Var(RangeSet(i))
+            b.y = Var(RangeSet(j))
+        m.bb = Block(m.I, NonNegativeIntegers, rule=_bb_rule)
+        self.assertEqual(_rule_, [3,5])
+        _b = m.bb[3,5]
+        self.assertEqual(_rule_, [3,5,(3,5)])
+        self.assertEqual(len(m.bb), 1)
+        self.assertEqual(len(_b.x), 3)
+        self.assertEqual(len(_b.y), 5)
+
+    def test_derived_block_construction(self):
+        # This tests a case where a derived block doesn't follow the
+        # assumption that unconstructed scalar blocks initialize
+        # `_data[None] = self` (therefore doesn't fully support abstract
+        # models).  At one point, that was causing the block rule to
+        # fire twice during construction.
+        class ConcreteBlock(Block):
+            pass
+
+        class ScalarConcreteBlock(_BlockData, ConcreteBlock):
+            def __init__(self, *args, **kwds):
+                _BlockData.__init__(self, component=self)
+                ConcreteBlock.__init__(self, *args, **kwds)
+
+        _buf = []
+        def _rule(b):
+            _buf.append(1)
+
+        m = ConcreteModel()
+        m.b = ScalarConcreteBlock(rule=_rule)
+        self.assertEqual(_buf, [1])
 
 if __name__ == "__main__":
     unittest.main()

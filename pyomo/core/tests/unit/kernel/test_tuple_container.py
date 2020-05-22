@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import pickle
-import collections
 
 import pyutilib.th as unittest
 import pyomo.kernel as pmo
@@ -24,6 +23,11 @@ from pyomo.core.kernel.block import (IBlock,
                                      block_list)
 
 import six
+
+if six.PY3:
+    from collections.abc import Sequence as collections_Sequence
+else:
+    from collections import Sequence as collections_Sequence
 
 #
 # There are no fully implemented test suites in this
@@ -71,8 +75,8 @@ class _TestTupleContainerBase(object):
         self.assertTrue(isinstance(ctuple, ICategorizedObjectContainer))
         self.assertTrue(isinstance(ctuple, IHomogeneousContainer))
         self.assertTrue(isinstance(ctuple, TupleContainer))
-        self.assertTrue(isinstance(ctuple, collections.Sequence))
-        self.assertTrue(issubclass(type(ctuple), collections.Sequence))
+        self.assertTrue(isinstance(ctuple, collections_Sequence))
+        self.assertTrue(issubclass(type(ctuple), collections_Sequence))
 
     def test_len1(self):
         c = self._container_type()
@@ -463,8 +467,8 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
         self.assertTrue(isinstance(ctuple, ICategorizedObjectContainer))
         self.assertTrue(isinstance(ctuple, IHomogeneousContainer))
         self.assertTrue(isinstance(ctuple, TupleContainer))
-        self.assertTrue(isinstance(ctuple, collections.Sequence))
-        self.assertTrue(issubclass(type(ctuple), collections.Sequence))
+        self.assertTrue(isinstance(ctuple, collections_Sequence))
+        self.assertTrue(issubclass(type(ctuple), collections_Sequence))
 
     def test_active(self):
         index = list(range(4))

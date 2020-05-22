@@ -11,6 +11,7 @@ from pyomo.core.expr.numeric_expr import (
     PowExpression,
     NegationExpression,
     MonomialTermExpression,
+    DivisionExpression,
     ReciprocalExpression,
     AbsExpression,
     UnaryFunctionExpression,
@@ -20,11 +21,6 @@ from pyomo.core.expr.numvalue import (
 )
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor,
-)
-from pyomo.core.kernel.set_types import (
-    RealSet,
-    IntegerSet,
-    BooleanSet
 )
 from pyomo.gdp import Disjunction
 
@@ -131,17 +127,17 @@ class SMTSatSolver(object):
     def add_var(self, var):
         label = self.variable_label_map.getSymbol(var)
         domain = var.domain
-        if isinstance(domain, RealSet):
+        if var.is_continuous():
             self.variable_list.append("(declare-fun " + label + "() Real)\n")
             self._add_bound(var)
-        elif isinstance(domain, IntegerSet):
+        elif var.is_binary():
             self.variable_list.append("(declare-fun " + label + "() Int)\n")
             self._add_bound(var)
-        elif isinstance(domain, BooleanSet):
+        elif var.is_integer():
             self.variable_list.append("(declare-fun " + label + "() Int)\n")
             self._add_bound(var)
         else:
-            raise NotImplementedError("SMT cannot handle" + str(domain) + "variables")
+            raise NotImplementedError("SMT cannot handle " + str(domain) + " variables")
         return label
 
     # Defines SMT expression from pyomo expression
@@ -250,6 +246,8 @@ class SMT_visitor(StreamBasedExpressionVisitor):
             ans = "(- 0 " + data[0] + ")"
         elif isinstance(node, MonomialTermExpression):
             ans = "(* " + data[0] + " " + data[1] + ")"
+        elif isinstance(node, DivisionExpression):
+            ans = "(/ " + data[0] + " " + data[1] + ")"
         elif isinstance(node, ReciprocalExpression):
             ans = "(/ 1 " + data[0] + ")"
         elif isinstance(node, AbsExpression):

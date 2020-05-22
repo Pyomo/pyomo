@@ -87,12 +87,10 @@ def _build_op_template():
     div_comment = "\t#/"
     _op_template[EXPR.ProductExpression] = prod_template
     _op_comment[EXPR.ProductExpression] = prod_comment
+    _op_template[EXPR.DivisionExpression] = div_template
+    _op_comment[EXPR.DivisionExpression] = div_comment
     _op_template[EXPR.ReciprocalExpression] = div_template
     _op_comment[EXPR.ReciprocalExpression] = div_comment
-    del prod_template
-    del prod_comment
-    del div_template
-    del div_comment
 
     _op_template[EXPR.ExternalFunctionExpression] = ("f%d %d{C}\n", #function
                                                       "h%d:%s{C}\n") #string arg
@@ -459,7 +457,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if coef != 1:
                         OUTPUT.write(coef_term_str % (coef))
                     self._print_nonlinear_terms_NL(child_exp)
-            else:
+            else: # n == 1 or 2
                 for i in xrange(0,n):
                     assert(exp[i].__class__ is tuple)
                     coef = exp[i][0]
@@ -502,6 +500,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     OUTPUT.write(binary_sum_str)
                     self._print_nonlinear_terms_NL(vargs[0])
                     self._print_nonlinear_terms_NL(vargs[1])
+                elif n == 1:
+                    self._print_nonlinear_terms_NL(vargs[0])
                 else:
                     OUTPUT.write(nary_sum_str % (n))
                     for child_exp in vargs:
@@ -523,6 +523,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
             elif exp_type is EXPR.ProductExpression:
                 prod_str = self._op_string[EXPR.ProductExpression]
                 OUTPUT.write(prod_str)
+                self._print_nonlinear_terms_NL(exp.arg(0))
+                self._print_nonlinear_terms_NL(exp.arg(1))
+
+            elif exp_type is EXPR.DivisionExpression:
+                assert exp.nargs() == 2
+                div_str = self._op_string[EXPR.DivisionExpression]
+                OUTPUT.write(div_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
 
@@ -1822,14 +1829,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
             else:
                 _parent = v.parent_block()
                 while _parent is not None and _parent is not model:
-                    if _parent.type() is not model.type():
+                    if _parent.ctype is not model.type():
                         _errors.append(
                             "Variable '%s' exists within %s '%s', "
                             "but is used by an active "
                             "expression.  Currently variables "
                             "must be reachable through a tree "
                             "of active Blocks."
-                            % (v.name, _parent.type().__name__,
+                            % (v.name, _parent.ctype.__name__,
                                _parent.name))
                     if not _parent.active:
                         _errors.append(
@@ -1838,7 +1845,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             "an active expression.  Currently "
                             "variables must be reachable through "
                             "a tree of active Blocks."
-                            % (v.name, _parent.type().__name__,
+                            % (v.name, _parent.ctype.__name__,
                                _parent.name))
                     _parent = _parent.parent_block()
 

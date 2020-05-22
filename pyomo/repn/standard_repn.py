@@ -22,7 +22,6 @@ from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
 
-import pyomo.common
 from pyutilib.misc import Bunch
 from pyutilib.math.util import isclose as isclose_default
 
@@ -490,7 +489,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             # Add returned from recursion
             #
             ans.constant += res_.constant
-            if not (res_.nonl is 0 or res_.nonl.__class__ in native_numeric_types and res_.nonl == 0):
+            if not (res_.nonl.__class__ in native_numeric_types and res_.nonl == 0):
                 nonl.append(res_.nonl)
             for i in res_.linear:
                 ans.linear[i] = ans.linear.get(i,0) + res_.linear[i]
@@ -674,10 +673,7 @@ def _collect_var(exp, multiplier, idMap, compute_values, verbose, quadratic):
             key = len(idMap) - 1
             idMap[None][id_] = key
             idMap[key] = exp
-        if key in ans.linear:
-            ans.linear[key] += multiplier       # TODO: coverage?
-        else:
-            ans.linear[key] = multiplier
+        ans.linear[key] = multiplier
 
     return ans
 
@@ -763,6 +759,32 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     return Results(nonl=multiplier*exp)
 
+def _collect_division(exp, multiplier, idMap, compute_values, verbose, quadratic):
+    if exp._args_[1].__class__ in native_numeric_types or not exp._args_[1].is_potentially_variable():  # TODO: coverage?
+        # Denominator is trivially constant
+        if compute_values:
+            denom = 1.0 * value(exp._args_[1])
+        else:
+            denom = 1.0 * exp._args_[1]
+    else:
+        res =_collect_standard_repn(exp._args_[1], 1, idMap, compute_values, verbose, quadratic)
+        if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
+            # Denominator is variable, give up: this is nonlinear
+            return Results(nonl=multiplier*exp)
+        else:
+            # Denominaor ended up evaluating to a constant
+            denom = 1.0*res.constant
+    if denom.__class__ in native_numeric_types and denom == 0:
+        raise ZeroDivisionError
+
+    if exp._args_[0].__class__ in native_numeric_types or not exp._args_[0].is_potentially_variable():
+        num = exp._args_[0]
+        if compute_values:
+            num = value(num)
+        return Results(constant=multiplier*num/denom)
+
+    return _collect_standard_repn(exp._args_[0], multiplier/denom, idMap, compute_values, verbose, quadratic)
+
 def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._args_[0].__class__ in native_numeric_types or not exp._args_[0].is_potentially_variable():  # TODO: coverage?
         if compute_values:
@@ -845,9 +867,9 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
     for c,v in zip(exp.linear_coefs, exp.linear_vars):
         if v.fixed:
             if compute_values:
-                ans.constant += multiplier*v.value
+                ans.constant += multiplier * value(c) * value(v)
             else:
-                ans.constant += multiplier*v
+                ans.constant += multiplier * c * v
         else:
             id_ = id(v)
             if id_ in idMap[None]:
@@ -882,6 +904,7 @@ _repn_collectors = {
     EXPR.ProductExpression                      : _collect_prod,
     EXPR.MonomialTermExpression                 : _collect_term,
     EXPR.PowExpression                          : _collect_pow,
+    EXPR.DivisionExpression                     : _collect_division,
     EXPR.ReciprocalExpression                   : _collect_reciprocal,
     EXPR.Expr_ifExpression                      : _collect_branching_expr,
     EXPR.UnaryFunctionExpression                : _collect_nonl,
@@ -1278,6 +1301,7 @@ _linear_repn_collectors = {
     EXPR.ProductExpression                      : _linear_collect_prod,
     EXPR.MonomialTermExpression                 : _linear_collect_term,
     EXPR.PowExpression                          : _linear_collect_pow,
+    #EXPR.DivisionExpression                     : _linear_collect_division,
     #EXPR.ReciprocalExpression                   : _linear_collect_reciprocal,
     EXPR.Expr_ifExpression                      : _linear_collect_branching_expr,
     #EXPR.UnaryFunctionExpression                : _linear_collect_nonl,

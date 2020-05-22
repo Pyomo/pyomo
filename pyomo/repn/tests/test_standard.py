@@ -3931,7 +3931,7 @@ class Test(unittest.TestCase):
 
         e = m.p/sin(m.v)
         rep = generate_standard_repn(e, compute_values=False)
-        self.assertEqual(str(rep.to_expression()), "p*(1/sin(v))")
+        self.assertEqual(str(rep.to_expression()), "p/sin(v)")
 
         m.w.fixed=True
         e = m.v/m.w
@@ -4000,7 +4000,7 @@ class Test(unittest.TestCase):
         m = ConcreteModel()
         m.A = RangeSet(5)
         m.v = Var(m.A, initialize=1)
-        m.p = Param(m.A, initialize={1:-2, 2:-1, 3:0, 4:1, 5:2})
+        m.p = Param(m.A, initialize={1: -2, 2: -1, 3: 0, 4: 1, 5: 2})
 
         e = summation(m.v) + sum_product(m.p, m.v)
         rep = generate_standard_repn(e, compute_values=True)
@@ -4008,11 +4008,42 @@ class Test(unittest.TestCase):
         rep = generate_standard_repn(e, compute_values=False)
         self.assertEqual(str(rep.to_expression()), "- v[1] + v[3] + 2*v[4] + 3*v[5]")
 
-        m.v[1].fixed=True
+        m.v[1].fixed = True
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "2 + v[3] + 2*v[4] + 3*v[5]")
+        self.assertEqual(str(rep.to_expression()), "-1 + v[3] + 2*v[4] + 3*v[5]")
         rep = generate_standard_repn(e, compute_values=False)
-        self.assertEqual(str(rep.to_expression()), "v[1] + v[1] + v[3] + 2*v[4] + 3*v[5]")
+        self.assertEqual(
+            str(rep.to_expression()), "v[1] - 2*v[1] + v[3] + 2*v[4] + 3*v[5]"
+        )
+
+    def test_linear_with_mutable_param_and_fixed_var(self):
+        m = ConcreteModel()
+        m.A = RangeSet(5)
+        m.v = Var(m.A, initialize=1)
+        m.p = Param(m.A, initialize={1: -2, 2: -1, 3: 0, 4: 1, 5: 2}, mutable=True)
+
+        with EXPR.linear_expression() as expr:
+            for i in m.A:
+                expr += m.p[i] * m.v[i]
+
+        e = summation(m.v) + expr
+
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "- v[1] + v[3] + 2*v[4] + 3*v[5]")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(
+            str(rep.to_expression()),
+            "(1 + p[1])*v[1] + (1 + p[2])*v[2] + (1 + p[3])*v[3] + (1 + p[4])*v[4] + (1 + p[5])*v[5]",
+        )
+
+        m.v[1].fixed = True
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "-1 + v[3] + 2*v[4] + 3*v[5]")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(
+            str(rep.to_expression()),
+            "v[1] + p[1]*v[1] + (1 + p[2])*v[2] + (1 + p[3])*v[3] + (1 + p[4])*v[4] + (1 + p[5])*v[5]",
+        )
 
     def test_linear2(self):
         m = ConcreteModel()

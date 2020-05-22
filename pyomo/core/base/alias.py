@@ -56,12 +56,12 @@ class Alias(Component):
             self._aliased_object = weakref.ref(obj)
         ctype = Alias
         if isinstance(obj, Component):
-            ctype = obj.type()
+            ctype = obj.ctype
         else:
             if not isinstance(obj, ComponentData):
                 raise TypeError("Aliased object must be an "
                                 "instance of Component or ComponentData")
-            ctype = obj.parent_component().type()
+            ctype = obj.parent_component().ctype
         Component.__init__(self, ctype=ctype)
 
     @property
@@ -95,9 +95,9 @@ class Alias(Component):
 
     def _pprint(self):
         if self.aliased_object is None:
-            return ([("Proxy","None")], (), (), ())
+            return [("Proxy","None")], None, None, None
         else:
-            return ([("Proxy", self.aliased_object.name)], (), (), ())
+            return [("Proxy", self.aliased_object.name)], None, None, None
 
     # Dereference so we can point to a constructed object
     # after model cloning / construction

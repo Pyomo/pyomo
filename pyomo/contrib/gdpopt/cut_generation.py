@@ -1,20 +1,22 @@
 """This module provides functions for cut generation."""
 from __future__ import division
 
+from collections import namedtuple
 from math import copysign, fabs
-from pyomo.contrib.derivatives.differentiate import reverse_ad
-
+from six import iteritems
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
                         minimize, value, TransformationFactory)
-from pyomo.core.base.symbolic import differentiate
+from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct
 
+MAX_SYMBOLIC_DERIV_SIZE = 1000
+JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
 def add_subproblem_cuts(subprob_result, solve_data, config):
     if config.strategy == "LOA":
@@ -62,18 +64,32 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                 "Adding OA cut for %s with dual value %s"
                 % (constr.name, dual_value))
 
-            # Cache jacobians
-            jacobians = GDPopt.jacobians.get(constr, None)
-            if jacobians is None:
-                constr_vars = list(identify_variables(constr.body, include_fixed=False))
-                if len(constr_vars) >= 1000:
-                    jac_map = reverse_ad(constr.body)
-                    jacobians = ComponentMap((v, jac_map[v]) for v in constr_vars)
-                    GDPopt.jacobians[constr] = jacobians
+            # Cache jacobian
+            jacobian = GDPopt.jacobians.get(constr, None)
+            if jacobian is None:
+                constr_vars = list(identify_variables(
+                    constr.body, include_fixed=False))
+                if len(constr_vars) >= MAX_SYMBOLIC_DERIV_SIZE:
+                    mode = differentiate.Modes.reverse_numeric
                 else:
-                    jac_list = differentiate(constr.body, wrt_list=constr_vars)
-                    jacobians = ComponentMap(zip(constr_vars, jac_list))
-                    GDPopt.jacobians[constr] = jacobians
+                    mode = differentiate.Modes.sympy
+
+                try:
+                    jac_list = differentiate(
+                        constr.body, wrt_list=constr_vars, mode=mode)
+                    jac_map = ComponentMap(zip(constr_vars, jac_list))
+                except:
+                    if mode is differentiate.Modes.reverse_numeric:
+                        raise
+                    mode = differentiate.Modes.reverse_numeric
+                    jac_map = ComponentMap()
+                jacobian = JacInfo(mode=mode, vars=constr_vars, jac=jac_map)
+                GDPopt.jacobians[constr] = jacobian
+            # Recompute numeric derivatives
+            if not jacobian.jac:
+                jac_list = differentiate(
+                    constr.body, wrt_list=jacobian.vars, mode=jacobian.mode)
+                jacobian.jac.update(zip(jacobian.vars, jac_list))
 
             # Create a block on which to put outer approximation cuts.
             oa_utils = parent_block.component('GDPopt_OA')
@@ -93,11 +109,12 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                 new_oa_cut = (
                     copysign(1, sign_adjust * dual_value) * (
                         value(constr.body) - rhs + sum(
-                            value(jacobians[var]) * (var - value(var))
-                            for var in jacobians)) - slack_var <= 0)
+                            value(jac) * (var - value(var))
+                            for var, jac in iteritems(jacobian.jac))
+                        ) - slack_var <= 0)
                 if new_oa_cut.polynomial_degree() not in (1, 0):
-                    for var in jacobians:
-                        print(var.name, value(jacobians[var]))
+                    for var, jac in iteritems(jacobian.jac):
+                        print(var.name, value(jac))
                 oa_cuts.add(expr=new_oa_cut)
                 counter += 1
             except ZeroDivisionError:
@@ -107,6 +124,9 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                     % (constr.name,)
                 )
                 # Simply continue on to the next constraint.
+            # Clear out the numeric Jacobian values
+            if jacobian.mode is differentiate.Modes.reverse_numeric:
+                jacobian.jac.clear()
 
         config.logger.info('Added %s OA cuts' % counter)
 
@@ -181,22 +201,29 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
         GDPopt = m.GDPopt_utils
         var_value_is_one = ComponentSet()
         var_value_is_zero = ComponentSet()
+        indicator_vars = ComponentSet(disj.indicator_var for disj in GDPopt.disjunct_list)
         for var, val in zip(GDPopt.variable_list, var_values):
             if not var.is_binary():
                 continue
             if var.fixed:
-                if val is not None and var.value != val:
-                    # val needs to be None or match var.value. Otherwise, we have a
-                    # contradiction.
-                    raise ValueError(
-                        "Fixed variable %s has value %s != "
-                        "provided value of %s." % (var.name, var.value, val))
-                val = var.value
+                # if val is not None and var.value != val:
+                #     # val needs to be None or match var.value. Otherwise, we have a
+                #     # contradiction.
+                #     raise ValueError(
+                #         "Fixed variable %s has value %s != "
+                #         "provided value of %s." % (var.name, var.value, val))
+
+                # Note: FBBT may cause some disjuncts to be fathomed, which can cause
+                # a fixed variable to be different than the subproblem value.
+                # In this case, we simply construct the integer cut as usual with
+                # the subproblem value rather than its fixed value.
+                if val is None:
+                    val = var.value
 
             if not config.force_subproblem_nlp:
-                # Skip indicator variables
-                # TODO we should implement this as a check among Disjuncts instead
-                if not (var.local_name == 'indicator_var' and var.parent_block().type() == Disjunct):
+                # By default (config.force_subproblem_nlp = False), we only want
+                # the integer cuts to be over disjunct indicator vars.
+                if var not in indicator_vars:
                     continue
 
             if fabs(val - 1) <= config.integer_tolerance:
@@ -221,13 +248,13 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
         int_cut = (sum(1 - v for v in var_value_is_one) +
                    sum(v for v in var_value_is_zero)) >= 1
 
-        if not feasible:
-            config.logger.info('Adding integer cut')
-            GDPopt.integer_cuts.add(expr=int_cut)
-        else:
-            backtracking_enabled = (
-                "disabled" if GDPopt.no_backtracking.active else "allowed")
-            config.logger.info(
-                'Registering explored configuration. '
-                'Backtracking is currently %s.' % backtracking_enabled)
-            GDPopt.no_backtracking.add(expr=int_cut)
+        # Exclude the current binary combination
+        config.logger.info('Adding integer cut')
+        GDPopt.integer_cuts.add(expr=int_cut)
+
+    if config.calc_disjunctive_bounds:
+        with time_code(solve_data.timing, "disjunctive variable bounding"):
+            TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
+                m,
+                solver=config.mip_solver if config.obbt_disjunctive_bounds else None
+            )

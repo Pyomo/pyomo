@@ -33,9 +33,22 @@ def rand_distributed(val, lb, ub, divisions=9):
     return random.choice(set_distributed_vals)
 
 
+def simple_midpoint(val, lb, ub):
+    return (lb + ub) * 0.5
+
+
 def linspace(lower, upper, n):
     """Linearly spaced range."""
     return [lower + x * (upper - lower) / (n - 1) for x in range(n)]
+
+
+strategies = {
+    "rand": rand,
+    "midpoint_guess_and_bound": midpoint_guess_and_bound,
+    "rand_guess_and_bound": rand_guess_and_bound,
+    "rand_distributed": rand_distributed,
+    "midpoint": simple_midpoint,
+}
 
 
 def reinitialize_variables(model, config):
@@ -50,7 +63,7 @@ def reinitialize_variables(model, config):
         if var.lb is None or var.ub is None:
             if not config.suppress_unbounded_warning:
                 logger.warning(
-                    'Unable to reinitialize value of unbounded variable '
+                    'Skipping reinitialization of unbounded variable '
                     '%s with bounds (%s, %s). '
                     'To suppress this message, set the '
                     'suppress_unbounded_warning flag.'
@@ -58,10 +71,4 @@ def reinitialize_variables(model, config):
             continue
         val = var.value if var.value is not None else (var.lb + var.ub) / 2
         # apply reinitialization strategy to variable
-        strategies = {
-            "rand": rand,
-            "midpoint_guess_and_bound": midpoint_guess_and_bound,
-            "rand_guess_and_bound": rand_guess_and_bound,
-            "rand_distributed": rand_distributed
-        }
         var.value = strategies[config.strategy](val, var.lb, var.ub)

@@ -47,9 +47,6 @@ class PersistentSolver(DirectOrPersistentSolver):
         Dictionary of solver options
     """
 
-    def __init__(self, **kwds):
-        DirectOrPersistentSolver.__init__(self, **kwds)
-
     def _presolve(self, **kwds):
         DirectOrPersistentSolver._presolve(self, **kwds)
 

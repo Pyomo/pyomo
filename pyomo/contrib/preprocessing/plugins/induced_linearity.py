@@ -88,7 +88,7 @@ def _process_container(blk, config):
     if not hasattr(blk, '_induced_linearity_info'):
         blk._induced_linearity_info = Block()
     else:
-        assert blk._induced_linearity_info.type() == Block
+        assert blk._induced_linearity_info.ctype == Block
     eff_discr_vars = detect_effectively_discrete_vars(
         blk, config.equality_tolerance)
     # TODO will need to go through this for each disjunct, since it does
@@ -185,7 +185,7 @@ def prune_possible_values(block_scope, possible_values, config):
             Constraint, active=True, descend_into=(Block, Disjunct)):
         if constr.body.polynomial_degree() not in (1, 0):
             constr.deactivate()
-    if block_scope.type() == Disjunct:
+    if block_scope.ctype == Disjunct:
         disj = tmp_clone_blk._tmp_block_scope[0]
         disj.indicator_var.fix(1)
         TransformationFactory('gdp.bigm').apply_to(model)
@@ -224,7 +224,7 @@ def _process_bilinear_constraints(block, v1, v2, var_values, bilinear_constrs):
         .replace('[', '').replace(']', ''))
     block._induced_linearity_info.add_component(unique_name, blk)
     # TODO think about not using floats as indices in a set
-    blk.valid_values = Set(initialize=var_values)
+    blk.valid_values = Set(initialize=sorted(var_values))
     blk.x_active = Var(blk.valid_values, domain=Binary, initialize=1)
     blk.v_increment = Var(
         blk.valid_values, domain=v2.domain,

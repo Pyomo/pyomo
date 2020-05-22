@@ -1,3 +1,4 @@
+$offlisting
 $offdigit
 
 EQUATIONS
@@ -15,16 +16,20 @@ VARIABLES
 	x2
 	x3;
 
-c1_lo.. -1.0 =l= 1.0 ;
-c1_hi.. 1.0 =l= 1.0 ;
-c2_lo.. -1.0 =l= x1 ;
-c2_hi.. x1 =l= 1.0 ;
-c3_lo.. -1.0 =l= x2 ;
-c3_hi.. x2 =l= 1.0 ;
+c1_lo.. -1 =l= 1 ;
+c1_hi.. 1 =l= 1 ;
+c2_lo.. -1 =l= x1 ;
+c2_hi.. x1 =l= 1 ;
+c3_lo.. -1 =l= x2 ;
+c3_hi.. x2 =l= 1 ;
 c4.. GAMS_OBJECTIVE =e= x3 ;
 
 
 MODEL GAMS_MODEL /all/ ;
+option solprint=off;
+option limrow=0;
+option limcol=0;
+option solvelink=5;
 SOLVE GAMS_MODEL USING lp minimizing GAMS_OBJECTIVE;
 
 Scalars MODELSTAT 'model status', SOLVESTAT 'solve status';

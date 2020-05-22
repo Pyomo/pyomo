@@ -1,3 +1,4 @@
+$offlisting
 $offdigit
 
 EQUATIONS
@@ -21,24 +22,28 @@ VARIABLES
 	GAMS_OBJECTIVE
 	x1;
 
-c1.. x1 =e= 0.0 ;
-c2.. 0.0*x1 + x1 =e= 0.0 ;
-c3.. x1 =e= 0.0 ;
-c4.. x1 =e= 0.0 ;
-c5.. 0.0*power(x1, 2) + x1 =e= 0.0 ;
-c6.. 0.0*x1*1.0 + x1 =e= 0.0 ;
-c7.. 0.0*power(x1, 2) + x1 =e= 0.0 ;
-c8.. 0.0*x1*1.0 + x1 =e= 0.0 ;
-c9.. 0.0*x1 =e= 0.0 ;
-c10.. 0.0*power(x1, 2) =e= 0.0 ;
-c11.. 0.0*x1*1.0 =e= 0.0 ;
-c12.. 0.0*power(x1, 2) =e= 0.0 ;
-c13.. 0.0*x1*1.0 =e= 0.0 ;
-c14.. 0.0*x1 =e= 0.0 ;
-c15.. GAMS_OBJECTIVE =e= x1 + 0.0*x1 + 0.0*x1 + x1*x1*0.0 + x1*x1*0.0 + 0.0*power(x1, 2) ;
+c1.. x1 =e= 0 ;
+c2.. 0*x1 + x1 =e= 0 ;
+c3.. x1 =e= 0 ;
+c4.. x1 =e= 0 ;
+c5.. 0*power(x1, 2) + x1 =e= 0 ;
+c6.. 0*x1*1 + x1 =e= 0 ;
+c7.. 0*power(x1, 2) + x1 =e= 0 ;
+c8.. 0*x1*1 + x1 =e= 0 ;
+c9.. 0*x1 =e= 0 ;
+c10.. 0*power(x1, 2) =e= 0 ;
+c11.. 0*x1*1 =e= 0 ;
+c12.. 0*power(x1, 2) =e= 0 ;
+c13.. 0*x1*1 =e= 0 ;
+c14.. 0*x1 =e= 0 ;
+c15.. GAMS_OBJECTIVE =e= x1 + 0*x1 + 0*x1 + x1*x1*0 + x1*x1*0 + 0*power(x1, 2) ;
 
 
 MODEL GAMS_MODEL /all/ ;
+option solprint=off;
+option limrow=0;
+option limcol=0;
+option solvelink=5;
 SOLVE GAMS_MODEL USING nlp minimizing GAMS_OBJECTIVE;
 
 Scalars MODELSTAT 'model status', SOLVESTAT 'solve status';

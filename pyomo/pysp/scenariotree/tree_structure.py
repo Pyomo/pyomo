@@ -27,7 +27,7 @@ except ImportError:                         #pragma:nocover
 
 from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
-                        CounterLabeler, IntegerSet,
+                        CounterLabeler,
                         Objective, SOSConstraint, Set,
                         ComponentUID)
 from pyomo.core.base.suffix import ComponentMap
@@ -283,8 +283,8 @@ class ScenarioTreeNode(object):
                        self._stage._name,
                        scenario_instance.name))
 
-            if component_object.type() is not Block:
-                isVar = (component_object.type() is Var)
+            if component_object.ctype is not Block:
+                isVar = (component_object.ctype is Var)
                 if not derived:
                     if not isVar:
                         raise RuntimeError("The component=%s "
@@ -297,8 +297,8 @@ class ScenarioTreeNode(object):
                                               type(component_object)))
                 else:
                     if (not isVar) and \
-                       (component_object.type() is not Expression) and \
-                       (component_object.type() is not Objective):
+                       (component_object.ctype is not Expression) and \
+                       (component_object.ctype is not Objective):
                         raise RuntimeError("The derived component=%s "
                                            "associated with stage=%s "
                                            "is present in instance=%s "
@@ -448,14 +448,14 @@ class ScenarioTreeNode(object):
                                  % (cost_variable_name,
                                     self._stage._name,
                                     scenario_instance.name))
-            if not cost_variable.type() in [Var,Expression,Objective]:
+            if not cost_variable.ctype in [Var,Expression,Objective]:
                 raise RuntimeError("The component=%s associated with stage=%s "
                                    "is present in model=%s but is not a "
                                    "variable or expression - type=%s"
                                    % (cost_variable_name,
                                       self._stage._name,
                                       scenario_instance.name,
-                                      cost_variable.type()))
+                                      cost_variable.ctype))
             if cost_variable_index not in cost_variable:
                 raise RuntimeError("The index %s is not defined for cost "
                                    "variable=%s on model=%s"
@@ -1389,7 +1389,8 @@ class ScenarioTree(object):
                     new_stage._derived_variable_templates[variable_name].append(match_template)
 
             # de-reference is required to access the parameter value
-
+            # TBD March 2020: make it so the stages always know their cost names.
+            # dlw March 2020: when coming from NetworkX, we don't know these yet!!
             cost_variable_string = stage_cost_variable_names[stage_name].value
             if cost_variable_string is not None:
                 if isVariableNameIndexed(cost_variable_string):
@@ -1490,7 +1491,7 @@ class ScenarioTree(object):
 
         # the input stages must be ordered, for both output purposes
         # and knowledge of the final stage.
-        if not stage_ids.ordered:
+        if not stage_ids.isordered():
             raise ValueError(
                 "An ordered set of stage IDs must be supplied in "
                 "the ScenarioTree constructor")
@@ -1498,8 +1499,8 @@ class ScenarioTree(object):
         for node_id in node_ids:
             node_stage_id = node_stage_ids[node_id].value
             if node_stage_id != stage_ids.last():
-                if (len(stage_variable_ids[node_stage_id].value) == 0) and \
-                   (len(node_variable_ids[node_id].value) == 0):
+                if (len(stage_variable_ids[node_stage_id]) == 0) and \
+                   (len(node_variable_ids[node_id]) == 0):
                     raise ValueError(
                         "Scenario tree node %s, belonging to stage %s, "
                         "has not been declared with any variables. "
@@ -1622,7 +1623,7 @@ class ScenarioTree(object):
                 scenario_leaf_node_name = value(scenario_leaf_ids[scenario_name])
                 if scenario_leaf_node_name not in self._tree_node_map:
                     raise ValueError("Uknown tree node=%s specified as leaf "
-                                     "of scenario=%s"
+                                     "of scenario=%s" %
                                      (scenario_leaf_node_name, scenario_name))
                 else:
                     new_scenario._leaf_node = \

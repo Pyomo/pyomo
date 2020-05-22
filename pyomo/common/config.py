@@ -10,8 +10,9 @@
 
 import os
 import platform
-import six
 
+import enum
+import six
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
 
 if 'PYOMO_CONFIG_DIR' in os.environ:
@@ -145,9 +146,9 @@ class PathList(Path):
             return [ super(PathList, self).__call__(data) ]
 
 
-def add_docstring_list(docstring, configblock):
+def add_docstring_list(docstring, configblock, indent_by=4):
     """Returns the docstring with a formatted configuration arguments listing."""
-    return docstring + "    ".join(
+    return docstring + (" " * indent_by).join(
         configblock.generate_documentation(
             block_start="Keyword Arguments\n-----------------\n",
             block_end="",
@@ -157,3 +158,13 @@ def add_docstring_list(docstring, configblock):
             indent_spacing=0,
             width=256
         ).splitlines(True))
+
+
+class ConfigEnum(enum.Enum):
+    @classmethod
+    def from_enum_or_string(cls, arg):
+        if type(arg) is str:
+            return cls[arg]
+        else:
+            # Handles enum or integer inputs
+            return cls(arg)

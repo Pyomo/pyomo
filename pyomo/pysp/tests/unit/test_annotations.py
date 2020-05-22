@@ -28,7 +28,6 @@ from pyomo.pysp.annotations import (locate_annotations,
                                     PySP_StochasticObjectiveAnnotation,
                                     StochasticVariableBoundsAnnotation)
 
-@unittest.category('smoke','nightly','expensive')
 class TestAnnotations(unittest.TestCase):
 
     def test_deprecated(self):

@@ -67,14 +67,7 @@ def get_button(w, label):
 def test_get_mainwindow(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
-    qtbot.addWidget(mw)
-    mw._dialog_test_button = QMessageBox.No
-    assert(hasattr(mw, "menu_File"))
     assert(hasattr(mw, "menuBar"))
-    qtbot.keyClick(mw.menuBar(), "f", modifier=QtCore.Qt.AltModifier)
-    qtbot.keyClick(mw.menu_File, "x")
-    # should have actiavted exit dialog
-    assert(isinstance(mw._dialog, QMessageBox))
     assert(isinstance(mw.variables, ModelBrowser))
     assert(isinstance(mw.constraints, ModelBrowser))
     assert(isinstance(mw.expressions, ModelBrowser))
@@ -90,7 +83,13 @@ def test_model_information(qtbot):
     text = mw._dialog.text()
     mw._dialog.close()
     text = text.split("\n")
-    assert(text[0].startswith("8")) # Active constraints
-    assert(text[1].startswith("7")) # Active equalities
-    assert(text[2].startswith("7")) # Free vars in active equalities
-    assert(text[3].startswith("0")) # degrees of feedom
+    assert(str(text[0]).startswith("8")) # Active constraints
+    assert(str(text[1]).startswith("7")) # Active equalities
+    assert(str(text[2]).startswith("7")) # Free vars in active equalities
+    assert(str(text[3]).startswith("0")) # degrees of feedom
+    # Main window has parts it is supposed to 
+    assert(hasattr(mw, "menuBar"))
+    assert(isinstance(mw.variables, ModelBrowser))
+    assert(isinstance(mw.constraints, ModelBrowser))
+    assert(isinstance(mw.expressions, ModelBrowser))
+    assert(isinstance(mw.parameters, ModelBrowser))

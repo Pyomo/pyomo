@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 
 import logging
+import sys
+import traceback
 from pyomo.common.download import FileDownloader, DownloadFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 
@@ -29,14 +31,29 @@ class GroupDownloader(object):
         self.downloader.insecure = args.insecure
         for target in DownloadFactory:
             try:
-                DownloadFactory(target, downloader=self.downloader)
-                result = ' OK '
+                ext = DownloadFactory(target, downloader=self.downloader)
+                if hasattr(ext, 'skip') and ext.skip():
+                    result = 'SKIP'
+                elif hasattr(ext, '__call__'):
+                    ext()
+                    result = ' OK '
+                else:
+                    # Extension was a simple function and already ran
+                    result = ' OK '
             except SystemExit:
+                _info = sys.exc_info()
+                _cls = str(_info[0].__name__ if _info[0] is not None
+                           else "NoneType") + ": "
+                logger.error(_cls + str(_info[1]))
                 result = 'FAIL'
-                returncode = 1
+                returncode |= 2
             except:
+                _info = sys.exc_info()
+                _cls = str(_info[0].__name__ if _info[0] is not None
+                           else "NoneType") + ": "
+                logger.error(_cls + str(_info[1]))
                 result = 'FAIL'
-                returncode = 1
+                returncode |= 1
             results.append(result_fmt % (result, target))
         logger.info("Finished downloading Pyomo extensions.")
         logger.info(
@@ -49,7 +66,7 @@ class GroupDownloader(object):
 # Add a subparser for the download-extensions command
 #
 _group_downloader = GroupDownloader()
-solve_parser = _group_downloader.create_parser(
+_parser = _group_downloader.create_parser(
     add_subparser(
         'download-extensions',
         func=_group_downloader.call,

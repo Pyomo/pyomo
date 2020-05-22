@@ -64,7 +64,7 @@ def tearDownModule():
         del sys.modules["piecewise_model_embedded"]
     piecewise_model_embedded = None
 
-@unittest.category('nightly','expensive')
+@unittest.category('nightly')
 class TestSMPSEmbeddedBad(unittest.TestCase):
 
     @classmethod
@@ -372,7 +372,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
              "only supports discrete table distributions of type "
              "pyomo.pysp.embeddedsp.TableDistribution."))
 
-@unittest.category('nightly','expensive')
+@unittest.category('nightly')
 class TestSMPSEmbedded(unittest.TestCase):
 
     def _diff(self, baselinedir, outputdir, dc=None):

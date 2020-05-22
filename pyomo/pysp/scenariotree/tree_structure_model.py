@@ -14,14 +14,15 @@ import pyomo.core
 
 import six
 
-try:
-    import networkx
-    has_networkx = True
-except ImportError:                               #pragma:nocover
-    has_networkx = False
+from pyomo.common.dependencies import attempt_import
+
+# The code below conforms to the networkx>=2.0 API
+networkx, networkx_available = attempt_import('networkx', minimum_version="2.0")
 
 def CreateAbstractScenarioTreeModel():
-    from pyomo.core import (AbstractModel, Set, Param, Boolean)
+    from pyomo.core import (
+        AbstractModel, Set, Param, Boolean, Any, UnitInterval,
+    )
 
     model = AbstractModel()
 
@@ -39,6 +40,7 @@ def CreateAbstractScenarioTreeModel():
                          initialize=[],
                          ordered=True)
     model.ConditionalProbability = Param(model.Nodes,
+                                         within=UnitInterval,
                                          mutable=True)
 
     model.Scenarios = Set(ordered=True)
@@ -55,14 +57,17 @@ def CreateAbstractScenarioTreeModel():
                               ordered=True)
 
     model.StageCost = Param(model.Stages,
+                            within=Any,
                             mutable=True,
                             default=None)
     model.NodeCost = Param(model.Nodes,
+                           within=Any,
                            mutable=True,
                            default=None)
 
     # DEPRECATED
     model.StageCostVariable = Param(model.Stages,
+                                    within=Any,
                                     mutable=True)
 
     # it is often the case that a subset of the stage variables are strictly "derived"
@@ -116,13 +121,13 @@ def CreateAbstractScenarioTreeModel():
 #
 def CreateConcreteTwoStageScenarioTreeModel(num_scenarios):
     m = CreateAbstractScenarioTreeModel()
+    m = m.create_instance()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
     m.Nodes.add('RootNode')
     for i in range(1, num_scenarios+1):
         m.Nodes.add('LeafNode_Scenario'+str(i))
         m.Scenarios.add('Scenario'+str(i))
-    m = m.create_instance()
     m.NodeStage['RootNode'] = 'Stage1'
     m.ConditionalProbability['RootNode'] = 1.0
     for node in m.Nodes:
@@ -230,10 +235,6 @@ def ScenarioTreeModelFromNetworkX(
         >>> model = ScenarioTreeModelFromNetworkX(G)
     """
 
-    if not has_networkx:                          #pragma:nocover
-        raise ValueError(
-            "networkx module is not available")
-
     if not networkx.is_tree(tree):
         raise TypeError(
             "Graph object is not a tree "
@@ -262,6 +263,7 @@ def ScenarioTreeModelFromNetworkX(
         raise ValueError(
             "The number of stages must be at least 2")
     m = CreateAbstractScenarioTreeModel()
+    m = m.create_instance()
     if stage_names is not None:
         unique_stage_names = set()
         for cnt, stage_name in enumerate(stage_names,1):
@@ -281,12 +283,12 @@ def ScenarioTreeModelFromNetworkX(
     scenario_bundle = {}
     def _setup(u, succ):
         if node_name_attribute is not None:
-            if node_name_attribute not in tree.node[u]:
+            if node_name_attribute not in tree.nodes[u]:
                 raise KeyError(
                     "node '%s' missing node name "
                     "attribute: '%s'"
                     % (u, node_name_attribute))
-            node_name = tree.node[u][node_name_attribute]
+            node_name = tree.nodes[u][node_name_attribute]
         else:
             node_name = u
         node_to_name[u] = node_name
@@ -297,21 +299,21 @@ def ScenarioTreeModelFromNetworkX(
         else:
             # a leaf node
             if scenario_name_attribute is not None:
-                if scenario_name_attribute not in tree.node[u]:
+                if scenario_name_attribute not in tree.nodes[u]:
                     raise KeyError(
                         "node '%s' missing scenario name "
                         "attribute: '%s'"
                         % (u, scenario_name_attribute))
-                scenario_name = tree.node[u][scenario_name_attribute]
+                scenario_name = tree.nodes[u][scenario_name_attribute]
             else:
                 scenario_name = u
             node_to_scenario[u] = scenario_name
             m.Scenarios.add(scenario_name)
             scenario_bundle[scenario_name] = \
-                tree.node[u].get('bundle', None)
+                tree.nodes[u].get('bundle', None)
     _setup(root,
            networkx.dfs_successors(tree, root))
-    m = m.create_instance()
+
     def _add_node(u, stage, succ, pred):
         node_name = node_to_name[u]
         m.NodeStage[node_name] = m.Stages[stage]
@@ -336,19 +338,19 @@ def ScenarioTreeModelFromNetworkX(
                 probability = 1.0/len(succ[pred[u]])
             m.ConditionalProbability[node_name] = probability
         # get node variables
-        if "variables" in tree.node[u]:
-            node_variables = tree.node[u]["variables"]
+        if "variables" in tree.nodes[u]:
+            node_variables = tree.nodes[u]["variables"]
             assert type(node_variables) in [tuple, list]
             for varstring in node_variables:
                 m.NodeVariables[node_name].add(varstring)
-        if "derived_variables" in tree.node[u]:
-            node_derived_variables = tree.node[u]["derived_variables"]
+        if "derived_variables" in tree.nodes[u]:
+            node_derived_variables = tree.nodes[u]["derived_variables"]
             assert type(node_derived_variables) in [tuple, list]
             for varstring in node_derived_variables:
                 m.NodeDerivedVariables[node_name].add(varstring)
-        if "cost" in tree.node[u]:
-            assert isinstance(tree.node[u]["cost"], six.string_types)
-            m.NodeCost[node_name].value = tree.node[u]["cost"]
+        if "cost" in tree.nodes[u]:
+            assert isinstance(tree.nodes[u]["cost"], six.string_types)
+            m.NodeCost[node_name].value = tree.nodes[u]["cost"]
         if u in succ:
             child_names = []
             for v in succ[u]:

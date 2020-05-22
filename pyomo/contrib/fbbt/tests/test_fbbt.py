@@ -1,17 +1,13 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
+from pyomo.contrib.fbbt import interval
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import ProductExpression, UnaryFunctionExpression
 import math
 import logging
 import io
-try:
-    import numpy as np
-    numpy_available = True
-except ImportError:
-    numpy_available = False
-
 
 class DummyExpr(ProductExpression):
     pass
@@ -535,6 +531,29 @@ class TestFBBT(unittest.TestCase):
             self.assertTrue(np.all(xl <= x))
             self.assertTrue(np.all(xu >= x))
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
+    def test_log10(self):
+        c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
+        for cl, cu in c_bounds:
+            m = pe.Block(concrete=True)
+            m.x = pe.Var()
+            m.c = pe.Constraint(expr=pe.inequality(body=pe.log10(m.x), lower=cl, upper=cu))
+            fbbt(m)
+            z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+            if m.x.lb is None:
+                xl = -np.inf
+            else:
+                xl = pe.value(m.x.lb)
+            if m.x.ub is None:
+                xu = np.inf
+            else:
+                xu = pe.value(m.x.ub)
+            x = 10**z
+            print(xl, xu, cl, cu)
+            print(x)
+            self.assertTrue(np.all(xl <= x))
+            self.assertTrue(np.all(xu >= x))
+
     def test_sin(self):
         m = pe.Block(concrete=True)
         m.x = pe.Var(bounds=(-math.pi/2, math.pi/2))
@@ -673,6 +692,30 @@ class TestFBBT(unittest.TestCase):
         fbbt(m, deactivate_satisfied_constraints=True)
         self.assertFalse(m.c.active)
 
+    def test_iteration_limit(self):
+        m = pe.ConcreteModel()
+        m.x_set = pe.Set(initialize=[0, 1, 2], ordered=True)
+        m.c_set = pe.Set(initialize=[0, 1], ordered=True)
+        m.x = pe.Var(m.x_set)
+        m.c = pe.Constraint(m.c_set)
+        m.c[0] = m.x[0] == m.x[1]
+        m.c[1] = m.x[1] == m.x[2]
+        m.x[2].setlb(-1)
+        m.x[2].setub(1)
+        fbbt(m, max_iter=1)
+        self.assertEqual(m.x[1].lb, -1)
+        self.assertEqual(m.x[1].ub, 1)
+        self.assertEqual(m.x[0].lb, None)
+        self.assertEqual(m.x[0].ub, None)
+
+    def test_inf_bounds_on_expr(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(-1, 1))
+        m.y = pe.Var()
+        lb, ub = compute_bounds_on_expr(m.x + m.y)
+        self.assertEqual(lb, None)
+        self.assertEqual(ub, None)
+
     @unittest.skip('This test passes locally, but not on travis or appveyor. I will add an issue.')
     def test_skip_unknown_expression1(self):
 
@@ -732,3 +775,44 @@ class TestFBBT(unittest.TestCase):
         lb, ub = compute_bounds_on_expr(e)
         self.assertAlmostEqual(lb, -2, 14)
         self.assertAlmostEqual(ub, 2, 14)
+
+    def test_encountered_bugs1(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var(bounds=(-0.035, -0.035))
+        m.y = pe.Var(bounds=(-0.023, -0.023))
+        m.c = pe.Constraint(expr=m.x**2 + m.y**2 <= 0.0256)
+        fbbt(m.c)
+        self.assertEqual(m.x.lb, -0.035)
+        self.assertEqual(m.x.ub, -0.035)
+        self.assertEqual(m.y.lb, -0.023)
+        self.assertEqual(m.y.ub, -0.023)
+
+    def test_encountered_bugs2(self):
+        m = pe.Block(concrete=True)
+        m.x = pe.Var(within=pe.Integers)
+        m.y = pe.Var(within=pe.Integers)
+        m.c = pe.Constraint(expr=m.x + m.y == 1)
+        fbbt(m.c)
+        self.assertEqual(m.x.lb, None)
+        self.assertEqual(m.x.ub, None)
+        self.assertEqual(m.y.lb, None)
+        self.assertEqual(m.y.ub, None)
+
+    def test_encountered_bugs3(self):
+        xl = 0.033689710575092756
+        xu = 0.04008169994804723
+        yl = 0.03369608678342047
+        yu = 0.04009243987444148
+
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(xl, xu))
+        m.y = pe.Var(bounds=(yl, yu))
+
+        m.c = pe.Constraint(expr=m.x == pe.sin(m.y))
+
+        fbbt(m.c)
+
+        self.assertAlmostEqual(m.x.lb, xl)
+        self.assertAlmostEqual(m.x.ub, xu)
+        self.assertAlmostEqual(m.y.lb, yl)
+        self.assertAlmostEqual(m.y.ub, yu)

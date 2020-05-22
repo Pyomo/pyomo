@@ -20,10 +20,10 @@ logger = logging.getLogger('pyomo.common')
 # These URLs were retrieved from
 #     https://ampl.com/resources/extended-function-library/
 urlmap = {
-    'linux':   'https://www.ampl.com/NEW/amplgsl/amplgsl.linux-intel%s.zip',
-    'windows': 'https://www.ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
-    'cygwin':  'https://www.ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
-    'darwin':  'https://www.ampl.com/NEW/amplgsl/amplgsl.macosx%s.zip'
+    'linux':   'https://ampl.com/NEW/amplgsl/amplgsl.linux-intel%s.zip',
+    'windows': 'https://ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
+    'cygwin':  'https://ampl.com/NEW/amplgsl/amplgsl.mswin%s.zip',
+    'darwin':  'https://ampl.com/NEW/amplgsl/amplgsl.macosx%s.zip'
 }
 
 def find_GSL():
@@ -34,7 +34,7 @@ def find_GSL():
 
 def get_gsl(downloader):
     system, bits = downloader.get_sysinfo()
-    url = downloader.get_url(urlmap) % (bits,)
+    url = downloader.get_platform_url(urlmap) % (bits,)
 
     downloader.set_destination_filename(os.path.join('lib', 'amplgsl.dll'))
 

@@ -8,7 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = [ 'AbstractProblemWriter', 'WriterFactory', 'ProblemConfigFactory', 'BaseProblemConfig' ]
+__all__ = [
+    "AbstractProblemWriter",
+    "WriterFactory",
+    "ProblemConfigFactory",
+    "BaseProblemConfig",
+    "BranchDirection",
+]
 
 from pyomo.common import Factory
 
@@ -44,3 +50,12 @@ class AbstractProblemWriter(object):
     def __exit__(self, t, v, traceback):
         pass
 
+
+class BranchDirection(object):
+    """ Allowed values for MIP variable branching directions in the `direction` Suffix of a model. """
+
+    default = 0
+    down = -1
+    up = 1
+
+    ALL = {default, down, up}

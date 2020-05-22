@@ -15,6 +15,7 @@ import difflib
 import filecmp
 import shutil
 import subprocess
+import sys
 import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
@@ -33,7 +34,7 @@ pysp_examples_dir = \
 
 _run_verbose = True
 
-@unittest.category('nightly','expensive')
+@unittest.category('nightly')
 class TestConvertDDSIPSimple(unittest.TestCase):
 
     @unittest.nottest
@@ -70,7 +71,7 @@ class TestConvertDDSIPSimple(unittest.TestCase):
             shutil.rmtree(options['--output-directory'],
                           ignore_errors=True)
 
-        cmd = ['python','-m','pyomo.pysp.convert.ddsip']
+        cmd = [sys.executable,'-m','pyomo.pysp.convert.ddsip']
         for name, val in options.items():
             cmd.append(name)
             if val is not None:
@@ -214,7 +215,7 @@ class _DDSIPTesterBase(object):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = ['python','-m','pyomo.pysp.convert.ddsip']
+        cmd = [sys.executable,'-m','pyomo.pysp.convert.ddsip']
         for name, val in self.options.items():
             cmd.append(name)
             if val is not None:
@@ -412,7 +413,7 @@ create_test_classes('farmer',
                     'farmer',
                     farmer_model_dir,
                     farmer_data_dir,
-                    ('nightly','expensive'))
+                    ('nightly',))
 
 piecewise_model = join(thisdir, "piecewise_model.py")
 piecewise_scenario_tree = join(thisdir, "piecewise_scenario_tree.py")
@@ -420,14 +421,14 @@ create_test_classes('piecewise',
                     'piecewise',
                     piecewise_model,
                     piecewise_scenario_tree,
-                    ('nightly','expensive'))
+                    ('nightly',))
 
 piecewise_model = join(thisdir, "piecewise_model_alt.py")
 create_test_classes('piecewise_alt',
                     'piecewise',
                     piecewise_model,
                     piecewise_scenario_tree,
-                    ('nightly','expensive'))
+                    ('nightly',))
 
 if __name__ == "__main__":
     unittest.main()

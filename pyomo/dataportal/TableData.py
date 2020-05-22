@@ -106,7 +106,7 @@ class TableData(object):
         self._info = None
 
     def _set_data(self, headers, rows):
-        from pyomo.core.base.sets import Set
+        from pyomo.core.base.set import Set
         from pyomo.core.base.param import Param
 
         header_index = []
@@ -221,9 +221,9 @@ class TableData(object):
         from pyomo.core.expr import value
 
         tmp = []
-        if not self.options.columns is None:
+        if self.options.columns is not None:
             tmp.append(self.options.columns)
-        if not self.options.set is None:
+        if self.options.set is not None:
             # Create column names
             if self.options.columns is None:
                 cols = []
@@ -231,7 +231,7 @@ class TableData(object):
                     cols.append(self.options.set.local_name+str(i))
                 tmp.append(cols)
             # Get rows
-            if not self.options.sort is None:
+            if self.options.sort is not None:
                 for data in sorted(self.options.set):
                     if self.options.set.dimen > 1:
                         tmp.append(list(data))
@@ -243,12 +243,11 @@ class TableData(object):
                         tmp.append(list(data))
                     else:
                         tmp.append([data])
-        elif not self.options.param is None:
+        elif self.options.param is not None:
             if type(self.options.param) in (list,tuple):
                 _param = self.options.param
             else:
                 _param = [self.options.param]
-            tmp = []
             # Collect data
             for index in _param[0]:
                 if index is None:
@@ -267,5 +266,5 @@ class TableData(object):
                     cols.append('I'+str(i))
                 for param in _param:
                     cols.append(param)
-                tmp = [cols] + tmp
+                tmp.insert(0,cols)
         return tmp

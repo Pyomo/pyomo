@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -18,8 +18,8 @@ from pyomo.environ import *
 ##
 #
 # Pyomo makes a fundamental distinction between an abstract model and a
-# problem instance.  The Pyomo AbstractModel() class is used to manage the 
-# declaration of model components (e.g. sets and variables), and to 
+# problem instance.  The Pyomo AbstractModel() class is used to manage the
+# declaration of model components (e.g. sets and variables), and to
 # generate a problem instance.
 #
 model = AbstractModel()
@@ -50,11 +50,11 @@ model.E = Set(within=model.A * model.B * model.A)
 
 #
 # An indexed set
-# 
+#
 model.F = Set(model.A)
 #
 # An indexed set
-# 
+#
 model.G = Set(model.A,model.B)
 #
 # A simple set
@@ -122,10 +122,10 @@ model.N = Param(model.y, within=Reals)
 
 model.MM = Param(model.z)
 model.MMM = Param(model.z)
-model.NNN = Param(model.x)   
+model.NNN = Param(model.x)
 
 ##
-## Process an input file and confirm that we get appropriate 
+## Process an input file and confirm that we get appropriate
 ## set instances.
 ##
 instance = model.create_instance("data.dat")

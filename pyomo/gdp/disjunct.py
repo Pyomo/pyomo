@@ -13,6 +13,7 @@ import sys
 from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
+from pyomo.common.errors import PyomoException
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
@@ -26,6 +27,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 
+
 logger = logging.getLogger('pyomo.gdp')
 
 _rule_returned_none_error = """Disjunction '%s': rule returned None.
@@ -36,7 +38,7 @@ this error is forgetting to include the "return" statement at the end of
 your rule.
 """
 
-class GDP_Error(Exception):
+class GDP_Error(PyomoException):
     """Exception raised while processing GDP Models"""
 
 
@@ -74,31 +76,18 @@ class _Initializer(object):
 
 class _DisjunctData(_BlockData):
 
+    _Block_reserved_words = set()
+
+    @property
+    def transformation_block(self):
+        return self._transformation_block
+
     def __init__(self, component):
         _BlockData.__init__(self, component)
         self.indicator_var = Var(within=Binary)
-
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        _BlockData.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
-
-    def set_value(self, val):
-        _indicator_var = self.indicator_var
-        # Remove everything
-        for k in list(getattr(self, '_decl', {})):
-            self.del_component(k)
-        self._ctypes = {}
-        self._decl = {}
-        self._decl_order = []
-        # Now copy over everything from the other block.  If the other
-        # block has an indicator_var, it should override this block's.
-        # Otherwise restore this block's indicator_var.
-        if val:
-            if 'indicator_var' not in val:
-                self.add_component('indicator_var', _indicator_var)
-            for k in sorted(iterkeys(val)):
-                self.add_component(k,val[k])
-        else:
-            self.add_component('indicator_var', _indicator_var)
+        # pointer to transformation block if this disjunct has been
+        # transformed. None indicates it hasn't been transformed.
+        self._transformation_block = None
 
     def activate(self):
         super(_DisjunctData, self).activate()
@@ -176,18 +165,27 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
 
-    def pprint(self, ostream=None, verbose=False, prefix=""):
-        Disjunct.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
-
 
 class IndexedDisjunct(Disjunct):
-    pass
+    #
+    # HACK: this should be implemented on ActiveIndexedComponent, but
+    # that will take time and a PEP
+    #
+    @property
+    def active(self):
+        return any(d.active for d in itervalues(self._data))
 
+
+_DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
 class _DisjunctionData(ActiveComponentData):
-    __slots__ = ('disjuncts','xor')
+    __slots__ = ('disjuncts','xor', '_algebraic_constraint')
     _NoArgument = (0,)
+
+    @property
+    def algebraic_constraint(self):
+        return self._algebraic_constraint
 
     def __init__(self, component=None):
         #
@@ -201,6 +199,9 @@ class _DisjunctionData(ActiveComponentData):
         self._active = True
         self.disjuncts = []
         self.xor = True
+        # pointer to XOR (or OR) constraint if this disjunction has been
+        # transformed. None if it has not been transformed
+        self._algebraic_constraint = None
 
     def __getstate__(self):
         """
@@ -213,8 +214,14 @@ class _DisjunctionData(ActiveComponentData):
 
     def set_value(self, expr):
         for e in expr:
-            # The user gave us a proper Disjunct block
-            if hasattr(e, 'type') and e.type() == Disjunct:
+            # The user gave us a proper Disjunct block 
+            # [ESJ 06/21/2019] This is really an issue with the reclassifier,
+            # but in the case where you are iteratively adding to an
+            # IndexedDisjunct indexed by Any which has already been transformed,
+            # the new Disjuncts are Blocks already. This catches them for who
+            # they are anyway.
+            if isinstance(e, _DisjunctData):
+            #if hasattr(e, 'type') and e.ctype == Disjunct:
                 self.disjuncts.append(e)
                 continue
             # The user was lazy and gave us a single constraint
@@ -276,6 +283,7 @@ class Disjunction(ActiveIndexedComponent):
         self._init_expr = kwargs.pop('expr', None)
         self._init_xor = _Initializer.process(kwargs.pop('xor', True))
         self._autodisjuncts = None
+        self._algebraic_constraint = None
         kwargs.setdefault('ctype', Disjunction)
         super(Disjunction, self).__init__(*args, **kwargs)
 
@@ -435,5 +443,10 @@ class SimpleDisjunction(_DisjunctionData, Disjunction):
         return super(SimpleDisjunction, self).set_value(expr)
 
 class IndexedDisjunction(Disjunction):
-    pass
-
+    #
+    # HACK: this should be implemented on ActiveIndexedComponent, but
+    # that will take time and a PEP
+    #
+    @property
+    def active(self):
+        return any(d.active for d in itervalues(self._data))

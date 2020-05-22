@@ -5,16 +5,15 @@ from os.path import abspath, dirname, join, normpath
 
 from six import StringIO
 
-import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.gdpopt.GDPopt import GDPoptSolver
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
-from pyomo.contrib.gdpopt.util import is_feasible
+from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.environ import ConcreteModel, Objective, SolverFactory, Var, value, Integers, Block, Constraint, maximize
 from pyomo.gdp import Disjunct, Disjunction
-from pyutilib.misc import import_file
+from pyutilib.misc import import_file, Container
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.opt import TerminationCondition
 
@@ -51,7 +50,10 @@ class TestGDPoptUnit(unittest.TestCase):
         m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0], m.d._autodisjuncts[1]]
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            solve_linear_GDP(m, GDPoptSolveData(), GDPoptSolver.CONFIG(dict(mip_solver=mip_solver)))
+            solver_data = GDPoptSolveData()
+            solver_data.timing = Container()
+            with time_code(solver_data.timing, 'main', is_main_timer=True):
+                solve_linear_GDP(m, solver_data, GDPoptSolver.CONFIG(dict(mip_solver=mip_solver)))
             self.assertIn("Linear GDP was unbounded. Resolving with arbitrary bound values",
                           output.getvalue().strip())
 
@@ -145,8 +147,6 @@ class TestGDPoptUnit(unittest.TestCase):
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
                  % (LOA_solvers,))
-@unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                 "Symbolic differentiation is not available")
 class TestGDPopt(unittest.TestCase):
     """Tests for the GDPopt solver plugin."""
 
@@ -208,7 +208,7 @@ class TestGDPopt(unittest.TestCase):
             tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    @unittest.skipUnless(SolverFactory('gams').available(), 'GAMS solver not available')
+    @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False), 'GAMS solver not available')
     def test_LOA_8PP_gams_solver(self):
         # Make sure that the duals are still correct
         exfile = import_file(

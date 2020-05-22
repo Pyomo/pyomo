@@ -8,18 +8,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
 import os
 import platform
+import re
+import six
 import shutil
 import tempfile
 
 import pyutilib.th as unittest
 from pyutilib.misc import capture_output
+from pyutilib.subprocess import run
 
 from pyomo.common import DeveloperError
 from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file
-from pyomo.common.download import FileDownloader
+from pyomo.common.download import FileDownloader, distro_available
 
 class Test_FileDownloader(unittest.TestCase):
     def setUp(self):
@@ -137,15 +141,84 @@ class Test_FileDownloader(unittest.TestCase):
         self.assertFalse(any(c in ans[0] for c in '.-_'))
         self.assertIn(ans[1], (32,64))
 
-    def test_get_url(self):
+    def test_get_os_version(self):
+        f = FileDownloader()
+        _os, _ver = f.get_os_version(normalize=False)
+        _norm = f.get_os_version(normalize=True)
+        #print(_os,_ver,_norm)
+        _sys = f.get_sysinfo()[0]
+        if _sys == 'linux':
+            dist, dist_ver = re.match('^([^0-9]+)(.*)', _norm).groups()
+            self.assertNotIn('.', dist_ver)
+            self.assertGreater(int(dist_ver), 0)
+            if dist == 'ubuntu':
+                self.assertEqual(dist_ver, ''.join(_ver.split('.')[:2]))
+            else:
+                self.assertEqual(dist_ver, _ver.split('.')[0])
+
+            if distro_available:
+                d, v = f._get_distver_from_distro()
+                #print(d,v)
+                self.assertEqual(_os, d)
+                self.assertEqual(_ver, v)
+                self.assertTrue(v.replace('.','').startswith(dist_ver))
+
+            if os.path.exists('/etc/redhat-release'):
+                d, v = f._get_distver_from_redhat_release()
+                #print(d,v)
+                self.assertEqual(_os, d)
+                self.assertEqual(_ver, v)
+                self.assertTrue(v.replace('.','').startswith(dist_ver))
+
+            if run(['lsb_release'])[0] == 0:
+                d, v = f._get_distver_from_lsb_release()
+                #print(d,v)
+                self.assertEqual(_os, d)
+                self.assertEqual(_ver, v)
+                self.assertTrue(v.replace('.','').startswith(dist_ver))
+
+            if os.path.exists('/etc/os-release'):
+                d, v = f._get_distver_from_os_release()
+                #print(d,v)
+                self.assertEqual(_os, d)
+                # Note that (at least on centos), os_release is an
+                # imprecise version string
+                self.assertTrue(_ver.startswith(v))
+                self.assertTrue(v.replace('.','').startswith(dist_ver))
+
+        elif _sys == 'darwin':
+            dist, dist_ver = re.match('^([^0-9]+)(.*)', _norm).groups()
+            self.assertEqual(_os, 'macos')
+            self.assertEqual(dist, 'macos')
+            self.assertNotIn('.', dist_ver)
+            self.assertGreater(int(dist_ver), 0)
+            self.assertEqual(_norm, _os+''.join(_ver.split('.')[:2]))
+        elif _sys == 'windows':
+            self.assertEqual(_os, 'win')
+            self.assertEqual(_norm, _os+''.join(_ver.split('.')[:2]))
+        else:
+            self.assertEqual(ans, '')
+
+        self.assertEqual((_os, _ver), FileDownloader._os_version)
+        # Exercise the fetch from CACHE
+        try:
+            FileDownloader._os_version, tmp \
+                = ("test", '2'), FileDownloader._os_version
+            self.assertEqual(f.get_os_version(False), ("test","2"))
+            self.assertEqual(f.get_os_version(), "test2")
+        finally:
+            FileDownloader._os_version = tmp
+
+
+    def test_get_platform_url(self):
         f = FileDownloader()
         urlmap = {'bogus_sys': 'bogus'}
         with self.assertRaisesRegexp(
                 RuntimeError, "cannot infer the correct url for platform '.*'"):
-            f.get_url(urlmap)
+            f.get_platform_url(urlmap)
 
         urlmap[f.get_sysinfo()[0]] = 'correct'
-        self.assertEqual(f.get_url(urlmap), 'correct')
+        self.assertEqual(f.get_platform_url(urlmap), 'correct')
 
 
     def test_get_files_requires_set_destination(self):
@@ -161,3 +234,28 @@ class Test_FileDownloader(unittest.TestCase):
         with self.assertRaisesRegexp(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_gzipped_binary_file('bogus')
+
+    def test_get_test_binary_file(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            f = FileDownloader()
+
+            # Mock retrieve_url so network connections are not necessary
+            if six.PY3:
+                f.retrieve_url = lambda url: bytes("\n", encoding='utf-8')
+            else:
+                f.retrieve_url = lambda url: str("\n")
+
+            # Binary files will preserve line endings
+            target = os.path.join(tmpdir, 'bin.txt')
+            f.set_destination_filename(target)
+            f.get_binary_file(None)
+            self.assertEqual(os.path.getsize(target), 1)
+
+            # Text files will convert line endings to the local platform
+            target = os.path.join(tmpdir, 'txt.txt')
+            f.set_destination_filename(target)
+            f.get_text_file(None)
+            self.assertEqual(os.path.getsize(target), len(os.linesep))
+        finally:
+            shutil.rmtree(tmpdir)

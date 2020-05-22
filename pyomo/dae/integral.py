@@ -167,10 +167,10 @@ class IndexedIntegral(IndexedExpression, Integral):
         if self.dim() == 1:
             setlist = [self.index_set(), ]
         else:
-            setlist = self._implicit_subsets
+            setlist = self.index_set().set_tuple
 
         for i in setlist:
-            if i.type() is ContinuousSet:
+            if i.ctype is ContinuousSet:
                 if 'scheme' not in i.get_discretization_info():
                     return False
         return True

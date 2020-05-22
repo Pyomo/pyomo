@@ -25,6 +25,9 @@
 #
 # DISABLE_COVERAGE: if nonempty, then coverage analysis is disabled
 #
+# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions" command
+#     (e.g., to set up local SSL certificate authorities)
+#
 if test -z "$WORKSPACE"; then
     export WORKSPACE=`pwd`
 fi
@@ -99,8 +102,8 @@ if test -z "$MODE" -o "$MODE" == setup; then
         # Set up coverage for this build
         export COVERAGE_PROCESS_START=${WORKSPACE}/coveragerc
         cp ${WORKSPACE}/pyomo/.coveragerc ${COVERAGE_PROCESS_START}
-        echo "source=${WORKSPACE}/pyomo" >> ${COVERAGE_PROCESS_START}
-        echo "data_file=${WORKSPACE}/pyomo/.coverage" >> ${COVERAGE_PROCESS_START}
+        echo "data_file=${WORKSPACE}/pyomo/.coverage" \
+            >> ${COVERAGE_PROCESS_START}
         echo 'import coverage; coverage.process_startup()' \
             > "${LOCAL_SITE_PACKAGES}/run_coverage_at_startup.pth"
     fi
@@ -115,7 +118,20 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo ""
 
     # Use Pyomo to download & compile binary extensions
-    pyomo download-extensions || exit 1
+    i=0
+    while /bin/true; do
+        i=$[$i+1]
+        echo "Downloading pyomo extensions (attempt $i)"
+        pyomo download-extensions $PYOMO_DOWNLOAD_ARGS
+        if test $? == 0; then
+            break
+        elif test $i -ge 3; then
+            exit 1
+        fi
+        DELAY=$(( RANDOM % 30 + 15))
+        echo "Pausing $DELAY seconds before re-attempting download"
+        sleep $DELAY
+    done
     pyomo build-extensions || exit 1
 
     # Print useful version information
@@ -161,13 +177,14 @@ if test -z "$MODE" -o "$MODE" == test; then
         # Note, that the PWD should still be $WORKSPACE/pyomo
         #
         coverage combine || exit 1
+        coverage report -i
         export OS=`uname`
         if test -z "$CODECOV_TOKEN"; then
             coverage xml
         else
             CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/'`.$BUILD_NUMBER.$python
             i=0
-            while test $i -lt 3; do
+            while /bin/true; do
                 i=$[$i+1]
                 echo "Uploading coverage to codecov (attempt $i)"
                 codecov -X gcovcodecov -X gcov --no-color \
@@ -176,9 +193,12 @@ if test -z "$MODE" -o "$MODE" == test; then
                     | tee .cover.upload
                 if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
                     break
+                elif test $i -ge 4; then
+                    exit 1
                 fi
-                echo "Pausing 30 seconds before re-appempting upload"
-                sleep 30
+                DELAY=$(( RANDOM % 30 + 15))
+                echo "Pausing $DELAY seconds before re-attempting upload"
+                sleep $DELAY
             done
         fi
         rm .coverage
