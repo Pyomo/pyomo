@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -89,7 +89,7 @@ def collect_full_results(ph, var_config):
         print("Waiting for results extraction")
 
     num_results_so_far = 0
-    
+
     while (num_results_so_far < len(ph._scenario_tree.subproblems)):
 
         action_handle = ph._solver_manager.wait_any()
@@ -146,7 +146,7 @@ def warmstart_scenario_instances(ph):
     action_handle_scenario_map = {} # maps action handles to scenario names
 
     ph._solver_manager.begin_bulk()
-    
+
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -174,7 +174,7 @@ def warmstart_scenario_instances(ph):
 
             scenario_action_handle_map[scenario.name] = new_action_handle
             action_handle_scenario_map[new_action_handle] = scenario.name
-            
+
     ph._solver_manager.end_bulk()
 
     if ph._verbose:
@@ -231,7 +231,7 @@ def transmit_weights(ph):
     generate_responses = ph._handshake_with_phpyro
 
     ph._solver_manager.begin_bulk()
-    
+
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -266,7 +266,7 @@ def transmit_weights(ph):
                 generateResponse=generate_responses,
                 name=scenario.name,
                 new_weights=scenario._w) )
-            
+
     ph._solver_manager.end_bulk()
 
     if generate_responses:
@@ -294,7 +294,7 @@ def transmit_xbars(ph):
     generate_responses = ph._handshake_with_phpyro
 
     ph._solver_manager.begin_bulk()
-    
+
     if ph._scenario_tree.contains_bundles():
 
         for bundle in ph._scenario_tree._scenario_bundles:
@@ -333,7 +333,7 @@ def transmit_xbars(ph):
                 generateResponse=generate_responses,
                 name=scenario.name,
                 new_xbars=xbars_to_transmit) )
-            
+
     ph._solver_manager.end_bulk()
 
     if generate_responses:
@@ -382,14 +382,14 @@ def release_phsolverservers(ph):
         print("Revoking PHPyroWorker job assignments")
 
     ph._solver_manager.begin_bulk()
-    
+
     for job, worker in iteritems(ph._phpyro_job_worker_map):
         ph._solver_manager.queue(action="release",
                                  queue_name=ph._phpyro_job_worker_map[job],
                                  name=worker,
                                  object_name=job,
                                  generateResponse=False)
-        
+
     ph._solver_manager.end_bulk()
 
     ph._phpyro_worker_jobs_map = {}
@@ -583,7 +583,7 @@ def activate_ph_objective_weight_terms(ph):
     generate_responses = ph._handshake_with_phpyro
 
     ph._solver_manager.begin_bulk()
-    
+
     for subproblem in ph._scenario_tree.subproblems:
         action_handles.append( ph._solver_manager.queue(
             action="activate_ph_objective_weight_terms",
@@ -612,7 +612,7 @@ def deactivate_ph_objective_weight_terms(ph):
     generate_responses = ph._handshake_with_phpyro
 
     ph._solver_manager.begin_bulk()
-    
+
     for subproblem in ph._scenario_tree.subproblems:
         action_handles.append( ph._solver_manager.queue(
             action="deactivate_ph_objective_weight_terms",
@@ -642,7 +642,7 @@ def activate_ph_objective_proximal_terms(ph):
     generate_responses = ph._handshake_with_phpyro
 
     ph._solver_manager.begin_bulk()
-    
+
     for subproblem in ph._scenario_tree.subproblems:
         action_handles.append( ph._solver_manager.queue(
             action="activate_ph_objective_proximal_terms",
@@ -678,7 +678,7 @@ def deactivate_ph_objective_proximal_terms(ph):
             queue_name=ph._phpyro_job_worker_map[subproblem.name],
             generateResponse=generate_responses,
             name=subproblem.name) )
-            
+
     ph._solver_manager.end_bulk()
 
     if generate_responses:
@@ -890,7 +890,7 @@ def define_import_suffix(ph, suffix_name):
     generate_responses = ph._handshake_with_phpyro
 
     ph._solver_manager.begin_bulk()
-    
+
     for subproblem in ph._scenario_tree.subproblems:
         action_handles.append( ph._solver_manager.queue(
             action="define_import_suffix",
