@@ -13,20 +13,21 @@
 
 import time
 import itertools
-
-from pyutilib.enum import Enum
+import enum
 
 from pyomo.core import *
 
 from six import iteritems, itervalues
 
-InvocationType = Enum('SingleInvocation',
-                      'PerBundleInvocation',
-                      'PerBundleChainedInvocation',
-                      'PerScenarioInvocation',
-                      'PerScenarioChainedInvocation',
-                      'PerNodeInvocation',
-                      'PerNodeChainedInvocation')
+
+class InvocationType(str, enum.Enum):
+    SingleInvocation =             'SingleInvocation'
+    PerBundleInvocation =          'PerBundleInvocation'
+    PerBundleChainedInvocation =   'PerBundleChainedInvocation'
+    PerScenarioInvocation =        'PerScenarioInvocation'
+    PerScenarioChainedInvocation = 'PerScenarioChainedInvocation'
+    PerNodeInvocation =            'PerNodeInvocation'
+    PerNodeChainedInvocation =     'PerNodeChainedInvocation'
 
 class TransmitType(object):
 
@@ -798,7 +799,7 @@ def transmit_external_function_invocation_to_worker(
     action_handle = ph._solver_manager.queue(action="invoke_external_function",
                                              queue_name=ph._phpyro_job_worker_map[worker_name],
                                              name=worker_name,
-                                             invocation_type=invocation_type.key,
+                                             invocation_type=invocation_type.value,
                                              generateResponse=generate_response,
                                              module_name=module_name,
                                              function_name=function_name,
@@ -839,7 +840,7 @@ def transmit_external_function_invocation(
                     action="invoke_external_function",
                     queue_name=ph._phpyro_job_worker_map[bundle.name],
                     name=bundle.name,
-                    invocation_type=invocation_type.key,
+                    invocation_type=invocation_type.value,
                     generateResponse=generate_responses,
                     module_name=module_name,
                     function_name=function_name,
@@ -855,7 +856,7 @@ def transmit_external_function_invocation(
                     action="invoke_external_function",
                     queue_name=ph._phpyro_job_worker_map[scenario.name],
                     name=scenario.name,
-                    invocation_type=invocation_type.key,
+                    invocation_type=invocation_type.value,
                     generateResponse=generate_responses,
                     module_name=module_name,
                     function_name=function_name,
