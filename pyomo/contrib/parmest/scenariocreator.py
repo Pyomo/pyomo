@@ -16,10 +16,7 @@ class ScenarioSet(object):
     """
 
     def __init__(self, name):
-        """ NOTE: Delete this note by May 2020
-         As of March 2020, this uses a list as the underlying data structure.
-         The list could be changed to a dataframe with no outside impact.
-        """
+        # Note: If there was a use-case, the list could be a dataframe.
         self._scens = list()  # use a df instead?
         self.name = name  #  might be ""
 
