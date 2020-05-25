@@ -191,7 +191,7 @@ class MindtPySolver(object):
         description="Tolerance on variable bounds."
     ))
     CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-10,
+        default=1E-8,
         description="Tolerance on variable equal to zero."
     ))
     CONFIG.declare("initial_feas", ConfigValue(
