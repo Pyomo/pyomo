@@ -15,6 +15,7 @@ import pprint
 
 import pyutilib.misc
 
+import pyomo.common
 from pyomo.pysp.solvers.spsolver import SPSolver
 
 logger = logging.getLogger('pyomo.pysp')
