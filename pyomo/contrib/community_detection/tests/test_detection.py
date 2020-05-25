@@ -18,6 +18,7 @@ import logging
 import pyutilib.th as unittest
 from six import StringIO
 
+from pyomo.common.dependencies import networkx_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Integers, minimize, Objective, Var
 from pyomo.contrib.community_detection.detection import *
@@ -28,6 +29,8 @@ from pyomo.solvers.tests.models.LP_inactive_index import LP_inactive_index
 from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
 
 
+@unittest.skipUnless(community_available, "'community' package from 'python-louvain' is not available.")
+@unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestDecomposition(unittest.TestCase):
 
     def test_communities_1(self):

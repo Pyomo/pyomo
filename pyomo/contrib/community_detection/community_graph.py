@@ -1,12 +1,10 @@
 """Model Graph Generator Code - Rahul Joglekar"""
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import networkx as nx
 from pyomo.core import Constraint, Objective, Var
 from pyomo.core.expr.current import identify_variables
 from itertools import combinations
 import os
 import logging
-
-nx, networkx_available = attempt_import('networkx')
 
 
 def _generate_model_graph(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None):
