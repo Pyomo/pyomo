@@ -31,10 +31,6 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.block import SimpleBlock, SubclassOf, _BlockData, declare_custom_block
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import *
-try:
-    from StringIO import StringIO  # python 2
-except ImportError:
-    from io import StringIO  # python 3
 
 from pyomo.gdp import Disjunct
 
@@ -65,6 +61,7 @@ class TestGenerators(unittest.TestCase):
         model = ConcreteModel()
         model.q = Set(initialize=[1,2])
         model.Q = Set(model.q,initialize=[1,2])
+        model.qq = NonNegativeIntegers*model.q
         model.x = Var(initialize=-1)
         model.X = Var(model.q,initialize=-1)
         model.e = Expression(initialize=-1)
@@ -156,8 +153,8 @@ class TestGenerators(unittest.TestCase):
 
         model.component_lists = {}
         model.component_data_lists = {}
-        model.component_lists[Set] = [model.q, model.Q]
-        model.component_data_lists[Set] = [model.q, model.Q[1], model.Q[2]]
+        model.component_lists[Set] = [model.q, model.Q, model.qq]
+        model.component_data_lists[Set] = [model.q, model.Q[1], model.Q[2], model.qq]
         model.component_lists[Var] = [model.x, model.X]
         model.component_data_lists[Var] = [model.x, model.X[1], model.X[2]]
         model.component_lists[Expression] = [model.e, model.E]
@@ -190,7 +187,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_objects(ctype, active=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("component_objects(active=True) failed with ctype %s" % ctype)
+                    print("component_objects(active=True) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("component_objects(active=True) should have failed with ctype %s" % ctype)
@@ -209,7 +207,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_objects(ctype, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("components failed with ctype %s" % ctype)
+                    print("components failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("components should have failed with ctype %s" % ctype)
@@ -228,7 +227,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, active=True, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("component_data_objects(active=True, sort_by_keys=False) failed with ctype %s" % ctype)
+                    print("component_data_objects(active=True, sort_by_keys=False) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("component_data_objects(active=True, sort_by_keys=False) should have failed with ctype %s" % ctype)
@@ -247,7 +247,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, active=True, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("component_data_objects(active=True, sort=True) failed with ctype %s" % ctype)
+                    print("component_data_objects(active=True, sort=True) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("component_data_objects(active=True, sort=True) should have failed with ctype %s" % ctype)
@@ -266,7 +267,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, sort=False, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("components_data(sort_by_keys=True) failed with ctype %s" % ctype)
+                    print("components_data(sort_by_keys=True) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=True) should have failed with ctype %s" % ctype)
@@ -285,7 +287,8 @@ class TestGenerators(unittest.TestCase):
                 generator = list(block.component_data_iterindex(ctype, sort=True, descend_into=False))
             except:
                 if issubclass(ctype, Component):
-                    self.fail("components_data(sort_by_keys=False) failed with ctype %s" % ctype)
+                    print("components_data(sort_by_keys=False) failed with ctype %s" % ctype)
+                    raise
             else:
                 if not issubclass(ctype, Component):
                     self.fail("components_data(sort_by_keys=False) should have failed with ctype %s" % ctype)
@@ -2158,12 +2161,15 @@ class TestBlock(unittest.TestCase):
         buf = StringIO()
         m.pprint(ostream=buf)
         ref = """3 Set Declarations
-    a1_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(4, 5)
-        [5, 4]
-    a3_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(6, 7)
-        [6, 7]
-    a_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
+    a1_IDX : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {5, 4}
+    a3_IDX : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {6, 7}
+    a_index : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
 
 3 Block Declarations
     a : Size=3, Index=a_index, Active=True
@@ -2362,7 +2368,7 @@ class TestBlock(unittest.TestCase):
             return m.x[1]**2 <= 0
 
         self.assertTrue(hasattr(model, 'scalar_constraint'))
-        self.assertIs(model.scalar_constraint._type, Constraint)
+        self.assertIs(model.scalar_constraint.ctype, Constraint)
         self.assertEqual(len(model.scalar_constraint), 1)
         self.assertIs(type(scalar_constraint), types.FunctionType)
 
@@ -2371,7 +2377,7 @@ class TestBlock(unittest.TestCase):
             return m.x[i]**2 <= 0
 
         self.assertTrue(hasattr(model, 'vector_constraint'))
-        self.assertIs(model.vector_constraint._type, Constraint)
+        self.assertIs(model.vector_constraint.ctype, Constraint)
         self.assertEqual(len(model.vector_constraint), 3)
         self.assertIs(type(vector_constraint), types.FunctionType)
 
@@ -2428,7 +2434,80 @@ class TestBlock(unittest.TestCase):
         b.pprint(ostream=stream)
         self.assertEqual(correct_s, stream.getvalue())
 
+    def test_block_rules(self):
+        m = ConcreteModel()
+        m.I = Set()
+        _rule_ = []
+        def _block_rule(b,i):
+            _rule_.append(i)
+            b.x = Var(range(i))
+        m.b = Block(m.I, rule=_block_rule)
+        # I is empty: no rules called
+        self.assertEqual(_rule_, [])
+        m.I.update([1,3,5])
+        # Fetching a new block will call the rule
+        _b = m.b[3]
+        self.assertEqual(len(m.b), 1)
+        self.assertEqual(_rule_, [3])
+        self.assertIn('x', _b.component_map())
+        self.assertIn('x', m.b[3].component_map())
 
+        # If you transfer the attributes directly, the rule will still
+        # be called.
+        _tmp = Block()
+        _tmp.y = Var(range(3))
+        m.b[5].transfer_attributes_from(_tmp)
+        self.assertEqual(len(m.b), 2)
+        self.assertEqual(_rule_, [3,5])
+        self.assertIn('x', m.b[5].component_map())
+        self.assertIn('y', m.b[5].component_map())
+
+        # We do not support block assignment (and the rule will NOT be
+        # called)
+        _tmp = Block()
+        _tmp.y = Var(range(3))
+        with self.assertRaisesRegex(
+                RuntimeError, "Block components do not support "
+                "assignment or set_value"):
+            m.b[1] = _tmp
+        self.assertEqual(len(m.b), 2)
+        self.assertEqual(_rule_, [3,5])
+
+        # Blocks with non-finite indexing sets cannot be automatically
+        # populated (even if they have a rule!)
+        def _bb_rule(b, i, j):
+            _rule_.append((i,j))
+            b.x = Var(RangeSet(i))
+            b.y = Var(RangeSet(j))
+        m.bb = Block(m.I, NonNegativeIntegers, rule=_bb_rule)
+        self.assertEqual(_rule_, [3,5])
+        _b = m.bb[3,5]
+        self.assertEqual(_rule_, [3,5,(3,5)])
+        self.assertEqual(len(m.bb), 1)
+        self.assertEqual(len(_b.x), 3)
+        self.assertEqual(len(_b.y), 5)
+
+    def test_derived_block_construction(self):
+        # This tests a case where a derived block doesn't follow the
+        # assumption that unconstructed scalar blocks initialize
+        # `_data[None] = self` (therefore doesn't fully support abstract
+        # models).  At one point, that was causing the block rule to
+        # fire twice during construction.
+        class ConcreteBlock(Block):
+            pass
+
+        class ScalarConcreteBlock(_BlockData, ConcreteBlock):
+            def __init__(self, *args, **kwds):
+                _BlockData.__init__(self, component=self)
+                ConcreteBlock.__init__(self, *args, **kwds)
+
+        _buf = []
+        def _rule(b):
+            _buf.append(1)
+
+        m = ConcreteModel()
+        m.b = ScalarConcreteBlock(rule=_rule)
+        self.assertEqual(_buf, [1])
 
 if __name__ == "__main__":
     unittest.main()

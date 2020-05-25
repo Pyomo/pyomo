@@ -101,7 +101,7 @@ class Test(unittest.TestCase):
         self.model.e = Var(within=Boolean)
         self.model.f = Var(domain=Boolean)
         instance=self.model.create_instance()
-        xfrm = TransformationFactory('core.relax_integrality')
+        xfrm = TransformationFactory('core.relax_integer_vars')
         rinst = xfrm.create_using(instance)
         self.assertEqual(type(rinst.a.domain), RealSet)
         self.assertEqual(type(rinst.b.domain), RealSet)
@@ -126,7 +126,7 @@ class Test(unittest.TestCase):
         self.model.e = Var([1,2,3], within=Boolean, dense=True)
         self.model.f = Var([1,2,3], domain=Boolean, dense=True)
         instance=self.model.create_instance()
-        xfrm = TransformationFactory('core.relax_integrality')
+        xfrm = TransformationFactory('core.relax_integer_vars')
         rinst = xfrm.create_using(instance)
         self.assertEqual(type(rinst.a[1].domain), RealSet)
         self.assertEqual(type(rinst.b[1].domain), RealSet)
@@ -152,7 +152,7 @@ class Test(unittest.TestCase):
         self.model.f = Var(domain=Boolean)
         instance=self.model.create_instance()
         instance_cloned = instance.clone()
-        xfrm = TransformationFactory('core.relax_integrality')
+        xfrm = TransformationFactory('core.relax_integer_vars')
         rinst = xfrm.create_using(instance_cloned)
         self.assertEqual(type(rinst.a.domain), RealSet)
         self.assertEqual(type(rinst.b.domain), RealSet)
@@ -172,9 +172,12 @@ class Test(unittest.TestCase):
         self.model.d = Var(within=Integers, bounds=(-2,3))
         instance=self.model.create_instance()
         instance_cloned = instance.clone()
-        xfrm = TransformationFactory('core.relax_integrality')
+        xfrm = TransformationFactory('core.relax_integer_vars')
         rinst = xfrm.create_using(instance_cloned)
         self.assertEqual(type(rinst.d.domain), RealSet)
+        self.assertEqual(rinst.d.bounds, (-2,3))
+        self.assertIs(instance.d.domain, Integers)
+        self.assertIs(instance_cloned.d.domain, Integers)
 
     def test_relax_integrality_simple_cloned(self):
         self.model.x = Var(within=Integers, bounds=(-2,3))
@@ -182,7 +185,44 @@ class Test(unittest.TestCase):
         instance_cloned = instance.clone()
         xfrm = TransformationFactory('core.relax_discrete')
         rinst = xfrm.create_using(instance_cloned)
-        self.assertNotEqual(type(rinst.x.domain), RealSet)
+        self.assertIs(rinst.x.domain, Reals)
+        self.assertEqual(rinst.x.bounds, (-2,3))
+        self.assertIs(instance.x.domain, Integers)
+        self.assertIs(instance_cloned.x.domain, Integers)
+
+    def test_relax_integrality_on_deactivated_blocks(self):
+        self.model.x = Var(domain=NonNegativeIntegers)
+        self.model.b = Block()
+        self.model.b.x = Var(domain=Binary)
+        self.model.b.y = Var(domain=Integers, bounds=(-3,2))
+        instance = self.model.create_instance()
+        instance.b.deactivate()
+        relax_integrality = TransformationFactory('core.relax_integer_vars')
+        relax_integrality.apply_to(instance)
+        self.assertIs(instance.b.x.domain, Reals)
+        self.assertEqual(instance.b.x.lb, 0)
+        self.assertEqual(instance.b.x.ub, 1)
+        self.assertIs(instance.b.y.domain, Reals)
+        self.assertEqual(instance.b.y.lb, -3)
+        self.assertEqual(instance.b.y.ub, 2)
+        self.assertIs(instance.x.domain, Reals)
+        self.assertEqual(instance.x.lb, 0)
+        self.assertIsNone(instance.x.ub)
+
+    def test_relax_integrality_only_active_blocks(self):
+        self.model.x = Var(domain=NonNegativeIntegers)
+        self.model.b = Block()
+        self.model.b.x = Var(domain=Binary)
+        self.model.b.y = Var(domain=Integers, bounds=(-3,2))
+        instance = self.model.create_instance()
+        instance.b.deactivate()
+        relax_integrality = TransformationFactory('core.relax_integer_vars')
+        relax_integrality.apply_to(instance, transform_deactivated_blocks=False)
+        self.assertIs(instance.b.x.domain, Binary)
+        self.assertIs(instance.b.y.domain, Integers)
+        self.assertIs(instance.x.domain, Reals)
+        self.assertEqual(instance.x.lb, 0)
+        self.assertIsNone(instance.x.ub)
 
     def test_nonnegativity_transformation_1(self):
         self.model.a = Var()
@@ -204,15 +244,15 @@ class Test(unittest.TestCase):
         # Check that discrete variables are still discrete, and continuous
         # continuous
         for ndx in transformed.a:
-            self.assertTrue(isinstance(transformed.a[ndx].domain, RealSet))
+            self.assertIs(transformed.a[ndx].domain, NonNegativeReals)
         for ndx in transformed.b:
-            self.assertTrue(isinstance(transformed.b[ndx].domain, IntegerSet))
+            self.assertIs(transformed.b[ndx].domain, NonNegativeIntegers)
         for ndx in transformed.c:
-            self.assertTrue(isinstance(transformed.c[ndx].domain, IntegerSet))
+            self.assertIs(transformed.c[ndx].domain, NonNegativeIntegers)
         for ndx in transformed.d:
-            self.assertTrue(isinstance(transformed.d[ndx].domain, BooleanSet))
+            self.assertIs(transformed.d[ndx].domain, Binary)
         for ndx in transformed.e:
-            self.assertTrue(isinstance(transformed.e[ndx].domain, BooleanSet))
+            self.assertIs(transformed.e[ndx].domain, Binary)
 
     def test_nonnegativity_transformation_2(self):
         self.model.S = RangeSet(0,10)

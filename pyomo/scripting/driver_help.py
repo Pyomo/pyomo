@@ -16,11 +16,12 @@ import datetime
 import textwrap
 import logging
 import argparse
+import socket
 
 import pyutilib.subprocess
 from pyutilib.misc import Options
 
-from pyomo.common import get_pyomo_commands
+import pyomo.common
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -86,7 +87,7 @@ def help_commands():
     print("")
     print("The following commands are installed with Pyomo:")
     print("-"*75)
-    registry = get_pyomo_commands()
+    registry = pyomo.common.get_pyomo_commands()
     d = max(len(key) for key in registry)
     fmt = "%%-%ds  %%s" % d
     for key in sorted(registry.keys(), key=lambda v: v.upper()):
@@ -139,7 +140,6 @@ def help_datamanagers(options):
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
 def help_api(options):
-    import pyomo.common
     services = pyomo.common.PyomoAPIFactory.services()
     #
     f = {}
@@ -259,7 +259,19 @@ def help_transformations():
     print("---------------------------")
     for xform in sorted(TransformationFactory):
         print("  "+xform)
-        print(wrapper.fill(TransformationFactory.doc(xform)))
+        _doc = TransformationFactory.doc(xform) or ""
+        # Ideally, the Factory would ensure that the doc string
+        # indicated deprecation, but as @deprecated() is Pyomo
+        # functionality and the Factory comes directly from PyUtilib,
+        # PyUtilib probably shouldn't contain Pyomo-specific processing.
+        # The next best thing is to ensure that the deprecation status
+        # is indicated here.
+        _init_doc = TransformationFactory.get_class(xform).__init__.__doc__ \
+                    or ""
+        if _init_doc.startswith('DEPRECATION') and 'DEPRECAT' not in _doc:
+            _doc = ' '.join(('[DEPRECATED]', _doc))
+        if _doc:
+            print(wrapper.fill(_doc))
 
 def help_solvers():
     import pyomo.environ
@@ -327,6 +339,7 @@ def help_solvers():
     print('')
     try:
         logging.disable(logging.WARNING)
+        socket.setdefaulttimeout(10)
         import pyomo.neos.kestrel
         kestrel = pyomo.neos.kestrel.kestrelAMPL()
         #print "HERE", solver_list
@@ -354,6 +367,7 @@ def help_solvers():
         pass
     finally:
         logging.disable(logging.NOTSET)
+        socket.setdefaulttimeout(None)
 
 def print_components(data):
     """

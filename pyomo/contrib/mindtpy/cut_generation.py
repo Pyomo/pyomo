@@ -28,18 +28,17 @@ def add_objective_linearization(solve_data, config):
             expr=sign_adjust * sum(
                 value(MindtPy.jacs[obj][id(var)]) * (var - value(var))
                 for var in list(EXPR.identify_variables(obj.body))) +
-                 value(obj.body) <= 0)
+            value(obj.body) <= 0)
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
 
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True,
-                linearize_inactive=False,
-                use_slack_var=False):
+                linearize_inactive=False):
     """Linearizes nonlinear constraints.
 
-    For nonconvex problems, turn on 'use_slack_var'. Slack variables will
+    For nonconvex problems, turn on 'config.add_slack'. Slack variables will
     always be used for nonlinear equality constraints.
     """
     for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
@@ -56,98 +55,99 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             rhs = ((0 if constr.upper is None else constr.upper)
                    + (0 if constr.lower is None else constr.lower))
             rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
-            slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+            if config.add_slack:
+                slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
             target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
                 expr=copysign(1, sign_adjust * dual_value)
-                     * (sum(value(jacs[constr][var]) * (var - value(var))
-                            for var in list(EXPR.identify_variables(constr.body)))
-                        + value(constr.body) - rhs)
-                     - slack_var <= 0)
+                * (sum(value(jacs[constr][var]) * (var - value(var))
+                       for var in list(EXPR.identify_variables(constr.body)))
+                    + value(constr.body) - rhs)
+                - (slack_var if config.add_slack else 0) <= 0)
 
         else:  # Inequality constraint (possibly two-sided)
             if constr.has_ub() \
-               and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
+                and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.uslack() < 0) \
                     or (linearize_inactive and constr.uslack() > 0):
-                if use_slack_var:
+                if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
                 target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
                     expr=(sum(value(jacs[constr][var])*(var - var.value)
-                              for var in constr_vars)
-                          - (slack_var if use_slack_var else 0)
+                              for var in constr_vars) + value(constr.body)
+                          - (slack_var if config.add_slack else 0)
                           <= constr.upper)
                 )
 
             if constr.has_lb() \
-               and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
+                and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.lslack() < 0) \
                     or (linearize_inactive and constr.lslack() > 0):
-                if use_slack_var:
+                if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
                 target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
                     expr=(sum(value(jacs[constr][var])*(var - var.value)
-                              for var in constr_vars)
-                          + (slack_var if use_slack_var else 0)
+                              for var in constr_vars) + value(constr.body)
+                          + (slack_var if config.add_slack else 0)
                           >= constr.lower)
                 )
 
 
-def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
-    """More general case for outer approximation
+# def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
+#     """More general case for outer approximation
 
-    This method covers nonlinear inequalities g(x)<=b and g(x)>=b as well as 
-    equalities g(x)=b all in the same linearization call. It combines the dual
-    with the objective sense to figure out how to generate the cut.
-    Note that the dual sign is defined as follows (according to IPOPT):
-      sgn  | min | max
-    -------|-----|-----
-    g(x)<=b|  +1 | -1
-    g(x)>=b|  -1 | +1
+#     This method covers nonlinear inequalities g(x)<=b and g(x)>=b as well as
+#     equalities g(x)=b all in the same linearization call. It combines the dual
+#     with the objective sense to figure out how to generate the cut.
+#     Note that the dual sign is defined as follows (according to IPOPT):
+#       sgn  | min | max
+#     -------|-----|-----
+#     g(x)<=b|  +1 | -1
+#     g(x)>=b|  -1 | +1
 
-    Note additionally that the dual value is not strictly neccesary for inequality
-    constraints, but definitely neccesary for equality constraints. For equality 
-    constraints the cut will always be generated so that the side with the worse objective
-    function is the 'interior'.
+#     Note additionally that the dual value is not strictly neccesary for inequality
+#     constraints, but definitely neccesary for equality constraints. For equality
+#     constraints the cut will always be generated so that the side with the worse objective
+#     function is the 'interior'.
 
-    ignore_integrality: Accepts float values for discrete variables.
-                        Useful for cut in initial relaxation
-    """
+#     ignore_integrality: Accepts float values for discrete variables.
+#                         Useful for cut in initial relaxation
+#     """
 
-    m = solve_data.mip
-    MindtPy = m.MindtPy_utils
-    MindtPy.MindtPy_linear_cuts.nlp_iters.add(solve_data.nlp_iter)
-    sign_adjust = -1 if solve_data.objective_sense == minimize else 1
+#     m = solve_data.mip
+#     MindtPy = m.MindtPy_utils
+#     MindtPy.MindtPy_linear_cuts.nlp_iters.add(solve_data.nlp_iter)
+#     sign_adjust = -1 if solve_data.objective_sense == minimize else 1
 
-    copy_var_list_values(from_list=var_values,
-                         to_list=MindtPy.variable_list,
-                         config=config,
-                         ignore_integrality=ignore_integrality)
+#     copy_var_list_values(from_list=var_values,
+#                          to_list=MindtPy.variable_list,
+#                          config=config,
+#                          ignore_integrality=ignore_integrality)
 
-    # generate new constraints
-    # TODO some kind of special handling if the dual is phenomenally small?
-    # TODO-romeo conditional for 'global' option, i.e. slack or no slack
-    jacs = solve_data.jacobians
-    for constr, dual_value in zip(MindtPy.constraint_list, duals):
-        if constr.body.polynomial_degree() in (1, 0):
-            continue
-        rhs = ((0 if constr.upper is None else constr.upper)
-               + (0 if constr.lower is None else constr.lower))
-        # Properly handle equality constraints and ranged inequalities
-        # TODO special handling for ranged inequalities? a <= x <= b
-        rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
-        slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
-        MindtPy.MindtPy_linear_cuts.oa_cuts.add(
-            expr=copysign(1, sign_adjust * dual_value)
-                 * (sum(value(jacs[constr][var]) * (var - value(var))
-                        for var in list(EXPR.identify_variables(constr.body)))
-                    + value(constr.body) - rhs)
-                 - slack_var <= 0)
+#     # generate new constraints
+#     # TODO some kind of special handling if the dual is phenomenally small?
+#     # TODO-romeo conditional for 'global' option, i.e. slack or no slack
+#     jacs = solve_data.jacobians
+#     for constr, dual_value in zip(MindtPy.constraint_list, duals):
+#         if constr.body.polynomial_degree() in (1, 0):
+#             continue
+#         rhs = ((0 if constr.upper is None else constr.upper)
+#                + (0 if constr.lower is None else constr.lower))
+#         # Properly handle equality constraints and ranged inequalities
+#         # TODO special handling for ranged inequalities? a <= x <= b
+#         rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+#         slack_var = MindtPy.MindtPy_linear_cuts.slack_vars.add()
+#         MindtPy.MindtPy_linear_cuts.oa_cuts.add(
+#             expr=copysign(1, sign_adjust * dual_value)
+#             * (sum(value(jacs[constr][var]) * (var - value(var))
+#                    for var in list(EXPR.identify_variables(constr.body)))
+#                + value(constr.body) - rhs)
+#             - slack_var <= 0)
 
 
 def add_int_cut(var_values, solve_data, config, feasible=False):
-    if not config.integer_cuts:
+    if not config.add_integer_cuts:
         return
 
     config.logger.info("Adding integer cuts")

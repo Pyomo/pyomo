@@ -61,7 +61,7 @@ class MILP_unbounded_kernel(MILP_unbounded):
         model = self.model
         model._name = self.description
 
-        model.x = pmo.variable(domain=pmo.Integers)
-        model.y = pmo.variable(domain=pmo.Integers)
+        model.x = pmo.variable(domain=pmo.IntegerSet)
+        model.y = pmo.variable(domain=pmo.IntegerSet)
 
         model.o = pmo.objective(model.x+model.y)

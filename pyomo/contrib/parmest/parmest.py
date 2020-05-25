@@ -1,23 +1,36 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import re
 import importlib as im
 import types
 import json
-try:
-    import numpy as np
-    import pandas as pd
-    from scipy import stats
-    parmest_available = True
-except ImportError:
-    parmest_available = False
+from itertools import combinations
+
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+    scipy, scipy_available,
+)
+parmest_available = numpy_available & pandas_available & scipy_available
 
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 from pyomo.opt import SolverFactory
+from pyomo.environ import Block
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import pairwise_plot
+from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
+    fit_rect_dist, fit_mvn_dist, fit_kde_dist
 
 __version__ = 0.1
 
@@ -227,14 +240,13 @@ def _treemaker(scenlist):
     """
 
     num_scenarios = len(scenlist)
-    m = CreateAbstractScenarioTreeModel()
+    m = CreateAbstractScenarioTreeModel().create_instance()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
     m.Nodes.add('RootNode')
     for i in scenlist:
         m.Nodes.add('LeafNode_Experiment'+str(i))
         m.Scenarios.add('Experiment'+str(i))
-    m = m.create_instance()
     m.NodeStage['RootNode'] = 'Stage1'
     m.ConditionalProbability['RootNode'] = 1.0
     for node in m.Nodes:
@@ -250,17 +262,17 @@ def _treemaker(scenlist):
     
 def group_data(data, groupby_column_name, use_mean=None):
     """
-    Group data by experiment/scenario
+    Group data by scenario
     
     Parameters
     ----------
     data: DataFrame
         Data
     groupby_column_name: strings
-        Name of data column which contains experiment/scenario numbers
+        Name of data column which contains scenario numbers
     use_mean: list of column names or None, optional
         Name of data columns which should be reduced to a single value per 
-        experiment/scenario by taking the mean
+        scenario by taking the mean
         
     Returns
     ----------
@@ -293,8 +305,7 @@ class _SecondStateCostExpr(object):
 
 class Estimator(object):
     """
-    Parameter estimation class. Provides methods for parameter estimation, 
-    bootstrap resampling, and likelihood ratio test.
+    Parameter estimation class
 
     Parameters
     ----------
@@ -305,10 +316,10 @@ class Estimator(object):
         Data that is used to build an instance of the Pyomo model and build 
         the objective function
     theta_names: list of strings
-        List of Vars to estimate
+        List of Var names to estimate
     obj_function: function, optional
         Function used to formulate parameter estimation objective, generally
-        sum of squared error between measurments and model variables.  
+        sum of squared error between measurements and model variables.  
         If no function is specified, the model is used 
         "as is" and should be defined with a "FirstStateCost" and 
         "SecondStageCost" expression that are used to build an objective 
@@ -316,14 +327,19 @@ class Estimator(object):
     tee: bool, optional
         Indicates that ef solver output should be teed
     diagnostic_mode: bool, optional
-        if True, print diagnostics from the solver
+        If True, print diagnostics from the solver
     """
     def __init__(self, model_function, data, theta_names, obj_function=None, 
                  tee=False, diagnostic_mode=False):
         
         self.model_function = model_function
         self.callback_data = data
-        self.theta_names = theta_names 
+
+        if len(theta_names) == 0:
+            self.theta_names = ['parmest_dummy_var']
+        else:
+            self.theta_names = theta_names 
+            
         self.obj_function = obj_function 
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
@@ -339,13 +355,16 @@ class Estimator(object):
         from pyomo.core import Objective
         
         model = self.model_function(data)
-
+        
+        if (len(self.theta_names) == 1) and (self.theta_names[0] == 'parmest_dummy_var'):
+            model.parmest_dummy_var = pyo.Var(initialize = 1.0)
+            
         for theta in self.theta_names:
             try:
                 var_validate = eval('model.'+theta)
                 var_validate.fixed = False
             except:
-                print(theta +'is not a variable')
+                print(theta +' is not a variable')
         
         if self.obj_function:
             for obj in model.component_objects(Objective):
@@ -392,7 +411,7 @@ class Estimator(object):
         return model
     
 
-    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", bootlist=None):
+    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", return_values=[], bootlist=None):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -430,6 +449,7 @@ class Estimator(object):
         stsolver = st.StochSolver(fsfile = "pyomo.contrib.parmest.parmest",
                                   fsfct = "_pysp_instance_creation_callback",
                                   tree_model = tree_model)
+        
         if solver == "ef_ipopt":
             sopts = {}
             sopts['max_iter'] = 6000
@@ -444,6 +464,21 @@ class Estimator(object):
                  thetavals[name] = solval
 
             objval = stsolver.root_E_obj()
+            
+            if len(return_values) > 0:
+                var_values = []
+                for exp_i in stsolver.ef_instance.component_objects(Block, descend_into=False):
+                    vals = {}
+                    for var in return_values:
+                        exp_i_var = eval('exp_i.'+ str(var))
+                        temp = [_.value for _ in exp_i_var.itervalues()]
+                        if len(temp) == 1:
+                            vals[var] = temp[0]
+                        else:
+                            vals[var] = temp                    
+                    var_values.append(vals)                    
+                var_values = pd.DataFrame(var_values)
+                return objval, thetavals, var_values
 
             return objval, thetavals
         
@@ -598,155 +633,283 @@ class Estimator(object):
             objval = pyo.value(objobject)
             totobj += objval
         retval = totobj / len(self._numbers_list) # -1??
+
         return retval, thetavals, WorstStatus
 
-
-    def _Estimate_Hessian(self, thetavals, epsilon=1e-1):
-        """
-        Unused, Crude estimate of the Hessian of Q at thetavals
-
-        Parameters
-        ----------
-        thetavals: dict
-            A dictionary of values for theta
-
-        Return
-        ------
-        FirstDeriv: dict
-            Dictionary of scaled first differences
-        HessianDict: dict
-            Matrix (in dicionary form) of Hessian values
-        """
+    def _get_sample_list(self, samplesize, num_samples, replacement=True):
         
-        def firstdiffer(tvals, tstr):
-            tvals[tstr] = tvals[tstr] - epsilon / 2
-            lval, foo, w = self.Q_at_theta(tvals)
-            tvals[tstr] = tvals[tstr] + epsilon / 2
-            rval, foo, w = self.Q_at_theta(tvals)
-            tvals[tstr] = thetavals[tstr]
-            return rval - lval
-
-        # make a working copy of thetavals and get the Hessian dict started
-        tvals = {}
-        Hessian = {}
-        for tstr in thetavals:
-            tvals[tstr] = thetavals[tstr]
-            Hessian[tstr] = {}
+        samplelist = list()
         
-        # get "basline" first differences
-        firstdiffs = {}
-        for tstr in tvals:
-            # TBD, dlw jan 2018: check for bounds on theta
-            print("Debug firstdiffs for ",tstr)
-            firstdiffs[tstr] = firstdiffer(tvals, tstr)
-
-        # now get the second differences
-        # as of Jan 2018, do not assume symmetry so it can be "checked."
-        for firstdim in tvals:
-            for seconddim in tvals:
-                print("Debug H for ",firstdim,seconddim)
-                tvals[seconddim] = thetavals[seconddim] + epsilon
-                d2 = firstdiffer(tvals, firstdim)
-                Hessian[firstdim][seconddim] = \
-                        (d2 - firstdiffs[firstdim]) / (epsilon * epsilon) 
-                tvals[seconddim] = thetavals[seconddim]
-
-        FirstDeriv = {}
-        for tstr in thetavals:
-            FirstDeriv[tstr] = firstdiffs[tstr] / epsilon
-
-        return FirstDeriv, Hessian
+        if num_samples is None:
+            # This could get very large
+            for i, l in enumerate(combinations(self._numbers_list, samplesize)):
+                samplelist.append((i, np.sort(l)))
+        else:
+            for i in range(num_samples):
+                attempts = 0
+                unique_samples = 0 # check for duplicates in each sample
+                duplicate = False # check for duplicates between samples
+                while (unique_samples <= len(self.theta_names)) and (not duplicate):
+                    sample = np.random.choice(self._numbers_list,
+                                                samplesize,
+                                                replace=replacement)
+                    sample = np.sort(sample).tolist()
+                    unique_samples = len(np.unique(sample))
+                    if sample in samplelist:
+                        duplicate = True
+                    
+                    attempts += 1
+                    if attempts > num_samples: # arbitrary timeout limit
+                        raise RuntimeError("""Internal error: timeout constructing 
+                                           a sample, the dim of theta may be too 
+                                           close to the samplesize""")
     
+                samplelist.append((i, sample))
+            
+        return samplelist
     
-    def theta_est(self, solver="ef_ipopt", bootlist=None): 
+    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None): 
         """
-        Run parameter estimation using all data
+        Parameter estimation using all scenarios in the data
 
         Parameters
         ----------
         solver: string, optional
             "ef_ipopt" or "k_aug". Default is "ef_ipopt".
-
+        return_values: list, optional
+            List of Variable names used to return values from the model
+        bootlist: list, optional
+            List of bootstrap sample numbers, used internally when calling theta_est_bootstrap
+            
         Returns
         -------
         objectiveval: float
             The objective function value
         thetavals: dict
             A dictionary of all values for theta
+        variable values: pd.DataFrame
+            Variable values for each variable name in return_values (only for ef_ipopt)
         Hessian: dict
             A dictionary of dictionaries for the Hessian.
-            The Hessian is not returned if the solver is ef.
+            The Hessian is not returned if the solver is ef_ipopt.
         """
-        return self._Q_opt(solver=solver, bootlist=bootlist)
+        assert isinstance(solver, str)
+        assert isinstance(return_values, list)
+        assert isinstance(bootlist, (type(None), list))
+        
+        return self._Q_opt(solver=solver, return_values=return_values,
+                           bootlist=bootlist)
     
     
-    def theta_est_bootstrap(self, N, samplesize=None, replacement=True, seed=None, return_samples=False):
+    def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
+                            replacement=True, seed=None, return_samples=False):
         """
-        Run parameter estimation using N bootstap samples
+        Parameter estimation using bootstrap resampling of the data
 
         Parameters
         ----------
-        N: int
+        bootstrap_samples: int
             Number of bootstrap samples to draw from the data
         samplesize: int or None, optional
-            Sample size, if None samplesize will be set to the number of experiments
+            Size of each bootstrap sample. If samplesize=None, samplesize will be 
+			set to the number of samples in the data
         replacement: bool, optional
             Sample with or without replacement
         seed: int or None, optional
-            Set the random seed
+            Random seed
         return_samples: bool, optional
-            Return a list of experiment numbers used in each bootstrap estimation
+            Return a list of sample numbers used in each bootstrap estimation
         
         Returns
         -------
         bootstrap_theta: DataFrame 
-            Theta values for each bootstrap sample and (if return_samples = True) 
+            Theta values for each sample and (if return_samples = True) 
             the sample numbers used in each estimation
         """
-        bootstrap_theta = list()
+        assert isinstance(bootstrap_samples, int)
+        assert isinstance(samplesize, (type(None), int))
+        assert isinstance(replacement, bool)
+        assert isinstance(seed, (type(None), int))
+        assert isinstance(return_samples, bool)
         
         if samplesize is None:
             samplesize = len(self._numbers_list)  
+        
         if seed is not None:
             np.random.seed(seed)
+        
+        global_list = self._get_sample_list(samplesize, bootstrap_samples, 
+                                            replacement)
+
+        task_mgr = mpiu.ParallelTaskManager(bootstrap_samples)
+        local_list = task_mgr.global_to_local_data(global_list)
+
+        # Reset numbers_list
+        self._numbers_list =  list(range(samplesize))
+        
+        bootstrap_theta = list()
+        for idx, sample in local_list:
+            objval, thetavals = self.theta_est(bootlist=list(sample))
+            thetavals['samples'] = sample
+            bootstrap_theta.append(thetavals)
             
-        task_mgr = mpiu.ParallelTaskManager(N)
-        global_bootlist = list()
-        for i in range(N):
-            j = unique_samples = 0
-            while unique_samples <= len(self.theta_names):
-                bootlist = np.random.choice(self._numbers_list,
-                                            samplesize,
-                                            replace=replacement)
-                unique_samples = len(np.unique(bootlist))
-                j += 1
-                if j > N: # arbitrary timeout limit
-                    raise RuntimeError("Internal error: timeout in bootstrap"+\
-                                    " constructing a sample; possible hint:"+\
-                                    " the dim of theta may be too close to N")
-            global_bootlist.append((i, bootlist))
-
-        local_bootlist = task_mgr.global_to_local_data(global_bootlist)
-
-        for idx, bootlist in local_bootlist:
-            #print('Bootstrap Run Number: ', idx + 1, ' out of ', N)
-            objval, thetavals = self.theta_est(bootlist=bootlist)
-            thetavals['samples'] = bootlist
-            bootstrap_theta.append(thetavals)#, ignore_index=True)
+        # Reset numbers_list (back to original)
+        self._numbers_list =  list(range(len(self.callback_data)))
         
         global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
-        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
-        #bootstrap_theta.set_index('samples', inplace=True)        
+        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)       
 
         if not return_samples:
             del bootstrap_theta['samples']
-                    
+            
         return bootstrap_theta
+    
+    
+    def theta_est_leaveNout(self, lNo, lNo_samples=None, seed=None, 
+                            return_samples=False):
+        """
+        Parameter estimation where N data points are left out of each sample
+
+        Parameters
+        ----------
+        lNo: int
+            Number of data points to leave out for parameter estimation
+        lNo_samples: int
+            Number of leave-N-out samples. If lNo_samples=None, the maximum 
+            number of combinations will be used
+        seed: int or None, optional
+            Random seed
+        return_samples: bool, optional
+            Return a list of sample numbers that were left out
+        
+        Returns
+        -------
+        lNo_theta: DataFrame 
+            Theta values for each sample and (if return_samples = True) 
+            the sample numbers left out of each estimation
+        """
+        assert isinstance(lNo, int)
+        assert isinstance(lNo_samples, (type(None), int))
+        assert isinstance(seed, (type(None), int))
+        assert isinstance(return_samples, bool)
+        
+        samplesize = len(self._numbers_list)-lNo
+
+        if seed is not None:
+            np.random.seed(seed)
+        
+        global_list = self._get_sample_list(samplesize, lNo_samples, replacement=False)
+            
+        task_mgr = mpiu.ParallelTaskManager(len(global_list))
+        local_list = task_mgr.global_to_local_data(global_list)
+        
+        # Reset numbers_list
+        self._numbers_list =  list(range(samplesize))
+        
+        lNo_theta = list()
+        for idx, sample in local_list:
+            objval, thetavals = self.theta_est(bootlist=list(sample))
+            lNo_s = list(set(range(len(self.callback_data))) - set(sample))
+            thetavals['lNo'] = np.sort(lNo_s)
+            lNo_theta.append(thetavals)
+        
+        # Reset numbers_list (back to original)
+        self._numbers_list =  list(range(len(self.callback_data)))
+        
+        global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
+        lNo_theta = pd.DataFrame(global_bootstrap_theta)   
+        
+        if not return_samples:
+            del lNo_theta['lNo']
+                    
+        return lNo_theta
+    
+    
+    def leaveNout_bootstrap_test(self, lNo, lNo_samples, bootstrap_samples, 
+                                     distribution, alphas, seed=None):
+        """
+        Leave-N-out bootstrap test to compare theta values where N data points are 
+        left out to a bootstrap analysis using the remaining data, 
+        results indicate if theta is within a confidence region
+        determined by the bootstrap analysis
+
+        Parameters
+        ----------
+        lNo: int
+            Number of data points to leave out for parameter estimation
+        lNo_samples: int
+            Leave-N-out sample size. If lNo_samples=None, the maximum number 
+            of combinations will be used
+        bootstrap_samples: int:
+            Bootstrap sample size
+        distribution: string
+            Statistical distribution used to define a confidence region,  
+            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, 
+            and 'Rect' for rectangular.
+        alphas: list
+            List of alpha values used to determine if theta values are inside 
+            or outside the region.
+        seed: int or None, optional
+            Random seed
+            
+        Returns
+        ----------
+        List of tuples with one entry per lNo_sample:
+            
+        * The first item in each tuple is the list of N samples that are left 
+          out.
+        * The second item in each tuple is a DataFrame of theta estimated using 
+          the N samples.
+        * The third item in each tuple is a DataFrame containing results from 
+          the bootstrap analysis using the remaining samples.
+        
+        For each DataFrame a column is added for each value of alpha which 
+        indicates if the theta estimate is in (True) or out (False) of the 
+        alpha region for a given distribution (based on the bootstrap results)
+        """
+        assert isinstance(lNo, int)
+        assert isinstance(lNo_samples, (type(None), int))
+        assert isinstance(bootstrap_samples, int)
+        assert distribution in ['Rect', 'MVN', 'KDE']
+        assert isinstance(alphas, list)
+        assert isinstance(seed, (type(None), int))
+        
+        if seed is not None:
+            np.random.seed(seed)
+            
+        data = self.callback_data.copy()
+        
+        global_list = self._get_sample_list(lNo, lNo_samples, replacement=False)
+            
+        results = []
+        for idx, sample in global_list:
+            
+            # Reset callback_data and numbers_list
+            self.callback_data = data.loc[sample,:] 
+            self._numbers_list = self.callback_data.index
+            obj, theta = self.theta_est()
+            
+            # Reset callback_data and numbers_list
+            self.callback_data = data.drop(index=sample)
+            self._numbers_list = self.callback_data.index
+            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
+            
+            training, test = self.confidence_region_test(bootstrap_theta, 
+                                    distribution=distribution, alphas=alphas, 
+                                    test_theta_values=theta)
+                
+            results.append((sample, test, training))
+        
+        # Reset callback_data and numbers_list (back to original)
+        self.callback_data = data
+        self._numbers_list = self.callback_data.index
+        
+        return results
     
     
     def objective_at_theta(self, theta_values):
         """
-        Compute the objective over a range of theta values
+        Objective value for each theta
 
         Parameters
         ----------
@@ -756,9 +919,11 @@ class Estimator(object):
         Returns
         -------
         obj_at_theta: DataFrame
-            Objective values for each theta value (infeasible solutions are 
+            Objective value for each theta (infeasible solutions are 
             omitted).
         """
+        assert isinstance(theta_values, pd.DataFrame)
+        
         # for parallel code we need to use lists and dicts in the loop
         theta_names = theta_values.columns
         all_thetas = theta_values.to_dict('records')
@@ -776,42 +941,46 @@ class Estimator(object):
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
-
+            
         return obj_at_theta
     
     
-    def likelihood_ratio_test(self, obj_at_theta, obj_value, alpha, 
+    def likelihood_ratio_test(self, obj_at_theta, obj_value, alphas, 
                               return_thresholds=False):
         """
-        Compute the likelihood ratio for each value of alpha
+        Likelihood ratio test to identify theta values within a confidence 
+        region using the :math:`\chi^2` distribution
         
         Parameters
         ----------
         obj_at_theta: DataFrame, columns = theta_names + 'obj'
             Objective values for each theta value (returned by 
             objective_at_theta)
-            
-        obj_value: float
+        obj_value: int or float
             Objective value from parameter estimation using all data
-        
-        alpha: list
+        alphas: list
             List of alpha values to use in the chi2 test
-        
         return_thresholds: bool, optional
             Return the threshold value for each alpha
             
         Returns
         -------
         LR: DataFrame 
-            Objective values for each theta value along wit True or False for 
+            Objective values for each theta value along with True or False for 
+            each alpha
         thresholds: dictionary
             If return_threshold = True, the thresholds are also returned.
         """
+        assert isinstance(obj_at_theta, pd.DataFrame)
+        assert isinstance(obj_value, (int, float))
+        assert isinstance(alphas, list)
+        assert isinstance(return_thresholds, bool)
+            
         LR = obj_at_theta.copy()
         S = len(self.callback_data)
         thresholds = {}
-        for a in alpha:
-            chi2_val = stats.chi2.ppf(a, 2)
+        for a in alphas:
+            chi2_val = scipy.stats.chi2.ppf(a, 2)
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
             LR[a] = LR['obj'] < thresholds[a]
         
@@ -819,3 +988,87 @@ class Estimator(object):
             return LR, thresholds
         else:
             return LR
+
+    def confidence_region_test(self, theta_values, distribution, alphas, 
+                               test_theta_values=None):
+        """
+        Confidence region test to determine if theta values are within a 
+        rectangular, multivariate normal, or Gaussian kernel density distribution 
+        for a range of alpha values
+        
+        Parameters
+        ----------
+        theta_values: DataFrame, columns = theta_names
+            Theta values used to generate a confidence region 
+            (generally returned by theta_est_bootstrap)
+        distribution: string
+            Statistical distribution used to define a confidence region,  
+            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, 
+            and 'Rect' for rectangular.
+        alphas: list
+            List of alpha values used to determine if theta values are inside 
+            or outside the region.
+        test_theta_values: dictionary or DataFrame, keys/columns = theta_names, optional
+            Additional theta values that are compared to the confidence region
+            to determine if they are inside or outside.
+        
+        Returns
+        -------
+        training_results: DataFrame 
+            Theta value used to generate the confidence region along with True 
+            (inside) or False (outside) for each alpha
+        test_results: DataFrame 
+            If test_theta_values is not None, returns test theta value along 
+            with True (inside) or False (outside) for each alpha
+        """
+        assert isinstance(theta_values, pd.DataFrame)
+        assert distribution in ['Rect', 'MVN', 'KDE']
+        assert isinstance(alphas, list)
+        assert isinstance(test_theta_values, (type(None), dict, pd.DataFrame))
+        
+        if isinstance(test_theta_values, dict):
+            test_theta_values = pd.Series(test_theta_values).to_frame().transpose()
+            
+        training_results = theta_values.copy()
+        
+        if test_theta_values is not None:
+            test_result = test_theta_values.copy()
+        
+        for a in alphas:
+            
+            if distribution == 'Rect':
+                lb, ub = fit_rect_dist(theta_values, a)
+                training_results[a] = ((theta_values > lb).all(axis=1) & \
+                                  (theta_values < ub).all(axis=1))
+                
+                if test_theta_values is not None:
+                    # use upper and lower bound from the training set
+                    test_result[a] = ((test_theta_values > lb).all(axis=1) & \
+                                  (test_theta_values < ub).all(axis=1))
+                    
+            elif distribution == 'MVN':
+                dist = fit_mvn_dist(theta_values)
+                Z = dist.pdf(theta_values)
+                score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
+                training_results[a] = (Z >= score)
+                
+                if test_theta_values is not None:
+                    # use score from the training set
+                    Z = dist.pdf(test_theta_values)
+                    test_result[a] = (Z >= score) 
+                
+            elif distribution == 'KDE':
+                dist = fit_kde_dist(theta_values)
+                Z = dist.pdf(theta_values.transpose())
+                score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
+                training_results[a] = (Z >= score)
+                
+                if test_theta_values is not None:
+                    # use score from the training set
+                    Z = dist.pdf(test_theta_values.transpose())
+                    test_result[a] = (Z >= score) 
+                    
+        if test_theta_values is not None:
+            return training_results, test_result
+        else:
+            return training_results

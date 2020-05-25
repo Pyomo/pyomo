@@ -102,8 +102,8 @@ if test -z "$MODE" -o "$MODE" == setup; then
         # Set up coverage for this build
         export COVERAGE_PROCESS_START=${WORKSPACE}/coveragerc
         cp ${WORKSPACE}/pyomo/.coveragerc ${COVERAGE_PROCESS_START}
-        echo "source=${WORKSPACE}/pyomo" >> ${COVERAGE_PROCESS_START}
-        echo "data_file=${WORKSPACE}/pyomo/.coverage" >> ${COVERAGE_PROCESS_START}
+        echo "data_file=${WORKSPACE}/pyomo/.coverage" \
+            >> ${COVERAGE_PROCESS_START}
         echo 'import coverage; coverage.process_startup()' \
             > "${LOCAL_SITE_PACKAGES}/run_coverage_at_startup.pth"
     fi
@@ -177,6 +177,7 @@ if test -z "$MODE" -o "$MODE" == test; then
         # Note, that the PWD should still be $WORKSPACE/pyomo
         #
         coverage combine || exit 1
+        coverage report -i
         export OS=`uname`
         if test -z "$CODECOV_TOKEN"; then
             coverage xml
@@ -192,7 +193,7 @@ if test -z "$MODE" -o "$MODE" == test; then
                     | tee .cover.upload
                 if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
                     break
-                elif  test $i -ge 3; then
+                elif test $i -ge 4; then
                     exit 1
                 fi
                 DELAY=$(( RANDOM % 30 + 15))

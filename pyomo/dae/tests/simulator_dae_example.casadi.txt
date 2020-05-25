@@ -1,3 +1,8 @@
+1 RangeSet Declarations
+    t_domain : Dimen=1, Size=Inf, Bounds=(0, 1)
+        Key  : Finite : Members
+        None :  False : [0.0..1]
+
 4 Param Declarations
     p1 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
         Key  : Value
@@ -15,7 +20,7 @@
 5 Var Declarations
     dza : Size=51, Index=t
         Key      : Lower : Value : Upper : Fixed : Stale : Domain
-             0.0 :  None :  None :  None : False :  True :  Reals
+               0 :  None :  None :  None : False :  True :  Reals
          0.00571 :  None :  None :  None : False :  True :  Reals
         0.027684 :  None :  None :  None : False :  True :  Reals
         0.058359 :  None :  None :  None : False :  True :  Reals
@@ -68,7 +73,7 @@
                1 :  None :  None :  None : False :  True :  Reals
     dzb : Size=51, Index=t
         Key      : Lower : Value : Upper : Fixed : Stale : Domain
-             0.0 :  None :  None :  None : False :  True :  Reals
+               0 :  None :  None :  None : False :  True :  Reals
          0.00571 :  None :  None :  None : False :  True :  Reals
         0.027684 :  None :  None :  None : False :  True :  Reals
         0.058359 :  None :  None :  None : False :  True :  Reals
@@ -120,169 +125,169 @@
         0.986024 :  None :  None :  None : False :  True :  Reals
                1 :  None :  None :  None : False :  True :  Reals
     za : Size=51, Index=t
-        Key      : Lower : Value          : Upper : Fixed : Stale : Domain
-             0.0 :  None :            1.0 :  None : False : False :  Reals
-         0.00571 :  None : 0.977812279974 :  None : False : False :  Reals
-        0.027684 :  None : 0.897420371598 :  None : False : False :  Reals
-        0.058359 :  None : 0.798743226376 :  None : False : False :  Reals
-        0.086024 :  None : 0.721067811612 :  None : False : False :  Reals
-             0.1 :  None : 0.685294140966 :  None : False : False :  Reals
-         0.10571 :  None : 0.671448724858 :  None : False : False :  Reals
-        0.127684 :  None : 0.621070519067 :  None : False : False :  Reals
-        0.158359 :  None :  0.55867835577 :  None : False : False :  Reals
-        0.186024 :  None : 0.509433843825 :  None : False : False :  Reals
-             0.2 :  None : 0.486785158115 :  None : False : False :  Reals
-         0.20571 :  None : 0.477975912233 :  None : False : False :  Reals
-        0.227684 :  None : 0.446049259303 :  None : False : False :  Reals
-        0.258359 :  None : 0.406494394239 :  None : False : False :  Reals
-        0.286024 :  None : 0.375259797217 :  None : False : False :  Reals
-             0.3 :  None :  0.36091878828 :  None : False : False :  Reals
-         0.30571 :  None : 0.355313817067 :  None : False : False :  Reals
-        0.327684 :  None : 0.335080228323 :  None : False : False :  Reals
-        0.358359 :  None : 0.310003844561 :  None : False : False :  Reals
-        0.386024 :  None : 0.290192955028 :  None : False : False :  Reals
-             0.4 :  None : 0.281112407744 :  None : False : False :  Reals
-         0.40571 :  None : 0.277546421538 :  None : False : False :  Reals
-        0.427684 :  None : 0.264723559557 :  None : False : False :  Reals
-        0.458359 :  None : 0.248826345617 :  None : False : False :  Reals
-        0.486024 :  None : 0.236261383877 :  None : False : False :  Reals
-             0.5 :  None : 0.230511758295 :  None : False : False :  Reals
-         0.50571 :  None : 0.228243159375 :  None : False : False :  Reals
-        0.527684 :  None : 0.220116926615 :  None : False : False :  Reals
-        0.558359 :  None : 0.210039118925 :  None : False : False :  Reals
-        0.586024 :  None : 0.202070111838 :  None : False : False :  Reals
-             0.6 :  None : 0.198429643562 :  None : False : False :  Reals
-         0.60571 :  None : 0.196990497732 :  None : False : False :  Reals
-        0.627684 :  None : 0.191836834341 :  None : False : False :  Reals
-        0.658359 :  None : 0.185448275941 :  None : False : False :  Reals
-        0.686024 :  None : 0.180400845587 :  None : False : False :  Reals
-             0.7 :  None : 0.178089178747 :  None : False : False :  Reals
-         0.70571 :  None : 0.177180945029 :  None : False : False :  Reals
-        0.727684 :  None : 0.173907783607 :  None : False : False :  Reals
-        0.758359 :  None : 0.169857970679 :  None : False : False :  Reals
-        0.786024 :  None : 0.166661860054 :  None : False : False :  Reals
-             0.8 :  None : 0.165193212111 :  None : False : False :  Reals
-         0.80571 :  None : 0.164620034483 :  None : False : False :  Reals
-        0.827684 :  None :  0.16254375454 :  None : False : False :  Reals
-        0.858359 :  None : 0.159974903173 :  None : False : False :  Reals
-        0.886024 :  None : 0.157950280624 :  None : False : False :  Reals
-             0.9 :  None : 0.157017256849 :  None : False : False :  Reals
-         0.90571 :  None :  0.15665552715 :  None : False : False :  Reals
-        0.927684 :  None : 0.155339576788 :  None : False : False :  Reals
-        0.958359 :  None : 0.153710866922 :  None : False : False :  Reals
-        0.986024 :  None : 0.152426586541 :  None : False : False :  Reals
-               1 :  None : 0.151833863083 :  None : False : False :  Reals
+        Key      : Lower : Value               : Upper : Fixed : Stale : Domain
+               0 :  None :                 1.0 :  None : False : False :  Reals
+         0.00571 :  None :  0.9778122799736729 :  None : False : False :  Reals
+        0.027684 :  None :  0.8974203715977497 :  None : False : False :  Reals
+        0.058359 :  None :  0.7987432263757179 :  None : False : False :  Reals
+        0.086024 :  None :  0.7210678116123416 :  None : False : False :  Reals
+             0.1 :  None :  0.6852941409656236 :  None : False : False :  Reals
+         0.10571 :  None :  0.6714487248581024 :  None : False : False :  Reals
+        0.127684 :  None :   0.621070519066829 :  None : False : False :  Reals
+        0.158359 :  None :  0.5586783557695114 :  None : False : False :  Reals
+        0.186024 :  None :  0.5094338438254381 :  None : False : False :  Reals
+             0.2 :  None :  0.4867851581150437 :  None : False : False :  Reals
+         0.20571 :  None :  0.4779759122327108 :  None : False : False :  Reals
+        0.227684 :  None :  0.4460492593031096 :  None : False : False :  Reals
+        0.258359 :  None : 0.40649439423897077 :  None : False : False :  Reals
+        0.286024 :  None : 0.37525979721675473 :  None : False : False :  Reals
+             0.3 :  None :  0.3609187882803063 :  None : False : False :  Reals
+         0.30571 :  None : 0.35531381706670456 :  None : False : False :  Reals
+        0.327684 :  None :   0.335080228323394 :  None : False : False :  Reals
+        0.358359 :  None : 0.31000384456130714 :  None : False : False :  Reals
+        0.386024 :  None :  0.2901929550275578 :  None : False : False :  Reals
+             0.4 :  None :  0.2811124077440353 :  None : False : False :  Reals
+         0.40571 :  None :  0.2775464215381259 :  None : False : False :  Reals
+        0.427684 :  None : 0.26472355955677956 :  None : False : False :  Reals
+        0.458359 :  None : 0.24882634561734235 :  None : False : False :  Reals
+        0.486024 :  None : 0.23626138387744378 :  None : False : False :  Reals
+             0.5 :  None :  0.2305117582951921 :  None : False : False :  Reals
+         0.50571 :  None : 0.22824315937524348 :  None : False : False :  Reals
+        0.527684 :  None : 0.22011692661458637 :  None : False : False :  Reals
+        0.558359 :  None :  0.2100391189250308 :  None : False : False :  Reals
+        0.586024 :  None :  0.2020701118382127 :  None : False : False :  Reals
+             0.6 :  None :  0.1984296435622711 :  None : False : False :  Reals
+         0.60571 :  None :  0.1969904977320466 :  None : False : False :  Reals
+        0.627684 :  None : 0.19183683434108842 :  None : False : False :  Reals
+        0.658359 :  None :  0.1854482759405722 :  None : False : False :  Reals
+        0.686024 :  None : 0.18040084558731742 :  None : False : False :  Reals
+             0.7 :  None : 0.17808917874651323 :  None : False : False :  Reals
+         0.70571 :  None : 0.17718094502902584 :  None : False : False :  Reals
+        0.727684 :  None : 0.17390778360749842 :  None : False : False :  Reals
+        0.758359 :  None : 0.16985797067926942 :  None : False : False :  Reals
+        0.786024 :  None :  0.1666618600541457 :  None : False : False :  Reals
+             0.8 :  None :  0.1651932121106028 :  None : False : False :  Reals
+         0.80571 :  None : 0.16462003448308787 :  None : False : False :  Reals
+        0.827684 :  None :  0.1625437545396941 :  None : False : False :  Reals
+        0.858359 :  None : 0.15997490317271887 :  None : False : False :  Reals
+        0.886024 :  None : 0.15795028062400923 :  None : False : False :  Reals
+             0.9 :  None : 0.15701725684856155 :  None : False : False :  Reals
+         0.90571 :  None : 0.15665552714999134 :  None : False : False :  Reals
+        0.927684 :  None : 0.15533957678837768 :  None : False : False :  Reals
+        0.958359 :  None : 0.15371086692249716 :  None : False : False :  Reals
+        0.986024 :  None : 0.15242658654141075 :  None : False : False :  Reals
+               1 :  None : 0.15183386308321142 :  None : False : False :  Reals
     zb : Size=51, Index=t
-        Key      : Lower : Value           : Upper : Fixed : Stale : Domain
-             0.0 :  None :             0.0 :  None : False : False :  Reals
-         0.00571 :  None : 0.0184570025544 :  None : False : False :  Reals
-        0.027684 :  None : 0.0666150289684 :  None : False : False :  Reals
-        0.058359 :  None :  0.101674636549 :  None : False : False :  Reals
-        0.086024 :  None :  0.124411470858 :  None : False : False :  Reals
-             0.1 :  None :  0.134522400341 :  None : False : False :  Reals
-         0.10571 :  None :  0.138407400785 :  None : False : False :  Reals
-        0.127684 :  None :  0.152494714234 :  None : False : False :  Reals
-        0.158359 :  None :   0.16988956616 :  None : False : False :  Reals
-        0.186024 :  None :  0.183608424397 :  None : False : False :  Reals
-             0.2 :  None :  0.189917250002 :  None : False : False :  Reals
-         0.20571 :  None :  0.192371022979 :  None : False : False :  Reals
-        0.227684 :  None :  0.201263907497 :  None : False : False :  Reals
-        0.258359 :  None :  0.212281436418 :  None : False : False :  Reals
-        0.286024 :  None :  0.220981460928 :  None : False : False :  Reals
-             0.3 :  None :  0.224975972595 :  None : False : False :  Reals
-         0.30571 :  None :  0.226537166716 :  None : False : False :  Reals
-        0.327684 :  None :  0.232172974599 :  None : False : False :  Reals
-        0.358359 :  None :  0.239157687348 :  None : False : False :  Reals
-        0.386024 :  None :  0.244675759814 :  None : False : False :  Reals
-             0.4 :  None :  0.247205030488 :  None : False : False :  Reals
-         0.40571 :  None :  0.248198290662 :  None : False : False :  Reals
-        0.427684 :  None :  0.251769937364 :  None : False : False :  Reals
-        0.458359 :  None :  0.256197905295 :  None : False : False :  Reals
-        0.486024 :  None :  0.259697716041 :  None : False : False :  Reals
-             0.5 :  None :  0.261299201697 :  None : False : False :  Reals
-         0.50571 :  None :  0.261931091289 :  None : False : False :  Reals
-        0.527684 :  None :  0.264194550578 :  None : False : False :  Reals
-        0.558359 :  None :  0.267001596114 :  None : False : False :  Reals
-        0.586024 :  None :  0.269221261995 :  None : False : False :  Reals
-             0.6 :  None :  0.270235268477 :  None : False : False :  Reals
-         0.60571 :  None :  0.270636124408 :  None : False : False :  Reals
-        0.627684 :  None :  0.272071612481 :  None : False : False :  Reals
-        0.658359 :  None :  0.273851064662 :  None : False : False :  Reals
-        0.686024 :  None :  0.275256962333 :  None : False : False :  Reals
-             0.7 :  None :  0.275900847832 :  None : False : False :  Reals
-         0.70571 :  None :  0.276153824835 :  None : False : False :  Reals
-        0.727684 :  None :  0.277065522557 :  None : False : False :  Reals
-        0.758359 :  None :  0.278193546817 :  None : False : False :  Reals
-        0.786024 :  None :  0.279083782998 :  None : False : False :  Reals
-             0.8 :  None :  0.279492856263 :  None : False : False :  Reals
-         0.80571 :  None :  0.279652507622 :  None : False : False :  Reals
-        0.827684 :  None :  0.280230829098 :  None : False : False :  Reals
-        0.858359 :  None :  0.280946350161 :  None : False : False :  Reals
-        0.886024 :  None :  0.281510283184 :  None : False : False :  Reals
-             0.9 :  None :  0.281770165157 :  None : False : False :  Reals
-         0.90571 :  None :  0.281870920384 :  None : False : False :  Reals
-        0.927684 :  None :  0.282237461689 :  None : False : False :  Reals
-        0.958359 :  None :  0.282691118198 :  None : False : False :  Reals
-        0.986024 :  None :  0.283048838258 :  None : False : False :  Reals
-               1 :  None :   0.28321393388 :  None : False : False :  Reals
+        Key      : Lower : Value                : Upper : Fixed : Stale : Domain
+               0 :  None :                  0.0 :  None : False : False :  Reals
+         0.00571 :  None : 0.018457002554371972 :  None : False : False :  Reals
+        0.027684 :  None :   0.0666150289683904 :  None : False : False :  Reals
+        0.058359 :  None :  0.10167463654898541 :  None : False : False :  Reals
+        0.086024 :  None :   0.1244114708578883 :  None : False : False :  Reals
+             0.1 :  None :  0.13452240034093335 :  None : False : False :  Reals
+         0.10571 :  None :  0.13840740078485717 :  None : False : False :  Reals
+        0.127684 :  None :   0.1524947142344445 :  None : False : False :  Reals
+        0.158359 :  None :  0.16988956616012657 :  None : False : False :  Reals
+        0.186024 :  None :   0.1836084243974377 :  None : False : False :  Reals
+             0.2 :  None :   0.1899172500023451 :  None : False : False :  Reals
+         0.20571 :  None :  0.19237102297893427 :  None : False : False :  Reals
+        0.227684 :  None :   0.2012639074972283 :  None : False : False :  Reals
+        0.258359 :  None :   0.2122814364181978 :  None : False : False :  Reals
+        0.286024 :  None :  0.22098146092821289 :  None : False : False :  Reals
+             0.3 :  None :  0.22497597259469362 :  None : False : False :  Reals
+         0.30571 :  None :   0.2265371667157954 :  None : False : False :  Reals
+        0.327684 :  None :  0.23217297459915592 :  None : False : False :  Reals
+        0.358359 :  None :  0.23915768734848866 :  None : False : False :  Reals
+        0.386024 :  None :  0.24467575981408343 :  None : False : False :  Reals
+             0.4 :  None :   0.2472050304883578 :  None : False : False :  Reals
+         0.40571 :  None :  0.24819829066205695 :  None : False : False :  Reals
+        0.427684 :  None :  0.25176993736394293 :  None : False : False :  Reals
+        0.458359 :  None :   0.2561979052953936 :  None : False : False :  Reals
+        0.486024 :  None :   0.2596977160413475 :  None : False : False :  Reals
+             0.5 :  None :   0.2612992016967095 :  None : False : False :  Reals
+         0.50571 :  None :  0.26193109128880954 :  None : False : False :  Reals
+        0.527684 :  None :   0.2641945505775068 :  None : False : False :  Reals
+        0.558359 :  None :   0.2670015961143072 :  None : False : False :  Reals
+        0.586024 :  None :   0.2692212619948366 :  None : False : False :  Reals
+             0.6 :  None :  0.27023526847710955 :  None : False : False :  Reals
+         0.60571 :  None :   0.2706361244078388 :  None : False : False :  Reals
+        0.627684 :  None :  0.27207161248132894 :  None : False : False :  Reals
+        0.658359 :  None :    0.273851064661633 :  None : False : False :  Reals
+        0.686024 :  None :  0.27525696233275676 :  None : False : False :  Reals
+             0.7 :  None :   0.2759008478322489 :  None : False : False :  Reals
+         0.70571 :  None :  0.27615382483549455 :  None : False : False :  Reals
+        0.727684 :  None :  0.27706552255662475 :  None : False : False :  Reals
+        0.758359 :  None :  0.27819354681730285 :  None : False : False :  Reals
+        0.786024 :  None :    0.279083782997723 :  None : False : False :  Reals
+             0.8 :  None :  0.27949285626276915 :  None : False : False :  Reals
+         0.80571 :  None :   0.2796525076223737 :  None : False : False :  Reals
+        0.827684 :  None :  0.28023082909832486 :  None : False : False :  Reals
+        0.858359 :  None :  0.28094635016142827 :  None : False : False :  Reals
+        0.886024 :  None :   0.2815102831843716 :  None : False : False :  Reals
+             0.9 :  None :   0.2817701651569773 :  None : False : False :  Reals
+         0.90571 :  None :   0.2818709203841266 :  None : False : False :  Reals
+        0.927684 :  None :   0.2822374616892232 :  None : False : False :  Reals
+        0.958359 :  None :   0.2826911181983395 :  None : False : False :  Reals
+        0.986024 :  None :   0.2830488382578243 :  None : False : False :  Reals
+               1 :  None :  0.28321393387972915 :  None : False : False :  Reals
     zc : Size=51, Index=t
-        Key      : Lower : Value              : Upper : Fixed : Stale : Domain
-             0.0 :  None : -5.77096113154e-12 :  None : False : False :  Reals
-         0.00571 :  None :   0.00373071746945 :  None : False : False :  Reals
-        0.027684 :  None :    0.0359645994339 :  None : False : False :  Reals
-        0.058359 :  None :    0.0995821370753 :  None : False : False :  Reals
-        0.086024 :  None :      0.15452071753 :  None : False : False :  Reals
-             0.1 :  None :     0.180183458693 :  None : False : False :  Reals
-         0.10571 :  None :     0.190143874357 :  None : False : False :  Reals
-        0.127684 :  None :     0.226434766699 :  None : False : False :  Reals
-        0.158359 :  None :      0.27143207807 :  None : False : False :  Reals
-        0.186024 :  None :     0.306957731777 :  None : False : False :  Reals
-             0.2 :  None :     0.323297591883 :  None : False : False :  Reals
-         0.20571 :  None :     0.329653064788 :  None : False : False :  Reals
-        0.227684 :  None :       0.3526868332 :  None : False : False :  Reals
-        0.258359 :  None :     0.381224169343 :  None : False : False :  Reals
-        0.286024 :  None :     0.403758741855 :  None : False : False :  Reals
-             0.3 :  None :     0.414105239125 :  None : False : False :  Reals
-         0.30571 :  None :     0.418149016218 :  None : False : False :  Reals
-        0.327684 :  None :     0.432746797077 :  None : False : False :  Reals
-        0.358359 :  None :      0.45083846809 :  None : False : False :  Reals
-        0.386024 :  None :     0.465131285158 :  None : False : False :  Reals
-             0.4 :  None :     0.471682561768 :  None : False : False :  Reals
-         0.40571 :  None :       0.4742552878 :  None : False : False :  Reals
-        0.427684 :  None :     0.483506503079 :  None : False : False :  Reals
-        0.458359 :  None :     0.494975749087 :  None : False : False :  Reals
-        0.486024 :  None :     0.504040900081 :  None : False : False :  Reals
-             0.5 :  None :     0.508189040008 :  None : False : False :  Reals
-         0.50571 :  None :     0.509825749336 :  None : False : False :  Reals
-        0.527684 :  None :     0.515688522808 :  None : False : False :  Reals
-        0.558359 :  None :     0.522959284961 :  None : False : False :  Reals
-        0.586024 :  None :     0.528708626167 :  None : False : False :  Reals
-             0.6 :  None :     0.531335087961 :  None : False : False :  Reals
-         0.60571 :  None :      0.53237337786 :  None : False : False :  Reals
-        0.627684 :  None :     0.536091553178 :  None : False : False :  Reals
-        0.658359 :  None :     0.540700659398 :  None : False : False :  Reals
-        0.686024 :  None :      0.54434219208 :  None : False : False :  Reals
-             0.7 :  None :     0.546009973421 :  None : False : False :  Reals
-         0.70571 :  None :     0.546665230135 :  None : False : False :  Reals
-        0.727684 :  None :     0.549026693836 :  None : False : False :  Reals
-        0.758359 :  None :     0.551948482503 :  None : False : False :  Reals
-        0.786024 :  None :     0.554254356948 :  None : False : False :  Reals
-             0.8 :  None :     0.555313931627 :  None : False : False :  Reals
-         0.80571 :  None :     0.555727457895 :  None : False : False :  Reals
-        0.827684 :  None :     0.557225416362 :  None : False : False :  Reals
-        0.858359 :  None :     0.559078746666 :  None : False : False :  Reals
-        0.886024 :  None :     0.560539436192 :  None : False : False :  Reals
-             0.9 :  None :     0.561212577994 :  None : False : False :  Reals
-         0.90571 :  None :     0.561473552466 :  None : False : False :  Reals
-        0.927684 :  None :     0.562422961522 :  None : False : False :  Reals
-        0.958359 :  None :     0.563598014879 :  None : False : False :  Reals
-        0.986024 :  None :     0.564524575201 :  None : False : False :  Reals
-               1 :  None :     0.564952203037 :  None : False : False :  Reals
+        Key      : Lower : Value                  : Upper : Fixed : Stale : Domain
+               0 :  None : -5.770962826643652e-12 :  None : False : False :  Reals
+         0.00571 :  None :  0.0037307174694463847 :  None : False : False :  Reals
+        0.027684 :  None :   0.035964599433859795 :  None : False : False :  Reals
+        0.058359 :  None :    0.09958213707529827 :  None : False : False :  Reals
+        0.086024 :  None :    0.15452071752977012 :  None : False : False :  Reals
+             0.1 :  None :    0.18018345869344304 :  None : False : False :  Reals
+         0.10571 :  None :     0.1901438743570405 :  None : False : False :  Reals
+        0.127684 :  None :    0.22643476669872656 :  None : False : False :  Reals
+        0.158359 :  None :      0.271432078070362 :  None : False : False :  Reals
+        0.186024 :  None :     0.3069577317771242 :  None : False : False :  Reals
+             0.2 :  None :    0.32329759188261126 :  None : False : False :  Reals
+         0.20571 :  None :     0.3296530647883549 :  None : False : False :  Reals
+        0.227684 :  None :    0.35268683319966193 :  None : False : False :  Reals
+        0.258359 :  None :     0.3812241693428313 :  None : False : False :  Reals
+        0.286024 :  None :     0.4037587418550322 :  None : False : False :  Reals
+             0.3 :  None :     0.4141052391250002 :  None : False : False :  Reals
+         0.30571 :  None :     0.4181490162175002 :  None : False : False :  Reals
+        0.327684 :  None :       0.43274679707745 :  None : False : False :  Reals
+        0.358359 :  None :    0.45083846809020434 :  None : False : False :  Reals
+        0.386024 :  None :    0.46513128515835883 :  None : False : False :  Reals
+             0.4 :  None :    0.47168256176760714 :  None : False : False :  Reals
+         0.40571 :  None :    0.47425528779981724 :  None : False : False :  Reals
+        0.427684 :  None :    0.48350650307927745 :  None : False : False :  Reals
+        0.458359 :  None :    0.49497574908726427 :  None : False : False :  Reals
+        0.486024 :  None :     0.5040409000812086 :  None : False : False :  Reals
+             0.5 :  None :     0.5081890400080985 :  None : False : False :  Reals
+         0.50571 :  None :      0.509825749335947 :  None : False : False :  Reals
+        0.527684 :  None :     0.5156885228079069 :  None : False : False :  Reals
+        0.558359 :  None :     0.5229592849606621 :  None : False : False :  Reals
+        0.586024 :  None :     0.5287086261669508 :  None : False : False :  Reals
+             0.6 :  None :     0.5313350879606192 :  None : False : False :  Reals
+         0.60571 :  None :     0.5323733778601143 :  None : False : False :  Reals
+        0.627684 :  None :     0.5360915531775823 :  None : False : False :  Reals
+        0.658359 :  None :     0.5407006593977952 :  None : False : False :  Reals
+        0.686024 :  None :     0.5443421920799257 :  None : False : False :  Reals
+             0.7 :  None :     0.5460099734212374 :  None : False : False :  Reals
+         0.70571 :  None :     0.5466652301354791 :  None : False : False :  Reals
+        0.727684 :  None :     0.5490266938358767 :  None : False : False :  Reals
+        0.758359 :  None :     0.5519484825034281 :  None : False : False :  Reals
+        0.786024 :  None :     0.5542543569481307 :  None : False : False :  Reals
+             0.8 :  None :     0.5553139316266272 :  None : False : False :  Reals
+         0.80571 :  None :     0.5557274578945376 :  None : False : False :  Reals
+        0.827684 :  None :     0.5572254163619818 :  None : False : False :  Reals
+        0.858359 :  None :     0.5590787466658532 :  None : False : False :  Reals
+        0.886024 :  None :     0.5605394361916178 :  None : False : False :  Reals
+             0.9 :  None :     0.5612125779944603 :  None : False : False :  Reals
+         0.90571 :  None :     0.5614735524658817 :  None : False : False :  Reals
+        0.927684 :  None :     0.5624229615224005 :  None : False : False :  Reals
+        0.958359 :  None :     0.5635980148791631 :  None : False : False :  Reals
+        0.986024 :  None :     0.5645245752007635 :  None : False : False :  Reals
+               1 :  None :     0.5649522030370595 :  None : False : False :  Reals
 
 5 Constraint Declarations
     algeq1 : Size=51, Index=t, Active=True
         Key      : Lower : Body                                       : Upper : Active
-             0.0 :   1.0 :                za[0.0] + zb[0.0] + zc[0.0] :   1.0 :   True
+               0 :   1.0 :                      za[0] + zb[0] + zc[0] :   1.0 :   True
          0.00571 :   1.0 :    za[0.00571] + zb[0.00571] + zc[0.00571] :   1.0 :   True
         0.027684 :   1.0 : za[0.027684] + zb[0.027684] + zc[0.027684] :   1.0 :   True
         0.058359 :   1.0 : za[0.058359] + zb[0.058359] + zc[0.058359] :   1.0 :   True
@@ -335,7 +340,7 @@
                1 :   1.0 :                      za[1] + zb[1] + zc[1] :   1.0 :   True
     diffeq1 : Size=51, Index=t, Active=True
         Key      : Lower : Body                                                   : Upper : Active
-             0.0 :   0.0 :                dza[0.0] - (-4.0*za[0.0] + 2.0*zb[0.0]) :   0.0 :   True
+               0 :   0.0 :                      dza[0] - (-4.0*za[0] + 2.0*zb[0]) :   0.0 :   True
          0.00571 :   0.0 :    dza[0.00571] - (-4.0*za[0.00571] + 2.0*zb[0.00571]) :   0.0 :   True
         0.027684 :   0.0 : dza[0.027684] - (-4.0*za[0.027684] + 2.0*zb[0.027684]) :   0.0 :   True
         0.058359 :   0.0 : dza[0.058359] - (-4.0*za[0.058359] + 2.0*zb[0.058359]) :   0.0 :   True
@@ -388,7 +393,7 @@
                1 :   0.0 :                      dza[1] - (-4.0*za[1] + 2.0*zb[1]) :   0.0 :   True
     diffeq2 : Size=51, Index=t, Active=True
         Key      : Lower : Body                                                                       : Upper : Active
-             0.0 :   0.0 :                     dzb[0.0] - (4.0*za[0.0] - 42.0*zb[0.0] + 20.0*zc[0.0]) :   0.0 :   True
+               0 :   0.0 :                             dzb[0] - (4.0*za[0] - 42.0*zb[0] + 20.0*zc[0]) :   0.0 :   True
          0.00571 :   0.0 :     dzb[0.00571] - (4.0*za[0.00571] - 42.0*zb[0.00571] + 20.0*zc[0.00571]) :   0.0 :   True
         0.027684 :   0.0 : dzb[0.027684] - (4.0*za[0.027684] - 42.0*zb[0.027684] + 20.0*zc[0.027684]) :   0.0 :   True
         0.058359 :   0.0 : dzb[0.058359] - (4.0*za[0.058359] - 42.0*zb[0.058359] + 20.0*zc[0.058359]) :   0.0 :   True
@@ -441,11 +446,11 @@
                1 :   0.0 :                             dzb[1] - (4.0*za[1] - 42.0*zb[1] + 20.0*zc[1]) :   0.0 :   True
     dza_disc_eq : Size=50, Index=t, Active=True
         Key      : Lower : Body                                                                                                                                                                               : Upper : Active
-         0.00571 :   0.0 :    dza[0.00571] - (-110.386792412*za[0.0] + 87.5592397794*za[0.00571] + 28.9194261538*za[0.027684] - 8.751863962*za[0.058359] + 3.9970520794*za[0.086024] - 1.33706163849*za[0.1]) :   0.0 :   True
-        0.027684 :   0.0 :  dza[0.027684] - (35.830685225*za[0.0] - 71.6138072015*za[0.00571] + 18.0607772408*za[0.027684] + 23.6379717607*za[0.058359] - 8.65900780283*za[0.086024] + 2.74338077775*za[0.1]) :   0.0 :   True
-        0.058359 :   0.0 : dza[0.058359] - (-23.441715579*za[0.0] + 41.2216524624*za[0.00571] - 44.9601712581*za[0.027684] + 8.56765245397*za[0.058359] + 25.1832094921*za[0.086024] - 6.57062757134*za[0.1]) :   0.0 :   True
-        0.086024 :   0.0 : dza[0.086024] - (22.8263550021*za[0.0] - 38.7866321972*za[0.00571] + 33.9315191806*za[0.027684] - 51.8834090641*za[0.058359] + 5.81233052581*za[0.086024] + 28.0998365528*za[0.1]) :   0.0 :   True
-             0.1 :   0.0 :                      dza[0.1] - (-50.0*za[0.0] + 84.1242422359*za[0.00571] - 69.7025611666*za[0.027684] + 87.7711420415*za[0.058359] - 182.192823111*za[0.086024] + 130.0*za[0.1]) :   0.0 :   True
+         0.00571 :   0.0 :      dza[0.00571] - (-110.386792412*za[0] + 87.5592397794*za[0.00571] + 28.9194261538*za[0.027684] - 8.751863962*za[0.058359] + 3.9970520794*za[0.086024] - 1.33706163849*za[0.1]) :   0.0 :   True
+        0.027684 :   0.0 :    dza[0.027684] - (35.830685225*za[0] - 71.6138072015*za[0.00571] + 18.0607772408*za[0.027684] + 23.6379717607*za[0.058359] - 8.65900780283*za[0.086024] + 2.74338077775*za[0.1]) :   0.0 :   True
+        0.058359 :   0.0 :   dza[0.058359] - (-23.441715579*za[0] + 41.2216524624*za[0.00571] - 44.9601712581*za[0.027684] + 8.56765245397*za[0.058359] + 25.1832094921*za[0.086024] - 6.57062757134*za[0.1]) :   0.0 :   True
+        0.086024 :   0.0 :   dza[0.086024] - (22.8263550021*za[0] - 38.7866321972*za[0.00571] + 33.9315191806*za[0.027684] - 51.8834090641*za[0.058359] + 5.81233052581*za[0.086024] + 28.0998365528*za[0.1]) :   0.0 :   True
+             0.1 :   0.0 :                        dza[0.1] - (-50.0*za[0] + 84.1242422359*za[0.00571] - 69.7025611666*za[0.027684] + 87.7711420415*za[0.058359] - 182.192823111*za[0.086024] + 130.0*za[0.1]) :   0.0 :   True
          0.10571 :   0.0 :    dza[0.10571] - (-110.386792412*za[0.1] + 87.5592397794*za[0.10571] + 28.9194261538*za[0.127684] - 8.751863962*za[0.158359] + 3.9970520794*za[0.186024] - 1.33706163849*za[0.2]) :   0.0 :   True
         0.127684 :   0.0 :  dza[0.127684] - (35.830685225*za[0.1] - 71.6138072015*za[0.10571] + 18.0607772408*za[0.127684] + 23.6379717607*za[0.158359] - 8.65900780283*za[0.186024] + 2.74338077775*za[0.2]) :   0.0 :   True
         0.158359 :   0.0 : dza[0.158359] - (-23.441715579*za[0.1] + 41.2216524624*za[0.10571] - 44.9601712581*za[0.127684] + 8.56765245397*za[0.158359] + 25.1832094921*za[0.186024] - 6.57062757134*za[0.2]) :   0.0 :   True
@@ -493,11 +498,11 @@
                1 :   0.0 :                          dza[1] - (-50.0*za[0.9] + 84.1242422359*za[0.90571] - 69.7025611666*za[0.927684] + 87.7711420415*za[0.958359] - 182.192823111*za[0.986024] + 130.0*za[1]) :   0.0 :   True
     dzb_disc_eq : Size=50, Index=t, Active=True
         Key      : Lower : Body                                                                                                                                                                               : Upper : Active
-         0.00571 :   0.0 :    dzb[0.00571] - (-110.386792412*zb[0.0] + 87.5592397794*zb[0.00571] + 28.9194261538*zb[0.027684] - 8.751863962*zb[0.058359] + 3.9970520794*zb[0.086024] - 1.33706163849*zb[0.1]) :   0.0 :   True
-        0.027684 :   0.0 :  dzb[0.027684] - (35.830685225*zb[0.0] - 71.6138072015*zb[0.00571] + 18.0607772408*zb[0.027684] + 23.6379717607*zb[0.058359] - 8.65900780283*zb[0.086024] + 2.74338077775*zb[0.1]) :   0.0 :   True
-        0.058359 :   0.0 : dzb[0.058359] - (-23.441715579*zb[0.0] + 41.2216524624*zb[0.00571] - 44.9601712581*zb[0.027684] + 8.56765245397*zb[0.058359] + 25.1832094921*zb[0.086024] - 6.57062757134*zb[0.1]) :   0.0 :   True
-        0.086024 :   0.0 : dzb[0.086024] - (22.8263550021*zb[0.0] - 38.7866321972*zb[0.00571] + 33.9315191806*zb[0.027684] - 51.8834090641*zb[0.058359] + 5.81233052581*zb[0.086024] + 28.0998365528*zb[0.1]) :   0.0 :   True
-             0.1 :   0.0 :                      dzb[0.1] - (-50.0*zb[0.0] + 84.1242422359*zb[0.00571] - 69.7025611666*zb[0.027684] + 87.7711420415*zb[0.058359] - 182.192823111*zb[0.086024] + 130.0*zb[0.1]) :   0.0 :   True
+         0.00571 :   0.0 :      dzb[0.00571] - (-110.386792412*zb[0] + 87.5592397794*zb[0.00571] + 28.9194261538*zb[0.027684] - 8.751863962*zb[0.058359] + 3.9970520794*zb[0.086024] - 1.33706163849*zb[0.1]) :   0.0 :   True
+        0.027684 :   0.0 :    dzb[0.027684] - (35.830685225*zb[0] - 71.6138072015*zb[0.00571] + 18.0607772408*zb[0.027684] + 23.6379717607*zb[0.058359] - 8.65900780283*zb[0.086024] + 2.74338077775*zb[0.1]) :   0.0 :   True
+        0.058359 :   0.0 :   dzb[0.058359] - (-23.441715579*zb[0] + 41.2216524624*zb[0.00571] - 44.9601712581*zb[0.027684] + 8.56765245397*zb[0.058359] + 25.1832094921*zb[0.086024] - 6.57062757134*zb[0.1]) :   0.0 :   True
+        0.086024 :   0.0 :   dzb[0.086024] - (22.8263550021*zb[0] - 38.7866321972*zb[0.00571] + 33.9315191806*zb[0.027684] - 51.8834090641*zb[0.058359] + 5.81233052581*zb[0.086024] + 28.0998365528*zb[0.1]) :   0.0 :   True
+             0.1 :   0.0 :                        dzb[0.1] - (-50.0*zb[0] + 84.1242422359*zb[0.00571] - 69.7025611666*zb[0.027684] + 87.7711420415*zb[0.058359] - 182.192823111*zb[0.086024] + 130.0*zb[0.1]) :   0.0 :   True
          0.10571 :   0.0 :    dzb[0.10571] - (-110.386792412*zb[0.1] + 87.5592397794*zb[0.10571] + 28.9194261538*zb[0.127684] - 8.751863962*zb[0.158359] + 3.9970520794*zb[0.186024] - 1.33706163849*zb[0.2]) :   0.0 :   True
         0.127684 :   0.0 :  dzb[0.127684] - (35.830685225*zb[0.1] - 71.6138072015*zb[0.10571] + 18.0607772408*zb[0.127684] + 23.6379717607*zb[0.158359] - 8.65900780283*zb[0.186024] + 2.74338077775*zb[0.2]) :   0.0 :   True
         0.158359 :   0.0 : dzb[0.158359] - (-23.441715579*zb[0.1] + 41.2216524624*zb[0.10571] - 44.9601712581*zb[0.127684] + 8.56765245397*zb[0.158359] + 25.1832094921*zb[0.186024] - 6.57062757134*zb[0.2]) :   0.0 :   True
@@ -545,10 +550,11 @@
                1 :   0.0 :                          dzb[1] - (-50.0*zb[0.9] + 84.1242422359*zb[0.90571] - 69.7025611666*zb[0.927684] + 87.7711420415*zb[0.958359] - 182.192823111*zb[0.986024] + 130.0*zb[1]) :   0.0 :   True
 
 1 ContinuousSet Declarations
-    t : Dim=0, Dimen=1, Size=51, Domain=None, Ordered=Sorted, Bounds=(0.0, 1)
-        [0.0, 0.00571, 0.027684, 0.058359, 0.086024, 0.1, 0.10571, 0.127684, 0.158359, 0.186024, 0.2, 0.20571, 0.227684, 0.258359, 0.286024, 0.3, 0.30571, 0.327684, 0.358359, 0.386024, 0.4, 0.40571, 0.427684, 0.458359, 0.486024, 0.5, 0.50571, 0.527684, 0.558359, 0.586024, 0.6, 0.60571, 0.627684, 0.658359, 0.686024, 0.7, 0.70571, 0.727684, 0.758359, 0.786024, 0.8, 0.80571, 0.827684, 0.858359, 0.886024, 0.9, 0.90571, 0.927684, 0.958359, 0.986024, 1]
+    t : Size=1, Index=None, Ordered=Sorted
+        Key  : Dimen : Domain   : Size : Members
+        None :     1 : [0.0..1] :   51 : {0, 0.00571, 0.027684, 0.058359, 0.086024, 0.1, 0.10571, 0.127684, 0.158359, 0.186024, 0.2, 0.20571, 0.227684, 0.258359, 0.286024, 0.3, 0.30571, 0.327684, 0.358359, 0.386024, 0.4, 0.40571, 0.427684, 0.458359, 0.486024, 0.5, 0.50571, 0.527684, 0.558359, 0.586024, 0.6, 0.60571, 0.627684, 0.658359, 0.686024, 0.7, 0.70571, 0.727684, 0.758359, 0.786024, 0.8, 0.80571, 0.827684, 0.858359, 0.886024, 0.9, 0.90571, 0.927684, 0.958359, 0.986024, 1}
 
-15 Declarations: t p1 p2 p3 p4 za zb zc dza dzb diffeq1 diffeq2 algeq1 dza_disc_eq dzb_disc_eq
+16 Declarations: t_domain t p1 p2 p3 p4 za zb zc dza dzb diffeq1 diffeq2 algeq1 dza_disc_eq dzb_disc_eq
 [[ 1.0000  0.0000 -0.0000]
  [ 0.9607  0.0327  0.0066]
  [ 0.9236  0.0547  0.0217]

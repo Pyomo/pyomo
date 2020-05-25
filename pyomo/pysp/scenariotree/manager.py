@@ -24,9 +24,9 @@ from collections import (defaultdict,
                          namedtuple)
 
 import pyutilib.misc
-import pyutilib.enum
 from pyutilib.pyro import (shutdown_pyro_components,
                            using_pyro4)
+from pyomo.common.dependencies import dill, dill_available
 from pyomo.opt import (UndefinedData,
                        undefined,
                        SolverStatus,
@@ -40,8 +40,7 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     safe_register_common_option,
                                     _domain_must_be_str,
                                     _domain_tuple_of_str)
-from pyomo.pysp.util.misc import (load_external_module,
-                                  _EnumValueWithData)
+from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.action_manager_pyro \
@@ -57,60 +56,20 @@ from six import (iteritems,
                  string_types)
 from six.moves import xrange
 
-try:
-    import dill
-    dill_available = True                         #pragma:nocover
-except ImportError:                               #pragma:nocover
-    dill_available = False
-
 logger = logging.getLogger('pyomo.pysp')
 
-_invocation_type_enum_list = []
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 0, 'Single'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 1, 'PerScenario'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 2, 'PerScenarioChained'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 3, 'PerBundle'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 4, 'PerBundleChained'))
+class _InvocationTypeMeta(type):
+    def __contains__(cls, obj):
+        return isinstance(obj, cls._value)
+    def __iter__(cls):
+        return iter(
+            sorted((obj for obj in cls.__dict__.values()
+                    if isinstance(obj, cls._value)),
+                   key=lambda _: _.index)
+        )
 
-##### These values are DEPRECATED
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 5, 'SingleInvocation'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 6, 'PerScenarioInvocation'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 7, 'PerScenarioChainedInvocation'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 8, 'PerBundleInvocation'))
-_invocation_type_enum_list.append(
-    pyutilib.enum.EnumValue('InvocationType', 9, 'PerBundleChainedInvocation'))
-#####
-
-# These are enum values that carry data with them
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_must_be_str,
-                       'InvocationType', 10, 'OnScenario'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_tuple_of_str,
-                       'InvocationType', 11, 'OnScenarios'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_must_be_str,
-                       'InvocationType', 12, 'OnBundle'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_tuple_of_str,
-                       'InvocationType', 13, 'OnBundles'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_tuple_of_str,
-                       'InvocationType', 14, 'OnScenariosChained'))
-_invocation_type_enum_list.append(
-    _EnumValueWithData(_domain_tuple_of_str,
-                       'InvocationType', 15, 'OnBundlesChained'))
-
-class _InvocationTypeDocumentedEnum(pyutilib.enum.Enum):
+@six.add_metaclass(_InvocationTypeMeta)
+class InvocationType(object):
     """Controls execution of function invocations with a scenario tree manager.
 
     In all cases, the function must accept the process-local scenario
@@ -225,8 +184,61 @@ class _InvocationTypeDocumentedEnum(pyutilib.enum.Enum):
             managed by the named scenario tree worker.
 
     """
-
-InvocationType = _InvocationTypeDocumentedEnum(*_invocation_type_enum_list)
+    class _value(object):
+        def __init__(self, key, index):
+            self._key = key
+            self._index = index
+        @property
+        def key(self):
+            return self._key
+        @property
+        def index(self):
+            return self._index
+        def __hash__(self):
+            return hash((self.key, self.index))
+        def __eq__(self, other):
+            return (self.__class__ is other.__class__) and \
+                (self.key == other.key) and (self.index == other.index)
+        def __ne__(self, other):
+            return not self.__eq__(other)
+        def __repr__(self):
+            return ("InvocationType.%s" % (self.key))
+    class _value_with_data(_value):
+        def __init__(self, key, id_, domain):
+            super(self.__class__, self).__init__(key, id_)
+            self._domain = domain
+            self._data = None
+        @property
+        def data(self):
+            return self._data
+        def __call__(self, data):
+            if self.data is not None:
+                raise ValueError("Must create from InvocationType class")
+            obj = self.__class__(self.key, self.index, self._domain)
+            assert obj.data is None
+            obj._data = self._domain(data)
+            assert obj.data is obj._data
+            return obj
+    Single =                       _value("Single", 0)
+    PerScenario =                  _value("PerScenario", 1)
+    PerScenarioChained =           _value("PerScenarioChained", 2)
+    PerBundle =                    _value("PerBundle", 3)
+    PerBundleChained =             _value("PerBundleChained", 4)
+    ### deprecated
+    SingleInvocation =             _value("SingleInvocation", 5)
+    PerScenarioInvocation =        _value("PerScenarioInvocation", 6)
+    PerScenarioChainedInvocation = _value("PerScenarioChainedInvocation", 7)
+    PerBundleInvocation =          _value("PerBundleInvocation", 8)
+    PerBundleChainedInvocation =   _value("PerBundleChainedInvocation", 9)
+    ###
+    OnScenario =                   _value_with_data("OnScenario", 10 ,_domain_must_be_str)
+    OnScenarios =                  _value_with_data("OnScenarios", 11, _domain_tuple_of_str)
+    OnBundle =                     _value_with_data("OnBundle", 12, _domain_must_be_str)
+    OnBundles =                    _value_with_data("OnBundles", 13, _domain_tuple_of_str)
+    OnScenariosChained =           _value_with_data("OnScenariosChained", 14, _domain_tuple_of_str)
+    OnBundlesChained =             _value_with_data("OnBundlesChained", 15, _domain_tuple_of_str)
+    def __init__(self, *args, **kwds):
+        raise NotImplementedError
 
 _deprecated_invocation_types = \
     {InvocationType.SingleInvocation: InvocationType.Single,
@@ -1758,7 +1770,7 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
             raise ValueError("Unexpected function invocation type '%s'. "
                              "Expected one of %s"
                              % (invocation_type,
-                                [str(v) for v in InvocationType._values]))
+                                [str(v) for v in InvocationType]))
 
         result = None
         if (invocation_type == InvocationType.Single):
@@ -3597,7 +3609,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
             raise ValueError("Unexpected function invocation type '%s'. "
                              "Expected one of %s"
                              % (invocation_type,
-                                [str(v) for v in InvocationType._values]))
+                                [str(v) for v in InvocationType]))
 
         if oneway_call:
             action_handle_data = None

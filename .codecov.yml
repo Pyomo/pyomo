@@ -1,4 +1,19 @@
 coverage:
   range: "50...100"
+  status:
+    project:
+      default:
+        # Allow overall coverage to drop to avoid failures due to code
+        # cleanup or CI unavailability/lag
+        threshold: 5%
+    patch:
+      default:
+        # Force patches to be covered at the level of the codebase
+        threshold: 0%
 #  ci:
 #    - !ci.appveyor.com
+codecov:
+  notify:
+    # GHA: 18, Travis: 13, Jenkins: 6
+    after_n_builds: 33
+    wait_for_ci: yes

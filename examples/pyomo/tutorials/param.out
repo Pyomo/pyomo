@@ -1,14 +1,19 @@
 5 Set Declarations
-    A : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=(2, 8)
-        [2, 4, 6, 8]
-    B : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
-    R_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
-        Virtual
-    W_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
-        Virtual
-    X_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
-        Virtual
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    4 : {2, 4, 6, 8}
+    B : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
+    R_index : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*B :   12 : {(2, 1), (2, 2), (2, 3), (4, 1), (4, 2), (4, 3), (6, 1), (6, 2), (6, 3), (8, 1), (8, 2), (8, 3)}
+    W_index : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*B :   12 : {(2, 1), (2, 2), (2, 3), (4, 1), (4, 2), (4, 3), (6, 1), (6, 2), (6, 3), (8, 1), (8, 2), (8, 3)}
+    X_index : Size=1, Index=None, Ordered=True
+        Key  : Dimen : Domain : Size : Members
+        None :     2 :    A*B :   12 : {(2, 1), (2, 2), (2, 3), (4, 1), (4, 2), (4, 3), (6, 1), (6, 2), (6, 3), (8, 1), (8, 2), (8, 3)}
 
 9 Param Declarations
     R : Size=12, Index=R_index, Domain=Any, Default=99.0, Mutable=False

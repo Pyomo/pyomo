@@ -21,7 +21,6 @@ from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import ActiveIndexedComponent, UnindexedComponent_set
 from pyomo.core.base.set_types import PositiveIntegers
-from pyomo.core.base.sets import Set, _IndexedOrderedSetData
 
 logger = logging.getLogger('pyomo.core')
 
@@ -236,7 +235,7 @@ class SOSConstraint(ActiveIndexedComponent):
             else:
                 if not self.is_indexed():
                     if self._sosSet is None:
-                        if getattr(self._sosVars.index_set(), 'ordered', False):
+                        if getattr(self._sosVars.index_set(), 'isordered', lambda *x: False)():
                             _sosSet = {None: list(self._sosVars.index_set())}
                         else:
                             _sosSet = {None: set(self._sosVars.index_set())}
@@ -256,9 +255,7 @@ class SOSConstraint(ActiveIndexedComponent):
                         ordered=False
                         if type(sosSet) is list or sosSet is UnindexedComponent_set or len(sosSet) == 1:
                             ordered=True
-                        if hasattr(sosSet, 'ordered') and sosSet.ordered:
-                            ordered=True
-                        if type(sosSet) is _IndexedOrderedSetData:
+                        if hasattr(sosSet, 'isordered') and sosSet.isordered():
                             ordered=True
                         if not ordered:
                             raise ValueError("Cannot define a SOS over an unordered index.")
@@ -323,7 +320,7 @@ class SOSConstraint(ActiveIndexedComponent):
             ostream.write(self.doc+'\n')
             ostream.write("  ")
         ostream.write("\tSize="+str(len(self._data.keys()))+' ')
-        if isinstance(self._index,Set):
+        if self.is_indexed():
             ostream.write("\tIndex= "+self._index.name+'\n')
         else:
             ostream.write("\n")

@@ -15,6 +15,7 @@ import sys
 import copy
 import json
 
+from pyomo.common.dependencies import yaml, yaml_load_args
 import pyomo.opt
 from pyomo.opt.results.container import (undefined,
                                          ignore,
@@ -27,12 +28,6 @@ import pyomo.opt.results.solver
 
 from six import iteritems, StringIO
 from six.moves import xrange
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
 
 class SolverResults(MapContainer):
@@ -182,9 +177,7 @@ class SolverResults(MapContainer):
             return
 
         if not 'format' in kwds or kwds['format'] == 'yaml':
-            if not yaml_available:
-                raise IOError("Aborting SolverResults.read() because PyYAML is not installed!")
-            repn = yaml.load(istream, Loader=yaml.SafeLoader)
+            repn = yaml.load(istream, **yaml_load_args)
         else:
             repn = json.load(istream)
         for i in xrange(len(self._order)):

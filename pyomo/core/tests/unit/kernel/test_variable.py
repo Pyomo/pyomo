@@ -24,16 +24,16 @@ from pyomo.core.kernel.variable import \
 from pyomo.core.kernel.block import block
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
-                                         Binary,
-                                         NonNegativeReals,
-                                         NegativeReals,
-                                         Reals,
-                                         RealInterval,
-                                         Integers,
-                                         NonNegativeIntegers,
-                                         NegativeIntegers,
-                                         IntegerInterval,
                                          BooleanSet)
+from pyomo.core.base.set import(Binary,
+                                NonNegativeReals,
+                                NegativeReals,
+                                Reals,
+                                Integers,
+                                NonNegativeIntegers,
+                                NegativeIntegers,
+                                RealInterval,
+                                IntegerInterval)
 
 import six
 from six import StringIO

@@ -75,10 +75,7 @@
 
 import copy, logging
 
-try:
-    import numpy
-except ImportError:
-    pass
+from pyomo.common.dependencies import numpy
 
 logger = logging.getLogger('pyomo.network')
 

@@ -10,29 +10,20 @@
 import pyutilib.th as unittest
 import pyomo.environ as aml
 import os
-
-from .. import numpy_available, scipy_available
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available, scipy_sparse, scipy_available
+)
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
-
-import scipy.sparse as spa
-import numpy as np
-
-from pyomo.contrib.pynumero.extensions.asl import AmplInterface
+from pyomo.contrib.pynumero.asl import AmplInterface
+from pyomo.contrib.pynumero.interfaces.nlp import NLP
+from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.contrib.pynumero.examples.structured.nlp_compositions import TwoStageStochasticNLP
+from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
+from scipy_sparse import coo_matrix, identity
 if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run NLP tests")
-
-
-from pyomo.contrib.pynumero.interfaces.nlp import NLP
-from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.pynumero.interfaces.nlp_compositions import TwoStageStochasticNLP
-from pyomo.contrib.pynumero.sparse import (BlockVector,
-                                           BlockMatrix,
-                                           BlockSymMatrix,
-                                           empty_matrix)
-
-from scipy.sparse import coo_matrix, identity
 
 
 def create_basic_dense_qp(G, A, b, c, complicated_var_ids):
@@ -384,8 +375,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         nz = len(self.complicated_vars_ids)
         nx_i = (self.G.shape[0] + nz)
         for i in range(self.n_scenarios):
-            xl[i] = np.array([-np.inf]*nx_i)
-            xl[i][0] = -100.0
+            xl.set_block(i, np.array([-np.inf]*nx_i))
+            xl.get_block(i)[0] = -100.0
         xl[self.n_scenarios] = np.array([-np.inf] * nz)
         self.assertIsInstance(self.nlp.xl(), BlockVector)
         xl_flat = xl.flatten()
@@ -402,8 +393,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(lower_x, BlockVector)
         self.assertEqual(lower_x.nblocks, n_scenarios + 1)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(lower_x[i], xl))
-        self.assertTrue(np.allclose(lower_x[n_scenarios], xl_z))
+            self.assertTrue(np.allclose(lower_x.get_block(i), xl))
+        self.assertTrue(np.allclose(lower_x.get_block(n_scenarios), xl_z))
 
         xl = np.array([0, 0])
         n_scenarios = len(self.scenarios2)
@@ -413,16 +404,16 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(lower_x, BlockVector)
         self.assertEqual(lower_x.nblocks, n_scenarios + 1)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(lower_x[i], xl))
-        self.assertTrue(np.allclose(lower_x[n_scenarios], xl_z))
+            self.assertTrue(np.allclose(lower_x.get_block(i), xl))
+        self.assertTrue(np.allclose(lower_x.get_block(n_scenarios), xl_z))
 
     def test_xu(self):
         xu = BlockVector(self.n_scenarios + 1)
         nz = len(self.complicated_vars_ids)
         nx_i = (self.G.shape[0] + nz)
         for i in range(self.n_scenarios):
-            xu[i] = np.array([np.inf]*nx_i)
-            xu[i][0] = 100.0
+            xu.set_block(i, np.array([np.inf]*nx_i))
+            xu.get_block(i)[0] = 100.0
         xu[self.n_scenarios] = np.array([np.inf] * nz)
         self.assertIsInstance(self.nlp.xu(), BlockVector)
         xu_flat = xu.flatten()
@@ -439,8 +430,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(upper_x, BlockVector)
         self.assertEqual(upper_x.nblocks, n_scenarios + 1)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(upper_x[i], xu))
-        self.assertTrue(np.allclose(upper_x[n_scenarios], xu_z))
+            self.assertTrue(np.allclose(upper_x.get_block(i), xu))
+        self.assertTrue(np.allclose(upper_x.get_block(n_scenarios), xu_z))
 
         xu = np.array([100.0])
         n_scenarios = len(self.scenarios2)
@@ -450,8 +441,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(upper_x, BlockVector)
         self.assertEqual(upper_x.nblocks, n_scenarios + 1)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(upper_x[i], xu))
-        self.assertTrue(np.allclose(upper_x[n_scenarios], xu_z))
+            self.assertTrue(np.allclose(upper_x.get_block(i), xu))
+        self.assertTrue(np.allclose(upper_x.get_block(n_scenarios), xu_z))
 
     def test_gl(self):
         gl = [0.0, 0.0, -np.inf, -100., -500.]
@@ -461,8 +452,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(lower_g, BlockVector)
         self.assertEqual(lower_g.nblocks, n_scenarios * 2)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(lower_g[i], gl))
-            self.assertTrue(np.allclose(lower_g[i+n_scenarios],
+            self.assertTrue(np.allclose(lower_g.get_block(i), gl))
+            self.assertTrue(np.allclose(lower_g.get_block(i+n_scenarios),
                                         np.zeros(nz)))
 
         gl = np.array([0.0, 0.0, -100., -500.])
@@ -473,8 +464,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(lower_g, BlockVector)
         self.assertEqual(lower_g.nblocks, 2 * n_scenarios)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(lower_g[i], gl))
-            self.assertTrue(np.allclose(lower_g[i + n_scenarios],
+            self.assertTrue(np.allclose(lower_g.get_block(i), gl))
+            self.assertTrue(np.allclose(lower_g.get_block(i + n_scenarios),
                                         gl_z))
 
     def test_gu(self):
@@ -485,8 +476,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(upper_g, BlockVector)
         self.assertEqual(upper_g.nblocks, n_scenarios * 2)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(upper_g[i], gu))
-            self.assertTrue(np.allclose(upper_g[i + n_scenarios],
+            self.assertTrue(np.allclose(upper_g.get_block(i), gu))
+            self.assertTrue(np.allclose(upper_g.get_block(i + n_scenarios),
                                         np.zeros(nz)))
 
         gu = np.array([0.0, 0.0, 100.])
@@ -497,8 +488,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(upper_g, BlockVector)
         self.assertEqual(upper_g.nblocks, 2 * n_scenarios)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(upper_g[i], gu))
-            self.assertTrue(np.allclose(upper_g[i + n_scenarios],
+            self.assertTrue(np.allclose(upper_g.get_block(i), gu))
+            self.assertTrue(np.allclose(upper_g.get_block(i + n_scenarios),
                                         gu_z))
 
     def test_dl(self):
@@ -508,7 +499,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(lower_d, BlockVector)
         self.assertEqual(lower_d.nblocks, n_scenarios)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(lower_d[i], dl))
+            self.assertTrue(np.allclose(lower_d.get_block(i), dl))
 
         dl = np.array([-100., -500.])
         n_scenarios = len(self.scenarios2)
@@ -516,7 +507,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(lower_d, BlockVector)
         self.assertEqual(lower_d.nblocks, n_scenarios)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(lower_d[i], dl))
+            self.assertTrue(np.allclose(lower_d.get_block(i), dl))
 
     def test_du(self):
         du = [100., np.inf, np.inf]
@@ -525,7 +516,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(upper_d, BlockVector)
         self.assertEqual(upper_d.nblocks, n_scenarios)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(upper_d[i], du))
+            self.assertTrue(np.allclose(upper_d.get_block(i), du))
 
         du = np.array([100.])
         n_scenarios = len(self.scenarios2)
@@ -533,15 +524,15 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(upper_d, BlockVector)
         self.assertEqual(upper_d.nblocks, n_scenarios)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(upper_d[i], du))
+            self.assertTrue(np.allclose(upper_d.get_block(i), du))
 
     def test_x_init(self):
         x_init = BlockVector(self.n_scenarios + 1)
         nz = len(self.complicated_vars_ids)
         nx_i = (self.G.shape[0] + nz)
         for i in range(self.n_scenarios):
-            x_init[i] = np.zeros(nx_i)
-            x_init[i][0] = 1.0
+            x_init.set_block(i, np.zeros(nx_i))
+            x_init.get_block(i)[0] = 1.0
         x_init[self.n_scenarios] = np.zeros(nz)
         self.assertIsInstance(self.nlp.x_init(), BlockVector)
         x_init_flat = x_init.flatten()
@@ -557,8 +548,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(x_init, BlockVector)
         self.assertEqual(x_init.nblocks, n_scenarios + 1)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(x_init[i], x_init_i))
-        self.assertTrue(np.allclose(x_init[n_scenarios], np.zeros(nz)))
+            self.assertTrue(np.allclose(x_init.get_block(i), x_init_i))
+        self.assertTrue(np.allclose(x_init.get_block(n_scenarios), np.zeros(nz)))
 
     def test_create_vector_x(self):
 
@@ -566,7 +557,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         nz = len(self.complicated_vars_ids)
         nx_i = (self.G.shape[0] + nz)
         for i in range(self.n_scenarios):
-            x_[i] = np.zeros(nx_i)
+            x_.set_block(i, np.zeros(nx_i))
         x_[self.n_scenarios] = np.zeros(nz)
         self.assertEqual(x_.shape, self.nlp.create_vector_x().shape)
         self.assertEqual(x_.nblocks,
@@ -581,7 +572,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             xs = self.nlp.create_vector_x(subset=s)
             xs_ = BlockVector(self.n_scenarios + 1)
             for i in range(self.n_scenarios):
-                xs_[i] = np.zeros(1)
+                xs_.set_block(i, np.zeros(1))
             xs_[self.n_scenarios] = np.zeros(0)
             self.assertEqual(xs_.shape, xs.shape)
             self.assertEqual(xs_.nblocks, xs.nblocks)
@@ -598,8 +589,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(x, BlockVector)
         self.assertEqual(x.nblocks, n_scenarios + 1)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(x[i], xi))
-        self.assertTrue(np.allclose(x[n_scenarios], np.zeros(nz)))
+            self.assertTrue(np.allclose(x.get_block(i), xi))
+        self.assertTrue(np.allclose(x.get_block(n_scenarios), np.zeros(nz)))
 
         for s in ['l', 'u']:
             if s == 'l':
@@ -611,8 +602,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             self.assertIsInstance(x, BlockVector)
             self.assertEqual(x.nblocks, n_scenarios + 1)
             for i in range(n_scenarios):
-                self.assertTrue(np.allclose(x[i], xi))
-            self.assertTrue(np.allclose(x[n_scenarios], np.zeros(0)))
+                self.assertTrue(np.allclose(x.get_block(i), xi))
+            self.assertTrue(np.allclose(x.get_block(n_scenarios), np.zeros(0)))
 
     def test_create_vector_y(self):
         nz = len(self.complicated_vars_ids)
@@ -620,7 +611,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
 
         y_ = BlockVector(2 * self.n_scenarios)
         for i in range(self.n_scenarios):
-            y_[i] = np.zeros(ng_i)
+            y_.set_block(i, np.zeros(ng_i))
             y_[self.n_scenarios + i] = np.zeros(nz)
         y = self.nlp.create_vector_y()
 
@@ -634,7 +625,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         # check for equalities
         ys_ = BlockVector(2 * self.n_scenarios)
         for i in range(self.n_scenarios):
-            ys_[i] = np.zeros(ng_i)
+            ys_.set_block(i, np.zeros(ng_i))
             ys_[self.n_scenarios + i] = np.zeros(nz)
         ys = self.nlp.create_vector_y(subset='c')
         self.assertEqual(ys_.shape, ys.shape)
@@ -647,7 +638,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         # check for inequalities
         ys_ = BlockVector(self.n_scenarios)
         for i in range(self.n_scenarios):
-            ys_[i] = np.zeros(0)
+            ys_.set_block(i, np.zeros(0))
         ys = self.nlp.create_vector_y(subset='d')
         self.assertEqual(ys_.shape, ys.shape)
         self.assertEqual(ys_.nblocks, ys.nblocks)
@@ -665,8 +656,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(y, BlockVector)
         self.assertEqual(y.nblocks, 2 * n_scenarios)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(y[i], np.zeros(gi)))
-            self.assertTrue(np.allclose(y[i + n_scenarios], np.zeros(nz)))
+            self.assertTrue(np.allclose(y.get_block(i), np.zeros(gi)))
+            self.assertTrue(np.allclose(y.get_block(i + n_scenarios), np.zeros(nz)))
 
         for s in ['c', 'd']:
             y = self.nlp2.create_vector_y(subset=s)
@@ -684,9 +675,9 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
                 gi = 1
                 self.assertEqual(y.nblocks, n_scenarios)
             for i in range(n_scenarios):
-                self.assertTrue(np.allclose(y[i], np.zeros(gi)))
+                self.assertTrue(np.allclose(y.get_block(i), np.zeros(gi)))
                 if s == 'c':
-                    self.assertTrue(np.allclose(y[i + n_scenarios], np.zeros(nz)))
+                    self.assertTrue(np.allclose(y.get_block(i + n_scenarios), np.zeros(nz)))
 
     def test_nlps(self):
 
@@ -720,7 +711,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         x = self.nlp2.create_vector_x()
         n_scenarios = len(self.scenarios2)
         for i in range(n_scenarios):
-            x[i][1] = 5
+            x.get_block(i)[1] = 5
         self.assertEqual(25.0 * n_scenarios, self.nlp2.objective(x))
 
     def test_grad_objective(self):
@@ -735,20 +726,20 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         x.fill(1.0)
         grad_obj = self.nlp.grad_objective(x)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(grad_obj[i], single_grad))
+            self.assertTrue(np.allclose(grad_obj.get_block(i), single_grad))
         self.assertTrue(np.allclose(grad_obj[self.n_scenarios],
                                     np.zeros(nz)))
 
         grad_obj.fill(0.0)
         self.nlp.grad_objective(x, out=grad_obj)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(grad_obj[i], single_grad))
+            self.assertTrue(np.allclose(grad_obj.get_block(i), single_grad))
         self.assertTrue(np.allclose(grad_obj[self.n_scenarios],
                                     np.zeros(nz)))
 
         grad_obj = self.nlp.grad_objective(x.flatten())
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(grad_obj[i], single_grad))
+            self.assertTrue(np.allclose(grad_obj.get_block(i), single_grad))
         self.assertTrue(np.allclose(grad_obj[self.n_scenarios],
                                     np.zeros(nz)))
 
@@ -757,7 +748,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         nz = len(self.complicated_vars_ids2)
         n_scenarios = len(self.scenarios2)
         for i in range(n_scenarios):
-            x[i][1] = 1
+            x.get_block(i)[1] = 1
 
         df = self.nlp2.grad_objective(x)
         self.assertIsInstance(df, BlockVector)
@@ -765,8 +756,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         dfi = np.zeros(3)
         dfi[1] = 2
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(df[i], dfi))
-        self.assertTrue(np.allclose(df[n_scenarios], np.zeros(nz)))
+            self.assertTrue(np.allclose(df.get_block(i), dfi))
+        self.assertTrue(np.allclose(df.get_block(n_scenarios), np.zeros(nz)))
 
     def test_evaluate_g(self):
 
@@ -776,24 +767,24 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         gi = np.array([-59, -38, -40, 12, 0, 0])
         g = self.nlp.evaluate_g(x)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(g[i], gi))
+            self.assertTrue(np.allclose(g.get_block(i), gi))
             self.assertTrue(np.allclose(g[i+self.n_scenarios], np.zeros(nz)))
 
         g.fill(0.0)
         self.nlp.evaluate_g(x, out=g)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(g[i], gi))
+            self.assertTrue(np.allclose(g.get_block(i), gi))
             self.assertTrue(np.allclose(g[i + self.n_scenarios], np.zeros(nz)))
 
         g = self.nlp.evaluate_g(x.flatten())
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(g[i], gi))
+            self.assertTrue(np.allclose(g.get_block(i), gi))
             self.assertTrue(np.allclose(g[i + self.n_scenarios], np.zeros(nz)))
 
         g.fill(0.0)
         self.nlp.evaluate_g(x.flatten(), out=g)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(g[i], gi))
+            self.assertTrue(np.allclose(g.get_block(i), gi))
             self.assertTrue(np.allclose(g[i + self.n_scenarios], np.zeros(nz)))
 
         # test nlp2
@@ -811,8 +802,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(g.size, n_scenarios * (ngi + nz))
         cvars = [0, 2]
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(g[i], gi))
-            self.assertTrue(np.allclose(g[i + n_scenarios], x[i][cvars]))
+            self.assertTrue(np.allclose(g.get_block(i), gi))
+            self.assertTrue(np.allclose(g.get_block(i + n_scenarios), x.get_block(i)[cvars]))
 
         # test out
         g.fill(0.0)
@@ -822,8 +813,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(g.size, n_scenarios * (ngi + nz))
         cvars = [0, 2]
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(g[i], gi))
-            self.assertTrue(np.allclose(g[i + n_scenarios], x[i][cvars]))
+            self.assertTrue(np.allclose(g.get_block(i), gi))
+            self.assertTrue(np.allclose(g.get_block(i + n_scenarios), x.get_block(i)[cvars]))
 
     def test_evaluate_c(self):
 
@@ -833,24 +824,24 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         ci = np.array([-59, -38, -40, 12, 0, 0])
         c = self.nlp.evaluate_c(x)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(c[i], ci))
+            self.assertTrue(np.allclose(c.get_block(i), ci))
             self.assertTrue(np.allclose(c[i+self.n_scenarios], np.zeros(nz)))
 
         c.fill(0.0)
         self.nlp.evaluate_c(x, out=c)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(c[i], ci))
+            self.assertTrue(np.allclose(c.get_block(i), ci))
             self.assertTrue(np.allclose(c[i + self.n_scenarios], np.zeros(nz)))
 
         c = self.nlp.evaluate_c(x.flatten())
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(c[i], ci))
+            self.assertTrue(np.allclose(c.get_block(i), ci))
             self.assertTrue(np.allclose(c[i + self.n_scenarios], np.zeros(nz)))
 
         c.fill(0.0)
         self.nlp.evaluate_c(x.flatten(), out=c)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(c[i], ci))
+            self.assertTrue(np.allclose(c.get_block(i), ci))
             self.assertTrue(np.allclose(c[i + self.n_scenarios], np.zeros(nz)))
 
         # test nlp2
@@ -868,8 +859,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(c.size, n_scenarios * (nci + nz))
         cvars = [0, 2]
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(c[i], ci))
-            self.assertTrue(np.allclose(c[i + n_scenarios], x[i][cvars]))
+            self.assertTrue(np.allclose(c.get_block(i), ci))
+            self.assertTrue(np.allclose(c.get_block(i + n_scenarios), x.get_block(i)[cvars]))
 
         # test out
         c.fill(0.0)
@@ -879,8 +870,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(c.size, n_scenarios * (nci + nz))
         cvars = [0, 2]
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(c[i], ci))
-            self.assertTrue(np.allclose(c[i + n_scenarios], x[i][cvars]))
+            self.assertTrue(np.allclose(c.get_block(i), ci))
+            self.assertTrue(np.allclose(c.get_block(i + n_scenarios), x.get_block(i)[cvars]))
 
         # tests evaluated_g
         g = self.nlp2.evaluate_g(x)
@@ -890,8 +881,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(c.size, n_scenarios * (nci + nz))
         cvars = [0, 2]
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(c[i], ci))
-            self.assertTrue(np.allclose(c[i + n_scenarios], x[i][cvars]))
+            self.assertTrue(np.allclose(c.get_block(i), ci))
+            self.assertTrue(np.allclose(c.get_block(i + n_scenarios), x.get_block(i)[cvars]))
 
         # tests evaluated_g with out
         c.fill(0.0)
@@ -901,8 +892,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(c.size, n_scenarios * (nci + nz))
         cvars = [0, 2]
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(c[i], ci))
-            self.assertTrue(np.allclose(c[i + n_scenarios], x[i][cvars]))
+            self.assertTrue(np.allclose(c.get_block(i), ci))
+            self.assertTrue(np.allclose(c.get_block(i + n_scenarios), x.get_block(i)[cvars]))
 
     def test_evaluate_d(self):
 
@@ -918,7 +909,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(d.nblocks, n_scenarios)
         self.assertEqual(d.size, ndi * n_scenarios)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(di, d[i]))
+            self.assertTrue(np.allclose(di, d.get_block(i)))
 
         # test out
         d.fill(0.0)
@@ -927,7 +918,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(d.nblocks, n_scenarios)
         self.assertEqual(d.size, ndi * n_scenarios)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(di, d[i]))
+            self.assertTrue(np.allclose(di, d.get_block(i)))
 
         # test evaluated_g
         g = self.nlp2.evaluate_g(x)
@@ -936,7 +927,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(d.nblocks, n_scenarios)
         self.assertEqual(d.size, n_scenarios * n_scenarios)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(d[i], di))
+            self.assertTrue(np.allclose(d.get_block(i), di))
 
         # test evaluated_g
         d.fill(0.0)
@@ -945,7 +936,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(d.nblocks, n_scenarios)
         self.assertEqual(d.size, n_scenarios * n_scenarios)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(d[i], di))
+            self.assertTrue(np.allclose(d.get_block(i), di))
 
     def test_jacobian_g(self):
 
@@ -953,15 +944,15 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         nxi = nz + self.G.shape[1]
         ngi = nz + self.A.shape[0]
         Ji = BlockMatrix(2, 2)
-        Ji[0, 0] = coo_matrix(self.A)
+        Ji.set_block(0, 0, coo_matrix(self.A))
         B1 = np.zeros((nz, self.A.shape[1]))
         B2 = np.zeros((nz, nz))
         for i, v in enumerate(self.complicated_vars_ids):
             B1[i, v] = -1.0
             B2[i, i] = 1.0
-        Ji[1, 0] = coo_matrix(B1)
-        Ji[1, 1] = coo_matrix(B2)
-        dense_Ji = Ji.todense()
+        Ji.set_block(1, 0, coo_matrix(B1))
+        Ji.set_block(1, 1, coo_matrix(B2))
+        dense_Ji = Ji.toarray()
 
         x = self.nlp.create_vector_x()
         jac_g = self.nlp.jacobian_g(x)
@@ -972,45 +963,47 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_gi = jac_g[i, i].todense()
+            jac_gi = jac_g.get_block(i, i).toarray()
             self.assertTrue(np.allclose(jac_gi, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
-        Ai_[0, 1] = identity(nz)
-        Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_.set_block(0, 1, identity(nz))
+        Ai_.set_block(0, 0, coo_matrix((nz, self.G.shape[1])))
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_g[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_g[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test out
         # change g values
         for i in range(self.n_scenarios):
-            jac_g[i, i] *= 2.0
-            jac_gi = jac_g[i, i].todense()
+            _jac_g_i_i = jac_g.get_block(i, i)
+            _jac_g_i_i *= 2.0
+            jac_g.set_block(i, i, _jac_g_i_i)
+            jac_gi = jac_g.get_block(i, i).toarray()
             self.assertTrue(np.allclose(jac_gi, 2*dense_Ji))
         self.nlp.jacobian_g(x, out=jac_g)
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_gi = jac_g[i, i].todense()
+            jac_gi = jac_g.get_block(i, i).toarray()
             self.assertTrue(np.allclose(jac_gi, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
-        Ai_[0, 1] = identity(nz)
-        Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_.set_block(0, 1, identity(nz))
+        Ai_.set_block(0, 0, coo_matrix((nz, self.G.shape[1])))
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_g[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_g[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test flattened vector
         jac_g = self.nlp.jacobian_g(x.flatten())
@@ -1021,20 +1014,20 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_gi = jac_g[i, i].todense()
+            jac_gi = jac_g.get_block(i, i).toarray()
             self.assertTrue(np.allclose(jac_gi, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
-        Ai_[0, 1] = identity(nz)
-        Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_.set_block(0, 1, identity(nz))
+        Ai_.set_block(0, 0, coo_matrix((nz, self.G.shape[1])))
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_g[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_g[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test nlp2
         instance = self.scenarios2['s0']
@@ -1048,32 +1041,32 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(Jc.bshape, (2 * n_scenarios, n_scenarios + 1))
         AB = self.nlp2.coupling_matrix()
         for i in range(n_scenarios):
-            AB[i, i] = AB[i, i].tocoo()
-        AB[n_scenarios, n_scenarios] = AB[n_scenarios, n_scenarios].tocoo()
+            AB.set_block(i, i, AB.get_block(i, i).tocoo())
+        AB.set_block(n_scenarios, n_scenarios, AB.get_block(n_scenarios, n_scenarios).tocoo())
 
         for i in range(n_scenarios):
-            self.assertIsInstance(Jc[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[i, i].row, Jci.row))
-            self.assertTrue(np.allclose(Jc[i, i].col, Jci.col))
-            self.assertTrue(np.allclose(Jc[i, i].data, Jci.data))
+            self.assertIsInstance(Jc.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(i, i).row, Jci.row))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).col, Jci.col))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).data, Jci.data))
 
             # check Ai
-            self.assertIsInstance(Jc[n_scenarios + i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].row,
-                                        AB[i, i].row))
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].col,
-                                        AB[i, i].col))
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].data,
-                                        AB[i, i].data))
+            self.assertIsInstance(Jc.get_block(n_scenarios + i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).row,
+                                        AB.get_block(i, i).row))
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).col,
+                                        AB.get_block(i, i).col))
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).data,
+                                        AB.get_block(i, i).data))
 
             # check Bi
-            coo_identity = Jc[n_scenarios + i, n_scenarios].tocoo()
+            coo_identity = Jc.get_block(n_scenarios + i, n_scenarios).tocoo()
             self.assertTrue(np.allclose(coo_identity.row,
-                                        AB[n_scenarios, n_scenarios].row))
+                                        AB.get_block(n_scenarios, n_scenarios).row))
             self.assertTrue(np.allclose(coo_identity.col,
-                                        AB[n_scenarios, n_scenarios].col))
+                                        AB.get_block(n_scenarios, n_scenarios).col))
             self.assertTrue(np.allclose(coo_identity.data,
-                                        AB[n_scenarios, n_scenarios].data))
+                                        AB.get_block(n_scenarios, n_scenarios).data))
 
         # test flattened
         Jc = self.nlp2.jacobian_g(x.flatten())
@@ -1081,51 +1074,53 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(Jc.bshape, (2 * n_scenarios, n_scenarios + 1))
         AB = self.nlp2.coupling_matrix()
         for i in range(n_scenarios):
-            AB[i, i] = AB[i, i].tocoo()
-        AB[n_scenarios, n_scenarios] = AB[n_scenarios, n_scenarios].tocoo()
+            AB.set_block(i, i, AB.get_block(i, i).tocoo())
+        AB.set_block(n_scenarios, n_scenarios, AB.get_block(n_scenarios, n_scenarios).tocoo())
 
         for i in range(n_scenarios):
-            self.assertIsInstance(Jc[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[i, i].row, Jci.row))
-            self.assertTrue(np.allclose(Jc[i, i].col, Jci.col))
-            self.assertTrue(np.allclose(Jc[i, i].data, Jci.data))
+            self.assertIsInstance(Jc.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(i, i).row, Jci.row))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).col, Jci.col))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).data, Jci.data))
 
             # check Ai
-            self.assertIsInstance(Jc[n_scenarios + i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].row,
-                                        AB[i, i].row))
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].col,
-                                        AB[i, i].col))
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].data,
-                                        AB[i, i].data))
+            self.assertIsInstance(Jc.get_block(n_scenarios + i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).row,
+                                        AB.get_block(i, i).row))
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).col,
+                                        AB.get_block(i, i).col))
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).data,
+                                        AB.get_block(i, i).data))
 
             # check Bi
 
-            coo_identity = Jc[n_scenarios + i, n_scenarios].tocoo()
+            coo_identity = Jc.get_block(n_scenarios + i, n_scenarios).tocoo()
             self.assertTrue(np.allclose(coo_identity.row,
-                                        AB[n_scenarios, n_scenarios].row))
+                                        AB.get_block(n_scenarios, n_scenarios).row))
             self.assertTrue(np.allclose(coo_identity.col,
-                                        AB[n_scenarios, n_scenarios].col))
+                                        AB.get_block(n_scenarios, n_scenarios).col))
             self.assertTrue(np.allclose(coo_identity.data,
-                                        AB[n_scenarios, n_scenarios].data))
+                                        AB.get_block(n_scenarios, n_scenarios).data))
 
         # test out
         for i in range(n_scenarios):
-            Jc[i, i] *= 2.0
-            self.assertTrue(np.allclose(Jc[i, i].data, Jci.data * 2.0))
+            _Jc_i_i = Jc.get_block(i, i)
+            _Jc_i_i *= 2.0
+            Jc.set_block(i, i, _Jc_i_i)
+            self.assertTrue(np.allclose(Jc.get_block(i, i).data, Jci.data * 2.0))
 
         self.nlp2.jacobian_g(x, out=Jc)
         self.assertIsInstance(Jc, BlockMatrix)
         self.assertEqual(Jc.bshape, (2 * n_scenarios, n_scenarios + 1))
         AB = self.nlp2.coupling_matrix()
         for i in range(n_scenarios):
-            AB[i, i] = AB[i, i].tocoo()
+            AB.set_block(i, i, AB.get_block(i, i).tocoo())
 
         for i in range(n_scenarios):
-            self.assertIsInstance(Jc[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[i, i].row, Jci.row))
-            self.assertTrue(np.allclose(Jc[i, i].col, Jci.col))
-            self.assertTrue(np.allclose(Jc[i, i].data, Jci.data))
+            self.assertIsInstance(Jc.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(i, i).row, Jci.row))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).col, Jci.col))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).data, Jci.data))
 
     def test_jacobian_c(self):
 
@@ -1133,15 +1128,15 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         nxi = nz + self.G.shape[1]
         ngi = nz + self.A.shape[0]
         Ji = BlockMatrix(2, 2)
-        Ji[0, 0] = coo_matrix(self.A)
+        Ji.set_block(0, 0, coo_matrix(self.A))
         B1 = np.zeros((nz, self.A.shape[1]))
         B2 = np.zeros((nz, nz))
         for i, v in enumerate(self.complicated_vars_ids):
             B1[i, v] = -1.0
             B2[i, i] = 1.0
-        Ji[1, 0] = coo_matrix(B1)
-        Ji[1, 1] = coo_matrix(B2)
-        dense_Ji = Ji.todense()
+        Ji.set_block(1, 0, coo_matrix(B1))
+        Ji.set_block(1, 1, coo_matrix(B2))
+        dense_Ji = Ji.toarray()
 
         x = self.nlp.create_vector_x()
         jac_c = self.nlp.jacobian_c(x)
@@ -1152,45 +1147,47 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_ci = jac_c[i, i].todense()
+            jac_ci = jac_c.get_block(i, i).toarray()
             self.assertTrue(np.allclose(jac_ci, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
-        Ai_[0, 1] = identity(nz)
-        Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_.set_block(0, 1, identity(nz))
+        Ai_.set_block(0, 0, coo_matrix((nz, self.G.shape[1])))
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_c[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_c[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test out
         # change g values
         for i in range(self.n_scenarios):
-            jac_c[i, i] *= 2.0
-            jac_ci = jac_c[i, i].todense()
+            _jac_c_i_i = jac_c.get_block(i, i)
+            _jac_c_i_i *= 2.0
+            jac_c.set_block(i, i, _jac_c_i_i)
+            jac_ci = jac_c.get_block(i, i).toarray()
             self.assertTrue(np.allclose(jac_ci, 2 * dense_Ji))
         self.nlp.jacobian_c(x, out=jac_c)
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_ci = jac_c[i, i].todense()
+            jac_ci = jac_c.get_block(i, i).toarray()
             self.assertTrue(np.allclose(jac_ci, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
-        Ai_[0, 1] = identity(nz)
-        Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_.set_block(0, 1, identity(nz))
+        Ai_.set_block(0, 0, coo_matrix((nz, self.G.shape[1])))
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_c[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_c[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test flattened vector
         jac_g = self.nlp.jacobian_c(x.flatten())
@@ -1201,20 +1198,20 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
 
         # check block jacobians
         for i in range(self.n_scenarios):
-            jac_ci = jac_c[i, i].todense()
+            jac_ci = jac_c.get_block(i, i).toarray()
             self.assertTrue(np.allclose(jac_ci, dense_Ji))
 
         # check coupling jacobians
         Ai_ = BlockMatrix(1, 2)
-        Ai_[0, 1] = identity(nz)
-        Ai_[0, 0] = empty_matrix(nz, self.G.shape[1])
-        Ai_ = Ai_.todense()
-        Bi_ = -identity(nz).todense()
+        Ai_.set_block(0, 1, identity(nz))
+        Ai_.set_block(0, 0, coo_matrix((nz, self.G.shape[1])))
+        Ai_ = Ai_.toarray()
+        Bi_ = -identity(nz).toarray()
         for i in range(self.n_scenarios):
             Ai = jac_c[self.n_scenarios + i, i]
-            self.assertTrue(np.allclose(Ai.todense(), Ai_))
+            self.assertTrue(np.allclose(Ai.toarray(), Ai_))
             Bi = jac_c[self.n_scenarios + i, self.n_scenarios]
-            self.assertTrue(np.allclose(Bi.todense(), Bi_))
+            self.assertTrue(np.allclose(Bi.toarray(), Bi_))
 
         # test nlp2
         instance = self.scenarios2['s0']
@@ -1228,32 +1225,32 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(Jc.bshape, (2 * n_scenarios, n_scenarios + 1))
         AB = self.nlp2.coupling_matrix()
         for i in range(n_scenarios):
-            AB[i, i] = AB[i, i].tocoo()
-        AB[n_scenarios, n_scenarios] = AB[n_scenarios, n_scenarios].tocoo()
+            AB.set_block(i, i, AB.get_block(i, i).tocoo())
+        AB.set_block(n_scenarios, n_scenarios, AB.get_block(n_scenarios, n_scenarios).tocoo())
         for i in range(n_scenarios):
-            self.assertIsInstance(Jc[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[i, i].row, Jci.row))
-            self.assertTrue(np.allclose(Jc[i, i].col, Jci.col))
-            self.assertTrue(np.allclose(Jc[i, i].data, Jci.data))
+            self.assertIsInstance(Jc.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(i, i).row, Jci.row))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).col, Jci.col))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).data, Jci.data))
 
             # check Ai
-            self.assertIsInstance(Jc[n_scenarios + i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].row,
-                                        AB[i, i].row))
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].col,
-                                        AB[i, i].col))
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].data,
-                                        AB[i, i].data))
+            self.assertIsInstance(Jc.get_block(n_scenarios + i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).row,
+                                        AB.get_block(i, i).row))
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).col,
+                                        AB.get_block(i, i).col))
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).data,
+                                        AB.get_block(i, i).data))
 
             # check Bi
-            #self.assertIsInstance(Jc[n_scenarios + i, n_scenarios], coo_matrix)
-            coo_identity = Jc[n_scenarios + i, n_scenarios].tocoo()
+            #self.assertIsInstance(Jc.get_block(n_scenarios + i, n_scenarios), coo_matrix)
+            coo_identity = Jc.get_block(n_scenarios + i, n_scenarios).tocoo()
             self.assertTrue(np.allclose(coo_identity.row,
-                                        AB[n_scenarios, n_scenarios].row))
+                                        AB.get_block(n_scenarios, n_scenarios).row))
             self.assertTrue(np.allclose(coo_identity.col,
-                                        AB[n_scenarios, n_scenarios].col))
+                                        AB.get_block(n_scenarios, n_scenarios).col))
             self.assertTrue(np.allclose(coo_identity.data,
-                                        AB[n_scenarios, n_scenarios].data))
+                                        AB.get_block(n_scenarios, n_scenarios).data))
 
         # test flattened
         Jc = self.nlp2.jacobian_c(x.flatten())
@@ -1261,51 +1258,53 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertEqual(Jc.bshape, (2 * n_scenarios, n_scenarios + 1))
         AB = self.nlp2.coupling_matrix()
         for i in range(n_scenarios):
-            AB[i, i] = AB[i, i].tocoo()
-        AB[n_scenarios, n_scenarios] = AB[n_scenarios, n_scenarios].tocoo()
+            AB.set_block(i, i, AB.get_block(i, i).tocoo())
+        AB.set_block(n_scenarios, n_scenarios, AB.get_block(n_scenarios, n_scenarios).tocoo())
 
         for i in range(n_scenarios):
-            self.assertIsInstance(Jc[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[i, i].row, Jci.row))
-            self.assertTrue(np.allclose(Jc[i, i].col, Jci.col))
-            self.assertTrue(np.allclose(Jc[i, i].data, Jci.data))
+            self.assertIsInstance(Jc.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(i, i).row, Jci.row))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).col, Jci.col))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).data, Jci.data))
 
             # check Ai
-            self.assertIsInstance(Jc[n_scenarios + i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].row,
-                                        AB[i, i].row))
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].col,
-                                        AB[i, i].col))
-            self.assertTrue(np.allclose(Jc[n_scenarios + i, i].data,
-                                        AB[i, i].data))
+            self.assertIsInstance(Jc.get_block(n_scenarios + i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).row,
+                                        AB.get_block(i, i).row))
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).col,
+                                        AB.get_block(i, i).col))
+            self.assertTrue(np.allclose(Jc.get_block(n_scenarios + i, i).data,
+                                        AB.get_block(i, i).data))
 
             # check Bi
-            #self.assertIsInstance(Jc[n_scenarios + i, n_scenarios], coo_matrix)
-            coo_identity = Jc[n_scenarios + i, n_scenarios].tocoo()
+            #self.assertIsInstance(Jc.get_block(n_scenarios + i, n_scenarios), coo_matrix)
+            coo_identity = Jc.get_block(n_scenarios + i, n_scenarios).tocoo()
             self.assertTrue(np.allclose(coo_identity.row,
-                                        AB[n_scenarios, n_scenarios].row))
+                                        AB.get_block(n_scenarios, n_scenarios).row))
             self.assertTrue(np.allclose(coo_identity.col,
-                                        AB[n_scenarios, n_scenarios].col))
+                                        AB.get_block(n_scenarios, n_scenarios).col))
             self.assertTrue(np.allclose(coo_identity.data,
-                                        AB[n_scenarios, n_scenarios].data))
+                                        AB.get_block(n_scenarios, n_scenarios).data))
 
         # test out
         for i in range(n_scenarios):
-            Jc[i, i] *= 2.0
-            self.assertTrue(np.allclose(Jc[i, i].data, Jci.data * 2.0))
+            _Jc_i_i = Jc.get_block(i, i)
+            _Jc_i_i *= 2.0
+            Jc.set_block(i, i, _Jc_i_i)
+            self.assertTrue(np.allclose(Jc.get_block(i, i).data, Jci.data * 2.0))
 
         self.nlp2.jacobian_c(x, out=Jc)
         self.assertIsInstance(Jc, BlockMatrix)
         self.assertEqual(Jc.bshape, (2 * n_scenarios, n_scenarios + 1))
         AB = self.nlp2.coupling_matrix()
         for i in range(n_scenarios):
-            AB[i, i] = AB[i, i].tocoo()
+            AB.set_block(i, i, AB.get_block(i, i).tocoo())
 
         for i in range(n_scenarios):
-            self.assertIsInstance(Jc[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jc[i, i].row, Jci.row))
-            self.assertTrue(np.allclose(Jc[i, i].col, Jci.col))
-            self.assertTrue(np.allclose(Jc[i, i].data, Jci.data))
+            self.assertIsInstance(Jc.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jc.get_block(i, i).row, Jci.row))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).col, Jci.col))
+            self.assertTrue(np.allclose(Jc.get_block(i, i).data, Jci.data))
 
     def test_jacobian_d(self):
 
@@ -1319,88 +1318,95 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         self.assertIsInstance(Jd, BlockMatrix)
         self.assertEqual(Jd.bshape, (n_scenarios, n_scenarios))
         for i in range(n_scenarios):
-            self.assertIsInstance(Jd[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jd[i, i].row, Jdi.row))
-            self.assertTrue(np.allclose(Jd[i, i].col, Jdi.col))
-            self.assertTrue(np.allclose(Jd[i, i].data, Jdi.data))
+            self.assertIsInstance(Jd.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jd.get_block(i, i).row, Jdi.row))
+            self.assertTrue(np.allclose(Jd.get_block(i, i).col, Jdi.col))
+            self.assertTrue(np.allclose(Jd.get_block(i, i).data, Jdi.data))
 
         for i in range(n_scenarios):
-            Jd[i, i] *= 2.0
-            self.assertTrue(np.allclose(Jd[i, i].data, Jdi.data*2.0))
+            _Jd_i_i = Jd.get_block(i, i)
+            _Jd_i_i *= 2.0
+            Jd.set_block(i, i, _Jd_i_i)
+            self.assertTrue(np.allclose(Jd.get_block(i, i).data, Jdi.data*2.0))
 
         self.nlp2.jacobian_d(x, out=Jd)
         for i in range(n_scenarios):
-            self.assertIsInstance(Jd[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jd[i, i].row, Jdi.row))
-            self.assertTrue(np.allclose(Jd[i, i].col, Jdi.col))
-            self.assertTrue(np.allclose(Jd[i, i].data, Jdi.data))
+            self.assertIsInstance(Jd.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jd.get_block(i, i).row, Jdi.row))
+            self.assertTrue(np.allclose(Jd.get_block(i, i).col, Jdi.col))
+            self.assertTrue(np.allclose(Jd.get_block(i, i).data, Jdi.data))
 
         Jd = self.nlp2.jacobian_d(x.flatten())
         self.assertIsInstance(Jd, BlockMatrix)
         self.assertEqual(Jd.bshape, (n_scenarios, n_scenarios))
         for i in range(n_scenarios):
-            self.assertIsInstance(Jd[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jd[i, i].row, Jdi.row))
-            self.assertTrue(np.allclose(Jd[i, i].col, Jdi.col))
-            self.assertTrue(np.allclose(Jd[i, i].data, Jdi.data))
+            self.assertIsInstance(Jd.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jd.get_block(i, i).row, Jdi.row))
+            self.assertTrue(np.allclose(Jd.get_block(i, i).col, Jdi.col))
+            self.assertTrue(np.allclose(Jd.get_block(i, i).data, Jdi.data))
 
         for i in range(n_scenarios):
-            Jd[i, i] *= 2.0
-            self.assertTrue(np.allclose(Jd[i, i].data, Jdi.data * 2.0))
+            _Jd_i_i = Jd.get_block(i, i)
+            _Jd_i_i *= 2.0
+            Jd.set_block(i, i, _Jd_i_i)
+            self.assertTrue(np.allclose(Jd.get_block(i, i).data, Jdi.data * 2.0))
 
         self.nlp2.jacobian_d(x.flatten(), out=Jd)
         for i in range(n_scenarios):
-            self.assertIsInstance(Jd[i, i], coo_matrix)
-            self.assertTrue(np.allclose(Jd[i, i].row, Jdi.row))
-            self.assertTrue(np.allclose(Jd[i, i].col, Jdi.col))
-            self.assertTrue(np.allclose(Jd[i, i].data, Jdi.data))
+            self.assertIsInstance(Jd.get_block(i, i), coo_matrix)
+            self.assertTrue(np.allclose(Jd.get_block(i, i).row, Jdi.row))
+            self.assertTrue(np.allclose(Jd.get_block(i, i).col, Jdi.col))
+            self.assertTrue(np.allclose(Jd.get_block(i, i).data, Jdi.data))
 
     def test_hessian(self):
 
         nz = len(self.complicated_vars_ids)
-        Hi = BlockSymMatrix(2)
-        Hi[0, 0] = coo_matrix(self.G)
-        Hi[1, 1] = empty_matrix(nz, nz) # this is because of the way the test problem was setup
+        Hi = BlockMatrix(2, 2)
+        Hi.set_block(0, 0, coo_matrix(self.G))
+        # this is because of the way the test problem was setup
+        Hi.set_block(1, 1, coo_matrix((nz, nz)))
 
-        Hi = Hi.todense()
+        Hi = Hi.toarray()
         x = self.nlp.create_vector_x()
         y = self.nlp.create_vector_y()
         H = self.nlp.hessian_lag(x, y)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H.get_block(i, i).toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    coo_matrix((nz, nz)).toarray()))
 
         # test out
         # change g values
         for i in range(self.n_scenarios):
-            H[i, i] *= 2.0
-            Hj = H[i, i].todense()
+            _H_i_i = H.get_block(i, i)
+            _H_i_i *= 2.0
+            H.set_block(i, i, _H_i_i)
+            Hj = H.get_block(i, i).toarray()
             self.assertTrue(np.allclose(Hj, 2.0 * Hi))
         self.nlp.hessian_lag(x, y, out=H)
 
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H.get_block(i, i).toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    coo_matrix((nz, nz)).toarray()))
 
         H = self.nlp.hessian_lag(x.flatten(), y)
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H.get_block(i, i).toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    coo_matrix((nz, nz)).toarray()))
 
         H = self.nlp.hessian_lag(x.flatten(), y.flatten())
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H.get_block(i, i).toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    coo_matrix((nz, nz)).toarray()))
 
         H = self.nlp.hessian_lag(x, y.flatten())
         for i in range(self.n_scenarios):
-            self.assertTrue(np.allclose(H[i, i].todense(), Hi))
-        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].todense(),
-                                    empty_matrix(nz, nz).todense()))
+            self.assertTrue(np.allclose(H.get_block(i, i).toarray(), Hi))
+        self.assertTrue(np.allclose(H[self.n_scenarios, self.n_scenarios].toarray(),
+                                    coo_matrix((nz, nz)).toarray()))
 
     def test_expansion_matrix_xl(self):
 
@@ -1432,8 +1438,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         all_xl = Pxl * lower_x
         self.assertIsInstance(all_xl, BlockVector)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(xxi, all_xl[i]))
-        self.assertTrue(np.allclose(np.zeros(nz), all_xl[n_scenarios]))
+            self.assertTrue(np.allclose(xxi, all_xl.get_block(i)))
+        self.assertTrue(np.allclose(np.zeros(nz), all_xl.get_block(n_scenarios)))
 
     def expansion_matrix_xu(self):
 
@@ -1456,8 +1462,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         all_xu = Pxu * upper_x
         self.assertIsInstance(all_xu, BlockVector)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(xxi, all_xu[i]))
-        self.assertTrue(np.allclose(np.zeros(nz), all_xu[n_scenarios]))
+            self.assertTrue(np.allclose(xxi, all_xu.get_block(i)))
+        self.assertTrue(np.allclose(np.zeros(nz), all_xu.get_block(n_scenarios)))
 
     def test_expansion_matrix_dl(self):
 
@@ -1481,7 +1487,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         all_dl = Pdl * lower_d
         self.assertIsInstance(all_dl, BlockVector)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(ddi, all_dl[i]))
+            self.assertTrue(np.allclose(ddi, all_dl.get_block(i)))
 
     def test_expansion_matrix_du(self):
 
@@ -1505,7 +1511,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         all_du = Pdu * upper_d
         self.assertIsInstance(all_du, BlockVector)
         for i in range(n_scenarios):
-            self.assertTrue(np.allclose(ddi, all_du[i]))
+            self.assertTrue(np.allclose(ddi, all_du.get_block(i)))
 
     def test_coupling_matrix(self):
 
@@ -1520,7 +1526,7 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
         x.fill(1.0)
         zs = AB * x
         for i in range(n_scenarios):
-            self.assertEqual(zs[i].size, nz)
-        self.assertEqual(zs[n_scenarios].size, nz)
+            self.assertEqual(zs.get_block(i).size, nz)
+        self.assertEqual(zs.get_block(n_scenarios).size, nz)
 
 
