@@ -706,16 +706,52 @@ class TestReference(unittest.TestCase):
         self.assertEqual(len(m.b), 1)
         self.assertEqual(len(m.b[1].x), 3)
 
-        # While (2,1) appears to be a valid member of the slice, because 2
-        # was not in the Set when the Block rule fired, there is no
-        # m.b[2] block data.  Attempting to add m.xx[2,1] will correctly
-        # instantiate the block and then promptly fail because we don't
-        # automatically fire rules after construction.
-        with self.assertRaisesRegexp(
-                AttributeError, "'_BlockData' object has no attribute 'x'"):
-            m.xx.add((2,1))
+        # While (2,2) appears to be a valid member of the slice, because
+        # 2 was not in the Set when the Block rule fired, there is no
+        # m.b[2] block data.  Accessing m.xx[2,1] will construct the
+        # b[2] block data, fire the rule, and then add the new value to
+        # the Var x.
+        self.assertEqual(len(m.xx), 3)
+        m.xx[2,2] = 10
         self.assertEqual(len(m.b), 2)
-        self.assertEqual(len(list(m.b[2].component_objects())), 0)
+        self.assertEqual(len(list(m.b[2].component_objects())), 1)
+        self.assertEqual(len(m.xx), 4)
+        self.assertIs(m.xx[2,2], m.b[2].x[2])
+        self.assertEqual(value(m.b[2].x[2]), 10)
+
+    def test_insert_var(self):
+        m = ConcreteModel()
+        m.T = Set(initialize=[1,5])
+        m.x = Var(m.T, initialize=lambda m,i: i)
+        @m.Block(m.T)
+        def b(b, i):
+            b.y = Var(initialize=lambda b: 10*b.index())
+        ref_x = Reference(m.x[:])
+        ref_y = Reference(m.b[:].y)
+
+        self.assertEqual(len(m.x), 2)
+        self.assertEqual(len(ref_x), 2)
+        self.assertEqual(len(m.b), 2)
+        self.assertEqual(len(ref_y), 2)
+        self.assertEqual(value(ref_x[1]), 1)
+        self.assertEqual(value(ref_x[5]), 5)
+        self.assertEqual(value(ref_y[1]), 10)
+        self.assertEqual(value(ref_y[5]), 50)
+
+        m.T.add(2)
+        _x = ref_x[2]
+        self.assertEqual(len(m.x), 3)
+        self.assertIs(_x, m.x[2])
+        self.assertEqual(value(_x), 2)
+        self.assertEqual(value(m.x[2]), 2)
+        self.assertEqual(value(ref_x[2]), 2)
+
+        _y = ref_y[2]
+        self.assertEqual(len(m.b), 3)
+        self.assertIs(_y, m.b[2].y)
+        self.assertEqual(value(_y), 20)
+        self.assertEqual(value(ref_y[2]), 20)
+        self.assertEqual(value(m.b[2].y), 20)
 
 if __name__ == "__main__":
     unittest.main()

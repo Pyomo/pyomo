@@ -104,9 +104,25 @@ after_success:
     # Combine coverage reports over all subprocesses and upload
   - ${DOC} find . -maxdepth 10 -name ".cov*"
   - ${DOC} coverage combine
-  - ${DOC} codecov --env TAG -X gcov
-    # Trigger PyomoGallery build, but only when building the master branch
-    # Note: this is disabled unless a token is injected through an
-    # environment variable
+  - ${DOC} coverage report -i
+  - ${DOC} coverage xml -i
+  - |
+    i=0
+    while : ; do
+        i=$[$i+1]
+        echo "Uploading coverage to codecov (attempt $i)"
+        ${DOC} codecov --env TAG -X gcov -X s3
+        if test $? == 0; then
+            break
+        elif test $i -ge 4; then
+            exit 1
+        fi
+        DELAY=$(( RANDOM % 30 + 30))
+        echo "Pausing $DELAY seconds before re-attempting upload"
+        sleep $DELAY
+    done
+  # Trigger PyomoGallery build, but only when building the master branch
+  # Note: this is disabled unless a token is injected through an
+  # environment variable
   - "if [ -n \"${SECRET_TRAVIS_TOKEN}\" -a -n \"${KEY_JOB}\" -a \"${TRAVIS_PULL_REQUEST}\" == false ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token ${SECRET_TRAVIS_TOKEN}' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
 

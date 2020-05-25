@@ -333,23 +333,10 @@ def _update_block(blk):
                 'function on Block-derived components that override '
                 'construct()' % blk.name)
 
-    # Code taken from the construct() method of Block
     missing_idx = getattr(blk, '_dae_missing_idx', set([]))
     for idx in list(missing_idx):
-        _block = blk[idx]
-        obj = apply_indexed_rule(
-            blk, blk._rule, _block, idx, blk._options)
- 
-        if isinstance(obj, _BlockData) and obj is not _block:
-            # If the user returns a block, use their block instead
-            # of the empty one we just created.
-            for c in list(obj.component_objects(descend_into=False)):
-                obj.del_component(c)
-                _block.add_component(c.local_name, c)
-                # transfer over any other attributes that are not components
-            for name, val in iteritems(obj.__dict__):
-                if not hasattr(_block, name) and not hasattr(blk, name):
-                    super(_BlockData, _block).__setattr__(name, val)
+        # Trigger block creation (including calling the Block's rule)
+        blk[idx]
 
     # Remove book-keeping data after Block is discretized
     if hasattr(blk, '_dae_missing_idx'):

@@ -13,15 +13,29 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
+from pyomo.common.log import LoggingIntercept
 from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
-                        Binary, value, Block)
+                        Binary, value, Block, Objective)
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import log
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.opt import SolverFactory, check_available_solvers
+import pyomo.contrib.fme.fourier_motzkin_elimination
+
+from six import StringIO
+import logging
+import random
+
+solvers = check_available_solvers('glpk')
 
 class TestFourierMotzkinElimination(unittest.TestCase):
+    def setUp(self):
+        # will need this so we know transformation block names in the test that
+        # includes chull transformation
+        random.seed(666)
+
     @staticmethod
     def makeModel():
         """
@@ -59,10 +73,13 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             apply_to,
             m)
 
-    def check_projected_constraints(self, m):
+    unfiltered_indices = [1, 2, 3, 6]
+    filtered_indices = [1, 2, 3, 4]
+
+    def check_projected_constraints(self, m, indices):
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # x - 0.01y <= 1
-        cons = constraints[1]
+        cons = constraints[indices[0]]
         self.assertEqual(value(cons.lower), -1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -76,7 +93,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(coefs[1], 0.01)
 
         # y <= 1000*(1 - u_1)
-        cons = constraints[2]
+        cons = constraints[indices[1]]
         self.assertEqual(value(cons.lower), -1000)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -89,7 +106,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(coefs[1], -1000)
 
         # -x + 0.01y + 1 <= 1000*(1 - u_2)
-        cons = constraints[3]
+        cons = constraints[indices[2]]
         self.assertEqual(value(cons.lower), -999)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -104,7 +121,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(coefs[2], -1000)
 
         # u_2 + 100u_1 >= 1
-        cons = constraints[6]
+        cons = constraints[indices[3]]
         self.assertEqual(value(cons.lower), 1)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
@@ -120,27 +137,44 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
-            vars_to_eliminate = m.lamb)
-
+            vars_to_eliminate = m.lamb,
+            constraint_filtering_callback=None)
         # we get some trivial constraints too, but let's check that the ones
         # that should be there really are
-        self.check_projected_constraints(m)
+        self.check_projected_constraints(m, self.unfiltered_indices)
 
     def test_transformed_constraints_varData_list_arg(self):
         m = self.makeModel()
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
-            vars_to_eliminate = [m.lamb[1], m.lamb[2]])
+            vars_to_eliminate = [m.lamb[1], m.lamb[2]],
+            constraint_filtering_callback=None)
 
-        self.check_projected_constraints(m)
+        self.check_projected_constraints(m, self.unfiltered_indices)
 
     def test_transformed_constraints_indexedVar_list(self):
         m = self.makeModel()
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
             m,
-            vars_to_eliminate = [m.lamb])
+            vars_to_eliminate = [m.lamb],
+            constraint_filtering_callback=None)
 
-        self.check_projected_constraints(m)
+        self.check_projected_constraints(m, self.unfiltered_indices)
+
+    def test_default_constraint_filtering(self):
+        # We will filter constraints which are trivial based on variable bounds
+        # during the transformation. This checks that we removed the constraints
+        # we expect.
+        m = self.makeModel()
+        TransformationFactory('contrib.fourier_motzkin_elimination').apply_to( 
+            m,
+            vars_to_eliminate = m.lamb)
+
+        # we still have all the right constraints
+        self.check_projected_constraints(m, self.filtered_indices)
+        # but now we *only* have the right constraints
+        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+        self.assertEqual(len(constraints), 4)
 
     def test_original_constraints_deactivated(self):
         m = self.makeModel()
@@ -218,6 +252,44 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             m, 
             vars_to_eliminate=m.x)
 
+    def test_bad_constraint_filtering_callback_error(self):
+        m = self.makeModel()
+        def not_a_callback(cons):
+            raise RuntimeError("I don't know how to do my job.")
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.contrib.fourier_motzkin_elimination',
+                              logging.ERROR):
+            self.assertRaisesRegexp(
+                RuntimeError,
+                "I don't know how to do my job.",
+                fme.apply_to,
+                m,
+                vars_to_eliminate=m.x,
+                constraint_filtering_callback=not_a_callback)
+        self.assertRegexpMatches(
+            log.getvalue(),
+            "Problem calling constraint filter callback "
+            "on constraint with right-hand side -1.0 and body:*")
+
+    def test_constraint_filtering_callback_not_callable_error(self):
+        m = self.makeModel()
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.contrib.fourier_motzkin_elimination',
+                              logging.ERROR):
+            self.assertRaisesRegexp(
+                TypeError,
+                "'int' object is not callable",
+                fme.apply_to,
+                m,
+                vars_to_eliminate=m.x,
+                constraint_filtering_callback=5)
+        self.assertRegexpMatches(
+            log.getvalue(),
+            "Problem calling constraint filter callback "
+            "on constraint with right-hand side -1.0 and body:*")
+
     def test_combine_three_inequalities_and_flatten_blocks(self):
         m = ConcreteModel()
         m.x = Var()
@@ -242,12 +314,165 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertIsNone(cons.upper)
         self.assertIs(cons.body, m.x)
 
-    def test_project_disaggregated_vars(self):
-        """This is a little bit more of an integration test with GDP, 
-        but also an example of why FME is 'useful.' We will give a GDP, 
-        take chull relaxation, and then project out the disaggregated 
-        variables."""
+    def check_chull_projected_constraints(self, m, constraints, indices):
+        # p[1] >= on.ind_var
+        cons = constraints[indices[0]]
+        self.assertEqual(cons.lower, 0)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 2)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[0], m.p[1])
+        self.assertEqual(body.linear_coefs[0], 1)
+        self.assertIs(body.linear_vars[1], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[1], -1)
 
+        # p[1] <= 10*on.ind_var + 10*off.ind_var
+        cons = constraints[indices[1]]
+        self.assertEqual(cons.lower, 0)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 3)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[0], 10)
+        self.assertIs(body.linear_vars[1], m.off.indicator_var)
+        self.assertEqual(body.linear_coefs[1], 10)
+        self.assertIs(body.linear_vars[2], m.p[1])
+        self.assertEqual(body.linear_coefs[2], -1)
+
+        # p[1] >= time1_disjuncts[0].ind_var
+        cons = constraints[indices[2]]
+        self.assertEqual(cons.lower, 0)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 2)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[1], m.time1_disjuncts[0].indicator_var)
+        self.assertEqual(body.linear_coefs[1], -1)
+        self.assertIs(body.linear_vars[0], m.p[1])
+        self.assertEqual(body.linear_coefs[0], 1)
+
+        # p[1] <= 10*time1_disjuncts[0].ind_var
+        cons = constraints[indices[3]]
+        self.assertEqual(cons.lower, 0)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 2)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
+        self.assertEqual(body.linear_coefs[0], 10)
+        self.assertIs(body.linear_vars[1], m.p[1])
+        self.assertEqual(body.linear_coefs[1], -1)
+
+        # p[2] - p[1] <= 3*on.ind_var + 2*startup.ind_var
+        cons = constraints[indices[4]]
+        self.assertEqual(value(cons.lower), 0)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 4)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[3], m.p[2])
+        self.assertEqual(body.linear_coefs[3], -1)
+        self.assertIs(body.linear_vars[0], m.p[1])
+        self.assertEqual(body.linear_coefs[0], 1)
+        self.assertIs(body.linear_vars[1], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[1], 3)
+        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertEqual(body.linear_coefs[2], 2)
+
+        # p[2] >= on.ind_var + startup.ind_var
+        cons = constraints[indices[5]]
+        self.assertEqual(cons.lower, 0)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 3)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[0], m.p[2])
+        self.assertEqual(body.linear_coefs[0], 1)
+        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
+        self.assertEqual(body.linear_coefs[1], -1)
+        self.assertIs(body.linear_vars[2], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[2], -1)
+
+        # p[2] <= 10*on.ind_var + 2*startup.ind_var
+        cons = constraints[indices[6]]
+        self.assertEqual(cons.lower, 0)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 3)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[0], 10)
+        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
+        self.assertEqual(body.linear_coefs[1], 2)
+        self.assertIs(body.linear_vars[2], m.p[2])
+        self.assertEqual(body.linear_coefs[2], -1)
+
+        # 1 <= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
+        cons = constraints[indices[7]]
+        self.assertEqual(cons.lower, 1)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 2)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
+        self.assertEqual(body.linear_coefs[0], 1)
+        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].indicator_var)
+        self.assertEqual(body.linear_coefs[1], 1)
+
+        # 1 >= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
+        cons = constraints[indices[8]]
+        self.assertEqual(cons.lower, -1)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 2)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
+        self.assertEqual(body.linear_coefs[0], -1)
+        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].indicator_var)
+        self.assertEqual(body.linear_coefs[1], -1)
+
+        # 1 <= on.ind_var + startup.ind_var + off.ind_var
+        cons = constraints[indices[9]]
+        self.assertEqual(cons.lower, 1)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 3)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[0], 1)
+        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
+        self.assertEqual(body.linear_coefs[1], 1)
+        self.assertIs(body.linear_vars[2], m.off.indicator_var)
+        self.assertEqual(body.linear_coefs[2], 1)
+
+        # 1 >= on.ind_var + startup.ind_var + off.ind_var
+        cons = constraints[indices[10]]
+        self.assertEqual(cons.lower, -1)
+        self.assertIsNone(cons.upper)
+        body = generate_standard_repn(cons.body)
+        self.assertEqual(body.constant, 0)
+        self.assertEqual(len(body.linear_vars), 3)
+        self.assertTrue(body.is_linear())
+        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[0], -1)
+        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
+        self.assertEqual(body.linear_coefs[1], -1)
+        self.assertIs(body.linear_vars[2], m.off.indicator_var)
+        self.assertEqual(body.linear_coefs[2], -1)
+
+    def create_chull_model(self):
         m = ConcreteModel()
         m.p = Var([1, 2], bounds=(0, 10))
         m.time1 = Disjunction(expr=[m.p[1] >= 1, m.p[1] == 0])
@@ -265,180 +490,87 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.off.off = Constraint(expr=m.p[2] == 0)
         m.time2 = Disjunction(expr=[m.on, m.startup, m.off])
 
-        TransformationFactory('gdp.chull').apply_to(m)
-        relaxationBlocks = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
-        disaggregatedVars = ComponentSet([relaxationBlocks[0].component("p[1]"),
-                                          relaxationBlocks[1].component("p[1]"),
-                                          relaxationBlocks[2].component("p[1]"),
-                                          relaxationBlocks[2].component("p[2]"),
-                                          relaxationBlocks[3].component("p[1]"),
-                                          relaxationBlocks[3].component("p[2]"),
-                                          relaxationBlocks[4].component("p[1]"),
-                                          relaxationBlocks[4].component("p[2]")])
+        m.obj = Objective(expr=m.p[1] + m.p[2])
+
+        chull = TransformationFactory('gdp.chull')
+        chull.apply_to(m)
+        disaggregatedVars = ComponentSet(
+            [chull.get_disaggregated_var(m.p[1], m.time1.disjuncts[0]),
+             chull.get_disaggregated_var(m.p[1], m.time1.disjuncts[1]),
+             chull.get_disaggregated_var(m.p[1], m.on),
+             chull.get_disaggregated_var(m.p[2], m.on),
+             chull.get_disaggregated_var(m.p[1], m.startup),
+             chull.get_disaggregated_var(m.p[2], m.startup),
+             chull.get_disaggregated_var(m.p[1], m.off),
+             chull.get_disaggregated_var(m.p[2], m.off)
+         ])
+                                          
+        # from nose.tools import set_trace
+        # set_trace()
+        # disaggregatedVars = ComponentSet([relaxationBlocks[0].component("p[1]"),
+        #                                   relaxationBlocks[1].component("p[1]"),
+        #                                   relaxationBlocks[2].component("p[1]"),
+        #                                   relaxationBlocks[2].component("p[2]"),
+        #                                   relaxationBlocks[3].component("p[1]"),
+        #                                   relaxationBlocks[3].component("p[2]"),
+        #                                   relaxationBlocks[4].component("p[1]"),
+        #                                   relaxationBlocks[4].component("p[2]")])
+
+        return m, disaggregatedVars
+
+    def test_project_disaggregated_vars(self):
+        """This is a little bit more of an integration test with GDP, 
+        but also an example of why FME is 'useful.' We will give a GDP, 
+        take chull relaxation, and then project out the disaggregated 
+        variables."""
+        m, disaggregatedVars = self.create_chull_model()
+        
+        filtered = TransformationFactory('contrib.fourier_motzkin_elimination').\
+                   create_using(m, vars_to_eliminate=disaggregatedVars)
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
-            m, vars_to_eliminate=disaggregatedVars)
+            m, vars_to_eliminate=disaggregatedVars,
+            constraint_filtering_callback=None)
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # we of course get tremendous amounts of garbage, but we make sure that
         # what should be here is:
+        self.check_chull_projected_constraints(m, constraints, [22, 20, 58, 61,
+                                                                56, 38, 32, 1, 2,
+                                                                4, 5])
+        # and when we filter, it's still there.
+        constraints = filtered._pyomo_contrib_fme_transformation.\
+                      projected_constraints
+        self.check_chull_projected_constraints(filtered, constraints, [6, 5, 16,
+                                                                       17, 15,
+                                                                       11, 8, 1,
+                                                                       2, 3, 4])
+    
+    @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
+    def test_post_processing(self):
+        m, disaggregatedVars = self.create_chull_model()
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        fme.apply_to(m, vars_to_eliminate=disaggregatedVars)
+        # post-process
+        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
 
-        # p[1] >= on.ind_var
-        cons = constraints[22]
-        self.assertEqual(cons.lower, 0)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 2)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.p[1])
-        self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
-        self.assertEqual(body.linear_coefs[1], -1)
+        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+        self.assertEqual(len(constraints), 11)
 
-        # p[1] <= 10*on.ind_var + 10*off.ind_var
-        cons = constraints[20]
-        self.assertEqual(cons.lower, 0)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 3)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
-        self.assertEqual(body.linear_coefs[0], 10)
-        self.assertIs(body.linear_vars[1], m.off.indicator_var)
-        self.assertEqual(body.linear_coefs[1], 10)
-        self.assertIs(body.linear_vars[2], m.p[1])
-        self.assertEqual(body.linear_coefs[2], -1)
+        # They should be the same as the above, but now these are *all* the
+        # constraints
+        self.check_chull_projected_constraints(m, constraints, [6, 5, 16, 17,
+                                                                15, 11, 8, 1, 2,
+                                                                3, 4])
 
-        # p[1] >= time1_disjuncts[0].ind_var
-        cons = constraints[58]
-        self.assertEqual(cons.lower, 0)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 2)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[0].indicator_var)
-        self.assertEqual(body.linear_coefs[1], -1)
-        self.assertIs(body.linear_vars[0], m.p[1])
-        self.assertEqual(body.linear_coefs[0], 1)
-
-        # p[1] <= 10*time1_disjuncts[0].ind_var
-        cons = constraints[61]
-        self.assertEqual(cons.lower, 0)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 2)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
-        self.assertEqual(body.linear_coefs[0], 10)
-        self.assertIs(body.linear_vars[1], m.p[1])
-        self.assertEqual(body.linear_coefs[1], -1)
-
-        # p[2] - p[1] <= 3*on.ind_var + 2*startup.ind_var
-        cons = constraints[56]
-        self.assertEqual(value(cons.lower), 0)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 4)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[3], m.p[2])
-        self.assertEqual(body.linear_coefs[3], -1)
-        self.assertIs(body.linear_vars[0], m.p[1])
-        self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
-        self.assertEqual(body.linear_coefs[1], 3)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
-        self.assertEqual(body.linear_coefs[2], 2)
-
-        # p[2] >= on.ind_var + startup.ind_var
-        cons = constraints[38]
-        self.assertEqual(cons.lower, 0)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 3)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.p[2])
-        self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
-        self.assertEqual(body.linear_coefs[1], -1)
-        self.assertIs(body.linear_vars[2], m.on.indicator_var)
-        self.assertEqual(body.linear_coefs[2], -1)
-
-        # p[2] <= 10*on.ind_var + 2*startup.ind_var
-        cons = constraints[32]
-        self.assertEqual(cons.lower, 0)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 3)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
-        self.assertEqual(body.linear_coefs[0], 10)
-        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
-        self.assertEqual(body.linear_coefs[1], 2)
-        self.assertIs(body.linear_vars[2], m.p[2])
-        self.assertEqual(body.linear_coefs[2], -1)
-
-        # 1 <= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
-        cons = constraints[1]
-        self.assertEqual(cons.lower, 1)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 2)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
-        self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].indicator_var)
-        self.assertEqual(body.linear_coefs[1], 1)
-
-        # 1 >= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
-        cons = constraints[2]
-        self.assertEqual(cons.lower, -1)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 2)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
-        self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].indicator_var)
-        self.assertEqual(body.linear_coefs[1], -1)
-
-        # 1 <= on.ind_var + startup.ind_var + off.ind_var
-        cons = constraints[3]
-        self.assertEqual(cons.lower, 1)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 3)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
-        self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
-        self.assertEqual(body.linear_coefs[1], 1)
-        self.assertIs(body.linear_vars[2], m.off.indicator_var)
-        self.assertEqual(body.linear_coefs[2], 1)
-
-        # 1 >= on.ind_var + startup.ind_var + off.ind_var
-        cons = constraints[4]
-        self.assertEqual(cons.lower, -1)
-        self.assertIsNone(cons.upper)
-        body = generate_standard_repn(cons.body)
-        self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 3)
-        self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
-        self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
-        self.assertEqual(body.linear_coefs[1], -1)
-        self.assertIs(body.linear_vars[2], m.off.indicator_var)
-        self.assertEqual(body.linear_coefs[2], -1)
-
+        # and check that we didn't change the model
+        for disj in m.component_data_objects(Disjunct):
+            self.assertIs(disj.indicator_var.domain, Binary)
+        self.assertEqual(len([o for o in m.component_data_objects(Objective)]),
+                         1)
+        self.assertIsInstance(m.component("obj"), Objective)
+        self.assertTrue(m.obj.active)
+        
+    @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_model_with_unrelated_nonlinear_expressions(self):
         m = ConcreteModel()
         m.x = Var([1, 2, 3], bounds=(0,3))
@@ -454,8 +586,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # This is vacuous, but I just want something that's not quadratic
         m.cons4 = Constraint(expr=m.x[3] <= log(m.y + 1))
 
-        TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to(m, vars_to_eliminate=m.x)
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        fme.apply_to(m, vars_to_eliminate=m.x,
+                     constraint_filtering_callback=None)
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
 
         # 0 <= y <= 3
@@ -524,3 +657,27 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             for i in constraints:
                 self.assertLessEqual(value(constraints[i].lower),
                                      value(constraints[i].body))
+        m.y.fixed = False
+        m.z.fixed = False
+        
+        # check post process these are non-convex, so I don't want to deal with
+        # it... (and this is a good test that I *don't* deal with it.)
+        constraints[4].deactivate()
+        constraints[3].deactivate()
+        constraints[1].deactivate()
+        # NOTE also that some of the suproblems in this test are unbounded: We
+        # need to keep those constraints.
+        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+        # we needed all the constraints, so we kept them all
+        self.assertEqual(len(constraints), 6)
+
+        # last check that if someone activates something on the model in
+        # between, we just use it. (I struggle to imagine why you would do this
+        # because why withold the information *during* FME, but if there's some
+        # reason, we may as well use all the information we've got.)
+        m.some_new_cons = Constraint(expr=m.y <= 2)
+        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+        # now we should have lost one constraint
+        self.assertEqual(len(constraints), 5)
+        # and it should be the y <= 3 one...
+        self.assertIsNone(dict(constraints).get(5))
