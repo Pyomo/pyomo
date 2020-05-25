@@ -277,7 +277,7 @@ class ddextension_base(object):
             stage_cost_component = \
                 self._reference_scenario_instance.\
                 find_component(cost_variable_name)
-            if stage_cost_component.type() is not Expression:
+            if stage_cost_component.ctype is not Expression:
                 LP_name = LP_byObject[id(stage_cost_component[cost_variable_index])]
                 assert LP_name not in self._FirstStageVars
                 if LP_name not in self._AllVars:
@@ -306,7 +306,7 @@ class ddextension_base(object):
                 stage_cost_component = \
                     self._reference_scenario_instance.\
                     find_component(cost_variable_name)
-                if stage_cost_component.type() is not Expression:
+                if stage_cost_component.ctype is not Expression:
                     cost_vars.add(stage_cost_component[cost_variable_index].name)
             print(("Number of Scenario Tree Variables (found ddsip LP file): "+str(len(tree_vars))))
             print(("Number of Scenario Tree Cost Variables (found ddsip LP file): "+str(len(cost_vars))))

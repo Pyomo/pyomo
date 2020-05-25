@@ -15,7 +15,7 @@ from pyomo.common.config import (
     ConfigBlock, ConfigList, ConfigValue,
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
-    In, Path, PathList
+    In, Path, PathList, ConfigEnum
 )
 
 class TestConfig(unittest.TestCase):
@@ -338,3 +338,15 @@ class TestConfig(unittest.TestCase):
         c.a = ()
         self.assertEqual(len(c.a), 0)
         self.assertIs(type(c.a), list)
+
+    def test_ConfigEnum(self):
+        class TestEnum(ConfigEnum):
+            ITEM_ONE = 1
+            ITEM_TWO = 2
+
+        self.assertEqual(TestEnum.from_enum_or_string(1),
+                TestEnum.ITEM_ONE)
+        self.assertEqual(TestEnum.from_enum_or_string(
+            TestEnum.ITEM_TWO), TestEnum.ITEM_TWO)
+        self.assertEqual(TestEnum.from_enum_or_string('ITEM_ONE'),
+                TestEnum.ITEM_ONE)

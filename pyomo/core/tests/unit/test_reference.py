@@ -384,7 +384,7 @@ class TestReference(unittest.TestCase):
         m.x = Var()
         m.r = Reference(m.x)
 
-        self.assertIs(m.r.type(), Var)
+        self.assertIs(m.r.ctype, Var)
         self.assertIsNot(m.r.index_set(), m.x.index_set())
         self.assertIs(m.x.index_set(), UnindexedComponent_set)
         self.assertIs(type(m.r.index_set()), UnorderedSetOf)
@@ -398,7 +398,7 @@ class TestReference(unittest.TestCase):
 
         m.s = Reference(m.x[:])
 
-        self.assertIs(m.s.type(), Var)
+        self.assertIs(m.s.ctype, Var)
         self.assertIsNot(m.s.index_set(), m.x.index_set())
         self.assertIs(m.x.index_set(), UnindexedComponent_set)
         self.assertIs(type(m.s.index_set()), UnorderedSetOf)
@@ -413,7 +413,7 @@ class TestReference(unittest.TestCase):
         m.y = Var([1,2])
         m.t = Reference(m.y)
 
-        self.assertIs(m.t.type(), Var)
+        self.assertIs(m.t.ctype, Var)
         self.assertIs(m.t.index_set(), m.y.index_set())
         self.assertEqual(len(m.t), 2)
         self.assertTrue(m.t.is_indexed())
@@ -444,7 +444,7 @@ class TestReference(unittest.TestCase):
         m.b[2].x = Var(bounds=(2,None))
         m.r = Reference(m.b[:].x)
 
-        self.assertIs(m.r.type(), Var)
+        self.assertIs(m.r.ctype, Var)
         self.assertIs(m.r.index_set(), m.b.index_set())
         self.assertEqual(len(m.r), 2)
         self.assertEqual(m.r[1].lb, 1)
@@ -465,7 +465,7 @@ class TestReference(unittest.TestCase):
 
         m.r = Reference(m.b[:].x[:])
 
-        self.assertIs(m.r.type(), Var)
+        self.assertIs(m.r.ctype, Var)
         self.assertIsInstance(m.r.index_set(), SetProduct)
         self.assertIs(m.r.index_set().set_tuple[0], m.I)
         self.assertIs(m.r.index_set().set_tuple[1], m.J)
@@ -490,7 +490,7 @@ class TestReference(unittest.TestCase):
 
         m.r = Reference(m.b[:].x[:,:])
 
-        self.assertIs(m.r.type(), Var)
+        self.assertIs(m.r.ctype, Var)
         self.assertIsInstance(m.r.index_set(), SetProduct)
         self.assertIs(m.r.index_set().set_tuple[0], m.I)
         self.assertIs(m.r.index_set().set_tuple[1], m.J)
@@ -516,7 +516,7 @@ class TestReference(unittest.TestCase):
 
         m.r = Reference(m.b[:].x[3,:])
 
-        self.assertIs(m.r.type(), Var)
+        self.assertIs(m.r.ctype, Var)
         self.assertIs(type(m.r.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.r), 2*1)
         self.assertEqual(m.r[1,3].lb, 1)
@@ -539,7 +539,7 @@ class TestReference(unittest.TestCase):
 
         m.r = Reference(m.b[:].x[:])
 
-        self.assertIs(m.r.type(), Var)
+        self.assertIs(m.r.ctype, Var)
         self.assertIs(type(m.r.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.r), 2*2)
         self.assertEqual(m.r[1,3].lb, 1)
@@ -562,7 +562,7 @@ class TestReference(unittest.TestCase):
 
         m.r = Reference(m.b[:].x[:])
 
-        self.assertIs(m.r.type(), Var)
+        self.assertIs(m.r.ctype, Var)
         self.assertIs(type(m.r.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.r), 2*2)
         self.assertEqual(m.r[1,3].lb, 1)
@@ -585,7 +585,7 @@ class TestReference(unittest.TestCase):
 
         m.r = Reference(m.b[:].x[:,:])
 
-        self.assertIs(m.r.type(), Var)
+        self.assertIs(m.r.ctype, Var)
         self.assertIs(type(m.r.index_set()), UnorderedSetOf)
         self.assertEqual(len(m.r), 2*2*2)
         self.assertEqual(m.r[1,3,3].lb, 1)
@@ -627,14 +627,14 @@ class TestReference(unittest.TestCase):
 
         m.y = Reference(m.b[:].y[...])
         self.assertIs(type(m.y), IndexedVar)
-        self.assertIs(m.y.type(), Var)
+        self.assertIs(m.y.ctype, Var)
         m.y1 = Reference(m.b[:].y[...], ctype=None)
         self.assertIs(type(m.y1), IndexedComponent)
-        self.assertIs(m.y1.type(), IndexedComponent)
+        self.assertIs(m.y1.ctype, IndexedComponent)
 
         m.z = Reference(m.b[:].z)
         self.assertIs(type(m.z), IndexedComponent)
-        self.assertIs(m.z.type(), IndexedComponent)
+        self.assertIs(m.z.ctype, IndexedComponent)
 
     def test_reference_to_sparse(self):
         m = ConcreteModel()
@@ -706,16 +706,52 @@ class TestReference(unittest.TestCase):
         self.assertEqual(len(m.b), 1)
         self.assertEqual(len(m.b[1].x), 3)
 
-        # While (2,1) appears to be a valid member of the slice, because 2
-        # was not in the Set when the Block rule fired, there is no
-        # m.b[2] block data.  Attempting to add m.xx[2,1] will correctly
-        # instantiate the block and then promptly fail because we don't
-        # automatically fire rules after construction.
-        with self.assertRaisesRegexp(
-                AttributeError, "'_BlockData' object has no attribute 'x'"):
-            m.xx.add((2,1))
+        # While (2,2) appears to be a valid member of the slice, because
+        # 2 was not in the Set when the Block rule fired, there is no
+        # m.b[2] block data.  Accessing m.xx[2,1] will construct the
+        # b[2] block data, fire the rule, and then add the new value to
+        # the Var x.
+        self.assertEqual(len(m.xx), 3)
+        m.xx[2,2] = 10
         self.assertEqual(len(m.b), 2)
-        self.assertEqual(len(list(m.b[2].component_objects())), 0)
+        self.assertEqual(len(list(m.b[2].component_objects())), 1)
+        self.assertEqual(len(m.xx), 4)
+        self.assertIs(m.xx[2,2], m.b[2].x[2])
+        self.assertEqual(value(m.b[2].x[2]), 10)
+
+    def test_insert_var(self):
+        m = ConcreteModel()
+        m.T = Set(initialize=[1,5])
+        m.x = Var(m.T, initialize=lambda m,i: i)
+        @m.Block(m.T)
+        def b(b, i):
+            b.y = Var(initialize=lambda b: 10*b.index())
+        ref_x = Reference(m.x[:])
+        ref_y = Reference(m.b[:].y)
+
+        self.assertEqual(len(m.x), 2)
+        self.assertEqual(len(ref_x), 2)
+        self.assertEqual(len(m.b), 2)
+        self.assertEqual(len(ref_y), 2)
+        self.assertEqual(value(ref_x[1]), 1)
+        self.assertEqual(value(ref_x[5]), 5)
+        self.assertEqual(value(ref_y[1]), 10)
+        self.assertEqual(value(ref_y[5]), 50)
+
+        m.T.add(2)
+        _x = ref_x[2]
+        self.assertEqual(len(m.x), 3)
+        self.assertIs(_x, m.x[2])
+        self.assertEqual(value(_x), 2)
+        self.assertEqual(value(m.x[2]), 2)
+        self.assertEqual(value(ref_x[2]), 2)
+
+        _y = ref_y[2]
+        self.assertEqual(len(m.b), 3)
+        self.assertIs(_y, m.b[2].y)
+        self.assertEqual(value(_y), 20)
+        self.assertEqual(value(ref_y[2]), 20)
+        self.assertEqual(value(m.b[2].y), 20)
 
 if __name__ == "__main__":
     unittest.main()

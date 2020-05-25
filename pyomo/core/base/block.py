@@ -264,7 +264,7 @@ class PseudoMap(object):
         """
         if key in self._block._decl:
             x = self._block._decl_order[self._block._decl[key]]
-            if self._ctypes is None or x[0].type() in self._ctypes:
+            if self._ctypes is None or x[0].ctype in self._ctypes:
                 if self._active is None or x[0].active == self._active:
                     return x[0]
         msg = ""
@@ -332,7 +332,7 @@ class PseudoMap(object):
         # component matches those flags
         if key in self._block._decl:
             x = self._block._decl_order[self._block._decl[key]]
-            if self._ctypes is None or x[0].type() in self._ctypes:
+            if self._ctypes is None or x[0].ctype in self._ctypes:
                 return self._active is None or x[0].active == self._active
         return False
 
@@ -925,7 +925,7 @@ class _BlockData(ActiveComponentData):
         # component type that is suppressed.
         #
         _component = self.parent_component()
-        _type = val.type()
+        _type = val.ctype
         if _type in _component._suppress_ctypes:
             return
         #
@@ -1051,8 +1051,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # NB: we don't have to construct the temporary / implicit
             # sets here: if necessary, that happens when
             # _add_implicit_sets() calls add_component().
-            if id(self) in _BlockConstruction.data:
-                data = _BlockConstruction.data[id(self)].get(name, None)
+            if _BlockConstruction.data:
+                data = _BlockConstruction.data.get(id(self), None)
+                if data is not None:
+                    data = data.get(name, None)
             else:
                 data = None
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -1115,10 +1117,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         self._decl_order[idx] = (None, self._decl_order[idx][1])
 
         # Update the ctype linked lists
-        ctype_info = self._ctypes[obj.type()]
+        ctype_info = self._ctypes[obj.ctype]
         ctype_info[2] -= 1
         if ctype_info[2] == 0:
-            del self._ctypes[obj.type()]
+            del self._ctypes[obj.ctype]
 
         # Clear the _parent attribute
         obj._parent = None
@@ -1143,7 +1145,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         if obj is None:
             return
 
-        if obj._type is new_ctype:
+        if obj.ctype is new_ctype:
             return
 
         name = obj.local_name
@@ -1152,22 +1154,22 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # easiest (and fastest) thing to do is just delete it and
             # re-add it.
             self.del_component(name)
-            obj._type = new_ctype
+            obj._ctype = new_ctype
             self.add_component(name, obj)
             return
 
         idx = self._decl[name]
 
         # Update the ctype linked lists
-        ctype_info = self._ctypes[obj.type()]
+        ctype_info = self._ctypes[obj.ctype]
         ctype_info[2] -= 1
         if ctype_info[2] == 0:
-            del self._ctypes[obj.type()]
+            del self._ctypes[obj.ctype]
         elif ctype_info[0] == idx:
             ctype_info[0] = self._decl_order[idx][1]
         else:
             prev = None
-            tmp = self._ctypes[obj.type()][0]
+            tmp = self._ctypes[obj.ctype][0]
             while tmp < idx:
                 prev = tmp
                 tmp = self._decl_order[tmp][1]
@@ -1177,7 +1179,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             if ctype_info[1] == idx:
                 ctype_info[1] = prev
 
-        obj._type = new_ctype
+        obj._ctype = new_ctype
 
         # Insert into the new ctype list
         if new_ctype not in self._ctypes:
@@ -1317,27 +1319,22 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = PseudoMap(self, ctype, active, sort)
         for name, comp in _subcomp.iteritems():
-            # _NOTE_: Suffix has a dict interface (something other
-            #         derived non-indexed Components may do as well),
-            #         so we don't want to test the existence of
-            #         iteritems as a check for components. Also,
-            #         the case where we test len(comp) after seeing
-            #         that comp.is_indexed is False is a hack for a
-            #         SimpleConstraint whose expression resolved to
-            #         Constraint.skip or Constraint.feasible (in which
-            #         case its data is empty and iteritems would have
-            #         been empty as well)
-            # try:
-            #    _items = comp.iteritems()
-            # except AttributeError:
-            #    _items = [ (None, comp) ]
+            # NOTE: Suffix has a dict interface (something other derived
+            #   non-indexed Components may do as well), so we don't want
+            #   to test the existence of iteritems as a check for
+            #   component datas. We will rely on is_indexed() to catch
+            #   all the indexed components.  Then we will do special
+            #   processing for the scalar components to catch the case
+            #   where there are "sparse scalar components"
             if comp.is_indexed():
                 _items = comp.iteritems()
-            # This is a hack (see _NOTE_ above).
-            elif len(comp) or not hasattr(comp, '_data'):
-                _items = ((None, comp),)
+            elif hasattr(comp, '_data'):
+                # This may be an empty Scalar component (e.g., from
+                # Constraint.Skip on a scalar Constraint)
+                assert len(comp._data) <= 1
+                _items = iteritems(comp._data)
             else:
-                _items = tuple()
+                _items = ((None, comp),)
 
             if _sort_indices:
                 _items = sorted(_items, key=itemgetter(0))
@@ -1510,7 +1507,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # "descend_into" argument in public calling functions: callers
         # expect that the called thing will be iterated over.
         #
-        # if self.parent_component().type() not in ctype:
+        # if self.parent_component().ctype not in ctype:
         #    return ().__iter__()
 
         if traversal is None or \
@@ -1834,7 +1831,35 @@ class Block(ActiveIndexedComponent):
             self.construct()
 
     def _getitem_when_not_present(self, idx):
-        return self._setitem_when_not_present(idx)
+        _block = self._setitem_when_not_present(idx)
+        if self._rule is None:
+            return _block
+
+        if _BlockConstruction.data:
+            data = _BlockConstruction.data.get(id(self), None)
+            if data is not None:
+                data = data.get(idx, None)
+            if data is not None:
+                _BlockConstruction.data[id(_block)] = data
+        else:
+            data = None
+
+        try:
+            obj = apply_indexed_rule(
+                self, self._rule, _block, idx, self._options)
+        finally:
+            if data is not None:
+                del _BlockConstruction.data[id(_block)]
+
+        if obj is not _block and isinstance(obj, _BlockData):
+            # If the user returns a block, transfer over everything
+            # they defined into the empty one we created.
+            _block.transfer_attributes_from(obj)
+
+        # TBD: Should we allow skipping Blocks???
+        # if obj is Block.Skip and idx is not None:
+        #   del self._data[idx]
+        return _block
 
     def find_component(self, label_or_component):
         """
@@ -1854,54 +1879,57 @@ class Block(ActiveIndexedComponent):
         timer = ConstructionTimer(self)
         self._constructed = True
 
-        # We must check that any pre-existing components are
-        # constructed.  This catches the case where someone is building
-        # a Concrete model by building (potentially pseudo-abstract)
-        # sub-blocks and then adding them to a Concrete model block.
-        for idx in self._data:
-            _block = self[idx]
-            for name, obj in iteritems(_block.component_map()):
-                if not obj._constructed:
-                    if data is None:
-                        _data = None
-                    else:
-                        _data = data.get(name, None)
-                    obj.construct(_data)
+        # Constructing blocks is tricky.  Scalar blocks are already
+        # partially constructed (they have _data[None] == self) in order
+        # to support Abstract blocks.  The block may therefore already
+        # have components declared on it.  In order to preserve
+        # decl_order, we must construct those components *first* before
+        # firing any rule.  Indexed blocks should be empty, so we only
+        # need to fire the rule in order.
+        #
+        #  Since the rule does not pass any "data" on, we build a scalar
+        #  "stack" of pointers to block data (_BlockConstruction.data)
+        #  that the individual blocks' add_component() can refer back to
+        #  to handle component construction.
+        if data is not None:
+            _BlockConstruction.data[id(self)] = data
+        try:
+            if self.is_indexed():
+                # We can only populate Blocks with finite indexing sets
+                if self._rule is not None and self.index_set().isfinite():
+                    for _idx in self.index_set():
+                        # Trigger population & call the rule
+                        self._getitem_when_not_present(_idx)
+            else:
+                # We must check that any pre-existing components are
+                # constructed.  This catches the case where someone is
+                # building a Concrete model by building (potentially
+                # pseudo-abstract) sub-blocks and then adding them to a
+                # Concrete model block.
+                _idx = next(iter(UnindexedComponent_set))
+                _block = self[_idx]
+                for name, obj in iteritems(_block.component_map()):
+                    if not obj._constructed:
+                        if data is None:
+                            _data = None
+                        else:
+                            _data = data.get(name, None)
+                        obj.construct(_data)
+                if self._rule is not None:
+                    obj = apply_indexed_rule(
+                        self, self._rule, _block, _idx, self._options)
+                    if obj is not _block and isinstance(obj, _BlockData):
+                        # If the user returns a block, transfer over
+                        # everything they defined into the empty one we
+                        # created.
+                        _block.transfer_attributes_from(obj)
 
-        if self._rule is None:
-            # Ensure the _data dictionary is populated for singleton
-            # blocks
-            if not self.is_indexed():
-                self[None]
-            timer.report()
-            return
-        # If we have a rule, fire the rule for all indices.
-        # Notes:
-        #  - Since this block is now concrete, any components added to
-        #    it will be immediately constructed by
-        #    block.add_component().
-        #  - Since the rule does not pass any "data" on, we build a
-        #    scalar "stack" of pointers to block data
-        #    (_BlockConstruction.data) that the individual blocks'
-        #    add_component() can refer back to to handle component
-        #    construction.
-        for idx in self._index:
-            _block = self[idx]
-            if data is not None and idx in data:
-                _BlockConstruction.data[id(_block)] = data[idx]
-            obj = apply_indexed_rule(
-                self, self._rule, _block, idx, self._options)
-            if id(_block) in _BlockConstruction.data:
-                del _BlockConstruction.data[id(_block)]
-
-            if obj is not _block and isinstance(obj, _BlockData):
-                # If the user returns a block, transfer over everything
-                # they defined into the empty one we created.
-                _block.transfer_attributes_from(obj)
-
-            # TBD: Should we allow skipping Blocks???
-            # if obj is Block.Skip and idx is not None:
-            #   del self._data[idx]
+        finally:
+            # We must check if data is still in the dictionary, as
+            # scalar blocks will have already removed the entry (as
+            # the _data and the component are the same object)
+            if data is not None and id(self) in _BlockConstruction.data:
+                del _BlockConstruction.data[id(self)]
         timer.report()
 
     def _pprint_callback(self, ostream, idx, data):
@@ -1945,6 +1973,10 @@ class SimpleBlock(_BlockData, Block):
     def __init__(self, *args, **kwds):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
+        # Iniitalize the data dict so that (abstract) attribute
+        # assignment will work.  Note that we do not trigger
+        # get/setitem_when_not_present so that we do not (implicitly)
+        # trigger the Block rule
         self._data[None] = self
 
     def display(self, filename=None, ostream=None, prefix=""):

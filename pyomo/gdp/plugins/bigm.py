@@ -19,6 +19,7 @@ from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, Any, value,
     RangeSet)
+from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
@@ -140,6 +141,7 @@ class BigM_Transformation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
+            ExternalFunction: False,
         }
 
     def _get_bigm_suffix_list(self, block):
@@ -214,12 +216,12 @@ class BigM_Transformation(Transformation):
                                knownBlocks=knownBlocks):
                 raise GDP_Error("Target %s is not a component on instance %s!"
                                 % (t.name, instance.name))
-            elif t.type() is Disjunction:
+            elif t.ctype is Disjunction:
                 if t.parent_component() is t:
                     self._transform_disjunction(t, bigM)
                 else:
                     self._transform_disjunctionData( t, bigM, t.index())
-            elif t.type() in (Block, Disjunct):
+            elif t.ctype in (Block, Disjunct):
                 if t.parent_component() is t:
                     self._transform_block(t, bigM)
                 else:
@@ -475,7 +477,7 @@ class BigM_Transformation(Transformation):
         # that because we only iterate through active components, this means
         # non-ActiveComponent types cannot have handlers.)
         for obj in block.component_objects(active=True, descend_into=False):
-            handler = self.handlers.get(obj.type(), None)
+            handler = self.handlers.get(obj.ctype, None)
             if not handler:
                 if handler is None:
                     raise GDP_Error(
@@ -483,7 +485,7 @@ class BigM_Transformation(Transformation):
                         "for modeling components of type %s. If your " 
                         "disjuncts contain non-GDP Pyomo components that "
                         "require transformation, please transform them first."
-                        % obj.type())
+                        % obj.ctype)
                 continue
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator

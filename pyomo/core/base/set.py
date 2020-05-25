@@ -117,7 +117,7 @@ def process_setarg(arg):
     elif isinstance(arg, IndexedComponent):
         raise TypeError("Cannot apply a Set operator to an "
                         "indexed %s component (%s)"
-                        % (arg.type().__name__, arg.name,))
+                        % (arg.ctype.__name__, arg.name,))
     elif isinstance(arg, Component):
         raise TypeError("Cannot apply a Set operator to a non-Set "
                         "%s component (%s)"
@@ -416,6 +416,8 @@ class TuplizeValuesInitializer(InitializerBase):
 
         if not isinstance(_val, collections_Sequence):
             _val = tuple(_val)
+        if len(_val) == 0:
+            return _val
         if isinstance(_val[0], tuple):
             return _val
         return self._tuplize(_val, parent, index)
@@ -2525,7 +2527,7 @@ class RangeSet(Component):
 
     Parameters
     ----------
-    *args: tuple, optional
+    *args: int | float | None
         The range defined by ([start=1], end, [step=1]).  If only a
         single positional parameter, `end` is supplied, then the
         RangeSet will be the integers starting at 1 up through and

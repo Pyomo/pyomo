@@ -242,8 +242,11 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
                    (float(data['cc']) - model.cc)**2 + \
                    (float(data['cd']) - model.cd)**2
             return expr
+
+        solver_options = {"max_iter": 6000}
         
-        self.pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
+        self.pest = parmest.Estimator(reactor_design_model, data,
+                                      theta_names, SSE, solver_options)
 
     def test_theta_est(self):
         objval, thetavals = self.pest.theta_est()

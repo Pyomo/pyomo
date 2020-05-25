@@ -19,6 +19,7 @@ except:
 
 import pyutilib.th as unittest
 import os
+import sys
 
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.scenariocreator as sc
@@ -126,7 +127,16 @@ class  pamest_Scenario_creator_semibatch(unittest.TestCase):
         # for the sum of squared error that will be used in parameter estimation
 
         self.pest = parmest.Estimator(sb.generate_model, data, theta_names)
+        
 
+    def test_semibatch_bootstrap(self):
+
+        scenmaker = sc.ScenarioCreator(self.pest, "ipopt")
+        bootscens = sc.ScenarioSet("Bootstrap")
+        numtomake = 2
+        scenmaker.ScenariosFromBoostrap(bootscens, numtomake, seed=1134)
+        tval = bootscens.ScenarioNumber(0).ThetaVals["k1"]
+        self.assertAlmostEqual(tval, 20.64, places=1)
 
     def test_semibatch_example(self):
         # this is referenced in the documentation so at least look for smoke
