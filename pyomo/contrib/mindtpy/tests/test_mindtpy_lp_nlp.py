@@ -33,7 +33,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving 8PP problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
@@ -49,7 +49,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving 8PP_init_max_binary problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
@@ -64,7 +64,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving MINLP_simple problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -80,7 +80,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving MINLP2_simple problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -96,7 +96,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving MINLP3_simple problem with Outer Approximation')
             results = opt.solve(model, strategy='OA', init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -111,7 +111,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving Proposal problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -124,7 +124,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_OnlineDocExample(self):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving OnlineDocExample with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
