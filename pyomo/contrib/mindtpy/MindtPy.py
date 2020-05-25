@@ -416,6 +416,10 @@ class MindtPySolver(object):
 
         solve_data.results.solver.iterations = solve_data.mip_iter
 
+        if config.single_tree == True:
+            solve_data.results.solver.num_nodes = solve_data.nlp_iter - \
+                (1 if config.init_strategy == 'rNLP' else 0)
+
         return solve_data.results
 
     #
