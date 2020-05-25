@@ -125,18 +125,18 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                        solve_data.working_model.MindtPy_utils.variable_list,
                                        config)
         # update the bound
-        if main_objective.sense == minimize:
-            solve_data.LB = max(
-                self.get_objective_value(),
-                # self.get_best_objective_value(),
-                solve_data.LB)
-            solve_data.LB_progress.append(solve_data.LB)
-        else:
-            solve_data.UB = min(
-                self.get_objective_value(),
-                # self.get_best_objective_value(),
-                solve_data.UB)
-            solve_data.UB_progress.append(solve_data.UB)
+        # if main_objective.sense == minimize:
+        #     solve_data.LB = max(
+        #         self.get_objective_value(),
+        #         # self.get_best_objective_value(),
+        #         solve_data.LB)
+        #     solve_data.LB_progress.append(solve_data.LB)
+        # else:
+        #     solve_data.UB = min(
+        #         self.get_objective_value(),
+        #         # self.get_best_objective_value(),
+        #         solve_data.UB)
+        #     solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
             % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
