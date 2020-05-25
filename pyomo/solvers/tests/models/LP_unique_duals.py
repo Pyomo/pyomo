@@ -8,8 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, RangeSet, ConstraintList, \
-    NonNegativeReals, Suffix, summation, sum_product
+from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, RangeSet, ConstraintList, NonNegativeReals, Suffix, summation
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 def c_rule(model, j):
