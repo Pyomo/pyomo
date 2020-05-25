@@ -92,7 +92,7 @@ def solve_OA_master(solve_data, config):
                 solve_data.LB = max(
                     master_mip_results.problem.lower_bound, solve_data.LB)
                 solve_data.LB_progress.append(solve_data.LB)
-
+            else:
                 solve_data.UB = min(
                     master_mip_results.problem.upper_bound, solve_data.UB)
                 solve_data.UB_progress.append(solve_data.UB)
