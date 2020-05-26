@@ -645,25 +645,27 @@ def process_init(x, lb, ub):
     ub_only = np.logical_and(ub_mask, np.logical_not(lb_mask))
     lb_and_ub = np.logical_and(lb_mask, ub_mask)
     out_of_bounds = ((x >= ub) + (x <= lb))
-    out_of_bounds_lb_only = np.logical_and(out_of_bounds, lb_only).nonzero()[0]
-    out_of_bounds_ub_only = np.logical_and(out_of_bounds, ub_only).nonzero()[0]
-    out_of_bounds_lb_and_ub = np.logical_and(out_of_bounds, lb_and_ub).nonzero()[0]
+    out_of_bounds_lb_only = np.logical_and(out_of_bounds, lb_only)
+    out_of_bounds_ub_only = np.logical_and(out_of_bounds, ub_only)
+    out_of_bounds_lb_and_ub = np.logical_and(out_of_bounds, lb_and_ub)
 
-    np.put(x, out_of_bounds_lb_only, lb[out_of_bounds_lb_only] + 1)
-    np.put(x, out_of_bounds_ub_only, ub[out_of_bounds_ub_only] - 1)
+    cm = build_compression_matrix(out_of_bounds_lb_only)
+    x[out_of_bounds_lb_only] = cm * (lb + 1)
 
-    cm = build_compression_matrix(lb_and_ub).tocsr()
-    np.put(x, out_of_bounds_lb_and_ub,
-           (0.5 * cm.transpose() * (cm * lb + cm * ub))[out_of_bounds_lb_and_ub])
+    cm = build_compression_matrix(out_of_bounds_ub_only)
+    x[out_of_bounds_ub_only] = cm * (ub - 1)
+
+    del cm
+    cm1 = build_compression_matrix(lb_and_ub)
+    cm2 = build_compression_matrix(out_of_bounds_lb_and_ub)
+    x[out_of_bounds_lb_and_ub] = cm2 * (0.5 * cm1.transpose() * (cm1 * lb + cm1 * ub))
 
 
 def process_init_duals_lb(x, lb):
-    out_of_bounds = (x <= 0).nonzero()[0]
-    np.put(x, out_of_bounds, 1)
+    x[x <= 0] = 1
     x[np.isneginf(lb)] = 0
 
 
 def process_init_duals_ub(x, ub):
-    out_of_bounds = (x <= 0).nonzero()[0]
-    np.put(x, out_of_bounds, 1)
+    x[x <= 0] = 1
     x[np.isinf(ub)] = 0
