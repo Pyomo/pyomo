@@ -267,7 +267,6 @@ class _DisjunctionData(ActiveComponentData):
 
 @ModelComponentFactory.register("Disjunction expressions.")
 class Disjunction(ActiveIndexedComponent):
-    Skip = (0,)
     _ComponentDataClass = _DisjunctionData
 
     def __new__(cls, *args, **kwds):
