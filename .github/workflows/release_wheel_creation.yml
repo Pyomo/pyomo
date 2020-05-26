@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - '*'
-    branches:
-      - wheel_creation
 
 jobs:
   manylinux:
@@ -35,10 +33,10 @@ jobs:
         python-versions: 'cp27-cp27mu cp35-cp35m cp36-cp36m cp37-cp37m cp38-cp38'
         build-requirements: 'cython'
         package-path: ''
-        pip-wheel-args: '--no-deps'
+        pip-wheel-args: ''
+        # When locally testing, --no-deps flag is necessary (PyUtilib dependency will trigger an error otherwise)
     - name: Delete linux wheels
       run: |
-        ls wheelhouse/
         sudo rm -rf wheelhouse/*-linux_x86_64.whl
     - name: Upload artifact
       uses: actions/upload-artifact@v1
