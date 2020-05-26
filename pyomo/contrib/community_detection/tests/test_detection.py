@@ -12,9 +12,15 @@
 #  ___________________________________________________________________________
 
 from __future__ import division
-import pyutilib.th as unittest
 
-from pyomo.environ import *
+import logging
+
+import pyutilib.th as unittest
+from six import StringIO
+
+from pyomo.common.dependencies import networkx_available
+from pyomo.common.log import LoggingIntercept
+from pyomo.environ import ConcreteModel, Constraint, Integers, minimize, Objective, Var
 from pyomo.contrib.community_detection.detection import *
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
@@ -23,6 +29,8 @@ from pyomo.solvers.tests.models.LP_inactive_index import LP_inactive_index
 from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
 
 
+@unittest.skipUnless(community_available, "'community' package from 'python-louvain' is not available.")
+@unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestDecomposition(unittest.TestCase):
 
     def test_communities_1(self):
@@ -255,19 +263,14 @@ class TestDecomposition(unittest.TestCase):
 
     def test_communities_7(self):
         model = create_model_6()
-        empty_model = detect_communities(ConcreteModel())
-        bad_model = detect_communities(2)
-        bad_node_type = detect_communities(model, node_type=[])
-        bad_objective = detect_communities(model, with_objective='c')
-        bad_weighted_graph = detect_communities(model, weighted_graph=set())
-        bad_file_destination = detect_communities(model, file_destination=dict())
-        bad_log_level = detect_communities(model, log_level=[])
-        bad_seed_value = detect_communities(model, random_seed='v')
 
-        test_results = (empty_model, bad_model, bad_node_type, bad_objective, bad_weighted_graph, bad_file_destination,
-                        bad_log_level, bad_seed_value)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.community_detection', logging.ERROR):
+            detect_communities(ConcreteModel())
+        self.assertIn('Empty community map was returned', output.getvalue())
 
-        correct_community_maps = ({}, None, None, None, None, None, None, None)
+        with self.assertRaisesRegex(AssertionError, "Invalid node type specified. Valid values: 'v', 'c'."):
+            detect_communities(model, node_type='foo')
 
 
 def create_model_5():  # MINLP written by GAMS Convert at 05/10/19 14:22:56
