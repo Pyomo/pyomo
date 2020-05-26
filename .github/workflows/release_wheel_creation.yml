@@ -39,7 +39,7 @@ jobs:
     - name: Delete linux wheels
       run: |
         ls /github/workspace/wheelhouse/
-        rm -rf /github/workspace/wheelhouse/*-linux_x86_64.whl
+        sudo rm -rf /github/workspace/wheelhouse/*-linux_x86_64.whl
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
