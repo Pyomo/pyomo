@@ -525,7 +525,13 @@ class BlockMatrix(BaseBlockMatrix):
             raise ValueError('BlockMatrix only supports transpose with copy=True')
 
         m, n = self.bshape
+        row_sizes = self.row_block_sizes()
+        col_sizes = self.col_block_sizes()
         mat = BlockMatrix(n, m)
+        for _ndx, _size in enumerate(row_sizes):
+            mat.set_col_size(_ndx, _size)
+        for _ndx, _size in enumerate(col_sizes):
+            mat.set_row_size(_ndx, _size)
         for i in range(m):
             for j in range(n):
                 if not self.is_empty_block(i, j):
