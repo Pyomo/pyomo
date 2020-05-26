@@ -35,7 +35,7 @@ jobs:
         python-versions: 'cp27-cp27mu cp35-cp35m cp36-cp36m cp37-cp37m cp38-cp38'
         build-requirements: 'cython'
         package-path: ''
-        pip-wheel-args: ''
+        pip-wheel-args: '--no-deps'
     - name: Delete linux wheels
       run: |
         rm -rf wheelhouse/*-linux_x86_64.whl
