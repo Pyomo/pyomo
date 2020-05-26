@@ -1249,13 +1249,46 @@ class BlockVector(np.ndarray, BaseBlockVector):
         self._set_block_size(key, value.size)
         super(BlockVector, self).__setitem__(key, value)
 
+    def _has_equal_structure(self, other):
+        """
+        Parameters
+        ----------
+        other: BlockVector
+
+        Returns
+        -------
+        equal_structure: bool
+            True if self and other have the same block structure (recursive). False otherwise.
+        """
+        if not isinstance(other, BlockVector):
+            return False
+        if self.nblocks != other.nblocks:
+            return False
+        for ndx, block1 in enumerate(self):
+            block2 = other.get_block(ndx)
+            if isinstance(block1, BlockVector):
+                if not isinstance(block2, BlockVector):
+                    return False
+                if not block1._has_equal_structure(block2):
+                    return False
+        return True
+
     def __getitem__(self, item):
-        raise NotImplementedError('BlockVector does not support __getitem__. '
-                                  'Use get_block or set_block to access sub-blocks.')
+        if not self._has_equal_structure(item):
+            raise ValueError('BlockVector.__getitem__ only accepts slices in the form of BlockVectors of the same structure')
+        res = BlockVector(self.nblocks)
+        for ndx, block in self:
+            res.set_block(ndx, block[item.get_block(ndx)])
 
     def __setitem__(self, key, value):
-        raise NotImplementedError('BlockVector does not support __setitem__. '
-                                  'Use get_block or set_block to access sub-blocks.')
+        if not (self._has_equal_structure(key) and (self._has_equal_structure(value) or np.isscalar(value))):
+            raise ValueError('BlockVector.__setitem__ only accepts slices in the form of BlockVectors of the same structure')
+        if np.isscalar(value):
+            for ndx, block in self:
+                block[key.get_block(ndx)] = value
+        else:
+            for ndx, block in self:
+                block[key.get_block(ndx)] = value.get_block(ndx)
 
     def _comparison_helper(self, other, operation):
         assert_block_structure(self)
