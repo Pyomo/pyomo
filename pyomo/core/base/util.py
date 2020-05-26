@@ -17,6 +17,7 @@ import inspect
 import six
 
 from six import iteritems, iterkeys
+from six.moves import xrange
 
 if six.PY2:
     getargspec = inspect.getargspec
@@ -269,7 +270,10 @@ class ItemInitializer(InitializerBase):
         return True
 
     def indices(self):
-        return iterkeys(self._dict)
+        try:
+            return iterkeys(self._dict)
+        except AttributeError:
+            return xrange(len(self._dict))
 
 
 class IndexedCallInitializer(InitializerBase):
