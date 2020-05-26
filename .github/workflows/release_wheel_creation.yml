@@ -4,6 +4,9 @@ on:
   push:
     tags:
     - '*'
+  push:
+    branch:
+    - wheel_creation
 
 jobs:
   manylinux:
@@ -34,6 +37,9 @@ jobs:
         build-requirements: 'cython'
         package-path: ''
         pip-wheel-args: ''
+    - name: Delete linux wheels
+      run: |
+        rm -rf wheelhouse/*-linux_x86_64.whl
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
