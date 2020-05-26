@@ -1,4 +1,4 @@
-"""Model Graph Generator Code - Rahul Joglekar"""
+"""Model Graph Generator Code"""
 from pyomo.common.dependencies import networkx as nx
 from pyomo.core import Constraint, Objective, Var
 from pyomo.core.expr.current import identify_variables

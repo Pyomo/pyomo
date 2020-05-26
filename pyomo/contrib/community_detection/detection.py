@@ -19,7 +19,7 @@ community, community_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
 
-def detect_communities(model, node_type='v', with_objective=True, weighted_graph=True, random_seed=False):
+def detect_communities(model, node_type='v', with_objective=True, weighted_graph=True, random_seed=None):
     """
     Detects communities in a Pyomo optimization model
 
