@@ -1221,41 +1221,35 @@ class MiscConTests(unittest.TestCase):
         a = Constraint()
         self.assertEqual(a._constructed, False)
         self.assertEqual(len(a), 0)
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a()
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.body
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.lower
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.upper
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.equality
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.strict_lower
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.strict_upper
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
+
         x = Var(initialize=1.0)
         x.construct()
         a.construct()
