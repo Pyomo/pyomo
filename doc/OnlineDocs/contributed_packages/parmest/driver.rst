@@ -72,7 +72,16 @@ Section.
 
     >>> import pyomo.contrib.parmest.parmest as parmest
     >>> pest = parmest.Estimator(model_function, data, theta_names, objective_function)
- 
+
+Optionally, solver options can be supplied, e.g.,
+
+.. doctest::
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
+    >>> solver_options = {"max_iter": 6000}
+    >>> pest = parmest.Estimator(model_function, data, theta_names, objective_function, solver_options)
+        
+
 
 Model function
 --------------
