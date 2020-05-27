@@ -358,8 +358,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns the largest value stored in this BlockVector
         """
         assert_block_structure(self)
-        results = np.array([self.get_block(i).max() for i in range(self.nblocks) if self.get_block(i).size > 0])
-        return results.max(axis=axis, out=out, keepdims=keepdims)
+        results = list()
+        for block in self:
+            if block.size > 0:
+                results.append(block.max())
+        return max(results)
 
     def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):
         """Copy of the array, cast to a specified type"""
