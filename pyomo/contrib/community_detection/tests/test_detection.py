@@ -307,6 +307,5 @@ def create_model_6():
     return model
 
 
-
 if __name__ == '__main__':
     unittest.main()
