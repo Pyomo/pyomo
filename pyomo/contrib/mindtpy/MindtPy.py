@@ -231,6 +231,16 @@ class MindtPySolver(object):
                     "slack variables here are used to deal with nonconvex MINLP",
         domain=bool
     ))
+    CONFIG.declare("continuous_var_bound", ConfigValue(
+        default=1e24,
+        description="default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
+    CONFIG.declare("intger_var_bound", ConfigValue(
+        default=1e9,
+        description="default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.

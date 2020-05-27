@@ -15,6 +15,7 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
+from pyomo.contrib.mindtpy.single_tree import var_bound_add
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -22,6 +23,10 @@ def MindtPy_initialize_master(solve_data, config):
     This includes generating the initial cuts require to build the master
     problem.
     """
+    # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded master problem.
+    if config.single_tree == True:
+        var_bound_add(solve_data, config)
+
     m = solve_data.mip = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
     m.dual.deactivate()
