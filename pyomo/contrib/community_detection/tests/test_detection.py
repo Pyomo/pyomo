@@ -39,21 +39,21 @@ class TestDecomposition(unittest.TestCase):
         model = m_class.model
 
         community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
 
         test_results = (community_map_v_unweighted_without,
                         community_map_v_weighted_without,
@@ -75,21 +75,21 @@ class TestDecomposition(unittest.TestCase):
         model = m_class.model
 
         community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
 
         test_results = (community_map_v_unweighted_without,
                         community_map_v_weighted_without,
@@ -112,21 +112,21 @@ class TestDecomposition(unittest.TestCase):
         model = m_class.model
 
         community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
 
         test_results = (community_map_v_unweighted_without,
                         community_map_v_weighted_without,
@@ -156,21 +156,21 @@ class TestDecomposition(unittest.TestCase):
         model = m_class.model
 
         community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
 
         test_results = (community_map_v_unweighted_without,
                         community_map_v_weighted_without,
@@ -192,21 +192,21 @@ class TestDecomposition(unittest.TestCase):
         model = create_model_5()
 
         community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
 
         test_results = (community_map_v_unweighted_without,
                         community_map_v_weighted_without,
@@ -229,21 +229,21 @@ class TestDecomposition(unittest.TestCase):
         model = create_model_6()
 
         community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                                weighted_graph=False, random_seed=5)
+                                                                weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                              weighted_graph=True, random_seed=5)
+                                                              weighted_graph=True, random_seed=random_seed_test)
         community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                             weighted_graph=False, random_seed=5)
+                                                             weighted_graph=False, random_seed=random_seed_test)
         community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                           weighted_graph=True, random_seed=5)
+                                                           weighted_graph=True, random_seed=random_seed_test)
 
         test_results = (community_map_v_unweighted_without,
                         community_map_v_weighted_without,
@@ -273,11 +273,14 @@ class TestDecomposition(unittest.TestCase):
             detect_communities(model, node_type='foo')
 
 
-def create_model_5():  # MINLP written by GAMS Convert at 05/10/19 14:22:56 ; model = st_test4.py
+random_seed_test = 5
+
+
+def create_model_5():  # This model comes from a GAMS convert of instance st_test4.gms at minlplib.com
     model = m = ConcreteModel()
-    m.i1 = Var(within=Integers, bounds=(0, 1E15), initialize=0)
-    m.i2 = Var(within=Integers, bounds=(0, 1E15), initialize=0)
-    m.i3 = Var(within=Integers, bounds=(0, 1E15), initialize=0)
+    m.i1 = Var(within=Integers, bounds=(0, 100), initialize=0)
+    m.i2 = Var(within=Integers, bounds=(0, 100), initialize=0)
+    m.i3 = Var(within=Integers, bounds=(0, 100), initialize=0)
     m.i4 = Var(within=Integers, bounds=(0, 1), initialize=0)
     m.i5 = Var(within=Integers, bounds=(0, 1), initialize=0)
     m.i6 = Var(within=Integers, bounds=(0, 2), initialize=0)
@@ -302,6 +305,7 @@ def create_model_6():
     m.c1 = Constraint(expr=m.x1 + m.x2 >= 1)
     m.c2 = Constraint(expr=m.x3 + m.x4 >= 1)
     return model
+
 
 
 if __name__ == '__main__':
