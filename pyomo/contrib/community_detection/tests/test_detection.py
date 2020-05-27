@@ -262,15 +262,42 @@ class TestDecomposition(unittest.TestCase):
         self.assertEqual(correct_community_maps, test_results)
 
     def test_communities_7(self):
-        model = create_model_6()
-
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.community_detection', logging.ERROR):
             detect_communities(ConcreteModel())
-        self.assertIn('Empty community map was returned', output.getvalue())
+        self.assertIn('in detect_communities: Empty community map was returned', output.getvalue())
 
-        with self.assertRaisesRegex(AssertionError, "Invalid node type specified. Valid values: 'v', 'c'."):
-            detect_communities(model, node_type='foo')
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.community_detection', logging.WARNING):
+            detect_communities(one_community_model())
+        self.assertIn("Community detection found that with the given parameters, the model could not be decomposed - "
+                      "only one community was found", output.getvalue())
+
+        model = 'foo'
+        with self.assertRaisesRegex(AssertionError, "Invalid model: 'model=%s' - model must be an instance of "
+                                                    "ConcreteModel" % model):
+            detect_communities(model)
+        model = create_model_6()
+
+        node_type = 'foo'
+        with self.assertRaisesRegex(AssertionError,
+                                    "Invalid node type specified: 'node_type=%s' - Valid values: 'v', 'c'" % node_type):
+            detect_communities(model, node_type=node_type)
+
+        with_objective = 'foo'
+        with self.assertRaisesRegex(AssertionError, "Invalid value for with_objective: 'with_objective=%s' - "
+                                                    "with_objective must be a Boolean" % with_objective):
+            detect_communities(model, with_objective=with_objective)
+
+        weighted_graph = 'foo'
+        with self.assertRaisesRegex(AssertionError, "Invalid value for weighted_graph: 'weighted_graph=%s' - "
+                                                    "weighted_graph must be a Boolean" % weighted_graph):
+            detect_communities(model, weighted_graph=weighted_graph)
+
+        random_seed = 'foo'
+        with self.assertRaisesRegex(AssertionError, "Invalid value for random_seed: 'random_seed=%s' - random_seed "
+                                                    "must be a positive integer" % random_seed):
+            detect_communities(model, random_seed=random_seed)
 
 
 random_seed_test = 5
@@ -304,6 +331,15 @@ def create_model_6():
     m.obj = Objective(expr=m.x1, sense=minimize)
     m.c1 = Constraint(expr=m.x1 + m.x2 >= 1)
     m.c2 = Constraint(expr=m.x3 + m.x4 >= 1)
+    return model
+
+
+def one_community_model():
+    model = m = ConcreteModel()
+    m.x1 = Var(bounds=(0, 1))
+    m.x2 = Var(bounds=(0, 1))
+    m.obj = Objective(expr=m.x1, sense=minimize)
+    m.c1 = Constraint(expr=m.x1 + m.x2 >= 1)
     return model
 
 

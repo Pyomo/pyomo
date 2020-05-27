@@ -10,6 +10,7 @@ Original implementation developed by Rahul Joglekar in the Grossmann research gr
 from logging import getLogger
 
 from pyomo.common.dependencies import attempt_import
+from pyomo.core import ConcreteModel
 from pyomo.contrib.community_detection.community_graph import _generate_model_graph
 
 logger = getLogger('pyomo.contrib.community_detection')
@@ -50,12 +51,27 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
         a Python dictionary whose keys are integers from zero to the number of communities minus one
         with values that are sorted lists of the nodes in the given community
     """
-    assert node_type in ('v', 'c'), "Invalid node type specified. Valid values: 'v', 'c'."
+
+    # Check that all arguments are of the correct type
+    assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
+                                             "ConcreteModel" % model
+
+    assert node_type in ('v', 'c'), "Invalid node type specified: 'node_type=%s' - Valid " \
+                                    "values: 'v', 'c'" % node_type
+
+    assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
+                                         "must be a Boolean" % with_objective
+
+    assert type(weighted_graph) == bool, "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph " \
+                                         "must be a Boolean" % weighted_graph
+
+    assert type(random_seed) == int or random_seed is None, "Invalid value for random_seed: 'random_seed=%s' - " \
+                                                            "random_seed must be a positive integer" % random_seed
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
     model_graph = _generate_model_graph(
         model, node_type=node_type, with_objective=with_objective,
-        weighted_graph=weighted_graph, )
+        weighted_graph=weighted_graph)
 
     # Use Louvain community detection to determine which community each node belongs to
     partition_of_graph = community.best_partition(model_graph, random_state=random_seed)
