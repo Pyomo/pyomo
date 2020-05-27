@@ -263,11 +263,11 @@ class TestDecomposition(unittest.TestCase):
 
     def test_communities_7(self):
         output = StringIO()
+
         with LoggingIntercept(output, 'pyomo.contrib.community_detection', logging.ERROR):
             detect_communities(ConcreteModel())
         self.assertIn('in detect_communities: Empty community map was returned', output.getvalue())
 
-        output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.community_detection', logging.WARNING):
             detect_communities(one_community_model())
         self.assertIn("Community detection found that with the given parameters, the model could not be decomposed - "
@@ -296,7 +296,7 @@ class TestDecomposition(unittest.TestCase):
 
         random_seed = 'foo'
         with self.assertRaisesRegex(AssertionError, "Invalid value for random_seed: 'random_seed=%s' - random_seed "
-                                                    "must be a positive integer" % random_seed):
+                                                    "must be a non-negative integer" % random_seed):
             detect_communities(model, random_seed=random_seed)
 
 

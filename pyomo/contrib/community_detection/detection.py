@@ -15,7 +15,7 @@ from pyomo.contrib.community_detection.community_graph import _generate_model_gr
 
 logger = getLogger('pyomo.contrib.community_detection')
 
-# Yikes, the naming. I hope the user doesn't have another package installed named 'community'
+# Attempt import of louvain community detection package
 community, community_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
@@ -66,12 +66,11 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
                                          "must be a Boolean" % weighted_graph
 
     assert type(random_seed) == int or random_seed is None, "Invalid value for random_seed: 'random_seed=%s' - " \
-                                                            "random_seed must be a positive integer" % random_seed
+                                                            "random_seed must be a non-negative integer" % random_seed
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
-    model_graph = _generate_model_graph(
-        model, node_type=node_type, with_objective=with_objective,
-        weighted_graph=weighted_graph)
+    model_graph = _generate_model_graph(model, node_type=node_type,
+                                        with_objective=with_objective, weighted_graph=weighted_graph)
 
     # Use Louvain community detection to determine which community each node belongs to
     partition_of_graph = community.best_partition(model_graph, random_state=random_seed)
