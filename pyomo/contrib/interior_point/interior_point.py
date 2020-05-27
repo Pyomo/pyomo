@@ -1,10 +1,10 @@
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix
-from scipy.sparse import coo_matrix, identity
 import numpy as np
 import logging
 import time
 from .linalg.results import LinearSolverStatus
 from pyutilib.misc.timing import HierarchicalTimer
+import enum
 
 
 """
@@ -18,6 +18,11 @@ Interface Requirements
 
 
 ip_logger = logging.getLogger('interior_point')
+
+
+class InteriorPointStatus(enum.Enum):
+    optimal = 0
+    error = 1
 
 
 class LinearSolveContext(object):
@@ -223,6 +228,7 @@ class InteriorPointSolver(object):
         reg_coef = 0
 
         timer.stop('init')
+        status = InteriorPointStatus.error
 
         for _iter in range(max_iter):
             self._iter = _iter
@@ -262,6 +268,7 @@ class InteriorPointSolver(object):
                                                    time=time.time() - t0))
 
             if max(primal_inf, dual_inf, complimentarity_inf) <= tol:
+                status = InteriorPointStatus.optimal
                 break
             timer.start('convergence check')
             primal_inf, dual_inf, complimentarity_inf = \
@@ -320,7 +327,7 @@ class InteriorPointSolver(object):
         timer.stop('IP solve')
         if report_timing:
             print(timer)
-        return primals, duals_eq, duals_ineq
+        return status
 
     def factorize(self, kkt, timer=None):
         desired_n_neg_evals = (self.interface.n_eq_constraints() +
@@ -438,11 +445,10 @@ class InteriorPointSolver(object):
         ineq_ub_mod[np.isinf(ineq_ub)] = 0  # these entries get multiplied by 0
 
         timer.start('grad_lag_primals')
-        grad_lag_primals = (grad_obj +
-                            jac_eq.transpose() * duals_eq +
-                            jac_ineq.transpose() * duals_ineq -
-                            duals_primals_lb +
-                            duals_primals_ub)
+        grad_lag_primals = grad_obj + jac_eq.transpose() * duals_eq
+        grad_lag_primals += jac_ineq.transpose() * duals_ineq
+        grad_lag_primals -= duals_primals_lb
+        grad_lag_primals += duals_primals_ub
         timer.stop('grad_lag_primals')
         timer.start('grad_lag_slacks')
         grad_lag_slacks = (-duals_ineq -
@@ -533,7 +539,7 @@ def _fraction_to_the_boundary_helper_lb(tau, x, delta_x, xl):
     delta_x_mod[delta_x_mod == 0] = 1
     alpha = -tau * (x - xl) / delta_x_mod
     alpha[delta_x >= 0] = np.inf
-    if len(alpha) == 0:
+    if alpha.size == 0:
         return 1
     else:
         return min(alpha.min(), 1)
@@ -544,7 +550,7 @@ def _fraction_to_the_boundary_helper_ub(tau, x, delta_x, xu):
     delta_x_mod[delta_x_mod == 0] = 1
     alpha = tau * (xu - x) / delta_x_mod
     alpha[delta_x <= 0] = np.inf
-    if len(alpha) == 0:
+    if alpha.size == 0:
         return 1
     else:
         return min(alpha.min(), 1)
@@ -608,22 +614,22 @@ def fraction_to_the_boundary(interface, tau):
         tau=tau,
         x=duals_primals_lb,
         delta_x=delta_duals_primals_lb,
-        xl=np.zeros(len(duals_primals_lb)))
+        xl=np.zeros(duals_primals_lb.size))
     alpha_dual_max_b = _fraction_to_the_boundary_helper_lb(
         tau=tau,
         x=duals_primals_ub,
         delta_x=delta_duals_primals_ub,
-        xl=np.zeros(len(duals_primals_ub)))
+        xl=np.zeros(duals_primals_ub.size))
     alpha_dual_max_c = _fraction_to_the_boundary_helper_lb(
         tau=tau,
         x=duals_slacks_lb,
         delta_x=delta_duals_slacks_lb,
-        xl=np.zeros(len(duals_slacks_lb)))
+        xl=np.zeros(duals_slacks_lb.size))
     alpha_dual_max_d = _fraction_to_the_boundary_helper_lb(
         tau=tau,
         x=duals_slacks_ub,
         delta_x=delta_duals_slacks_ub,
-        xl=np.zeros(len(duals_slacks_ub)))
+        xl=np.zeros(duals_slacks_ub.size))
     alpha_dual_max = min(alpha_dual_max_a, alpha_dual_max_b,
                          alpha_dual_max_c, alpha_dual_max_d)
 

@@ -113,7 +113,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                        np.logical_not, np.expm1, np.exp2, np.sign,
                        np.rint, np.square, np.positive, np.negative,
                        np.rad2deg, np.deg2rad, np.conjugate, np.reciprocal,
-                       ]
+                       np.signbit]
 
         # functions that take two vectors
         binary_funcs = [np.add, np.multiply, np.divide, np.subtract,
@@ -515,8 +515,11 @@ class BlockVector(np.ndarray, BaseBlockVector):
         Returns the smallest value stored in the vector
         """
         assert_block_structure(self)
-        results = np.array([self.get_block(i).min() for i in range(self.nblocks)])
-        return results.min(axis=axis, out=out, keepdims=keepdims)
+        results = list()
+        for block in self:
+            if block.size > 0:
+                results.append(block.min())
+        return min(results)
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):
         """
@@ -1205,31 +1208,18 @@ class BlockVector(np.ndarray, BaseBlockVector):
     def __idiv__(self, other):
         return self.__itruediv__(other)
 
-    def __str__(self):
+    def _print(self, indent):
         msg = ''
-        for idx in range(self.bshape[0]):
-            if isinstance(self.get_block(idx), BlockVector):
-                repn = self.get_block(idx).__repr__()
-                repn += '\n'
-                for j, vv in enumerate(self.get_block(idx)):
-                    if isinstance(vv, BlockVector):
-                        repn += '   {}: {}\n'.format(j, vv.__repr__())
-                        repn += '\n'
-                        for jj, vvv in enumerate(vv):
-                            if isinstance(vv, BlockVector):
-                                repn += '      {}: {}\n'.format(jj, vvv.__repr__())
-                            else:
-                                repn += '      {}: array({})\n'.format(jj, vvv.size)
-                    else:
-                        repn += '   {}: array({})\n'.format(j, vv.size)
-            elif isinstance(self.get_block(idx), np.ndarray):
-                repn = "array({})".format(self.get_block(idx).size)
-            elif self.get_block(idx) is None:
-                repn = None
+        for ndx, block in enumerate(self):
+            if isinstance(block, BlockVector):
+                msg += indent + str(ndx) + ': ' + block.__class__.__name__ + str(block.bshape) + '\n'
+                msg += block._print(indent=indent+'   ')
             else:
-                raise NotImplementedError("Should not get here")
-            msg += '{}: {}\n'.format(idx, repn)
+                msg += indent + str(ndx) + ': ' + block.__class__.__name__ + str(block.shape) + '\n'
         return msg
+
+    def __str__(self):
+        return self._print(indent='')
 
     def __repr__(self):
         return '{}{}'.format(self.__class__.__name__, self.bshape)
@@ -1284,10 +1274,10 @@ class BlockVector(np.ndarray, BaseBlockVector):
         if not (self._has_equal_structure(key) and (self._has_equal_structure(value) or np.isscalar(value))):
             raise ValueError('BlockVector.__setitem__ only accepts slices in the form of BlockVectors of the same structure')
         if np.isscalar(value):
-            for ndx, block in self:
+            for ndx, block in enumerate(self):
                 block[key.get_block(ndx)] = value
         else:
-            for ndx, block in self:
+            for ndx, block in enumerate(self):
                 block[key.get_block(ndx)] = value.get_block(ndx)
 
     def _comparison_helper(self, other, operation):

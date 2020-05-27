@@ -757,13 +757,23 @@ class BlockMatrix(BaseBlockMatrix):
     def __repr__(self):
         return '{}{}'.format(self.__class__.__name__, self.bshape)
 
-    def __str__(self):
-        msg = '{}{}\n'.format(self.__class__.__name__, self.bshape)
+    def _print(self, indent):
+        msg = ''
         for idx in range(self.bshape[0]):
             for jdx in range(self.bshape[1]):
-                repn = self._blocks[idx, jdx].__repr__() if self._block_mask[idx, jdx] else None
-                msg += '({}, {}): {}\n'.format(idx, jdx, repn)
+                if self.is_empty_block(idx, jdx):
+                    msg += indent + str((idx, jdx)) + ': ' + str(None) + '\n'
+                else:
+                    block = self.get_block(idx, jdx)
+                    if isinstance(block, BlockMatrix):
+                        msg += indent + str((idx, jdx)) + ': ' + block.__class__.__name__ + str(block.bshape) + '\n'
+                        msg += block._print(indent=indent+'   ')
+                    else:
+                        msg += indent + str((idx, jdx)) + ': ' + block.__class__.__name__ + str(block.shape) + '\n'
         return msg
+
+    def __str__(self):
+        return self._print(indent='')
 
     def get_block(self, row, col):
         assert row >= 0 and col >= 0, 'indices must be positive'
@@ -915,8 +925,9 @@ class BlockMatrix(BaseBlockMatrix):
                         x = other.get_block(j)
                         A = self._blocks[i, j]
                         blk = result.get_block(i)
-                        blk += A * x
-                        result.set_block(i, blk)
+                        _tmp = A*x
+                        _tmp += blk
+                        result.set_block(i, _tmp)
             return result
         elif isinstance(other, np.ndarray):
 
