@@ -12,8 +12,8 @@ import os
 
 import pyutilib.th as unittest
 
-from pyomo.checker import *
-from pyomo.checker.plugins.checker import *
+from pyomo.checker import ImmediateDataChecker, ImmediateTreeChecker, IterativeDataChecker, IterativeTreeChecker, ModelCheckRunner, ModelScript
+from pyomo.checker.plugins.checker import IModelChecker
 
 
 currdir = os.path.dirname(os.path.abspath(__file__))
