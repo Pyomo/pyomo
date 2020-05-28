@@ -69,8 +69,9 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
                                                             "random_seed must be a non-negative integer" % random_seed
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
-    model_graph = _generate_model_graph(model, node_type=node_type,
-                                        with_objective=with_objective, weighted_graph=weighted_graph)
+    model_graph = _generate_model_graph(
+        model, node_type=node_type, with_objective=with_objective,
+        weighted_graph=weighted_graph)
 
     # Use Louvain community detection to determine which community each node belongs to
     partition_of_graph = community.best_partition(model_graph, random_state=random_seed)
