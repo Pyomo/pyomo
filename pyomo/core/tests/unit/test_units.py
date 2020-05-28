@@ -176,6 +176,8 @@ class TestPyomoUnit(unittest.TestCase):
         model.y = Var()
         model.z = Var()
         model.p = Param(initialize=42.0, mutable=True)
+        model.xkg = Var(units=kg)
+        model.ym = Var(units=m)
 
         # test equality
         self._get_check_units_ok(3.0*kg == 1.0*kg, uc, 'kg', EXPR.EqualityExpression)
@@ -377,6 +379,16 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_fail(model.ef2(model.x*kg, model.y), uc, EXPR.ExternalFunctionExpression, UnitsError)
         self._get_check_units_fail(model.ef2(2.0*kg, 1.0), uc, EXPR.NPV_ExternalFunctionExpression, UnitsError)
 
+        # test ExternalFunctionExpression, NPV_ExternalFunctionExpression
+        model.ef3 = ExternalFunction(python_callback_function, units=uc.kg, arg_units=[uc.kg, uc.m])
+        self._get_check_units_fail(model.ef3(model.x, model.y), uc, EXPR.ExternalFunctionExpression)
+        self._get_check_units_fail(model.ef3(1.0, 2.0), uc, EXPR.NPV_ExternalFunctionExpression)
+        self._get_check_units_fail(model.ef3(model.x*kg, model.y), uc, EXPR.ExternalFunctionExpression, UnitsError)
+        self._get_check_units_fail(model.ef3(2.0*kg, 1.0), uc, EXPR.NPV_ExternalFunctionExpression, UnitsError)
+        self._get_check_units_ok(model.ef3(2.0*kg, 1.0*uc.m), uc, 'kg', EXPR.NPV_ExternalFunctionExpression)
+        self._get_check_units_ok(model.ef3(model.x*kg, model.y*m), uc, 'kg', EXPR.ExternalFunctionExpression)
+        self._get_check_units_ok(model.ef3(model.xkg, model.ym), uc, 'kg', EXPR.ExternalFunctionExpression)
+        self._get_check_units_fail(model.ef3(model.ym, model.xkg), uc, EXPR.ExternalFunctionExpression, InconsistentUnitsError)
 
     # @unittest.skip('Skipped testing LinearExpression since StreamBasedExpressionVisitor does not handle LinearExpressions')
     def test_linear_expression(self):

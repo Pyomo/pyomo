@@ -795,6 +795,43 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         # now return the units in node.get_units
         return self._pyomo_units_container._get_units_tuple(node.get_units())
 
+    def _get_units_ExternalFunction(self, node, list_of_unit_tuples):
+        """
+        Check to make sure that any child arguments are consistent with 
+        arg_units return the value from node.get_units() This
+        was written for ExternalFunctionExpression where the external
+        function has units assigned to its return value and arguments
+
+        Parameters
+        ----------
+        node : Pyomo expression node
+            The parent node of the children
+
+        list_of_unit_tuples : list
+           This is a list of tuples (one for each of the children) where each tuple
+           is a PyomoUnit, pint unit pair
+
+        Returns
+        -------
+        : tuple (pyomo_unit, pint_unit)
+
+        """
+        # get the list of arg_units
+        arg_units = node.get_arg_units()
+        if arg_units is None:
+            # they should all be dimensionless
+            arg_units = [None]*len(list_of_unit_tuples)
+            
+        for (arg_unit, unit_tuple) in zip(arg_units, list_of_unit_tuples):
+            pyomo_arg_unit, pint_arg_unit = self._pyomo_units_container._get_units_tuple(arg_unit)
+            pint_child_unit = unit_tuple[1]
+            print(pint_arg_unit, pint_child_unit)
+            if not self._pint_units_equivalent(pint_arg_unit, pint_child_unit):
+                raise InconsistentUnitsError(arg_unit, unit_tuple[0], 'Inconsistent units found in ExternalFunction.')
+
+        # now return the units in node.get_units
+        return self._pyomo_units_container._get_units_tuple(node.get_units())
+
     def _get_dimensionless_with_dimensionless_children(self, node, list_of_unit_tuples):
         """
         Check to make sure that any child arguments are unitless /
@@ -1034,8 +1071,8 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         EXPR.Expr_ifExpression: _get_unit_for_expr_if,
         IndexTemplate: _get_dimensionless_no_children,
         EXPR.GetItemExpression: _get_dimensionless_with_dimensionless_children,
-        EXPR.ExternalFunctionExpression: _get_units_with_dimensionless_children,
-        EXPR.NPV_ExternalFunctionExpression: _get_units_with_dimensionless_children,
+        EXPR.ExternalFunctionExpression: _get_units_ExternalFunction,
+        EXPR.NPV_ExternalFunctionExpression: _get_units_ExternalFunction,
         EXPR.LinearExpression: _get_unit_for_linear_expression
     }
 
@@ -1307,6 +1344,9 @@ class PyomoUnitsContainer(object):
         -------
         : tuple (PyomoUnit, pint unit)
         """
+        if expr is None:
+            return (None, None)
+
         pyomo_unit, pint_unit = _UnitExtractionVisitor(self).walk_expression(expr=expr)
         if pint_unit == self._pint_registry.dimensionless:
             pint_unit = None
@@ -1318,6 +1358,7 @@ class PyomoUnitsContainer(object):
             if type(pint_unit) != type(self._pint_registry.kg):
                 pint_unit = pint_unit.units
             return (_PyomoUnit(pint_unit, self._pint_registry), pint_unit)
+
         return (None, None)
 
     def get_units(self, expr):
