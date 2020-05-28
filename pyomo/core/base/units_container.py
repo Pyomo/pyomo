@@ -767,34 +767,6 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         pyomo_unit, pint_unit = list_of_unit_tuples[0]
         return (pyomo_unit, pint_unit)
 
-    def _get_units_with_dimensionless_children(self, node, list_of_unit_tuples):
-        """
-        Check to make sure that any child arguments are unitless /
-        dimensionless and return the value from node.get_units() This
-        was written for ExternalFunctionExpression where the external
-        function has units assigned to its return value.
-
-        Parameters
-        ----------
-        node : Pyomo expression node
-            The parent node of the children
-
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
-
-        Returns
-        -------
-        : tuple (pyomo_unit, pint_unit)
-
-        """
-        for (pyomo_unit, pint_unit) in list_of_unit_tuples:
-            if not self._pint_unit_equivalent_to_dimensionless(pint_unit):
-                raise UnitsError('Expected no units or dimensionless units in {}, but found {}.'.format(str(node), str(pyomo_unit)))
-
-        # now return the units in node.get_units
-        return self._pyomo_units_container._get_units_tuple(node.get_units())
-
     def _get_units_ExternalFunction(self, node, list_of_unit_tuples):
         """
         Check to make sure that any child arguments are consistent with 
