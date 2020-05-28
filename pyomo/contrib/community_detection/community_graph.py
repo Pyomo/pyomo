@@ -1,5 +1,4 @@
 """Model Graph Generator Code"""
-
 from core.kernel.component_set import ComponentSet
 from pyomo.common.dependencies import networkx as nx
 from pyomo.core import Constraint, Objective, Var, ComponentMap
@@ -149,7 +148,9 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
     # respectively), the networkX graph (model_graph) will be updated with all of the edges determined above
     if weighted_graph:
         for edge in edge_weight_dict:
-            model_graph.add_edge(id(edge[0]), id(edge[1]), weight=edge_weight_dict[edge])
+            model_graph.add_edge(id(edge[0]), id(edge[1]), weight=0)
+        for edge in edge_weight_dict:
+            model_graph[id(edge[0])][id(edge[1])]['weight'] += edge_weight_dict[edge]
         edge_weight_dict.clear()
     else:
         for edge in edge_set:
