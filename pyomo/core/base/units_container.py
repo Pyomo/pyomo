@@ -1308,7 +1308,11 @@ class PyomoUnitsContainer(object):
         : tuple (PyomoUnit, pint unit)
         """
         pyomo_unit, pint_unit = _UnitExtractionVisitor(self).walk_expression(expr=expr)
-
+        if pint_unit == self._pint_registry.dimensionless:
+            pint_unit = None
+        if pyomo_unit is self.dimensionless:
+            pyomo_unit = None
+            
         if pint_unit is not None:
             assert pyomo_unit is not None
             if type(pint_unit) != type(self._pint_registry.kg):
@@ -1408,39 +1412,17 @@ class PyomoUnitsContainer(object):
         """
         src_pyomo_unit, src_pint_unit = self._get_units_tuple(src)
         to_pyomo_unit, to_pint_unit = self._get_units_tuple(to_units)
-
-        # check if they are both dimensionless
-        src_dimensionless = \
-            _UnitExtractionVisitor(self)._pint_unit_equivalent_to_dimensionless(src_pint_unit)
-        to_dimensionless = \
-            _UnitExtractionVisitor(self)._pint_unit_equivalent_to_dimensionless(to_pint_unit)
-        if src_dimensionless and to_dimensionless:
+        
+        if src_pyomo_unit is None and to_pyomo_unit is None:
             return src
-        elif src_dimensionless or to_dimensionless:
-            raise InconsistentUnitsError(src_pint_unit, to_pint_unit,
-                                         'Error in convert: units not compatible.')
-
-        # check if any units have offset
-        # CDL: This is no longer necessary since we don't allow
-        # offset units, but let's keep the code in case we change
-        # our mind about offset units
-        #  src_unit_container = pint.util.to_units_container(src_unit, self._pint_ureg)
-        # dest_unit_container = pint.util.to_units_container(dest_unit, self._pint_ureg)
-        # src_offset_units = [(u, e) for u, e in src_unit_container.items()
-        #                     if not self._pint_ureg._units[u].is_multiplicative]
-        # 
-        #  dest_offset_units = [(u, e) for u, e in dest_unit_container.items()
-        #                 if not self._pint_ureg._units[u].is_multiplicative]
-
-        # if len(src_offset_units) + len(dest_offset_units) != 0:
-        #     raise UnitsError('Offset unit detected in call to convert. Offset units are not supported at this time.')
 
         # no offsets, we only need a factor to convert between the two
         fac_b_src, base_units_src = self._pint_registry.get_base_units(src_pint_unit, check_nonmult=True)
         fac_b_dest, base_units_dest = self._pint_registry.get_base_units(to_pint_unit, check_nonmult=True)
 
         if base_units_src != base_units_dest:
-            raise UnitsError('Cannot convert {0:s} to {1:s}. Units are not compatible.'.format(str(src_pyomo_unit), str(to_pyomo_unit)))
+            raise InconsistentUnitsError(src_pint_unit, to_pint_unit,
+                                             'Error in convert: units not compatible.')
 
         return fac_b_src/fac_b_dest*to_pyomo_unit/src_pyomo_unit*src
 
