@@ -8,7 +8,7 @@ These approaches include:
 - Outer approximation
 - Benders decomposition [pending]
 - Partial surrogate cuts [pending]
-- Extended cutting plane [pending]
+- Extended cutting plane [pending by Saeed]
 
 This solver implementation was developed by Carnegie Mellon University in the
 research group of Ignacio Grossmann.
