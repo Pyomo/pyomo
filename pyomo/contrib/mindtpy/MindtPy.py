@@ -241,6 +241,11 @@ class MindtPySolver(object):
         description="default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.",
         domain=PositiveFloat
     ))
+    CONFIG.declare("cycling_check", ConfigValue(
+        default=True,
+        description="whether check the cycling in OA algorithm.",
+        domain=bool
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -283,6 +288,8 @@ class MindtPySolver(object):
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()
+        solve_data.curr_int_sol = []
+        solve_data.prev_int_sol = []
 
         solve_data.original_model = model
         solve_data.working_model = model.clone()
