@@ -11,6 +11,7 @@
 import logging
 
 import pyomo.common.config as cfg
+from pyomo.common import deprecated
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 from pyomo.core.base.component import ActiveComponent, ComponentUID
@@ -35,19 +36,18 @@ from functools import wraps
 from six import iteritems, iterkeys
 from weakref import ref as weakref_ref
 
-logger = logging.getLogger('pyomo.gdp.chull')
+logger = logging.getLogger('pyomo.gdp.hull')
 
 NAME_BUFFER = {}
 
-@TransformationFactory.register('gdp.chull',
-                                doc="Relax disjunctive model by forming "
-                                "the convex hull.")
-
-class ConvexHull_Transformation(Transformation):
-    """Relax disjunctive model by forming the convex hull.
+@TransformationFactory.register(
+    'gdp.hull',
+    doc="Relax disjunctive model by forming the hull reformulation.")
+class Hull_Reformulation(Transformation):
+    """Relax disjunctive model by forming the hull reformulation.
 
     Relaxes a disjunctive model into an algebraic model by forming the
-    convex hull of each disjunction.
+    hull reformulation of each disjunction.
 
     This transformation accepts the following keyword arguments:
 
@@ -64,7 +64,7 @@ class ConvexHull_Transformation(Transformation):
         list of blocks and Disjunctions [default: the instance]
 
     The transformation will create a new Block with a unique
-    name beginning "_pyomo_gdp_chull_relaxation".  That Block will
+    name beginning "_pyomo_gdp_hull_relaxation".  That Block will
     contain an indexed Block named "relaxedDisjuncts", which will hold
     the relaxed disjuncts.  This block is indexed by an integer
     indicating the order in which the disjuncts were relaxed.
@@ -90,14 +90,14 @@ class ConvexHull_Transformation(Transformation):
     constraints are on, and all transformed Disjunctions will have a
     pointer to the corresponding OR or XOR constraint.
 
-    The _pyomo_gdp_chull_relaxation block will have a ComponentMap
+    The _pyomo_gdp_hull_relaxation block will have a ComponentMap
     "_disaggregationConstraintMap":
         <src var>:ComponentMap(<srcDisjunction>: <disaggregation constraint>)
 
     """
 
 
-    CONFIG = cfg.ConfigBlock('gdp.chull')
+    CONFIG = cfg.ConfigBlock('gdp.hull')
     CONFIG.declare('targets', cfg.ConfigValue(
         default=None,
         domain=target_list,
@@ -177,7 +177,7 @@ class ConvexHull_Transformation(Transformation):
     ))
 
     def __init__(self):
-        super(ConvexHull_Transformation, self).__init__()
+        super(Hull_Reformulation, self).__init__()
         self.handlers = {
             Constraint : self._transform_constraint,
             Var :        False,
@@ -278,7 +278,7 @@ class ConvexHull_Transformation(Transformation):
         # transformed components
         transBlockName = unique_component_name(
             instance,
-            '_pyomo_gdp_chull_relaxation')
+            '_pyomo_gdp_hull_relaxation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
@@ -340,7 +340,7 @@ class ConvexHull_Transformation(Transformation):
             return
 
         # put the transformation block on the parent block of the Disjunction,
-        # unless this is a disjunction we have seen in a prior call to chull, in
+        # unless this is a disjunction we have seen in a prior call to hull, in
         # which case we will use the same transformation block we created
         # before.
         if obj._algebraic_constraint is not None:
@@ -361,10 +361,10 @@ class ConvexHull_Transformation(Transformation):
     def _transform_disjunctionData(self, obj, index, transBlock=None):
         if not obj.active:
             return
-        # Convex hull doesn't work if this is an or constraint. So if
+        # Hull reformulation doesn't work if this is an OR constraint. So if
         # xor is false, give up
         if not obj.xor:
-            raise GDP_Error("Cannot do convex hull transformation for "
+            raise GDP_Error("Cannot do hull reformulation for "
                             "Disjunction '%s' with OR constraint.  "
                             "Must be an XOR!" % obj.name)
 
@@ -566,7 +566,7 @@ class ConvexHull_Transformation(Transformation):
             ub = var.ub
             if lb is None or ub is None:
                 raise GDP_Error("Variables that appear in disjuncts must be "
-                                "bounded in order to use the chull "
+                                "bounded in order to use the hull "
                                 "transformation! Missing bound for %s."
                                 % (var.name))
 
@@ -610,7 +610,7 @@ class ConvexHull_Transformation(Transformation):
             ub = var.ub
             if lb is None or ub is None:
                 raise GDP_Error("Variables that appear in disjuncts must be "
-                                "bounded in order to use the chull "
+                                "bounded in order to use the hull "
                                 "transformation! Missing bound for %s."
                                 % (var.name))
             if value(lb) > 0:
@@ -654,7 +654,7 @@ class ConvexHull_Transformation(Transformation):
 
     def _transform_block_components( self, block, disjunct, var_substitute_map,
                                      zero_substitute_map):
-        # As opposed to bigm, in chull we do not need to do anything special for
+        # As opposed to bigm, in hull we do not need to do anything special for
         # nested disjunctions. The indicator variables and disaggregated
         # variables of the inner disjunction will need to be disaggregated again
         # anyway, and nothing will get double-bigm-ed. (If an untransformed
@@ -669,7 +669,7 @@ class ConvexHull_Transformation(Transformation):
             if not handler:
                 if handler is None:
                     raise GDP_Error(
-                        "No chull transformation handler registered "
+                        "No hull transformation handler registered "
                         "for modeling components of type %s. If your "
                         "disjuncts contain non-GDP Pyomo components that "
                         "require transformation, please transform them first."
@@ -770,7 +770,7 @@ class ConvexHull_Transformation(Transformation):
                     )
                     expr = ((1-EPS)*y + EPS)*sub_expr - EPS*h_0*(1-y)
                 else:
-                    raise RuntimeError("Unknown NL CHull mode")
+                    raise RuntimeError("Unknown NL Hull mode")
             else:
                 expr = clone_without_expression_components(
                     c.body, substitute=var_substitute_map)
@@ -825,7 +825,7 @@ class ConvexHull_Transformation(Transformation):
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
                     _name = c.getname(
                         fully_qualified=True, name_buffer=NAME_BUFFER)
-                    logger.debug("GDP(cHull): Transforming constraint " +
+                    logger.debug("GDP(Hull): Transforming constraint " +
                                  "'%s'", _name)
                 if NL:
                     newConsExpr = expr >= c.lower*y
@@ -847,7 +847,7 @@ class ConvexHull_Transformation(Transformation):
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
                     _name = c.getname(
                         fully_qualified=True, name_buffer=NAME_BUFFER)
-                    logger.debug("GDP(cHull): Transforming constraint " +
+                    logger.debug("GDP(Hull): Transforming constraint " +
                                  "'%s'", _name)
                 if NL:
                     newConsExpr = expr <= c.upper*y
@@ -928,7 +928,7 @@ class ConvexHull_Transformation(Transformation):
 
         Parameters
         ----------
-        disaggregated_var: a Var which was created by the chull
+        disaggregated_var: a Var which was created by the hull
                            transformation as a disaggregated variable
                            (and so appears on a transformation block
                            of some Disjunct)
@@ -982,7 +982,7 @@ class ConvexHull_Transformation(Transformation):
 
         Parameters
         ----------
-        v: a Var which was created by the chull  transformation as a
+        v: a Var which was created by the hull  transformation as a
            disaggregated variable (and so appears on a transformation
            block of some Disjunct)
         """
@@ -995,3 +995,14 @@ class ConvexHull_Transformation(Transformation):
                          "the disjunction that disaggregates it has not "
                          "been properly transformed." % v.name)
             raise
+
+
+@TransformationFactory.register(
+    'gdp.chull',
+    doc="Deprecated name for the hull reformulation. Please use 'gdp.hull'.")
+class Deprecated_Name_Hull(Hull_Reformulation):
+    @deprecated("The 'gdp.hull' name is deprecated. Please use the more apt 'gdp.hull' instead.",
+                logger='pyomo.gdp',
+                version="TBD", remove_in="TBD")
+    def __init__(self):
+        super(Deprecated_Name_Hull, self).__init__()

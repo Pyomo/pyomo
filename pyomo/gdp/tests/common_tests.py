@@ -35,7 +35,7 @@ def diff_apply_to_and_create_using(self, model, transformation):
 
 def check_relaxation_block(self, m, name, numdisjuncts):
     # utility for checking the transformation block (this method is generic to
-    # bigm and chull though there is more on the chull transformation block, and
+    # bigm and hull though there is more on the hull transformation block, and
     # the lbub set differs between the two
     transBlock = m.component(name)
     self.assertIsInstance(transBlock, Block)
@@ -475,7 +475,7 @@ def check_only_targets_get_transformed(self, transformation):
                 relaxedDisjuncts
     # only two disjuncts relaxed
     self.assertEqual(len(disjBlock), 2)
-    # Note that in chull, these aren't the only components that get created, but
+    # Note that in hull, these aren't the only components that get created, but
     # they are a proxy for which disjuncts got relaxed, which is what we want to
     # check.
     self.assertIsInstance(disjBlock[0].component("disjunct1[0].c"),
@@ -940,7 +940,7 @@ def check_simple_disjunction_of_disjunct_datas(self, transformation):
                            Constraint)
 
 # these tests have different checks for what ends up on the model between bigm
-# and chull, but they have the same structure
+# and hull, but they have the same structure
 def check_iteratively_adding_disjunctions_transform_container(self,
                                                               transformation):
     # Check that we can play the same game with iteratively adding Disjunctions,
@@ -1312,7 +1312,7 @@ def check_activeInnerDisjunction_err(self, transformation):
                  m.disjunction])
 
 
-# nested disjunctions: chull and bigm have very different handling for nested
+# nested disjunctions: hull and bigm have very different handling for nested
 # disjunctions, but these tests check *that* everything is transformed, not how
 
 def check_disjuncts_inactive_nested(self, transformation):

@@ -78,7 +78,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def test_disjunct_and_constraint_maps(self):
         """Tests the actual data structures used to store the maps."""
         # ESJ: Note that despite outward appearances, this test really is unique
-        # to bigm. Because chull handles the a == 0 constraint by fixing the
+        # to bigm. Because hull handles the a == 0 constraint by fixing the
         # disaggregated variable rather than creating a transformed constraint.
         m = models.makeTwoTermDisj()
         bigm = TransformationFactory('gdp.bigm')
@@ -1032,7 +1032,7 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
 
     def test_do_not_transform_deactivated_constraintDatas(self):
         # ESJ: specific to how bigM transforms constraints (so not a common test
-        # with chull)
+        # with hull)
         m = models.makeTwoTermDisj_IndexedConstraints()
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = 30
@@ -1847,9 +1847,9 @@ class IndexedDisjunctions(unittest.TestCase):
     def test_disjunction_data_target_any_index(self):
        ct.check_disjunction_data_target_any_index(self, 'bigm')
 
-    # ESJ: This and the following tests are *very* similar to those in chull,
+    # ESJ: This and the following tests are *very* similar to those in hull,
     # but I actually bothered to check the additional transformed objects in
-    # chull (disaggregated variables, bounds constraints...), so they are
+    # hull (disaggregated variables, bounds constraints...), so they are
     # reproduced independently there.
     def check_trans_block_disjunctions_of_disjunct_datas(self, m):
         transBlock1 = m.component("_pyomo_gdp_bigm_relaxation")
