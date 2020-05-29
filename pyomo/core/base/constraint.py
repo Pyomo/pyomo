@@ -117,6 +117,8 @@ def simple_constraint_rule( fn ):
 
     model.c = Constraint(rule=simple_constraint_rule(...))
     """
+    if type(fn) in _simple_constraint_rule_types:
+        return _map_constraint_result(fn, Constraint.Skip, None, None)
     # Because some of our processing of initializer functions relies on
     # knowing the number of positional arguments, we will go to extra
     # effort here to preserve the original function signature.
@@ -146,6 +148,8 @@ def simple_constraintlist_rule( fn ):
 
     model.c = ConstraintList(expr=simple_constraintlist_rule(...))
     """
+    if type(fn) in _simple_constraint_rule_types:
+        return _map_constraint_result(fn, ConstraintList.End, None, None)
     # Because some of our processing of initializer functions relies on
     # knowing the number of positional arguments, we will go to extra
     # effort here to preserve the original function signature.
