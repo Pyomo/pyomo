@@ -199,6 +199,12 @@ def Initializer(init,
         # segfault in pypy3 7.3.0).  We will immediately expand the
         # generator into a tuple and then store it as a constant.
         return ConstantInitializer(tuple(init))
+    elif type(init) is functools.partial:
+        _args = getargspec(init.func)
+        if len(_args.args) - len(init.args) == 1 and _args.varargs is None:
+            return ScalarCallInitializer(init)
+        else:
+            return IndexedCallInitializer(init)
     else:
         return ConstantInitializer(init)
 
