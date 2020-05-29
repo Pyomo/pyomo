@@ -18,22 +18,17 @@ import sys
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 import pickle
+
 import pyutilib.th as unittest
 import pyutilib.services
-import pyomo.opt
-from pyomo.opt import SolutionStatus
-from pyomo.opt.parallel.local import SolverManager_Serial
-from pyomo.environ import *
+
+from pyomo.common.dependencies import yaml_available
 from pyomo.core.expr import current as EXPR
+from pyomo.environ import *
+from pyomo.opt import SolutionStatus, check_available_solvers
+from pyomo.opt.parallel.local import SolverManager_Serial
 
-solvers = pyomo.opt.check_available_solvers('glpk')
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
-
+solvers = check_available_solvers('glpk')
 
 class Test(unittest.TestCase):
 
@@ -769,8 +764,10 @@ class Test(unittest.TestCase):
                 return sum(m.x[i] for i in m.I) >= 0
             m.c = Constraint( rule=c )
 
-        model = AbstractModel(rule=make_invalid)
-        self.assertRaises(RuntimeError, model.create_instance)
+        with self.assertRaisesRegexp(
+                ValueError, 'x\[1\]: The component has not been constructed.'):
+            model = AbstractModel(rule=make_invalid)
+            instance = model.create_instance()
 
         model = AbstractModel(rule=make)
         instance = model.create_instance()

@@ -13,7 +13,7 @@ import pyutilib.th as unittest
 from pyutilib.misc.redirect_io import capture_output
 
 from pyomo.environ import SolverFactory
-from pyomo.scripting.driver_help import help_solvers
+from pyomo.scripting.driver_help import help_solvers, help_transformations
 
 
 class Test(unittest.TestCase):
@@ -35,6 +35,15 @@ class Test(unittest.TestCase):
                 self.assertTrue(re.search("%s +\* [a-zA-Z]" % solver, OUT))
             else:
                 self.assertTrue(re.search("%s +[a-zA-Z]" % solver, OUT))
+
+    def test_help_transformations(self):
+        with capture_output() as OUT:
+            help_transformations()
+        OUT = OUT.getvalue()
+        self.assertTrue(re.search('Pyomo Model Transformations', OUT))
+        self.assertTrue(re.search('core.relax_integer_vars', OUT))
+        # test a transformation that we know is deprecated
+        self.assertTrue(re.search('duality.linear_dual\s+\[DEPRECATED\]', OUT))
 
 
 if __name__ == "__main__":

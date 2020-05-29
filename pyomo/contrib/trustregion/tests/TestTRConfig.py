@@ -5,16 +5,11 @@ import pyutilib.th as unittest
 from pyutilib.misc.config import ConfigBlock, ConfigValue, ConfigList
 from pyomo.common.config import ( 
     PositiveInt, PositiveFloat, NonNegativeFloat, In)
+from pyomo.common.dependencies import numpy_available
 from pyomo.core import Var, value
 
 from pyomo.environ import *
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
-
-try:
-    import numpy
-    numpy_available = True
-except ImportError:
-    numpy_available = False
 
 @unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
 @unittest.skipIf(not SolverFactory('gjh').available(False), "The GJH solver is not available")

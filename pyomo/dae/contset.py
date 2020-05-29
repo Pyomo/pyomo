@@ -12,7 +12,7 @@ import logging
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import *
 from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.sets import OrderedSimpleSet
+from pyomo.core.base.set import SortedSimpleSet
 from pyomo.core.base.numvalue import native_numeric_types
 
 logger = logging.getLogger('pyomo.dae')
@@ -22,7 +22,7 @@ __all__ = ['ContinuousSet']
 @ModelComponentFactory.register(
                    "A bounded continuous numerical range optionally containing"
                    " discrete points of interest.")
-class ContinuousSet(OrderedSimpleSet):
+class ContinuousSet(SortedSimpleSet):
     """ Represents a bounded continuous domain
 
         Minimally, this set must contain two numeric values defining the
@@ -38,7 +38,7 @@ class ContinuousSet(OrderedSimpleSet):
         bounds : `tuple`
             The bounding points for the continuous domain. The bounds will
             be included as discrete points in the :py:class:`ContinuousSet`
-            but will not be used to restrict points added to the
+            and will be used to bound the points added to the
             :py:class:`ContinuousSet` through the 'initialize' argument,
             a data file, or the add() method
 
@@ -72,7 +72,8 @@ class ContinuousSet(OrderedSimpleSet):
         # if kwds.pop("within", None) is not None:
         #    raise TypeError("'within' is not a valid keyword argument for "
         #  ContinuousSet")
-        if kwds.pop("dimen", None) is not None:
+        kwds.setdefault('dimen', 1)
+        if kwds["dimen"] != 1:
             raise TypeError("'dimen' is not a valid keyword argument for "
                             "ContinuousSet")
         if kwds.pop("virtual", None) is not None:
@@ -85,14 +86,10 @@ class ContinuousSet(OrderedSimpleSet):
             raise TypeError("A ContinuousSet expects no arguments")
 
         kwds.setdefault('ctype', ContinuousSet)
-        kwds.setdefault('ordered', Set.SortedOrder)
-        self._type = ContinuousSet
         self._changed = False
-        self.concrete = True
-        self.virtual = False
         self._fe = []
         self._discretization_info = {}
-        OrderedSimpleSet.__init__(self, **kwds)
+        super(ContinuousSet, self).__init__(**kwds)
 
     def get_finite_elements(self):
         """ Returns the finite element points
@@ -213,30 +210,17 @@ class ContinuousSet(OrderedSimpleSet):
         """ Constructs a :py:class:`ContinuousSet` component
 
         """
+        if self._constructed:
+            return
         timer = ConstructionTimer(self)
-        OrderedSimpleSet.construct(self, values)
+        super(ContinuousSet, self).construct(values)
 
-        for val in self.value:
+        for val in self:
             if type(val) is tuple:
                 raise ValueError("ContinuousSet cannot contain tuples")
             if val.__class__ not in native_numeric_types:
                 raise ValueError("ContinuousSet can only contain numeric "
                                  "values")
-
-        if self._bounds is None:
-            raise ValueError("ContinuousSet '%s' must have at least two values"
-                             " indicating the range over which a differential "
-                             "equation is to be discretized" % self.name)
-
-        # If bounds were set using pyomo parameters, get their values
-        lb = value(self._bounds[0])
-        ub = value(self._bounds[1])
-        self._bounds = (lb, ub)
-
-        if self._bounds[0].__class__ not in native_numeric_types:
-            raise ValueError("Bounds on ContinuousSet must be numeric values")
-        if self._bounds[1].__class__ not in native_numeric_types:
-            raise ValueError("Bounds on ContinuousSet must be numeric values")
 
         # TBD: If a user specifies bounds they will be added to the set
         # unless the user specified bounds have been overwritten during
@@ -244,14 +228,19 @@ class ContinuousSet(OrderedSimpleSet):
         # behavior when the ContinuousSet is both initialized with values and
         # bounds are specified. The current implementation is consistent
         # with how 'Set' treats this situation.
-        if self._bounds[0] not in self.value:
-            self.add(self._bounds[0])
-            self._sort()
-        if self._bounds[1] not in self.value:
-            self.add(self._bounds[1])
-            self._sort()
+        for bnd in self.domain.bounds():
+            # Note: the base class constructor ensures that any declared
+            # set members are already within the bounds.
+            if bnd is not None and bnd not in self:
+                self.add(bnd)
+
+        if None in self.bounds():
+            raise ValueError("ContinuousSet '%s' must have at least two values"
+                             " indicating the range over which a differential "
+                             "equation is to be discretized" % self.name)
 
         if len(self) < 2:
+            # (reachable if lb==ub)
             raise ValueError("ContinuousSet '%s' must have at least two values"
                              " indicating the range over which a differential "
                              "equation is to be discretized" % self.name)

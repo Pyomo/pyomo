@@ -640,6 +640,9 @@ class ExternalFunctionExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         return "{0}({1})".format(self.getname(), ", ".join(values))
 
+    def get_units(self):
+        """ Return the units for this external function expression """
+        return self._fcn.get_units()
 
 class NPV_ExternalFunctionExpression(ExternalFunctionExpression):
     __slots__ = ()
@@ -1363,18 +1366,16 @@ class LinearExpression(ExpressionBase):
         return 'sum'
 
     def _compute_polynomial_degree(self, result):
-        return 1 if len(self.linear_vars) > 0 else 0
+        return 1 if not self.is_fixed() else 0
 
     def is_constant(self):
         return len(self.linear_vars) == 0
 
+    def _is_fixed(self, values=None):
+        return all(v.fixed for v in self.linear_vars)
+
     def is_fixed(self):
-        if len(self.linear_vars) == 0:
-            return True
-        for v in self.linear_vars:
-            if not v.fixed:
-                return False
-        return True
+        return self._is_fixed()
 
     def _to_string(self, values, verbose, smap, compute_values):
         tmp = []

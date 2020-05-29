@@ -18,10 +18,7 @@ from pyomo.core.kernel.base import \
 from pyomo.core.kernel.container_utils import \
     define_simple_containers
 from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet,
-                                         BooleanSet,
-                                         RealInterval,
-                                         IntegerInterval)
+                                         IntegerSet)
 
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
@@ -36,15 +33,12 @@ def _extract_domain_type_and_bounds(domain_type,
                 "'domain_type' keywords can be changed "
                 "from their default value when "
                 "initializing a variable.")
-        domain_type = type(domain)
-        # handle some edge cases
-        if domain_type is BooleanSet:
-            domain_type = IntegerSet
-        elif domain_type is RealInterval:
+        domain_lb, domain_ub, domain_step = domain.get_interval()
+        if domain_step == 0:
             domain_type = RealSet
-        elif domain_type is IntegerInterval:
+        elif domain_step == 1:
             domain_type = IntegerSet
-        domain_lb, domain_ub = domain.bounds()
+        # else: domain_type will remain None and generate an exception below
         if domain_lb is not None:
             if lb is not None:
                 raise ValueError(
@@ -188,30 +182,26 @@ class IVariable(ICategorizedObject, NumericValue):
     def is_continuous(self):
         """Returns :const:`True` when the domain type is
         :class:`RealSet`."""
-        return issubclass(self.domain_type, RealSet)
+        return self.domain_type.get_interval()[2] == 0
 
     # this could be expanded to include semi-continuous
     # where as is_integer would not
     def is_discrete(self):
         """Returns :const:`True` when the domain type is
         :class:`IntegerSet`."""
-        return issubclass(self.domain_type, IntegerSet)
+        return self.domain_type.get_interval()[2] not in (0, None)
 
     def is_integer(self):
         """Returns :const:`True` when the domain type is
         :class:`IntegerSet`."""
-        return issubclass(self.domain_type, IntegerSet)
+        return self.domain_type.get_interval()[2] == 1
 
     def is_binary(self):
         """Returns :const:`True` when the domain type is
         :class:`IntegerSet` and the bounds are within
         [0,1]."""
-        lb, ub = self.bounds
-        return self.is_integer() and \
-            (lb is not None) and \
-            (ub is not None) and \
-            (value(lb) >= 0) and \
-            (value(ub) <= 1)
+        return self.domain_type.get_interval()[2] == 1 \
+            and (value(self.lb), value(self.ub)) in {(0,1), (0,0), (1,1)}
 
 # TODO?
 #    def is_semicontinuous(self):

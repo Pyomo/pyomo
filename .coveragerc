@@ -1,9 +1,6 @@
 [report]
 omit =
-    */python?.?/*
-    */site-packages/nose/*
-    *__init__*
-    */setup.py
+    setup.py
     */tests/*
     */tmp/*
 
@@ -11,3 +8,9 @@ omit =
 # "data_file" directive to the end of this file.
 [run]
 parallel = True
+source =
+    pyomo
+    examples
+omit =
+    # github actions creates a cache directory we don't want measured
+    cache/*

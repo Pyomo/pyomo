@@ -124,8 +124,9 @@ class Array_Param(unittest.TestCase):
         buf = StringIO()
         instance.pprint(ostream=buf)
         self.assertEqual(buf.getvalue(),"""1 Set Declarations
-    Z : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 3]
+    Z : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    2 : {1, 3}
 
 1 Param Declarations
     A : Size=2, Index=Z, Domain=Any, Default=None, Mutable=True

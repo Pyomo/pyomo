@@ -14,10 +14,18 @@
 
 import os
 import glob
+import sys
 from os.path import basename, dirname, abspath, join
 
 import pyutilib.subprocess
 import pyutilib.th as unittest
+
+from pyomo.common.dependencies import numpy_available, scipy_available
+
+import platform
+if platform.python_implementation() == "PyPy":
+    # The scipy is importable into PyPy, but ODE integrators don't work. (2/ 18)
+    scipy_available = False
 
 currdir = dirname(abspath(__file__))
 topdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
@@ -25,24 +33,6 @@ examplesdir = join(topdir, "examples", "kernel")
 
 examples = glob.glob(join(examplesdir,"*.py"))
 examples.extend(glob.glob(join(examplesdir,"mosek","*.py")))
-
-numpy_available = False
-try:
-    import numpy
-    numpy_available = True
-except:
-    pass
-
-scipy_available = False
-try:
-    import platform
-    if platform.python_implementation() == "PyPy":
-        # The scipy is importable into PyPy, but ODE integrators don't work. (2/ 18)
-        raise ImportError
-    import scipy
-    scipy_available = True
-except:
-    pass
 
 testing_solvers = {}
 testing_solvers['ipopt','nl'] = False
@@ -75,7 +65,7 @@ def create_test_method(example):
             if (not testing_solvers['ipopt','nl']) or \
                (not testing_solvers['mosek','python']):
                 self.skipTest("Ipopt or Mosek is not available")
-        rc, log = pyutilib.subprocess.run(['python',example])
+        rc, log = pyutilib.subprocess.run([sys.executable,example])
         self.assertEqual(rc, 0, msg=log)
     return testmethod
 
