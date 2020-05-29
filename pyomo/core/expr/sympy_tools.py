@@ -214,6 +214,8 @@ def sympyify_expression(expr):
 
 
 def sympy2pyomo_expression(expr, object_map):
+    if not sympy_available:
+        raise ImportError('sympy is not available')
     visitor = Sympy2PyomoVisitor(object_map)
     is_expr, ans = visitor.beforeChild(None, expr)
     if not is_expr:
