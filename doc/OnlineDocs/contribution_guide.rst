@@ -247,7 +247,7 @@ Step 1 (recommended): Create a new conda environment.
 
    conda create --name pyomodev
 
-You may change the environment name from `pyomodev` as you see fit. Then activate the environment:
+You may change the environment name from ``pyomodev`` as you see fit. Then activate the environment:
 
 ::
    
@@ -255,13 +255,13 @@ You may change the environment name from `pyomodev` as you see fit. Then activat
 
 Step 2: Install PyUtilib
 
-You will likely need the master branch of PyUtilib to use contribute to Pyomo. Clone a copy of the repository in a new directory:
+You will likely need the master branch of PyUtilib to contribute to Pyomo. Clone a copy of the repository in a new directory:
 
 ::
 
    git clone https://github.com/PyUtilib/pyutilib
 
-Then in the directory containing the clone of PyUtilib, run:
+Then in the directory containing the clone of PyUtilib run:
 
 ::
 
