@@ -510,7 +510,7 @@ class Simulator:
                     if not isinstance(i, tuple):
                         i = (i,)
                     tempidx = i[0:csidx] + (cstemplate,) + i[csidx:]
-                    tempexp = conrule(m, *tempidx)
+                    tempexp = conrule(m, tempidx)
 
                 # Check to make sure it's an EqualityExpression
                 if not type(tempexp) is EXPR.EqualityExpression:

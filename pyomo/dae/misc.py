@@ -277,7 +277,7 @@ def _update_constraint(con):
     for i in con.index_set():
         if i not in con:
             # Code taken from the construct() method of Constraint
-            con.add(i, apply_indexed_rule(con, _rule, _parent, i))
+            con.add(i, _rule(_parent, i))
 
 
 def _update_expression(expre):
