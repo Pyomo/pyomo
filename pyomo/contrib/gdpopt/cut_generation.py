@@ -1,7 +1,9 @@
 """This module provides functions for cut generation."""
 from __future__ import division
 
+from collections import namedtuple
 from math import copysign, fabs
+from six import iteritems
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
@@ -13,6 +15,8 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct
 
+MAX_SYMBOLIC_DERIV_SIZE = 1000
+JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
 def add_subproblem_cuts(subprob_result, solve_data, config):
     if config.strategy == "LOA":
@@ -60,19 +64,32 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                 "Adding OA cut for %s with dual value %s"
                 % (constr.name, dual_value))
 
-            # Cache jacobians
-            jacobians = GDPopt.jacobians.get(constr, None)
-            if jacobians is None:
-                constr_vars = list(identify_variables(constr.body, include_fixed=False))
-                if len(constr_vars) >= 1000:
+            # Cache jacobian
+            jacobian = GDPopt.jacobians.get(constr, None)
+            if jacobian is None:
+                constr_vars = list(identify_variables(
+                    constr.body, include_fixed=False))
+                if len(constr_vars) >= MAX_SYMBOLIC_DERIV_SIZE:
                     mode = differentiate.Modes.reverse_numeric
                 else:
                     mode = differentiate.Modes.sympy
 
+                try:
+                    jac_list = differentiate(
+                        constr.body, wrt_list=constr_vars, mode=mode)
+                    jac_map = ComponentMap(zip(constr_vars, jac_list))
+                except:
+                    if mode is differentiate.Modes.reverse_numeric:
+                        raise
+                    mode = differentiate.Modes.reverse_numeric
+                    jac_map = ComponentMap()
+                jacobian = JacInfo(mode=mode, vars=constr_vars, jac=jac_map)
+                GDPopt.jacobians[constr] = jacobian
+            # Recompute numeric derivatives
+            if not jacobian.jac:
                 jac_list = differentiate(
-                    constr.body, wrt_list=constr_vars, mode=mode)
-                jacobians = ComponentMap(zip(constr_vars, jac_list))
-                GDPopt.jacobians[constr] = jacobians
+                    constr.body, wrt_list=jacobian.vars, mode=jacobian.mode)
+                jacobian.jac.update(zip(jacobian.vars, jac_list))
 
             # Create a block on which to put outer approximation cuts.
             oa_utils = parent_block.component('GDPopt_OA')
@@ -92,11 +109,12 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                 new_oa_cut = (
                     copysign(1, sign_adjust * dual_value) * (
                         value(constr.body) - rhs + sum(
-                            value(jacobians[var]) * (var - value(var))
-                            for var in jacobians)) - slack_var <= 0)
+                            value(jac) * (var - value(var))
+                            for var, jac in iteritems(jacobian.jac))
+                        ) - slack_var <= 0)
                 if new_oa_cut.polynomial_degree() not in (1, 0):
-                    for var in jacobians:
-                        print(var.name, value(jacobians[var]))
+                    for var, jac in iteritems(jacobian.jac):
+                        print(var.name, value(jac))
                 oa_cuts.add(expr=new_oa_cut)
                 counter += 1
             except ZeroDivisionError:
@@ -106,6 +124,9 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                     % (constr.name,)
                 )
                 # Simply continue on to the next constraint.
+            # Clear out the numeric Jacobian values
+            if jacobian.mode is differentiate.Modes.reverse_numeric:
+                jacobian.jac.clear()
 
         config.logger.info('Added %s OA cuts' % counter)
 

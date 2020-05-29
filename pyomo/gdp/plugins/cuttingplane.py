@@ -38,9 +38,6 @@ import math
 import logging
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
-# DEBUG
-from nose.tools import set_trace
-
 # TODO: this should be an option probably, right?
 # do I have other options that won't be mad about the quadratic objective in the
 # separation problem?

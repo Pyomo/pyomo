@@ -182,18 +182,6 @@ class Test_kernel(unittest.TestCase):
         self.assertEqual(
             [str(obj) for obj in model.block_data_objects()],
             [str(model)]+[str(obj) for obj in model.components(ctype=IBlock)])
-    def test_type_hack(self):
-        for obj in [pmo.variable(),
-                    pmo.constraint(),
-                    pmo.objective(),
-                    pmo.expression(),
-                    pmo.parameter(),
-                    pmo.suffix(),
-                    pmo.sos([]),
-                    pmo.block()]:
-            ctype = obj.ctype
-            self.assertIs(obj.__class__._ctype, ctype)
-            self.assertIs(obj.type(), ctype)
 
 if __name__ == "__main__":
     unittest.main()

@@ -1007,6 +1007,6 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(index_getter('a',1,0),(2.0,'a'))
 
 
-    
+
 if __name__ == "__main__":
     unittest.main()

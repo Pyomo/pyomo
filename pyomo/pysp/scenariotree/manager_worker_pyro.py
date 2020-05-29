@@ -12,7 +12,7 @@ __all__ = ("ScenarioTreeManagerWorkerPyro",)
 
 import time
 
-from pyomo.pysp.util.misc import _EnumValueWithData
+from pyomo.common.dependencies import dill, dill_available
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_common_option)
@@ -23,12 +23,6 @@ from pyomo.pysp.scenariotree.manager \
 
 import six
 from six import iteritems, string_types
-
-try:
-    import dill
-    dill_available = True
-except ImportError:                               #pragma:nocover
-    dill_available = False
 
 #
 # A full implementation of the ScenarioTreeManager interface
@@ -275,16 +269,15 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
                 print("Received request to invoke anonymous "
                       "function serialized using the dill module")
 
-        # pyutilib.Enum can not be serialized depending on the
-        # serializer type used by Pyro, so we just transmit it
-        # as a (key, data) tuple in that case
+        # InvocationType is transmitted as (key, data) to
+        # avoid issues with Pyro, so this function accepts a
+        # tuple and converts back to InvocationType
         if type(invocation_type) is tuple:
             _invocation_type_key, _invocation_type_data = invocation_type
             assert isinstance(_invocation_type_key, string_types)
             invocation_type = getattr(InvocationType,
                                       _invocation_type_key)
             if _invocation_type_data is not None:
-                assert isinstance(invocation_type, _EnumValueWithData)
                 invocation_type = invocation_type(_invocation_type_data)
 
         # here we assume that if the module_name is None,

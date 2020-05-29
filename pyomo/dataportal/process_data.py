@@ -18,8 +18,11 @@ from pyutilib.misc import quote_split, Options
 import pyutilib.common
 from pyutilib.misc import flatten
 
-from pyomo.dataportal.parse_datacmds import parse_data_commands
+from pyomo.dataportal.parse_datacmds import (
+    parse_data_commands, _re_number
+)
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
+from pyomo.core.base.set import UnknownSetDimen
 
 try:
     from collections import OrderedDict
@@ -33,57 +36,77 @@ except:
     unicode = str
 try:
     long
-    numlist = (bool, int, float, long)
+    numlist = {bool, int, float, long}
 except:
-    numlist = (bool, int, float)
+    numlist = {bool, int, float}
 
 logger = logging.getLogger('pyomo.core')
 
 global Lineno
 global Filename
 
+_num_pattern = re.compile("^("+_re_number+")$")
+_str_false_values = {'False','false','FALSE'}
+_str_bool_values = {'True','true','TRUE'}
+_str_bool_values.update(_str_false_values)
+
+def _guess_set_dimen(index):
+    d = 0
+    # Look through the subsets of this index and get their dimen
+    for subset in index.subsets():
+        sub_d = subset.dimen
+        # If the subset has an unknown dimen, then look at the subset's
+        # domain to guess the dimen.
+        if sub_d is UnknownSetDimen:
+            for domain_subset in subset.domain.subsets():
+                sub_d = domain_subset.domain.dimen
+                if sub_d in (UnknownSetDimen, None):
+                    # We will guess that None / Unknown domains are dimen==1
+                    d += 1
+                else:
+                    d += sub_d
+        elif sub_d is None:
+            return None
+        else:
+            d += sub_d
+    return d
 
 def _process_token(token):
+    #print("TOKEN:", token, type(token))
     if type(token) is tuple:
         return tuple(_process_token(i) for i in token)
-    if type(token) in numlist:
+    elif type(token) in numlist:
         return token
-    if token in ('True','true','TRUE'):
-        return True
-    if token in ('False','false','FALSE'):
-        return False
-
-    if token[0] == '[' and token[-1] == ']':
+    elif token in _str_bool_values:
+        return token not in _str_false_values
+    elif token[0] == '"' and token[-1] == '"':
+        # Strip "flag" quotation characters
+        return token[1:-1]
+    elif token[0] == '[' and token[-1] == ']':
         vals = []
         token = token[1:-1]
         for item in token.split(","):
-            if item[0] == "'" or item[0] == '"':
+            if item[0] in '"\'' and item[0] == item[-1]:
                 vals.append( item[1:-1] )
-            try:
-                vals.append( int(item) )
-                continue
-            except:
-                pass
-            try:
-                vals.append( float(item) )
-                continue
-            except:
-                pass
-            vals.append( item )
+            elif _num_pattern.match(item):
+                _num = float(item)
+                if '.' in item:
+                    vals.append(_num)
+                else:
+                    _int = int(_num)
+                    vals.append(_int if _int == _num else _num)
+            else:
+                vals.append( item )
         return tuple(vals)
-
-    elif token[0] == "'" or token[0] == '"':
-        return token[1:-1]
-
-    try:
-        return int(token)
-    except:
-        pass
-    try:
-        return float(token)
-    except:
-        pass
-    return token
+    elif _num_pattern.match(token):
+        _num = float(token)
+        if '.' in token:
+            return _num
+        else:
+            _int = int(_num)
+            return _int if _int == _num else _num
+    else:
+        return token
 
 
 def _preprocess_data(cmd):
@@ -321,7 +344,10 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
                     finaldata = _process_data_list(pname, ncolumns-1, cmd)
                 elif not _model is None:
                     _param = getattr(_model, pname)
-                    finaldata = _process_data_list(pname, _param.dim(), cmd)
+                    _dim = _param.dim()
+                    if _dim is UnknownSetDimen:
+                        _dim = _guess_set_dimen(_param.index_set())
+                    finaldata = _process_data_list(pname, _dim, cmd)
                 else:
                     finaldata = _process_data_list(pname, 1, cmd)
                 for key in finaldata:
@@ -426,7 +452,7 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
                 d = 1
             else:
                 index = getattr(_model, sname)
-                d = index.dimen
+                d = _guess_set_dimen(index)
             #print "SET",sname,d,_model#,getattr(_model,sname).dimen, type(index)
             #d = getattr(_model,sname).dimen
             np = i-1
@@ -473,7 +499,10 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
             elif _model is None:
                 d = 1
             else:
-                d = getattr(_model, param[j-jstart]).dim()
+                _param = getattr(_model, pname)
+                d = _param.dim()
+                if d is UnknownSetDimen:
+                    d = _guess_set_dimen(_param.index_set())
             if nsets > 0:
                 np = i-1
                 dnp = d+np-1
@@ -583,7 +612,6 @@ def _process_include(cmd, _model, _data, _default, options=None):
     Filename = cmd[1]
     global Lineno
     Lineno = 0
-
     try:
         scenarios = parse_data_commands(filename=cmd[1])
     except IOError:

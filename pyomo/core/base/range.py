@@ -27,6 +27,8 @@ except ImportError:
             ans -= b
         return ans
 
+_inf = float('inf')
+
 class RangeDifferenceError(ValueError): pass
 
 class NumericRange(object):
@@ -69,6 +71,10 @@ class NumericRange(object):
             raise ValueError(
                 "NumericRange step must be int (got %s)" % (step,))
         step = int(step)
+        if start == -_inf:
+            start = None
+        if end == _inf:
+            end = None
         if start is None:
             if step:
                 raise ValueError("NumericRange: start must not be None "

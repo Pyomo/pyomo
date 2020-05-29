@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 
 import weakref
+from pyomo.core import ComponentMap
+from pyomo.core.base.set import UnknownSetDimen
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
@@ -90,20 +92,29 @@ class DerivativeVar(Var):
             # This dictionary keeps track of where the ContinuousSet appears
             # in the index. This implementation assumes that every element
             # in an indexing set has the same dimension.
-            sVar._contset = {}
+            sVar._contset = ComponentMap()
             sVar._derivative = {}
             if sVar.dim() == 0:
                 num_contset = 0
-            elif sVar.dim() == 1:
-                sidx_sets = sVar._index
-                if sidx_sets.type() is ContinuousSet:
-                    sVar._contset[sidx_sets] = 0
             else:
-                sidx_sets = sVar.index_set().set_tuple
+                sidx_sets = list(sVar.index_set().subsets())
                 loc = 0
                 for i, s in enumerate(sidx_sets):
-                    if s.type() is ContinuousSet:
+                    if s.ctype is ContinuousSet:
                         sVar._contset[s] = loc
+                    _dim = s.dimen
+                    if _dim is None:
+                        raise DAE_Error(
+                            "The variable %s is indexed by a Set (%s) with a "
+                            "non-fixed dimension.  A DerivativeVar may only be "
+                            "indexed by Sets with constant dimension"
+                            % (sVar, s.name))
+                    elif _dim is UnknownSetDimen:
+                        raise DAE_Error(
+                            "The variable %s is indexed by a Set (%s) with an "
+                            "unknown dimension.  A DerivativeVar may only be "
+                            "indexed by Sets with known constant dimension"
+                            % (sVar, s.name))
                     loc += s.dimen
             num_contset = len(sVar._contset)
 

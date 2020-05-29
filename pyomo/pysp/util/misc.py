@@ -14,6 +14,7 @@ __all__ = ("launch_command",
 
 import logging
 import time
+import six
 import sys
 import subprocess
 import traceback
@@ -30,19 +31,18 @@ try:
 except ImportError:
     pstats_available=False
 
-from pyutilib.enum import EnumValue
 from pyutilib.misc import PauseGC, import_file
-from pyutilib.pyro import using_pyro3, using_pyro4
-from pyutilib.pyro.util import find_unused_port
 from pyutilib.services import TempfileManager
 import pyutilib.common
 from pyomo.opt.base import ConverterError
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.plugin import (ExtensionPoint,
-                               SingletonPlugin)
+                                 SingletonPlugin)
 from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 
-import six
+pyu_pyro = attempt_import('pyutilib.pyro', alt_names=['pyu_pyro'])[0]
+
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -446,12 +446,12 @@ def _kill(proc):
             proc.poll()
 
 def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
-    if not (using_pyro3 or using_pyro4):
+    if not (pyu_pyro.using_pyro3 or pyu_pyro.using_pyro4):
         return None, None
     ns_options = None
-    if using_pyro3:
+    if pyu_pyro.using_pyro3:
         ns_options = ["-r","-k","-n "+ns_host]
-    elif using_pyro4:
+    elif pyu_pyro.using_pyro4:
         ns_options = ["--host="+ns_host]
     # don't start the broadcast server
     ns_options += ["-x"]
@@ -459,13 +459,13 @@ def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
     ns_process = None
     for i in range(num_tries):
         try:
-            ns_port = find_unused_port()
+            ns_port = pyu_pyro.util.find_unused_port()
             print("Trying nameserver with port: "
                   +str(ns_port))
             cmd = ["pyomo_ns"] + ns_options
-            if using_pyro3:
+            if pyu_pyro.using_pyro3:
                 cmd += ["-p "+str(ns_port)]
-            elif using_pyro4:
+            elif pyu_pyro.using_pyro4:
                 cmd += ["--port="+str(ns_port)]
             print(' '.join(cmd))
             ns_process = \
@@ -486,13 +486,13 @@ def _get_test_dispatcher(ns_host=None,
                          ns_port=None,
                          dispatcher_host="127.0.0.1",
                          num_tries=20):
-    if not (using_pyro3 or using_pyro4):
+    if not (pyu_pyro.using_pyro3 or pyu_pyro.using_pyro4):
         return None, None
     dispatcher_port = None
     dispatcher_process = None
     for i in range(num_tries):
         try:
-            dispatcher_port = find_unused_port()
+            dispatcher_port = pyu_pyro.util.find_unused_port()
             print("Trying dispatcher with port: "
                   +str(dispatcher_port))
             cmd = ["dispatch_srvr",
@@ -514,31 +514,3 @@ def _get_test_dispatcher(ns_host=None,
             dispatcher_port = None
             dispatcher_process = None
     return dispatcher_process, dispatcher_port
-
-class _EnumValueWithData(EnumValue):
-    """A subclass of pyutilib.enum.EnumValue that carries additional data.
-
-    The data carried by the _EnumValueWithData object does not affect
-    equality checks with other instances of the same enumerated value,
-    nor does it affect containment checks in the owning Enum
-    container.
-
-    """
-    def __init__(self, check_type, *args, **kwds):
-        super(_EnumValueWithData, self).__init__(*args, **kwds)
-        self._data = None
-        self._check_type = check_type
-    @property
-    def data(self):
-        return self._data
-    def __repr__(self):
-        return (super(_EnumValueWithData, self).__repr__() + \
-                ": %s" % (self.data))
-    def __call__(self, data):
-        self._check_type(data)
-        obj = self.__class__(self._check_type,
-                             self.enumtype,
-                             self.index,
-                             self.key)
-        obj._data = data
-        return obj

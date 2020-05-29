@@ -23,7 +23,7 @@ optimization solvers can be installed with conda as well:
 
 ::
 
-   conda install -c conda-forge ipopt coincbc glpk
+   conda install -c conda-forge ipopt glpk
 
 
 Using PIP

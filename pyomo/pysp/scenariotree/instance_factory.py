@@ -27,6 +27,7 @@ from pyomo.core import (Block,
                         IPyomoScriptModifyInstance,
                         AbstractModel)
 from pyomo.core.base.block import _BlockData
+from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 from pyomo.common.plugin import ExtensionPoint
 from pyomo.pysp.phutils import _OLD_OUTPUT
 from pyomo.pysp.util.misc import load_external_module
@@ -38,19 +39,9 @@ from pyomo.pysp.scenariotree.tree_structure import \
 
 import six
 
-has_yaml = False
-try:
-    import yaml
-    has_yaml = True
-except:                #pragma:nocover
-    has_yaml = False
-
-has_networkx = False
-try:
-    import networkx
-    has_networkx = True
-except:                #pragma:nocover
-    has_networkx = False
+from pyomo.common.dependencies import (
+    networkx, networkx_available as has_networkx
+)
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -639,7 +630,7 @@ class ScenarioTreeInstanceFactory(object):
                             scenario_data_filename + ".dat"
                         data = None
                     elif os.path.exists(scenario_data_filename+'.yaml'):
-                        if not has_yaml:
+                        if not yaml_available:
                             raise ValueError(
                                 "Found yaml data file for scenario '%s' "
                                 "but he PyYAML module is not available"
@@ -647,7 +638,7 @@ class ScenarioTreeInstanceFactory(object):
                         scenario_data_filename = \
                             scenario_data_filename+".yaml"
                         with open(scenario_data_filename) as f:
-                            data = yaml.load(f)
+                            data = yaml.load(f, **yaml_load_args)
                     else:
                         raise RuntimeError(
                             "Cannot find a data file for scenario '%s' "
@@ -832,10 +823,13 @@ class ScenarioTreeInstanceFactory(object):
                 scenario_tree_model = scenario_tree_model.clone()
                 scenario_tree_model.Bundling = True
                 scenario_tree_model.Bundling._constructed = False
+                scenario_tree_model.Bundling._data.clear()
                 scenario_tree_model.Bundles.clear()
                 scenario_tree_model.Bundles._constructed = False
+                scenario_tree_model.Bundles._data.clear()
                 scenario_tree_model.BundleScenarios.clear()
                 scenario_tree_model.BundleScenarios._constructed = False
+                scenario_tree_model.BundleScenarios._data.clear()
                 scenario_tree_model.load(bundles)
 
         #

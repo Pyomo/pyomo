@@ -89,6 +89,8 @@ from pyomo.core.kernel.piecewise_library.transforms_nd import \
 from pyomo.core.kernel.set_types import \
     (RealSet,
      IntegerSet,
+     BooleanSet)
+from pyomo.environ import (
      Reals,
      PositiveReals,
      NonPositiveReals,
@@ -104,8 +106,8 @@ from pyomo.core.kernel.set_types import \
      Boolean,
      Binary,
      RealInterval,
-     IntegerInterval)
-
+     IntegerInterval,
+)
 #
 # allow the use of standard kernel modeling components
 # as the ctype argument for the general iterator method
@@ -225,12 +227,6 @@ def _valid_problem_types(self):
     return [pyomo.opt.base.ProblemFormat.pyomo]
 block.valid_problem_types = _valid_problem_types
 del _valid_problem_types
-
-from pyomo.core.kernel.base import ICategorizedObject
-def _type(self):
-    return self._ctype
-ICategorizedObject.type = _type
-del ICategorizedObject
 
 # update the reserved block attributes now that
 # new hacked methods have been placed on blocks
