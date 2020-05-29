@@ -8,7 +8,7 @@ from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP2
 from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
-from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
+from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
 from pyomo.environ import SolverFactory, value
 from pyomo.environ import *
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
@@ -172,9 +172,9 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
-    def test_OA_OnlineDocExample(self):
+    def test_OA_ConstraintQualificationExample(self):
         with SolverFactory('mindtpy') as opt:
-            model = OnlineDocExample()
+            model = ConstraintQualificationExample()
             print('\n Solving problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
@@ -187,7 +187,7 @@ class TestMindtPy(unittest.TestCase):
     # the following tests are used to improve code coverage
     def test_iteration_limit(self):
         with SolverFactory('mindtpy') as opt:
-            model = OnlineDocExample()
+            model = ConstraintQualificationExample()
             print('\n Solving problem with Outer Approximation')
             opt.solve(model, strategy='OA',
                       iteration_limit=1,
@@ -198,7 +198,7 @@ class TestMindtPy(unittest.TestCase):
 
     def test_time_limit(self):
         with SolverFactory('mindtpy') as opt:
-            model = OnlineDocExample()
+            model = ConstraintQualificationExample()
             print('\n Solving problem with Outer Approximation')
             opt.solve(model, strategy='OA',
                       time_limit=1,

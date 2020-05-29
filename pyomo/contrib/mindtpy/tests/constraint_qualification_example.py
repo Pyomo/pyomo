@@ -1,4 +1,4 @@
-""" Example in Online Document.
+""" Example of constraint qualification.
 
 The expected optimal solution value is 3.
 
@@ -16,12 +16,12 @@ from pyomo.environ import (Binary, ConcreteModel, Constraint, Reals,
                            Objective, Param, RangeSet, Var, exp, minimize, log)
 
 
-class OnlineDocExample(ConcreteModel):
+class ConstraintQualificationExample(ConcreteModel):
 
     def __init__(self, *args, **kwargs):
         """Create the problem."""
-        kwargs.setdefault('name', 'OnlineDocExample')
-        super(OnlineDocExample, self).__init__(*args, **kwargs)
+        kwargs.setdefault('name', 'ConstraintQualificationExample')
+        super(ConstraintQualificationExample, self).__init__(*args, **kwargs)
         model = self
         model.x = Var(bounds=(1.0, 10.0), initialize=5.0)
         model.y = Var(within=Binary)
