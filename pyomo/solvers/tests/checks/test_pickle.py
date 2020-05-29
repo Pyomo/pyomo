@@ -133,6 +133,7 @@ for model in test_models():
         cls = new.classobj(name, (unittest.TestCase,), {})
     else:
         cls = types.new_class(name, (unittest.TestCase,))
+        cls.__module__ = __name__
     cls = unittest.category(*case.level)(cls)
     driver[model] = cls
     globals()[name] = cls
