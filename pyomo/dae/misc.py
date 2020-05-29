@@ -219,10 +219,7 @@ def update_contset_indexed_component(comp, expansion_map):
     # Extract the indexing sets. Must treat components with a single
     # index separately from components with multiple indexing sets.
     temp = comp.index_set()
-    if hasattr(temp, 'set_tuple'):
-        indexset = comp.index_set().set_tuple
-    else:
-        indexset = [temp,]
+    indexset = list(comp.index_set().subsets())
 
     for s in indexset:
         if s.ctype == ContinuousSet and s.get_changed():
