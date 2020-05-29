@@ -799,32 +799,40 @@ class Constraint(ActiveIndexedComponent):
         """
         if self._constructed:
             return
+        self._constructed=True
+
         timer = ConstructionTimer(self)
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Constructing constraint %s"
                          % (self.name))
-        self._constructed=True
 
-        # We do not (currently) accept data for constructing Constraints
-        assert data is None
-
-        if self.rule is None:
-            timer.report()
-            return
-
-        if self.rule.constant() and self.is_indexed():
-            raise IndexError(
-                "Constraint '%s': Cannot initialize multiple indices "
-                "of a constraint with a single expression" %
-                (self.name,) )
         try:
+            # We do not (currently) accept data for constructing Constraints
+            assert data is None
+
             index = None
             block = self.parent_block()
-            if self.rule.contains_indices():
+            if self.rule is None:
+                # If there is no rule, then we are immediately done.
+                pass
+            elif self.rule.contains_indices():
                 # The index is coming in externally; we need to validate it
                 for index in self.rule.indices():
                     self[index] = self.rule(block, index)
+            elif not self.index_set().isfinite():
+                # If the index is not finite, then we cannot iterate
+                # over it.  Since the rule doesn't provide explicit
+                # indices, then there is nothing we can do (the
+                # assumption is tht the user will trigger specific
+                # indices to be created at a later time).
+                pass
             else:
+                if self.rule.constant() and len(self.index_set()) > 1:
+                    raise IndexError(
+                        "Constraint '%s': Cannot initialize multiple indices "
+                        "of a constraint with a single expression" %
+                        (self.name,) )
+
                 # Bypass the index validation and create the member directly
                 for index in self.index_set():
                     self._setitem_when_not_present(
@@ -840,7 +848,8 @@ class Constraint(ActiveIndexedComponent):
                    type(err).__name__,
                    err))
             raise
-        timer.report()
+        finally:
+            timer.report()
 
     def _pprint(self):
         """
