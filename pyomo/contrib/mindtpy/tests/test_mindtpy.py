@@ -16,7 +16,7 @@ from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('ipopt', 'glpk')  # 'cplex_persistent')
+required_solvers = ('gams', 'gams')  # 'cplex_persistent')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -176,10 +176,12 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0]
-                      )
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0]
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     # the following tests are used to improve code coverage

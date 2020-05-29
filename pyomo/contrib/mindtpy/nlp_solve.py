@@ -36,6 +36,9 @@ def solve_NLP_subproblem(solve_data, config):
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
 
     # restore original variable values
+    # print(solve_data.mip_iter)
+    # fixed_nlp.pprint()
+    # if solve_data.mip_iter == 0:
     for nlp_var, orig_val in zip(
             MindtPy.variable_list,
             solve_data.initial_var_values):
@@ -217,7 +220,7 @@ def solve_NLP_feas(solve_data, config):
         feas_soln = SolverFactory(config.nlp_solver).solve(
             fixed_nlp, **config.nlp_solver_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal:
+    if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
         copy_var_list_values(
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,

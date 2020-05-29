@@ -118,7 +118,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
-        domain=In(["ipopt"]),
+        domain=In(["ipopt", "gams"]),
         description="NLP subsolver name",
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
             "subproblems"
@@ -236,7 +236,7 @@ class MindtPySolver(object):
         description="default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.",
         domain=PositiveFloat
     ))
-    CONFIG.declare("intger_var_bound", ConfigValue(
+    CONFIG.declare("integer_var_bound", ConfigValue(
         default=1e9,
         description="default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.",
         domain=PositiveFloat

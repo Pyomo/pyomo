@@ -47,7 +47,7 @@ def MindtPy_iteration_loop(solve_data, config):
             # The constraint linearization happens in the handlers
             fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
                 solve_data, config)
-            if fixed_nlp_result.solver.termination_condition is tc.optimal:
+            if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
                 handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
@@ -144,12 +144,14 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
 
         if solve_data.curr_int_sol == solve_data.prev_int_sol:
             config.logger.info(
-                'Cycling happens after {} master iterations.'
-                'Please check the constraint qualification of the model'
+                'Cycling happens after {} master iterations. '
+                'This issue happens when the NLP subproblem violates constraint qualification. '
+                'Convergence to optimal solution is not guaranteed.'
                 .format(solve_data.mip_iter))
             config.logger.info(
                 'Final bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))
+            # TODO determine solve_data.LB, solve_data.UB is inf or -inf.
             solve_data.results.solver.termination_condition = tc.feasible
             return True
 

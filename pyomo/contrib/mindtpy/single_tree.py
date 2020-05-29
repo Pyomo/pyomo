@@ -241,7 +241,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
 
         # add oa cuts
-        if fixed_nlp_result.solver.termination_condition is tc.optimal:
+        if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
             self.handle_lazy_NLP_subproblem_optimal(
                 fixed_nlp, solve_data, config, opt)
         elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
@@ -265,11 +265,11 @@ def var_bound_add(solve_data, config):
                     continue
                 elif not var.has_lb():
                     if var.is_integer():
-                        var.setlb(-config.intger_var_bound)
+                        var.setlb(-config.integer_var_bound)
                     else:
                         var.setlb(-config.continuous_var_bound)
                 elif not var.has_ub():
                     if var.is_integer():
-                        var.setub(config.intger_var_bound)
+                        var.setub(config.integer_var_bound)
                     else:
                         var.setub(config.continuous_var_bound)
