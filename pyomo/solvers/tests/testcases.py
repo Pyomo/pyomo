@@ -319,6 +319,19 @@ MissingSuffixFailures['baron', 'bar', 'LP_trivial_constraints'] = (
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
+# Known to work through 19.12.7, and fail in 20.4.14
+MissingSuffixFailures['baron', 'bar', 'LP_duals_minimize'] = (
+    lambda v: v > (19,12,7),
+    ['dual','rc'],
+    "Baron will not return dual solution when a solution is "
+    "found during preprocessing.")
+
+# Known to work through 19.12.7, and fail in 20.4.14
+MissingSuffixFailures['baron', 'bar', 'LP_duals_maximize'] = (
+    lambda v: v > (19,12,7),
+    ['dual','rc'],
+    "Baron will not return dual solution when a solution is "
+    "found during preprocessing.")
 
 
 
