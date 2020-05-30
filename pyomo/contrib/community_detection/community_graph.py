@@ -40,17 +40,18 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
         model_graph: a networkX graph with nodes and edges based on the given Pyomo optimization model
     """
 
-    model_graph = nx.Graph()
     if weighted_graph:
         edge_weight_dict = ComponentMap()
     else:
         edge_set = ComponentSet()
 
+    model_graph_nodes = []
+
     # Variable nodes
     if node_type == 'v':
         # Create nodes based on variables in the Pyomo model
         for model_variable in model.component_data_objects(Var, descend_into=True):
-            model_graph.add_node(id(model_variable), node_name=str(model_variable))
+            model_graph_nodes.append(model_variable)
 
         # Loop through all constraints in the Pyomo model
         for model_constraint in model.component_data_objects(Constraint, descend_into=True):
@@ -94,14 +95,14 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
     elif node_type == 'c':
         # Create nodes based on constraints in the Pyomo model
         for model_constraint in model.component_data_objects(Constraint, descend_into=True):
-            model_graph.add_node(id(model_constraint), node_name=str(model_constraint))
+            model_graph_nodes.append(model_constraint)
 
         # If the user chooses to include the objective function as a constraint in the model graph
         if with_objective:
             # Use a loop to account for the possibility of multiple objective functions
             for objective_function in model.component_data_objects(Objective, descend_into=True):
                 # Add objective_function as a node in model_graph
-                model_graph.add_node(id(objective_function), node_name=str(objective_function))
+                model_graph_nodes.append(objective_function)
 
         # Loop through all variables in the Pyomo model
         for model_variable in model.component_data_objects(Var, descend_into=True):
@@ -145,18 +146,26 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
                 new_edges = ComponentSet(edges_between_nodes)
                 edge_set.update(new_edges)
 
+    model_graph = nx.Graph()
+    model_graph_nodes = sorted(str(node) for node in model_graph_nodes)
+    model_graph.add_nodes_from(model_graph_nodes)
     # Now, using edge_weight_dict or edge_set (based on whether the user wants a weighted or unweighted graph,
     # respectively), the networkX graph (model_graph) will be updated with all of the edges determined above
     if weighted_graph:
+        model_graph_edges = sorted([tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edge_weight_dict])
+        model_graph.add_edges_from(model_graph_edges)
+
         for edge in edge_weight_dict:
-            model_graph.add_edge(id(edge[0]), id(edge[1]), weight=0)
-        for edge in edge_weight_dict:
-            model_graph[id(edge[0])][id(edge[1])]['weight'] += edge_weight_dict[edge]
-        edge_weight_dict.clear()
+            if model_graph.get_edge_data(str(edge[0]), str(edge[1]), 'weight') == {}:
+                model_graph[str(edge[0])][str(edge[1])]['weight'] = edge_weight_dict[edge]
+            else:
+                model_graph[str(edge[0])][str(edge[1])]['weight'] += edge_weight_dict[edge]
+
+        del edge_weight_dict
     else:
-        for edge in edge_set:
-            model_graph.add_edge(id(edge[0]), id(edge[1]))
-        edge_set.clear()
+        model_graph_edges = sorted([tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edge_set])
+        model_graph.add_edges_from(model_graph_edges)
+        del edge_set
 
     # Log especially significant information with the following logger function
     _event_log(model, model_graph)
@@ -169,20 +178,7 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
 
     # Return the networkX graph based on the given Pyomo optimization model
 
-    mapping = nx.get_node_attributes(model_graph, 'node_name')
-    nx.relabel_nodes(model_graph, mapping, copy=False)
-
-    proper_order = nx.Graph()
-    proper_order_edges = [tuple(sorted(edge)) for edge in sorted(model_graph.edges)]
-    proper_order_nodes = sorted(model_graph.nodes)
-
-    proper_order.add_nodes_from(proper_order_nodes)
-    proper_order.add_edges_from(proper_order_edges)
-    if weighted_graph:
-        for edge in model_graph.edges:
-            proper_order[edge[0]][edge[1]]['weight'] = model_graph[edge[0]][edge[1]]['weight']
-
-    return proper_order
+    return model_graph
 
 
 def _event_log(model, model_graph):
