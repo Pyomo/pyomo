@@ -9,6 +9,7 @@ from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
+from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
 from pyomo.environ import SolverFactory, value
 from pyomo.environ import *
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
@@ -181,10 +182,37 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0]
                                 )
             self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    def test_OA_ConstraintQualificationExample_integer_cut(self):
+        with SolverFactory('mindtpy') as opt:
+            model = ConstraintQualificationExample()
+            print('\n Solving problem with Outer Approximation')
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_integer_cuts=True
+                                )
+            self.assertIs(results.solver.termination_condition,
                           TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
+    def test_OA_OnlineDocExample(self):
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print('\n Solving problem with Outer Approximation')
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0]
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), 2.438447, places=2)
+
     # the following tests are used to improve code coverage
+
     def test_iteration_limit(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
@@ -259,15 +287,15 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving problem with Outer Approximation')
-            opt.solve(model, strategy='OA',
-                      init_strategy='initial_binary',
-                      mip_solver=required_solvers[1],
-                      nlp_solver=required_solvers[0],
-                      obj_bound=10,
-                      add_slack=True)
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10,
+                                add_slack=True)
 
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
     # def test_OA_OnlineDocExample4(self):

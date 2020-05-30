@@ -9,6 +9,7 @@ from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
+from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
 from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
@@ -133,6 +134,20 @@ class TestMindtPy(unittest.TestCase):
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    def test_OA_OnlineDocExample(self):
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print('\n Solving OnlineDocExample with Outer Approximation')
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                single_tree=True
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), 2.438447, places=2)
 
     # TODO fix the bug with integer_to_binary
     # def test_OA_Proposal_with_int_cuts(self):

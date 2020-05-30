@@ -210,7 +210,7 @@ class MindtPySolver(object):
         domain=bool
     ))
     CONFIG.declare("add_integer_cuts", ConfigValue(
-        default=True,
+        default=False,
         description="Add integer cuts (no-good cuts) to binary variables to disallow same integer solution again."
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
