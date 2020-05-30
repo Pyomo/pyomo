@@ -34,7 +34,7 @@ from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
 class TestDecomposition(unittest.TestCase):
 
     def test_communities_1(self):
-        m_class = LP_unbounded()
+        m_class = LP_inactive_index()
         m_class._generate_model()
         model = m_class.model
 
@@ -64,8 +64,16 @@ class TestDecomposition(unittest.TestCase):
                         community_map_c_unweighted_with,
                         community_map_c_weighted_with)
 
-        correct_community_maps = ({0: ['x'], 1: ['y']}, {0: ['x'], 1: ['y']}, {0: ['x', 'y']}, {0: ['x', 'y']},
-                                  {}, {}, {0: ['o']}, {0: ['o']})
+        correct_community_maps = ({0: ['x'], 1: ['y'], 2: ['z']}, {0: ['x'], 1: ['y'], 2: ['z']},
+                                  {0: ['x', 'y', 'z']}, {0: ['x', 'y', 'z']},
+                                  {0: ['c1[1]', 'c1[2]', 'c2[2]'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
+                                   2: ['b.c', 'B[1].c', 'B[2].c']},
+                                  {0: ['c1[1]', 'c1[2]', 'c2[2]'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
+                                   2: ['b.c', 'B[1].c', 'B[2].c']},
+                                  {0: ['c1[1]', 'c1[2]', 'c2[2]', 'obj[1]', 'OBJ'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
+                                   2: ['b.c', 'B[1].c', 'B[2].c', 'obj[2]']},
+                                  {0: ['c1[1]', 'c1[2]', 'c2[2]', 'obj[1]', 'OBJ'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
+                                   2: ['b.c', 'B[1].c', 'B[2].c', 'obj[2]']})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -107,7 +115,7 @@ class TestDecomposition(unittest.TestCase):
         self.assertEqual(correct_community_maps, test_results)
 
     def test_communities_3(self):
-        m_class = LP_inactive_index()
+        m_class = LP_unbounded()
         m_class._generate_model()
         model = m_class.model
 
@@ -137,16 +145,8 @@ class TestDecomposition(unittest.TestCase):
                         community_map_c_unweighted_with,
                         community_map_c_weighted_with)
 
-        correct_community_maps = ({0: ['x'], 1: ['y'], 2: ['z']}, {0: ['x'], 1: ['y'], 2: ['z']},
-                                  {0: ['x', 'y', 'z']}, {0: ['x', 'y', 'z']},
-                                  {0: ['c1[1]', 'c1[2]', 'c2[2]'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
-                                   2: ['b.c', 'B[1].c', 'B[2].c']},
-                                  {0: ['c1[1]', 'c1[2]', 'c2[2]'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
-                                   2: ['b.c', 'B[1].c', 'B[2].c']},
-                                  {0: ['c1[1]', 'c1[2]', 'c2[2]', 'obj[1]', 'OBJ'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
-                                   2: ['b.c', 'B[1].c', 'B[2].c', 'obj[2]']},
-                                  {0: ['c1[1]', 'c1[2]', 'c2[2]', 'obj[1]', 'OBJ'], 1: ['c1[3]', 'c1[4]', 'c2[1]'],
-                                   2: ['b.c', 'B[1].c', 'B[2].c', 'obj[2]']})
+        correct_community_maps = ({0: ['x'], 1: ['y']}, {0: ['x'], 1: ['y']}, {0: ['x', 'y']}, {0: ['x', 'y']},
+                                  {}, {}, {0: ['o']}, {0: ['o']})
 
         self.assertEqual(correct_community_maps, test_results)
 

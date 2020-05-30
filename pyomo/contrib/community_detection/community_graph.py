@@ -7,6 +7,7 @@ from itertools import combinations
 import os
 import logging
 
+import networkx.algorithms.isomorphism as iso
 
 def _generate_model_graph(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None):
     """
@@ -171,7 +172,17 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
     mapping = nx.get_node_attributes(model_graph, 'node_name')
     nx.relabel_nodes(model_graph, mapping, copy=False)
 
-    return model_graph
+    proper_order = nx.Graph()
+    proper_order_edges = [tuple(sorted(edge)) for edge in sorted(model_graph.edges)]
+    proper_order_nodes = sorted(model_graph.nodes)
+
+    proper_order.add_nodes_from(proper_order_nodes)
+    proper_order.add_edges_from(proper_order_edges)
+    if weighted_graph:
+        for edge in model_graph.edges:
+            proper_order[edge[0]][edge[1]]['weight'] = model_graph[edge[0]][edge[1]]['weight']
+
+    return proper_order
 
 
 def _event_log(model, model_graph):
