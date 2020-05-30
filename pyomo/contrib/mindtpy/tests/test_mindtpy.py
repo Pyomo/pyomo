@@ -36,7 +36,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving 8PP problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
@@ -51,7 +51,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving 8PP problem with Outer Approximation(max_binary)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
@@ -104,7 +104,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving MINLP_simple problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -119,7 +119,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving MINLP2_simple problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -134,7 +134,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving MINLP3_simple problem with Outer Approximation')
             results = opt.solve(model, strategy='OA', init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -148,7 +148,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving Proposal problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0])
@@ -161,7 +161,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving Proposal problem with Outer Approximation(integer cuts)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -176,7 +176,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_ConstraintQualificationExample(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving Constraint Qualification Example with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0]
@@ -188,7 +188,8 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_ConstraintQualificationExample_integer_cut(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            print('\n Solving problem with Outer Approximation')
+            print(
+                '\n Solving Constraint Qualification Example with Outer Approximation(integer cut)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -201,7 +202,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_OnlineDocExample(self):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving Online Doc Example with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0]
@@ -216,7 +217,7 @@ class TestMindtPy(unittest.TestCase):
     def test_iteration_limit(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            print('\n Solving problem with Outer Approximation')
+            print('\n test iteration_limit  to improve code coverage')
             opt.solve(model, strategy='OA',
                       iteration_limit=1,
                       mip_solver=required_solvers[1],
@@ -227,7 +228,7 @@ class TestMindtPy(unittest.TestCase):
     def test_time_limit(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            print('\n Solving problem with Outer Approximation')
+            print('\n test time_limit to improve code coverage')
             opt.solve(model, strategy='OA',
                       time_limit=1,
                       mip_solver=required_solvers[1],
@@ -239,7 +240,7 @@ class TestMindtPy(unittest.TestCase):
             m_class = LP_unbounded()
             m_class._generate_model()
             model = m_class.model
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving LP case with Outer Approximation')
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
@@ -250,7 +251,7 @@ class TestMindtPy(unittest.TestCase):
             m_class = QCP_simple()
             m_class._generate_model()
             model = m_class.model
-            print('\n Solving problem with Outer Approximation')
+            print('\n Solving QCP case with Outer Approximation')
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
@@ -261,7 +262,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             model.obj.sense = maximize
-            print('\n Solving problem with Outer Approximation')
+            print('\n test maximize case to improve code coverage')
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
@@ -273,7 +274,8 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet()
-            print('\n Solving problem with Outer Approximation')
+            print(
+                '\n Test rNLP initialize strategy and add_slack to improve code coverage')
             opt.solve(model, strategy='OA',
                       init_strategy='rNLP',
                       mip_solver=required_solvers[1],
@@ -286,7 +288,8 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
-            print('\n Solving problem with Outer Approximation')
+            print(
+                '\n Test initial_binary initialize strategy and add_slack to improve code coverage')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
