@@ -31,7 +31,7 @@ import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
     fit_rect_dist, fit_mvn_dist, fit_kde_dist
-
+    
 __version__ = 0.1
 
 #=============================================
@@ -330,9 +330,11 @@ class Estimator(object):
         If True, print diagnostics from the solver
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute)
+    calc_cov: bool, optional
+        Indicates if the covariance matrix should be computed and returned
     """
     def __init__(self, model_function, data, theta_names, obj_function=None, 
-                 tee=False, diagnostic_mode=False, solver_options=None):
+                 tee=False, diagnostic_mode=False, solver_options=None, calc_cov=False):
         
         self.model_function = model_function
         self.callback_data = data
@@ -349,6 +351,8 @@ class Estimator(object):
         
         self._second_stage_cost_exp = "SecondStageCost"
         self._numbers_list = list(range(len(data)))
+        
+        self.calc_cov = calc_cov
         
 
     def _create_parmest_model(self, data):
@@ -426,7 +430,6 @@ class Estimator(object):
         construct the tree just once and reuse it, then remember to
         remove thetavals from it when none is desired.
         """
-        # Testing to see where this commit goes. AWD: Feb-6-2020
         
         assert(solver != "k_aug" or ThetaVals == None)
         # Create a tree with dummy scenarios (callback will supply when needed).
@@ -455,11 +458,21 @@ class Estimator(object):
         stsolver = st.StochSolver(fsfile = "pyomo.contrib.parmest.parmest",
                                   fsfct = "_pysp_instance_creation_callback",
                                   tree_model = tree_model)
-        
+                
+        # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            ef_sol = stsolver.solve_ef('ipopt',
-                                       sopts=self.solver_options,
-                                       tee=self.tee)
+        
+            if not self.calc_cov:
+                ef_sol = stsolver.solve_ef('ipopt',
+                                           sopts=self.solver_options,
+                                           tee=self.tee,
+                                            )                            
+            else:
+                ef_sol, cov = stsolver.solve_ef('this_does_not_matter',
+                                           sopts=self.solver_options,
+                                           tee=self.tee,
+                                           reduced_hessian_independent_vars=self.theta_names)
+                                           
             if self.diagnostic_mode:
                 print('    Solver termination condition = ',
                        str(ef_sol.solver.termination_condition))
@@ -484,10 +497,17 @@ class Estimator(object):
                             vals[var] = temp                    
                     var_values.append(vals)                    
                 var_values = pd.DataFrame(var_values)
-                return objval, thetavals, var_values
+                if self.calc_cov:
+                    return objval, thetavals, var_values, cov
+                else:
+                    return objval, thetavals, var_values
 
-            return objval, thetavals
+            if self.calc_cov:
+                return objval, thetavals, cov
+            else:
+                return cov
         
+        # Solve with sipopt and k_aug
         elif solver == "k_aug":
             # Just hope for the best with respect to degrees of freedom.
 

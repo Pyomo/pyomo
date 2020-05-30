@@ -15,6 +15,8 @@ from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioT
 from pyomo.pysp.scenariotree.instance_factory import \
                 ScenarioTreeInstanceFactory
 
+from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
+
 import pyomo.pysp.phinit as phinit
 import os
 
@@ -183,7 +185,8 @@ class StochSolver:
                  cvar_weight = None,
                  risk_alpha = None,
                  cc_indicator_var_name=None,
-                 cc_alpha=0.0):
+                 cc_alpha=0.0,
+                 reduced_hessian_independent_vars=[]):
 
         """Solve the stochastic program directly using the extensive form.
         All Args other than subsolver are optional.
@@ -199,6 +202,9 @@ class StochSolver:
             risk_alpha (float): alpha value for cvar
             cc_indicator_var_name (string): name of the Var used for chance constraint
             cc_alpha (float): alpha for chance constraint
+            reduced_hessian_independent_vars (list of string): independent variable names
+                used to calculate the reduced hessian. If empty, the reduced hessian is NOT
+                calculated.
 
         Returns: (`Pyomo solver result`, `float`)
 
@@ -221,29 +227,57 @@ class StochSolver:
                                         cc_indicator_var_name = cc_indicator_var_name,
                                         cc_alpha = cc_alpha)
 
-        solver = SolverFactory(subsolver)
-        if sopts is not None:
-            for key in sopts:
-                solver.options[key] = sopts[key]
+        assert not (need_gap and len(reduced_hessian_independent_vars) > 0), "Calculating both the gap and reduced hessian is not supported."
 
-        if need_gap:
-            solve_result = solver.solve(self.ef_instance, tee = tee, load_solutions=False)
-            if len(solve_result.solution) > 0:
-                absgap = solve_result.solution(0).gap
+        if len(reduced_hessian_independent_vars) == 0:
+            # Do not calculate the reduced hessian
+            # This is the original code
+
+            solver = SolverFactory(subsolver)
+            if sopts is not None:
+                for key in sopts:
+                    solver.options[key] = sopts[key]
+
+            if need_gap:
+                solve_result = solver.solve(self.ef_instance, tee = tee, load_solutions=False)
+                if len(solve_result.solution) > 0:
+                    absgap = solve_result.solution(0).gap
+                else:
+                    absgap = None
+                self.ef_instance.solutions.load_from(solve_result)
             else:
-                absgap = None
-            self.ef_instance.solutions.load_from(solve_result)
-        else:
-            solve_result = solver.solve(self.ef_instance, tee = tee)
+                solve_result = solver.solve(self.ef_instance, tee = tee)
 
-        # note: the objective is probably called MASTER
-        #print ("debug value(ef_instance.MASTER)=",value(ef_instance.MASTER))
-        self.scenario_tree.pullScenarioSolutionsFromInstances()
-        self.scenario_tree.snapshotSolutionFromScenarios() # update nodes
-        if need_gap:
-            return solve_result, absgap
+            # note: the objective is probably called MASTER
+            #print ("debug value(ef_instance.MASTER)=",value(ef_instance.MASTER))
+            self.scenario_tree.pullScenarioSolutionsFromInstances()
+            self.scenario_tree.snapshotSolutionFromScenarios() # update nodes
+            if need_gap:
+                return solve_result, absgap
+            else:
+                return solve_result
+                
         else:
-            return solve_result
+            print("Calculating reduced Hessian...")            
+            # parmest makes the fitted parameters stage 1 variables
+            # thus we need to convert from var names (string) to 
+            # Pyomo vars
+            ind_vars = []
+            for v in reduced_hessian_independent_vars:
+
+                #ind_vars.append(eval('ef.'+v))
+                ind_vars.append(self.ef_instance.MASTER_BLEND_VAR_RootNode[v])
+        
+            # calculate the reduced hessian
+            solve_result, inv_red_hess = inv_reduced_hessian_barrier(self.ef_instance, 
+                independent_variables= ind_vars,
+                solver_options=sopts,
+                tee=tee)
+                
+            self.scenario_tree.pullScenarioSolutionsFromInstances()
+            self.scenario_tree.snapshotSolutionFromScenarios() # update nodes
+                        
+            return solve_result, inv_red_hess
 
     #=========================
     def solve_ph(self, subsolver, default_rho, phopts = None, sopts = None):

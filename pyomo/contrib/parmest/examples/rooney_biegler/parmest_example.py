@@ -21,7 +21,7 @@ theta_names = ['asymptote', 'rate_constant']
 
 # Data
 data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
-                          [4,16.0],[5,15.6],[6,19.8]],
+                          [4,16.0],[5,15.6],[7,19.8]],
                     columns=['hour', 'y'])
 
 # Sum of squared error function
@@ -32,22 +32,25 @@ def SSE(model, data):
 
 solver_options = {"max_iter": 6000}  # not really needed in this case
 
-pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE, solver_options)
-obj, theta = pest.theta_est()
+pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE, solver_options, calc_cov=True)
+obj, theta, cov = pest.theta_est()
 print(obj)
 print(theta)
+print(cov)
+
+### Covariance matrix
 
 ### Parameter estimation with bootstrap resampling
-
+'''
 bootstrap_theta = pest.theta_est_bootstrap(50, seed=4581)
 print(bootstrap_theta.head())
 
 parmest.pairwise_plot(bootstrap_theta, title='Bootstrap theta')
 parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'], 
                       title='Bootstrap theta with confidence regions')
-
+'''
 ### Likelihood ratio test
-
+'''
 asym = np.arange(10, 30, 2)
 rate = np.arange(0, 1.5, 0.1)
 theta_vals = pd.DataFrame(list(product(asym, rate)), columns=theta_names)
@@ -60,3 +63,4 @@ print(LR.head())
 
 parmest.pairwise_plot(LR, theta, 0.8, 
                       title='LR results within 80% confidence region')
+'''
