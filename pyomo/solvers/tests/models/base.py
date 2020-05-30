@@ -191,6 +191,7 @@ class _BaseTestModel(object):
         model = self.model
         suffixes = dict((suffix, getattr(model,suffix))
                         for suffix in kwds.pop('suffixes',[]))
+        exclude = kwds.pop('exclude_suffixes',set())
         for suf in suffixes.values():
             if isinstance(self.model, IBlock):
                 assert isinstance(suf,pmo.suffix)
@@ -228,6 +229,10 @@ class _BaseTestModel(object):
             for suffix_name, suffix in suffixes.items():
                 if suffix_name in solution[var.name]:
                     if suffix.get(var) is None:
+                        if suffix_name in exclude:
+                            _ex = exclude[suffix_name]
+                            if not _ex or var.name in _ex:
+                                continue
                         if not(solution[var.name][suffix_name] in \
                                solution["suffix defaults"][suffix_name]):
                             return (False,
@@ -236,6 +241,13 @@ class _BaseTestModel(object):
                                         suffix,
                                         solution[var.name][suffix_name],
                                         "none defined"))
+                    elif suffix_name in exclude and (
+                            not exclude[suffix_name]
+                            or var.name in exclude[suffix_name]):
+                        return (
+                            False,
+                            "Expected solution to be missing suffix %s"
+                            % suffix_name)
                     elif not abs(solution[var.name][suffix_name] - \
                                  suffix.get(var)) < self.diff_tol:
                         return (False,
@@ -259,6 +271,10 @@ class _BaseTestModel(object):
             for suffix_name, suffix in suffixes.items():
                 if suffix_name in solution[con.name]:
                     if suffix.get(con) is None:
+                        if suffix_name in exclude:
+                            _ex = exclude[suffix_name]
+                            if not _ex or con.name in _ex:
+                                continue
                         if not (solution[con.name][suffix_name] in \
                                 solution["suffix defaults"][suffix_name]):
                             return (False,
@@ -267,6 +283,13 @@ class _BaseTestModel(object):
                                         suffix,
                                         solution[con.name][suffix_name],
                                         "none defined"))
+                    elif suffix_name in exclude and (
+                            not exclude[suffix_name]
+                            or con.name in exclude[suffix_name]):
+                        return (
+                            False,
+                            "Expected solution to be missing suffix %s"
+                            % suffix_name)
                     elif not abs(solution[con.name][suffix_name] - \
                                  suffix.get(con)) < self.diff_tol:
                         return (False,
@@ -290,6 +313,10 @@ class _BaseTestModel(object):
             for suffix_name, suffix in suffixes.items():
                 if suffix_name in solution[obj.name]:
                     if suffix.get(obj) is None:
+                        if suffix_name in exclude:
+                            _ex = exclude[suffix_name]
+                            if not _ex or obj.name in _ex:
+                                continue
                         if not(solution[obj.name][suffix_name] in \
                                solution["suffix defaults"][suffix_name]):
                             return (False,
@@ -298,6 +325,13 @@ class _BaseTestModel(object):
                                         suffix,
                                         solution[obj.name][suffix_name],
                                         "none defined"))
+                    elif suffix_name in exclude and (
+                            not exclude[suffix_name]
+                            or obj.name in exclude[suffix_name]):
+                        return (
+                            False,
+                            "Expected solution to be missing suffix %s"
+                            % suffix_name)
                     elif not abs(solution[obj.name][suffix_name] - \
                                  suffix.get(obj)) < self.diff_tol:
                         return (False,
@@ -316,6 +350,10 @@ class _BaseTestModel(object):
                 if (solution[block.name] is not None) and \
                    (suffix_name in solution[block.name]):
                     if suffix.get(block) is None:
+                        if suffix_name in exclude:
+                            _ex = exclude[suffix_name]
+                            if not _ex or block.name in _ex:
+                                continue
                         if not(solution[block.name][suffix_name] in \
                                solution["suffix defaults"][suffix_name]):
                             return (False,
@@ -324,6 +362,13 @@ class _BaseTestModel(object):
                                         suffix,
                                         solution[block.name][suffix_name],
                                         "none defined"))
+                    elif suffix_name in exclude and (
+                            not exclude[suffix_name]
+                            or block.name in exclude[suffix_name]):
+                        return (
+                            False,
+                            "Expected solution to be missing suffix %s"
+                            % suffix_name)
                     elif not abs(solution[block.name][suffix_name] - \
                                  suffix.get(block)) < sefl.diff_tol:
                         return (False,

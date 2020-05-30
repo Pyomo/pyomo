@@ -84,7 +84,8 @@ def create_test_method(model,
         else:
             model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
             model_class.save_current_solution(save_filename, suffixes=model_class.test_suffixes)
-        rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
+        rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes,
+                                                   exclude_suffixes=test_case.exclude_suffixes)
 
         if is_expected_failure:
             if rc[0]:
