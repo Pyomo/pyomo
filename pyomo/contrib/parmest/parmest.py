@@ -426,7 +426,6 @@ class Estimator(object):
         construct the tree just once and reuse it, then remember to
         remove thetavals from it when none is desired.
         """
-        
         assert(solver != "k_aug" or ThetaVals == None)
         # Create a tree with dummy scenarios (callback will supply when needed).
         # Which names to use (i.e., numbers) depends on if it is for bootstrap.
