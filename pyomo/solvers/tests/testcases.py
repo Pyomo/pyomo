@@ -310,7 +310,9 @@ def test_scenarios(arg=None):
                     msg=case[1]
 
             # Return scenario dimensions and scenario information
-            yield (model, solver, io), Options(status=status, msg=msg, model=_model, solver=None, testcase=_solver_case)
+            yield (model, solver, io), Options(
+                status=status, msg=msg, model=_model, solver=None,
+                testcase=_solver_case, demo_limits=_solver_case.demo_limits)
 
 
 @unittest.nottest
