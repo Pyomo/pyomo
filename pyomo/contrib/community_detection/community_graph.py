@@ -7,7 +7,6 @@ from itertools import combinations
 import os
 import logging
 
-import networkx.algorithms.isomorphism as iso
 
 def _generate_model_graph(model, node_type='v', with_objective=True, weighted_graph=True, file_destination=None):
     """
