@@ -90,3 +90,16 @@ print("asymptote =",theta_hat2[0])
 print("rate_constant =",theta_hat2[1])
 
 print("\ncovariance=\n",cov2)
+
+
+## covariance matrix in Rooney and Biegler (2001)
+cov_paper = np.array([[6.22864, -0.4322],[-0.4322,0.04124]])
+print("\ncovariance from paper =\n",cov_paper)
+
+'''
+Two possible explanations for the slight difference between the Scipy results and the paper:
+- The paper used an alternative finite difference approximation for the Jacobian
+- The paper used the exact reduced Hessian
+
+But the difference is in the 3rd decimal place, so close enough.
+'''
