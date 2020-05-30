@@ -40,9 +40,9 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
     """
 
     if weighted_graph:
-        edge_weight_dict = ComponentMap()
+        edge_weight_dict = dict()
     else:
-        edge_set = ComponentSet()
+        edge_set = set()
 
     model_graph_nodes = []
 
@@ -62,11 +62,12 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
 
             # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
             if weighted_graph:
-                new_edge_weights = ComponentMap(
-                    (edge, edge_weight_dict.get(edge, 0) + 1) for edge in edges_between_nodes)
+                new_edge_weights = {tuple([id(edge[0]), id(edge[1])]):
+                                        edge_weight_dict.get(tuple([id(edge[0]), id(edge[1])]), 0) + 1
+                                    for edge in edges_between_nodes}
                 edge_weight_dict.update(new_edge_weights)
             else:
-                new_edges = ComponentSet(edges_between_nodes)
+                new_edges = {tuple([id(edge[0]), id(edge[1])]) for edge in edges_between_nodes}
                 edge_set.update(new_edges)
 
         # This if statement will be executed if the user chooses to treat the objective function as a constraint in
@@ -83,11 +84,12 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
 
                 # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
                 if weighted_graph:
-                    new_edge_weights = ComponentMap(
-                        (edge, edge_weight_dict.get(edge, 0) + 1) for edge in edges_between_nodes)
+                    new_edge_weights = {tuple([id(edge[0]), id(edge[1])]):
+                                            edge_weight_dict.get(tuple([id(edge[0]), id(edge[1])]), 0) + 1
+                                        for edge in edges_between_nodes}
                     edge_weight_dict.update(new_edge_weights)
                 else:
-                    new_edges = ComponentSet(edges_between_nodes)
+                    new_edges = {tuple([id(edge[0]), id(edge[1])]) for edge in edges_between_nodes}
                     edge_set.update(new_edges)
 
     # Constraint nodes
@@ -138,12 +140,15 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
 
             # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
             if weighted_graph:
-                new_edge_weights = ComponentMap(
-                    (edge, edge_weight_dict.get(edge, 0) + 1) for edge in edges_between_nodes)
+                new_edge_weights = {tuple([id(edge[0]), id(edge[1])]):
+                                        edge_weight_dict.get(tuple([id(edge[0]), id(edge[1])]), 0) + 1
+                                    for edge in edges_between_nodes}
                 edge_weight_dict.update(new_edge_weights)
             else:
-                new_edges = ComponentSet(edges_between_nodes)
+                new_edges = {tuple([id(edge[0]), id(edge[1])]) for edge in edges_between_nodes}
                 edge_set.update(new_edges)
+
+    id_map = {id(node): node for node in model_graph_nodes}
 
     model_graph = nx.Graph()
     model_graph_nodes = sorted(str(node) for node in model_graph_nodes)
@@ -151,18 +156,26 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
     # Now, using edge_weight_dict or edge_set (based on whether the user wants a weighted or unweighted graph,
     # respectively), the networkX graph (model_graph) will be updated with all of the edges determined above
     if weighted_graph:
-        model_graph_edges = sorted([tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edge_weight_dict])
+        model_graph_edges = sorted(
+            [tuple(sorted([str(id_map[edge[0]]), str(id_map[edge[1]])])) for edge in edge_weight_dict])
         model_graph.add_edges_from(model_graph_edges)
 
+        seen_edges = set()
         for edge in edge_weight_dict:
-            if model_graph.get_edge_data(str(edge[0]), str(edge[1]), 'weight') == {}:
-                model_graph[str(edge[0])][str(edge[1])]['weight'] = edge_weight_dict[edge]
+            reverse_edge = edge[::-1]
+            node_one = str(id_map[edge[0]])
+            node_two = str(id_map[edge[1]])
+            if edge in seen_edges or reverse_edge in seen_edges:
+                model_graph[node_one][node_two]['weight'] += edge_weight_dict[edge]
             else:
-                model_graph[str(edge[0])][str(edge[1])]['weight'] += edge_weight_dict[edge]
+                model_graph[node_one][node_two]['weight'] = edge_weight_dict[edge]
+                seen_edges.add(edge)
 
         del edge_weight_dict
+        del seen_edges
+
     else:
-        model_graph_edges = sorted([tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edge_set])
+        model_graph_edges = sorted([tuple(sorted([str(id_map[edge[0]]), str(id_map[edge[1]])])) for edge in edge_set])
         model_graph.add_edges_from(model_graph_edges)
         del edge_set
 
@@ -176,7 +189,6 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
                        weighted_graph=weighted_graph, file_destination=file_destination)
 
     # Return the networkX graph based on the given Pyomo optimization model
-
     return model_graph
 
 
