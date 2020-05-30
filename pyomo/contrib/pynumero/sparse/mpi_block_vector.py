@@ -825,11 +825,12 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         for ndx in range(result.nblocks):
             if serialized_structure[structure_ndx] == -1:
                 structure_ndx += 1
-                result.set_block(ndx, BlockVector(serialized_structure[structure_ndx]))
+                block = BlockVector(serialized_structure[structure_ndx])
                 structure_ndx += 1
                 structure_ndx = MPIBlockVector._create_from_serialized_structure(serialized_structure,
                                                                                  structure_ndx,
-                                                                                 result.get_block(ndx))
+                                                                                 block)
+                result.set_block(ndx, block)
             elif serialized_structure[structure_ndx] == -2:
                 structure_ndx += 1
                 result.set_block(ndx, np.zeros(serialized_structure[structure_ndx]))

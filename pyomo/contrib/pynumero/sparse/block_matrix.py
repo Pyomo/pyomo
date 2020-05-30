@@ -525,13 +525,13 @@ class BlockMatrix(BaseBlockMatrix):
             raise ValueError('BlockMatrix only supports transpose with copy=True')
 
         m, n = self.bshape
-        row_sizes = self.row_block_sizes()
-        col_sizes = self.col_block_sizes()
         mat = BlockMatrix(n, m)
-        for _ndx, _size in enumerate(row_sizes):
-            mat.set_col_size(_ndx, _size)
-        for _ndx, _size in enumerate(col_sizes):
-            mat.set_row_size(_ndx, _size)
+        for row in range(m):
+            if self.is_row_size_defined(row):
+                mat.set_col_size(row, self.get_row_size(row))
+        for col in range(n):
+            if self.is_col_size_defined(col):
+                mat.set_row_size(col, self.get_col_size(col))
         for i in range(m):
             for j in range(n):
                 if not self.is_empty_block(i, j):
@@ -744,7 +744,14 @@ class BlockMatrix(BaseBlockMatrix):
         BlockMatrix
 
         """
-        result = BlockMatrix(self.bshape[0], self.bshape[1])
+        m, n = self.bshape
+        result = BlockMatrix(m, n)
+        for row in range(m):
+            if self.is_row_size_defined(row):
+                result.set_row_size(row, self.get_row_size(row))
+        for col in range(n):
+            if self.is_col_size_defined(col):
+                result.set_col_size(col, self.get_col_size(col))
         ii, jj = np.nonzero(self._block_mask)
         for i, j in zip(ii, jj):
             if isinstance(self._blocks[i, j], BlockMatrix):

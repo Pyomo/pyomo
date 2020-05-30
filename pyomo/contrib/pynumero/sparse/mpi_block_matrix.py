@@ -336,6 +336,27 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         raise RuntimeError('Operation not supported by MPIBlockMatrix')
 
+    def to_local_array(self):
+        """
+        This method is only for testing/debugging
+
+        Returns
+        -------
+        result: np.ndarray
+        """
+        local_result = self._block_matrix.copy_structure()
+        rank = self._mpiw.Get_rank()
+        block_indices = self._unique_owned_mask if rank != 0 else self._owned_mask
+
+        ii, jj = np.nonzero(block_indices)
+        for i, j in zip(ii, jj):
+            if not self._block_matrix.is_empty_block(i, j):
+                local_result.set_block(i, j, self.get_block(i, j))
+        local_result = local_result.toarray()
+        global_result = np.zeros(shape=local_result.shape, dtype=local_result.dtype)
+        self._mpiw.Allreduce(local_result, global_result)
+        return global_result
+
     def is_empty_block(self, idx, jdx):
         """
         Indicates if a block is empty
