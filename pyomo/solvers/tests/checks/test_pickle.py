@@ -104,9 +104,9 @@ def create_test_method(model, solver, io,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_this(self):
+        def skipping_test(self):
             return self.skipTest(test_case.msg)
-        return skipping_this
+        return skipping_test
 
     if is_expected_failure:
         @unittest.expectedFailure
@@ -147,12 +147,17 @@ for key, value in test_scenarios(lambda c: c.test_pickling):
     test_name = "test_"+solver+"_"+io +"_symbolic_labels"
     test_method = create_test_method(model, solver, io, value, True)
     if test_method is not None:
+        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
+        test_method = None
+
     # Non-symbolic labels
     test_name = "test_"+solver+"_"+io +"_nonsymbolic_labels"
     test_method = create_test_method(model, solver, io, value, False)
     if test_method is not None:
+        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
+        test_method = None
 
 # Reset the cls variable, since it contains a unittest.TestCase subclass.
 # This prevents this class from being processed twice!
