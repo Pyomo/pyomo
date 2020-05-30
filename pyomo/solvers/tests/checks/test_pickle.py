@@ -108,6 +108,16 @@ def create_test_method(model, solver, io,
             return self.skipTest(test_case.msg)
         return skipping_test
 
+    # If this solver is in demo mode
+    size = getattr(test_case.model, 'size', (None, None, None))
+    for prb, sol in zip(size, test_case.demo_limits):
+        if prb is None or sol is None:
+            continue
+        if prb > sol:
+            def skipping_test(self):
+                self.skipTest("Problem is too large for unlicensed %s solver" % solver)
+            return skipping_test
+
     if is_expected_failure:
         @unittest.expectedFailure
         def failing_pickle_test(self):
