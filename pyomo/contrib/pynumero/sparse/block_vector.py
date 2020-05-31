@@ -1264,6 +1264,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
                     return False
                 if not block1._has_equal_structure(block2):
                     return False
+            elif isinstance(block2, BlockVector):
+                return False
         return True
 
     def __getitem__(self, item):
@@ -1275,7 +1277,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def __setitem__(self, key, value):
         if not (self._has_equal_structure(key) and (self._has_equal_structure(value) or np.isscalar(value))):
-            raise ValueError('BlockVector.__setitem__ only accepts slices in the form of BlockVectors of the same structure')
+            raise ValueError(
+                'BlockVector.__setitem__ only accepts slices in the form of BlockVectors of the same structure')
         if np.isscalar(value):
             for ndx, block in enumerate(self):
                 block[key.get_block(ndx)] = value

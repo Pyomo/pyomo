@@ -153,7 +153,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                        np.logical_not, np.expm1, np.exp2, np.sign,
                        np.rint, np.square, np.positive, np.negative,
                        np.rad2deg, np.deg2rad, np.conjugate, np.reciprocal,
-                       ]
+                       np.signbit]
         # functions that take two vectors
         binary_funcs = [np.add, np.multiply, np.divide, np.subtract,
                         np.greater, np.greater_equal, np.less, np.less_equal,
@@ -1130,13 +1130,46 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         self._block_vector.set_block(key, value)
         self._set_block_size(key, value.size)
 
+    def _has_equal_structure(self, other):
+        if not (isinstance(other, MPIBlockVector) or isinstance(other, BlockVector)):
+            return False
+        if self.nblocks != other.nblocks:
+            return False
+        if isinstance(other, MPIBlockVector):
+            if (self.owned_blocks != other.owned_blocks).any():
+                return False
+        for ndx in self.owned_blocks:
+            block1 = self.get_block(ndx)
+            block2 = other.get_block(ndx)
+            if isinstance(block1, BlockVector):
+                if not isinstance(block2, BlockVector):
+                    return False
+                if not block1._has_equal_structure(block2):
+                    return False
+            elif isinstance(block2, BlockVector):
+                return False
+        return True
+
     def __getitem__(self, item):
-        raise NotImplementedError('MPIBlockVector does not support __getitem__. '
-                                  'Use get_block or set_block to access sub-blocks.')
+        if not self._has_equal_structure(item):
+            raise ValueError('MIPBlockVector.__getitem__ only accepts slices in the form of MPIBlockVectors of the same structure')
+        res = self.copy_structure()
+        for ndx in self.owned_blocks:
+            block = self.get_block(ndx)
+            res.set_block(ndx, block[item.get_block(ndx)])
 
     def __setitem__(self, key, value):
-        raise NotImplementedError('MPIBlockVector does not support __setitem__. '
-                                  'Use get_block or set_block to access sub-blocks.')
+        if not (self._has_equal_structure(key) and (self._has_equal_structure(value) or np.isscalar(value))):
+            raise ValueError(
+                'MPIBlockVector.__setitem__ only accepts slices in the form of MPIBlockVectors of the same structure')
+        if np.isscalar(value):
+            for ndx in self.owned_blocks:
+                block = self.get_block(ndx)
+                block[key.get_block(ndx)] = value
+        else:
+            for ndx in self.owned_blocks:
+                block = self.get_block(ndx)
+                block[key.get_block(ndx)] = value.get_block(ndx)
 
     def __str__(self):
         msg = '{}{}:\n'.format(self.__class__.__name__, self.bshape)

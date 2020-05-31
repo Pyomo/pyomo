@@ -10,6 +10,8 @@
 import numpy as np
 from scipy.sparse import coo_matrix
 from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
+from pyomo.common.dependencies import attempt_import
+mpi_block_vector, mpi_block_vector_available = attempt_import('pyomo.contrib.pynumero.sparse.mpi_block_vector')
 
 
 def build_bounds_mask(vector):
@@ -43,12 +45,26 @@ def build_compression_matrix(compression_mask):
             sub_matrix = build_compression_matrix(block)
             res.set_block(ndx, ndx, sub_matrix)
         return res
-    else:
+    elif type(compression_mask) is np.ndarray:
         cols = compression_mask.nonzero()[0]
         nnz = len(cols)
         rows = np.arange(nnz, dtype=np.int)
         data = np.ones(nnz)
         return coo_matrix((data, (rows, cols)), shape=(nnz, len(compression_mask)))
+    elif isinstance(compression_mask, mpi_block_vector.MPIBlockVector):
+        from pyomo.contrib.pynumero.sparse.mpi_block_matrix import MPIBlockMatrix
+        from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
+        compression_mask: MPIBlockVector = compression_mask
+        n = compression_mask.nblocks
+        rank_ownership = np.ones((n, n), dtype=np.int64) * -1
+        for i in range(n):
+            rank_ownership[i, i] = compression_mask.rank_ownership[i]
+        res = MPIBlockMatrix(nbrows=n, nbcols=n, rank_ownership=rank_ownership, mpi_comm=compression_mask.mpi_comm)
+        for ndx in compression_mask.owned_blocks:
+            block = compression_mask.get_block(ndx)
+            sub_matrix = build_compression_matrix(block)
+            res.set_block(ndx, ndx, sub_matrix)
+        return res
 
 
 def build_compression_mask_for_finite_values(vector):
