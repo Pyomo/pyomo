@@ -24,6 +24,7 @@ from pyomo.core.expr.expr_common import \
      _iadd, _isub, _imul, _idiv,
      _ipow, _lt, _le, _eq)
 
+from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 logger = logging.getLogger('pyomo.core')
@@ -532,36 +533,7 @@ numeric types using the following functions:
         return retval
 
 
-
-class PyomoModelingObject(object):
-    __slots__ = ()
-
-    def is_component_type(self):
-        """Return True if this class is a Pyomo component"""
-        return False
-
-    def is_numeric_type(self):
-        """Return True if this class is a Pyomo numeric object"""
-        return False
-
-    def is_parameter_type(self):
-        """Return False unless this class is a parameter object"""
-        return False
-
-    def is_variable_type(self):
-        """Return False unless this class is a variable object"""
-        return False
-
-    def is_expression_type(self):
-        """Return True if this numeric value is an expression"""
-        return False
-
-    def is_named_expression_type(self):
-        """Return True if this numeric value is a named expression"""
-        return False
-
-
-class NumericValue(PyomoModelingObject):
+class NumericValue(PyomoObject):
     """
     This is the base class for numeric values used in Pyomo.
     """

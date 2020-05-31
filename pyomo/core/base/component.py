@@ -22,7 +22,7 @@ from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
 from pyomo.common import deprecated
-from pyomo.core.expr.numvalue import PyomoModelingObject
+from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 
 logger = logging.getLogger('pyomo.core')
@@ -76,7 +76,7 @@ def cname(*args, **kwds):
 class CloneError(pyomo.common.errors.PyomoException):
     pass
 
-class _ComponentBase(PyomoModelingObject):
+class _ComponentBase(PyomoObject):
     """A base class for Component and ComponentData
 
     This class defines some fundamental methods and properties that are
