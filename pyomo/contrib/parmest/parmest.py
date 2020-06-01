@@ -531,9 +531,17 @@ class Estimator(object):
                 # Assumption: Objective value is sum of squared errors
                 sse = objval
                 
-                # Calculate covariance assuming:
-                # Experimental observation errors are independent and following a Gaussian 
-                # distribution with constant variance
+                '''Calculate covariance assuming experimental observation errors are
+                independent and follow a Gaussian 
+                distribution with constant variance.
+                
+                The formula used in parmest was verified against equations (7-5-15) and
+                (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
+                
+                This formula is also applicable if the objective is scaled by a constant;
+                the constant cancels out. (PySP scaled by 1/n because it computes an
+                expected value.)
+                '''
                 cov = 2 * sse / (n - l) * inv_red_hes
             
             if len(return_values) > 0:
@@ -780,7 +788,7 @@ class Estimator(object):
         assert isinstance(bootlist, (type(None), list))
         
         return self._Q_opt(solver=solver, return_values=return_values,
-                           bootlist=bootlist, calc_cov)
+                           bootlist=bootlist, calc_cov=calc_cov)
     
     
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
