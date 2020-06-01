@@ -75,9 +75,19 @@ def solve_NLP_subproblem(solve_data, config):
     TransformationFactory('contrib.deactivate_trivial_constraints')\
         .apply_to(fixed_nlp, tmp=True, ignore_infeasible=True)
     # Solve the NLP
-    with SuppressInfeasibleWarning():
-        results = SolverFactory(config.nlp_solver).solve(
-            fixed_nlp, **config.nlp_solver_args)
+    try:
+        with SuppressInfeasibleWarning():
+            results = SolverFactory(config.nlp_solver).solve(
+                fixed_nlp, **config.nlp_solver_args)
+    except ValueError:
+        for nlp_var, orig_val in zip(
+                MindtPy.variable_list,
+                solve_data.initial_var_values):
+            if not nlp_var.fixed and not nlp_var.is_binary():
+                nlp_var.value = orig_val
+        with SuppressInfeasibleWarning():
+            results = SolverFactory(config.nlp_solver).solve(
+                fixed_nlp, **config.nlp_solver_args)
     return fixed_nlp, results
 
 
