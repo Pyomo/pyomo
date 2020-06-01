@@ -46,13 +46,11 @@ def check_units_equivalent(*args):
     -------
     bool : True if all the expressions passed as argments have the same units
     """
-    pyomo_unit_compare, pint_unit_compare = units._get_units_tuple(args[0])
-    for expr in args[1:]:
-        pyomo_unit, pint_unit = units._get_units_tuple(expr)
-        if not UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit_compare, pint_unit):
-            return False
-    # made it through all of them successfully
-    return True
+    try:
+        assert_units_equivalent(*args)
+        return True
+    except UnitsError:
+        return False
 
 def assert_units_equivalent(*args):
     """

@@ -65,6 +65,9 @@ class TestUnitsChecking(unittest.TestCase):
         with self.assertRaises(UnitsError):
             assert_units_consistent(m.broken)
 
+        self.assertTrue(check_units_equivalent(m.dx, m.dy))
+        self.assertFalse(check_units_equivalent(m.dx, m.vx))
+
     def test_assert_units_consistent_on_datas(self):
         u = units
         m = ConcreteModel()

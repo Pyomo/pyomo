@@ -49,7 +49,7 @@ There are other methods there that may be helpful for verifying correct units on
        >>> assert_units_equivalent(model.obj.expr, u.m**2/u.s**4) # raise exc if units not equivalent
        >>> print(u.get_units(model.obj.expr)) # print the units on the objective
        m ** 2 / s ** 4
-       >>> print(check_units_equivalent(model.acc.get_units(), u.m/u.s**2))
+       >>> print(check_units_equivalent(model.acc, u.m/u.s**2))
        True
 
 The implementation is currently based on the `pint
