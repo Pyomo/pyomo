@@ -55,7 +55,7 @@ class TestUnitsChecking(unittest.TestCase):
         assert_units_equivalent(m.dx, m.dy) # check var
         assert_units_equivalent(m.x_unitless, u.dimensionless) # check unitless var
         assert_units_equivalent(m.x_unitless, None) # check unitless var
-        assert_units_equivalent(m.vx_con, u.m/u.s) # check constraint
+        assert_units_equivalent(m.vx_con.body, u.m/u.s) # check constraint
 
         m.broken = Constraint(expr = m.dy == 42.0*u.kg)
         with self.assertRaises(UnitsError):
@@ -98,23 +98,23 @@ class TestUnitsChecking(unittest.TestCase):
         assert_units_consistent(m.vel_con[2]) # check constraint data
         assert_units_consistent(m.unitless_con[2]) # check unitless constraint data
 
-        assert_units_equivalent(m.x[2], m.y[1])  # check var data
+        assert_units_equivalent(m.x[2], m.x[1])  # check var data
         assert_units_equivalent(m.t[2], u.s)  # check var data
         assert_units_equivalent(m.v[2], u.m/u.s)  # check var data
-        assert_units_equivalent(m.unitless[2], u.dimensionless)  # check var
+        assert_units_equivalent(m.unitless[2], u.dimensionless)  # check var data unitless
         assert_units_equivalent(m.unitless[2], None)  # check var
         assert_units_equivalent(m.vel_con[2]) # check constraint data
         assert_units_equivalent(m.unitless_con[2], u.dimensionless) # check unitless constraint data
 
         @m.Constraint(m.S)
         def broken(m,i):
-            return m.x[i] == 42.0*m.y[i]
+            return m.x[i] == 42.0*m.v[i]
         with self.assertRaises(UnitsError):
             assert_units_consistent(m)
         with self.assertRaises(UnitsError):
             assert_units_consistent(m.broken)
         with self.assertRaises(UnitsError):
-            assert_units_consistent(m.broken[i])
+            assert_units_consistent(m.broken[1])
 
         # all of these should still work
         assert_units_consistent(m.x)  # check var

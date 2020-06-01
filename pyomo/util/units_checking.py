@@ -25,6 +25,7 @@ from pyomo.gdp import Disjunction
 from pyomo.core.base.block import Block
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base.expression import Expression
+from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.numvalue import native_types
 
 def check_units_equivalent(*args):
@@ -152,10 +153,12 @@ def assert_units_consistent(obj):
     ------
     :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
     """
-    if obj in native_types:
+    objtype = type(obj)
+    if objtype in native_types:
         return
-    elif obj.is_expression_type():
+    elif obj.is_expression_type() or objtype is IndexTemplate:
         _assert_units_consistent_expression(obj)
+        return
 
     # if object is not in our component handler, raise an exception
     if obj.ctype not in _component_data_handlers:
