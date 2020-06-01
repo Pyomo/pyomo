@@ -939,20 +939,20 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
     def _binary_operation_helper(self, other, operation):
         assert_block_structure(self)
         result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
+        if isinstance(other, MPIBlockVector) or isinstance(other, BlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockVectors must be distributed in same processors'
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
+            if isinstance(other, MPIBlockVector):
+                assert np.array_equal(self._rank_owner, other._rank_owner), \
+                    'MPIBlockVectors must be distributed in same processors'
+                assert self._mpiw == other._mpiw, 'Need to have same communicator'
             for i in self._owned_blocks:
                 result.set_block(i, operation(self.get_block(i), other.get_block(i)))
             return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
+            _tmp = self.copy_structure()
+            _tmp.copyfrom(other)
+            return self._binary_operation_helper(_tmp, operation)
         elif np.isscalar(other):
             for i in self._owned_blocks:
                 result.set_block(i, operation(self.get_block(i), other))
@@ -976,23 +976,26 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def _inplace_binary_operation_helper(self, other, operation):
         assert_block_structure(self)
-        if isinstance(other, MPIBlockVector):
-            assert_block_structure(other)
+        if isinstance(other, MPIBlockVector) or isinstance(other, BlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockVectors must be distributed in same processors'
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
+            if isinstance(other, MPIBlockVector):
+                assert np.array_equal(self._rank_owner, other._rank_owner), \
+                    'MPIBlockVectors must be distributed in same processors'
+                assert self._mpiw == other._mpiw, 'Need to have same communicator'
+                assert_block_structure(other)
+            else:
+                block_vector_assert_block_structure(other)
 
             for i in self._owned_blocks:
                 blk = self.get_block(i)
                 operation(blk, other.get_block(i))
                 self.set_block(i, blk)
             return self
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
+            _tmp = self.copy_structure()
+            _tmp.copyfrom(other)
+            return self._inplace_binary_operation_helper(_tmp, operation)
         elif np.isscalar(other):
             for i in self._owned_blocks:
                 blk = self.get_block(i)

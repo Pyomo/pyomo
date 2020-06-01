@@ -271,11 +271,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         n = self.bshape[1]
         assert_block_structure(self)
         result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw)
-
-        rows, columns = np.nonzero(self.ownership_mask)
-        for i, j in zip(rows, columns):
-            if self.get_block(i, j) is not None:
-                result.set_block(j, i, self.get_block(i, j).transpose(copy=True))
+        result._block_matrix = self._block_matrix.transpose()
         return result
 
     def tocoo(self):
@@ -791,7 +787,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         for row_ndx, col_ndx in zip(*np.nonzero(block_indices)):
             if self.get_block(row_ndx, col_ndx) is not None:
                 res_blk = local_result.get_block(row_ndx)
-                res_blk += self.get_block(row_ndx, col_ndx) * other.get_block(col_ndx)
+                _tmp = self.get_block(row_ndx, col_ndx) * other.get_block(col_ndx)
+                res_blk = _tmp + res_blk
                 local_result.set_block(row_ndx, res_blk)
         flat_local = local_result.flatten()
         flat_global = np.zeros(flat_local.size)
