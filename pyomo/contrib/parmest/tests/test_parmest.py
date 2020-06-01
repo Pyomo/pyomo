@@ -226,10 +226,10 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
             expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
             return expr
         
-        self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE, calc_cov=True)
+        self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
 
     def test_theta_est(self):
-        objval, thetavals, cov = self.pest.theta_est()
+        objval, thetavals, cov = self.pest.theta_est(calc_cov=True)
         
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper

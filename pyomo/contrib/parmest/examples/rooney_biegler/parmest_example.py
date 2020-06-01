@@ -32,7 +32,7 @@ def SSE(model, data):
 
 solver_options = {"max_iter": 6000}  # not really needed in this case
 
-pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE, solver_options, calc_cov=False)
+pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE, solver_options)
 obj, theta = pest.theta_est()
 print(obj)
 print(theta)

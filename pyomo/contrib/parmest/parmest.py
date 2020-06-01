@@ -332,11 +332,9 @@ class Estimator(object):
         If True, print diagnostics from the solver
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute)
-    calc_cov: bool, optional
-        Indicates if the covariance matrix should be computed and returned
     """
     def __init__(self, model_function, data, theta_names, obj_function=None, 
-                 tee=False, diagnostic_mode=False, solver_options=None, calc_cov=False):
+                 tee=False, diagnostic_mode=False, solver_options=None):
         
         self.model_function = model_function
         self.callback_data = data
@@ -353,9 +351,7 @@ class Estimator(object):
         
         self._second_stage_cost_exp = "SecondStageCost"
         self._numbers_list = list(range(len(data)))
-        
-        self.calc_cov = calc_cov
-        
+
 
     def _create_parmest_model(self, data):
         """
@@ -421,7 +417,7 @@ class Estimator(object):
     
 
     def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
-               return_values=[], bootlist=None):
+               return_values=[], bootlist=None, calc_cov=False):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -473,7 +469,7 @@ class Estimator(object):
             
             assert not (need_gap and self.calc_cov), "Calculating both the gap and reduced hessian (covariance) is not currently supported."
 
-            if not self.calc_cov:
+            if not calc_cov:
                 # Do not calculate the reduced hessian
 
                 solver = SolverFactory('ipopt')
@@ -523,7 +519,7 @@ class Estimator(object):
 
             objval = stsolver.root_E_obj()
             
-            if self.calc_cov:
+            if calc_cov:
                 # Calculate the covariance matrix
                 
                 # Extract number of data points considered
@@ -553,12 +549,12 @@ class Estimator(object):
                             vals[var] = temp                    
                     var_values.append(vals)                    
                 var_values = pd.DataFrame(var_values)
-                if self.calc_cov:
+                if calc_cov:
                     return objval, thetavals, var_values, cov
                 else:
                     return objval, thetavals, var_values
 
-            if self.calc_cov:
+            if calc_cov:
                 return objval, thetavals, cov
             else:
                 return objval, thetavals
@@ -750,7 +746,7 @@ class Estimator(object):
             
         return samplelist
     
-    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None): 
+    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None, calc_cov=False): 
         """
         Parameter estimation using all scenarios in the data
 
@@ -762,6 +758,8 @@ class Estimator(object):
             List of Variable names used to return values from the model
         bootlist: list, optional
             List of bootstrap sample numbers, used internally when calling theta_est_bootstrap
+        calc_cov: boolean, optional
+            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver)
             
         Returns
         -------
@@ -774,13 +772,15 @@ class Estimator(object):
         Hessian: dict
             A dictionary of dictionaries for the Hessian.
             The Hessian is not returned if the solver is ef_ipopt.
+        cov: numpy.array
+            Covariance matrix of the fitted parameters (only for ef_ipopt)
         """
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
         assert isinstance(bootlist, (type(None), list))
         
         return self._Q_opt(solver=solver, return_values=return_values,
-                           bootlist=bootlist)
+                           bootlist=bootlist, calc_cov)
     
     
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
