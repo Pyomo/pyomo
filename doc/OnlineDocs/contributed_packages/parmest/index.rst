@@ -16,6 +16,7 @@ confidence regions and subsequent creation of scenarios for PySP.
    examples.rst
    parallel.rst
    api.rst
+   scencreate.rst
 
 Indices and Tables
 ------------------
