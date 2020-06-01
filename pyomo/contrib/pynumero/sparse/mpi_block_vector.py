@@ -163,17 +163,15 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                         np.logaddexp2, np.remainder, np.heaviside,
                         np.hypot]
 
-        args = [input_ for i, input_ in enumerate(inputs)]
-
         outputs = kwargs.pop('out', None)
         if outputs is not None:
             raise NotImplementedError(str(ufunc) + ' cannot be used with MPIBlockVector if the out keyword argument is given.')
 
         if ufunc in unary_funcs:
-            results = self._unary_operation(ufunc, method, *args, **kwargs)
+            results = self._unary_operation(ufunc, method, *inputs, **kwargs)
             return results
         elif ufunc in binary_funcs:
-            results = self._binary_operation(ufunc, method, *args, **kwargs)
+            results = self._binary_operation(ufunc, method, *inputs, **kwargs)
             return results
         else:
             raise NotImplementedError(str(ufunc) + "not supported for MPIBlockVector")
@@ -213,7 +211,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert np.array_equal(x1._rank_owner, x2._rank_owner), msg
             assert x1._mpiw == x2._mpiw, 'Need to have same communicator'
 
-            res = MPIBlockVector(x1.nblocks, x1._rank_owner, self._mpiw)
+            res = x1.copy_structure()
             for i in x1._owned_blocks:
                 _args = [x1.get_block(i)] + [x2.get_block(i)] + [args[j] for j in range(2, len(args))]
                 res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
@@ -240,6 +238,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(x1, np.ndarray) and isinstance(x2, np.ndarray):
             # this will take care of blockvector and ndarrays
+            return self._block_vector.__array_ufunc__(ufunc, method, *args, **kwargs)
+        elif (type(x1)==BlockVector or np.isscalar(x1)) and (type(x2)==BlockVector or np.isscalar(x2)):
             return self._block_vector.__array_ufunc__(ufunc, method, *args, **kwargs)
         elif (type(x1)==np.ndarray or np.isscalar(x1)) and (type(x2)==np.ndarray or np.isscalar(x2)):
             return super(MPIBlockVector, self).__array_ufunc__(ufunc, method,
