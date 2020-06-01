@@ -462,6 +462,8 @@ class Estimator(object):
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
         
+            # TODO: Move the "guts" of solve_ef here to reduce the dependency of parmest
+            # on "rapper.py" in pysp
             if not self.calc_cov:
                 ef_sol = stsolver.solve_ef('ipopt',
                                            sopts=self.solver_options,
