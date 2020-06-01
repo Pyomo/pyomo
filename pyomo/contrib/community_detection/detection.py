@@ -69,7 +69,7 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
                                                             "random_seed must be a non-negative integer" % random_seed
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
-    model_graph = _generate_model_graph(
+    model_graph, string_map = _generate_model_graph(
         model, node_type=node_type, with_objective=with_objective,
         weighted_graph=weighted_graph)
 
@@ -79,10 +79,10 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
     # Use partition_of_graph to create a dictionary that maps communities to nodes (because Louvain community detection
     # returns a dictionary that maps individual nodes to their communities)
     number_of_communities = len(set(partition_of_graph.values()))
-    community_map = {nth_community: [] for nth_community in range(number_of_communities)}
+    str_community_map = {nth_community: [] for nth_community in range(number_of_communities)}
     for node in partition_of_graph:
         nth_community = partition_of_graph[node]
-        community_map[nth_community].append(node)
+        str_community_map[nth_community].append(node)
 
     # Log information about the number of communities found from the model
     logger.info("%s communities were found in the model" % number_of_communities)
@@ -91,6 +91,13 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
     if number_of_communities == 1:
         logger.warning("Community detection found that with the given parameters, the model could not be decomposed - "
                        "only one community was found")
+
+    # Convert str_community_map into a dictionary of the actual variables/constraints so that it can be iterated over
+    # if desired
+    community_map = {}
+    for nth_community in str_community_map:
+        community_map[nth_community] = [string_map[community_member] for community_member in
+                                        str_community_map[nth_community]]
 
     return community_map
 

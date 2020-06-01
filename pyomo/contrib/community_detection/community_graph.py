@@ -148,7 +148,7 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
                 new_edges = {tuple([str(edge[0]), str(edge[1])]) for edge in edges_between_nodes}
                 edge_set.update(new_edges)
 
-    str_map = {str(node): node for node in model_graph_nodes}
+    string_map = {str(node): node for node in model_graph_nodes}
 
     model_graph = nx.Graph()
     model_graph_nodes = sorted(str(node) for node in model_graph_nodes)
@@ -157,7 +157,7 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
     # Now, using edge_weight_dict or edge_set (based on whether the user wants a weighted or unweighted graph,
     # respectively), the networkX graph (model_graph) will be updated with all of the edges determined above
     if weighted_graph:
-        model_graph_edges = sorted([tuple(sorted([edge[0], edge[1]])) for edge in edge_weight_dict])
+        model_graph_edges = sorted([tuple(sorted(edge)) for edge in edge_weight_dict])
         model_graph.add_edges_from(model_graph_edges)
 
         seen_edges = set()
@@ -175,8 +175,7 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
         del seen_edges
 
     else:
-        model_graph_edges = sorted(
-            [tuple(sorted([edge[0], edge[1]])) for edge in edge_set])
+        model_graph_edges = sorted([tuple(sorted(edge)) for edge in edge_set])
         model_graph.add_edges_from(model_graph_edges)
         del edge_set
 
@@ -190,7 +189,7 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
                        weighted_graph=weighted_graph, file_destination=file_destination)
 
     # Return the networkX graph based on the given Pyomo optimization model
-    return model_graph
+    return model_graph, string_map
 
 
 def _event_log(model, model_graph):
