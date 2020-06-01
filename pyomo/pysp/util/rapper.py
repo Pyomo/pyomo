@@ -211,7 +211,7 @@ class StochSolver:
            Also attach the full ef instance to the object. So you might want
            obj = pyo.value(stsolver.ef_instance.MASTER)
            This needs more work to deal with solver failure (dlw, March, 2018)
-           
+
         """
         
         self.ef_instance = self.make_ef(verbose=verbose,
