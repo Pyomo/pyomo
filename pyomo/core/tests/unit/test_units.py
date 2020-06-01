@@ -13,7 +13,6 @@
 
 import pyutilib.th as unittest
 from pyomo.environ import *
-from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.units_container import (
@@ -354,11 +353,11 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_fail(EXPR.Expr_if(IF=model.x >= 2.0, THEN=m, ELSE=kg),
                                  uc, EXPR.Expr_ifExpression)
 
-        # test IndexTemplate and GetItemExpression
+        # test EXPR.IndexTemplate and GetItemExpression
         model.S = Set()
-        i = IndexTemplate(model.S)
-        j = IndexTemplate(model.S)
-        self._get_check_units_ok(i, uc, None, IndexTemplate)
+        i = EXPR.IndexTemplate(model.S)
+        j = EXPR.IndexTemplate(model.S)
+        self._get_check_units_ok(i, uc, None, EXPR.IndexTemplate)
 
         model.mat = Var(model.S, model.S)
         self._get_check_units_ok(model.mat[i,j+1], uc, None, EXPR.GetItemExpression)
