@@ -475,27 +475,24 @@ class Estimator(object):
 
             if not self.calc_cov:
                 # Do not calculate the reduced hessian
-                # This is the original code
 
-                solver = SolverFactory(subsolver)
+                solver = SolverFactory('ipopt')
                 if self.solver_options is not None:
                     for key in sopts:
                         solver.options[key] = sopts[key]
 
                 if need_gap:
-                    solve_result = solver.solve(self.ef_instance, tee = tee, load_solutions=False)
+                    solve_result = solver.solve(self.ef_instance, tee = self.tee, load_solutions=False)
                     if len(solve_result.solution) > 0:
                         absgap = solve_result.solution(0).gap
                     else:
                         absgap = None
                     self.ef_instance.solutions.load_from(solve_result)
                 else:
-                    solve_result = solver.solve(self.ef_instance, tee = tee)
+                    solve_result = solver.solve(self.ef_instance, tee = self.tee)
 
                 
             else:
-                print("Calculating reduced Hessian...")            
-                
                 # parmest makes the fitted parameters stage 1 variables
                 # thus we need to convert from var names (string) to 
                 # Pyomo vars
@@ -517,7 +514,7 @@ class Estimator(object):
                                 
             if self.diagnostic_mode:
                 print('    Solver termination condition = ',
-                       str(ef_sol.solver.termination_condition))
+                       str(solve_result.solver.termination_condition))
 
             # assume all first stage are thetas...
             thetavals = {}

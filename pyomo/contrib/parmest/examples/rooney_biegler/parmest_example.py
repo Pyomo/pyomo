@@ -33,15 +33,11 @@ def SSE(model, data):
 solver_options = {"max_iter": 6000}  # not really needed in this case
 
 pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE, solver_options, calc_cov=False)
-obj, theta, cov = pest.theta_est()
+obj, theta = pest.theta_est()
 print(obj)
 print(theta)
-print(cov)
-
-### Covariance matrix
 
 ### Parameter estimation with bootstrap resampling
-'''
 bootstrap_theta = pest.theta_est_bootstrap(50, seed=4581)
 print(bootstrap_theta.head())
 
@@ -63,4 +59,3 @@ print(LR.head())
 
 parmest.pairwise_plot(LR, theta, 0.8, 
                       title='LR results within 80% confidence region')
-'''
