@@ -643,7 +643,7 @@ class ExternalFunctionExpression(ExpressionBase):
         return self._fcn.get_arg_units()
 
     def get_units(self):
-        """ Get the returned units for this external functions """
+        """ Get the returned units for this external function """
         return self._fcn.get_units()
 
 class NPV_ExternalFunctionExpression(ExternalFunctionExpression):
