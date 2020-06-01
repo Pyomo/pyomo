@@ -32,6 +32,8 @@ import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
     fit_rect_dist, fit_mvn_dist, fit_kde_dist
     
+from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
+    
 __version__ = 0.1
 
 #=============================================
@@ -462,19 +464,57 @@ class Estimator(object):
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
         
-            # TODO: Move the "guts" of solve_ef here to reduce the dependency of parmest
-            # on "rapper.py" in pysp
+            # Generate the extensive form of the stochastic program using pysp
+            self.ef_instance = stsolver.make_ef()
+
+            # need_gap is a holdover from solve_ef in rapper.py. Would we ever want
+            # need_gap = True with parmest?
+            need_gap = False
+            
+            assert not (need_gap and self.calc_cov), "Calculating both the gap and reduced hessian (covariance) is not currently supported."
+
             if not self.calc_cov:
-                ef_sol = stsolver.solve_ef('ipopt',
-                                           sopts=self.solver_options,
-                                           tee=self.tee,
-                                            )                            
+                # Do not calculate the reduced hessian
+                # This is the original code
+
+                solver = SolverFactory(subsolver)
+                if self.solver_options is not None:
+                    for key in sopts:
+                        solver.options[key] = sopts[key]
+
+                if need_gap:
+                    solve_result = solver.solve(self.ef_instance, tee = tee, load_solutions=False)
+                    if len(solve_result.solution) > 0:
+                        absgap = solve_result.solution(0).gap
+                    else:
+                        absgap = None
+                    self.ef_instance.solutions.load_from(solve_result)
+                else:
+                    solve_result = solver.solve(self.ef_instance, tee = tee)
+
+                
             else:
-                ef_sol, cov = stsolver.solve_ef('this_does_not_matter',
-                                           sopts=self.solver_options,
-                                           tee=self.tee,
-                                           reduced_hessian_independent_vars=self.theta_names)
-                                           
+                print("Calculating reduced Hessian...")            
+                
+                # parmest makes the fitted parameters stage 1 variables
+                # thus we need to convert from var names (string) to 
+                # Pyomo vars
+                ind_vars = []
+                for v in self.theta_names:
+
+                    #ind_vars.append(eval('ef.'+v))
+                    ind_vars.append(self.ef_instance.MASTER_BLEND_VAR_RootNode[v])
+        
+                # calculate the reduced hessian
+                solve_result, cov = inv_reduced_hessian_barrier(self.ef_instance, 
+                    independent_variables= ind_vars,
+                    solver_options=self.solver_options,
+                    tee=self.tee)
+            
+            # Extract solution from pysp
+            stsolver.scenario_tree.pullScenarioSolutionsFromInstances()
+            stsolver.scenario_tree.snapshotSolutionFromScenarios() # update nodes
+                                
             if self.diagnostic_mode:
                 print('    Solver termination condition = ',
                        str(ef_sol.solver.termination_condition))
