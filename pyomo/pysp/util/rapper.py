@@ -204,7 +204,8 @@ class StochSolver:
 
                 solve_result is the solver return value.
 
-                absgap is the absolute optimality gap (might not be valid); only if requested      
+                absgap is the absolute optimality gap (might not be valid); only if requested
+
         Note:
            Also update the scenario tree, populated with the solution.
            Also attach the full ef instance to the object. So you might want
@@ -212,7 +213,7 @@ class StochSolver:
            This needs more work to deal with solver failure (dlw, March, 2018)
            
         """
-
+        
         self.ef_instance = self.make_ef(verbose=verbose,
                                         generate_weighted_cvar = generate_weighted_cvar,
                                         cvar_weight = cvar_weight,
