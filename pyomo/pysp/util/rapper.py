@@ -199,11 +199,11 @@ class StochSolver:
             risk_alpha (float): alpha value for cvar
             cc_indicator_var_name (string): name of the Var used for chance constraint
             cc_alpha (float): alpha for chance constraint
-            
+
         Returns: (`Pyomo solver result`, `float`)
-        
+
                 solve_result is the solver return value.
-                
+
                 absgap is the absolute optimality gap (might not be valid); only if requested      
         Note:
            Also update the scenario tree, populated with the solution.
@@ -212,7 +212,7 @@ class StochSolver:
            This needs more work to deal with solver failure (dlw, March, 2018)
            
         """
-        
+
         self.ef_instance = self.make_ef(verbose=verbose,
                                         generate_weighted_cvar = generate_weighted_cvar,
                                         cvar_weight = cvar_weight,
