@@ -13,6 +13,7 @@
 
 import pyutilib.th as unittest
 from pyomo.environ import *
+from pyomo.util.units_checking import assert_units_consistent, assert_units_equivalent
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as EXPR
@@ -58,25 +59,25 @@ class TestPyomoUnit(unittest.TestCase):
         with self.assertRaises(TypeError):
             x = int(kg)
 
-        uc.assert_units_consistent(kg < m.kg)
-        uc.assert_units_consistent(kg > m.kg)
-        uc.assert_units_consistent(kg <= m.kg)
-        uc.assert_units_consistent(kg >= m.kg)
-        uc.assert_units_consistent(kg == m.kg)
-        uc.assert_units_consistent(kg + m.kg)
-        uc.assert_units_consistent(kg - m.kg)
+        assert_units_consistent(kg < m.kg)
+        assert_units_consistent(kg > m.kg)
+        assert_units_consistent(kg <= m.kg)
+        assert_units_consistent(kg >= m.kg)
+        assert_units_consistent(kg == m.kg)
+        assert_units_consistent(kg + m.kg)
+        assert_units_consistent(kg - m.kg)
 
         with self.assertRaises(InconsistentUnitsError):
-            uc.assert_units_consistent(kg + 3)
+            assert_units_consistent(kg + 3)
 
         with self.assertRaises(InconsistentUnitsError):
-            uc.assert_units_consistent(kg - 3)
+            assert_units_consistent(kg - 3)
 
         with self.assertRaises(InconsistentUnitsError):
-            uc.assert_units_consistent(3 + kg)
+            assert_units_consistent(3 + kg)
 
         with self.assertRaises(InconsistentUnitsError):
-            uc.assert_units_consistent(3 - kg)
+            assert_units_consistent(3 - kg)
 
         # should not assert
         # check __mul__
@@ -93,7 +94,7 @@ class TestPyomoUnit(unittest.TestCase):
         # check rpow
         x = 2 ** kg  # creation is allowed, only fails when units are "checked"
         with self.assertRaises(UnitsError):
-            uc.assert_units_consistent(x)
+            assert_units_consistent(x)
 
         x = kg
         x += kg
@@ -143,7 +144,7 @@ class TestPyomoUnit(unittest.TestCase):
         if expected_type is not None:
             self.assertEqual(expected_type, type(x))
 
-        pyomo_units_container.assert_units_consistent(x)
+        assert_units_consistent(x)
         if str_check is not None:
             self.assertEqual(str_check, str(pyomo_units_container.get_units(x)))
         else:
@@ -155,7 +156,7 @@ class TestPyomoUnit(unittest.TestCase):
             self.assertEqual(expected_type, type(x))
 
         with self.assertRaises(expected_error):
-            pyomo_units_container.assert_units_consistent(x)
+            assert_units_consistent(x)
 
         # we also expect get_units to fail
         with self.assertRaises(expected_error):
@@ -452,11 +453,11 @@ class TestPyomoUnit(unittest.TestCase):
 
         ex = 2.0*delta_degC + 3.0*delta_degC + 1.0*delta_degC
         self.assertEqual(type(ex), EXPR.NPV_SumExpression)
-        uc.assert_units_consistent(ex)
+        assert_units_consistent(ex)
 
         ex = 2.0*delta_degF + 3.0*delta_degF
         self.assertEqual(type(ex), EXPR.NPV_SumExpression)
-        uc.assert_units_consistent(ex)
+        assert_units_consistent(ex)
 
         self._get_check_units_fail(2.0*K + 3.0*R, uc, EXPR.NPV_SumExpression)
         self._get_check_units_fail(2.0*delta_degC + 3.0*delta_degF, uc, EXPR.NPV_SumExpression)
@@ -538,31 +539,6 @@ class TestPyomoUnit(unittest.TestCase):
             foo = u.convert(m.y, to_units=None)
         with self.assertRaises(InconsistentUnitsError):
             foo = u.convert(m.y, to_units=1.0)
-
-    def test_assert_units_consistent(self):
-        u = units
-        m = ConcreteModel()
-        m.dx = Var(units=u.m, initialize=0.10188943773836046)
-        m.dy = Var(units=u.m, initialize=0.0)
-        m.vx = Var(units=u.m/u.s, initialize=0.7071067769802851)
-        m.vy = Var(units=u.m/u.s, initialize=0.7071067769802851)
-        m.t = Var(units=u.min, bounds=(1e-5,10.0), initialize=0.0024015570927624456)
-        m.theta = Var(bounds=(0, 0.49*3.14), initialize=0.7853981693583533, units=u.radians)
-        m.a = Param(initialize=-32.2, units=u.ft/u.s**2)
-
-        m.obj = Objective(expr = m.dx, sense=maximize)
-        m.vx_con = Constraint(expr = m.vx == 1.0*u.m/u.s*cos(m.theta))
-        m.vy_con = Constraint(expr = m.vy == 1.0*u.m/u.s*sin(m.theta))
-        m.dx_con = Constraint(expr = m.dx == m.vx*u.convert(m.t, to_units=u.s))
-        m.dy_con = Constraint(expr = m.dy == m.vy*u.convert(m.t, to_units=u.s)
-                              + 0.5*(u.convert(m.a, to_units=u.m/u.s**2))*(u.convert(m.t, to_units=u.s))**2)
-        m.ground = Constraint(expr = m.dy == 0)
-
-        print(isinstance(m, Block))
-        u.assert_units_consistent(m)
-        m.broken = Constraint(expr = m.dy == 42.0*u.kg)
-        with self.assertRaises(UnitsError):
-            u.assert_units_consistent(m)
 
     def test_usd(self):
         u = units

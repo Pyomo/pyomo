@@ -33,22 +33,23 @@ Units can be assigned to Var, Param, and ExternalFunction components, and can
 be used directly in expressions (e.g., defining constraints). You can also
 verify that the units are consistent on a model, or on individual components
 like the objective function, constraint, or expression using
-`assert_units_consistent`. There are other methods that may be helpful
-for verifying correct units on a model.
+`assert_units_consistent` (from pyomo.util.units_checking).
+There are other methods there that may be helpful for verifying correct units on a model.
 
     .. doctest::
 
        >>> from pyomo.environ import ConcreteModel, Var, Objective
        >>> from pyomo.environ import units as u
+       >>> from pyomo.util.units_checking import assert_units_consistent, assert_units_equivalent, check_units_equivalent
        >>> model = ConcreteModel()
        >>> model.acc = Var(initialize=5.0, units=u.m/u.s**2)
        >>> model.obj = Objective(expr=(model.acc - 9.81*u.m/u.s**2)**2)
-       >>> u.assert_units_consistent(model.obj) # raise exc if units invalid on obj
-       >>> u.assert_units_consistent(model) # raise exc if units invalid anywhere on the model
-       >>> u.assert_units_equivalent(model.obj.expr, u.m**2/u.s**4) # raise exc if units not equivalent
+       >>> assert_units_consistent(model.obj) # raise exc if units invalid on obj
+       >>> assert_units_consistent(model) # raise exc if units invalid anywhere on the model
+       >>> assert_units_equivalent(model.obj.expr, u.m**2/u.s**4) # raise exc if units not equivalent
        >>> print(u.get_units(model.obj.expr)) # print the units on the objective
        m ** 2 / s ** 4
-       >>> print(u.check_units_equivalent(model.acc.get_units(), u.m/u.s**2))
+       >>> print(check_units_equivalent(model.acc.get_units(), u.m/u.s**2))
        True
 
 The implementation is currently based on the `pint
@@ -108,13 +109,6 @@ import six
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_numeric_types
-from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.objective import Objective
-from pyomo.core.base.block import Block, SubclassOf
-from pyomo.core.base.expression import Expression
-from pyomo.core.base.var import _VarData
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import current as EXPR
 
@@ -394,7 +388,7 @@ class _PyomoUnit(NumericValue):
         #     ostream.write('{:!~s}'.format(self._pint_unit))
 
 
-class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
+class UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
     def __init__(self, pyomo_units_container, units_equivalence_tolerance=1e-12):
         """
         Visitor class used to determine units of an expression. Do not use
@@ -423,7 +417,7 @@ class _UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         particular method that should be called to return the units of the node based
         on the units of its child arguments. This map is used in exitNode.
         """
-        super(_UnitExtractionVisitor, self).__init__()
+        super(UnitExtractionVisitor, self).__init__()
         self._pyomo_units_container = pyomo_units_container
         self._pint_registry = self._pyomo_units_container._pint_registry
         self._units_equivalence_tolerance = units_equivalence_tolerance
@@ -1319,7 +1313,7 @@ class PyomoUnitsContainer(object):
         if expr is None:
             return (None, None)
 
-        pyomo_unit, pint_unit = _UnitExtractionVisitor(self).walk_expression(expr=expr)
+        pyomo_unit, pint_unit = UnitExtractionVisitor(self).walk_expression(expr=expr)
         if pint_unit == self._pint_registry.dimensionless:
             pint_unit = None
         if pyomo_unit is self.dimensionless:
@@ -1479,136 +1473,6 @@ class PyomoUnitsContainer(object):
         src_quantity = num_value * from_pint_unit
         dest_quantity = src_quantity.to(to_pint_unit)
         return dest_quantity.magnitude
-
-    def _assert_units_consistent_constraint_data(self, condata):
-        """
-        Raise an exception if the any units in lower, body, upper on a
-        ConstraintData object are not consistent or are not equivalent
-        with each other.
-        """
-        if condata.equality:
-            if condata.lower == 0.0:
-                # Pyomo can rearrange expressions, resulting in a value
-                # of 0 for the RHS that does not have units associated
-                # Therefore, if the RHS is 0, we allow it to be unitless
-                # and check the consistency of the body only
-                # ToDo: If we modify the constraint to keep the original
-                # expression, we should verify against that instead
-                assert condata.upper == 0.0
-                self._assert_units_consistent_expression(condata.body)
-            else:
-                self.assert_units_equivalent(condata.lower, condata.body)
-        else:
-            self.assert_units_equivalent(condata.lower, condata.body, condata.upper)
-
-    def _assert_units_consistent_expression(self, expr):
-        """
-        Raise an exception if any units in expr are inconsistent.
-
-        Parameters
-        ----------
-        expr : Pyomo expression
-            The source expression to check.
-
-        Raises
-        ------
-        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
-
-        """
-        # this call will raise an error if an inconsistency is found
-        pyomo_unit, pint_unit = self._get_units_tuple(expr=expr)
-
-    def check_units_equivalent(self, *args):
-        """
-        Returns True if the units associated with each of the
-        expressions passed as arguments are all equivalent (and False
-        otherwise).
-
-        Note that this method will raise an exception if the units are
-        inconsistent within an expression (since the units for that
-        expression are not valid).
-
-        Parameters
-        ----------
-        args : an argument list of Pyomo expressions
-
-        Returns
-        -------
-        bool : True if all the expressions passed as argments have the same units
-        """
-        pyomo_unit_compare, pint_unit_compare = self._get_units_tuple(args[0])
-        for expr in args[1:]:
-            pyomo_unit, pint_unit = self._get_units_tuple(expr)
-            if not _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit_compare, pint_unit):
-                return False
-        # made it through all of them successfully
-        return True
-
-    def assert_units_equivalent(self, *args):
-        """
-        Raise an exception if the units are inconsistent within an
-        expression, or not equivalent across all the passed
-        expressions.
-
-        Parameters
-        ----------
-        args : an argument list of Pyomo expressions
-            The Pyomo expressions to test
-
-        Raises
-        ------
-        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
-        """
-        # this call will raise an exception if an inconsistency is found
-        pyomo_unit_compare, pint_unit_compare = self._get_units_tuple(args[0])
-        for expr in args[1:]:
-            # this call will raise an exception if an inconsistency is found
-            pyomo_unit, pint_unit = self._get_units_tuple(expr)
-            if not _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit_compare, pint_unit):
-                raise UnitsError("Units between {} and {} are not consistent.".format(str(pyomo_unit_compare), str(pyomo_unit)))
-
-    def assert_units_consistent(self, obj):
-        """
-        This method raises an exception if the units are not
-        consistent on the passed in object.  Argument obj can be one
-        of the following components: Pyomo Block (or Model),
-        Constraint, Objective, Expression, or it can be a Pyomo
-        expression object
-
-        Parameters
-        ----------
-        obj : Pyomo component (Block, Model, Constraint, Objective, or Expression) or Pyomo expression
-           The object or expression to test
-
-        Raises
-        ------
-        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
-        """
-        if isinstance(obj, Block):
-            # check all the constraints, objectives, and Expression objects
-            for cdata in obj.component_data_objects(ctype=SubclassOf(Constraint), descend_into=True):
-                self._assert_units_consistent_constraint_data(cdata)
-
-            for data in obj.component_data_objects(ctype=(SubclassOf(Objective), SubclassOf(Expression)), descend_into=True):
-                self._assert_units_consistent_expression(data.expr)
-
-        elif isinstance(obj, Constraint):
-            if obj.is_indexed():
-                for cdata in obj.values():
-                    self._assert_units_consistent_constraint_data(cdata)
-            else:
-                self._assert_units_consistent_constraint_data(obj)
-
-        elif isinstance(obj, Objective) or isinstance(obj, Expression):
-            if obj.is_indexed():
-                for data in obj.values():
-                    self._assert_units_consistent_expression(data.expr)
-            else:
-                self._assert_units_consistent_expression(obj.expr)
-        else:
-            # doesn't appear to be one of the components: Block, Constraint, Objective, or Expression
-            # therefore, let's just check the units of the object itself
-            self._assert_units_consistent_expression(obj)
 
 
 class DeferredUnitsSingleton(PyomoUnitsContainer):
