@@ -506,7 +506,7 @@ class Estimator(object):
                     ind_vars.append(self.ef_instance.MASTER_BLEND_VAR_RootNode[v])
         
                 # calculate the reduced hessian
-                solve_result, cov = inv_reduced_hessian_barrier(self.ef_instance, 
+                solve_result, inv_red_hes = inv_reduced_hessian_barrier(self.ef_instance, 
                     independent_variables= ind_vars,
                     solver_options=self.solver_options,
                     tee=self.tee)
@@ -525,6 +525,23 @@ class Estimator(object):
                  thetavals[name] = solval
 
             objval = stsolver.root_E_obj()
+            
+            if self.calc_cov:
+                # Calculate the covariance matrix
+                
+                # Extract number of data points considered
+                n = len(self.callback_data)
+                
+                # Extract number of fitted parameters
+                l = len(thetavals)
+                
+                # Assumption: Objective value is sum of squared errors
+                sse = objval
+                
+                # Calculate covariance assuming:
+                # Experimental observation errors are independent and following a Gaussian 
+                # distribution with constant variance
+                cov = 2 * sse / (n - l) * inv_red_hes
             
             if len(return_values) > 0:
                 var_values = []
@@ -547,7 +564,7 @@ class Estimator(object):
             if self.calc_cov:
                 return objval, thetavals, cov
             else:
-                return cov
+                return objval, thetavals
         
         # Solve with sipopt and k_aug
         elif solver == "k_aug":

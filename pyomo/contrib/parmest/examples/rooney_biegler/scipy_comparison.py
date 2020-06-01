@@ -73,6 +73,7 @@ print("sigre = ",sigre)
 
 # approximate covariance
 # Need to divide by 2 because optimize.least_squares scaled the objective by 1/2
+print("Hessian approximation =\n",np.linalg.inv(sol.jac.T @ sol.jac))
 cov = sigre * np.linalg.inv(sol.jac.T @ sol.jac)
 
 print("\ncovariance=\n",cov)

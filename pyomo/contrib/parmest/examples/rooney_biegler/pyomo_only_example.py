@@ -22,14 +22,34 @@ data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
                     columns=['hour', 'y'])
 
 model = rooney_biegler_model(data)
+
+def residual_rule(m, i):
+        expr = data.y[i] - m.response_function[data.hour[i]]
+        return expr
+
+model.residuals = pyo.Expression(data.index, rule = residual_rule)
+
 # solver = pyo.SolverFactory('ipopt')
 # solver.solve(model)
 
-status, cov = inv_reduced_hessian_barrier(model, 
+status, inv_red_hes = inv_reduced_hessian_barrier(model, 
                     independent_variables= [model.asymptote, model.rate_constant],
                     solver_options=None,
                     tee=True)
 
+print("inverse of the reduced Hessian =\n",inv_red_hes)
+
+obj = model.SSE()
+# print(model.pprint())
 print('asymptote = ', model.asymptote())
 print('rate constant = ', model.rate_constant())
-print('covariance\n=',cov)
+'''
+print('residuals')
+obj = 0.0
+for i in data.index:
+    print("\tr[",i,"] =",model.residuals[i]())
+    obj += model.residuals[i]()**2
+print("SSE = ",obj)
+'''
+print('covariance\n=',2*obj/(len(data) - 2)*inv_red_hes)
+
