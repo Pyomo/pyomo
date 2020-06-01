@@ -183,7 +183,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
         if isinstance(x, MPIBlockVector):
             rank = self._mpiw.Get_rank()
-            v = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+            v = x.copy_structure()
             for i in self._owned_blocks:
                 _args = [x.get_block(i)] + [args[j] for j in range(1, len(args))]
                 v.set_block(i, self._unary_operation(ufunc, method, *_args, **kwargs))
@@ -221,13 +221,13 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         elif isinstance(x1, MPIBlockVector) and isinstance(x2, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(x1, MPIBlockVector) and np.isscalar(x2):
-            res = MPIBlockVector(x1.nblocks, x1._rank_owner, self._mpiw)
+            res = x1.copy_structure()
             for i in x1._owned_blocks:
                 _args = [x1.get_block(i)] + [x2] + [args[j] for j in range(2, len(args))]
                 res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
             return res
         elif isinstance(x2, MPIBlockVector) and np.isscalar(x1):
-            res = MPIBlockVector(x2.nblocks, x2._rank_owner, self._mpiw)
+            res = x2.copy_structure()
             for i in x2._owned_blocks:
                 _args = [x1] + [x2.get_block(i)] + [args[j] for j in range(2, len(args))]
                 res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))

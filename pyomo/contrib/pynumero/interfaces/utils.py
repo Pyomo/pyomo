@@ -53,8 +53,6 @@ def build_compression_matrix(compression_mask):
         return coo_matrix((data, (rows, cols)), shape=(nnz, len(compression_mask)))
     elif isinstance(compression_mask, mpi_block_vector.MPIBlockVector):
         from pyomo.contrib.pynumero.sparse.mpi_block_matrix import MPIBlockMatrix
-        from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
-        compression_mask: MPIBlockVector = compression_mask
         n = compression_mask.nblocks
         rank_ownership = np.ones((n, n), dtype=np.int64) * -1
         for i in range(n):
@@ -64,6 +62,7 @@ def build_compression_matrix(compression_mask):
             block = compression_mask.get_block(ndx)
             sub_matrix = build_compression_matrix(block)
             res.set_block(ndx, ndx, sub_matrix)
+        res.broadcast_block_sizes()
         return res
 
 
