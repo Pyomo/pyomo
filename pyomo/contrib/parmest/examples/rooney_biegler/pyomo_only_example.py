@@ -43,13 +43,5 @@ obj = model.SSE()
 # print(model.pprint())
 print('asymptote = ', model.asymptote())
 print('rate constant = ', model.rate_constant())
-'''
-print('residuals')
-obj = 0.0
-for i in data.index:
-    print("\tr[",i,"] =",model.residuals[i]())
-    obj += model.residuals[i]()**2
-print("SSE = ",obj)
-'''
 print('covariance\n=',2*obj/(len(data) - 2)*inv_red_hes)
 

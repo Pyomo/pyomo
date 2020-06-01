@@ -73,7 +73,6 @@ print("sigre = ",sigre)
 
 # approximate covariance
 # Need to divide by 2 because optimize.least_squares scaled the objective by 1/2
-print("Hessian approximation =\n",np.linalg.inv(sol.jac.T @ sol.jac))
 cov = sigre * np.linalg.inv(sol.jac.T @ sol.jac)
 
 print("\ncovariance=\n",cov)
@@ -98,9 +97,6 @@ cov_paper = np.array([[6.22864, -0.4322],[-0.4322,0.04124]])
 print("\ncovariance from paper =\n",cov_paper)
 
 '''
-Two possible explanations for the slight difference between the Scipy results and the paper:
-- The paper used an alternative finite difference approximation for the Jacobian
-- The paper used the exact reduced Hessian
-
-But the difference is in the 3rd decimal place, so close enough.
+These scipy results differ in the 3rd decimal place from the paper. It is possible
+the paper used an alternative finite difference approximation for the Jacobian.
 '''
