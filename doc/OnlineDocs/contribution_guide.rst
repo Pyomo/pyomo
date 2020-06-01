@@ -275,6 +275,7 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
 
   python setup.py develop
 
+These commands register the cloned code with the active python environment (``pyomodev``). This way, your changes to the source code for ``pyomo`` and ``pyutilib`` are automatically used by the active environment. You can create another conda environment to switch to alternate versions of pyomo (e.g., stable).
 
 Review Process
 --------------
