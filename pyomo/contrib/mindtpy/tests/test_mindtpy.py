@@ -17,7 +17,7 @@ from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('ipopt', 'cplex')
+required_solvers = ('ipopt', 'glpk')
 # required_solvers = ('gams', 'gams')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
