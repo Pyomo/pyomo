@@ -1,0 +1,52 @@
+$offlisting
+$offdigit
+
+EQUATIONS
+	c1_lo
+	c2
+	obj;
+
+POSITIVE VARIABLES
+	x;
+
+VARIABLES
+	GAMS_OBJECTIVE
+	y;
+
+y.fx = 0;
+
+c1_lo.. 0 =l= y + y ;
+c2.. x + y =e= 1 ;
+obj.. GAMS_OBJECTIVE =e= x ;
+
+
+MODEL GAMS_MODEL /all/ ;
+option solprint=off;
+option limrow=0;
+option limcol=0;
+option solvelink=5;
+SOLVE GAMS_MODEL USING lp minimizing GAMS_OBJECTIVE;
+
+Scalars MODELSTAT 'model status', SOLVESTAT 'solve status';
+MODELSTAT = GAMS_MODEL.modelstat;
+SOLVESTAT = GAMS_MODEL.solvestat;
+
+Scalar OBJEST 'best objective', OBJVAL 'objective value';
+OBJEST = GAMS_MODEL.objest;
+OBJVAL = GAMS_MODEL.objval;
+
+Scalar NUMVAR 'number of variables';
+NUMVAR = GAMS_MODEL.numvar
+
+Scalar NUMEQU 'number of equations';
+NUMEQU = GAMS_MODEL.numequ
+
+Scalar NUMDVAR 'number of discrete variables';
+NUMDVAR = GAMS_MODEL.numdvar
+
+Scalar NUMNZ 'number of nonzeros';
+NUMNZ = GAMS_MODEL.numnz
+
+Scalar ETSOLVE 'time to execute solve statement';
+ETSOLVE = GAMS_MODEL.etsolve
+

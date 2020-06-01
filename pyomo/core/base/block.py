@@ -1907,7 +1907,13 @@ class Block(ActiveIndexedComponent):
                 # pseudo-abstract) sub-blocks and then adding them to a
                 # Concrete model block.
                 _idx = next(iter(UnindexedComponent_set))
-                _block = self[_idx]
+                if _idx not in self._data:
+                    # Derived block classes may not follow the scalar
+                    # Block convention of initializing _data to point to
+                    # itself (i.e., they are not set up to support
+                    # Abstract models)
+                    self._data[_idx] = self
+                _block = self
                 for name, obj in iteritems(_block.component_map()):
                     if not obj._constructed:
                         if data is None:
@@ -1923,14 +1929,13 @@ class Block(ActiveIndexedComponent):
                         # everything they defined into the empty one we
                         # created.
                         _block.transfer_attributes_from(obj)
-
         finally:
             # We must check if data is still in the dictionary, as
             # scalar blocks will have already removed the entry (as
             # the _data and the component are the same object)
             if data is not None and id(self) in _BlockConstruction.data:
                 del _BlockConstruction.data[id(self)]
-        timer.report()
+            timer.report()
 
     def _pprint_callback(self, ostream, idx, data):
         if not self.is_indexed():
@@ -1973,7 +1978,7 @@ class SimpleBlock(_BlockData, Block):
     def __init__(self, *args, **kwds):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
-        # Iniitalize the data dict so that (abstract) attribute
+        # Initialize the data dict so that (abstract) attribute
         # assignment will work.  Note that we do not trigger
         # get/setitem_when_not_present so that we do not (implicitly)
         # trigger the Block rule

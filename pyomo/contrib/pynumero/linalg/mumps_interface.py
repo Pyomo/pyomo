@@ -173,6 +173,12 @@ class MumpsCentralizedAssembledLinearSolver(object):
         self.do_numeric_factorization(matrix)
         return self.do_back_solve(rhs)
 
+    def get_icntl(self, key):
+        return self._mumps.id.icntl[key - 1]
+
+    def get_cntl(self, key):
+        return self._mumps.id.cntl[key - 1]
+
     def get_info(self, key):
         return self._mumps.id.info[key - 1]
 
