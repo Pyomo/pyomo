@@ -35,7 +35,7 @@ import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
     fit_rect_dist, fit_mvn_dist, fit_kde_dist
 
-__version__ = 0.2
+__version__ = 0.29999
 
 #=============================================
 def _object_from_string(instance, vstr):
@@ -47,32 +47,35 @@ def _object_from_string(instance, vstr):
     output:
         the object 
     NOTE: We need to deal with blocks 
-          and with indexes that might really be strings or ints
+          and with indexes that might really be strings or ints.
+          There can be blocks within blocks and the Var might not be indexed...
+    TBD: do a better job with indexes (e.g., tuples of integers)
     """
-    # pull off the index
-    l = vstr.find('[')
-    if l == -1:
-        indexstr = None
-        basestr = vstr
-    else:
-        r = vstr.find(']')
-        indexstr = vstr[l+1:r]
-        basestr = vstr[:l]
-    # get the blocks and the name
-    parts = basestr.split('.')
-    name = parts[-1]
+
+    def ni(s):
+        l = s.find('[')
+        if l == -1:
+            indexstr = None
+            basestr = s
+        else:
+            r = s.find(']')
+            indexstr = s[l+1:r]
+            basestr = s[:l]
+        return basestr, indexstr
+
     retval = instance
-    for i in range(len(parts)-1):
-        retval = getattr(retval, parts[i])
-    retval = getattr(retval, name)
-    if indexstr is None:
-        return retval
-    # dlw jan 2018: TBD improve index handling... multiple indexes, e.g.
-    try:
-        indexstr = int(indexstr)  # hack...
-    except:
-        pass
-    return retval[indexstr]
+    parts = vstr.split('.')
+    for i in range(len(parts)):
+        bname, bindex = ni(parts[i])
+        if bindex is None:
+            retval = getattr(retval, bname)
+        else:
+            try:
+                bindex = int(bindex)  # TBD: improve
+            except:
+                pass
+            retval = getattr(retval, bname)[bindex]
+    return retval
 
 #=============================================
 def _ef_ROOT_node_Object_from_string(efinstance, vstr):
@@ -409,7 +412,6 @@ class Estimator(object):
         if (solver == "k_aug"):
             raise RuntimeError("k_aug no longer supported.")
         # (Bootstrap scenarios will use indirection through the bootlist)
-        print("debug in parmest.py numberslist={}".format(self._numbers_list))
         if bootlist is None:
             scen_names = ["Scenario{}".format(i) for i in self._numbers_list]
         else:
@@ -448,7 +450,6 @@ class Estimator(object):
                 # process the name
                 # the scenarios are blocks, so strip the scenario name
                 vname  = Var.name[Var.name.find(".")+1:]
-                print("debug in parmest Varname={}; vname={}".format(Var.name, vname))
                 thetavals[vname] = solval
 
             objval = pyo.value(EF.ef.EF_Obj)
