@@ -91,6 +91,27 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
         nth_community = partition_of_graph[node]
         str_community_map[nth_community].append(node)
 
+    # Node type 'v'
+    if node_type == 'v':
+        for community_key in str_community_map:
+            main_list = str_community_map[community_key]
+            constraint_list = []
+            for str_variable in main_list:
+                constraint_list.extend([constraint_key for constraint_key in constraint_variable_map if
+                                        str_variable in constraint_variable_map[constraint_key]])
+            constraint_list = sorted(set(constraint_list))
+            str_community_map[community_key] = (main_list, constraint_list)
+
+    # Node type 'c'
+    elif node_type == 'c':
+        for community_key in str_community_map:
+            main_list = str_community_map[community_key]
+            variable_list = []
+            for str_constraint in main_list:
+                variable_list.extend(constraint_variable_map[str_constraint])
+            variable_list = sorted(set(variable_list))
+            str_community_map[community_key] = (main_list, variable_list)
+
     # Log information about the number of communities found from the model
     logger.info("%s communities were found in the model" % number_of_communities)
     if number_of_communities == 0:
@@ -106,8 +127,11 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     # if desired
     community_map = {}
     for nth_community in str_community_map:
-        community_map[nth_community] = [string_map[community_member] for community_member in
-                                        str_community_map[nth_community]]
+        first_list = str_community_map[nth_community][0]
+        second_list = str_community_map[nth_community][1]
+        new_first_list = [string_map[community_member] for community_member in first_list]
+        new_second_list = [string_map[community_member] for community_member in second_list]
+        community_map[nth_community] = (new_first_list, new_second_list)
 
     return community_map
 
