@@ -1454,14 +1454,13 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                     disjBlock[i].component(nm),
                     Constraint)
 
-    def test_transformation_block_not_on_disjunct_anymore(self):
+    def test_transformation_block_on_disjunct_empty(self):
         m = models.makeNestedDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(m)
-
-        self.assertIsNone(m.disjunct[1]._pyomo_gdp_bigm_relaxation.\
-                          component("relaxedDisjuncts"))
-        self.assertIsNone(m.simpledisjunct._pyomo_gdp_bigm_relaxation.\
-                          component("relaxedDisjuncts"))
+        self.assertEqual(len(m.disjunct[1]._pyomo_gdp_bigm_relaxation.\
+                             component("relaxedDisjuncts")), 0)
+        self.assertEqual(len(m.simpledisjunct._pyomo_gdp_bigm_relaxation.\
+                             component("relaxedDisjuncts")), 0)
 
     def test_mappings_between_disjunctions_and_xors(self):
         # Note this test actually checks that the inner disjunction maps to its
@@ -1672,6 +1671,36 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m = models.makeNestedDisjunctions()
         self.diff_apply_to_and_create_using(m)
 
+    def test_indexed_nested_disjunction(self):
+        # When we have a nested disjunction inside of a disjunct, we need to
+        # make sure that we don't delete the relaxedDisjuncts container because
+        # we will end up moving things out of it in two different steps. If that
+        # were to happen, this would throw an error when it can't find the block
+        # the second time.
+        m = ConcreteModel()
+        m.d1 = Disjunct()
+        m.d1.indexedDisjunct1 = Disjunct([0,1])
+        m.d1.indexedDisjunct2 = Disjunct([0,1])
+        @m.d1.Disjunction([0,1])
+        def innerIndexed(d, i):
+            return [d.indexedDisjunct1[i], d.indexedDisjunct2[i]]
+        m.d2 = Disjunct()
+        m.outer = Disjunction(expr=[m.d1, m.d2])
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        # we check that they all ended up on the same Block in the end (I don't
+        # really care in what order for this test)
+        disjuncts = [m.d1, m.d2, m.d1.indexedDisjunct1[0],
+                     m.d1.indexedDisjunct1[1], m.d1.indexedDisjunct2[0],
+                     m.d1.indexedDisjunct2[1]]
+        for disjunct in disjuncts:
+            self.assertIs(disjunct.transformation_block().parent_component(),
+                          m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts)
+
+        # and we check that nothing remains on original transformation block
+        self.assertEqual(len(m.d1._pyomo_gdp_bigm_relaxation.relaxedDisjuncts),
+                         0)
 
 class IndexedDisjunction(unittest.TestCase):
     # this tests that if the targets are a subset of the
