@@ -535,8 +535,6 @@ class BigM_Transformation(Transformation):
 
         # delete everything we moved.
         for idx in to_delete:
-            # Note we have to do it by index because python scoping is
-            # obnoxious...
             del fromBlock.relaxedDisjuncts[idx]
 
         # Note that we could handle other components here if we ever needed
