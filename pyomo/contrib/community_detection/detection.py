@@ -20,7 +20,8 @@ community, community_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
 
-def detect_communities(model, node_type='v', with_objective=True, weighted_graph=True, random_seed=None):
+def detect_communities(model, node_type='v', with_objective=True, weighted_graph=True, random_seed=None,
+                       string_output=False):
     """
     Detects communities in a Pyomo optimization model
 
@@ -32,18 +33,21 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
     ----------
     model: Block
          a Pyomo model or block to be used for community detection
-    node_type: str
+    node_type: str, optional
         A string that specifies the dictionary to be returned.
         'v' returns a dictionary with communities based on variable nodes,
         'c' returns a dictionary with communities based on constraint nodes.
-    with_objective: bool
+    with_objective: bool, optional
         a Boolean argument that specifies whether or not the objective function will be
         treated as a node/constraint (depending on what node_type is specified as (see prior argument))
-    weighted_graph: bool
+    weighted_graph: bool, optional
         a Boolean argument that specifies whether a weighted or unweighted graph is to be
         created from the Pyomo model
     random_seed: int, optional
         Specify the integer to use the random seed for the heuristic Louvain community detection
+    string_output: bool, optional
+        a Boolean argument that specifies whether the community map that is returned is comprised of the strings
+        of the nodes or if it contains the actual objects themselves (Pyomo variables/constraints)
 
     Returns
     -------
@@ -68,6 +72,9 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
     assert type(random_seed) == int or random_seed is None, "Invalid value for random_seed: 'random_seed=%s' - " \
                                                             "random_seed must be a non-negative integer" % random_seed
 
+    assert type(string_output) == bool, "Invalid value for with_objective: 'string_output=%s' - string_output " \
+                                        "must be a Boolean" % string_output
+
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
     model_graph, string_map = _generate_model_graph(
         model, node_type=node_type, with_objective=with_objective,
@@ -91,6 +98,9 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
     if number_of_communities == 1:
         logger.warning("Community detection found that with the given parameters, the model could not be decomposed - "
                        "only one community was found")
+
+    if string_output:
+        return str_community_map
 
     # Convert str_community_map into a dictionary of the actual variables/constraints so that it can be iterated over
     # if desired
