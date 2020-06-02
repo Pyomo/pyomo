@@ -22,6 +22,10 @@ invoke 'make' differently.  For example, using the PyUtilib 'lbin' command:
 
   lbin make html
 
+NOTE: If you get the error ``ModuleNotFoundError: No module named 'sphinx_rtd_theme'``, try running:
+
+  pip install sphinx_rtd_theme
+
 3.  Admire your work
 
   cd _build/html
