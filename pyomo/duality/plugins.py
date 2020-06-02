@@ -146,6 +146,7 @@ class LinearDual_PyomoTransformation(Transformation):
             #
             for (name, ndx), domain in iteritems(v_domain):
                 v = getvar(name, ndx)
+                flag = type(ndx) is tuple and (ndx[-1] == 'lb' or ndx[-1] == 'ub')
                 if domain == 1:
                     v.domain = NonNegativeReals
                 elif domain == -1:
