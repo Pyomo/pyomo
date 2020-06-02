@@ -12,7 +12,7 @@ import itertools
 from six import iteritems
 from six.moves import xrange
 
-from pyomo.core import Block, ConstraintList, Set
+from pyomo.core import Block, ConstraintList, Set, Constraint
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 
 import logging
