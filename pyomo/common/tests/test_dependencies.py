@@ -22,7 +22,6 @@ from pyomo.common.dependencies import (
 
 import pyomo.common.tests.dep_mod as dep_mod
 from pyomo.common.tests.dep_mod import (
-    numpy, numpy_available,
     bogus_nonexisting_module as bogus_nem,
     bogus_nonexisting_module_available as has_bogus_nem,
 )
