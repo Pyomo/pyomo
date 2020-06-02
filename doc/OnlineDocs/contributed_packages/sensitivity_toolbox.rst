@@ -21,7 +21,7 @@ We will start with a motivating example:
 
 Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while :math:`p_1` and :math:`p_2` are parameters. At first, let's consider :math:`p_1 = 4.5` and :math:`p_2 = 1.0`. Below is the model implemented in Pyomo.
 
-.. doctest::
+.. testcode::
     
     # Create a concrete model
     m = ConcreteModel()
@@ -45,14 +45,14 @@ The solution of this optimization problem is :math:`x_1^* = 0.15`, :math:`x_2^* 
 
 Next we define the perturbed parameter values :math:`\hat{p}_1` and :math:`\hat{p}_2`:
 
-.. doctest::
+.. testcode::
     
     m.perturbed_eta1 = Param(initialize = 4.0)
     m.perturbed_eta2 = Param(initialize = 1.0)
 
 And finally we call sIPOPT:
 
-.. doctest::
+.. testcode::
     
     m_sipopt = sipopt(m,[m.eta1,m.eta2],
                         [m.perturbed_eta1,m.perturbed_eta2],
@@ -62,7 +62,7 @@ The first argument is the Pyomo model. The second argument is a list of the orig
 
 We then get this output:
 
-.. doctest::
+.. testoutput::
     Ipopt 3.13.2: run_sens=yes
     
     ******************************************************************************
@@ -121,20 +121,20 @@ We then get this output:
 
 We can now inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
-.. doctest::
+.. testcode::
     
     print("\nOriginal parameter values:")
-    print("\teta1 =",m.eta1())
-    print("\teta2 =",m.eta2())
+    print("    eta1 =",m.eta1())
+    print("    eta2 =",m.eta2())
     
     print("Solution with the original parameter values:")
-    print("\tx1 =",m.x1())
-    print("\tx2 =",m.x2())
-    print("\tx3 =",m.x3())
+    print("    x1 =",m.x1())
+    print("    x2 =",m.x2())
+    print("    x3 =",m.x3())
 
 Which gives the output:
 
-.. doctest::
+.. testoutput::
     
     Original parameter values:
         eta1 = 4.5
@@ -146,20 +146,20 @@ Which gives the output:
 
 Likewise, we can inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`:
 
-.. doctest::
+.. testcode::
     
     print("\nNew parameter values:")
-    print("\teta1 =",m_sipopt.perturbed_eta1())
-    print("\teta2 =",m_sipopt.perturbed_eta2())
+    print("    eta1 =",m_sipopt.perturbed_eta1())
+    print("    eta2 =",m_sipopt.perturbed_eta2())
     
     print("(Approximate) solution with the new parameter values:")
-    print("\tx1 =",m_sipopt.x1())
-    print("\tx2 =",m_sipopt.x2())
-    print("\tx3 =",m_sipopt.x3())
+    print("    x1 =",m_sipopt.x1())
+    print("    x2 =",m_sipopt.x2())
+    print("    x3 =",m_sipopt.x3())
 
 Which gives the output:
 
-.. doctest::
+.. testoutput::
     
     New parameter values:
         eta1 = 4.0
@@ -172,7 +172,13 @@ Which gives the output:
 Installing sIPOPT
 -----------------
 
-TODO: Fill in with details.
+The sensitivity toolbox requires sIPOPT is installed and available in your system PATH. See the IPOPT documentation for detailed instructions:
+
+* https://coin-or.github.io/Ipopt/INSTALL.html
+* https://projects.coin-or.org/Ipopt/wiki/sIpopt
+* https://coin-or.github.io/coinbrew/
+
+Tip: If you get an error that ``ipopt_sens`` cannot be found, you need to make sure sIPOPT was installed and that it is in the system path.
 
 Sensitivity Toolbox Interface
 -----------------------------
