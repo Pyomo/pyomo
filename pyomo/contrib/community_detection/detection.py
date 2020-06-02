@@ -20,7 +20,7 @@ community, community_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
 
-def detect_communities(model, node_type='v', with_objective=True, weighted_graph=True, random_seed=None,
+def detect_communities(model, node_type='c', with_objective=True, weighted_graph=True, random_seed=None,
                        string_output=False):
     """
     Detects communities in a Pyomo optimization model
@@ -76,7 +76,7 @@ def detect_communities(model, node_type='v', with_objective=True, weighted_graph
                                         "must be a Boolean" % string_output
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
-    model_graph, string_map = _generate_model_graph(
+    model_graph, string_map, constraint_variable_map = _generate_model_graph(
         model, node_type=node_type, with_objective=with_objective,
         weighted_graph=weighted_graph)
 

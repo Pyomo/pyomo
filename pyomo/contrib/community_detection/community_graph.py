@@ -45,6 +45,7 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
         edge_set = set()
 
     model_graph_nodes = []
+    constraint_variable_map = {}
 
     # Variable nodes
     if node_type == 'v':
@@ -56,6 +57,9 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
         for model_constraint in model.component_data_objects(Constraint, descend_into=True):
             # Create a set of the variables that occur in the given constraint equation
             variables_in_constraint_equation = ComponentSet(identify_variables(model_constraint.body))
+
+            constraint_variable_map[str(model_constraint)] = [str(variable) for variable in
+                                                              variables_in_constraint_equation]
 
             # Create a list of all the edges that need to be created based on this constraint equation
             edges_between_nodes = list(combinations(variables_in_constraint_equation, 2))
@@ -78,6 +82,8 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
 
                 # Create a list of the variables that occur in the given objective function
                 variables_in_objective_function = ComponentSet(identify_variables(objective_function))
+                constraint_variable_map[str(objective_function)] = [str(variable) for variable in
+                                                                    variables_in_objective_function]
 
                 # Create a list of all the edges that need to be created based on the variables in the objective
                 edges_between_nodes = list(combinations(variables_in_objective_function, 2))
@@ -98,12 +104,20 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
         for model_constraint in model.component_data_objects(Constraint, descend_into=True):
             model_graph_nodes.append(model_constraint)
 
+            variables_in_constraint_equation = ComponentSet(identify_variables(model_constraint.body))
+            constraint_variable_map[str(model_constraint)] = [str(variable) for variable in
+                                                              variables_in_constraint_equation]
+
         # If the user chooses to include the objective function as a constraint in the model graph
         if with_objective:
             # Use a loop to account for the possibility of multiple objective functions
             for objective_function in model.component_data_objects(Objective, descend_into=True):
                 # Add objective_function as a node in model_graph
                 model_graph_nodes.append(objective_function)
+
+                variables_in_objective_function = ComponentSet(identify_variables(objective_function))
+                constraint_variable_map[str(objective_function)] = [str(variable) for variable in
+                                                                    variables_in_objective_function]
 
         # Loop through all variables in the Pyomo model
         for model_variable in model.component_data_objects(Var, descend_into=True):
@@ -189,7 +203,7 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
                        weighted_graph=weighted_graph, file_destination=file_destination)
 
     # Return the networkX graph based on the given Pyomo optimization model
-    return model_graph, string_map
+    return model_graph, string_map, constraint_variable_map
 
 
 def _event_log(model, model_graph):
