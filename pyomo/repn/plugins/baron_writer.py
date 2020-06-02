@@ -142,8 +142,6 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
 
         if node.is_expression_type():
             # we will descend into this, so type checking will happen later
-            if node.is_component_type():
-                self.treechecker(node)
             return False, None
 
         if node.is_component_type():
