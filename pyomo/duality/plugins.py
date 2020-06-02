@@ -17,7 +17,6 @@ from pyomo.core.base import (Transformation,
                              Var,
                              Constraint,
                              Objective,
-                             Set,
                              minimize,
                              NonNegativeReals,
                              NonPositiveReals,
@@ -26,7 +25,6 @@ from pyomo.core.base import (Transformation,
                              Model,
                              ConcreteModel)
 from pyomo.duality.collect import collect_linear_terms
-from pyomo.common.deprecation import deprecated
 
 def load():
     pass
@@ -148,7 +146,6 @@ class LinearDual_PyomoTransformation(Transformation):
             #
             for (name, ndx), domain in iteritems(v_domain):
                 v = getvar(name, ndx)
-                flag = type(ndx) is tuple and (ndx[-1] == 'lb' or ndx[-1] == 'ub')
                 if domain == 1:
                     v.domain = NonNegativeReals
                 elif domain == -1:
