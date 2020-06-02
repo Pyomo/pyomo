@@ -913,3 +913,15 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.all(bm.col_block_sizes() == np.ones(2)*4))
         self.assertTrue(np.all(bm.row_block_sizes(copy=False) == np.ones(2)*4))
         self.assertTrue(np.all(bm.col_block_sizes(copy=False) == np.ones(2)*4))
+
+    def test_transpose_with_empty_rows(self):
+        m = BlockMatrix(2, 2)
+        m.set_row_size(0, 2)
+        m.set_row_size(1, 2)
+        m.set_col_size(0, 2)
+        m.set_col_size(1, 2)
+        mt = m.transpose()
+        self.assertEqual(mt.get_row_size(0), 2)
+        self.assertEqual(mt.get_row_size(1), 2)
+        self.assertEqual(mt.get_col_size(0), 2)
+        self.assertEqual(mt.get_col_size(1), 2)

@@ -310,7 +310,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
 
         return ans
 
-    def beforeChild(self, node, child):
+    def beforeChild(self, node, child, child_idx):
         if type(child) in nonpyomo_leaf_types:
             # This means the child is POD
             # i.e., int, float, string
@@ -322,7 +322,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             # this is an expression node
             return True, None
 
-    def acceptChildResult(self, node, data, child_result):
+    def acceptChildResult(self, node, data, child_result, child_idx):
         self.refs.add(child_result)
         data.append(child_result)
         return data
