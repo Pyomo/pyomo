@@ -11,18 +11,14 @@
 """Big-M Generalized Disjunctive Programming transformation module."""
 
 import logging
-import textwrap
 
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value,
     RangeSet, NonNegativeIntegers)
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory
-from pyomo.core.base.component import ComponentUID, ActiveComponent
-from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
@@ -36,7 +32,6 @@ from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.deprecation import deprecation_warning
 
 from functools import wraps
 from six import iterkeys, iteritems
@@ -170,7 +165,6 @@ class BigM_Transformation(Transformation):
         # SimpleBlocks. Though it is possible at this point to stick them
         # on whatever components you want, we won't pick them up.
         suffix_list = []
-        orig_block = block
 
         # go searching above block in the tree, stop when we hit stopping_block
         # (This is so that we can search on each Disjunct once, but get any

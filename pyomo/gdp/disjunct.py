@@ -22,7 +22,7 @@ from pyomo.core import (
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
-from pyomo.core.base.numvalue import native_types
+from pyomo.core.base.numvalue import native_types, value
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
@@ -387,7 +387,7 @@ class Disjunction(ActiveIndexedComponent):
                            err))
                     raise
                 if expr is None:
-                    _name = "%s[%s]" % (self.name, str(idx))
+                    _name = "%s[%s]" % (self.name, str(ndx))
                     raise ValueError( _rule_returned_none_error % (_name,) )
                 if expr is Disjunction.Skip:
                     continue
