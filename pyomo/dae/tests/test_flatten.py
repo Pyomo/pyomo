@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 
-from pyomo.environ import ConcreteModel, Block, Var, Reference
+from pyomo.environ import ConcreteModel, Var, Reference
 from pyomo.dae import ContinuousSet
 # This inport will have to change when we decide where this should go...
 from pyomo.dae.flatten import flatten_dae_variables

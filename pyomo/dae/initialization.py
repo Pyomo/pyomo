@@ -119,7 +119,6 @@ def solve_consistent_initial_conditions(model, time, solver):
         raise NotImplementedError(
             '%s discretization scheme is not supported' % scheme)
 
-    t0 = time.first()
     timelist = list(time)[1:]
     deactivated_dict = deactivate_model_at(model, time, timelist)
 

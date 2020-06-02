@@ -10,7 +10,6 @@
 
 import logging
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core import *
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.set import SortedSimpleSet
 from pyomo.core.base.numvalue import native_numeric_types
