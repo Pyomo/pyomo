@@ -3,7 +3,7 @@ GETTING STARTED
 
 0.  Install Sphinx
 
-  pip install sphinx
+  pip install sphinx sphinx_rtd_theme
 
 1. Edit documentation
 
@@ -21,10 +21,6 @@ NOTE:  If the local python is not on your path, then you may need to
 invoke 'make' differently.  For example, using the PyUtilib 'lbin' command:
 
   lbin make html
-
-NOTE: If you get the error ``ModuleNotFoundError: No module named 'sphinx_rtd_theme'``, try running:
-
-  pip install sphinx_rtd_theme
 
 3.  Admire your work
 
