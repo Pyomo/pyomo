@@ -44,9 +44,8 @@ print(bootstrap_theta.head())
 parmest.pairwise_plot(bootstrap_theta, title='Bootstrap theta')
 parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'], 
                       title='Bootstrap theta with confidence regions')
-'''
+
 ### Likelihood ratio test
-'''
 asym = np.arange(10, 30, 2)
 rate = np.arange(0, 1.5, 0.1)
 theta_vals = pd.DataFrame(list(product(asym, rate)), columns=theta_names)
