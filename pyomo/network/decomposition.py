@@ -19,8 +19,8 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
 from pyutilib.misc import Options
-import copy, logging, time
-from six import iteritems, itervalues
+import logging, time
+from six import iteritems
 
 from pyomo.common.dependencies import (
     networkx as nx, networkx_available,
