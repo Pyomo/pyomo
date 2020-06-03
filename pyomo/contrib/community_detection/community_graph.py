@@ -1,10 +1,9 @@
 """Model Graph Generator Code"""
-from core.kernel.component_set import ComponentSet
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.common.dependencies import networkx as nx
 from pyomo.core import Constraint, Objective, Var
 from pyomo.core.expr.current import identify_variables
 from itertools import combinations
-import os
 import logging
 
 
