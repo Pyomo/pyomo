@@ -82,7 +82,7 @@ class Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
         else:
             return _op(*tuple(values))
 
-    def beforeChild(self, node, child):
+    def beforeChild(self, node, child, child_idx):
         #
         # Don't replace native or sympy types
         #
@@ -128,7 +128,7 @@ class Sympy2PyomoVisitor(StreamBasedExpressionVisitor):
                 "map" % type(_sympyOp) )
         return _op(*tuple(values))
 
-    def beforeChild(self, node, child):
+    def beforeChild(self, node, child, child_idx):
         if not child.args:
             item = self.object_map.getPyomoSymbol(child, None)
             if item is None:
@@ -222,7 +222,7 @@ def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_specia
 
 def sympy2pyomo_expression(expr, object_map):
     visitor = Sympy2PyomoVisitor(object_map)
-    is_expr, ans = visitor.beforeChild(None, expr)
+    is_expr, ans = visitor.beforeChild(None, expr, None)
     if not is_expr:
         return ans
     return visitor.walk_expression(expr)

@@ -193,7 +193,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
                 ]
             pass
 
-    def beforeChild(self, node, child):
+    def beforeChild(self, node, child, child_idx):
         if type(node) in special_logical_atom_types and child is node.args[0]:
             return False, child
         if type(child) in native_logical_types:
