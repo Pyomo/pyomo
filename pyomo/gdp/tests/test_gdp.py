@@ -188,6 +188,8 @@ class Reformulate(unittest.TestCase, CommonTests):
     def check(self, problem, solver):
         self.assertFileEqualsBaseline( join(currdir,self.problem+'_result.lp'),
                                            self.referenceFile(problem,solver) )
+        if os.path.exists(join(currdir,self.problem+'_result.lp')):
+            os.remove(join(currdir,self.problem+'_result.lp'))
 
 
 class Solver(unittest.TestCase):
@@ -208,6 +210,9 @@ class Solver(unittest.TestCase):
                     ansObj[i].get(key,{}).get('Value', None),
                     6
                 )
+        # Clean up test files
+        if os.path.exists(join(currdir,self.problem+'_result.lp')):
+            os.remove(join(currdir,self.problem+'_result.lp'))
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
