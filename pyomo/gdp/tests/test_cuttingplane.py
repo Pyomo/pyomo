@@ -16,6 +16,7 @@ from pyomo.gdp import *
 import pyomo.opt
 import pyomo.gdp.tests.models as models
 from pyomo.repn import generate_standard_repn
+from pyomo.gdp.tests.common_tests import diff_apply_to_and_create_using
 
 import random
 from six import StringIO
@@ -38,9 +39,9 @@ def check_linear_coef(self, repn, var, coef):
 
 def check_validity(self, body, lower, upper):
     if lower is not None:
-        self.assertGreaterEqual(value(body), lower)
+        self.assertGreaterEqual(value(body), value(lower))
     if upper is not None:
-        self.assertLessEqual(value(body), upper)
+        self.assertLessEqual(value(body), value(upper))
 
 class OneVarDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -200,6 +201,7 @@ class TwoTermDisj(unittest.TestCase):
         
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
         cut = cuts[0]
+        #set_trace()
         cut_expr = cut.body
         lower = cut.lower
         upper = cut.upper
@@ -210,9 +212,9 @@ class TwoTermDisj(unittest.TestCase):
             m.x.fix(pt[2])
             m.y.fix(pt[3])
             if lower is not None:
-                self.assertEqual(lower, value(cut_expr))
+                self.assertEqual(value(lower), value(cut_expr))
             if upper is not None:
-                self.assertEqual(upper, value(cut_expr))
+                self.assertEqual(value(upper), value(cut_expr))
 
 
     # [ESJ 15 Mar 19]: This is a slightly weird idea, but I think we've kind of
@@ -240,8 +242,8 @@ class TwoTermDisj(unittest.TestCase):
         cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
-            lower = cut.lower
-            upper = cut.upper
+            lower = value(cut.lower)
+            upper = value(cut.upper)
             tight = 0
             for pt in extreme_pts:
                 m.d[0].indicator_var.fix(pt[0])
@@ -259,25 +261,10 @@ class TwoTermDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_create_using(self):
         m = models.makeTwoTermDisj_boxes()
-
-        # TODO: this is duplicate code with other transformation tests. Someday
-        # it would be nice to centralize it...
-        modelcopy = TransformationFactory('gdp.cuttingplane').create_using(m)
-        modelcopy_buf = StringIO()
-        modelcopy.pprint(ostream=modelcopy_buf)
-        modelcopy_output = modelcopy_buf.getvalue()
-
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
-        model_buf = StringIO()
-        m.pprint(ostream=model_buf)
-        model_output = model_buf.getvalue()
-        self.maxDiff = None
-        # [ESJ 6 March 2019] TODO: there is in fact no reason to expect this to
-        # pass right now because there is nothing to guaruntee that the order of
-        # the terms in the expressions of the constraints is going to be the
-        # same. And so they will prrint differently even though the math is the
-        # same.
-        self.assertMultiLineEqual(modelcopy_output, model_output)
+        # TODO: I think doesn't pass because of inconsistent ordering of terms
+        # within expressions (based on an old note to myself, but I need to
+        # check)
+        diff_apply_to_and_create_using(self, m, 'gdp.cuttingplane')
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_active_objective_err(self):
@@ -383,14 +370,6 @@ class Grossmann_TestCases(unittest.TestCase):
                 check_validity(self, cut_expr, lower, upper)
 
 class NonlinearConvex_TwoCircles(unittest.TestCase):
-    # This is a really weak test because it is not actually *this* apply_to call
-    # that raises the exception. But that exception is tested in bigm, so maybe
-    # it doesn't matter much.
-    @raises(GDP_Error)
-    def test_complain_if_no_bigm(self):
-        m = models.twoDisj_twoCircles_easy()
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
-
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_valid_for_optimal(self):
         m = models.twoDisj_twoCircles_easy()
