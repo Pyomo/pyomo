@@ -780,7 +780,7 @@ class Estimator(object):
         assert isinstance(bootlist, (type(None), list))
         
         return self._Q_opt(solver=solver, return_values=return_values,
-                           bootlist=bootlist, calc_cov)
+                           bootlist=bootlist, calc_cov=calc_cov)
     
     
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
