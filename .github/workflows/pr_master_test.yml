@@ -285,8 +285,8 @@ jobs:
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.zip"
             $URL += "baron-lin64.zip"
         }
-        if (-not (Test-Path "$BARON_INSTALLER" -PathType Leaf)) {
-            echo "...downloading BARON"
+        if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
+            echo "...downloading BARON ($URL)"
             Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
         }
         echo "...installing BARON"
