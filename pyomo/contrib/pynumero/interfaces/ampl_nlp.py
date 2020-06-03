@@ -503,6 +503,7 @@ class AslNLP(ExtendedNLP):
         # this computation into one
         if not self._jac_full_is_cached:
             self._asl.eval_jac_g(self._primals, self._cached_jac_full.data)
+            self._jac_full_is_cached = True
 
     # overloaded from NLP
     def evaluate_jacobian(self, out=None):

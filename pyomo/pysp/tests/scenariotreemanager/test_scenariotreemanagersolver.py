@@ -25,8 +25,7 @@ from pyomo.pysp.util.misc import (_get_test_nameserver,
 from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.scenariotree.manager import \
     (ScenarioTreeManagerClientSerial,
-     ScenarioTreeManagerClientPyro,
-     InvocationType)
+     ScenarioTreeManagerClientPyro)
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.manager_solver import \

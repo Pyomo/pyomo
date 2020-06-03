@@ -43,7 +43,6 @@ from functools import wraps
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
 
-
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
@@ -523,6 +522,7 @@ class BigM_Transformation(Transformation):
         # to move those over. We know the XOR constraints are on the block, and
         # we need to leave those on the disjunct.
         disjunctList = toBlock.relaxedDisjuncts
+        to_delete = []
         for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
             newblock = disjunctList[len(disjunctList)]
             newblock.transfer_attributes_from(disjunctBlock)
@@ -532,8 +532,12 @@ class BigM_Transformation(Transformation):
             original._transformation_block = weakref_ref(newblock)
             newblock._srcDisjunct = weakref_ref(original)
 
-        # we delete this container because we just moved everything out
-        del fromBlock.relaxedDisjuncts
+            # save index of what we just moved so that we can delete it
+            to_delete.append(idx)
+
+        # delete everything we moved.
+        for idx in to_delete:
+            del fromBlock.relaxedDisjuncts[idx]
 
         # Note that we could handle other components here if we ever needed
         # to, but we control what is on the transformation block and

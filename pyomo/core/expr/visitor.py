@@ -55,6 +55,7 @@ class StreamBasedExpressionVisitor(object):
     through callback functions as the traversal enters and leaves nodes
     in the tree:
 
+      initializeWalker(expr) -> walk, result
       enterNode(N1) -> args, data
       {for N2 in args:}
         beforeChild(N1, N2) -> descend, child_result
@@ -64,10 +65,20 @@ class StreamBasedExpressionVisitor(object):
         acceptChildResult(N1, data, child_result) -> data
         afterChild(N1, N2) -> None
       exitNode(N1, data) -> N1_result
+      finalizeWalker(result) -> result
 
     Individual event callbacks match the following signatures:
 
-    args, data = enterNode(self, node):
+   walk, result = initializeWalker(self, expr):
+
+        initializeWalker() is called to set the walker up and perform
+        any preliminary processing on the root node.  The method returns
+        a flag indicating if the tree should be walked and a result.  If
+        `walk` is True, then result is ignored.  If `walk` is False,
+        then `result` is returned as the final result from the walker,
+        bypassing all other callbacks (including finalizeResult).
+
+   args, data = enterNode(self, node):
 
         enterNode() is called when the walker first enters a node (from
         above), and is passed the node being entered.  It is expected to
@@ -89,10 +100,11 @@ class StreamBasedExpressionVisitor(object):
         this node.  If not specified, the default action is to return
         the data object from enterNode().
 
-    descend, child_result = beforeChild(self, node, child):
+    descend, child_result = beforeChild(self, node, child, child_idx):
 
         beforeChild() is called by a node for every child before
-        entering the child node.  The node and child nodes are passed as
+        entering the child node.  The node, child node, and child index
+        (position in the args list from enterNode()) are passed as
         arguments.  beforeChild should return a tuple (descend,
         child_result).  If descend is False, the child node will not be
         entered and the value returned to child_result will be passed to
@@ -100,24 +112,25 @@ class StreamBasedExpressionVisitor(object):
         equivalent to (True, None).  The default behavior if not
         specified is equivalent to (True, None).
 
-    data = acceptChildResult(self, node, data, child_result):
+    data = acceptChildResult(self, node, data, child_result, child_idx):
 
         acceptChildResult() is called for each child result being
         returned to a node.  This callback is responsible for recording
         the result for later processing or passing up the tree.  It is
-        passed the node, the result data structure (see enterNode()),
-        and the child result.  The data structure (possibly modified or
-        replaced) must be returned.  If acceptChildResult is not
-        specified, it does nothing if data is None, otherwise it calls
-        data.append(result).
+        passed the node, result data structure (see enterNode()), child
+        result, and the child index (position in args from enterNode()).
+        The data structure (possibly modified or replaced) must be
+        returned.  If acceptChildResult is not specified, it does
+        nothing if data is None, otherwise it calls data.append(result).
 
-    afterChild(self, node, child):
+    afterChild(self, node, child, child_idx):
 
         afterChild() is called by a node for every child node
         immediately after processing the node is complete before control
-        moves to the next child or up to the parent node.  The node and
-        child node are passed, and nothing is returned.  If afterChild
-        is not specified, no action takes place.
+        moves to the next child or up to the parent node.  The node,
+        child node, an child index (position in args from enterNode())
+        are passed, and nothing is returned.  If afterChild is not
+        specified, no action takes place.
 
     finalizeResult(self, result):
 
@@ -138,7 +151,7 @@ class StreamBasedExpressionVisitor(object):
     # derived classes or specified as callback functions to the class
     # constructor:
     client_methods = ('enterNode','exitNode','beforeChild','afterChild',
-                      'acceptChildResult','finalizeResult')
+                      'acceptChildResult','initializeWalker','finalizeResult')
     def __init__(self, **kwds):
         # This is slightly tricky: We want derived classes to be able to
         # override the "None" defaults here, and for keyword arguments
@@ -165,12 +178,16 @@ class StreamBasedExpressionVisitor(object):
         #      tuple/list of child nodes (arguments),
         #      number of child nodes (arguments),
         #      data object to aggregate results from child nodes,
-        #      current child node )
+        #      current child node index )
         #
         # The walker only needs a single pointer to the end of the list
         # (ptr).  The beginning of the list is indicated by a None
         # parent pointer.
         #
+        if self.initializeWalker is not None:
+            walk, result = self.initializeWalker(expr)
+            if not walk:
+                return result
         if self.enterNode is not None:
             tmp = self.enterNode(expr)
             if tmp is None:
@@ -186,115 +203,130 @@ class StreamBasedExpressionVisitor(object):
                 args = ()
             else:
                 args = expr.args
+        if hasattr(args, '__enter__'):
+            args.__enter__()
         node = expr
-        child_idx = 0
-        ptr = (None, node, args, len(args), data, child_idx)
+        # Note that because we increment child_idx just before fetching
+        # the child node, it must be initialized to -1, and ptr[3] must
+        # always be *one less than* the number of arguments
+        child_idx = -1
+        ptr = (None, node, args, len(args)-1, data, child_idx)
 
-        while 1:
-            if child_idx < ptr[3]:
-                # This node still has children to process
-                child = ptr[2][child_idx]
-                # Increment the child index pointer here for
-                # consistency.  Note that this means that for the bulk
-                # of the time, 'child_idx' is actually the index of the
-                # *next* child to be processed, and will not match the
-                # value of ptr[5].  This provides a modest performance
-                # improvement, as we only have to recreate the ptr tuple
-                # just before we descend further into the tree (i.e., we
-                # avoid recreating the tuples for the special case where
-                # beforeChild indicates that we should not descend
-                # further).
-                child_idx += 1
+        try:
+            while 1:
+                if child_idx < ptr[3]:
+                    # Increment the child index pointer here for
+                    # consistency.  Note that this means that for the bulk
+                    # of the time, 'child_idx' will not match the value of
+                    # ptr[5].  This provides a modest performance
+                    # improvement, as we only have to recreate the ptr tuple
+                    # just before we descend further into the tree (i.e., we
+                    # avoid recreating the tuples for the special case where
+                    # beforeChild indicates that we should not descend
+                    # further).
+                    child_idx += 1
+                    # This node still has children to process
+                    child = ptr[2][child_idx]
 
-                # Notify this node that we are about to descend into a
-                # child.
-                if self.beforeChild is not None:
-                    tmp = self.beforeChild(node, child)
-                    if tmp is None:
-                        descend = True
-                        child_result = None
+                    # Notify this node that we are about to descend into a
+                    # child.
+                    if self.beforeChild is not None:
+                        tmp = self.beforeChild(node, child, child_idx)
+                        if tmp is None:
+                            descend = True
+                            child_result = None
+                        else:
+                            descend, child_result = tmp
+                        if not descend:
+                            # We are aborting processing of this child node.
+                            # Tell this node to accept the child result and
+                            # we will move along
+                            if self.acceptChildResult is not None:
+                                data = self.acceptChildResult(
+                                    node, data, child_result, child_idx)
+                            elif data is not None:
+                                data.append(child_result)
+                            # And let the node know that we are done with a
+                            # child node
+                            if self.afterChild is not None:
+                                self.afterChild(node, child, child_idx)
+                            # Jump to the top to continue processing the
+                            # next child node
+                            continue
+
+                    # Update the child argument counter in the stack.
+                    # Because we are using tuples, we need to recreate the
+                    # "ptr" object (linked list node)
+                    ptr = ptr[:4] + (data, child_idx,)
+
+                    # We are now going to actually enter this node.  The
+                    # node will tell us the list of its child nodes that we
+                    # need to process
+                    if self.enterNode is not None:
+                        tmp = self.enterNode(child)
+                        if tmp is None:
+                            args = data = None
+                        else:
+                            args, data = tmp
                     else:
-                        descend, child_result = tmp
-                    if not descend:
-                        # We are aborting processing of this child node.
-                        # Tell this node to accept the child result and
-                        # we will move along
-                        if self.acceptChildResult is not None:
-                            data = self.acceptChildResult(
-                                node, data, child_result)
-                        elif data is not None:
-                            data.append(child_result)
-                        # And let the node know that we are done with a
-                        # child node
-                        if self.afterChild is not None:
-                            self.afterChild(node, child)
-                        # Jump to the top to continue processing the
-                        # next child node
-                        continue
+                        args = None
+                        data = []
+                    if args is None:
+                        if type(child) in nonpyomo_leaf_types \
+                           or not child.is_expression_type():
+                            # Leaves (either non-pyomo types or
+                            # non-Expressions) have no child arguments, so
+                            # are just put on the stack
+                            args = ()
+                        else:
+                            args = child.args
+                    if hasattr(args, '__enter__'):
+                        args.__enter__()
+                    node = child
+                    child_idx = -1
+                    ptr = (ptr, node, args, len(args)-1, data, child_idx)
 
-                # Update the child argument counter in the stack.
-                # Because we are using tuples, we need to recreate the
-                # "ptr" object (linked list node)
-                ptr = ptr[:4] + (data, child_idx,)
-
-                # We are now going to actually enter this node.  The
-                # node will tell us the list of its child nodes that we
-                # need to process
-                if self.enterNode is not None:
-                    tmp = self.enterNode(child)
-                    if tmp is None:
-                        args = data = None
+                else: # child_idx == ptr[3]:
+                    # We are done with this node.  Call exitNode to compute
+                    # any result
+                    if hasattr(ptr[2], '__exit__'):
+                        ptr[2].__exit__(None, None, None)
+                    if self.exitNode is not None:
+                        node_result = self.exitNode(node, data)
                     else:
-                        args, data = tmp
-                else:
-                    args = None
-                    data = []
-                if args is None:
-                    if type(child) in nonpyomo_leaf_types \
-                       or not child.is_expression_type():
-                        # Leaves (either non-pyomo types or
-                        # non-Expressions) have no child arguments, so
-                        # are just put on the stack
-                        args = ()
-                    else:
-                        args = child.args
-                node = child
-                child_idx = 0
-                ptr = (ptr, node, args, len(args), data, child_idx)
+                        node_result = data
 
-            else:
-                # We are done with this node.  Call exitNode to compute
-                # any result
-                if self.exitNode is not None:
-                    node_result = self.exitNode(node, data)
-                else:
-                    node_result = data
+                    # Pop the node off the linked list
+                    ptr = ptr[0]
+                    # If we have returned to the beginning, return the final
+                    # answer
+                    if ptr is None:
+                        if self.finalizeResult is not None:
+                            return self.finalizeResult(node_result)
+                        else:
+                            return node_result
+                    # Not done yet, update node to point to the new active
+                    # node
+                    node, child = ptr[1], node
+                    data = ptr[4]
+                    child_idx = ptr[5]
 
-                # Pop the node off the linked list
+                    # We need to alert the node to accept the child's result:
+                    if self.acceptChildResult is not None:
+                        data = self.acceptChildResult(
+                            node, data, node_result, child_idx)
+                    elif data is not None:
+                        data.append(node_result)
+
+                    # And let the node know that we are done with a child node
+                    if self.afterChild is not None:
+                        self.afterChild(node, child, child_idx)
+
+        finally:
+            while ptr is not None:
+                if hasattr(ptr[2], '__exit__'):
+                        ptr[2].__exit__(None, None, None)
                 ptr = ptr[0]
-                # If we have returned to the beginning, return the final
-                # answer
-                if ptr is None:
-                    if self.finalizeResult is not None:
-                        return self.finalizeResult(node_result)
-                    else:
-                        return node_result
-                # Not done yet, update node to point to the new active
-                # node
-                node, child = ptr[1], node
-                data = ptr[4]
-                child_idx = ptr[5]
-
-                # We need to alert the node to accept the child's result:
-                if self.acceptChildResult is not None:
-                    data = self.acceptChildResult(node, data, node_result)
-                elif data is not None:
-                    data.append(node_result)
-
-                # And let the node know that we are done with a child node
-                if self.afterChild is not None:
-                    self.afterChild(node, child)
-
 
 class SimpleExpressionVisitor(object):
 
@@ -870,7 +902,7 @@ def sizeof_expression(expr):
     """
     def enter(node):
         return None, 1
-    def accept(node, data, child_result):
+    def accept(node, data, child_result, child_idx):
         return data + child_result
     return StreamBasedExpressionVisitor(
         enterNode=enter,
@@ -893,25 +925,26 @@ class _EvaluationVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-
         if node.__class__ in nonpyomo_leaf_types:
             return True, node
 
         if isinstance(node, LogicalValue):
+            # [QC 2020-06-03]: I need to revisit what is going on here.
             if node.is_variable_type():
                 return True, value(node)
             if not node.is_expression_type():
                 return True, value(node)
             return False, None
 
-        if node.is_variable_type():
+        if node.is_expression_type():
+            return False, None
+
+        if node.is_numeric_type():
             return True, value(node)
+        else:
+            return True, node
 
-        if not node.is_expression_type():
-            return True, value(node) 
-            #This line is where the error occurs if I skip assigning values
 
-        return False, None
 
 
 class FixedExpressionError(Exception):
@@ -941,22 +974,33 @@ class _EvaluateConstantExpressionVisitor(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             return True, node
 
-        if node.is_parameter_type():
-            if node._component()._mutable:
-                raise FixedExpressionError()
-            return True, value(node)
+        if node.is_expression_type():
+            return False, None
 
+        if node.is_numeric_type():
+            # Get the object value.  This will also cause templates to
+            # raise TemplateExpressionErrors
+            try:
+                val = value(node)
+            except TemplateExpressionError:
+                raise
+            except:
+                # Uninitialized Var/Param objects should be given the
+                # opportunity to map the error to a NonConstant / Fixed
+                # expression error
+                if not node.is_fixed():
+                    raise NonConstantExpressionError()
+                if not node.is_constant():
+                    raise FixedExpressionError()
+                raise
 
-        if node.is_variable_type():
-            if node.fixed:
-                raise FixedExpressionError()
-            else:
+            if not node.is_fixed():
                 raise NonConstantExpressionError()
+            if not node.is_constant():
+                raise FixedExpressionError()
+            return True, val
 
-        if not node.is_expression_type():
-            return True, value(node)
-
-        return False, None
+        return True, node
 
 
 def evaluate_expression(exp, exception=True, constant=False):
@@ -988,29 +1032,18 @@ def evaluate_expression(exp, exception=True, constant=False):
     try:
         return visitor.dfs_postorder_stack(exp)
 
-    except NonConstantExpressionError:  #pragma: no cover
-        if exception:
-            raise
-        return None
-
-    except FixedExpressionError:        #pragma: no cover
-        if exception:
-            raise
-        return None
-
-    except TemplateExpressionError:     #pragma: no cover
-        if exception:
-            raise
-        return None
-
-    except ValueError:
-        if exception:
-            raise
-        return None
-
-    except TypeError:
-        # This can be raised in Python3 when evaluating a operation
-        # returns a complex number (e.g., sqrt(-1))
+    except ( TemplateExpressionError, ValueError, TypeError,
+             NonConstantExpressionError, FixedExpressionError ):
+        # Errors that we want to be able to suppress:
+        #
+        #   TemplateExpressionError: raised when generating expression
+        #      templates
+        #   FixedExpressionError, NonConstantExpressionError: raised
+        #      when processing expressions that are expected to be fixed
+        #      (e.g., indices)
+        #   ValueError: "standard" expression value errors
+        #   TypeError: This can be raised in Python3 when evaluating a
+        #      operation returns a complex number (e.g., sqrt(-1))
         if exception:
             raise
         return None
@@ -1179,13 +1212,16 @@ class _PolynomialDegreeVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in nonpyomo_leaf_types or not node.is_potentially_variable():
+        if node.__class__ in nonpyomo_leaf_types:
             return True, 0
 
-        if not node.is_expression_type():
-            return True, 0 if node.is_fixed() else 1
+        if node.is_expression_type():
+            return False, None
 
-        return False, None
+        if node.is_numeric_type():
+            return True, 0 if node.is_fixed() else 1
+        else:
+            return True, node
 
 
 def polynomial_degree(node):
@@ -1224,13 +1260,16 @@ class _IsFixedVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node.__class__ in nonpyomo_leaf_types or not node.is_potentially_variable():
+        if node.__class__ in nonpyomo_leaf_types:
             return True, True
 
-        elif not node.is_expression_type():
+        elif node.is_expression_type():
+            return False, None
+
+        elif node.is_numeric_type():
             return True, node.is_fixed()
 
-        return False, None
+        return True, node
 
 
 def _expression_is_fixed(node):
@@ -1303,15 +1342,18 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             return True, str(node)
 
+        if node.is_expression_type():
+            return False, None
+
         if node.is_variable_type():
             if not node.fixed:
                 return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=False)
             return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
 
-        if not node.is_expression_type():
+        if hasattr(node, 'to_string'):
             return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
-
-        return False, None
+        else:
+            return True, str(node)
 
 
 def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False):

@@ -55,7 +55,7 @@ from pyomo.core.expr.current import Expr_if
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
-from pyomo.core.base.template_expr import IndexTemplate
+from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 
@@ -730,7 +730,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         self.assertEqual(ans, ref)
 
     def test_beforeChild(self):
-        def before(node, child):
+        def before(node, child, child_idx):
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
                 return False, [child]
@@ -755,7 +755,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
     def test_reduce_in_accept(self):
         def enter(node):
             return None, 1
-        def accept(node, data, child_result):
+        def accept(node, data, child_result, child_idx):
             return data + child_result
         walker = StreamBasedExpressionVisitor(
             enterNode=enter, acceptChildResult=accept)
@@ -879,14 +879,14 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
 
     def test_beforeChild_acceptChildResult_afterChild(self):
         counts = [0,0,0]
-        def before(node, child):
+        def before(node, child, child_idx):
             counts[0] += 1
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
                 return False, None
-        def accept(node, data, child_result):
+        def accept(node, data, child_result, child_idx):
             counts[1] += 1
-        def after(node, child):
+        def after(node, child, child_idx):
             counts[2] += 1
         walker = StreamBasedExpressionVisitor(
             beforeChild=before, acceptChildResult=accept, afterChild=after)
@@ -897,11 +897,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
 
     def test_enterNode_acceptChildResult_beforeChild(self):
         ans = []
-        def before(node, child):
+        def before(node, child, child_idx):
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
                 return False, child
-        def accept(node, data, child_result):
+        def accept(node, data, child_result, child_idx):
             if data is not child_result:
                 data.append(child_result)
             return data
@@ -916,11 +916,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
 
     def test_finalize(self):
         ans = []
-        def before(node, child):
+        def before(node, child, child_idx):
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
                 return False, child
-        def accept(node, data, child_result):
+        def accept(node, data, child_result, child_idx):
             if data is not child_result:
                 data.append(child_result)
             return data
@@ -945,11 +945,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             ans.append("Enter %s" % (name(node)))
         def exit(node, data):
             ans.append("Exit %s" % (name(node)))
-        def before(node, child):
+        def before(node, child, child_idx):
             ans.append("Before %s (from %s)" % (name(child), name(node)))
-        def accept(node, data, child_result):
+        def accept(node, data, child_result, child_idx):
             ans.append("Accept into %s" % (name(node)))
-        def after(node, child):
+        def after(node, child, child_idx):
             ans.append("After %s (from %s)" % (name(child), name(node)))
         def finalize(result):
             ans.append("Finalize")
@@ -1020,12 +1020,12 @@ Finalize""")
                 self.ans.append("Enter %s" % (name(node)))
             def exitNode(self, node, data):
                 self.ans.append("Exit %s" % (name(node)))
-            def beforeChild(self, node, child):
+            def beforeChild(self, node, child, child_idx):
                 self.ans.append("Before %s (from %s)"
                                 % (name(child), name(node)))
-            def acceptChildResult(self, node, data, child_result):
+            def acceptChildResult(self, node, data, child_result, child_idx):
                 self.ans.append("Accept into %s" % (name(node)))
-            def afterChild(self, node, child):
+            def afterChild(self, node, child, child_idx):
                 self.ans.append("After %s (from %s)"
                                 % (name(child), name(node)))
             def finalizeResult(self, result):

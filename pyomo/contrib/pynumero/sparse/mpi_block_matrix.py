@@ -271,11 +271,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         n = self.bshape[1]
         assert_block_structure(self)
         result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw)
-
-        rows, columns = np.nonzero(self.ownership_mask)
-        for i, j in zip(rows, columns):
-            if self.get_block(i, j) is not None:
-                result.set_block(j, i, self.get_block(i, j).transpose(copy=True))
+        result._block_matrix = self._block_matrix.transpose()
         return result
 
     def tocoo(self):
@@ -335,6 +331,27 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         raise RuntimeError('Operation not supported by MPIBlockMatrix')
+
+    def to_local_array(self):
+        """
+        This method is only for testing/debugging
+
+        Returns
+        -------
+        result: np.ndarray
+        """
+        local_result = self._block_matrix.copy_structure()
+        rank = self._mpiw.Get_rank()
+        block_indices = self._unique_owned_mask if rank != 0 else self._owned_mask
+
+        ii, jj = np.nonzero(block_indices)
+        for i, j in zip(ii, jj):
+            if not self._block_matrix.is_empty_block(i, j):
+                local_result.set_block(i, j, self.get_block(i, j))
+        local_result = local_result.toarray()
+        global_result = np.zeros(shape=local_result.shape, dtype=local_result.dtype)
+        self._mpiw.Allreduce(local_result, global_result)
+        return global_result
 
     def is_empty_block(self, idx, jdx):
         """
@@ -770,7 +787,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         for row_ndx, col_ndx in zip(*np.nonzero(block_indices)):
             if self.get_block(row_ndx, col_ndx) is not None:
                 res_blk = local_result.get_block(row_ndx)
-                res_blk += self.get_block(row_ndx, col_ndx) * other.get_block(col_ndx)
+                _tmp = self.get_block(row_ndx, col_ndx) * other.get_block(col_ndx)
+                res_blk = _tmp + res_blk
                 local_result.set_block(row_ndx, res_blk)
         flat_local = local_result.flatten()
         flat_global = np.zeros(flat_local.size)

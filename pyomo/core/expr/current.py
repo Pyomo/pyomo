@@ -44,6 +44,7 @@ if _mode == Mode.pyomo5_trees:
         _generate_relational_expression,
         _chainedInequality,
     )
+    from pyomo.core.expr.template_expr import *
     from pyomo.core.expr import visitor as _visitor
     from pyomo.core.expr.visitor import *
     # FIXME: we shouldn't need circular dependencies between modules
