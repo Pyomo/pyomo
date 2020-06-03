@@ -8,13 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import numpy as np
 import pandas as pd
-from itertools import product
 import pyomo.contrib.parmest.parmest as parmest
 from rooney_biegler import rooney_biegler_model
-
-### Parameter estimation
 
 # Vars to estimate
 theta_names = ['asymptote', 'rate_constant']
