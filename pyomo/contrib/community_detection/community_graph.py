@@ -48,63 +48,8 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
     constraint_variable_map = {}
     string_map = {}
 
-    # Variable nodes
-    if node_type == 'v':
-        # Create nodes based on variables in the Pyomo model
-        for model_variable in model.component_data_objects(Var, descend_into=True):
-            model_graph.add_node(str(model_variable))
-            string_map[str(model_variable)] = model_variable
-
-        # Loop through all constraints in the Pyomo model
-        for model_constraint in model.component_data_objects(Constraint, descend_into=True):
-            # Create a set of the variables that occur in the given constraint equation
-            variables_in_constraint_equation = ComponentSet(identify_variables(model_constraint.body))
-
-            constraint_variable_map[str(model_constraint)] = [str(variable) for variable in
-                                                              variables_in_constraint_equation]
-            string_map[str(model_constraint)] = model_constraint
-
-            # Create a list of all the edges that need to be created based on this constraint equation
-            edges_between_nodes = list(combinations(variables_in_constraint_equation, 2))
-
-            # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
-            if weighted_graph:
-                new_edge_weights = {tuple([str(edge[0]), str(edge[1])]):
-                                        edge_weight_dict.get(tuple([str(edge[0]), str(edge[1])]), 0) + 1
-                                    for edge in edges_between_nodes}
-                edge_weight_dict.update(new_edge_weights)
-            else:
-                new_edges = {tuple([str(edge[0]), str(edge[1])]) for edge in edges_between_nodes}
-                edge_set.update(new_edges)
-
-        # This if statement will be executed if the user chooses to treat the objective function as a constraint in
-        # this model graph
-        if with_objective:
-            # Use a for loop to account for the possibility of multiple objective functions
-            for objective_function in model.component_data_objects(Objective, descend_into=True):
-
-                # Create a list of the variables that occur in the given objective function
-                variables_in_objective_function = ComponentSet(identify_variables(objective_function))
-
-                constraint_variable_map[str(objective_function)] = [str(variable) for variable in
-                                                                    variables_in_objective_function]
-                string_map[str(objective_function)] = objective_function
-
-                # Create a list of all the edges that need to be created based on the variables in the objective
-                edges_between_nodes = list(combinations(variables_in_objective_function, 2))
-
-                # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
-                if weighted_graph:
-                    new_edge_weights = {tuple([str(edge[0]), str(edge[1])]):
-                                            edge_weight_dict.get(tuple([str(edge[0]), str(edge[1])]), 0) + 1
-                                        for edge in edges_between_nodes}
-                    edge_weight_dict.update(new_edge_weights)
-                else:
-                    new_edges = {tuple([str(edge[0]), str(edge[1])]) for edge in edges_between_nodes}
-                    edge_set.update(new_edges)
-
     # Constraint nodes
-    elif node_type == 'c':
+    if node_type == 'c':
         # Create nodes based on constraints in the Pyomo model
         for model_constraint in model.component_data_objects(Constraint, descend_into=True):
             model_graph.add_node(str(model_constraint))
@@ -168,6 +113,65 @@ def _generate_model_graph(model, node_type='v', with_objective=True, weighted_gr
             else:
                 new_edges = {tuple([str(edge[0]), str(edge[1])]) for edge in edges_between_nodes}
                 edge_set.update(new_edges)
+
+    # Variable nodes
+    elif node_type == 'v':
+        # Create nodes based on variables in the Pyomo model
+        for model_variable in model.component_data_objects(Var, descend_into=True):
+            model_graph.add_node(str(model_variable))
+            string_map[str(model_variable)] = model_variable
+
+        # Loop through all constraints in the Pyomo model
+        for model_constraint in model.component_data_objects(Constraint, descend_into=True):
+            # Create a set of the variables that occur in the given constraint equation
+            variables_in_constraint_equation = ComponentSet(identify_variables(model_constraint.body))
+
+            constraint_variable_map[str(model_constraint)] = [str(variable) for variable in
+                                                              variables_in_constraint_equation]
+            string_map[str(model_constraint)] = model_constraint
+
+            # Create a list of all the edges that need to be created based on this constraint equation
+            edges_between_nodes = list(combinations(variables_in_constraint_equation, 2))
+
+            # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
+            if weighted_graph:
+                new_edge_weights = {tuple([str(edge[0]), str(edge[1])]):
+                                        edge_weight_dict.get(tuple([str(edge[0]), str(edge[1])]), 0) + 1
+                                    for edge in edges_between_nodes}
+                edge_weight_dict.update(new_edge_weights)
+            else:
+                new_edges = {tuple([str(edge[0]), str(edge[1])]) for edge in edges_between_nodes}
+                edge_set.update(new_edges)
+
+        # This if statement will be executed if the user chooses to treat the objective function as a constraint in
+        # this model graph
+        if with_objective:
+            # Use a for loop to account for the possibility of multiple objective functions
+            for objective_function in model.component_data_objects(Objective, descend_into=True):
+
+                # Create a list of the variables that occur in the given objective function
+                variables_in_objective_function = ComponentSet(identify_variables(objective_function))
+
+                constraint_variable_map[str(objective_function)] = [str(variable) for variable in
+                                                                    variables_in_objective_function]
+                string_map[str(objective_function)] = objective_function
+
+                # Create a list of all the edges that need to be created based on the variables in the objective
+                edges_between_nodes = list(combinations(variables_in_objective_function, 2))
+
+                # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
+                if weighted_graph:
+                    new_edge_weights = {tuple([str(edge[0]), str(edge[1])]):
+                                            edge_weight_dict.get(tuple([str(edge[0]), str(edge[1])]), 0) + 1
+                                        for edge in edges_between_nodes}
+                    edge_weight_dict.update(new_edge_weights)
+                else:
+                    new_edges = {tuple([str(edge[0]), str(edge[1])]) for edge in edges_between_nodes}
+                    edge_set.update(new_edges)
+
+    # Bipartite graph - both variable and constraint nodes
+    elif node_type == 'b':
+        pass
 
     # Now, using edge_weight_dict or edge_set (based on whether the user wants a weighted or unweighted graph,
     # respectively), the networkX graph (model_graph) will be updated with all of the edges determined above

@@ -85,8 +85,8 @@ class TestDecomposition(unittest.TestCase):
         test_results = collect_test_results(model)
 
         correct_community_maps = (
-        {0: ([m.x], []), 1: ([m.y], [])}, {0: ([m.x], []), 1: ([m.y], [])}, {0: ([m.x, m.y], [m.o])},
-        {0: ([m.x, m.y], [m.o])}, {}, {}, {0: ([m.o], [m.x, m.y])}, {0: ([m.o], [m.x, m.y])})
+            {0: ([m.x], []), 1: ([m.y], [])}, {0: ([m.x], []), 1: ([m.y], [])}, {0: ([m.x, m.y], [m.o])},
+            {0: ([m.x, m.y], [m.o])}, {}, {}, {0: ([m.o], [m.x, m.y])}, {0: ([m.o], [m.x, m.y])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -129,20 +129,23 @@ class TestDecomposition(unittest.TestCase):
 
         test_results = collect_test_results(model, with_string_tests=True)
 
-
         correct_community_maps = (
-        {0: ([m.x1, m.x2], [m.c1]), 1: ([m.x3, m.x4], [m.c2])}, {0: ([m.x1, m.x2], [m.c1]), 1: ([m.x3, m.x4], [m.c2])},
-        {0: ([m.x1, m.x2], [m.c1, m.obj]), 1: ([m.x3, m.x4], [m.c2])},
-        {0: ([m.x1, m.x2], [m.c1, m.obj]), 1: ([m.x3, m.x4], [m.c2])},
-        {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])}, {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-        {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-        {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-        {0: (['x1', 'x2'], ['c1']), 1: (['x3', 'x4'], ['c2'])}, {0: (['x1', 'x2'], ['c1']), 1: (['x3', 'x4'], ['c2'])},
-        {0: (['x1', 'x2'], ['c1', 'obj']), 1: (['x3', 'x4'], ['c2'])},
-        {0: (['x1', 'x2'], ['c1', 'obj']), 1: (['x3', 'x4'], ['c2'])},
-        {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])}, {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-        {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-        {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])})
+            {0: ([m.x1, m.x2], [m.c1]), 1: ([m.x3, m.x4], [m.c2])},
+            {0: ([m.x1, m.x2], [m.c1]), 1: ([m.x3, m.x4], [m.c2])},
+            {0: ([m.x1, m.x2], [m.c1, m.obj]), 1: ([m.x3, m.x4], [m.c2])},
+            {0: ([m.x1, m.x2], [m.c1, m.obj]), 1: ([m.x3, m.x4], [m.c2])},
+            {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+            {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+            {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+            {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+            {0: (['x1', 'x2'], ['c1']), 1: (['x3', 'x4'], ['c2'])},
+            {0: (['x1', 'x2'], ['c1']), 1: (['x3', 'x4'], ['c2'])},
+            {0: (['x1', 'x2'], ['c1', 'obj']), 1: (['x3', 'x4'], ['c2'])},
+            {0: (['x1', 'x2'], ['c1', 'obj']), 1: (['x3', 'x4'], ['c2'])},
+            {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+            {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+            {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+            {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])})
 
         self.assertEqual(correct_community_maps, test_results)
 
