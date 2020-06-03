@@ -29,12 +29,30 @@ class Test(unittest.TestCase):
         self.assertTrue(re.search('\n   \*asl ', OUT))
         # PS is bundles with Pyomo so should always be available
         self.assertTrue(re.search('\n   \+ps ', OUT))
-        for solver in ('ipopt','baron','cbc','glpk'):
+        for solver in ('ipopt','cbc','glpk'):
             s = SolverFactory(solver)
             if s.available():
-                self.assertTrue(re.search("\n   \+%s " % solver, OUT))
+                self.assertTrue(
+                    re.search("\n   \+%s " % solver, OUT),
+                    "'   +%s' not found in help --solvers" % solver)
             else:
-                self.assertTrue(re.search("\n    %s " % solver, OUT))
+                self.assertTrue(
+                    re.search("\n    %s " % solver, OUT),
+                    "'    %s' not found in help --solvers" % solver)
+        for solver in ('baron',):
+            s = SolverFactory(solver)
+            if s.license_is_valid():
+                self.assertTrue(
+                    re.search("\n   \+%s " % solver, OUT),
+                    "'   +%s' not found in help --solvers" % solver)
+            elif s.available():
+                self.assertTrue(
+                    re.search("\n   \-%s " % solver, OUT),
+                    "'   +%s' not found in help --solvers" % solver)
+            else:
+                self.assertTrue(
+                    re.search("\n    %s " % solver, OUT),
+                    "'    %s' not found in help --solvers" % solver)
 
     def test_help_transformations(self):
         with capture_output() as OUT:
