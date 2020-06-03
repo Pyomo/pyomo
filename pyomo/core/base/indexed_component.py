@@ -14,7 +14,7 @@ import pyutilib.misc
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types
-from pyomo.core.base.indexed_component_slice import _IndexedComponent_slice
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
@@ -375,7 +375,7 @@ You can silence this warning by one of three ways:
                 index = TypeError
             if index is TypeError:
                 raise
-            if index.__class__ is _IndexedComponent_slice:
+            if index.__class__ is IndexedComponent_slice:
                 return index
             # The index could have contained constant but nonhashable
             # objects (e.g., scalar immutable Params).
@@ -401,7 +401,7 @@ You can silence this warning by one of three ways:
                 # _processUnhashableIndex could have found a slice, or
                 # _validate could have found an Ellipsis and returned a
                 # slicer
-                if index.__class__ is _IndexedComponent_slice:
+                if index.__class__ is IndexedComponent_slice:
                     return index
                 obj = self._data.get(index, _NotFound)
             #
@@ -438,7 +438,7 @@ You can silence this warning by one of three ways:
             # If we didn't find the index in the data, then we need to
             # validate it against the underlying set (as long as
             # _processUnhashableIndex didn't return a slicer)
-            if index.__class__ is not _IndexedComponent_slice:
+            if index.__class__ is not IndexedComponent_slice:
                 index = self._validate_index(index)
         else:
             return self._setitem_impl(index, obj, val)
@@ -447,10 +447,10 @@ You can silence this warning by one of three ways:
         # dictionary and set the value
         #
         # Note that we need to RECHECK the class against
-        # _IndexedComponent_slice, as _validate_index could have found
+        # IndexedComponent_slice, as _validate_index could have found
         # an Ellipsis (which is hashable) and returned a slicer
         #
-        if index.__class__ is _IndexedComponent_slice:
+        if index.__class__ is IndexedComponent_slice:
             # support "m.x[:,1] = 5" through a simple recursive call.
             #
             # Assert that this slice was just generated
@@ -480,11 +480,11 @@ You can silence this warning by one of three ways:
             index = self._processUnhashableIndex(index)
 
         if obj is _NotFound:
-            if index.__class__ is not _IndexedComponent_slice:
+            if index.__class__ is not IndexedComponent_slice:
                 index = self._validate_index(index)
 
         # this supports "del m.x[:,1]" through a simple recursive call
-        if index.__class__ is _IndexedComponent_slice:
+        if index.__class__ is IndexedComponent_slice:
             # Assert that this slice ws just generated
             assert len(index._call_stack) == 1
             # Make a copy of the slicer items *before* we start
@@ -525,7 +525,7 @@ You can silence this warning by one of three ways:
             # indexing set is a complex set operation)!
             return validated_idx
 
-        if idx.__class__ is _IndexedComponent_slice:
+        if idx.__class__ is IndexedComponent_slice:
             return idx
 
         if normalize_index.flatten:
@@ -627,7 +627,7 @@ You can silence this warning by one of three ways:
                     # templatized expression.
                     #
                     from pyomo.core.expr import current as EXPR
-                    return EXPR.GetItemExpression(tuple(idx), self)
+                    return EXPR.GetItemExpression((self,) + tuple(idx))
 
                 except EXPR.NonConstantExpressionError:
                     #
@@ -666,7 +666,7 @@ value() function.""" % ( self.name, i ))
                 fixed[i - len(idx)] = val
 
         if sliced or ellipsis is not None:
-            return _IndexedComponent_slice(self, fixed, sliced, ellipsis)
+            return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:
             if len(idx) == 1:
                 return fixed[0]

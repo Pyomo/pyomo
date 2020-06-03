@@ -148,17 +148,9 @@ class _VarData(ComponentData, NumericValue):
         """Returns False because this is not a constant in an expression."""
         return False
 
-    def is_parameter_type(self):
-        """Returns False because this is not a parameter object."""
-        return False
-
     def is_variable_type(self):
         """Returns True because this is a variable."""
         return True
-
-    def is_expression_type(self):
-        """Returns False because this is not an expression"""
-        return False
 
     def is_potentially_variable(self):
         """Returns True because this is a variable."""
@@ -560,10 +552,6 @@ class Var(IndexedComponent):
             self._bounds_init_value = bounds
         elif bounds is not None:
             raise ValueError("Variable 'bounds' keyword must be a tuple or function")
-
-    def is_expression_type(self):
-        """Returns False because this is not an expression"""
-        return False
 
     def flag_as_stale(self):
         """
