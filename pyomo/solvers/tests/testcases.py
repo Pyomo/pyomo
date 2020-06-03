@@ -33,9 +33,14 @@ ExpectedFailures = {}
 # solver. The solver is expected to run successfully, but will not
 # return suffix information. If they return suffix information, that
 # means the solver has been fixed and that particular case should no
-# longer exist in the list of expected failures
+# longer exist in the list of expected failures.  This dict has (solver,
+# io, test) tuples as keys and values that are either a dict mapping
+# suffix to "(bool(enforce), set(object_names))" or a list of suffix
+# names (in which case enforcing is set to True and the set is empty,
+# indicating ALL objects).  If enforcing is True the test will fail if
+# the missing suffix was found.  Set enforcing to false for tests where
+# the solver is inconsistent in returning duals.
 MissingSuffixFailures = {}
-
 
 #
 # MOSEK
@@ -58,27 +63,27 @@ ExpectedFailures['mosek', 'python', 'MIQCP_simple'] = \
 
 MissingSuffixFailures['cplex', 'lp', 'QCP_simple'] = (
     lambda v: v <= _trunk_version,
-    {'dual': {'qc0','qc1'}},
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
 MissingSuffixFailures['cplex', 'mps', 'QCP_simple'] = (
     lambda v: v <= _trunk_version,
-    {'dual': {'qc0','qc1'}},
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
 MissingSuffixFailures['cplex', 'python', 'QCP_simple'] = (
     lambda v: v <= _trunk_version,
-    {'dual': {'qc0','qc1'}},
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
 MissingSuffixFailures['cplex_persistent', 'python', 'QCP_simple'] = (
     lambda v: v <= _trunk_version,
-    {'dual': {'qc0','qc1'}},
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
 MissingSuffixFailures['cplex', 'nl', 'QCP_simple'] = (
     lambda v: v <= (12,5,9,9),
-    {'dual': {'qc0','qc1'}},
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
 #
@@ -278,11 +283,13 @@ MissingSuffixFailures['baron', 'bar', 'LP_piecewise'] = (
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
+# Marking this test suffixes as fragile: Baron 20.4.14 will
+# intermittently return suffixes.
 MissingSuffixFailures['baron', 'bar', 'QP_simple'] = (
     lambda v: v <= (15,2,0,0) or v > (18,11,15),
-    ['dual', 'rc'],
-    "Baron will not return dual solution when a solution is "
-    "found during preprocessing.")
+    {'dual': (False, {}), 'rc': (False, {})},
+    "Baron will intermittently return dual solution when "
+    "a solution is found during preprocessing.")
 
 # Known to fail through 17.4.1, but was resolved by 18.5.9
 MissingSuffixFailures['baron', 'bar', 'QCP_simple'] = (
@@ -381,7 +388,7 @@ def test_scenarios(arg=None):
                         exclude_suffixes.update(case[1])
                     else:
                         for x in case[1]:
-                            exclude_suffixes[x] = {}
+                            exclude_suffixes[x] = (True, {})
                     msg=case[2]
 
             # Return scenario dimensions and scenario information
