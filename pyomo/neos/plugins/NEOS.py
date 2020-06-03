@@ -13,9 +13,8 @@ import logging
 import pyutilib.misc
 import pyutilib.services
 
-from pyomo.opt.base import *
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.opt.base import SolverFactory, ProblemFormat, ResultsFormat
+from pyomo.opt.solver import SystemCallSolver
 
 logger = logging.getLogger('pyomo.neos')
 
