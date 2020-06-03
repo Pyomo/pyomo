@@ -234,7 +234,48 @@ these changes to the master branch on your fork,
 ::
 
    git push my-fork master
+
+
+Setting up your development environment
++++++++++++++++++++++++++++++++++++++++
+
+After cloning your fork, you will want to install Pyomo from source.
+
+Step 1 (recommended): Create a new conda environment.
+
+::
+
+   conda create --name pyomodev
+
+You may change the environment name from ``pyomodev`` as you see fit. Then activate the environment:
+
+::
    
+   conda activate pyomodev
+
+Step 2: Install PyUtilib
+
+You will likely need the master branch of PyUtilib to contribute to Pyomo. Clone a copy of the repository in a new directory:
+
+::
+
+   git clone https://github.com/PyUtilib/pyutilib
+
+Then in the directory containing the clone of PyUtilib run:
+
+::
+
+   python setup.py develop
+   
+Step 3: Install Pyomo
+
+Finally, move to the directory containing the clone of your Pyomo fork and run:
+
+::
+
+  python setup.py develop
+
+These commands register the cloned code with the active python environment (``pyomodev``). This way, your changes to the source code for ``pyomo`` and ``pyutilib`` are automatically used by the active environment. You can create another conda environment to switch to alternate versions of pyomo (e.g., stable).
 
 Review Process
 --------------
