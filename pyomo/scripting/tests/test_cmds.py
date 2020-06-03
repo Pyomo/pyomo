@@ -26,15 +26,15 @@ class Test(unittest.TestCase):
         self.assertTrue(re.search('Serial Solver', OUT))
         # Test known solvers and metasolver flags
         # ASL is a metasolver
-        self.assertTrue(re.search('asl +\+', OUT))
+        self.assertTrue(re.search('\n   \*asl ', OUT))
         # PS is bundles with Pyomo so should always be available
-        self.assertTrue(re.search('ps +\*', OUT))
+        self.assertTrue(re.search('\n   \+ps ', OUT))
         for solver in ('ipopt','baron','cbc','glpk'):
             s = SolverFactory(solver)
             if s.available():
-                self.assertTrue(re.search("%s +\* [a-zA-Z]" % solver, OUT))
+                self.assertTrue(re.search("\n   \+%s " % solver, OUT))
             else:
-                self.assertTrue(re.search("%s +[a-zA-Z]" % solver, OUT))
+                self.assertTrue(re.search("\n    %s " % solver, OUT))
 
     def test_help_transformations(self):
         with capture_output() as OUT:
