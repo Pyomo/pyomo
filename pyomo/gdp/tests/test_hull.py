@@ -1908,7 +1908,7 @@ class NameDeprecationTest(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.gdp', logging.WARNING):
             TransformationFactory('gdp.chull').apply_to(m)
-        self.assertIn("DEPRECATED: The 'gdp.hull' name is deprecated. "
+        self.assertIn("DEPRECATED: The 'gdp.chull' name is deprecated. "
                       "Please use the more apt 'gdp.hull' instead.",
                       output.getvalue().replace('\n', ' '))
 

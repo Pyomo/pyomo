@@ -84,7 +84,7 @@ class BigM_Transformation(Transformation):
     Specifying "bigM=N" is automatically mapped to "bigM={None: N}".
 
     The transformation will create a new Block with a unique
-    name beginning "_pyomo_gdp_bigm_relaxation".  That Block will
+    name beginning "_pyomo_gdp_bigm_reformulation".  That Block will
     contain an indexed Block named "relaxedDisjuncts", which will hold
     the relaxed disjuncts.  This block is indexed by an integer
     indicating the order in which the disjuncts were relaxed.
@@ -292,7 +292,7 @@ class BigM_Transformation(Transformation):
         # on
         transBlockName = unique_component_name(
             instance,
-            '_pyomo_gdp_bigm_relaxation')
+            '_pyomo_gdp_bigm_reformulation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
