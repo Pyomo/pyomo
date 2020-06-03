@@ -19,7 +19,7 @@ import networkx as nx
 logger = getLogger('pyomo.contrib.community_detection')
 
 # Attempt import of louvain community detection package
-community, community_available = attempt_import(
+community_louvain, community_louvain_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
 
@@ -37,21 +37,22 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     model: Block
          a Pyomo model or block to be used for community detection
     node_type: str, optional
-        A string that specifies the dictionary to be returned.
+        A string that specifies the dictionary to be returned, the default is 'c'.
         'c' returns a dictionary with communities based on constraint nodes,
         'v' returns a dictionary with communities based on variable nodes,
-        'b' returns a dictionary with communities based on constraint and variable nodes.
+        'b' returns a dictionary with communities based on constraint and variable nodes (bipartite graph).
     with_objective: bool, optional
         a Boolean argument that specifies whether or not the objective function will be
-        treated as a node/constraint (depending on what node_type is specified as (see prior argument))
+        included as a node/constraint (depending on what node_type is specified as (see prior argument)), the default
+        is True
     weighted_graph: bool, optional
         a Boolean argument that specifies whether a weighted or unweighted graph is to be
-        created from the Pyomo model
+        created from the Pyomo model (the default is True)
     random_seed: int, optional
-        Specify the integer to use the random seed for the heuristic Louvain community detection
+        An integer that is used as the random seed for the heuristic Louvain community detection
     string_output: bool, optional
-        a Boolean argument that specifies whether the community map that is returned is comprised of the strings
-        of the nodes or if it contains the actual objects themselves (Pyomo variables/constraints)
+        a Boolean argument that specifies whether the community map that is returned contains communities of the
+        strings of the nodes or if it contains the actual Pyomo modeling components (the default is False)
 
     Returns
     -------
@@ -80,22 +81,30 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
                                         "must be a Boolean" % string_output
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
+    # string_map maps the string of Pyomo modeling components to the actual components themselves
+    # constraint_variable_map maps a constraint to the variables it contains
     model_graph, string_map, constraint_variable_map = _generate_model_graph(
         model, node_type=node_type, with_objective=with_objective,
         weighted_graph=weighted_graph)
 
-    # Use Louvain community detection to determine which community each node belongs to
-    partition_of_graph = community.best_partition(model_graph, random_state=random_seed)
+    # Use Louvain community detection - this returns a dictionary mapping individual nodes to their communities
+    partition_of_graph = community_louvain.best_partition(model_graph, random_state=random_seed)
 
-    # Use partition_of_graph to create a dictionary that maps communities to nodes (because Louvain community detection
-    # returns a dictionary that maps individual nodes to their communities)
+    # Now, use partition_of_graph to create a dictionary (str_community_map) that maps communities to their nodes
     number_of_communities = len(set(partition_of_graph.values()))
     str_community_map = {nth_community: [] for nth_community in range(number_of_communities)}
     for node in partition_of_graph:
         nth_community = partition_of_graph[node]
         str_community_map[nth_community].append(node)
 
-    # Node type 'c'
+    # At this point, we have str_community_map, which maps an integer (the community number) to a list of the strings
+    # of the Pyomo modeling components in each community
+
+    # Now, we want to include another list (so that each key in str_community_map corresponds to a tuple of two lists),
+    # which wil be determined based on the node_type given by the user
+
+    # Constraint node type - for a given community, we want to create a second list that contains all of the variables
+    # contained in the given constraints
     if node_type == 'c':
         for community_key in str_community_map:
             main_list = str_community_map[community_key]
@@ -105,7 +114,8 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
             variable_list = sorted(set(variable_list))
             str_community_map[community_key] = (main_list, variable_list)
 
-    # Node type 'v'
+    # Variable node type - for a given community, we want to create a second list that contains all of the constraints
+    # that the variables appear in
     elif node_type == 'v':
         for community_key in str_community_map:
             main_list = str_community_map[community_key]
@@ -116,6 +126,8 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
             constraint_list = sorted(set(constraint_list))
             str_community_map[community_key] = (main_list, constraint_list)
 
+    # Both variable and constraint nodes (bipartite graph) - for a given community, we simply want to separate the
+    # nodes into their two groups; thus, we create a list of constraints and a list of variables
     elif node_type == 'b':
         for community_key in str_community_map:
             constraint_node_list, variable_node_list = [], []
@@ -136,11 +148,16 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
         logger.warning("Community detection found that with the given parameters, the model could not be decomposed - "
                        "only one community was found")
 
+    # If the user desires an easy-to-read output, setting string_output to True will return the str_community_map
+    # that we have right now
     if string_output:
         return str_community_map
 
-    # Convert str_community_map into a dictionary of the actual variables/constraints so that it can be iterated over
-    # if desired
+    # If string_output is not set to True, then we will go ahead and convert the strings in the communities
+    # to the actual Pyomo modeling components that they correspond to
+
+    # Now, using string_map, we will convert str_community_map into community_map, a dictionary of the actual
+    # variables/constraints/objectives
     community_map = {}
     for nth_community in str_community_map:
         first_list = str_community_map[nth_community][0]
@@ -149,20 +166,42 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
         new_second_list = [string_map[community_member] for community_member in second_list]
         community_map[nth_community] = (new_first_list, new_second_list)
 
+    # Return community_map, which has integer keys that now map to a tuple of two lists
+    # containing Pyomo modeling components
     return community_map
 
 
 def get_edge_list(model, node_type='c', with_objective=True, weighted_graph=True, file_path=None):
-    """Writes the community edge list to a file.
+    """
+    Creates an edge list from on a given Pyomo optimization model
+
+    This function takes in a Pyomo optimization model, creates a networkX graph based on that model, then
+    returns an edge list based on the networkX graph. If the user provides a file path, then the edge list will
+    also be saved in a new directory.
 
     Parameters
     ----------
-    model
-    node_type
-    with_objective
-    weighted_graph
-    file_path
+    model: Block
+         a Pyomo model or block to be used for generating an edge list
+    node_type: str, optional
+        A string that specifies the type of graph that is created from the model, the default is 'c'.
+        'c' creates a graph based on constraint nodes,
+        'v' creates a graph based on variable nodes,
+        'b' creates a graph based on constraint and variable nodes (bipartite graph).
+    with_objective: bool, optional
+        a Boolean argument that specifies whether or not the objective function will be
+        included as a node/constraint (depending on what node_type is specified as (see prior argument)), the default
+        is True
+    weighted_graph: bool, optional
+        a Boolean argument that specifies whether a weighted or unweighted graph is to be
+        created from the Pyomo model (the default is True)
+    file_path: str, optional
+        a string that specifies a path if the user wants to write the edge list to a file
 
+    Returns
+    -------
+    edge_list: generator
+        a networkX edge list created from a networkX graph based on a given Pyomo optimization model
     """
     # Check that all arguments are of the correct type
     assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
@@ -182,61 +221,84 @@ def get_edge_list(model, node_type='c', with_objective=True, weighted_graph=True
     model_graph = _generate_model_graph(model, node_type=node_type, with_objective=with_objective,
                                         weighted_graph=weighted_graph)[0]
 
+    # If no file path is given by the user, then the edge list is generated and immediately returned to the user
+    edge_list = nx.generate_edgelist(model_graph)
     if file_path is None:
-        edge_list = nx.generate_edgelist(model_graph)
         return edge_list
 
+    # Create a path (community_detection_dir) that joins the user-provided file_destination with the
+    # directory where we will save the edge list (community_detection_graph_info)
+    community_detection_dir = os.path.join(file_path, 'community_detection_graph_info')
+
+    # In case the user-provided file_destination does not exist, we will use os.makedirs to create
+    # intermediate directories so that community_detection_dir is now a valid path and log this as a warning
+    if not os.path.exists(community_detection_dir):
+        os.makedirs(community_detection_dir)
+        logger.warning("in detect_communities: The given file path did not exist so the following file path was "
+                       "created and used to store the edge list: %s" % community_detection_dir)
+
+    # Collect information for naming the edge list:
+
+    # Based on node_type, determine the type of node
+    if node_type == 'c':
+        type_of_node = 'constraint'
+    elif node_type == 'v':
+        type_of_node = 'variable'
     else:
-        # Create a path based on the user-provided file_destination and the directory where the function will store the
-        # edge list (community_detection_graph_info)
-        community_detection_dir = os.path.join(file_path, 'community_detection_graph_info')
+        type_of_node = 'bipartite'
 
-        # In case the user-provided file_destination does not exist, create intermediate directories so that
-        # community_detection_dir is now a valid path
-        if not os.path.exists(community_detection_dir):
-            os.makedirs(community_detection_dir)
-            logger.error("in detect_communities: The given file path did not exist so the following file path was "
-                         "created and used to store the edge list: %s" % community_detection_dir)
+    # Based on whether the objective function was included in creating the model graph, determine objective status
+    if with_objective:
+        obj_status = 'with_obj'
+    else:
+        obj_status = 'without_obj'
 
-        # Collect information for naming the edge list:
+    # Based on whether the model graph was weighted or unweighted, determine weight status
+    if weighted_graph:
+        weight_status = 'weighted'
+    else:
+        weight_status = 'unweighted'
 
-        # Based on node_type, determine the type of node
-        if node_type == 'c':
-            type_of_node = 'constraint'
-        elif node_type == 'v':
-            type_of_node = 'variable'
-        else:
-            type_of_node = 'bipartite'
+    # Now, using all of this information, use the networkX function to write the edge list to the
+    # file path determined above and name it using the relevant graph information organized above
+    nx.write_edgelist(model_graph, os.path.join(community_detection_dir, 'community_detection') +
+                      '.%s_%s_edge_list_%s' % (type_of_node, weight_status, obj_status))
 
-        # Based on whether the objective function was included in creating the model graph, determine objective status
-        if with_objective:
-            obj_status = 'with_obj'
-        else:
-            obj_status = 'without_obj'
-
-        # Based on whether the model graph was weighted or unweighted, determine weight status
-        if weighted_graph:
-            weight_status = 'weighted'
-        else:
-            weight_status = 'unweighted'
-
-        # Now, using all of this information, use the networkX functions to write the edge list to the
-        # file path determined above and name them using the relevant graph information organized above
-        nx.write_edgelist(model_graph, os.path.join(community_detection_dir, 'community_detection') +
-                          '.%s_%s_edge_list_%s' % (type_of_node, weight_status, obj_status))
+    # Now, return the edge list
+    return edge_list
 
 
 def get_adj_list(model, node_type='c', with_objective=True, weighted_graph=True, file_path=None):
-    """Writes the community adjacency list to a file.
+    """
+    Creates an edge list from on a given Pyomo optimization model
+
+    This function takes in a Pyomo optimization model, creates a networkX graph based on that model, then
+    returns an adjacency list based on the networkX graph. If the user provides a file path, then the edge list will
+    also be saved in a new directory.
 
     Parameters
     ----------
-    model
-    node_type
-    with_objective
-    weighted_graph
-    file_path
+    model: Block
+         a Pyomo model or block to be used for generating an adjacency list
+    node_type: str, optional
+        A string that specifies the type of graph that is created from the model, the default is 'c'.
+        'c' creates a graph based on constraint nodes,
+        'v' creates a graph based on variable nodes,
+        'b' creates a graph based on constraint and variable nodes (bipartite graph).
+    with_objective: bool, optional
+        a Boolean argument that specifies whether or not the objective function will be
+        included as a node/constraint (depending on what node_type is specified as (see prior argument)), the default
+        is True
+    weighted_graph: bool, optional
+        a Boolean argument that specifies whether a weighted or unweighted graph is to be
+        created from the Pyomo model (the default is True)
+    file_path: str, optional
+        a string that specifies a path if the user wants to write the adjacency list to a file
 
+    Returns
+    -------
+    adj_list: generator
+        a networkX adjacency list created from a networkX graph based on a given Pyomo optimization model
     """
     # Check that all arguments are of the correct type
     assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
@@ -256,45 +318,48 @@ def get_adj_list(model, node_type='c', with_objective=True, weighted_graph=True,
     model_graph = _generate_model_graph(model, node_type=node_type, with_objective=with_objective,
                                         weighted_graph=weighted_graph)[0]
 
+    # If no file path is given by the user, then the adjacency list is generated and immediately returned to the user
+    adj_list = nx.generate_adjlist(model_graph)
     if file_path is None:
-        edge_list = nx.generate_adjlist(model_graph)
-        return edge_list
+        return adj_list
 
+    # Create a path (community_detection_dir) that joins the user-provided file_destination with the
+    # directory where we will save the adjacency list (community_detection_graph_info)
+    community_detection_dir = os.path.join(file_path, 'community_detection_graph_info')
+
+    # In case the user-provided file_destination does not exist, we will use os.makedirs to create
+    # intermediate directories so that community_detection_dir is now a valid path and log this as a warning
+    if not os.path.exists(community_detection_dir):
+        os.makedirs(community_detection_dir)
+        logger.warning("in detect_communities: The given file path did not exist so the following file path was "
+                       "created and used to store the adjacency list: %s" % community_detection_dir)
+
+    # Collect information for naming the adjacency list:
+
+    # Based on node_type, determine the type of node
+    if node_type == 'c':
+        type_of_node = 'constraint'
+    elif node_type == 'v':
+        type_of_node = 'variable'
     else:
-        # Create a path based on the user-provided file_destination and the directory where the function will store the
-        # adjacency list (community_detection_graph_info)
-        community_detection_dir = os.path.join(file_path, 'community_detection_graph_info')
+        type_of_node = 'bipartite'
 
-        # In case the user-provided file_destination does not exist, create intermediate directories so that
-        # community_detection_dir is now a valid path
-        if not os.path.exists(community_detection_dir):
-            os.makedirs(community_detection_dir)
-            logger.error("in detect_communities: The given file path did not exist so the following file path was "
-                         "created and used to store the adjacency list: %s" % community_detection_dir)
+    # Based on whether the objective function was included in creating the model graph, determine objective status
+    if with_objective:
+        obj_status = 'with_obj'
+    else:
+        obj_status = 'without_obj'
 
-        # Collect information for naming the adjacency list:
+    # Based on whether the model graph was weighted or unweighted, determine weight status
+    if weighted_graph:
+        weight_status = 'weighted'
+    else:
+        weight_status = 'unweighted'
 
-        # Based on node_type, determine the type of node
-        if node_type == 'c':
-            type_of_node = 'constraint'
-        elif node_type == 'v':
-            type_of_node = 'variable'
-        else:
-            type_of_node = 'bipartite'
+    # Now, using all of this information, use the networkX function to write the adjacency list to the
+    # file path determined above and name it using the relevant graph information organized above
+    nx.write_adjlist(model_graph, os.path.join(community_detection_dir, 'community_detection') +
+                     '.%s_%s_adj_list_%s' % (type_of_node, weight_status, obj_status))
 
-        # Based on whether the objective function was included in creating the model graph, determine objective status
-        if with_objective:
-            obj_status = 'with_obj'
-        else:
-            obj_status = 'without_obj'
-
-        # Based on whether the model graph was weighted or unweighted, determine weight status
-        if weighted_graph:
-            weight_status = 'weighted'
-        else:
-            weight_status = 'unweighted'
-
-        # Now, using all of this information, use the networkX functions to write the adjacency list to the
-        # file path determined above and name them using the relevant graph information organized above
-        nx.write_adjlist(model_graph, os.path.join(community_detection_dir, 'community_detection') +
-                         '.%s_%s_adj_list_%s' % (type_of_node, weight_status, obj_status))
+    # Now, return the adjacency list
+    return adj_list
