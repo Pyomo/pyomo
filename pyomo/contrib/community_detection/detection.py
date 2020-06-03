@@ -10,7 +10,7 @@ Original implementation developed by Rahul Joglekar in the Grossmann research gr
 from logging import getLogger
 
 from pyomo.common.dependencies import attempt_import
-from pyomo.core import ConcreteModel
+from pyomo.core import ConcreteModel, Var
 from pyomo.contrib.community_detection.community_graph import _generate_model_graph
 
 logger = getLogger('pyomo.contrib.community_detection')
@@ -35,8 +35,9 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
          a Pyomo model or block to be used for community detection
     node_type: str, optional
         A string that specifies the dictionary to be returned.
+        'c' returns a dictionary with communities based on constraint nodes,
         'v' returns a dictionary with communities based on variable nodes,
-        'c' returns a dictionary with communities based on constraint nodes.
+        'b' returns a dictionary with communities based on constraint and variable nodes.
     with_objective: bool, optional
         a Boolean argument that specifies whether or not the objective function will be
         treated as a node/constraint (depending on what node_type is specified as (see prior argument))
@@ -60,8 +61,8 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
                                              "ConcreteModel" % model
 
-    assert node_type in ('v', 'c'), "Invalid node type specified: 'node_type=%s' - Valid " \
-                                    "values: 'v', 'c'" % node_type
+    assert node_type in ('c', 'v', 'b'), "Invalid node type specified: 'node_type=%s' - Valid " \
+                                         "values: 'c', 'v', 'b'" % node_type
 
     assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
                                          "must be a Boolean" % with_objective
@@ -91,8 +92,18 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
         nth_community = partition_of_graph[node]
         str_community_map[nth_community].append(node)
 
+    # Node type 'c'
+    if node_type == 'c':
+        for community_key in str_community_map:
+            main_list = str_community_map[community_key]
+            variable_list = []
+            for str_constraint in main_list:
+                variable_list.extend(constraint_variable_map[str_constraint])
+            variable_list = sorted(set(variable_list))
+            str_community_map[community_key] = (main_list, variable_list)
+
     # Node type 'v'
-    if node_type == 'v':
+    elif node_type == 'v':
         for community_key in str_community_map:
             main_list = str_community_map[community_key]
             constraint_list = []
@@ -102,15 +113,17 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
             constraint_list = sorted(set(constraint_list))
             str_community_map[community_key] = (main_list, constraint_list)
 
-    # Node type 'c'
-    elif node_type == 'c':
+    elif node_type == 'b':
         for community_key in str_community_map:
-            main_list = str_community_map[community_key]
-            variable_list = []
-            for str_constraint in main_list:
-                variable_list.extend(constraint_variable_map[str_constraint])
-            variable_list = sorted(set(variable_list))
-            str_community_map[community_key] = (main_list, variable_list)
+            constraint_node_list, variable_node_list = [], []
+            node_community_list = str_community_map[community_key]
+            for str_node in node_community_list:
+                node = string_map[str_node]
+                if isinstance(node, Var):
+                    variable_node_list.append(str_node)
+                else:
+                    constraint_node_list.append(str_node)
+            str_community_map[community_key] = (constraint_node_list, variable_node_list)
 
     # Log information about the number of communities found from the model
     logger.info("%s communities were found in the model" % number_of_communities)

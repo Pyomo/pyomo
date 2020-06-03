@@ -46,8 +46,8 @@ class TestDecomposition(unittest.TestCase):
                                    2: ([m.z], [m.B[1].c, m.B[2].c, m.b.c])},
                                   {0: ([m.x, m.y, m.z], [m.B[1].c, m.B[2].c, m.OBJ, m.b.c, m.c1[1], m.c1[2],
                                                          m.c1[3], m.c1[4], m.c2[1], m.c2[2], m.obj[1], m.obj[2]])},
-                                  {0: ([m.x, m.y, m.z], [m.B[1].c, m.B[2].c, m.OBJ, m.b.c, m.c1[1], m.c1[2], m.c1[3],
-                                                         m.c1[4], m.c2[1], m.c2[2], m.obj[1], m.obj[2]])},
+                                  {0: ([m.x, m.y, m.z], [m.B[1].c, m.B[2].c, m.OBJ, m.b.c, m.c1[1], m.c1[2],
+                                                         m.c1[3], m.c1[4], m.c2[1], m.c2[2], m.obj[1], m.obj[2]])},
                                   {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
                                    2: ([m.b.c, m.B[1].c, m.B[2].c], [m.z])},
                                   {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
@@ -57,7 +57,17 @@ class TestDecomposition(unittest.TestCase):
                                    2: ([m.b.c, m.B[1].c, m.B[2].c, m.obj[2]], [m.x, m.y, m.z])},
                                   {0: ([m.c1[1], m.c1[2], m.c2[2], m.obj[1], m.OBJ], [m.x, m.y]),
                                    1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
-                                   2: ([m.b.c, m.B[1].c, m.B[2].c, m.obj[2]], [m.x, m.y, m.z])})
+                                   2: ([m.b.c, m.B[1].c, m.B[2].c, m.obj[2]], [m.x, m.y, m.z])},
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
+                                   2: ([m.b.c, m.B[1].c, m.B[2].c], [m.z])},
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
+                                   2: ([m.b.c, m.B[1].c, m.B[2].c], [m.z])},
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2], m.obj[1]], [m.x]),
+                                   1: ([m.c1[3], m.c1[4], m.c2[1], m.OBJ], [m.y]),
+                                   2: ([m.b.c, m.B[1].c, m.B[2].c, m.obj[2]], [m.z])},
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2], m.obj[1]], [m.x]),
+                                   1: ([m.c1[3], m.c1[4], m.c2[1], m.OBJ], [m.y]),
+                                   2: ([m.b.c, m.B[1].c, m.B[2].c, m.obj[2]], [m.z])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -73,7 +83,10 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ([m.x, m.y], [m.c1, m.c2, m.inactive_obj, m.obj])},
                                   {0: ([m.c1, m.c2], [m.x, m.y])}, {0: ([m.c1, m.c2], [m.x, m.y])},
                                   {0: ([m.c1, m.c2, m.inactive_obj, m.obj], [m.x, m.y])},
-                                  {0: ([m.c1, m.c2, m.inactive_obj, m.obj], [m.x, m.y])})
+                                  {0: ([m.c1, m.c2, m.inactive_obj, m.obj], [m.x, m.y])},
+                                  {0: ([m.c2], [m.x]), 1: ([m.c1], [m.y])}, {0: ([m.c2], [m.x]), 1: ([m.c1], [m.y])},
+                                  {0: ([m.c2, m.obj], [m.x]), 1: ([m.c1, m.inactive_obj], [m.y])},
+                                  {0: ([m.c2, m.obj], [m.x]), 1: ([m.c1, m.inactive_obj], [m.y])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -86,7 +99,9 @@ class TestDecomposition(unittest.TestCase):
 
         correct_community_maps = (
             {0: ([m.x], []), 1: ([m.y], [])}, {0: ([m.x], []), 1: ([m.y], [])}, {0: ([m.x, m.y], [m.o])},
-            {0: ([m.x, m.y], [m.o])}, {}, {}, {0: ([m.o], [m.x, m.y])}, {0: ([m.o], [m.x, m.y])})
+            {0: ([m.x, m.y], [m.o])}, {}, {}, {0: ([m.o], [m.x, m.y])}, {0: ([m.o], [m.x, m.y])},
+            {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([m.o], [m.x, m.y])},
+            {0: ([m.o], [m.x, m.y])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -104,7 +119,11 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ([m.c1, m.c4], [m.y[1], m.y[2]]), 1: ([m.c2], [m.x])},
                                   {0: ([m.c1, m.c4], [m.y[1], m.y[2]]), 1: ([m.c2], [m.x])},
                                   {0: ([m.c1, m.c4], [m.y[1], m.y[2]]), 1: ([m.c2, m.obj], [m.x, m.y[1], m.y[2]])},
-                                  {0: ([m.c1, m.c2, m.c4, m.obj], [m.x, m.y[1], m.y[2]])})
+                                  {0: ([m.c1, m.c2, m.c4, m.obj], [m.x, m.y[1], m.y[2]])},
+                                  {0: ([m.c2], [m.x]), 1: ([m.y[1], m.c4], []), 2: ([m.y[2], m.c1], [])},
+                                  {0: ([m.c2], [m.x]), 1: ([m.y[1], m.c4], []), 2: ([m.y[2], m.c1], [])},
+                                  {0: ([m.c2, m.obj], [m.x]), 1: ([m.y[1], m.c4], []), 2: ([m.y[2], m.c1], [])},
+                                  {0: ([m.c2, m.obj], [m.x]), 1: ([m.y[1], m.c4], []), 2: ([m.y[2], m.c1], [])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -120,7 +139,13 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ([m.c1, m.c2, m.c3, m.c4, m.c5], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
                                   {0: ([m.c1, m.c2, m.c3, m.c4, m.c5], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
                                   {0: ([m.c1, m.c2, m.c3, m.c4, m.c5, m.obj], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
-                                  {0: ([m.c1, m.c2, m.c3, m.c4, m.c5, m.obj], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])})
+                                  {0: ([m.c1, m.c2, m.c3, m.c4, m.c5, m.obj], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
+                                  {0: ([m.c1, m.c2, m.c3, m.c4, m.c5], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
+                                  {0: ([m.c1, m.c2, m.c3, m.c4, m.c5], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
+                                  {0: ([m.c4], [m.i1]), 1: ([m.c1], [m.i2]), 2: ([m.c2], [m.i3]), 3: ([m.c5], [m.i4]),
+                                   4: ([m.c3], [m.i5]), 5: ([m.obj], [m.i6])},
+                                  {0: ([m.c4], [m.i1]), 1: ([m.c1], [m.i2]), 2: ([m.c2], [m.i3]), 3: ([m.c5], [m.i4]),
+                                   4: ([m.c3], [m.i5]), 5: ([m.obj], [m.i6])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -138,10 +163,18 @@ class TestDecomposition(unittest.TestCase):
             {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
             {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
             {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+            {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+            {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+            {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+            {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
             {0: (['x1', 'x2'], ['c1']), 1: (['x3', 'x4'], ['c2'])},
             {0: (['x1', 'x2'], ['c1']), 1: (['x3', 'x4'], ['c2'])},
             {0: (['x1', 'x2'], ['c1', 'obj']), 1: (['x3', 'x4'], ['c2'])},
             {0: (['x1', 'x2'], ['c1', 'obj']), 1: (['x3', 'x4'], ['c2'])},
+            {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+            {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+            {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+            {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
             {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
             {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
             {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
@@ -169,7 +202,8 @@ class TestDecomposition(unittest.TestCase):
 
         node_type = 'foo'
         with self.assertRaisesRegex(AssertionError,
-                                    "Invalid node type specified: 'node_type=%s' - Valid values: 'v', 'c'" % node_type):
+                                    "Invalid node type specified: 'node_type=%s' - Valid values: 'c', 'v', 'b'"
+                                    % node_type):
             detect_communities(model, node_type=node_type)
 
         with_objective = 'foo'
@@ -215,6 +249,18 @@ def collect_test_results(model, with_string_tests=False):
     community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
                                                        weighted_graph=True, random_seed=random_seed_test,
                                                        string_output=False)
+    community_map_b_unweighted_without = detect_communities(model, node_type='b', with_objective=False,
+                                                            weighted_graph=False, random_seed=random_seed_test,
+                                                            string_output=False)
+    community_map_b_weighted_without = detect_communities(model, node_type='b', with_objective=False,
+                                                          weighted_graph=True, random_seed=random_seed_test,
+                                                          string_output=False)
+    community_map_b_unweighted_with = detect_communities(model, node_type='b', with_objective=True,
+                                                         weighted_graph=False, random_seed=random_seed_test,
+                                                         string_output=False)
+    community_map_b_weighted_with = detect_communities(model, node_type='b', with_objective=True,
+                                                       weighted_graph=True, random_seed=random_seed_test,
+                                                       string_output=False)
 
     test_results = (community_map_v_unweighted_without,
                     community_map_v_weighted_without,
@@ -223,7 +269,11 @@ def collect_test_results(model, with_string_tests=False):
                     community_map_c_unweighted_without,
                     community_map_c_weighted_without,
                     community_map_c_unweighted_with,
-                    community_map_c_weighted_with)
+                    community_map_c_weighted_with,
+                    community_map_b_unweighted_without,
+                    community_map_b_weighted_without,
+                    community_map_b_unweighted_with,
+                    community_map_b_weighted_with)
 
     if not with_string_tests:
         return test_results
@@ -252,6 +302,18 @@ def collect_test_results(model, with_string_tests=False):
     str_community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
                                                            weighted_graph=True, random_seed=random_seed_test,
                                                            string_output=True)
+    str_community_map_b_unweighted_without = detect_communities(model, node_type='b', with_objective=False,
+                                                                weighted_graph=False, random_seed=random_seed_test,
+                                                                string_output=True)
+    str_community_map_b_weighted_without = detect_communities(model, node_type='b', with_objective=False,
+                                                              weighted_graph=True, random_seed=random_seed_test,
+                                                              string_output=True)
+    str_community_map_b_unweighted_with = detect_communities(model, node_type='b', with_objective=True,
+                                                             weighted_graph=False, random_seed=random_seed_test,
+                                                             string_output=True)
+    str_community_map_b_weighted_with = detect_communities(model, node_type='b', with_objective=True,
+                                                           weighted_graph=True, random_seed=random_seed_test,
+                                                           string_output=True)
 
     str_test_results = (str_community_map_v_unweighted_without,
                         str_community_map_v_weighted_without,
@@ -260,7 +322,11 @@ def collect_test_results(model, with_string_tests=False):
                         str_community_map_c_unweighted_without,
                         str_community_map_c_weighted_without,
                         str_community_map_c_unweighted_with,
-                        str_community_map_c_weighted_with)
+                        str_community_map_c_weighted_with,
+                        str_community_map_b_unweighted_without,
+                        str_community_map_b_weighted_without,
+                        str_community_map_b_unweighted_with,
+                        str_community_map_b_weighted_with)
 
     return test_results + str_test_results
 
