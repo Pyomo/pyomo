@@ -49,7 +49,7 @@ class OneVarDisj(unittest.TestCase):
         m = models.oneVarDisj_2pts()
 
         TransformationFactory('gdp.cuttingplane').apply_to(m)
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         # I really expect 1 or 0. If we are getting more here then we have
         # pretty much got to be adding unncessary cuts...
@@ -68,7 +68,7 @@ class OneVarDisj(unittest.TestCase):
         # I actually know exactly the cut I am expecting in this case (I think I
         # get it twice, which is a bummer, but I am just going to make sure I
         # get it by testing that it is tight at two points)
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         # I should get one cut because I made bigM really bad, but I only need
         # one facet of the convex hull for this problem to be done.
@@ -95,7 +95,7 @@ class OneVarDisj(unittest.TestCase):
         # 0 <= Y <= 1 (in the limit)
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         # check that all the cuts are valid everywhere
         for cut in cuts.values():
@@ -132,7 +132,7 @@ class TwoTermDisj(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
         # we created the block
-        transBlock = m._pyomo_gdp_cuttingplane_relaxation
+        transBlock = m._pyomo_gdp_cuttingplane_transformation
         self.assertIsInstance(transBlock, Block)
         # the cuts are on it
         cuts = transBlock.cuts
@@ -143,7 +143,7 @@ class TwoTermDisj(unittest.TestCase):
         m = models.makeTwoTermDisj_boxes()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower
@@ -170,7 +170,7 @@ class TwoTermDisj(unittest.TestCase):
             (0,1,2,4)
         ]
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower
@@ -199,7 +199,7 @@ class TwoTermDisj(unittest.TestCase):
             (0,1,1,4)
         ]
         
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         cut = cuts[0]
         #set_trace()
         cut_expr = cut.body
@@ -239,7 +239,7 @@ class TwoTermDisj(unittest.TestCase):
             (0,1,2,4)
         ]
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
             lower = value(cut.lower)
@@ -295,7 +295,7 @@ class Grossmann_TestCases(unittest.TestCase):
             (0,1,10,3)
         ]
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower
@@ -324,7 +324,7 @@ class Grossmann_TestCases(unittest.TestCase):
             (0,1,120,3)
         ]
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower
@@ -354,7 +354,7 @@ class Grossmann_TestCases(unittest.TestCase):
             (0,1,0,1,11,3)
         ]
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower
@@ -375,7 +375,7 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         m = models.twoDisj_twoCircles_easy()
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         
         m.x.fix(2)
         m.y.fix(7)
@@ -389,7 +389,7 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         m = models.twoDisj_twoCircles_easy()
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         m.x.fix(5)
         m.y.fix(3)
@@ -406,7 +406,7 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         # this M comes from the fact that y \in (0,8) and x \in (0,6)
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=83)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         m.x.fix(2)
         m.y.fix(7)
@@ -424,7 +424,7 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         # this M comes from the fact that y \in (0,8) and x \in (0,6)
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=83)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         m.x.fix(5)
         m.y.fix(3)
@@ -440,7 +440,7 @@ class NonlinearConvex_OverlappingCircles(unittest.TestCase):
         m = models.fourCircles()
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         
         m.x.fix(2)
         m.y.fix(7)
@@ -456,7 +456,7 @@ class NonlinearConvex_OverlappingCircles(unittest.TestCase):
         m = models.fourCircles()
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         m.x.fix(5)
         m.y.fix(3)
@@ -472,7 +472,7 @@ class NonlinearConvex_OverlappingCircles(unittest.TestCase):
         m = models.fourCircles()
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=83)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         
         m.x.fix(2)
         m.y.fix(7)
@@ -488,7 +488,7 @@ class NonlinearConvex_OverlappingCircles(unittest.TestCase):
         m = models.fourCircles()
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=83)
 
-        cuts = m._pyomo_gdp_cuttingplane_relaxation.cuts
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         m.x.fix(5)
         m.y.fix(3)
