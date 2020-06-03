@@ -11,13 +11,12 @@
 __all__ = ['UndefinedData', 'undefined', 'ignore', 'ScalarData', 'ListContainer', 'MapContainer', 'default_print_options', 'ScalarType']
 
 import copy
-import math
 
 import pyutilib.math
 from pyutilib.misc import Bunch
 from pyutilib.enum import EnumValue, Enum
 
-from six import iterkeys, itervalues, iteritems, advance_iterator, StringIO
+from six import StringIO
 from six.moves import xrange
 try:
     unicode
