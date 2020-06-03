@@ -366,6 +366,12 @@ jobs:
         echo ""
         pyomo build-extensions --parallel 2
 
+    - name: Report pyomo plugin information
+      run: |
+        pyomo help --solvers || exit 1
+        pyomo help --transformations || exit 1
+        pyomo help --writers || exit 1
+
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
