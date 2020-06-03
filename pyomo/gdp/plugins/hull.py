@@ -64,7 +64,7 @@ class Hull_Reformulation(Transformation):
         list of blocks and Disjunctions [default: the instance]
 
     The transformation will create a new Block with a unique
-    name beginning "_pyomo_gdp_hull_relaxation".  That Block will
+    name beginning "_pyomo_gdp_hull_reformulation".  That Block will
     contain an indexed Block named "relaxedDisjuncts", which will hold
     the relaxed disjuncts.  This block is indexed by an integer
     indicating the order in which the disjuncts were relaxed.
@@ -90,7 +90,7 @@ class Hull_Reformulation(Transformation):
     constraints are on, and all transformed Disjunctions will have a
     pointer to the corresponding OR or XOR constraint.
 
-    The _pyomo_gdp_hull_relaxation block will have a ComponentMap
+    The _pyomo_gdp_hull_reformulation block will have a ComponentMap
     "_disaggregationConstraintMap":
         <src var>:ComponentMap(<srcDisjunction>: <disaggregation constraint>)
 
@@ -278,7 +278,7 @@ class Hull_Reformulation(Transformation):
         # transformed components
         transBlockName = unique_component_name(
             instance,
-            '_pyomo_gdp_hull_relaxation')
+            '_pyomo_gdp_hull_reformulation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
@@ -1000,9 +1000,9 @@ class Hull_Reformulation(Transformation):
 @TransformationFactory.register(
     'gdp.chull',
     doc="Deprecated name for the hull reformulation. Please use 'gdp.hull'.")
-class Deprecated_Name_Hull(Hull_Reformulation):
-    @deprecated("The 'gdp.hull' name is deprecated. Please use the more apt 'gdp.hull' instead.",
+class _Deprecated_Name_Hull(Hull_Reformulation):
+    @deprecated("The 'gdp.chull' name is deprecated. Please use the more apt 'gdp.hull' instead.",
                 logger='pyomo.gdp',
                 version="TBD", remove_in="TBD")
     def __init__(self):
-        super(Deprecated_Name_Hull, self).__init__()
+        super(_Deprecated_Name_Hull, self).__init__()
