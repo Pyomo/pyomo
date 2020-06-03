@@ -13,6 +13,9 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.core import ConcreteModel, Var
 from pyomo.contrib.community_detection.community_graph import _generate_model_graph
 
+import os
+import networkx as nx
+
 logger = getLogger('pyomo.contrib.community_detection')
 
 # Attempt import of louvain community detection package
@@ -149,15 +152,149 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     return community_map
 
 
-def write_community_to_file(community_map, filename):
-    """Writes the community edge and adjacency lists to a file.
+def get_edge_list(model, node_type='c', with_objective=True, weighted_graph=True, file_path=None):
+    """Writes the community edge list to a file.
 
     Parameters
     ----------
-    community_map
-    filename
-        an optional argument that takes in a path if the user wants to save an edge and adjacency
-        list based on the model
+    model
+    node_type
+    with_objective
+    weighted_graph
+    file_path
 
     """
-    pass
+    # Check that all arguments are of the correct type
+    assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
+                                             "ConcreteModel" % model
+
+    assert node_type in ('c', 'v', 'b'), "Invalid node type specified: 'node_type=%s' - Valid " \
+                                         "values: 'c', 'v', 'b'" % node_type
+
+    assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
+                                         "must be a Boolean" % with_objective
+
+    assert type(weighted_graph) == bool, "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph " \
+                                         "must be a Boolean" % weighted_graph
+
+    assert type(file_path) == str, "Invalid file path given: 'file_path=%s' - file_path must be a string" % file_path
+
+    model_graph = _generate_model_graph(model, node_type=node_type, with_objective=with_objective,
+                                        weighted_graph=weighted_graph)[0]
+
+    if file_path is None:
+        edge_list = nx.generate_edgelist(model_graph)
+        return edge_list
+
+    else:
+        # Create a path based on the user-provided file_destination and the directory where the function will store the
+        # edge list (community_detection_graph_info)
+        community_detection_dir = os.path.join(file_path, 'community_detection_graph_info')
+
+        # In case the user-provided file_destination does not exist, create intermediate directories so that
+        # community_detection_dir is now a valid path
+        if not os.path.exists(community_detection_dir):
+            os.makedirs(community_detection_dir)
+            logger.error("in detect_communities: The given file path did not exist so the following file path was "
+                         "created and used to store the edge list: %s" % community_detection_dir)
+
+        # Collect information for naming the edge list:
+
+        # Based on node_type, determine the type of node
+        if node_type == 'c':
+            type_of_node = 'constraint'
+        elif node_type == 'v':
+            type_of_node = 'variable'
+        else:
+            type_of_node = 'bipartite'
+
+        # Based on whether the objective function was included in creating the model graph, determine objective status
+        if with_objective:
+            obj_status = 'with_obj'
+        else:
+            obj_status = 'without_obj'
+
+        # Based on whether the model graph was weighted or unweighted, determine weight status
+        if weighted_graph:
+            weight_status = 'weighted'
+        else:
+            weight_status = 'unweighted'
+
+        # Now, using all of this information, use the networkX functions to write the edge list to the
+        # file path determined above and name them using the relevant graph information organized above
+        nx.write_edgelist(model_graph, os.path.join(community_detection_dir, 'community_detection') +
+                          '.%s_%s_edge_list_%s' % (type_of_node, weight_status, obj_status))
+
+
+def get_adj_list(model, node_type='c', with_objective=True, weighted_graph=True, file_path=None):
+    """Writes the community adjacency list to a file.
+
+    Parameters
+    ----------
+    model
+    node_type
+    with_objective
+    weighted_graph
+    file_path
+
+    """
+    # Check that all arguments are of the correct type
+    assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
+                                             "ConcreteModel" % model
+
+    assert node_type in ('c', 'v', 'b'), "Invalid node type specified: 'node_type=%s' - Valid " \
+                                         "values: 'c', 'v', 'b'" % node_type
+
+    assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
+                                         "must be a Boolean" % with_objective
+
+    assert type(weighted_graph) == bool, "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph " \
+                                         "must be a Boolean" % weighted_graph
+
+    assert type(file_path) == str, "Invalid file path given: 'file_path=%s' - file_path must be a string" % file_path
+
+    model_graph = _generate_model_graph(model, node_type=node_type, with_objective=with_objective,
+                                        weighted_graph=weighted_graph)[0]
+
+    if file_path is None:
+        edge_list = nx.generate_adjlist(model_graph)
+        return edge_list
+
+    else:
+        # Create a path based on the user-provided file_destination and the directory where the function will store the
+        # adjacency list (community_detection_graph_info)
+        community_detection_dir = os.path.join(file_path, 'community_detection_graph_info')
+
+        # In case the user-provided file_destination does not exist, create intermediate directories so that
+        # community_detection_dir is now a valid path
+        if not os.path.exists(community_detection_dir):
+            os.makedirs(community_detection_dir)
+            logger.error("in detect_communities: The given file path did not exist so the following file path was "
+                         "created and used to store the adjacency list: %s" % community_detection_dir)
+
+        # Collect information for naming the adjacency list:
+
+        # Based on node_type, determine the type of node
+        if node_type == 'c':
+            type_of_node = 'constraint'
+        elif node_type == 'v':
+            type_of_node = 'variable'
+        else:
+            type_of_node = 'bipartite'
+
+        # Based on whether the objective function was included in creating the model graph, determine objective status
+        if with_objective:
+            obj_status = 'with_obj'
+        else:
+            obj_status = 'without_obj'
+
+        # Based on whether the model graph was weighted or unweighted, determine weight status
+        if weighted_graph:
+            weight_status = 'weighted'
+        else:
+            weight_status = 'unweighted'
+
+        # Now, using all of this information, use the networkX functions to write the adjacency list to the
+        # file path determined above and name them using the relevant graph information organized above
+        nx.write_adjlist(model_graph, os.path.join(community_detection_dir, 'community_detection') +
+                         '.%s_%s_adj_list_%s' % (type_of_node, weight_status, obj_status))
