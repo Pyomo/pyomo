@@ -19,6 +19,7 @@ from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
 from pyutilib.math import isclose
 
+from pyomo.common.collections import OrderedSet
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.core.expr.numvalue import (
@@ -202,7 +203,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                  skip_trivial_constraints,
                                  sorter):
 
-        referenced_variable_ids = set()
+        referenced_variable_ids = OrderedSet()
 
         def _skip_trivial(constraint_data):
             if skip_trivial_constraints:
@@ -413,7 +414,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                                c_eqns,
                                                l_eqns):
 
-            variables = set()
+            variables = OrderedSet()
             #print(symbol_map.byObject.keys())
             eqn_body = expression_to_string(constraint_data.body, variables, smap=symbol_map)
             #print(symbol_map.byObject.keys())
@@ -494,7 +495,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 else:
                     output_file.write("maximize ")
 
-                variables = set()
+                variables = OrderedSet()
                 #print(symbol_map.byObject.keys())
                 obj_string = expression_to_string(objective_data.expr, variables, smap=symbol_map)
                 #print(symbol_map.byObject.keys())
