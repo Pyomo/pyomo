@@ -40,6 +40,7 @@ import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
+k_aug_available = SolverFactory('k_aug').available()
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -198,7 +199,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
             retcode = subprocess.call(rlist)
         assert(retcode == 0)
 
-    @unittest.skip("Most folks don't have k_aug installed")
+    @unittest.skipIf(not k_aug_available,"k_aug is not available")
     def test_theta_k_aug_for_Hessian(self):
         # this will fail if k_aug is not installed
         objval, thetavals, Hessian = self.pest.theta_est(solver="k_aug")
