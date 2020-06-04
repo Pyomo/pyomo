@@ -763,7 +763,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             walker = StreamBasedExpressionVisitor(beforeChild=before)
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
-            "has changed to include the argument index for the beforeChild() "
+            "has changed to include the child index for the beforeChild() "
             "method", os.getvalue().replace('\n',' '))
 
         ans = walker.walk_expression(self.e)
@@ -944,15 +944,15 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
                 beforeChild=before, acceptChildResult=accept, afterChild=after)
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
-            "has changed to include the argument index for the "
+            "has changed to include the child index for the "
             "beforeChild() method", os.getvalue().replace('\n',' '))
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
-            "has changed to include the argument index for the "
+            "has changed to include the child index for the "
             "acceptChildResult() method", os.getvalue().replace('\n',' '))
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
-            "has changed to include the argument index for the "
+            "has changed to include the child index for the "
             "afterChild() method", os.getvalue().replace('\n',' '))
 
         ans = walker.walk_expression(self.e)
@@ -1175,15 +1175,15 @@ Finalize""")
             walker = all_callbacks()
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
-            "has changed to include the argument index for the "
+            "has changed to include the child index for the "
             "beforeChild() method", os.getvalue().replace('\n',' '))
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
-            "has changed to include the argument index for the "
+            "has changed to include the child index for the "
             "acceptChildResult() method", os.getvalue().replace('\n',' '))
         self.assertIn(
             "Note that the API for the StreamBasedExpressionVisitor "
-            "has changed to include the argument index for the "
+            "has changed to include the child index for the "
             "afterChild() method", os.getvalue().replace('\n',' '))
 
         self.assertIsNone( walker.walk_expression(self.e) )

@@ -181,7 +181,7 @@ class StreamBasedExpressionVisitor(object):
             if len(_args.args) == nargs + _self_arg and _args.varargs is None:
                 deprecation_warning(
                     "Note that the API for the StreamBasedExpressionVisitor "
-                    "has changed to include the argument index for the %s() "
+                    "has changed to include the child index for the %s() "
                     "method.  Please update your walker callbacks." % (name,))
                 def wrap(fcn, nargs):
                     def wrapper(*args):
