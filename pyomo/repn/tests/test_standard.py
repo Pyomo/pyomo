@@ -17,12 +17,11 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
 
 from pyomo.core.expr.current import Expr_if
-from pyomo.core.expr import expr_common, current as EXPR
-from pyomo.repn import *
-from pyomo.environ import *
+from pyomo.core.expr import current as EXPR
+from pyomo.repn import generate_standard_repn
+from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Set, Expression, RangeSet, ExternalFunction, quicksum, cos, sin, summation, sum_product
 import pyomo.kernel
 from pyomo.core.base.numvalue import native_numeric_types, as_numeric
 

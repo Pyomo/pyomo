@@ -19,7 +19,6 @@ currdir = dirname(abspath(__file__))+os.sep
 datadir = abspath(join(currdir, "..", "ampl"))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.subprocess
 
 import pyomo.scripting.pyomo_main as main
 
