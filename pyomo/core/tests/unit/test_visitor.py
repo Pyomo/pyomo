@@ -26,6 +26,7 @@ from pyutilib.th import nottest
 
 from pyomo.environ import *
 import pyomo.kernel
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr.numvalue import (
     native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, 
     is_potentially_variable,
@@ -752,6 +753,36 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ref = []
         self.assertEqual(str(ans), str(ref))
 
+    def test_old_beforeChild(self):
+        def before(node, child):
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, [child]
+        os = six.StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            walker = StreamBasedExpressionVisitor(beforeChild=before)
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the argument index for the beforeChild() "
+            "method", os.getvalue().replace('\n',' '))
+
+        ans = walker.walk_expression(self.e)
+        m = self.m
+        ref = [
+            [[m.x], [2]],
+            [m.y],
+            [[m.z], [[m.x], [m.y]]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(m.x)
+        ref = []
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(2)
+        ref = []
+        self.assertEqual(str(ans), str(ref))
+
     def test_reduce_in_accept(self):
         def enter(node):
             return None, 1
@@ -890,6 +921,40 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             counts[2] += 1
         walker = StreamBasedExpressionVisitor(
             beforeChild=before, acceptChildResult=accept, afterChild=after)
+        ans = walker.walk_expression(self.e)
+        m = self.m
+        self.assertEqual(ans, None)
+        self.assertEquals(counts, [9,9,9])
+
+    def test_OLD_beforeChild_acceptChildResult_afterChild(self):
+        counts = [0,0,0]
+        def before(node, child):
+            counts[0] += 1
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, None
+        def accept(node, data, child_result):
+            counts[1] += 1
+        def after(node, child):
+            counts[2] += 1
+
+        os = six.StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            walker = StreamBasedExpressionVisitor(
+                beforeChild=before, acceptChildResult=accept, afterChild=after)
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the argument index for the "
+            "beforeChild() method", os.getvalue().replace('\n',' '))
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the argument index for the "
+            "acceptChildResult() method", os.getvalue().replace('\n',' '))
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the argument index for the "
+            "afterChild() method", os.getvalue().replace('\n',' '))
+
         ans = walker.walk_expression(self.e)
         m = self.m
         self.assertEqual(ans, None)
