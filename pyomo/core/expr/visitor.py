@@ -177,7 +177,8 @@ class StreamBasedExpressionVisitor(object):
             if fcn is None:
                 continue
             _args = getargspec(fcn)
-            if len(_args.args) == nargs and _args.varargs is None:
+            _self_arg = 1 if inspect.ismethod(fcn) else 0
+            if len(_args.args) == nargs + _self_arg and _args.varargs is None:
                 deprecation_warning(
                     "Note that the API for the StreamBasedExpressionVisitor "
                     "has changed to include the argument index for the %s() "

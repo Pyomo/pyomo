@@ -1146,6 +1146,96 @@ After prod (from sum)
 Exit sum
 Finalize""")
 
+    def test_all_derived_class_oldAPI(self):
+        def name(x):
+            if type(x) in nonpyomo_leaf_types:
+                return str(x)
+            else:
+                return x.name
+        class all_callbacks(StreamBasedExpressionVisitor):
+            def __init__(self):
+                self.ans = []
+                super(all_callbacks, self).__init__()
+            def enterNode(self, node):
+                self.ans.append("Enter %s" % (name(node)))
+            def exitNode(self, node, data):
+                self.ans.append("Exit %s" % (name(node)))
+            def beforeChild(self, node, child):
+                self.ans.append("Before %s (from %s)"
+                                % (name(child), name(node)))
+            def acceptChildResult(self, node, data, child_result):
+                self.ans.append("Accept into %s" % (name(node)))
+            def afterChild(self, node, child):
+                self.ans.append("After %s (from %s)"
+                                % (name(child), name(node)))
+            def finalizeResult(self, result):
+                self.ans.append("Finalize")
+        os = six.StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            walker = all_callbacks()
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the argument index for the "
+            "beforeChild() method", os.getvalue().replace('\n',' '))
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the argument index for the "
+            "acceptChildResult() method", os.getvalue().replace('\n',' '))
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the argument index for the "
+            "afterChild() method", os.getvalue().replace('\n',' '))
+
+        self.assertIsNone( walker.walk_expression(self.e) )
+        self.assertEqual("\n".join(walker.ans),"""Enter sum
+Before pow (from sum)
+Enter pow
+Before x (from pow)
+Enter x
+Exit x
+Accept into pow
+After x (from pow)
+Before 2 (from pow)
+Enter 2
+Exit 2
+Accept into pow
+After 2 (from pow)
+Exit pow
+Accept into sum
+After pow (from sum)
+Before y (from sum)
+Enter y
+Exit y
+Accept into sum
+After y (from sum)
+Before prod (from sum)
+Enter prod
+Before z (from prod)
+Enter z
+Exit z
+Accept into prod
+After z (from prod)
+Before sum (from prod)
+Enter sum
+Before x (from sum)
+Enter x
+Exit x
+Accept into sum
+After x (from sum)
+Before y (from sum)
+Enter y
+Exit y
+Accept into sum
+After y (from sum)
+Exit sum
+Accept into prod
+After sum (from prod)
+Exit prod
+Accept into sum
+After prod (from sum)
+Exit sum
+Finalize""")
+
 
 class TestEvaluateExpression(unittest.TestCase):
 
