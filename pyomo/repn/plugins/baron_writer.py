@@ -31,7 +31,6 @@ from pyomo.core.base import (SortComponents,
                              Objective,
                              Param)
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.set_types import object_symbol_dictionary
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
 import pyomo.core.base.suffix
