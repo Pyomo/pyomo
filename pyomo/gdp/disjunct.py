@@ -267,7 +267,7 @@ class _DisjunctionData(ActiveComponentData):
                 comp._autodisjuncts.construct()
             disjunct = comp._autodisjuncts[len(comp._autodisjuncts)]
             disjunct.constraint = c = ConstraintList()
-            disjunct.prepositions = p = LogicalStatementList()
+            disjunct.propositions = p = LogicalStatementList()
             for e in expressions:
                 if isinstance(e, LogicalValue):
                     p.add(e)
