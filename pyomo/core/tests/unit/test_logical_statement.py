@@ -1,5 +1,7 @@
 import pyutilib.th as unittest
-from pyomo.environ import ConcreteModel, AbstractModel, BooleanVar, LogicalStatement
+
+from pyomo.environ import AbstractModel, BooleanVar, ConcreteModel, LogicalStatement, TransformationFactory
+from pyomo.gdp import Disjunction, GDP_Error
 
 
 class TestLogicalStatementCreation(unittest.TestCase):
@@ -20,6 +22,16 @@ class TestLogicalStatementCreation(unittest.TestCase):
         model.p = LogicalStatement(rule=rule)
 
         self.assertIs(model.p.body, model.x)
+
+    def test_statement_in_Disjunct(self):
+        model = self.create_model()
+        model.disj = Disjunction(expr=[
+            [model.x | model.y], [model.y | model.z]
+        ])
+        with self.assertRaisesRegex(GDP_Error, "Found untransformed logical statment.*"):
+            TransformationFactory('gdp.bigm').create_using(model)
+        with self.assertRaisesRegex(GDP_Error, "Found untransformed logical statment.*"):
+            TransformationFactory('gdp.hull').create_using(model)
 
     # TODO look to test_con.py for inspiration
 
