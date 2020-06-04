@@ -15,9 +15,9 @@ import six
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.opt import SolverFactory, SolverManagerFactory, OptSolver
-from pyomo.opt.parallel.manager import ActionManagerError
+from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
 from pyomo.opt.parallel.async_solver import (
-    AsynchronousSolverManager, ActionStatus
+    AsynchronousSolverManager
 )
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
