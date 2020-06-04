@@ -130,9 +130,8 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 single_tree=True
                                 )
-            # TODO: constraint qualification hold true in this case
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.maxIterations)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample(self):

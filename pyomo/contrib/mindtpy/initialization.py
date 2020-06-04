@@ -15,7 +15,6 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
-from pyomo.contrib.mindtpy.single_tree import var_bound_add
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -25,6 +24,7 @@ def MindtPy_initialize_master(solve_data, config):
     """
     # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded master problem.
     if config.single_tree == True:
+        from pyomo.contrib.mindtpy.single_tree import var_bound_add
         var_bound_add(solve_data, config)
 
     m = solve_data.mip = solve_data.working_model.clone()
@@ -152,7 +152,7 @@ def init_max_binaries(solve_data, config):
     mip_args = dict(config.mip_solver_args)
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
-        mip_args['add_options'].append('option optcr=0.01;')
+        mip_args['add_options'].append('option optcr=0.0;')
     results = opt.solve(m, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition

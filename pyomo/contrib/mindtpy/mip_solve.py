@@ -86,7 +86,7 @@ def solve_OA_master(solve_data, config):
     mip_args = dict(config.mip_solver_args)
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
-        mip_args['add_options'].append('option optcr=0.01;')
+        mip_args['add_options'].append('option optcr=0.0;')
     master_mip_results = masteropt.solve(
         solve_data.mip, **mip_args)  # , tee=True)
 

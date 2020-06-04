@@ -62,7 +62,7 @@ def solve_NLP_subproblem(solve_data, config):
             # fixed_nlp.tmp_duals[c] = c_leq * max(
             #     0, c_leq*(value(c.body) - rhs))
             # TODO: change logic to c_leq based on benchmarking
-    except ValueError:
+    except (ValueError, OverflowError) as error:
         for nlp_var, orig_val in zip(
                 MindtPy.variable_list,
                 solve_data.initial_var_values):
