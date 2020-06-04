@@ -94,3 +94,26 @@ def add_feas_slacks(m):
         c = MindtPy.MindtPy_feas.feas_constraints.add(
             constr.body - rhs
             <= MindtPy.MindtPy_feas.slack_var[i])
+
+
+def var_bound_add(solve_data, config):
+    """This function will add bound for variables in nonlinear constraints if they are not bounded.
+       This is to avoid an unbound master problem in the LP/NLP algorithm.
+    """
+    m = solve_data.working_model
+    MindtPy = m.MindtPy_utils
+    for c in MindtPy.constraint_list:
+        if c.body.polynomial_degree() not in (1, 0):
+            for var in list(EXPR.identify_variables(c.body)):
+                if var.has_lb() and var.has_ub():
+                    continue
+                elif not var.has_lb():
+                    if var.is_integer():
+                        var.setlb(-config.integer_var_bound)
+                    else:
+                        var.setlb(-config.continuous_var_bound)
+                elif not var.has_ub():
+                    if var.is_integer():
+                        var.setub(config.integer_var_bound)
+                    else:
+                        var.setub(config.continuous_var_bound)
