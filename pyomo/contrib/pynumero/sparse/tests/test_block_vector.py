@@ -1151,5 +1151,20 @@ class TestBlockVector(unittest.TestCase):
             res = fun(v, v2)
             self.assertTrue(np.allclose(flat_res, res.flatten()))
 
+    def test_min_with_empty_blocks(self):
+        b = BlockVector(3)
+        b.set_block(0, np.zeros(3))
+        b.set_block(1, np.zeros(0))
+        b.set_block(2, np.zeros(3))
+        self.assertEqual(b.min(), 0)
+
+    def test_max_with_empty_blocks(self):
+        b = BlockVector(3)
+        b.set_block(0, np.zeros(3))
+        b.set_block(1, np.zeros(0))
+        b.set_block(2, np.zeros(3))
+        self.assertEqual(b.max(), 0)
+
+
 if __name__ == '__main__':
     unittest.main()

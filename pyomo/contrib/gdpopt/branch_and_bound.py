@@ -228,7 +228,7 @@ def _prescreen_node(node_data, node_model, solve_data):
         if node_data.node_count == 0:
             config.logger.info("Root node is not satisfiable. Problem is infeasible.")
         else:
-            config.debug.info("SAT solver pruned node %s" % node_data.node_count)
+            config.logger.info("SAT solver pruned node %s" % node_data.node_count)
         new_lb = new_ub = float('inf')
     else:
         # Solve model subproblem

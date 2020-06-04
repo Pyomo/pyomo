@@ -115,7 +115,7 @@ from pyomo.core.base.expression import Expression
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.external import ExternalFunction
-from pyomo.core.base.template_expr import IndexTemplate
+from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr import current as EXPR
 
 pint_module, pint_available = attempt_import(
