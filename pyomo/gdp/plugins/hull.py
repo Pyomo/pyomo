@@ -22,14 +22,15 @@ from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, RangeSet, Reals, value, NonNegativeIntegers
+    Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalStatement
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (clone_without_expression_components, target_list,
-                            is_child_of, get_src_disjunction,
-                            get_src_constraint, get_transformed_constraints,
-                            get_src_disjunct, _warn_for_active_disjunction,
-                            _warn_for_active_disjunct)
+from pyomo.gdp.util import (
+    _warn_for_active_logical_statement, clone_without_expression_components, target_list,
+    is_child_of, get_src_disjunction,
+    get_src_constraint, get_transformed_constraints,
+    get_src_disjunct, _warn_for_active_disjunction,
+    _warn_for_active_disjunct, )
 from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from functools import wraps
@@ -190,6 +191,7 @@ class Hull_Reformulation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
+            LogicalStatement: self._warn_for_active_logical_statement,
             }
 
     def _add_local_vars(self, block, local_var_dict):
@@ -687,6 +689,11 @@ class Hull_Reformulation(Transformation):
     def _warn_for_active_disjunct( self, innerdisjunct, outerdisjunct,
                                    var_substitute_map, zero_substitute_map):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER)
+
+    def _warn_for_active_logical_statement(
+            self, logical_statment, disjunct, var_substitute_map,
+            zero_substitute_map):
+        _warn_for_active_logical_statement(logical_statment, disjunct, NAME_BUFFER)
 
     def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
                                       zero_substitute_map):
