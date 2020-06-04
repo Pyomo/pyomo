@@ -8,10 +8,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-def load():
-    import pyomo.gdp.plugins.bigm
-    import pyomo.gdp.plugins.hull
-    import pyomo.gdp.plugins.bilinear
-    import pyomo.gdp.plugins.gdp_var_mover
-    import pyomo.gdp.plugins.cuttingplane
-    import pyomo.gdp.plugins.fix_disjuncts
+from .orderedset import OrderedDict, OrderedSet
