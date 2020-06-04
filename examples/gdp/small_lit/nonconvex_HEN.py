@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     # Decide whether to reformulate as MINLP and what method to use
     reformulation = True
-    reformulation_method = 'chull'
+    reformulation_method = 'hull'
 
     model = build_gdp_model()
     model.pprint()
@@ -84,8 +84,8 @@ if __name__ == "__main__":
     if reformulation:
         if reformulation_method == 'bigm':
             TransformationFactory('gdp.bigm').apply_to(model,bigM=600*(50**0.6)+2*46500)
-        elif reformulation_method == 'chull':
-            TransformationFactory('gdp.chull').apply_to(model)
+        elif reformulation_method == 'hull':
+            TransformationFactory('gdp.hull').apply_to(model)
         res = SolverFactory('gams').solve(model, tee=True, solver='baron', add_options=['option optcr = 0;'], keepfiles=True)
     else:
         # Note: MC++ needs to be properly installed to use strategy GLOA
