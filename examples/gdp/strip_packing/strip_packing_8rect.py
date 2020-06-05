@@ -88,6 +88,6 @@ def build_rect_strip_packing_model():
 
 if __name__ == "__main__":
     model = build_rect_strip_packing_model()
-    TransformationFactory('gdp.chull').apply_to(model)
+    TransformationFactory('gdp.hull').apply_to(model)
     opt = SolverFactory('gurobi')
     results = opt.solve(model, tee=True)

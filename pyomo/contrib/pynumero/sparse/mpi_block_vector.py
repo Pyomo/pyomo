@@ -153,7 +153,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                        np.logical_not, np.expm1, np.exp2, np.sign,
                        np.rint, np.square, np.positive, np.negative,
                        np.rad2deg, np.deg2rad, np.conjugate, np.reciprocal,
-                       ]
+                       np.signbit]
         # functions that take two vectors
         binary_funcs = [np.add, np.multiply, np.divide, np.subtract,
                         np.greater, np.greater_equal, np.less, np.less_equal,
@@ -163,17 +163,15 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                         np.logaddexp2, np.remainder, np.heaviside,
                         np.hypot]
 
-        args = [input_ for i, input_ in enumerate(inputs)]
-
         outputs = kwargs.pop('out', None)
         if outputs is not None:
             raise NotImplementedError(str(ufunc) + ' cannot be used with MPIBlockVector if the out keyword argument is given.')
 
         if ufunc in unary_funcs:
-            results = self._unary_operation(ufunc, method, *args, **kwargs)
+            results = self._unary_operation(ufunc, method, *inputs, **kwargs)
             return results
         elif ufunc in binary_funcs:
-            results = self._binary_operation(ufunc, method, *args, **kwargs)
+            results = self._binary_operation(ufunc, method, *inputs, **kwargs)
             return results
         else:
             raise NotImplementedError(str(ufunc) + "not supported for MPIBlockVector")
@@ -185,7 +183,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
         if isinstance(x, MPIBlockVector):
             rank = self._mpiw.Get_rank()
-            v = MPIBlockVector(self.nblocks, self._rank_owner, self._mpiw)
+            v = x.copy_structure()
             for i in self._owned_blocks:
                 _args = [x.get_block(i)] + [args[j] for j in range(1, len(args))]
                 v.set_block(i, self._unary_operation(ufunc, method, *_args, **kwargs))
@@ -213,7 +211,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert np.array_equal(x1._rank_owner, x2._rank_owner), msg
             assert x1._mpiw == x2._mpiw, 'Need to have same communicator'
 
-            res = MPIBlockVector(x1.nblocks, x1._rank_owner, self._mpiw)
+            res = x1.copy_structure()
             for i in x1._owned_blocks:
                 _args = [x1.get_block(i)] + [x2.get_block(i)] + [args[j] for j in range(2, len(args))]
                 res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
@@ -223,13 +221,13 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         elif isinstance(x1, MPIBlockVector) and isinstance(x2, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(x1, MPIBlockVector) and np.isscalar(x2):
-            res = MPIBlockVector(x1.nblocks, x1._rank_owner, self._mpiw)
+            res = x1.copy_structure()
             for i in x1._owned_blocks:
                 _args = [x1.get_block(i)] + [x2] + [args[j] for j in range(2, len(args))]
                 res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
             return res
         elif isinstance(x2, MPIBlockVector) and np.isscalar(x1):
-            res = MPIBlockVector(x2.nblocks, x2._rank_owner, self._mpiw)
+            res = x2.copy_structure()
             for i in x2._owned_blocks:
                 _args = [x1] + [x2.get_block(i)] + [args[j] for j in range(2, len(args))]
                 res.set_block(i, self._binary_operation(ufunc, method, *_args, **kwargs))
@@ -240,6 +238,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(x1, np.ndarray) and isinstance(x2, np.ndarray):
             # this will take care of blockvector and ndarrays
+            return self._block_vector.__array_ufunc__(ufunc, method, *args, **kwargs)
+        elif (type(x1)==BlockVector or np.isscalar(x1)) and (type(x2)==BlockVector or np.isscalar(x2)):
             return self._block_vector.__array_ufunc__(ufunc, method, *args, **kwargs)
         elif (type(x1)==np.ndarray or np.isscalar(x1)) and (type(x2)==np.ndarray or np.isscalar(x2)):
             return super(MPIBlockVector, self).__array_ufunc__(ufunc, method,
@@ -825,11 +825,12 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         for ndx in range(result.nblocks):
             if serialized_structure[structure_ndx] == -1:
                 structure_ndx += 1
-                result.set_block(ndx, BlockVector(serialized_structure[structure_ndx]))
+                block = BlockVector(serialized_structure[structure_ndx])
                 structure_ndx += 1
                 structure_ndx = MPIBlockVector._create_from_serialized_structure(serialized_structure,
                                                                                  structure_ndx,
-                                                                                 result.get_block(ndx))
+                                                                                 block)
+                result.set_block(ndx, block)
             elif serialized_structure[structure_ndx] == -2:
                 structure_ndx += 1
                 result.set_block(ndx, np.zeros(serialized_structure[structure_ndx]))
@@ -938,20 +939,20 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
     def _binary_operation_helper(self, other, operation):
         assert_block_structure(self)
         result = self.copy_structure()
-        if isinstance(other, MPIBlockVector):
+        if isinstance(other, MPIBlockVector) or isinstance(other, BlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockVectors must be distributed in same processors'
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
-
+            if isinstance(other, MPIBlockVector):
+                assert np.array_equal(self._rank_owner, other._rank_owner), \
+                    'MPIBlockVectors must be distributed in same processors'
+                assert self._mpiw == other._mpiw, 'Need to have same communicator'
             for i in self._owned_blocks:
                 result.set_block(i, operation(self.get_block(i), other.get_block(i)))
             return result
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
+            _tmp = self.copy_structure()
+            _tmp.copyfrom(other)
+            return self._binary_operation_helper(_tmp, operation)
         elif np.isscalar(other):
             for i in self._owned_blocks:
                 result.set_block(i, operation(self.get_block(i), other))
@@ -975,23 +976,26 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def _inplace_binary_operation_helper(self, other, operation):
         assert_block_structure(self)
-        if isinstance(other, MPIBlockVector):
-            assert_block_structure(other)
+        if isinstance(other, MPIBlockVector) or isinstance(other, BlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
-                'MPIBlockVectors must be distributed in same processors'
-            assert self._mpiw == other._mpiw, 'Need to have same communicator'
+            if isinstance(other, MPIBlockVector):
+                assert np.array_equal(self._rank_owner, other._rank_owner), \
+                    'MPIBlockVectors must be distributed in same processors'
+                assert self._mpiw == other._mpiw, 'Need to have same communicator'
+                assert_block_structure(other)
+            else:
+                block_vector_assert_block_structure(other)
 
             for i in self._owned_blocks:
                 blk = self.get_block(i)
                 operation(blk, other.get_block(i))
                 self.set_block(i, blk)
             return self
-        elif isinstance(other, BlockVector):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
         elif isinstance(other, np.ndarray):
-            raise RuntimeError('Operation not supported by MPIBlockVector')
+            _tmp = self.copy_structure()
+            _tmp.copyfrom(other)
+            return self._inplace_binary_operation_helper(_tmp, operation)
         elif np.isscalar(other):
             for i in self._owned_blocks:
                 blk = self.get_block(i)
@@ -1129,13 +1133,46 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         self._block_vector.set_block(key, value)
         self._set_block_size(key, value.size)
 
+    def _has_equal_structure(self, other):
+        if not (isinstance(other, MPIBlockVector) or isinstance(other, BlockVector)):
+            return False
+        if self.nblocks != other.nblocks:
+            return False
+        if isinstance(other, MPIBlockVector):
+            if (self.owned_blocks != other.owned_blocks).any():
+                return False
+        for ndx in self.owned_blocks:
+            block1 = self.get_block(ndx)
+            block2 = other.get_block(ndx)
+            if isinstance(block1, BlockVector):
+                if not isinstance(block2, BlockVector):
+                    return False
+                if not block1._has_equal_structure(block2):
+                    return False
+            elif isinstance(block2, BlockVector):
+                return False
+        return True
+
     def __getitem__(self, item):
-        raise NotImplementedError('MPIBlockVector does not support __getitem__. '
-                                  'Use get_block or set_block to access sub-blocks.')
+        if not self._has_equal_structure(item):
+            raise ValueError('MIPBlockVector.__getitem__ only accepts slices in the form of MPIBlockVectors of the same structure')
+        res = self.copy_structure()
+        for ndx in self.owned_blocks:
+            block = self.get_block(ndx)
+            res.set_block(ndx, block[item.get_block(ndx)])
 
     def __setitem__(self, key, value):
-        raise NotImplementedError('MPIBlockVector does not support __setitem__. '
-                                  'Use get_block or set_block to access sub-blocks.')
+        if not (self._has_equal_structure(key) and (self._has_equal_structure(value) or np.isscalar(value))):
+            raise ValueError(
+                'MPIBlockVector.__setitem__ only accepts slices in the form of MPIBlockVectors of the same structure')
+        if np.isscalar(value):
+            for ndx in self.owned_blocks:
+                block = self.get_block(ndx)
+                block[key.get_block(ndx)] = value
+        else:
+            for ndx in self.owned_blocks:
+                block = self.get_block(ndx)
+                block[key.get_block(ndx)] = value.get_block(ndx)
 
     def __str__(self):
         msg = '{}{}:\n'.format(self.__class__.__name__, self.bshape)

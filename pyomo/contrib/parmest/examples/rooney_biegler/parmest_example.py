@@ -29,7 +29,10 @@ def SSE(model, data):
     expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
     return expr
 
-pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
+
+solver_options = {"max_iter": 6000}  # not really needed in this case
+
+pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE, solver_options)
 obj, theta = pest.theta_est()
 print(obj)
 print(theta)

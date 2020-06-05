@@ -33,7 +33,7 @@ solvers = check_available_solvers('glpk')
 class TestFourierMotzkinElimination(unittest.TestCase):
     def setUp(self):
         # will need this so we know transformation block names in the test that
-        # includes chull transformation
+        # includes hull transformation
         random.seed(666)
 
     @staticmethod
@@ -314,7 +314,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertIsNone(cons.upper)
         self.assertIs(cons.body, m.x)
 
-    def check_chull_projected_constraints(self, m, constraints, indices):
+    def check_hull_projected_constraints(self, m, constraints, indices):
         # p[1] >= on.ind_var
         cons = constraints[indices[0]]
         self.assertEqual(cons.lower, 0)
@@ -472,7 +472,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertIs(body.linear_vars[2], m.off.indicator_var)
         self.assertEqual(body.linear_coefs[2], -1)
 
-    def create_chull_model(self):
+    def create_hull_model(self):
         m = ConcreteModel()
         m.p = Var([1, 2], bounds=(0, 10))
         m.time1 = Disjunction(expr=[m.p[1] >= 1, m.p[1] == 0])
@@ -492,17 +492,17 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         m.obj = Objective(expr=m.p[1] + m.p[2])
 
-        chull = TransformationFactory('gdp.chull')
-        chull.apply_to(m)
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
         disaggregatedVars = ComponentSet(
-            [chull.get_disaggregated_var(m.p[1], m.time1.disjuncts[0]),
-             chull.get_disaggregated_var(m.p[1], m.time1.disjuncts[1]),
-             chull.get_disaggregated_var(m.p[1], m.on),
-             chull.get_disaggregated_var(m.p[2], m.on),
-             chull.get_disaggregated_var(m.p[1], m.startup),
-             chull.get_disaggregated_var(m.p[2], m.startup),
-             chull.get_disaggregated_var(m.p[1], m.off),
-             chull.get_disaggregated_var(m.p[2], m.off)
+            [hull.get_disaggregated_var(m.p[1], m.time1.disjuncts[0]),
+             hull.get_disaggregated_var(m.p[1], m.time1.disjuncts[1]),
+             hull.get_disaggregated_var(m.p[1], m.on),
+             hull.get_disaggregated_var(m.p[2], m.on),
+             hull.get_disaggregated_var(m.p[1], m.startup),
+             hull.get_disaggregated_var(m.p[2], m.startup),
+             hull.get_disaggregated_var(m.p[1], m.off),
+             hull.get_disaggregated_var(m.p[2], m.off)
          ])
                                           
         # from nose.tools import set_trace
@@ -521,9 +521,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     def test_project_disaggregated_vars(self):
         """This is a little bit more of an integration test with GDP, 
         but also an example of why FME is 'useful.' We will give a GDP, 
-        take chull relaxation, and then project out the disaggregated 
+        take hull relaxation, and then project out the disaggregated 
         variables."""
-        m, disaggregatedVars = self.create_chull_model()
+        m, disaggregatedVars = self.create_hull_model()
         
         filtered = TransformationFactory('contrib.fourier_motzkin_elimination').\
                    create_using(m, vars_to_eliminate=disaggregatedVars)
@@ -534,20 +534,20 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # we of course get tremendous amounts of garbage, but we make sure that
         # what should be here is:
-        self.check_chull_projected_constraints(m, constraints, [22, 20, 58, 61,
+        self.check_hull_projected_constraints(m, constraints, [22, 20, 58, 61,
                                                                 56, 38, 32, 1, 2,
                                                                 4, 5])
         # and when we filter, it's still there.
         constraints = filtered._pyomo_contrib_fme_transformation.\
                       projected_constraints
-        self.check_chull_projected_constraints(filtered, constraints, [6, 5, 16,
+        self.check_hull_projected_constraints(filtered, constraints, [6, 5, 16,
                                                                        17, 15,
                                                                        11, 8, 1,
                                                                        2, 3, 4])
     
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_post_processing(self):
-        m, disaggregatedVars = self.create_chull_model()
+        m, disaggregatedVars = self.create_hull_model()
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         fme.apply_to(m, vars_to_eliminate=disaggregatedVars)
         # post-process
@@ -558,7 +558,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         # They should be the same as the above, but now these are *all* the
         # constraints
-        self.check_chull_projected_constraints(m, constraints, [6, 5, 16, 17,
+        self.check_hull_projected_constraints(m, constraints, [6, 5, 16, 17,
                                                                 15, 11, 8, 1, 2,
                                                                 3, 4])
 

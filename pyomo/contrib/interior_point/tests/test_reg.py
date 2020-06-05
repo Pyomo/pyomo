@@ -90,9 +90,11 @@ class TestRegularization(unittest.TestCase):
         interface = ip.InteriorPointInterface(m)
         ip_solver = ip.InteriorPointSolver(linear_solver)
 
-        x, duals_eq, duals_ineq = ip_solver.solve(interface)
-        self.assertAlmostEqual(x[0], 1)
-        self.assertAlmostEqual(x[1], pe.exp(-1))
+        status = ip_solver.solve(interface)
+        self.assertEqual(status, ip.InteriorPointStatus.optimal)
+        interface.load_primals_into_pyomo_model()
+        self.assertAlmostEqual(m.x.value, 1)
+        self.assertAlmostEqual(m.y.value, pe.exp(-1))
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_mumps_2(self):
