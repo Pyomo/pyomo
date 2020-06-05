@@ -24,7 +24,7 @@ def MindtPy_initialize_master(solve_data, config):
     problem.
     """
     # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded master problem.
-    if config.single_tree == True:
+    if config.single_tree:
         var_bound_add(solve_data, config)
 
     m = solve_data.mip = solve_data.working_model.clone()

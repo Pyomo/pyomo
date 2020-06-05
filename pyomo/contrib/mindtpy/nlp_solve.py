@@ -62,7 +62,7 @@ def solve_NLP_subproblem(solve_data, config):
         except (ValueError, OverflowError) as error:
             fixed_nlp.tmp_duals[c] = None
             flag = True
-    if flag == True:
+    if flag:
         for nlp_var, orig_val in zip(
                 MindtPy.variable_list,
                 solve_data.initial_var_values):
