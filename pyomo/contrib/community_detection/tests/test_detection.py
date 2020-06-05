@@ -21,7 +21,7 @@ from six import StringIO
 from pyomo.common.dependencies import networkx_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Integers, minimize, Objective, Var
-from pyomo.contrib.community_detection.detection import *
+from pyomo.contrib.community_detection.detection import detect_communities, community_louvain_available
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QP_simple import QP_simple

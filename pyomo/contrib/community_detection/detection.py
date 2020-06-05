@@ -12,9 +12,9 @@ from logging import getLogger
 from pyomo.common.dependencies import attempt_import
 from pyomo.core import ConcreteModel, Var
 from pyomo.contrib.community_detection.community_graph import _generate_model_graph
+from pyomo.common.dependencies import networkx as nx
 
 import os
-import networkx as nx
 
 logger = getLogger('pyomo.contrib.community_detection')
 

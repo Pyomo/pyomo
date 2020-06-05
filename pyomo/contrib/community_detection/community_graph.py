@@ -55,7 +55,7 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
     """
 
     # Initialize the data structure needed to keep track of edges in the graph
-    if weighted_graph:
+    if weighted_graph and not node_type == 'b':
         edge_weight_dict = dict()
     else:
         edge_set = set()
@@ -218,22 +218,15 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
             edges_between_nodes = [(model_constraint, variable_in_constraint)
                                    for variable_in_constraint in variables_in_constraint_equation]
 
-            # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
-            if weighted_graph:
-                for edge in edges_between_nodes:
-                    new_edge = tuple(sorted([str(edge[0]), str(edge[1])]))
-                    new_edge_weights = {new_edge: edge_weight_dict.get(new_edge, 0) + 1}
-                    edge_weight_dict.update(new_edge_weights)
-            else:
-                new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
-                edge_set.update(new_edges)
+            # Update edge_set based on the determined edges_between_nodes
+            new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
+            edge_set.update(new_edges)
 
         # This if statement will be executed if the user chooses to include the objective function as a node in
         # this model graph
         if with_objective:
             # Use a loop to account for the possibility of multiple objective functions
             for objective_function in model.component_data_objects(Objective, descend_into=True):
-
                 # Create a ComponentSet of the variables that occur in the given objective function
                 variables_in_objective_function = ComponentSet(identify_variables(objective_function))
 
@@ -244,19 +237,13 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
                 edges_between_nodes = [(objective_function, variable_in_constraint)
                                        for variable_in_constraint in variables_in_objective_function]
 
-                # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
-                if weighted_graph:
-                    for edge in edges_between_nodes:
-                        new_edge = tuple(sorted([str(edge[0]), str(edge[1])]))
-                        new_edge_weights = {new_edge: edge_weight_dict.get(new_edge, 0) + 1}
-                        edge_weight_dict.update(new_edge_weights)
-                else:
-                    new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
-                    edge_set.update(new_edges)
+                # Update edge_set based on the determined edges_between_nodes
+                new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
+                edge_set.update(new_edges)
 
     # Now, using edge_weight_dict or edge_set (based on if the user wants a weighted graph or an unweighted graph,
     # respectively), the networkX graph (model_graph) will be updated with all of the edges determined above
-    if weighted_graph:
+    if weighted_graph and not node_type == 'b':
         model_graph_edges = sorted(edge_weight_dict)
         model_graph.add_edges_from(model_graph_edges)
 
