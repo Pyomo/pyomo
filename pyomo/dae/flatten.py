@@ -125,7 +125,7 @@ def flatten_dae_variables(model, time):
             continue
         for blkdata in b.values():
             block_queue.extend(
-                list(blkdata.component_objects(Block, descend_into=False))
+                blkdata.component_objects(Block, descend_into=False)
             )
         for blkdata in b.values():
             for v in blkdata.component_objects(SubclassOf(Var), 
@@ -135,6 +135,6 @@ def flatten_dae_variables(model, time):
                     for _slice in generate_time_only_slices(v, time):
                         time_indexed_vars.append(Reference(_slice))
                 else:
-                    regular_vars.extend(list(v.values()))
+                    regular_vars.extend(v.values())
 
     return regular_vars, time_indexed_vars
