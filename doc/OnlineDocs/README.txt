@@ -3,7 +3,7 @@ GETTING STARTED
 
 0.  Install Sphinx
 
-  pip install sphinx
+  pip install sphinx sphinx_rtd_theme
 
 1. Edit documentation
 

@@ -142,17 +142,17 @@ class CommonTests:
     #                 preprocess='bigm', solver='cplex')
     #     self.check( 'constrained_layout', 'bigm')
 
-    def test_chull_jobshop_small(self):
-        self.problem='test_chull_jobshop_small'
-        # Run the small jobshop example using the CHull transformation
-        self.pyomo('jobshop-small.dat', preprocess='chull')
-        self.check( 'jobshop_small', 'chull' )
+    def test_hull_jobshop_small(self):
+        self.problem='test_hull_jobshop_small'
+        # Run the small jobshop example using the Hull transformation
+        self.pyomo('jobshop-small.dat', preprocess='hull')
+        self.check( 'jobshop_small', 'hull' )
 
-    def test_chull_jobshop_large(self):
-        self.problem='test_chull_jobshop_large'
-        # Run the large jobshop example using the CHull transformation
-        self.pyomo('jobshop.dat', preprocess='chull')
-        self.check( 'jobshop_large', 'chull' )
+    def test_hull_jobshop_large(self):
+        self.problem='test_hull_jobshop_large'
+        # Run the large jobshop example using the Hull transformation
+        self.pyomo('jobshop.dat', preprocess='hull')
+        self.check( 'jobshop_large', 'hull' )
 
     @unittest.skip("cutting plane LP file tests are too fragile")
     @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
@@ -188,6 +188,8 @@ class Reformulate(unittest.TestCase, CommonTests):
     def check(self, problem, solver):
         self.assertFileEqualsBaseline( join(currdir,self.problem+'_result.lp'),
                                            self.referenceFile(problem,solver) )
+        if os.path.exists(join(currdir,self.problem+'_result.lp')):
+            os.remove(join(currdir,self.problem+'_result.lp'))
 
 
 class Solver(unittest.TestCase):
@@ -208,6 +210,9 @@ class Solver(unittest.TestCase):
                     ansObj[i].get(key,{}).get('Value', None),
                     6
                 )
+        # Clean up test files
+        if os.path.exists(join(currdir,self.problem+'_result.lp')):
+            os.remove(join(currdir,self.problem+'_result.lp'))
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
