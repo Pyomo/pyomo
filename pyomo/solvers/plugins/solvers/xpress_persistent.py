@@ -92,10 +92,10 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         # pyomo.kernel objects
         #if var.is_indexed():
         #    for child_var in var.values():
-        #        self.compile_var(child_var)
+        #        self.update_var(child_var)
         #    return
         if var not in self._pyomo_var_to_solver_var_map:
-            raise ValueError('The Var provided to compile_var needs to be added first: {0}'.format(var))
+            raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
         xpress_var = self._pyomo_var_to_solver_var_map[var]
         qctype = self._xpress_chgcoltype_from_var(var)
         if var.is_fixed():
@@ -169,7 +169,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
 
     def write(self, filename, flags=''):
         """
-        Write the model to a file (e.g., and lp file).
+        Write the model to a file (e.g., a lp file).
 
         Parameters
         ----------
