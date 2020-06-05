@@ -72,7 +72,7 @@ def makeTwoTermDisj_Nonlinear():
 
 def makeTwoTermDisj_IndexedConstraints():
     """Single two-term disjunction with IndexedConstraints on both disjuncts.  
-    Does not bound the variables, so cannot be transformed by chull at all and 
+    Does not bound the variables, so cannot be transformed by hull at all and 
     requires specifying m values in bigm.
     """
     m = ConcreteModel()

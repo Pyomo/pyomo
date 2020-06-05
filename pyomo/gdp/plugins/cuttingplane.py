@@ -104,12 +104,12 @@ class CuttingPlane_Transformation(Transformation):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
 
-        (instance_rBigM, instance_rCHull, var_info, var_map,
+        (instance_rBigM, instance_rHull, var_info, var_map,
          disaggregated_var_info, rBigM_linear_constraints, 
          transBlockName) = self._setup_subproblems(
              instance, bigM)
 
-        self._generate_cuttingplanes( instance_rBigM, instance_rCHull, var_info,
+        self._generate_cuttingplanes( instance_rBigM, instance_rHull, var_info,
                                       var_map, disaggregated_var_info,
                                       rBigM_linear_constraints, transBlockName)
 
@@ -136,9 +136,9 @@ class CuttingPlane_Transformation(Transformation):
         # we'll store all the cuts we add together
         transBlock.cuts = Constraint(NonNegativeIntegers)
 
-        # get bigM and chull relaxations
+        # get bigM and hull relaxations
         bigMRelaxation = TransformationFactory('gdp.bigm')
-        chullRelaxation = TransformationFactory('gdp.chull')
+        hullRelaxation = TransformationFactory('gdp.hull')
         relaxIntegrality = TransformationFactory('core.relax_integer_vars')
 
         # HACK: for the current writers, we need to also apply gdp.reclassify so
@@ -148,17 +148,17 @@ class CuttingPlane_Transformation(Transformation):
         reclassify = TransformationFactory('gdp.reclassify')
 
         #
-        # Generate the CHull relaxation (used for the separation
+        # Generate the Hull relaxation (used for the separation
         # problem to generate cutting planes)
         #
-        instance_rCHull = chullRelaxation.create_using(instance,
-                                                       targets=instance)
+        instance_rHull = hullRelaxation.create_using(instance,
+                                                     targets=instance)
         # collect a list of disaggregated variables. We have to do this before
         # reclassify because we rely on Disjuncts still having a different
         # ctype.
-        disaggregated_vars = self._get_disaggregated_vars(instance_rCHull)
-        reclassify.apply_to(instance_rCHull)
-        relaxIntegrality.apply_to(instance_rCHull,
+        disaggregated_vars = self._get_disaggregated_vars(instance_rHull)
+        reclassify.apply_to(instance_rHull)
+        relaxIntegrality.apply_to(instance_rHull,
                                   transform_deactivated_blocks=True)
 
         #
@@ -172,8 +172,6 @@ class CuttingPlane_Transformation(Transformation):
         # restore it at the end.
         #
         relaxIntegrality.apply_to(instance, transform_deactivated_blocks=True)
-        # For debugging convenience, but we can do this, it's our model:
-        instance_rCHull.name = 'rchull'
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         #
@@ -202,20 +200,20 @@ class CuttingPlane_Transformation(Transformation):
         # here?? I think so, right??
 
         #
-        # Add the xstar parameter for the CHull problem
+        # Add the xstar parameter for the Hull problem
         #
-        transBlock_rCHull = instance_rCHull.component(transBlockName)
+        transBlock_rHull = instance_rHull.component(transBlockName)
         #
         # this will hold the solution to rbigm each time we solve it. We
         # add it to the transformation block so that we don't have to
         # worry about name conflicts.
-        transBlock_rCHull.xstar = Param( range(len(transBlock.all_vars)),
-                                         mutable=True, default=None,
-                                         within=[None] | Reals)
+        transBlock_rHull.xstar = Param( range(len(transBlock.all_vars)),
+                                        mutable=True, default=None,
+                                        within=[None] | Reals)
         # we will add a block that we will deactivate to use to store the
         # extended space cuts. We never need to solve these, but we need them to
         # be contructed for the sake of Fourier-Motzkin Elimination
-        extendedSpaceCuts = transBlock_rCHull.extendedSpaceCuts = Block()
+        extendedSpaceCuts = transBlock_rHull.extendedSpaceCuts = Block()
         extendedSpaceCuts.deactivate()
         extendedSpaceCuts.cuts = Constraint(Any)
 
@@ -228,33 +226,32 @@ class CuttingPlane_Transformation(Transformation):
         var_info = tuple(
             (v,
              transBlock_rBigM.all_vars[i],
-             transBlock_rCHull.all_vars[i],
-             transBlock_rCHull.xstar[i])
+             transBlock_rHull.all_vars[i],
+             transBlock_rHull.xstar[i])
             for i,v in enumerate(transBlock.all_vars))
 
         # this is the map that I need to translate my projected cuts and add
         # them to bigM and rBigM.
         # [ESJ 5 March 2019] TODO: If I add xstar to this (or don't) can I just
         # replace var_info?
-        var_map = ComponentMap((transBlock_rCHull.all_vars[i], v)
+        var_map = ComponentMap((transBlock_rHull.all_vars[i], v)
                                for i,v in enumerate(transBlock.all_vars))
 
         #
-        # Add the separation objective to the chull subproblem
+        # Add the separation objective to the hull subproblem
         #
-        self._add_separation_objective(var_info, transBlock_rCHull)
+        self._add_separation_objective(var_info, transBlock_rHull)
 
-        return (instance, instance_rCHull, var_info, var_map,
+        return (instance, instance_rHull, var_info, var_map,
                 disaggregated_vars, rBigM_linear_constraints,
                 transBlockName)
 
-    def _get_disaggregated_vars(self, chull):
+    def _get_disaggregated_vars(self, hull):
         # This function MUST be called *before* reclassify for this to work
         # (else we don't pick up any Disjuncts in the component_data_objects
         # call below.)
-        hull = TransformationFactory('gdp.chull')
         disaggregatedVars = []
-        for disjunct in chull.component_data_objects(Disjunct,
+        for disjunct in hull.component_data_objects( Disjunct,
                                                      descend_into=(Disjunct,
                                                                    Block)):
             if disjunct.transformation_block is not None:
@@ -263,7 +260,7 @@ class CuttingPlane_Transformation(Transformation):
                     [v for v in transBlock.component_data_objects(Var)])
         return disaggregatedVars
 
-    def _generate_cuttingplanes( self, instance_rBigM, instance_rCHull,
+    def _generate_cuttingplanes( self, instance_rBigM, instance_rHull,
                                  var_info, var_map, disaggregated_vars,
                                  rBigM_linear_constraints, transBlockName):
 
@@ -277,7 +274,7 @@ class CuttingPlane_Transformation(Transformation):
         cuts = None
 
         transBlock_rBigM = instance_rBigM.component(transBlockName)
-        transBlock_rCHull = instance_rCHull.component(transBlockName)
+        transBlock_rHull = instance_rHull.component(transBlockName)
 
         # We try to grab the first active objective. If there is more
         # than one, the writer will yell when we try to solve below. If
@@ -288,9 +285,9 @@ class CuttingPlane_Transformation(Transformation):
             raise GDP_Error("Cannot apply cutting planes transformation "
                             "without an active objective in the model!")
 
-        # Get list of all variables in the rCHull model which we will use when
+        # Get list of all variables in the rHull model which we will use when
         # calculating the composite normal vector.
-        rCHull_vars = [i for i in instance_rCHull.component_data_objects(
+        rHull_vars = [i for i in instance_rHull.component_data_objects(
             Var,
             descend_into=Block,
             sort=SortComponents.deterministic)]
@@ -309,10 +306,10 @@ class CuttingPlane_Transformation(Transformation):
                            % (rBigM_objVal,))
 
             # copy over xstar
-            for x_bigm, x_rbigm, x_chull, x_star in var_info:
+            for x_bigm, x_rbigm, x_hull, x_star in var_info:
                 x_star.value = x_rbigm.value
                 # initialize the X values
-                x_chull.value = x_rbigm.value
+                x_hull.value = x_rbigm.value
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
@@ -322,20 +319,25 @@ class CuttingPlane_Transformation(Transformation):
                           abs(obj_diff/prev_obj) > epsilon )
 
             # solve separation problem to get xhat.
-            opt.solve(instance_rCHull, tee=stream_solver)
+            opt.solve(instance_rHull, tee=stream_solver)
+            if verify_successful_solve(results) is not NORMAL:
+                logger.warning("GDP.cuttingplane: Hull separation subproblem "
+                               "did not solve normally. Stopping cutting "
+                               "plane generation.\n\n%s" % (results,))
+                return
 
             # [JDS 19 Dec 18] Note: we check that the separation objective was
             # significantly nonzero.  If it is too close to zero, either the
             # rBigM solution was in the convex hull, or the separation vector is
             # so close to zero that the resulting cut is likely to have
             # numerical issues.
-            if abs(value(transBlock_rCHull.separation_objective)) < epsilon:
+            if abs(value(transBlock_rHull.separation_objective)) < epsilon:
                 break
 
             cuts = self._create_cuts(var_info, var_map, disaggregated_vars,
-                                     rCHull_vars, instance_rCHull,
+                                     rHull_vars, instance_rHull,
                                      rBigM_linear_constraints, transBlock_rBigM,
-                                     transBlock_rCHull)
+                                     transBlock_rHull)
            
             # We are done if the cut generator couldn't return a valid cut
             if cuts is None:
@@ -361,26 +363,26 @@ class CuttingPlane_Transformation(Transformation):
         return transBlockName, transBlock
 
 
-    def _add_separation_objective(self, var_info, transBlock_rCHull):
+    def _add_separation_objective(self, var_info, transBlock_rHull):
         # Deactivate any/all other objectives
-        for o in transBlock_rCHull.model().component_data_objects(Objective):
+        for o in transBlock_rHull.model().component_data_objects(Objective):
             o.deactivate()
 
         obj_expr = 0
-        for x_bigm, x_rbigm, x_chull, x_star in var_info:
-            obj_expr += (x_chull - x_star)**2
+        for x_bigm, x_rbigm, x_hull, x_star in var_info:
+            obj_expr += (x_hull - x_star)**2
         # add separation objective to transformation block
-        transBlock_rCHull.separation_objective = Objective(expr=obj_expr)
+        transBlock_rHull.separation_objective = Objective(expr=obj_expr)
 
 
-    def _create_cuts(self, var_info, var_map, disaggregated_vars, rCHull_vars,
-                     instance_rCHull, rBigM_linear_constraints,
-                     transBlock_rBigm, transBlock_rCHull):
+    def _create_cuts(self, var_info, var_map, disaggregated_vars, rHull_vars,
+                     instance_rHull, rBigM_linear_constraints,
+                     transBlock_rBigm, transBlock_rHull):
         cut_number = len(transBlock_rBigm.cuts)
         logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
                        % (cut_number,))
 
-        # loop through all constraints in rCHull and figure out which are active
+        # loop through all constraints in rHull and figure out which are active
         # or slightly violated. For each we will get the tangent plane at xhat
         # (which is x_chull below). We get the normal vector for each of these
         # tangent planes and sum them to get a composite normal. Our cut is then
@@ -391,15 +393,15 @@ class CuttingPlane_Transformation(Transformation):
         conslist = tight_constraints.constraints = Constraint(
             NonNegativeIntegers)
         conslist.construct()
-        for constraint in instance_rCHull.component_data_objects(
+        for constraint in instance_rHull.component_data_objects(
                 Constraint,
                 active=True,
                 descend_into=Block,
                 sort=SortComponents.deterministic):
-            multiplier = self.constraint_tight(instance_rCHull, constraint)
+            multiplier = self.constraint_tight(instance_rHull, constraint)
             if multiplier:
                 f = constraint.body
-                firstDerivs = differentiate(f, wrt_list=rCHull_vars)
+                firstDerivs = differentiate(f, wrt_list=rHull_vars)
                 normal_vec = [multiplier*value(_) for _ in firstDerivs]
                 normal_vectors.append(normal_vec)
                 # check if constraint is linear
@@ -409,7 +411,7 @@ class CuttingPlane_Transformation(Transformation):
                     # we will use the linear approximation of this constraint at
                     # x_hat
                     conslist[len(conslist)] = self.get_linear_approximation_expr(
-                        normal_vec, rCHull_vars)
+                        normal_vec, rHull_vars)
 
         # It is possible that the separation problem returned a point in
         # the interior of the convex hull.  It is also possible that the
@@ -422,14 +424,14 @@ class CuttingPlane_Transformation(Transformation):
         composite_normal = list(
             sum(_) for _ in zip(*tuple(normal_vectors)) )
         composite_normal_map = ComponentMap(
-            (v,n) for v,n in zip(rCHull_vars, composite_normal))
+            (v,n) for v,n in zip(rHull_vars, composite_normal))
         
-        composite_cutexpr_CHull = 0
+        composite_cutexpr_Hull = 0
         for x_bigm, x_rbigm, x_chull, x_star in var_info:
-            # make the cut in the CHull space with the CHull variables. We will
+            # make the cut in the Hull space with the Hull variables. We will
             # translate it all to BigM and rBigM later when we have projected
             # out the disaggregated variables
-            composite_cutexpr_CHull += composite_normal_map[x_chull]*\
+            composite_cutexpr_Hull += composite_normal_map[x_chull]*\
                                        (x_chull - x_chull.value)
 
         # expand the composite_cutexprs to be in the extended space
@@ -438,7 +440,7 @@ class CuttingPlane_Transformation(Transformation):
         # add the part of the expression involving the disaggregated variables.
         for x_disaggregated in disaggregated_vars:
             normal_vec_component = composite_normal_map[x_disaggregated]
-            composite_cutexpr_CHull += normal_vec_component*\
+            composite_cutexpr_Hull += normal_vec_component*\
                                        (x_disaggregated - x_disaggregated.value)
             vars_to_eliminate.add(x_disaggregated)
             # check that at least one disaggregated variable appears in the
@@ -446,7 +448,7 @@ class CuttingPlane_Transformation(Transformation):
             if not do_fme and normal_vec_component != 0:
                 do_fme = True
     
-        conslist[len(conslist)] = composite_cutexpr_CHull <= 0
+        conslist[len(conslist)] = composite_cutexpr_Hull <= 0
         
         if do_fme:
             tight_constraints.construct()
@@ -461,7 +463,7 @@ class CuttingPlane_Transformation(Transformation):
             # we didn't need to project, so it's the last guy we added.
             projected_constraints = [conslist[len(conslist) - 1]]
 
-        # we created these constraints with the variables from rCHull. We
+        # we created these constraints with the variables from rHull. We
         # actually need constraints for BigM and rBigM now!
         cuts = self.get_constraint_exprs(projected_constraints, var_map)
 
