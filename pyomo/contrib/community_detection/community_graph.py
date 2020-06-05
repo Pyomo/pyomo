@@ -227,6 +227,9 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
         if with_objective:
             # Use a loop to account for the possibility of multiple objective functions
             for objective_function in model.component_data_objects(Objective, descend_into=True):
+                # Add objective_function as a node in model_graph
+                model_graph.add_node(str(objective_function))
+
                 # Create a ComponentSet of the variables that occur in the given objective function
                 variables_in_objective_function = ComponentSet(identify_variables(objective_function))
 
