@@ -232,7 +232,7 @@ class MindtPySolver(object):
         domain=bool
     ))
     CONFIG.declare("continuous_var_bound", ConfigValue(
-        default=1e24,
+        default=1e10,
         description="default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.",
         domain=PositiveFloat
     ))

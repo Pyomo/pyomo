@@ -89,11 +89,11 @@ def add_feas_slacks(m):
     MindtPy = m.MindtPy_utils
     # generate new constraints
     for i, constr in enumerate(MindtPy.constraint_list, 1):
-        rhs = ((0 if constr.upper is None else constr.upper) +
-               (0 if constr.lower is None else constr.lower))
-        c = MindtPy.MindtPy_feas.feas_constraints.add(
-            constr.body - rhs
-            <= MindtPy.MindtPy_feas.slack_var[i])
+        if constr.body.polynomial_degree() not in [0, 1]:
+            rhs = constr.upper if constr.has_ub() else constr.lower
+            c = MindtPy.MindtPy_feas.feas_constraints.add(
+                constr.body - rhs
+                <= MindtPy.MindtPy_feas.slack_var[i])
 
 
 def var_bound_add(solve_data, config):

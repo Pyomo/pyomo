@@ -46,43 +46,31 @@ def solve_NLP_subproblem(solve_data, config):
     # | g(x) <= b  | -1    | g(x1) > b    | g(x1) - b            |
     # | g(x) >= b  | +1    | g(x1) >= b   | 0                    |
     # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
-
-    try:
-        for c in fixed_nlp.component_data_objects(ctype=Constraint, active=True,
-                                                  descend_into=True):
-            # We prefer to include the upper bound as the right hand side since we are
-            # considering c by default a (hopefully) convex function, which would make
-            # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
-            # if we don't have to
-            rhs = c.upper if c. has_ub() else c.lower
-            c_geq = -1 if c.has_ub() else 1
-            # c_leq = 1 if c.has_ub else -1
+    flag = False
+    for c in fixed_nlp.component_data_objects(ctype=Constraint, active=True,
+                                              descend_into=True):
+        # We prefer to include the upper bound as the right hand side since we are
+        # considering c by default a (hopefully) convex function, which would make
+        # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
+        # if we don't have to
+        rhs = c.upper if c.has_ub() else c.lower
+        c_geq = -1 if c.has_ub() else 1
+        # c_leq = 1 if c.has_ub else -1
+        try:
             fixed_nlp.tmp_duals[c] = c_geq * max(
                 0, c_geq*(rhs - value(c.body)))
-            # fixed_nlp.tmp_duals[c] = c_leq * max(
-            #     0, c_leq*(value(c.body) - rhs))
-            # TODO: change logic to c_leq based on benchmarking
-    except (ValueError, OverflowError) as error:
+        except (ValueError, OverflowError) as error:
+            fixed_nlp.tmp_duals[c] = None
+            flag = True
+    if flag == True:
         for nlp_var, orig_val in zip(
                 MindtPy.variable_list,
                 solve_data.initial_var_values):
             if not nlp_var.fixed and not nlp_var.is_binary():
                 nlp_var.value = orig_val
-
-        for c in fixed_nlp.component_data_objects(ctype=Constraint, active=True,
-                                                  descend_into=True):
-            # We prefer to include the upper bound as the right hand side since we are
-            # considering c by default a (hopefully) convex function, which would make
-            # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
-            # if we don't have to
-            rhs = c.upper if c. has_ub() else c.lower
-            c_geq = -1 if c.has_ub() else 1
-            # c_leq = 1 if c.has_ub else -1
-            fixed_nlp.tmp_duals[c] = c_geq * max(
-                0, c_geq*(rhs - value(c.body)))
-            # fixed_nlp.tmp_duals[c] = c_leq * max(
-            #     0, c_leq*(value(c.body) - rhs))
-            # TODO: change logic to c_leq based on benchmarking
+        # fixed_nlp.tmp_duals[c] = c_leq * max(
+        #     0, c_leq*(value(c.body) - rhs))
+        # TODO: change logic to c_leq based on benchmarking
 
     TransformationFactory('contrib.deactivate_trivial_constraints')\
         .apply_to(fixed_nlp, tmp=True, ignore_infeasible=True)
