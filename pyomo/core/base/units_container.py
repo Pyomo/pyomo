@@ -33,14 +33,14 @@ Units can be assigned to Var, Param, and ExternalFunction components, and can
 be used directly in expressions (e.g., defining constraints). You can also
 verify that the units are consistent on a model, or on individual components
 like the objective function, constraint, or expression using
-`assert_units_consistent` (from pyomo.util.units_checking).
+`assert_units_consistent` (from pyomo.util.check_units).
 There are other methods there that may be helpful for verifying correct units on a model.
 
     .. doctest::
 
        >>> from pyomo.environ import ConcreteModel, Var, Objective
        >>> from pyomo.environ import units as u
-       >>> from pyomo.util.units_checking import assert_units_consistent, assert_units_equivalent, check_units_equivalent
+       >>> from pyomo.util.check_units import assert_units_consistent, assert_units_equivalent, check_units_equivalent
        >>> model = ConcreteModel()
        >>> model.acc = Var(initialize=5.0, units=u.m/u.s**2)
        >>> model.obj = Objective(expr=(model.acc - 9.81*u.m/u.s**2)**2)
@@ -1429,7 +1429,7 @@ class PyomoUnitsContainer(object):
 
         if base_units_src != base_units_dest:
             raise InconsistentUnitsError(src_pint_unit, to_pint_unit,
-                                             'Error in convert: units not compatible.')
+                                         'Error in convert: units not compatible.')
 
         return fac_b_src/fac_b_dest*to_pyomo_unit/src_pyomo_unit*src
 

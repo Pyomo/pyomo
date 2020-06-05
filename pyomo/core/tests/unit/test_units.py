@@ -13,7 +13,7 @@
 
 import pyutilib.th as unittest
 from pyomo.environ import *
-from pyomo.util.units_checking import assert_units_consistent, assert_units_equivalent
+from pyomo.util.check_units import assert_units_consistent, assert_units_equivalent
 from pyomo.core.base.template_expr import IndexTemplate
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as EXPR

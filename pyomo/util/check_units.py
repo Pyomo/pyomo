@@ -14,17 +14,13 @@ This module has some helpful methods to support checking units on Pyomo
 module objects.
 """
 from pyomo.core.base.units_container import units, UnitsError, UnitExtractionVisitor
-from pyomo.core.base.objective import Objective
-from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.var import Var
-from pyomo.core.base.param import Param
-from pyomo.core.base.suffix import Suffix
-from pyomo.core.base.set import Set, RangeSet
+from pyomo.core.base import (Objective, Constraint, Var, Param,
+                             Suffix, Set, RangeSet, Block,
+                             ExternalFunction, Expression)
+from pyomo.gdp import Disjunct, Disjunction
+                             
 from pyomo.gdp import Disjunct
 from pyomo.gdp import Disjunction
-from pyomo.core.base.block import Block
-from pyomo.core.base.external import ExternalFunction
-from pyomo.core.base.expression import Expression
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.numvalue import native_types
 

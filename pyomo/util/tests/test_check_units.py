@@ -16,7 +16,7 @@ from pyomo.environ import *
 from pyomo.core.base.units_container import (
     pint_available, UnitsError,
 )
-from pyomo.util.units_checking import assert_units_consistent, assert_units_equivalent, check_units_equivalent
+from pyomo.util.check_units import assert_units_consistent, assert_units_equivalent, check_units_equivalent
 
 @unittest.skipIf(not pint_available, 'Testing units requires pint')
 class TestUnitsChecking(unittest.TestCase):
