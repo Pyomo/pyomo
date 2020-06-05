@@ -164,8 +164,16 @@ class kestrelAMPL:
         logger.info(response)
 
     def solvers(self):
-        return self.neos.listSolversInCategory("kestrel") \
-                if not self.neos is None else []
+        if self.neos is None:
+            return []
+        else:
+            attempt = 0
+            while attempt < 3:
+                try:
+                    return self.neos.listSolversInCategory("kestrel")
+                except socket.timeout:
+                    attempt += 1
+            return []
 
     def retrieve(self,stub,jobNumber,password):
         # NEOS should return results as uu-encoded xmlrpclib.Binary data

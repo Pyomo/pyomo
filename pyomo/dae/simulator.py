@@ -6,14 +6,18 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-from pyomo.core.base import Constraint, Param, value, Suffix, Block
+from pyomo.core.base import Constraint, Param, Var, value, Suffix, Block
 
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import NumericValue, native_numeric_types
-from pyomo.core.base.template_expr import IndexTemplate, _GetItemIndexer
+from pyomo.core.expr.numvalue import (
+    NumericValue, native_numeric_types, nonpyomo_leaf_types,
+)
+from pyomo.core.expr.template_expr import IndexTemplate, _GetItemIndexer
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.reference import Reference
 
 from six import iterkeys, itervalues
 
@@ -75,7 +79,7 @@ def _check_getitemexpression(expr, i):
     GetItemExpression for the :py:class:`DerivativeVar<DerivativeVar>` and
     the RHS. If not, return None.
     """
-    if type(expr.arg(i)._base) is DerivativeVar:
+    if type(expr.arg(i).arg(0)) is DerivativeVar:
         return [expr.arg(i), expr.arg(1 - i)]
     else:
         return None
@@ -106,7 +110,7 @@ def _check_productexpression(expr, i):
         elif curr.__class__ is EXPR.ReciprocalExpression:
             stack.append((curr.arg(0), - e_))
         elif type(curr) is EXPR.GetItemExpression and \
-             type(curr._base) is DerivativeVar:
+             type(curr.arg(0)) is DerivativeVar:
             dv = (curr, e_)
         else:
             pterms.append((curr, e_))
@@ -140,7 +144,7 @@ def _check_negationexpression(expr, i):
     arg = expr.arg(i).arg(0)
 
     if type(arg) is EXPR.GetItemExpression and \
-       type(arg._base) is DerivativeVar:
+       type(arg.arg(0)) is DerivativeVar:
         return [arg, - expr.arg(1 - i)]
 
     if type(arg) is EXPR.ProductExpression:
@@ -151,7 +155,7 @@ def _check_negationexpression(expr, i):
                     not lhs.is_potentially_variable()):
             return None
         if not (type(rhs) is EXPR.GetItemExpression and
-                        type(rhs._base) is DerivativeVar):
+                        type(rhs.arg(0)) is DerivativeVar):
             return None
 
         return [rhs, - expr.arg(1 - i) / lhs]
@@ -178,7 +182,7 @@ def _check_viewsumexpression(expr, i):
         if dv is not None:
             items.append(item)
         elif type(item) is EXPR.GetItemExpression and \
-           type(item._base) is DerivativeVar:
+           type(item.arg(0)) is DerivativeVar:
             dv = item
         elif type(item) is EXPR.ProductExpression:
             # This will contain the constant coefficient if there is one
@@ -188,7 +192,7 @@ def _check_viewsumexpression(expr, i):
             if (type(lhs) in native_numeric_types or
                     not lhs.is_potentially_variable()) \
                 and (type(rhs) is EXPR.GetItemExpression and
-                             type(rhs._base) is DerivativeVar):
+                             type(rhs.arg(0)) is DerivativeVar):
                 dv = rhs
                 dvcoef = lhs
         else:
@@ -224,9 +228,8 @@ class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
             if _id not in self.templatemap:
                 self.templatemap[_id] = Param(mutable=True)
                 self.templatemap[_id].construct()
-                _args = []
                 self.templatemap[_id]._name = "%s[%s]" % (
-                    node._base.name, ','.join(str(x) for x in _id._args))
+                    _id.base.name, ','.join(str(x) for x in _id.args))
             return True, self.templatemap[_id]
 
         return super(
@@ -283,7 +286,7 @@ class Substitute_Pyomo2Casadi_Visitor(EXPR.ExpressionReplacementVisitor):
             _id = _GetItemIndexer(node)
             if _id not in self.templatemap:
                 name = "%s[%s]" % (
-                    node._base.name, ','.join(str(x) for x in _id._args))
+                    _id.base.name, ','.join(str(x) for x in _id.args))
                 self.templatemap[_id] = casadi.SX.sym(name)
             return True, self.templatemap[_id]
 
@@ -616,7 +619,7 @@ class Simulator:
         diffvars = []
 
         for deriv in derivlist:
-            sv = deriv._base.get_state_var()
+            sv = deriv.base.get_state_var()
             diffvars.append(_GetItemIndexer(sv[deriv._args]))
 
         # Create ordered list of algebraic variables and time-varying
@@ -624,7 +627,7 @@ class Simulator:
         algvars = []
 
         for item in iterkeys(templatemap):
-            if item._base.name in derivs:
+            if item.base.name in derivs:
                 # Make sure there are no DerivativeVars in the
                 # template map
                 raise DAE_Error(
@@ -654,7 +657,7 @@ class Simulator:
             for _id in diffvars:
                 if _id not in templatemap:
                     name = "%s[%s]" % (
-                        _id._base.name, ','.join(str(x) for x in _id._args))
+                        _id.base.name, ','.join(str(x) for x in _id.args))
                     templatemap[_id] = casadi.SX.sym(name)
 
         self._contset = contset

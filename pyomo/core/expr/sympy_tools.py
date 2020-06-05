@@ -139,8 +139,12 @@ class PyomoSympyBimap(object):
 class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def __init__(self, object_map):
+        sympy.Add  # this ensures _configure_sympy gets run
         super(Pyomo2SympyVisitor, self).__init__()
         self.object_map = object_map
+
+    def initializeWalker(self, expr):
+        return self.beforeChild(None, expr, None)
 
     def exitNode(self, node, values):
         if node.__class__ is EXPR.UnaryFunctionExpression:
@@ -151,7 +155,7 @@ class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
         else:
             return _op(*tuple(values))
 
-    def beforeChild(self, node, child):
+    def beforeChild(self, node, child, child_idx):
         #
         # Don't replace native or sympy types
         #
@@ -175,8 +179,12 @@ class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
 class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def __init__(self, object_map):
+        sympy.Add  # this ensures _configure_sympy gets run
         super(Sympy2PyomoVisitor, self).__init__()
         self.object_map = object_map
+
+    def initializeWalker(self, expr):
+        return self.beforeChild(None, expr, None)
 
     def enterNode(self, node):
         return (node._args, [])
@@ -191,7 +199,7 @@ class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
                 "map" % type(_sympyOp) )
         return _op(*tuple(values))
 
-    def beforeChild(self, node, child):
+    def beforeChild(self, node, child, child_idx):
         if not child._args:
             item = self.object_map.getPyomoSymbol(child, None)
             if item is None:
@@ -206,16 +214,9 @@ def sympyify_expression(expr):
     #
     object_map = PyomoSympyBimap()
     visitor = Pyomo2SympyVisitor(object_map)
-    is_expr, ans = visitor.beforeChild(None, expr)
-    if not is_expr:
-        return object_map, ans
-
     return object_map, visitor.walk_expression(expr)
 
 
 def sympy2pyomo_expression(expr, object_map):
     visitor = Sympy2PyomoVisitor(object_map)
-    is_expr, ans = visitor.beforeChild(None, expr)
-    if not is_expr:
-        return ans
     return visitor.walk_expression(expr)
