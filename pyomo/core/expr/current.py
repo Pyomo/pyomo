@@ -26,7 +26,7 @@ from pyomo.core.expr import expr_common as common
 # Pull symbols from the appropriate expression system
 #
 from pyomo.core.expr import numvalue as _numvalue
-from pyomo.core.expr import logicalvalue as _logicalvalue
+from pyomo.core.expr import boolean_value as _logicalvalue
 
 # Pyomo5
 if _mode == Mode.pyomo5_trees:

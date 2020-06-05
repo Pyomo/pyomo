@@ -15,7 +15,7 @@ from pyomo.core.expr.logical_expr import Or
 from pyomo.environ import (
     ConcreteModel, Constraint, Set, RangeSet, Param,
     Objective, Var, NonNegativeReals, Block,
-    TransformationFactory, SolverFactory, LogicalStatement, BooleanVar)
+    TransformationFactory, SolverFactory, LogicalConstraint, BooleanVar)
 from pyomo.gdp import Disjunct
 
 
@@ -97,11 +97,11 @@ def build_model():
     # Connect the disjuncts indicator variables using logical expressions
     m.logical_blocks = Block(range(1, m.T_max+1))
 
-    m.logical_blocks[1].not_y_1_0 = LogicalStatement(expr=~m.Y[1, '0'], doc="no pre-existing long-term contract")
+    m.logical_blocks[1].not_y_1_0 = LogicalConstraint(expr=~m.Y[1, '0'], doc="no pre-existing long-term contract")
 
     # Long-term contract implies '0'-disjunct in following timesteps
     for t in range(2, m.T_max+1):
-        m.logical_blocks[t].equiv = LogicalStatement(
+        m.logical_blocks[t].equiv = LogicalConstraint(
             expr=m.Y[t, '0'].equivalent_to(Or(m.Y[t_, str(q)] for t_ in range(1, t) for q in range(t-t_, m.T_max-t_+1)))
         )
 

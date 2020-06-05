@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['LogicalStatement', '_LogicalStatementData', 'LogicalStatementList']
+__all__ = ['LogicalConstraint', '_LogicalConstraintData', 'LogicalConstraintList']
 
 import inspect
 import sys
@@ -18,7 +18,7 @@ from weakref import ref as weakref_ref
 import pyutilib.math
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
-from pyomo.core.expr.logicalvalue import as_logical, LogicalConstant
+from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
@@ -34,22 +34,22 @@ from six import StringIO, iteritems
 
 logger = logging.getLogger('pyomo.core')
 
-_rule_returned_none_error = """LogicalStatement '%s': rule returned None.
+_rule_returned_none_error = """LogicalConstraint '%s': rule returned None.
 
-Logical statement rules must return a valid logical proposition.
+logical constraint rules must return a valid logical proposition.
 The most common cause of this error is
 forgetting to include the "return" statement at the end of your rule.
 """
 
 
-class _LogicalStatementData(ActiveComponentData):
+class _LogicalConstraintData(ActiveComponentData):
     """
-    This class defines the data for a single logical statement.
+    This class defines the data for a single logical constraint.
 
     It functions as a pure interface.
 
     Constructor arguments:
-        component       The LogicalStatement object that owns this data.
+        component       The LogicalConstraint object that owns this data.
 
     Public class attributes:
         active          A boolean that is true if this statement is
@@ -77,7 +77,7 @@ class _LogicalStatementData(ActiveComponentData):
     # Interface
     #
     def __call__(self, exception=True):
-        """Compute the value of the body of this logical statement."""
+        """Compute the value of the body of this logical constraint."""
         if self.body is None:
             return None
         return self.body(exception=exception)
@@ -87,11 +87,11 @@ class _LogicalStatementData(ActiveComponentData):
     #
     @property
     def body(self):
-        """Access the body of a logical statement."""
+        """Access the body of a logical constraint."""
         raise NotImplementedError
 
     def set_value(self, expr):
-        """Set the expression on this logical statement."""
+        """Set the expression on this logical constraint."""
         raise NotImplementedError
 
     def get_value(self):
@@ -99,21 +99,21 @@ class _LogicalStatementData(ActiveComponentData):
         raise NotImplementedError
 
 
-class _GeneralLogicalStatementData(_LogicalStatementData):
+class _GeneralLogicalConstraintData(_LogicalConstraintData):
     """
-    This class defines the data for a single general logical statement.
+    This class defines the data for a single general logical constraint.
 
     Constructor arguments:
         component       The LogicalStatment object that owns this data.
-        expr            The Pyomo expression stored in this logical statement.
+        expr            The Pyomo expression stored in this logical constraint.
 
     Public class attributes:
-        active          A boolean that is true if this logical statement is
+        active          A boolean that is true if this logical constraint is
                             active in the model.
-        body            The Pyomo expression for this logical statement
+        body            The Pyomo expression for this logical constraint
 
     Private class attributes:
-        _component      The logical statement component.
+        _component      The logical constraint component.
         _active         A boolean that indicates whether this data is active
     """
 
@@ -138,8 +138,8 @@ class _GeneralLogicalStatementData(_LogicalStatementData):
         """
         This method must be defined because this class uses slots.
         """
-        result = super(_GeneralLogicalStatementData, self).__getstate__()
-        for i in _GeneralLogicalStatementData.__slots__:
+        result = super(_GeneralLogicalConstraintData, self).__getstate__()
+        for i in _GeneralLogicalConstraintData.__slots__:
             result[i] = getattr(self, i)
         return result
 
@@ -152,19 +152,19 @@ class _GeneralLogicalStatementData(_LogicalStatementData):
 
     @property
     def body(self):
-        """Access the body of a logical statement expression."""
+        """Access the body of a logical constraint expression."""
         return self._body
 
     @property
     def expr(self):
-        """Return the expression associated with this logical statement."""
+        """Return the expression associated with this logical constraint."""
         return self.get_value()
 
     def set_value(self, expr):
-        """Set the expression on this logical statement."""
+        """Set the expression on this logical constraint."""
 
         if expr is None:
-            self._body = LogicalConstant(True)
+            self._body = BooleanConstant(True)
             return
 
         expr_type = type(expr)
@@ -178,24 +178,24 @@ class _GeneralLogicalStatementData(_LogicalStatementData):
             )
             raise ValueError(msg)
 
-        self._body = as_logical(expr)
+        self._body = as_boolean(expr)
 
     def get_value(self):
-        """Get the expression on this logical statement."""
+        """Get the expression on this logical constraint."""
         return self._body
 
 
-@ModelComponentFactory.register("General logical statements.")
-class LogicalStatement(ActiveIndexedComponent):
+@ModelComponentFactory.register("General logical constraints.")
+class LogicalConstraint(ActiveIndexedComponent):
     """
-    This modeling component defines a logical statement using a
+    This modeling component defines a logical constraint using a
     rule function.
 
     Constructor arguments:
         expr
-            A Pyomo expression for this logical statement
+            A Pyomo expression for this logical constraint
         rule
-            A function that is used to construct logical statements
+            A function that is used to construct logical constraints
         doc
             A text string describing this component
         name
@@ -210,7 +210,7 @@ class LogicalStatement(ActiveIndexedComponent):
             A boolean that is true if this component will be used to
             construct a model instance
         rule
-           The rule used to initialize the logical statement(s)
+           The rule used to initialize the logical constraint(s)
 
     Private class attributes:
         _constructed
@@ -229,7 +229,7 @@ class LogicalStatement(ActiveIndexedComponent):
             The class type for the derived subclass
     """
 
-    _ComponentDataClass = _GeneralLogicalStatementData
+    _ComponentDataClass = _GeneralLogicalConstraintData
     NoConstraint = (1000,)
     Skip = (1000,)
     Infeasible = (1001,)
@@ -238,17 +238,17 @@ class LogicalStatement(ActiveIndexedComponent):
     Satisfied = (1002,)
 
     def __new__(cls, *args, **kwds):
-        if cls != LogicalStatement:
-            return super(LogicalStatement, cls).__new__(cls)
+        if cls != LogicalConstraint:
+            return super(LogicalConstraint, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return SimpleLogicalStatement.__new__(SimpleLogicalStatement)
+            return SimpleLogicalConstraint.__new__(SimpleLogicalConstraint)
         else:
-            return IndexedLogicalStatement.__new__(IndexedLogicalStatement)
+            return IndexedLogicalConstraint.__new__(IndexedLogicalConstraint)
 
     def __init__(self, *args, **kwargs):
         self.rule = kwargs.pop('rule', None)
         self._init_expr = kwargs.pop('expr', None)
-        kwargs.setdefault('ctype', LogicalStatement)
+        kwargs.setdefault('ctype', LogicalConstraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
     #
@@ -272,15 +272,15 @@ class LogicalStatement(ActiveIndexedComponent):
         if self._check_skip_add(index, value) is None:
             return None
         else:
-            return super(LogicalStatement, self)._setitem_when_not_present(
+            return super(LogicalConstraint, self)._setitem_when_not_present(
                 index=index, value=value)
 
     def construct(self, data=None):
         """
-        Construct the expression(s) for this logical statement.
+        Construct the expression(s) for this logical constraint.
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Constructing logical statement %s" % self.name)
+            logger.debug("Constructing logical constraint %s" % self.name)
         if self._constructed:
             return
         timer = ConstructionTimer(self)
@@ -314,7 +314,7 @@ class LogicalStatement(ActiveIndexedComponent):
                     err = sys.exc_info()[1]
                     logger.error(
                         "Rule failed when generating expression for "
-                        "logical statement %s:\n%s: %s"
+                        "logical constraint %s:\n%s: %s"
                         % (self.name,
                            type(err).__name__,
                            err))
@@ -324,8 +324,8 @@ class LogicalStatement(ActiveIndexedComponent):
         else:
             if _init_expr is not None:
                 raise IndexError(
-                    "LogicalStatement '%s': Cannot initialize multiple indices "
-                    "of a logical statement with a single expression" %
+                    "LogicalConstraint '%s': Cannot initialize multiple indices "
+                    "of a logical constraint with a single expression" %
                     (self.name,))
 
             for ndx in self._index:
@@ -338,7 +338,7 @@ class LogicalStatement(ActiveIndexedComponent):
                     err = sys.exc_info()[1]
                     logger.error(
                         "Rule failed when generating expression for "
-                        "logical statement %s with index %s:\n%s: %s"
+                        "logical constraint %s with index %s:\n%s: %s"
                         % (self.name,
                            str(ndx),
                            type(err).__name__,
@@ -398,22 +398,22 @@ class LogicalStatement(ActiveIndexedComponent):
             return None
         if expr is False:
             raise ValueError(
-                "LogicalStatement '%s' is always False"
+                "LogicalConstraint '%s' is always False"
                 % (_get_indexed_component_data_name(self, index),))
 
         return expr
 
 
-class SimpleLogicalStatement(_GeneralLogicalStatementData, LogicalStatement):
+class SimpleLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
     """
-    SimpleLogicalStatement is the implementation representing a single,
-    non-indexed logical statement.
+    SimpleLogicalConstraint is the implementation representing a single,
+    non-indexed logical constraint.
     """
 
     def __init__(self, *args, **kwds):
-        _GeneralLogicalStatementData.__init__(
+        _GeneralLogicalConstraintData.__init__(
             self, component=self, expr=None)
-        LogicalStatement.__init__(self, *args, **kwds)
+        LogicalConstraint.__init__(self, *args, **kwds)
 
     #
     # Since this class derives from Component and
@@ -432,38 +432,38 @@ class SimpleLogicalStatement(_GeneralLogicalStatementData, LogicalStatement):
 
     @property
     def body(self):
-        """Access the body of a logical statement."""
+        """Access the body of a logical constraint."""
         if self._constructed:
             if len(self._data) == 0:
                 raise ValueError(
-                    "Accessing the body of SimpleLogicalStatement "
-                    "'%s' before the LogicalStatement has been assigned "
+                    "Accessing the body of SimpleLogicalConstraint "
+                    "'%s' before the LogicalConstraint has been assigned "
                     "an expression. There is currently "
                     "nothing to access." % self.name)
-            return _GeneralLogicalStatementData.body.fget(self)
+            return _GeneralLogicalConstraintData.body.fget(self)
         raise ValueError(
-            "Accessing the body of logical statement '%s' "
-            "before the LogicalStatement has been constructed (there "
+            "Accessing the body of logical constraint '%s' "
+            "before the LogicalConstraint has been constructed (there "
             "is currently no value to return)."
             % self.name)
 
     #
-    # Singleton logical statements are strange in that we want them to be
+    # Singleton logical constraints are strange in that we want them to be
     # both be constructed but have len() == 0 when not initialized with
     # anything (at least according to the unit tests that are
     # currently in place). So during initialization only, we will
     # treat them as "indexed" objects where things like
     # True are managed. But after that they will behave
-    # like _LogicalStatementData objects where set_value expects
+    # like _LogicalConstraintData objects where set_value expects
     # a valid expression or None.
     #
 
     def set_value(self, expr):
-        """Set the expression on this logical statement."""
+        """Set the expression on this logical constraint."""
         if not self._constructed:
             raise ValueError(
-                "Setting the value of logical statement '%s' "
-                "before the LogicalStatement has been constructed (there "
+                "Setting the value of logical constraint '%s' "
+                "before the LogicalConstraint has been constructed (there "
                 "is currently no object to set)."
                 % self.name)
 
@@ -472,24 +472,24 @@ class SimpleLogicalStatement(_GeneralLogicalStatementData, LogicalStatement):
         if self._check_skip_add(None, expr) is None:
             del self[None]
             return None
-        return super(SimpleLogicalStatement, self).set_value(expr)
+        return super(SimpleLogicalConstraint, self).set_value(expr)
 
     #
     # Leaving this method for backward compatibility reasons.
     # (probably should be removed)
     #
     def add(self, index, expr):
-        """Add a logical statement with a given index."""
+        """Add a logical constraint with a given index."""
         if index is not None:
             raise ValueError(
-                "SimpleLogicalStatement object '%s' does not accept "
+                "SimpleLogicalConstraint object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
                 % (self.name, index))
         self.set_value(expr)
         return self
 
 
-class IndexedLogicalStatement(LogicalStatement):
+class IndexedLogicalConstraint(LogicalConstraint):
 
     #
     # Leaving this method for backward compatibility reasons
@@ -499,14 +499,14 @@ class IndexedLogicalStatement(LogicalStatement):
     # was not checked).
     #
     def add(self, index, expr):
-        """Add a logical statement with a given index."""
+        """Add a logical constraint with a given index."""
         return self.__setitem__(index, expr)
 
 
-@ModelComponentFactory.register("A list of logical statements.")
-class LogicalStatementList(IndexedLogicalStatement):
+@ModelComponentFactory.register("A list of logical constraints.")
+class LogicalConstraintList(IndexedLogicalConstraint):
     """
-    A logical statement component that represents a list of constraints.
+    A logical constraint component that represents a list of constraints.
     Constraints can be indexed by their index, but when they are
     added an index value is not specified.
     """
@@ -518,17 +518,17 @@ class LogicalStatementList(IndexedLogicalStatement):
         args = (Set(),)
         if 'expr' in kwargs:
             raise ValueError(
-                "LogicalStatementList does not accept the 'expr' keyword")
-        LogicalStatement.__init__(self, *args, **kwargs)
+                "LogicalConstraintList does not accept the 'expr' keyword")
+        LogicalConstraint.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         """
-        Construct the expression(s) for this logical statement.
+        Construct the expression(s) for this logical constraint.
         """
         generate_debug_messages = \
             __debug__ and logger.isEnabledFor(logging.DEBUG)
         if generate_debug_messages:
-            logger.debug("Constructing logical statement list %s"
+            logger.debug("Constructing logical constraint list %s"
                          % self.name)
 
         if self._constructed:
@@ -559,17 +559,17 @@ class LogicalStatementList(IndexedLogicalStatement):
                 val = len(self._index) + 1
                 if generate_debug_messages:
                     logger.debug(
-                        "   Constructing logical statement index " + str(val))
+                        "   Constructing logical constraint index " + str(val))
                 expr = apply_indexed_rule(self,
                                           _init_rule,
                                           _self_parent,
                                           val)
                 if expr is None:
                     raise ValueError(
-                        "LogicalStatementList '%s': rule returned None "
-                        "instead of LogicalStatementList.End" % (self.name,))
+                        "LogicalConstraintList '%s': rule returned None "
+                        "instead of LogicalConstraintList.End" % (self.name,))
                 if (expr.__class__ is tuple) and \
-                        (expr == LogicalStatementList.End):
+                        (expr == LogicalConstraintList.End):
                     return
                 self.add(expr)
 
@@ -578,15 +578,15 @@ class LogicalStatementList(IndexedLogicalStatement):
             for expr in _generator:
                 if expr is None:
                     raise ValueError(
-                        "LogicalStatementList '%s': generator returned None "
-                        "instead of LogicalStatementList.End" % (self.name,))
+                        "LogicalConstraintList '%s': generator returned None "
+                        "instead of LogicalConstraintList.End" % (self.name,))
                 if (expr.__class__ is tuple) and \
-                        (expr == LogicalStatementList.End):
+                        (expr == LogicalConstraintList.End):
                     return
                 self.add(expr)
 
     def add(self, expr):
-        """Add a logical statement with an implicit index."""
+        """Add a logical constraint with an implicit index."""
         next_idx = len(self._index) + 1
         self._index.add(next_idx)
         return self.__setitem__(next_idx, expr)

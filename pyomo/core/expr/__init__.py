@@ -16,7 +16,7 @@
 # symbols that are used by developers.
 # 
 
-from . import numvalue, numeric_expr, logicalvalue, logical_expr, current
+from . import numvalue, numeric_expr, boolean_value, logical_expr, current
 
 from .numvalue import (
     value, is_constant, is_fixed, is_variable_type,
@@ -24,8 +24,8 @@ from .numvalue import (
     native_numeric_types, native_types, polynomial_degree,
 )
 
-from .logicalvalue import (
-	LogicalValue, TrueConstant,
+from .boolean_value import (
+    BooleanValue, TrueConstant,
     FalseConstant,
 )
 

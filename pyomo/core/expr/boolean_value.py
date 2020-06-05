@@ -1,6 +1,6 @@
 __all__ = (
-    'LogicalValue', 'TrueConstant', 'FalseConstant',
-    'native_logical_values', 'LogicalConstant', 'as_logical')
+    'BooleanValue', 'TrueConstant', 'FalseConstant',
+    'native_logical_values', 'BooleanConstant', 'as_boolean')
 
 import sys
 import logging
@@ -18,10 +18,10 @@ def _generate_logical_proposition(etype, _self, _other):
     raise RuntimeError("Incomplete import of Pyomo expression system")  #pragma: no cover
 
 
-def as_logical(obj):
+def as_boolean(obj):
     """
-    A function that creates a LogicalConstant object that
-    wraps Python logical values.
+    A function that creates a BooleanConstant object that
+    wraps Python Boolean values.
 
     Args:
         obj: The logical value that may be wrapped.
@@ -29,10 +29,10 @@ def as_logical(obj):
     Raises: TypeError if the object is in native_types and not in 
         native_logical_types
 
-    Returns: A true or false LogicalConstant or the original object
+    Returns: A true or false BooleanConstant or the original object
     """
     if obj.__class__ in native_logical_types:
-        return LogicalConstant(obj)
+        return BooleanConstant(obj)
     #
     # Ignore objects that are duck types to work with Pyomo expressions
     #
@@ -51,15 +51,15 @@ def as_logical(obj):
         "type '%s'" % (str(obj), type(obj).__name__))
 
 
-class LogicalValue(object):
+class BooleanValue(object):
     """
-    This is the base class for logical values used in Pyomo.
+    This is the base class for Boolean values used in Pyomo.
     """
     __slots__ = ()
     __hash__ = None
 
     def __getstate__(self):
-        _base = super(LogicalValue, self)
+        _base = super(BooleanValue, self)
         if hasattr(_base, '__getstate__'):
             return _base.__getstate__()
         else:
@@ -74,7 +74,7 @@ class LogicalValue(object):
         object attributes is handled at the last class before 'object',
         which may -- or may not (thanks to MRO) -- be here.
         """
-        _base = super(LogicalValue, self)
+        _base = super(BooleanValue, self)
         if hasattr(_base, '__setstate__'):
             return _base.__setstate__(state)
         else:
@@ -89,7 +89,7 @@ class LogicalValue(object):
         If this is a component, return the component's name on the owning
         block; otherwise return the value converted to a string
         """
-        _base = super(LogicalValue, self)
+        _base = super(BooleanValue, self)
         if hasattr(_base, 'getname'):
             return _base.getname(fully_qualified, name_buffer)
         else:
@@ -152,96 +152,96 @@ class LogicalValue(object):
 
     def __float__(self):
         raise TypeError(
-            "Implicit conversion of Pyomo LogicalValue type "
+            "Implicit conversion of Pyomo BooleanValue type "
             "'%s' to a float is disabled." % (self.name,))
 
     def __int__(self):
         raise TypeError(
-            "Implicit conversion of Pyomo LogicalValue type "
+            "Implicit conversion of Pyomo BooleanValue type "
             "'%s' to an integer is disabled." % (self.name,))
 
     def __lt__(self, other):
         raise TypeError(
-            "Numeric comparison with LogicalValue %s is not allowed." % self.name)
+            "Numeric comparison with BooleanValue %s is not allowed." % self.name)
 
     def __gt__(self, other):
         raise TypeError(
-            "Numeric comparison with LogicalValue %s is not allowed." % self.name)
+            "Numeric comparison with BooleanValue %s is not allowed." % self.name)
 
     def __le__(self, other):
         raise TypeError(
-            "Numeric comparison with LogicalValue %s is not allowed." % self.name)
+            "Numeric comparison with BooleanValue %s is not allowed." % self.name)
 
     def __ge__(self, other):
         raise TypeError(
-            "Numeric comparison with LogicalValue %s is not allowed." % self.name)
+            "Numeric comparison with BooleanValue %s is not allowed." % self.name)
     
     def __add__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __sub__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __mul__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __div__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __truediv__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __pow__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __radd__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __rsub__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __rmul__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __rdiv__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __rtruediv__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __rpow__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __iadd__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __isub__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __imul__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __idiv__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __itruediv__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __ipow__(self, other):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __neg__(self):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __pos__(self):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __abs__(self):
-        raise TypeError("Unable to perform arithmetic operations between logical values.")
+        raise TypeError("Unable to perform arithmetic operations between Boolean values.")
 
     def __bool__(self):
         """Evaluation as a boolean (using if, and, or keywords)"""
-        raise TypeError("Use value() for finding the value of a LogicalValue.")
+        raise TypeError("Use value() for finding the value of a BooleanValue.")
 
     def __eq__(self, other):
         """
@@ -362,7 +362,7 @@ class LogicalValue(object):
         return self.__str__()
 
 
-class LogicalConstant(LogicalValue):
+class BooleanConstant(BooleanValue):
     """An object that contains a constant Logical value.
 
     Constructor Arguments:
@@ -373,12 +373,12 @@ class LogicalConstant(LogicalValue):
 
     def __init__(self, value):
         if value not in native_logical_values:
-            raise TypeError('Not a valid LogicalValue. Unable to create a logical constant')
+            raise TypeError('Not a valid BooleanValue. Unable to create a logical constant')
         self.value = value
 
     def __getstate__(self):
-        state = super(LogicalConstant, self).__getstate__()
-        for i in LogicalConstant.__slots__:
+        state = super(BooleanConstant, self).__getstate__()
+        for i in BooleanConstant.__slots__:
             state[i] = getattr(self, i)
         return state
 
@@ -412,6 +412,6 @@ class LogicalConstant(LogicalValue):
         ostream.write(str(self))
 
 
-# We use as_logical() so that the constant is also in the cache
-TrueConstant = as_logical(True)
-FalseConstant = as_logical(False)
+# We use as_boolean() so that the constant is also in the cache
+TrueConstant = as_boolean(True)
+FalseConstant = as_boolean(False)

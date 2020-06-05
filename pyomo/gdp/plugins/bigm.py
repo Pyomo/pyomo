@@ -18,7 +18,7 @@ from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value,
-    RangeSet, NonNegativeIntegers, LogicalStatement)
+    RangeSet, NonNegativeIntegers, LogicalConstraint)
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.component import ComponentUID, ActiveComponent
@@ -163,7 +163,7 @@ class BigM_Transformation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
-            LogicalStatement: self._warn_for_active_logical_statement,
+            LogicalConstraint: self._warn_for_active_logical_statement,
             ExternalFunction: False,
         }
 

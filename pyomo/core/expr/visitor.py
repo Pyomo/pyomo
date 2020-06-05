@@ -23,8 +23,8 @@ from .symbol_map import SymbolMap
 from . import expr_common as common
 from .expr_errors import TemplateExpressionError
 
-from pyomo.core.expr.logicalvalue import (
-    LogicalValue,)
+from pyomo.core.expr.boolean_value import (
+    BooleanValue,)
 
 
 from pyomo.core.expr.numvalue import (
@@ -928,7 +928,7 @@ class _EvaluationVisitor(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             return True, node
 
-        if isinstance(node, LogicalValue):
+        if isinstance(node, BooleanValue):
             # [QC 2020-06-03]: I need to revisit what is going on here.
             if node.is_variable_type():
                 return True, value(node)

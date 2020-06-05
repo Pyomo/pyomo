@@ -27,9 +27,9 @@ from .numvalue import (
     native_logical_types,
 )
 
-from .logicalvalue import (
-    LogicalValue,
-    LogicalConstant,
+from .boolean_value import (
+    BooleanValue,
+    BooleanConstant,
 )
 
 from .expr_common import (
@@ -535,7 +535,7 @@ def _generate_logical_proposition(etype, lhs, rhs):
         raise ValueError("Unknown logical proposition type '%s'" % etype)  # pragma: no cover
 
 
-class LogicalExpressionBase(LogicalValue):
+class BooleanExpressionBase(BooleanValue):
     """
     Logical expressions base expression.
 
@@ -595,8 +595,8 @@ class LogicalExpressionBase(LogicalValue):
         Returns:
             The pickled state.
         """
-        state = super(LogicalExpressionBase, self).__getstate__()
-        for i in LogicalExpressionBase.__slots__:
+        state = super(BooleanExpressionBase, self).__getstate__()
+        for i in BooleanExpressionBase.__slots__:
            state[i] = getattr(self,i)
         return state
 
@@ -652,7 +652,7 @@ class LogicalExpressionBase(LogicalValue):
         return expression_to_string(self, verbose=verbose, labeler=labeler, smap=smap, compute_values=compute_values)
 
     def _precedence(self):
-        return LogicalExpressionBase.PRECEDENCE
+        return BooleanExpressionBase.PRECEDENCE
 
     def _associativity(self):
         """Return the associativity of this operator.
@@ -996,7 +996,7 @@ def AtLeast(n, *args):
     return result
 
 
-class UnaryLogicalExpression(LogicalExpressionBase):
+class UnaryBooleanExpression(BooleanExpressionBase):
     """
     Abstract class for single-argument logical expressions.
     """
@@ -1007,7 +1007,7 @@ class UnaryLogicalExpression(LogicalExpressionBase):
         return 1
 
 
-class NotExpression(UnaryLogicalExpression):
+class NotExpression(UnaryBooleanExpression):
     """
     This is the node for a NotExpression, this node should have exactly one child
     """
@@ -1026,7 +1026,7 @@ class NotExpression(UnaryLogicalExpression):
         return not result[0]
 
 
-class BinaryLogicalExpression(LogicalExpressionBase):
+class BinaryBooleanExpression(BooleanExpressionBase):
     """
     Abstract class for binary logical expressions.
     """
@@ -1037,7 +1037,7 @@ class BinaryLogicalExpression(LogicalExpressionBase):
         return 2
 
 
-class EquivalenceExpression(BinaryLogicalExpression):
+class EquivalenceExpression(BinaryBooleanExpression):
     """
     Logical equivalence statement: Y_1 iff Y_2.
 
@@ -1059,7 +1059,7 @@ class EquivalenceExpression(BinaryLogicalExpression):
         return result[0] == result[1]
 
 
-class XorExpression(BinaryLogicalExpression):
+class XorExpression(BinaryBooleanExpression):
     """
     Logical Exclusive OR statement: Y_1 ^ Y_2
     """
@@ -1080,7 +1080,7 @@ class XorExpression(BinaryLogicalExpression):
         return operator.xor(result[0], result[1])
 
 
-class ImplicationExpression(BinaryLogicalExpression):
+class ImplicationExpression(BinaryBooleanExpression):
     """
     Logical Implication statement: Y_1 >> Y_2.
     """
@@ -1101,9 +1101,9 @@ class ImplicationExpression(BinaryLogicalExpression):
         return (not result[0]) or result[1]
 
 
-class MultiArgsExpression(LogicalExpressionBase):
+class NaryBooleanExpression(BooleanExpressionBase):
     """
-    The abstract class for MultiargsExpression. This class should never be initialized.
+    The abstract class for NaryBooleanExpression. This class should never be initialized.
     """
     def __init__(self, args):
         self._args_ = args
@@ -1116,7 +1116,7 @@ class MultiArgsExpression(LogicalExpressionBase):
         return self._nargs
 
     def getname(self, *arg, **kwd):
-        return 'MultiArgsExpression'
+        return 'NaryBooleanExpression'
 
 
 def _add_to_and_or_expression(orig_expr, new_arg):
@@ -1139,7 +1139,7 @@ def _add_to_and_or_expression(orig_expr, new_arg):
     return new_expr
 
 
-class AndExpression(MultiArgsExpression):
+class AndExpression(NaryBooleanExpression):
     """
     This is the node for AndExpression.
     """
@@ -1162,13 +1162,13 @@ class AndExpression(MultiArgsExpression):
     def add(self, new_arg):
         if new_arg.__class__ in native_logical_types:
             if new_arg is False:
-                return LogicalConstant(False)
+                return BooleanConstant(False)
             elif new_arg is True:
                 return self
         return _add_to_and_or_expression(self, new_arg)
 
 
-class OrExpression(MultiArgsExpression):
+class OrExpression(NaryBooleanExpression):
     """
     This is the node for OrExpression.
     """
@@ -1193,13 +1193,13 @@ class OrExpression(MultiArgsExpression):
             if new_arg is False:
                 return self
             elif new_arg is True:
-                return LogicalConstant(True)
+                return BooleanConstant(True)
         return _add_to_and_or_expression(self, new_arg)
 
 
-class ExactlyExpression(MultiArgsExpression):
+class ExactlyExpression(NaryBooleanExpression):
     """
-    Logical statement that exactly N child statements are True.
+    Logical constraint that exactly N child statements are True.
 
     The first argument N is expected to be a numeric non-negative integer.
     Subsequent arguments are expected to be Boolean.
@@ -1224,9 +1224,9 @@ class ExactlyExpression(MultiArgsExpression):
         return sum(result[1:]) == result[0]
 
 
-class AtMostExpression(MultiArgsExpression):
+class AtMostExpression(NaryBooleanExpression):
     """
-    Logical statement at that most N child statements are True.
+    Logical constraint that at most N child statements are True.
 
     The first argument N is expected to be a numeric non-negative integer.
     Subsequent arguments are expected to be Boolean.
@@ -1251,9 +1251,9 @@ class AtMostExpression(MultiArgsExpression):
         return sum(result[1:]) <= result[0]
 
 
-class AtLeastExpression(MultiArgsExpression):
+class AtLeastExpression(NaryBooleanExpression):
     """
-    Logical statement at that least N child statements are True.
+    Logical constraint that at least N child statements are True.
 
     The first argument N is expected to be a numeric non-negative integer.
     Subsequent arguments are expected to be Boolean.
@@ -1278,4 +1278,4 @@ class AtLeastExpression(MultiArgsExpression):
         return sum(result[1:]) >= result[0]
 
 
-special_logical_atom_types = {ExactlyExpression, AtMostExpression, AtLeastExpression}
+special_boolean_atom_types = {ExactlyExpression, AtMostExpression, AtLeastExpression}

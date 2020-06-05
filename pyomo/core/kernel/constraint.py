@@ -137,7 +137,7 @@ class IConstraint(ICategorizedObject):
                 return body_expr <= self.ub
             elif self.ub is None:
                 return self.lb <= body_expr
-            return logical_expr.RangedExpression((self.lb, body_expr, self.ub), (False,False))
+            return logical_expr.RangedExpression((self.lb, body_expr, self.ub), (False, False))
 
     @property
     def bounds(self):

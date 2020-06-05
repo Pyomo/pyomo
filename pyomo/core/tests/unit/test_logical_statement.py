@@ -1,6 +1,6 @@
 import pyutilib.th as unittest
 
-from pyomo.environ import AbstractModel, BooleanVar, ConcreteModel, LogicalStatement, TransformationFactory
+from pyomo.environ import AbstractModel, BooleanVar, ConcreteModel, LogicalConstraint, TransformationFactory
 from pyomo.gdp import Disjunction, GDP_Error
 
 
@@ -19,7 +19,7 @@ class TestLogicalStatementCreation(unittest.TestCase):
         model = self.create_model()
         def rule(model):
             return model.x
-        model.p = LogicalStatement(rule=rule)
+        model.p = LogicalConstraint(rule=rule)
 
         self.assertIs(model.p.body, model.x)
 

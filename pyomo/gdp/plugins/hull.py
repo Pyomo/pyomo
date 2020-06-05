@@ -22,7 +22,7 @@ from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import (
     Block, Connector, Constraint, Param, Set, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalStatement
+    Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalConstraint
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
@@ -191,7 +191,7 @@ class Hull_Reformulation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
-            LogicalStatement: self._warn_for_active_logical_statement,
+            LogicalConstraint: self._warn_for_active_logical_statement,
             }
 
     def _add_local_vars(self, block, local_var_dict):

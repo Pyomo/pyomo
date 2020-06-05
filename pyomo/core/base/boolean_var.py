@@ -8,7 +8,7 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.expr.logicalvalue import LogicalValue
+from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
@@ -22,7 +22,7 @@ from six.moves import xrange
 logger = logging.getLogger('pyomo.core')
 
 
-class _BooleanVarData(ComponentData, LogicalValue):
+class _BooleanVarData(ComponentData, BooleanValue):
     """
     This class defines the data for a single variable.
 
@@ -177,7 +177,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         # following constructors:
         #   - _BooleanVarData
         #   - ComponentData
-        #   - LogicalValue
+        #   - BooleanValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._value = None
@@ -298,7 +298,7 @@ class BooleanVar(IndexedComponent):
         self._value_init_value = None
         self._value_init_rule = None
 
-        if is_functor(initialize) and (not isinstance(initialize, LogicalValue)):
+        if is_functor(initialize) and (not isinstance(initialize, BooleanValue)):
             self._value_init_rule = initialize
         else:
             self._value_init_value = initialize

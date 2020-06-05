@@ -1,11 +1,11 @@
-"""Transformation from BooleanVar and LogicalStatement to Binary and Constraints."""
+"""Transformation from BooleanVar and LogicalConstraint to Binary and Constraints."""
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from pyomo.core import TransformationFactory, BooleanVar, VarList, Binary, LogicalStatement, Block, ConstraintList, \
-    native_types, BooleanVarList, as_logical
+from pyomo.core import TransformationFactory, BooleanVar, VarList, Binary, LogicalConstraint, Block, ConstraintList, \
+    native_types, BooleanVarList, as_boolean
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.logical_expr import AndExpression, OrExpression, NotExpression, AtLeastExpression, \
-    AtMostExpression, ExactlyExpression, special_logical_atom_types, EqualityExpression, InequalityExpression, \
+    AtMostExpression, ExactlyExpression, special_boolean_atom_types, EqualityExpression, InequalityExpression, \
     RangedExpression
 from pyomo.core.expr.numvalue import native_logical_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
@@ -17,7 +17,7 @@ from pyomo.gdp import Disjunct
 @TransformationFactory.register("core.logical_to_linear", doc="Convert logic to linear constraints")
 class LogicalToLinear(IsomorphicTransformation):
     """
-    Re-encode logical statements as linear constraints,
+    Re-encode logical constraints as linear constraints,
     converting Boolean variables to binary.
     """
 
@@ -39,10 +39,10 @@ class LogicalToLinear(IsomorphicTransformation):
                         new_binary_vardata.fix()
 
         # Process statements in global (entire model) context
-        _process_statements_in_logical_context(model)
+        _process_logical_constraints_in_logical_context(model)
         # Process statements that appear in disjuncts
         for disjunct in model.component_data_objects(Disjunct, descend_into=(Block, Disjunct), active=True):
-            _process_statements_in_logical_context(disjunct)
+            _process_logical_constraints_in_logical_context(disjunct)
 
 
 def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
@@ -58,7 +58,7 @@ def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
                 raise ValueError("Binary variable has non-{0,1} value: %s = %s" % (binary_var.name, binary_var.value))
 
 
-def _process_statements_in_logical_context(context):
+def _process_logical_constraints_in_logical_context(context):
     new_constrlist_name = unique_component_name(context, 'logic_to_linear')
     new_constrlist = ConstraintList()
     setattr(context, new_constrlist_name, new_constrlist)
@@ -71,10 +71,10 @@ def _process_statements_in_logical_context(context):
     setattr(context, new_var_list_name, new_varlist)
     indicator_map = ComponentMap()
     cnf_statements = []
-    # Convert all logical statements to CNF
-    for logic_statement in context.component_data_objects(ctype=LogicalStatement, active=True):
-        cnf_statements.extend(to_cnf(logic_statement.body, new_boolvarlist, indicator_map))
-        logic_statement.deactivate()
+    # Convert all logical constraints to CNF
+    for logical_constraint in context.component_data_objects(ctype=LogicalConstraint, active=True):
+        cnf_statements.extend(to_cnf(logical_constraint.body, new_boolvarlist, indicator_map))
+        logical_constraint.deactivate()
 
     # Associate new Boolean vars to new binary variables
     for bool_vardata in new_boolvarlist.values():
@@ -134,7 +134,7 @@ _numeric_relational_types = {InequalityExpression, EqualityExpression, RangedExp
 
 
 class CnfToLinearVisitor(StreamBasedExpressionVisitor):
-    """Convert CNF Logical Statement to linear constraints.
+    """Convert CNF logical constraint to linear constraints.
 
     Expected expression node types: AndExpression, OrExpression, NotExpression,
     AtLeastExpression, AtMostExpression, ExactlyExpression, _BooleanVarData
@@ -194,7 +194,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
             pass
 
     def beforeChild(self, node, child, child_idx):
-        if type(node) in special_logical_atom_types and child is node.args[0]:
+        if type(node) in special_boolean_atom_types and child is node.args[0]:
             return False, child
         if type(child) in native_logical_types:
             return False, int(child)

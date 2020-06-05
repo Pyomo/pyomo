@@ -6,13 +6,13 @@ from pyomo.common import DeveloperError
 from pyomo.core.expr.numvalue import native_types, value
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.expr.logical_expr import (
-    LogicalExpressionBase,
-    NotExpression, BinaryLogicalExpression, MultiArgsExpression,
+    BooleanExpressionBase,
+    NotExpression, BinaryBooleanExpression, NaryBooleanExpression,
     AndExpression, OrExpression, ImplicationExpression, EquivalenceExpression,
     XorExpression,
     ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalent,
     Or, Implies, And, Exactly, AtMost, AtLeast, Xor,
-    special_logical_atom_types)
+    special_boolean_atom_types)
 
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.kernel.component_set import ComponentSet
@@ -76,7 +76,7 @@ class Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
     def exitNode(self, node, values):
         _op = _pyomo_operator_map.get(node.__class__, None)
         if _op is None:
-            if node.__class__ in special_logical_atom_types:
+            if node.__class__ in special_boolean_atom_types:
                 raise ValueError("Encountered special atom class '%s' in root node" % node.__class__)
             return node._apply_operation(values)
         else:
@@ -92,7 +92,7 @@ class Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
         # We will descend into all expressions...
         #
         if child.is_expression_type():
-            if child.__class__ in special_logical_atom_types:
+            if child.__class__ in special_boolean_atom_types:
                 indicator_var = self.boolean_variable_list.add()
                 self.special_atom_map[indicator_var] = child
                 return False, self.object_map.getSympySymbol(indicator_var)
@@ -138,7 +138,7 @@ class Sympy2PyomoVisitor(StreamBasedExpressionVisitor):
 
 
 def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
-    """Converts a Pyomo logical statement to CNF form.
+    """Converts a Pyomo logical constraint to CNF form.
 
     Note: the atoms AtMostExpression, AtLeastExpression, and ExactlyExpression
     require special treatment if they are not the root node, or if their children are not atoms,
@@ -150,7 +150,7 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
     not provided on which to store the augmented variables,
     and augmented variables are needed.
 
-    This function will return a list of CNF logical statements, including:
+    This function will return a list of CNF logical constraints, including:
     - CNF of original statement, including possible substitutions
     - Additional CNF statements (for enforcing equivalence to augmented variables)
 
@@ -160,7 +160,7 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
       with only literals as logical arguments
 
     """
-    if type(expr) in special_logical_atom_types:
+    if type(expr) in special_boolean_atom_types:
         # If root node is one of the special atoms, recursively convert its
         # children nodes to CNF.
         return _convert_children_to_literals(expr, bool_varlist, bool_var_to_special_atoms)
@@ -189,7 +189,7 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
 
 
 def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_special_atoms):
-    """If the child logical statements are not literals, substitute augmented boolean variables.
+    """If the child logical constraints are not literals, substitute augmented boolean variables.
 
     Same return types as to_cnf() function.
 
@@ -205,7 +205,7 @@ def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_specia
             # We need to do a substitution
             need_new_expression = True
             new_indicator = bool_varlist.add()
-            if type(child) in special_logical_atom_types:
+            if type(child) in special_boolean_atom_types:
                 child_cnf = _convert_children_to_literals(child, bool_varlist, bool_var_to_special_atoms)
                 bool_var_to_special_atoms[new_indicator] = child_cnf[0]
             else:

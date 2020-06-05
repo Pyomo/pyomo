@@ -11,7 +11,7 @@ from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.logical_expr import (Not, Equivalent,
                                           Or, Implies, And, Exactly, AtMost, AtLeast, Xor,
                                           )
-from pyomo.core.expr.logicalvalue import LogicalConstant
+from pyomo.core.expr.boolean_value import BooleanConstant
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.environ import *
@@ -184,7 +184,7 @@ class TestLogicalClasses(unittest.TestCase):
         m.s = RangeSet(nargs)
         m.Y = BooleanVar(m.s)
         op_static = And(*(m.Y[i] for i in m.s))
-        op_class = LogicalConstant(True)
+        op_class = BooleanConstant(True)
         op_operator = True
         for y in m.Y.values():
             op_class = op_class.and_(y)
@@ -202,7 +202,7 @@ class TestLogicalClasses(unittest.TestCase):
         m.s = RangeSet(nargs)
         m.Y = BooleanVar(m.s)
         op_static = Or(*(m.Y[i] for i in m.s))
-        op_class = LogicalConstant(False)
+        op_class = BooleanConstant(False)
         op_operator = False
         for y in m.Y.values():
             op_class = op_class.or_(y)
@@ -296,11 +296,11 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: m.Y1 > 0
             yield lambda: m.Y1 < 0
 
-        numeric_error_msg = "Unable to perform arithmetic operations between logical values."
+        numeric_error_msg = "Unable to perform arithmetic operations between Boolean values."
         for invalid_expr_fcn in invalid_expression_generator():
             with self.assertRaisesRegex(TypeError, numeric_error_msg):
                 _ = invalid_expr_fcn()
-        comparison_error_msg = "Numeric comparison with LogicalValue Y1 is not allowed."
+        comparison_error_msg = "Numeric comparison with BooleanValue Y1 is not allowed."
         for invalid_expr_fcn in invalid_comparison_generator():
             with self.assertRaisesRegex(TypeError, comparison_error_msg):
                 _ = invalid_expr_fcn()
@@ -310,12 +310,12 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
 
         with self.assertRaisesRegex(
-                TypeError, "Implicit conversion of Pyomo LogicalValue type "
+                TypeError, "Implicit conversion of Pyomo BooleanValue type "
                 "'Y1' to a float is disabled."):
             float(m.Y1)
 
         with self.assertRaisesRegex(
-                TypeError, "Implicit conversion of Pyomo LogicalValue type "
+                TypeError, "Implicit conversion of Pyomo BooleanValue type "
                 "'Y1' to an integer is disabled."):
             int(m.Y1)
 

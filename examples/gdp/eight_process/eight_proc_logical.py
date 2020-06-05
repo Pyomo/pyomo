@@ -28,7 +28,7 @@ from six import iteritems
 
 from pyomo.core.expr.logical_expr import And
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
-                           Objective, Param, RangeSet, Var, exp, minimize, BooleanVar, LogicalStatement)
+                           Objective, Param, RangeSet, Var, exp, minimize, BooleanVar, LogicalConstraint)
 from pyomo.gdp import Disjunction
 from pyomo.opt import SolverFactory
 
@@ -170,10 +170,10 @@ def build_eight_process_flowsheet():
     m.specs4 = Constraint(expr=m.flow[12] >= 2 * m.flow[14])
 
     # logical propositions
-    m.use1or2implies345 = LogicalStatement(
+    m.use1or2implies345 = LogicalConstraint(
         expr=(m.use_unit[1] | m.use_unit[2]).implies(m.use_unit[3] | m.use_unit[4] | m.use_unit[5]))
-    m.use4implies6or7 = LogicalStatement(expr=m.use_unit[4].implies(m.use_unit[6] | m.use_unit[7]))
-    m.use3implies8 = LogicalStatement(expr=m.use_unit[3] >> m.use_unit[8])
+    m.use4implies6or7 = LogicalConstraint(expr=m.use_unit[4].implies(m.use_unit[6] | m.use_unit[7]))
+    m.use3implies8 = LogicalConstraint(expr=m.use_unit[3] >> m.use_unit[8])
 
     """Profit (objective) function definition"""
     m.profit = Objective(expr=sum(
