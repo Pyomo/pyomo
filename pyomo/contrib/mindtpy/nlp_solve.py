@@ -46,7 +46,7 @@ def solve_NLP_subproblem(solve_data, config):
     # | g(x) <= b  | -1    | g(x1) > b    | g(x1) - b            |
     # | g(x) >= b  | +1    | g(x1) >= b   | 0                    |
     # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
-    flag = False
+    evaluation_error = False
     for c in fixed_nlp.component_data_objects(ctype=Constraint, active=True,
                                               descend_into=True):
         # We prefer to include the upper bound as the right hand side since we are
@@ -61,8 +61,8 @@ def solve_NLP_subproblem(solve_data, config):
                 0, c_geq*(rhs - value(c.body)))
         except (ValueError, OverflowError) as error:
             fixed_nlp.tmp_duals[c] = None
-            flag = True
-    if flag:
+            evaluation_error = True
+    if evaluation_error:
         for nlp_var, orig_val in zip(
                 MindtPy.variable_list,
                 solve_data.initial_var_values):
