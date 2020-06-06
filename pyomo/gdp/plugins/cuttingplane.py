@@ -104,13 +104,15 @@ class CuttingPlane_Transformation(Transformation):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
 
-        (instance_rBigM, instance_rHull, var_info, var_map,
-         disaggregated_var_info, rBigM_linear_constraints, 
-         transBlockName) = self._setup_subproblems(
+        (instance_rBigM, instance_rHull, var_info, 
+         var_map, disaggregated_vars, 
+         disaggregation_constraints, 
+         rBigM_linear_constraints, transBlockName) = self._setup_subproblems(
              instance, bigM)
 
         self._generate_cuttingplanes( instance_rBigM, instance_rHull, var_info,
-                                      var_map, disaggregated_var_info,
+                                      var_map, disaggregated_vars,
+                                      disaggregation_constraints,
                                       rBigM_linear_constraints, transBlockName)
 
         # restore integrality
@@ -156,7 +158,9 @@ class CuttingPlane_Transformation(Transformation):
         # collect a list of disaggregated variables. We have to do this before
         # reclassify because we rely on Disjuncts still having a different
         # ctype.
-        disaggregated_vars = self._get_disaggregated_vars(instance_rHull)
+        (disaggregated_vars, 
+         disaggregation_constraints) = self._get_disaggregated_vars(
+             instance_rHull)
         reclassify.apply_to(instance_rHull)
         relaxIntegrality.apply_to(instance_rHull,
                                   transform_deactivated_blocks=True)
@@ -242,8 +246,8 @@ class CuttingPlane_Transformation(Transformation):
         #
         self._add_separation_objective(var_info, transBlock_rHull)
 
-        return (instance, instance_rHull, var_info, var_map,
-                disaggregated_vars, rBigM_linear_constraints,
+        return (instance, instance_rHull, var_info, var_map, disaggregated_vars,
+                disaggregation_constraints, rBigM_linear_constraints,
                 transBlockName)
 
     def _get_disaggregated_vars(self, hull):
@@ -251,17 +255,25 @@ class CuttingPlane_Transformation(Transformation):
         # (else we don't pick up any Disjuncts in the component_data_objects
         # call below.)
         disaggregatedVars = []
-        for disjunct in hull.component_data_objects( Disjunct,
-                                                     descend_into=(Disjunct,
-                                                                   Block)):
-            if disjunct.transformation_block is not None:
-                transBlock = disjunct.transformation_block()
-                disaggregatedVars.extend(
-                    [v for v in transBlock.component_data_objects(Var)])
-        return disaggregatedVars
+        disaggregationConstraints = ComponentSet()
+        hull_xform = TransformationFactory('gdp.hull')
+        for disjunction in hull.component_data_objects( Disjunction,
+                                                        descend_into=(Disjunct,
+                                                                      Block)):
+            for disjunct in disjunction.disjuncts:
+                if disjunct.transformation_block is not None:
+                    transBlock = disjunct.transformation_block()
+                    for v in transBlock.component_data_objects(Var):
+                        disaggregatedVars.append(v)
+                        disaggregationConstraints.add(
+                            hull_xform.get_disaggregation_constraint(
+                                hull_xform.get_src_var(v), disjunction))
+                
+        return disaggregatedVars, disaggregationConstraints
 
-    def _generate_cuttingplanes( self, instance_rBigM, instance_rHull,
-                                 var_info, var_map, disaggregated_vars,
+    def _generate_cuttingplanes( self, instance_rBigM, instance_rHull, var_info,
+                                 var_map, disaggregated_vars,
+                                 disaggregation_constraints,
                                  rBigM_linear_constraints, transBlockName):
 
         opt = SolverFactory(self._config.solver)
@@ -306,10 +318,12 @@ class CuttingPlane_Transformation(Transformation):
                            % (rBigM_objVal,))
 
             # copy over xstar
+            print("x* is:")
             for x_bigm, x_rbigm, x_hull, x_star in var_info:
                 x_star.value = x_rbigm.value
                 # initialize the X values
                 x_hull.value = x_rbigm.value
+                print("%s: %s" % (x_rbigm.name, x_rbigm.value))
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
@@ -325,6 +339,10 @@ class CuttingPlane_Transformation(Transformation):
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
+            # DEBUG:
+            print("xhat is: ")
+            for x_bigm, x_rbigm, x_hull, x_star in var_info:
+                print("%s: %s" % (x_hull.name, x_hull.value))
 
             # [JDS 19 Dec 18] Note: we check that the separation objective was
             # significantly nonzero.  If it is too close to zero, either the
@@ -335,12 +353,12 @@ class CuttingPlane_Transformation(Transformation):
                 break
 
             cuts = self._create_cuts(var_info, var_map, disaggregated_vars,
-                                     rHull_vars, instance_rHull,
-                                     rBigM_linear_constraints, transBlock_rBigM,
-                                     transBlock_rHull)
+                                     disaggregation_constraints, rHull_vars,
+                                     instance_rHull, rBigM_linear_constraints,
+                                     transBlock_rBigM, transBlock_rHull)
            
             # We are done if the cut generator couldn't return a valid cut
-            if cuts is None:
+            if cuts is None or not improving:
                 break
 
             for cut in cuts:
@@ -375,16 +393,17 @@ class CuttingPlane_Transformation(Transformation):
         transBlock_rHull.separation_objective = Objective(expr=obj_expr)
 
 
-    def _create_cuts(self, var_info, var_map, disaggregated_vars, rHull_vars,
-                     instance_rHull, rBigM_linear_constraints,
-                     transBlock_rBigm, transBlock_rHull):
+    def _create_cuts(self, var_info, var_map, disaggregated_vars,
+                     disaggregation_constraints, rHull_vars, instance_rHull,
+                     rBigM_linear_constraints, transBlock_rBigm,
+                     transBlock_rHull):
         cut_number = len(transBlock_rBigm.cuts)
         logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
                        % (cut_number,))
 
         # loop through all constraints in rHull and figure out which are active
         # or slightly violated. For each we will get the tangent plane at xhat
-        # (which is x_chull below). We get the normal vector for each of these
+        # (which is x_hull below). We get the normal vector for each of these
         # tangent planes and sum them to get a composite normal. Our cut is then
         # the hyperplane normal to this composite through xbar (projected into
         # the original space).
@@ -412,6 +431,10 @@ class CuttingPlane_Transformation(Transformation):
                     # x_hat
                     conslist[len(conslist)] = self.get_linear_approximation_expr(
                         normal_vec, rHull_vars)
+            # even if it was satisfied exactly, we need to grab the
+            # disaggregation constraints in order to do the projection.
+            elif constraint in disaggregation_constraints:
+                conslist[len(conslist)] = constraint.expr
 
         # It is possible that the separation problem returned a point in
         # the interior of the convex hull.  It is also possible that the
@@ -421,18 +444,20 @@ class CuttingPlane_Transformation(Transformation):
         if not normal_vectors:
             return None
 
+        hull_xform = TransformationFactory('gdp.hull')
+
         composite_normal = list(
             sum(_) for _ in zip(*tuple(normal_vectors)) )
         composite_normal_map = ComponentMap(
             (v,n) for v,n in zip(rHull_vars, composite_normal))
         
         composite_cutexpr_Hull = 0
-        for x_bigm, x_rbigm, x_chull, x_star in var_info:
+        for x_bigm, x_rbigm, x_hull, x_star in var_info:
             # make the cut in the Hull space with the Hull variables. We will
             # translate it all to BigM and rBigM later when we have projected
             # out the disaggregated variables
-            composite_cutexpr_Hull += composite_normal_map[x_chull]*\
-                                       (x_chull - x_chull.value)
+            composite_cutexpr_Hull += composite_normal_map[x_hull]*\
+                                       (x_hull - x_hull.value)
 
         # expand the composite_cutexprs to be in the extended space
         vars_to_eliminate = ComponentSet()
@@ -474,12 +499,21 @@ class CuttingPlane_Transformation(Transformation):
             cut = cuts[i]
             # x* is still in rBigM, so we can just remove this constraint if it
             # is satisfied at x*
+            print("hi there")
+            print(cut)
             if value(cut):
                 del cuts[i]
                 continue
-            # we have found a constraint which cuts of x* and is not already
-            # in rBigM, this has to be our cut and we can stop.
-            return [cut]
+            # we have found a constraint which cuts of x* by some convincing
+            # amount and is not already in rBigM, this has to be our cut and we
+            # can stop. We know cut is lb <= expr and that it's violated
+            assert len(cut.args) == 2
+            # TODO: OK, we need a tolerance option here...
+            print("maybe: ")
+            print(cut)
+            print(value(cut.args[0]) - value(cut.args[1]))
+            if value(cut.args[0]) - value(cut.args[1]) > 0.001:
+                return [cut]
 
         return None
 

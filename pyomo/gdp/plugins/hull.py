@@ -973,6 +973,23 @@ class Hull_Reformulation(Transformation):
                          (original_var.name, disjunction.name))
             raise
 
+    def get_disaggregation_constraint_from_disaggregated_var(self,
+                                                             disaggregated_var):
+        """
+        Returns the disaggregation (re-aggregation?) constraint corresponding
+        to disaggregated_var's Disjunction
+
+        Parameters
+        ----------
+        disaggregated_var: A disaggregated variable created by the hull 
+                           transformation
+        """
+        disjBlock = disaggregated_var.parent_block()
+        from nose.tools import set_trace
+        set_trace()
+        return self.get_disaggregation_constraint(
+            self.get_src_var(disaggregated_var), disjunction)
+
     def get_var_bounds_constraint(self, v):
         """
         Returns the IndexedConstraint which sets a disaggregated

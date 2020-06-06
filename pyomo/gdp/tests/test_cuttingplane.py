@@ -29,14 +29,6 @@ solvers = pyomo.opt.check_available_solvers('ipopt')
 #     - test that deactivated objectives on the model don't get used by the
 #       transformation
 
-def check_linear_coef(self, repn, var, coef):
-    var_id = None
-    for i,v in enumerate(repn.linear_vars):
-        if v is var:
-            var_id = i
-    self.assertIsNotNone(var_id)
-    self.assertAlmostEqual(repn.linear_coefs[var_id], coef)
-
 def check_validity(self, body, lower, upper):
     if lower is not None:
         self.assertGreaterEqual(value(body), value(lower))
@@ -51,9 +43,6 @@ class OneVarDisj(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(m)
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
-        # I really expect 1 or 0. If we are getting more here then we have
-        # pretty much got to be adding unncessary cuts...
-
         # Big-m is actually tight for the optimal M value, so I should have no
         # cuts. If I have any then we are wasting our time.
         self.assertEqual(len(cuts), 0)
@@ -65,14 +54,11 @@ class OneVarDisj(unittest.TestCase):
         # 0 <= Y <= 1 (in the limit)
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
-        # I actually know exactly the cut I am expecting in this case (I think I
-        # get it twice, which is a bummer, but I am just going to make sure I
-        # get it by testing that it is tight at two points)
+        # I am expecting exactly one cut
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         # I should get one cut because I made bigM really bad, but I only need
         # one facet of the convex hull for this problem to be done.
-        cuts.pprint()
         self.assertEqual(len(cuts), 1)
 
         cut_expr = cuts[0].body
@@ -81,9 +67,10 @@ class OneVarDisj(unittest.TestCase):
         m.disj2.indicator_var.fix(0)
         # The almost equal here is OK because we are going to check that it is
         # actually valid in the next test. I just wanted to make sure it is the
-        # line I am expecting, so I want to know that it is tight here.
+        # line I am expecting, so I want to know that it is tight here...
         self.assertAlmostEqual(value(cut_expr), 0)
 
+        # ...and that it is tight here
         m.x.fix(2)
         m.disj2.indicator_var.fix(1)
         self.assertAlmostEqual(value(cut_expr), 0)
@@ -125,6 +112,17 @@ class OneVarDisj(unittest.TestCase):
         
 
 class TwoTermDisj(unittest.TestCase):
+    extreme_points = [
+        (1,0,4,1),
+        (1,0,4,2),
+        (1,0,3,1),
+        (1,0,3,2),
+        (0,1,1,3),
+        (0,1,1,4),
+        (0,1,2,3),
+        (0,1,2,4)
+    ]
+
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     # check that we have a transformation block and that the cuts are on it.
     def test_transformation_block(self):
@@ -159,24 +157,13 @@ class TwoTermDisj(unittest.TestCase):
         m = models.makeTwoTermDisj_boxes()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        extreme_pts = [
-            (1,0,4,1),
-            (1,0,4,2),
-            (1,0,3,1),
-            (1,0,3,2),
-            (0,1,1,3),
-            (0,1,1,4),
-            (0,1,2,3),
-            (0,1,2,4)
-        ]
-
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower
             upper = cut.upper
             # now there are 8 extreme points and we can test all of them
-            for pt in extreme_pts:
+            for pt in self.extreme_points:
                 m.d[0].indicator_var.fix(pt[0])
                 m.d[1].indicator_var.fix(pt[1])
                 m.x.fix(pt[2])
@@ -192,6 +179,8 @@ class TwoTermDisj(unittest.TestCase):
         m = models.makeTwoTermDisj_boxes()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
+        # I'm pretty sure this could be one of two facets, but it turns out to
+        # be this one, which is fine.
         facet_extreme_pts = [
             (1,0,3,1),
             (1,0,3,2),
@@ -200,12 +189,11 @@ class TwoTermDisj(unittest.TestCase):
         ]
         
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        self.assertEqual(len(cuts), 1)
         cut = cuts[0]
-        #set_trace()
         cut_expr = cut.body
         lower = cut.lower
         upper = cut.upper
-        tight = 0
         for pt in facet_extreme_pts:
             m.d[0].indicator_var.fix(pt[0])
             m.d[1].indicator_var.fix(pt[1])
@@ -222,48 +210,35 @@ class TwoTermDisj(unittest.TestCase):
     # the convex hull (in the original space). I don't think this is a very
     # robust test yet because I am asking for exact equality. But on the other
     # hand, exact means numerically life is very good.
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cuts_tight_somewhere(self):
-        m = models.makeTwoTermDisj_boxes()
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
+    # [ESJ 05 June 20]: This tests is redundant with the above because we 
+    # only get one cut.
+    # @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    # def test_cuts_tight_somewhere(self):
+    #     m = models.makeTwoTermDisj_boxes()
+    #     TransformationFactory('gdp.cuttingplane').apply_to(m)
 
-        # TODO: this is redundant code, I should probably centralize this
-        extreme_pts = [
-            (1,0,4,1),
-            (1,0,4,2),
-            (1,0,3,1),
-            (1,0,3,2),
-            (0,1,1,3),
-            (0,1,1,4),
-            (0,1,2,3),
-            (0,1,2,4)
-        ]
-
-        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-        for cut in cuts.values():
-            cut_expr = cut.body
-            lower = value(cut.lower)
-            upper = value(cut.upper)
-            tight = 0
-            for pt in extreme_pts:
-                m.d[0].indicator_var.fix(pt[0])
-                m.d[1].indicator_var.fix(pt[1])
-                m.x.fix(pt[2])
-                m.y.fix(pt[3])
-                if lower is not None:
-                    if value(cut_expr) == lower:
-                        tight += 1
-                if upper is not None:
-                    if value(cut_expr) == upper:
-                        tight += 1
-            self.assertGreaterEqual(tight, 1)
+    #     cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+    #     for cut in cuts.values():
+    #         cut_expr = cut.body
+    #         lower = value(cut.lower)
+    #         upper = value(cut.upper)
+    #         tight = 0
+    #         for pt in self.extreme_points:
+    #             m.d[0].indicator_var.fix(pt[0])
+    #             m.d[1].indicator_var.fix(pt[1])
+    #             m.x.fix(pt[2])
+    #             m.y.fix(pt[3])
+    #             if lower is not None:
+    #                 if value(cut_expr) == lower:
+    #                     tight += 1
+    #             if upper is not None:
+    #                 if value(cut_expr) == upper:
+    #                     tight += 1
+    #         self.assertGreaterEqual(tight, 1)
    
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_create_using(self):
         m = models.makeTwoTermDisj_boxes()
-        # TODO: I think doesn't pass because of inconsistent ordering of terms
-        # within expressions (based on an old note to myself, but I need to
-        # check)
         diff_apply_to_and_create_using(self, m, 'gdp.cuttingplane')
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -280,7 +255,7 @@ class TwoTermDisj(unittest.TestCase):
 
 class Grossmann_TestCases(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cuts_valid_at_extreme_pts(self):
+    def test_cut_valid_at_extreme_pts(self):
         m = models.grossmann_oneDisj()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
@@ -296,6 +271,7 @@ class Grossmann_TestCases(unittest.TestCase):
         ]
 
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        self.assertEqual(len(cuts), 1)
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower
@@ -309,6 +285,29 @@ class Grossmann_TestCases(unittest.TestCase):
                 m.disjunct2.indicator_var.fix(pt[1])
                 check_validity(self, cut_expr, lower, upper)
 
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cut_is_correct_facet(self):
+        m = models.grossmann_oneDisj()
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        self.assertEqual(len(cuts), 1)
+
+        # similar to the two boxes example, this could have been either, but it
+        # turns out to be this one.
+        facet_extreme_points = [
+            (1,0,2,10),
+            (1,0,2,7),
+            (0,1,10,0),
+            (0,1,10,3)
+        ]
+
+        for pt in facet_extreme_points:
+            m.x.fix(pt[2])
+            m.y.fix(pt[3])
+            m.disjunct1.indicator_var.fix(pt[0])
+            m.disjunct2.indicator_var.fix(pt[1])
+            self.assertEqual(value(cuts[0].lower), value(cuts[0].body))
+        
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_valid_at_extreme_pts_rescaled(self):
         m = models.to_break_constraint_tolerances()
@@ -337,6 +336,28 @@ class Grossmann_TestCases(unittest.TestCase):
                 m.disjunct1.indicator_var.fix(pt[0])
                 m.disjunct2.indicator_var.fix(pt[1])
                 check_validity(self, cut_expr, lower, upper)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cut_is_correct_facet_rescaled(self):
+        m = models.to_break_constraint_tolerances()
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        self.assertEqual(len(cuts), 1)
+        
+        facet_extreme_points = [
+            (1,0,2,127),
+            (1,0,2,117),
+            (0,1,120,0),
+            (0,1,120,3)
+        ]
+
+        for pt in facet_extreme_points:
+            m.x.fix(pt[2])
+            m.y.fix(pt[3])
+            m.disjunct1.indicator_var.fix(pt[0])
+            m.disjunct2.indicator_var.fix(pt[1])
+            self.assertEqual(value(cuts[0].lower), value(cuts[0].body))
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_2disj_cuts_valid_for_extreme_pts(self):
@@ -397,7 +418,6 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         m.lower_circle.indicator_var.fix(1)
         for i in range(len(cuts)):
             self.assertTrue(value(cuts[i].expr))
-            #self.assertGreaterEqual(0, value(cuts[i].body))
             
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_valid_for_optimal_tighter_m(self):
@@ -415,7 +435,6 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
 
         for i in range(len(cuts)):
             self.assertTrue(value(cuts[i].expr))
-            #self.assertGreaterEqual(0, value(cuts[i].body))
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_valid_for_optimalFacet_tighter_m(self):
