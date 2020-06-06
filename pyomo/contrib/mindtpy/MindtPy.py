@@ -243,7 +243,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("cycling_check", ConfigValue(
         default=True,
-        description="whether check the cycling in OA algorithm.",
+        description="check if OA algorithm is stalled in a cycle and terminate.",
         domain=bool
     ))
 
