@@ -284,6 +284,7 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         m.Y_asbinary[1].value = 0.9
         update_boolean_vars_from_binary(m, integer_tolerance=0.1)
         self.assertTrue(m.Y[1].value)
+        # Now try it without the tolerance set
         with self.assertRaisesRegexp(ValueError, r"Binary variable has non-\{0,1\} value"):
             update_boolean_vars_from_binary(m)
 
