@@ -20,8 +20,8 @@ from pyomo.opt import SolverFactory
 
 
 def sipopt(instance,paramSubList,perturbList,cloneModel=True,
-					     streamSoln=False,
-					     keepfiles=False):
+            streamSoln=False,
+            keepfiles=False):
     """
     This function accepts a Pyomo ConcreteModel, a list of parameters, along
     with their corresponding perterbation list. The model is then converted
