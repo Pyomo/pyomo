@@ -75,7 +75,7 @@ We then get this output:
              For more information visit http://projects.coin-or.org/Ipopt
     ******************************************************************************
     
-    
+    [Many lines of output were truncated.]
     
     EXIT: Optimal Solution Found.
 
