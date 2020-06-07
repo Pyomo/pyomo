@@ -1,6 +1,6 @@
 import pyutilib.th as unittest
 
-from pyomo.core.expr.logical_expr import AtLeast, AtMost, Exactly
+from pyomo.core import AtLeast, AtMost, Exactly
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 from pyomo.environ import ConcreteModel, BooleanVar, LogicalConstraint, TransformationFactory, RangeSet, \

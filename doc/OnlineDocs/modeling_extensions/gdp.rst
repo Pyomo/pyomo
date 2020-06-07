@@ -136,8 +136,10 @@ The ``BooleanVar`` object in Pyomo represents Boolean variables, analogous to ``
 
 .. testsetup::
 
-    from pyomo.environ import ConcreteModel, RangeSet, BooleanVar, LogicalConstraint, TransformationFactory
-    from pyomo.core.expr.logical_expr import AtLeast
+    from pyomo.environ import (
+        ConcreteModel, RangeSet, BooleanVar, LogicalConstraint,
+        TransformationFactory, AtLeast
+    )
 
 .. doctest::
 
