@@ -764,7 +764,7 @@ def templatize_rule(block, rule, index_set):
         #
         # TBD: Should this just return a "FORALL()" expression node that
         # behaves similarly to the GetItemExpression node?
-        return rule(block, *indices), indices
+        return rule(block, indices), indices
     except:
         internal_error = sys.exc_info()
         raise
