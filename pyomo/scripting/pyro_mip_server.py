@@ -29,7 +29,7 @@ except:
 
 import pyutilib.services
 import pyutilib.pyro
-from pyutilib.pyro import using_pyro4
+from pyutilib.pyro import using_pyro4, TaskProcessingError
 import pyutilib.common
 from pyomo.common import pyomo_command
 from pyomo.opt.base import SolverFactory, ConverterError
@@ -195,11 +195,6 @@ def main():
     kwds['timeout'] = options.request_timeout
     kwds['block'] = True
 
-    #
-    # Import plugins
-    #
-    import pyomo.environ
-    #
 
     if options.traceback:
         pyutilib.pyro.TaskWorkerServer(PyomoMIPWorker,
