@@ -16,7 +16,7 @@ import textwrap
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
-    Block, Connector, Constraint, Param, Set, Suffix, Var,
+    Block, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value,
     RangeSet, NonNegativeIntegers)
 from pyomo.core.base.external import ExternalFunction
@@ -158,6 +158,7 @@ class BigM_Transformation(Transformation):
             Suffix:      False,
             Param:       False,
             Set:         False,
+            SetOf:       False,
             RangeSet:    False,
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
