@@ -42,6 +42,7 @@ def main(args=None):
     # Load subcommands
     #
     from pyomo.scripting import pyomo_parser
+    import pyomo.environ
     #
     # Parse the arguments
     #
