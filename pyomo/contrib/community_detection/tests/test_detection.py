@@ -48,25 +48,27 @@ class TestDecomposition(unittest.TestCase):
                                                          m.c1[3], m.c1[4], m.c2[1], m.c2[2], m.obj[1], m.obj[2]])},
                                   {0: ([m.x, m.y, m.z], [m.B[1].c, m.B[2].c, m.OBJ, m.b.c, m.c1[1], m.c1[2],
                                                          m.c1[3], m.c1[4], m.c2[1], m.c2[2], m.obj[1], m.obj[2]])},
-                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
-                                   2: ([m.b.c, m.B[1].c, m.B[2].c], [m.z])},
-                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
-                                   2: ([m.b.c, m.B[1].c, m.B[2].c], [m.z])},
-                                  {0: ([m.c1[1], m.c1[2], m.c2[2], m.obj[1], m.OBJ], [m.x, m.y]),
+                                  {0: ([m.B[1].c, m.B[2].c, m.b.c], [m.z]), 1: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]),
+                                   2: ([m.c1[3], m.c1[4], m.c2[1]], [m.y])},
+                                  {0: ([m.B[1].c, m.B[2].c, m.b.c], [m.z]), 1: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]),
+                                   2: ([m.c1[3], m.c1[4], m.c2[1]], [m.y])},
+                                  {0: ([m.B[1].c, m.B[2].c, m.b.c, m.obj[2]], [m.x, m.y, m.z]),
+                                   1: ([m.OBJ, m.c1[1], m.c1[2], m.c2[2], m.obj[1]], [m.x, m.y]),
+                                   2: ([m.c1[3], m.c1[4], m.c2[1]], [m.y])},
+                                  {0: ([m.B[1].c, m.B[2].c, m.b.c, m.obj[2]], [m.x, m.y, m.z]),
+                                   1: ([m.OBJ, m.c1[1], m.c1[2], m.c2[2], m.obj[1]], [m.x, m.y]),
+                                   2: ([m.c1[3], m.c1[4], m.c2[1]], [m.y])},
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]),
                                    1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
-                                   2: ([m.b.c, m.B[1].c, m.B[2].c, m.obj[2]], [m.x, m.y, m.z])},
-                                  {0: ([m.c1[1], m.c1[2], m.c2[2], m.obj[1], m.OBJ], [m.x, m.y]),
+                                   2: ([m.b.c, m.B[1].c, m.B[2].c], [m.z])},
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]),
                                    1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
-                                   2: ([m.b.c, m.B[1].c, m.B[2].c, m.obj[2]], [m.x, m.y, m.z])},
-                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
                                    2: ([m.b.c, m.B[1].c, m.B[2].c], [m.z])},
-                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
-                                   2: ([m.b.c, m.B[1].c, m.B[2].c], [m.z])},
-                                  {0: ([m.c1[1], m.c1[2], m.c2[2], m.obj[1]], [m.x]),
-                                   1: ([m.c1[3], m.c1[4], m.c2[1], m.OBJ], [m.y]),
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2], m.OBJ], [m.x]),
+                                   1: ([m.c1[3], m.c1[4], m.c2[1], m.obj[1]], [m.y]),
                                    2: ([m.b.c, m.B[1].c, m.B[2].c, m.obj[2]], [m.z])},
-                                  {0: ([m.c1[1], m.c1[2], m.c2[2], m.obj[1]], [m.x]),
-                                   1: ([m.c1[3], m.c1[4], m.c2[1], m.OBJ], [m.y]),
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2], m.OBJ], [m.x]),
+                                   1: ([m.c1[3], m.c1[4], m.c2[1], m.obj[1]], [m.y]),
                                    2: ([m.b.c, m.B[1].c, m.B[2].c, m.obj[2]], [m.z])})
 
         self.assertEqual(correct_community_maps, test_results)
@@ -183,6 +185,22 @@ class TestDecomposition(unittest.TestCase):
         self.assertEqual(correct_community_maps, test_results)
 
     def test_communities_7(self):
+        model = m = disconnected_model()
+
+        test_results = collect_test_results(model)
+
+        correct_community_maps = ({0: ([m.x1], [m.c1]), 1: ([m.x2], [])}, {0: ([m.x1], [m.c1]), 1: ([m.x2], [])},
+                                  {0: ([m.x1], [m.c1, m.obj]), 1: ([m.x2], [])},
+                                  {0: ([m.x1], [m.c1, m.obj]), 1: ([m.x2], [])}, {0: ([m.c1], [m.x1])},
+                                  {0: ([m.c1], [m.x1])}, {0: ([m.OBJ], []), 1: ([m.c1, m.obj], [m.x1])},
+                                  {0: ([m.OBJ], []), 1: ([m.c1, m.obj], [m.x1])},
+                                  {0: ([m.c1], [m.x1]), 1: ([], [m.x2])}, {0: ([m.c1], [m.x1]), 1: ([], [m.x2])},
+                                  {0: ([m.c1, m.obj], [m.x1]), 1: ([], [m.x2]), 2: ([m.OBJ], [])},
+                                  {0: ([m.c1, m.obj], [m.x1]), 1: ([], [m.x2]), 2: ([m.OBJ], [])})
+
+        self.assertEqual(correct_community_maps, test_results)
+
+    def test_communities_8(self):
         output = StringIO()
 
         with LoggingIntercept(output, 'pyomo.contrib.community_detection', logging.ERROR):
@@ -359,6 +377,16 @@ def create_model_6():  # Toy model
     m.obj = Objective(expr=m.x1, sense=minimize)
     m.c1 = Constraint(expr=m.x1 + m.x2 >= 1)
     m.c2 = Constraint(expr=m.x3 + m.x4 >= 1)
+    return model
+
+
+def disconnected_model():
+    model = m = ConcreteModel()
+    m.x1 = Var(bounds=(0, 1))
+    m.x2 = Var(bounds=(0, 1))
+    m.OBJ = Objective(expr=1, sense=minimize)
+    m.obj = Objective(expr=m.x1, sense=minimize)
+    m.c1 = Constraint(expr=m.x1 >= 1)
     return model
 
 
