@@ -447,16 +447,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         # 2 blocks: the original Disjunct and the transformation block
         self.assertEqual(
-            len(list(m.component_objects(Block, descend_into=False))), 2)
+            len(list(m.component_objects(Block, descend_into=False))), 1)
         self.assertEqual(
-            len(list(m.component_objects(Disjunct))), 0)
+            len(list(m.component_objects(Disjunct))), 1)
 
-        # Each relaxed disjunct should have 0 vars, and i "d[i].c"
-        # Constraints
+        # Each relaxed disjunct should have 1 vars (the reference to the
+        # indicator var), and i "d[i].c" Constraints
         for i in [1,2,3]:
             relaxed = transBlock.relaxedDisjuncts[i-1]
-            self.assertEqual(len(list(relaxed.component_objects(Var))), 0)
-            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 0)
+            self.assertEqual(len(list(relaxed.component_objects(Var))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 1)
             self.assertEqual(
                 len(list(relaxed.component_objects(Constraint))), 1)
             self.assertEqual(
@@ -480,16 +480,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         # 2 blocks: the original Disjunct and the transformation block
         self.assertEqual(
-            len(list(m.component_objects(Block, descend_into=False))), 2)
+            len(list(m.component_objects(Block, descend_into=False))), 1)
         self.assertEqual(
-            len(list(m.component_objects(Disjunct))), 0)
+            len(list(m.component_objects(Disjunct))), 1)
 
-        # Each relaxed disjunct should have 0 vars, and i "d[i].c"
-        # Constraints
+        # Each relaxed disjunct should have 1 var (the reference to the
+        # indicator var), and i "d[i].c" Constraints
         for i in [1,2,3]:
             relaxed = transBlock.relaxedDisjuncts[i-1]
-            self.assertEqual(len(list(relaxed.component_objects(Var))), 0)
-            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 0)
+            self.assertEqual(len(list(relaxed.component_objects(Var))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 1)
             self.assertEqual(
                 len(list(relaxed.component_objects(Constraint))), 1)
             self.assertEqual(
@@ -1729,8 +1729,11 @@ class BlocksOnDisjuncts(unittest.TestCase):
 
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
-        self.assertEqual(len(disjBlock[0].component_map()), 1)
-        self.assertEqual(len(disjBlock[1].component_map()), 4)
+        # [ESJ 06/07/2020] This is the stuff we test below, plus indicator_var
+        # and indicator_var_index that get added by our hack of adding a
+        # Reference to get around the writers.
+        self.assertEqual(len(disjBlock[0].component_map()), 3)
+        self.assertEqual(len(disjBlock[1].component_map()), 6)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
@@ -1752,8 +1755,11 @@ class BlocksOnDisjuncts(unittest.TestCase):
 
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
-        self.assertEqual(len(disjBlock[0].component_map()), 1)
-        self.assertEqual(len(disjBlock[1].component_map()), 3)
+        # [ESJ 06/07/2020] This is the stuff we test below, plus indicator_var
+        # and indicator_var_index that get added by our hack of adding a
+        # Reference to get around the writers.
+        self.assertEqual(len(disjBlock[0].component_map()), 3)
+        self.assertEqual(len(disjBlock[1].component_map()), 5)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
@@ -1772,8 +1778,11 @@ class BlocksOnDisjuncts(unittest.TestCase):
 
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
-        self.assertEqual(len(disjBlock[0].component_map()), 1)
-        self.assertEqual(len(disjBlock[1].component_map()), 3)
+        # [ESJ 06/07/2020] This is the stuff we test below, plus indicator_var
+        # and indicator_var_index that get added by our hack of adding a
+        # Reference to get around the writers.
+        self.assertEqual(len(disjBlock[0].component_map()), 3)
+        self.assertEqual(len(disjBlock[1].component_map()), 5)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),

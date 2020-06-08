@@ -13,10 +13,11 @@ from six import string_types
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_numeric_types
 from pyomo.gdp import GDP_Error, Disjunction
-from pyomo.gdp.disjunct import _DisjunctData
+from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 from copy import deepcopy
 
 from pyomo.core.base.component import _ComponentBase, ComponentUID
+from pyomo.core import Block
 from pyomo.opt import TerminationCondition, SolverStatus
 from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys
@@ -158,7 +159,8 @@ def get_src_disjunction(xor_constraint):
     # block while we do the transformation. And then this method could query
     # that map.
     m = xor_constraint.model()
-    for disjunction in m.component_data_objects(Disjunction):
+    for disjunction in m.component_data_objects(Disjunction,
+                                                descend_into=(Block, Disjunct)):
         if disjunction._algebraic_constraint:
             if disjunction._algebraic_constraint() is xor_constraint:
                 return disjunction

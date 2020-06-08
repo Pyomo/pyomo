@@ -32,7 +32,7 @@ from pyomo.gdp.util import (target_list, is_child_of, get_src_disjunction,
                             _get_constraint_transBlock, get_src_disjunct,
                             _warn_for_active_disjunction,
                             _warn_for_active_disjunct)
-from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
+from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Reference_Indicator_Vars
 from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
@@ -280,13 +280,19 @@ class BigM_Transformation(Transformation):
 
         # HACK for backwards compatibility with the older GDP transformations
         #
-        # Until the writers are updated to find variables on things
-        # other than active blocks, we need to reclassify the Disjuncts
-        # as Blocks after transformation so that the writer will pick up
-        # all the variables that it needs (in this case, indicator_vars).
-        if _HACK_transform_whole_instance:
-            HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
-
+        # Until the writers are updated to find variables on things other than
+        # active blocks, we will create references to the indicator variables on
+        # the transformation block of each Disjunct so that the writers will
+        # pick them up there.
+        if not instance.ctype is Block:
+            # instance could be a Disjunction, so just call this on its parent
+            # block if that's the case. We won't mess with untransformed stuff
+            # anyway.
+            instance = instance.parent_block()
+            _HACK_transform_whole_instance = False
+        HACK_GDP_Reference_Indicator_Vars().apply_to(
+            instance, check_model_algebraic=_HACK_transform_whole_instance)
+            
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts
         # on
