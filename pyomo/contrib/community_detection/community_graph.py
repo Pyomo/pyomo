@@ -55,224 +55,168 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
     """
 
     # Initialize the data structure needed to keep track of edges in the graph
-    if weighted_graph and not node_type == 'b':
-        edge_weight_dict = dict()
-    else:
-        edge_set = set()
+    edge_set = set()
 
     # Initialize the three items to be returned by this function
     model_graph = nx.Graph()
+    collapsed_model_graph = nx.Graph()
+    collapsed_model_graph_nodes = []
     constraint_variable_map = {}  # this will not be used if node_type = 'b'
     string_map = {}
 
-    # Constraint nodes
-    if node_type == 'c':
+    # Initialize set to check membership for type of node
+    variable_node_set = set()
+
+    # Create nodes based on variables in the Pyomo model
+    for model_variable in model.component_data_objects(Var, descend_into=True):
+        model_graph.add_node(str(model_variable))
+
+        # Update string_map
+        string_map[str(model_variable)] = model_variable
+
+        # Update variable_node_set
+        variable_node_set.add(str(model_variable))
+
+    # Loop through all constraints in the Pyomo model in the Pyomo model to determine what edges need to be created
+    for model_constraint in model.component_data_objects(Constraint, descend_into=True):
         # Create nodes based on constraints in the Pyomo model
-        for model_constraint in model.component_data_objects(Constraint, descend_into=True):
-            model_graph.add_node(str(model_constraint))
+        model_graph.add_node(str(model_constraint))
 
-            # Update constraint_variable_map and string_map
-            variables_in_constraint_equation = ComponentSet(identify_variables(model_constraint.body))
+        # Create a ComponentSet of the variables that occur in the given constraint equation
+        variables_in_constraint_equation = ComponentSet(identify_variables(model_constraint.body))
+
+        # Update constraint_variable_map and string_map
+        if node_type in ('c', 'v'):
             constraint_variable_map[str(model_constraint)] = [str(variable) for variable in
                                                               variables_in_constraint_equation]
-            string_map[str(model_constraint)] = model_constraint
+        string_map[str(model_constraint)] = model_constraint
 
-        # If the user chooses to include the objective function as a constraint in the model graph
-        if with_objective:
-            # Use a loop to account for the possibility of multiple objective functions
-            for objective_function in model.component_data_objects(Objective, descend_into=True):
-                # Add objective_function as a node in model_graph
-                model_graph.add_node(str(objective_function))
+        # Create a list of all the edges that need to be created based on this constraint equation
+        edges_between_nodes = [(model_constraint, variable_in_constraint)
+                               for variable_in_constraint in variables_in_constraint_equation]
 
-                # Update constraint_variable_map and string_map
-                variables_in_objective_function = ComponentSet(identify_variables(objective_function))
-                constraint_variable_map[str(objective_function)] = [str(variable) for variable in
-                                                                    variables_in_objective_function]
-                string_map[str(objective_function)] = objective_function
+        # Update edge_set based on the determined edges_between_nodes
+        new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
+        edge_set.update(new_edges)
 
-        # Loop through all variables in the Pyomo model to determine what edges need to be created
-        for model_variable in model.component_data_objects(Var, descend_into=True):
-            # Update string_map
-            string_map[str(model_variable)] = model_variable
+    # This if statement will be executed if the user chooses to include the objective function as a node in
+    # this model graph
+    if with_objective:
+        # Use a loop to account for the possibility of multiple objective functions
+        for objective_function in model.component_data_objects(Objective, descend_into=True):
+            # Add objective_function as a node in model_graph
+            model_graph.add_node(str(objective_function))
 
-            # Create a ComponentSet of the constraint equations that contain the given variable:
-            # This ComponentSet comprehension is saying to add a constraint to the list constraints_with_given_variable
-            # only if the given model_variable occurs in that constraint
-            constraints_with_given_variable = ComponentSet(
-                model_constraint for model_constraint in
-                model.component_data_objects(Constraint, descend_into=True) if
-                model_variable in ComponentSet(identify_variables(model_constraint.body)))
-
-            # Now, if the user is including the objective function as a constraint in the graph, we will add the
-            # objective function to the ComponentSet constraints_with_given_variable (again, only if the given
-            # model_variable occurs in the given objective function)
-            if with_objective:
-                # This is structurally and logically identical to the ComponentSet comprehension
-                # used above (constraints_with_given_variable)
-
-                # This ComponentSet comprehension is saying that the objective function will be added to this list
-                # if the model_variable occurs in the given objective_function (the structure reflects the
-                # possibility of multiple objective functions)
-                objective_functions_with_given_variable = ComponentSet(
-                    objective_function for objective_function in
-                    model.component_data_objects(Objective, descend_into=True) if
-                    model_variable in ComponentSet(identify_variables(objective_function)))
-
-                # Now, we add the relevant objective function(s) to constraints containing model_variable
-                constraints_with_given_variable.update(objective_functions_with_given_variable)
-
-            # Create a list of all the edges that need to be created based on the constraints that contain the
-            # given model_variable
-            edges_between_nodes = list(combinations(constraints_with_given_variable, 2))
-
-            # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
-            if weighted_graph:
-                for edge in edges_between_nodes:
-                    new_edge = tuple(sorted([str(edge[0]), str(edge[1])]))
-                    new_edge_weights = {new_edge: edge_weight_dict.get(new_edge, 0) + 1}
-                    edge_weight_dict.update(new_edge_weights)
-            else:
-                new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
-                edge_set.update(new_edges)
-
-    # Variable nodes
-    elif node_type == 'v':
-        # Create nodes based on variables in the Pyomo model
-        for model_variable in model.component_data_objects(Var, descend_into=True):
-            model_graph.add_node(str(model_variable))
-
-            # Update string_map
-            string_map[str(model_variable)] = model_variable
-
-        # Loop through all constraints in the Pyomo model in the Pyomo model to determine what edges need to be created
-        for model_constraint in model.component_data_objects(Constraint, descend_into=True):
-            # Create a ComponentSet of the variables that occur in the given constraint equation
-            variables_in_constraint_equation = ComponentSet(identify_variables(model_constraint.body))
-
-            # Create a list of all the edges that need to be created based on this constraint equation
-            edges_between_nodes = list(combinations(variables_in_constraint_equation, 2))
+            # Create a ComponentSet of the variables that occur in the given objective function
+            variables_in_objective_function = ComponentSet(identify_variables(objective_function))
 
             # Update constraint_variable_map and string_map
-            constraint_variable_map[str(model_constraint)] = [str(variable) for variable in
-                                                              variables_in_constraint_equation]
-            string_map[str(model_constraint)] = model_constraint
-
-            # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
-            if weighted_graph:
-                for edge in edges_between_nodes:
-                    new_edge = tuple(sorted([str(edge[0]), str(edge[1])]))
-                    new_edge_weights = {new_edge: edge_weight_dict.get(new_edge, 0) + 1}
-                    edge_weight_dict.update(new_edge_weights)
-            else:
-                new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
-                edge_set.update(new_edges)
-
-        # This if statement will be executed if the user chooses to include the objective function as a node in
-        # this model graph
-        if with_objective:
-            # Use a loop to account for the possibility of multiple objective functions
-            for objective_function in model.component_data_objects(Objective, descend_into=True):
-
-                # Create a list of the variables that occur in the given objective function
-                variables_in_objective_function = ComponentSet(identify_variables(objective_function))
-
-                # Create a list of all the edges that need to be created based on the variables in the objective
-                edges_between_nodes = list(combinations(variables_in_objective_function, 2))
-
-                # Update constraint_variable_map and string_map
+            if node_type in ('c', 'v'):
                 constraint_variable_map[str(objective_function)] = [str(variable) for variable in
                                                                     variables_in_objective_function]
-                string_map[str(objective_function)] = objective_function
+            string_map[str(objective_function)] = objective_function
 
-                # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
-                if weighted_graph:
-                    for edge in edges_between_nodes:
-                        new_edge = tuple(sorted([str(edge[0]), str(edge[1])]))
-                        new_edge_weights = {new_edge: edge_weight_dict.get(new_edge, 0) + 1}
-                        edge_weight_dict.update(new_edge_weights)
-                else:
-                    new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
-                    edge_set.update(new_edges)
-
-    # Bipartite graph - both variable and constraint nodes
-    elif node_type == 'b':
-        # Create nodes based on variables in the Pyomo model
-        for model_variable in model.component_data_objects(Var, descend_into=True):
-            model_graph.add_node(str(model_variable))
-
-            # Update string_map
-            string_map[str(model_variable)] = model_variable
-
-        # Loop through all constraints in the Pyomo model in the Pyomo model to determine what edges need to be created
-        for model_constraint in model.component_data_objects(Constraint, descend_into=True):
-            # Create nodes based on constraints in the Pyomo model
-            model_graph.add_node(str(model_constraint))
-
-            # Update string_map
-            string_map[str(model_constraint)] = model_constraint
-
-            # Create a ComponentSet of the variables that occur in the given constraint equation
-            variables_in_constraint_equation = ComponentSet(identify_variables(model_constraint.body))
-
-            # Create a list of all the edges that need to be created based on this constraint equation
-            edges_between_nodes = [(model_constraint, variable_in_constraint)
-                                   for variable_in_constraint in variables_in_constraint_equation]
+            # Create a list of all the edges that need to be created based on the variables in the objective
+            edges_between_nodes = [(objective_function, variable_in_constraint)
+                                   for variable_in_constraint in variables_in_objective_function]
 
             # Update edge_set based on the determined edges_between_nodes
             new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
             edge_set.update(new_edges)
 
-        # This if statement will be executed if the user chooses to include the objective function as a node in
-        # this model graph
-        if with_objective:
-            # Use a loop to account for the possibility of multiple objective functions
-            for objective_function in model.component_data_objects(Objective, descend_into=True):
-                # Add objective_function as a node in model_graph
-                model_graph.add_node(str(objective_function))
+    model_graph_edges = sorted(edge_set)
+    model_graph.add_edges_from(model_graph_edges)
+    del edge_set
 
-                # Create a ComponentSet of the variables that occur in the given objective function
-                variables_in_objective_function = ComponentSet(identify_variables(objective_function))
+    # Constraint nodes
+    if node_type == 'c':
+        if weighted_graph:
+            edge_weight_dict = dict()
+        else:
+            edge_set = set()
 
-                # Update string_map
-                string_map[str(objective_function)] = objective_function
+        for node in model_graph.nodes():
+            if node in variable_node_set:
+                connected_constraints = []
 
-                # Create a list of all the edges that need to be created based on the variables in the objective
-                edges_between_nodes = [(objective_function, variable_in_constraint)
-                                       for variable_in_constraint in variables_in_objective_function]
+                for edge in model_graph.edges(node):
+                    connected_constraints.append(edge[1])
+                edges_between_constraints = list(combinations(connected_constraints, 2))
 
-                # Update edge_set based on the determined edges_between_nodes
-                new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
-                edge_set.update(new_edges)
+                # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
+                if weighted_graph:
+                    for edge in edges_between_constraints:
+                        new_edge = tuple(sorted([str(edge[0]), str(edge[1])]))
+                        new_edge_weights = {new_edge: edge_weight_dict.get(new_edge, 0) + 1}
+                        edge_weight_dict.update(new_edge_weights)
+                else:
+                    new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_constraints}
+                    edge_set.update(new_edges)
+            else:
+                collapsed_model_graph_nodes.append(node)
+
+    # Variable nodes
+    elif node_type == 'v':
+        if weighted_graph:
+            edge_weight_dict = dict()
+        else:
+            edge_set = set()
+
+        for node in model_graph.nodes():
+            if node not in variable_node_set:
+                connected_variables = []
+
+                for edge in model_graph.edges(node):
+                    connected_variables.append(edge[1])
+                edges_between_variables = list(combinations(connected_variables, 2))
+
+                # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
+                if weighted_graph:
+                    for edge in edges_between_variables:
+                        new_edge = tuple(sorted([str(edge[0]), str(edge[1])]))
+                        new_edge_weights = {new_edge: edge_weight_dict.get(new_edge, 0) + 1}
+                        edge_weight_dict.update(new_edge_weights)
+                else:
+                    new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_variables}
+                    edge_set.update(new_edges)
+            else:
+                collapsed_model_graph_nodes.append(node)
+
+    # Bipartite graph - both variable and constraint nodes
+    elif node_type == 'b':
+        return model_graph, string_map, constraint_variable_map
+
+    collapsed_model_graph.add_nodes_from(sorted(collapsed_model_graph_nodes))
 
     # Now, using edge_weight_dict or edge_set (based on if the user wants a weighted graph or an unweighted graph,
-    # respectively), the networkX graph (model_graph) will be updated with all of the edges determined above
-    if weighted_graph and not node_type == 'b':
-        model_graph_edges = sorted(edge_weight_dict)
-        model_graph.add_edges_from(model_graph_edges)
+    # respectively), the networkX graph (collapsed_model_graph) will be updated with all of the edges determined above
+    if weighted_graph:
+        collapsed_model_graph_edges = sorted(edge_weight_dict)
+        collapsed_model_graph.add_edges_from(collapsed_model_graph_edges)
 
         seen_edges = set()
         for edge in edge_weight_dict:
             node_one = edge[0]
             node_two = edge[1]
             if edge in seen_edges:
-                model_graph[node_one][node_two]['weight'] += edge_weight_dict[edge]
+                collapsed_model_graph[node_one][node_two]['weight'] += edge_weight_dict[edge]
             else:
-                model_graph[node_one][node_two]['weight'] = edge_weight_dict[edge]
+                collapsed_model_graph[node_one][node_two]['weight'] = edge_weight_dict[edge]
                 seen_edges.add(edge)
 
         del edge_weight_dict
         del seen_edges
 
     else:
-        model_graph_edges = sorted(edge_set)
-        model_graph.add_edges_from(model_graph_edges)
+        collapsed_model_graph_edges = sorted(edge_set)
+        collapsed_model_graph.add_edges_from(collapsed_model_graph_edges)
         del edge_set
 
     # Log important information with the following logger function
     _event_log(model, model_graph)
 
     # Return the networkX graph based on the given Pyomo optimization model, string_map, and constraint_variable_map
-    return model_graph, string_map, constraint_variable_map
+    return collapsed_model_graph, string_map, constraint_variable_map
 
 
 def _event_log(model, model_graph):
@@ -316,5 +260,3 @@ def _event_log(model, model_graph):
         logging.warning("in _generate_model_graph: No nodes generated from the model")
     if number_of_edges == 0:
         logging.warning("in _generate_model_graph: No edges generated from the model")
-
-
