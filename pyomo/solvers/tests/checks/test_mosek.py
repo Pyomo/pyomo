@@ -1,8 +1,7 @@
 import pyutilib.th as unittest
 
 from pyomo.opt import (TerminationCondition,
-                       SolutionStatus,
-                       SolverStatus)
+                       SolutionStatus)
 import pyomo.environ as aml
 import pyomo.kernel as pmo
 import sys
