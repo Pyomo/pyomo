@@ -60,21 +60,14 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ([m.B[1].c, m.B[2].c, m.b.c, m.obj[2]], [m.x, m.y, m.z]),
                                    1: ([m.OBJ, m.c1[1], m.c1[2], m.c2[2], m.obj[1]], [m.x, m.y]),
                                    2: ([m.c1[3], m.c1[4], m.c2[1]], [m.y])},
-                                  {0: ([m.x], [m.c1[1], m.c1[2], m.c2[2]]), 1: ([m.y], [m.c1[3], m.c1[4], m.c2[1]]),
-                                   2: ([m.z], [m.B[1].c, m.B[2].c, m.b.c])},
-                                  {0: ([m.x], [m.c1[1], m.c1[2], m.c2[2]]), 1: ([m.y], [m.c1[3], m.c1[4], m.c2[1]]),
-                                   2: ([m.z], [m.B[1].c, m.B[2].c, m.b.c])}, {0: ([m.x, m.y, m.z],
-                                                                                  [m.B[1].c, m.B[2].c, m.OBJ, m.b.c,
-                                                                                   m.c1[1], m.c1[2], m.c1[3], m.c1[4],
-                                                                                   m.c2[1], m.c2[2], m.obj[1],
-                                                                                   m.obj[2]])}, {0: ([m.x, m.y, m.z],
-                                                                                                     [m.B[1].c,
-                                                                                                      m.B[2].c, m.OBJ,
-                                                                                                      m.b.c, m.c1[1],
-                                                                                                      m.c1[2], m.c1[3],
-                                                                                                      m.c1[4], m.c2[1],
-                                                                                                      m.c2[2], m.obj[1],
-                                                                                                      m.obj[2]])})
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
+                                   2: ([m.B[1].c, m.B[2].c, m.b.c], [m.z])},
+                                  {0: ([m.c1[1], m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c1[4], m.c2[1]], [m.y]),
+                                   2: ([m.B[1].c, m.B[2].c, m.b.c], [m.z])}, {0: (
+        [m.B[1].c, m.B[2].c, m.OBJ, m.b.c, m.c1[1], m.c1[2], m.c1[3], m.c1[4], m.c2[1], m.c2[2], m.obj[1], m.obj[2]],
+        [m.x, m.y, m.z])}, {0: (
+        [m.B[1].c, m.B[2].c, m.OBJ, m.b.c, m.c1[1], m.c1[2], m.c1[3], m.c1[4], m.c2[1], m.c2[2], m.obj[1], m.obj[2]],
+        [m.x, m.y, m.z])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -91,9 +84,9 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ([m.c1, m.c2], [m.x, m.y])}, {0: ([m.c1, m.c2], [m.x, m.y])},
                                   {0: ([m.c1, m.c2, m.inactive_obj, m.obj], [m.x, m.y])},
                                   {0: ([m.c1, m.c2, m.inactive_obj, m.obj], [m.x, m.y])},
-                                  {0: ([m.x, m.y], [m.c1, m.c2])}, {0: ([m.x, m.y], [m.c1, m.c2])},
-                                  {0: ([m.x, m.y], [m.c1, m.c2, m.inactive_obj, m.obj])},
-                                  {0: ([m.x, m.y], [m.c1, m.c2, m.inactive_obj, m.obj])})
+                                  {0: ([m.c1, m.c2], [m.x, m.y])}, {0: ([m.c1, m.c2], [m.x, m.y])},
+                                  {0: ([m.c1, m.c2, m.inactive_obj, m.obj], [m.x, m.y])},
+                                  {0: ([m.c1, m.c2, m.inactive_obj, m.obj], [m.x, m.y])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -105,10 +98,10 @@ class TestDecomposition(unittest.TestCase):
         test_results = collect_test_results(model)
 
         correct_community_maps = (
-            {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([m.o], [m.x, m.y])},
-            {0: ([m.o], [m.x, m.y])}, {}, {}, {0: ([m.o], [m.x, m.y])}, {0: ([m.o], [m.x, m.y])},
-            {0: ([m.x], []), 1: ([m.y], [])}, {0: ([m.x], []), 1: ([m.y], [])}, {0: ([m.x, m.y], [m.o])},
-            {0: ([m.x, m.y], [m.o])})
+        {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([m.o], [m.x, m.y])},
+        {0: ([m.o], [m.x, m.y])}, {}, {}, {0: ([m.o], [m.x, m.y])}, {0: ([m.o], [m.x, m.y])},
+        {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([m.o], [m.x, m.y])},
+        {0: ([m.o], [m.x, m.y])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -127,10 +120,10 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ([m.c1, m.c4], [m.y[1], m.y[2]]), 1: ([m.c2], [m.x])},
                                   {0: ([m.c1, m.c4], [m.y[1], m.y[2]]), 1: ([m.c2, m.obj], [m.x, m.y[1], m.y[2]])},
                                   {0: ([m.c1, m.c2, m.c4, m.obj], [m.x, m.y[1], m.y[2]])},
-                                  {0: ([m.x], [m.c2]), 1: ([m.y[1], m.y[2]], [m.c1, m.c4])},
-                                  {0: ([m.x], [m.c2]), 1: ([m.y[1], m.y[2]], [m.c1, m.c4])},
-                                  {0: ([m.x, m.y[1], m.y[2]], [m.c1, m.c2, m.c4, m.obj])},
-                                  {0: ([m.x, m.y[1], m.y[2]], [m.c1, m.c2, m.c4, m.obj])})
+                                  {0: ([m.c2], [m.x]), 1: ([m.c1, m.c4], [m.y[1], m.y[2]])},
+                                  {0: ([m.c2], [m.x]), 1: ([m.c1, m.c4], [m.y[1], m.y[2]])},
+                                  {0: ([m.c1, m.c2, m.c4, m.obj], [m.x, m.y[1], m.y[2]])},
+                                  {0: ([m.c1, m.c2, m.c4, m.obj], [m.x, m.y[1], m.y[2]])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -149,10 +142,10 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ([m.c1, m.c2, m.c3, m.c4, m.c5], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
                                   {0: ([m.c1, m.c2, m.c3, m.c4, m.c5, m.obj], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
                                   {0: ([m.c1, m.c2, m.c3, m.c4, m.c5, m.obj], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
-                                  {0: ([m.i1, m.i2, m.i3, m.i4, m.i5, m.i6], [m.c1, m.c2, m.c3, m.c4, m.c5])},
-                                  {0: ([m.i1, m.i2, m.i3, m.i4, m.i5, m.i6], [m.c1, m.c2, m.c3, m.c4, m.c5])},
-                                  {0: ([m.i1, m.i2, m.i3, m.i4, m.i5, m.i6], [m.c1, m.c2, m.c3, m.c4, m.c5, m.obj])},
-                                  {0: ([m.i1, m.i2, m.i3, m.i4, m.i5, m.i6], [m.c1, m.c2, m.c3, m.c4, m.c5, m.obj])})
+                                  {0: ([m.c1, m.c2, m.c3, m.c4, m.c5], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
+                                  {0: ([m.c1, m.c2, m.c3, m.c4, m.c5], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
+                                  {0: ([m.c1, m.c2, m.c3, m.c4, m.c5, m.obj], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
+                                  {0: ([m.c1, m.c2, m.c3, m.c4, m.c5, m.obj], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -162,30 +155,24 @@ class TestDecomposition(unittest.TestCase):
         test_results = collect_test_results(model, with_string_tests=True)
 
         correct_community_maps = (
-            {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-            {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-            {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-            {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-            {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-            {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-            {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-            {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
-            {0: ([m.x1, m.x2], [m.c1]), 1: ([m.x3, m.x4], [m.c2])},
-            {0: ([m.x1, m.x2], [m.c1]), 1: ([m.x3, m.x4], [m.c2])},
-            {0: ([m.x1, m.x2], [m.c1, m.obj]), 1: ([m.x3, m.x4], [m.c2])},
-            {0: ([m.x1, m.x2], [m.c1, m.obj]), 1: ([m.x3, m.x4], [m.c2])},
-            {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-            {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-            {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-            {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-            {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-            {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-            {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-            {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
-            {0: (['x1', 'x2'], ['c1']), 1: (['x3', 'x4'], ['c2'])},
-            {0: (['x1', 'x2'], ['c1']), 1: (['x3', 'x4'], ['c2'])},
-            {0: (['x1', 'x2'], ['c1', 'obj']), 1: (['x3', 'x4'], ['c2'])},
-            {0: (['x1', 'x2'], ['c1', 'obj']), 1: (['x3', 'x4'], ['c2'])})
+        {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])}, {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+        {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+        {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+        {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])}, {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+        {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+        {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+        {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])}, {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+        {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+        {0: ([m.c1, m.obj], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
+        {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])}, {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+        {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+        {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+        {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])}, {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+        {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+        {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+        {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])}, {0: (['c1'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+        {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])},
+        {0: (['c1', 'obj'], ['x1', 'x2']), 1: (['c2'], ['x3', 'x4'])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -200,9 +187,9 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ([m.c1], [m.x1])}, {0: ([m.c1], [m.x1])},
                                   {0: ([m.OBJ], []), 1: ([m.c1, m.obj], [m.x1])},
                                   {0: ([m.OBJ], []), 1: ([m.c1, m.obj], [m.x1])},
-                                  {0: ([m.x1], [m.c1]), 1: ([m.x2], [])}, {0: ([m.x1], [m.c1]), 1: ([m.x2], [])},
-                                  {0: ([m.x1], [m.c1, m.obj]), 1: ([m.x2], [])},
-                                  {0: ([m.x1], [m.c1, m.obj]), 1: ([m.x2], [])})
+                                  {0: ([m.c1], [m.x1]), 1: ([], [m.x2])}, {0: ([m.c1], [m.x1]), 1: ([], [m.x2])},
+                                  {0: ([m.c1, m.obj], [m.x1]), 1: ([], [m.x2])},
+                                  {0: ([m.c1, m.obj], [m.x1]), 1: ([], [m.x2])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -219,10 +206,10 @@ class TestDecomposition(unittest.TestCase):
                                   {0: ([m.c1, m.c2], [m.x1, m.x2]), 1: ([m.c3, m.c4, m.c5], [m.x2, m.x3, m.x4])},
                                   {0: ([m.c1, m.c2], [m.x1, m.x2]), 1: ([m.c3, m.c4, m.c5], [m.x2, m.x3, m.x4])},
                                   {0: ([m.c1, m.c2], [m.x1, m.x2]), 1: ([m.c3, m.c4, m.c5], [m.x2, m.x3, m.x4])},
-                                  {0: ([m.x1, m.x2], [m.c1, m.c2, m.c3]), 1: ([m.x3, m.x4], [m.c3, m.c4, m.c5])},
-                                  {0: ([m.x1, m.x2], [m.c1, m.c2, m.c3]), 1: ([m.x3, m.x4], [m.c3, m.c4, m.c5])},
-                                  {0: ([m.x1, m.x2], [m.c1, m.c2, m.c3]), 1: ([m.x3, m.x4], [m.c3, m.c4, m.c5])},
-                                  {0: ([m.x1, m.x2], [m.c1, m.c2, m.c3]), 1: ([m.x3, m.x4], [m.c3, m.c4, m.c5])})
+                                  {0: ([m.c1, m.c2, m.c3], [m.x1, m.x2]), 1: ([m.c3, m.c4, m.c5], [m.x3, m.x4])},
+                                  {0: ([m.c1, m.c2, m.c3], [m.x1, m.x2]), 1: ([m.c3, m.c4, m.c5], [m.x3, m.x4])},
+                                  {0: ([m.c1, m.c2, m.c3], [m.x1, m.x2]), 1: ([m.c3, m.c4, m.c5], [m.x3, m.x4])},
+                                  {0: ([m.c1, m.c2, m.c3], [m.x1, m.x2]), 1: ([m.c3, m.c4, m.c5], [m.x3, m.x4])})
 
         self.assertEqual(correct_community_maps, test_results)
 
@@ -247,14 +234,14 @@ class TestDecomposition(unittest.TestCase):
                                    1: ([m.c4, m.c5, m.c6], [m.x[4], m.x[5], m.x[6], m.x[7]])},
                                   {0: ([m.c1, m.c2], [m.x[1], m.x[2], m.x[3]]),
                                    1: ([m.c3, m.c4, m.c5, m.c6], [m.x[3], m.x[4], m.x[5], m.x[6], m.x[7]])},
-                                  {0: ([m.x[1], m.x[2], m.x[3]], [m.c1, m.c2, m.c3]),
-                                   1: ([m.x[4], m.x[5], m.x[6], m.x[7]], [m.c3, m.c4, m.c5, m.c6])},
-                                  {0: ([m.x[1], m.x[2], m.x[3]], [m.c1, m.c2, m.c3]),
-                                   1: ([m.x[4], m.x[5], m.x[6], m.x[7]], [m.c3, m.c4, m.c5, m.c6])},
-                                  {0: ([m.x[1], m.x[2], m.x[3]], [m.c1, m.c2, m.c3]),
-                                   1: ([m.x[4], m.x[5], m.x[6], m.x[7]], [m.c3, m.c4, m.c5, m.c6])},
-                                  {0: ([m.x[1], m.x[2], m.x[3]], [m.c1, m.c2, m.c3]),
-                                   1: ([m.x[4], m.x[5], m.x[6], m.x[7]], [m.c3, m.c4, m.c5, m.c6])})
+                                  {0: ([m.c1, m.c2, m.c3], [m.x[1], m.x[2], m.x[3]]),
+                                   1: ([m.c3, m.c4, m.c5, m.c6], [m.x[4], m.x[5], m.x[6], m.x[7]])},
+                                  {0: ([m.c1, m.c2, m.c3], [m.x[1], m.x[2], m.x[3]]),
+                                   1: ([m.c3, m.c4, m.c5, m.c6], [m.x[4], m.x[5], m.x[6], m.x[7]])},
+                                  {0: ([m.c1, m.c2, m.c3], [m.x[1], m.x[2], m.x[3]]),
+                                   1: ([m.c3, m.c4, m.c5, m.c6], [m.x[4], m.x[5], m.x[6], m.x[7]])},
+                                  {0: ([m.c1, m.c2, m.c3], [m.x[1], m.x[2], m.x[3]]),
+                                   1: ([m.c3, m.c4, m.c5, m.c6], [m.x[4], m.x[5], m.x[6], m.x[7]])})
 
         self.assertEqual(correct_community_maps, test_results)
 

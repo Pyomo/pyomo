@@ -107,24 +107,24 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     # contained in the given constraints
     if node_type == 'c':
         for community_key in str_community_map:
-            main_list = str_community_map[community_key]
+            constraint_list = str_community_map[community_key]
             variable_list = []
-            for str_constraint in main_list:
+            for str_constraint in constraint_list:
                 variable_list.extend(constraint_variable_map[str_constraint])
             variable_list = sorted(set(variable_list))
-            str_community_map[community_key] = (main_list, variable_list)
+            str_community_map[community_key] = (constraint_list, variable_list)
 
     # Variable node type - for a given community, we want to create a second list that contains all of the constraints
     # that the variables appear in
     elif node_type == 'v':
         for community_key in str_community_map:
-            main_list = str_community_map[community_key]
+            variable_list = str_community_map[community_key]
             constraint_list = []
-            for str_variable in main_list:
+            for str_variable in variable_list:
                 constraint_list.extend([constraint_key for constraint_key in constraint_variable_map if
                                         str_variable in constraint_variable_map[constraint_key]])
             constraint_list = sorted(set(constraint_list))
-            str_community_map[community_key] = (main_list, constraint_list)
+            str_community_map[community_key] = (constraint_list, variable_list)
 
     # Both variable and constraint nodes (bipartite graph) - for a given community, we simply want to separate the
     # nodes into their two groups; thus, we create a list of constraints and a list of variables
