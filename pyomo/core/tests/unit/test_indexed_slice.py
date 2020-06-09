@@ -72,10 +72,10 @@ class TestComponentSlices(unittest.TestCase):
             ans, ['b[1,4].c[1,4]', 'b[1,4].c[2,4]', 'b[1,4].c[3,4]'] )
 
     def test_wildcard_slice(self):
-        _slicer = self.m.b[:]
-        self.assertIsInstance(_slicer, IndexedComponent_slice)
-        ans = [ str(x) for x in _slicer ]
-        self.assertEqual( ans, [] )
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = self.m.b[:]
 
         _slicer = self.m.b[...]
         self.assertIsInstance(_slicer, IndexedComponent_slice)
@@ -143,15 +143,15 @@ class TestComponentSlices(unittest.TestCase):
             ans, [ 'b[1,4]',
                ] )
 
-        _slicer = self.m.b[1,2,3,...]
-        self.assertIsInstance(_slicer, IndexedComponent_slice)
-        ans = [ str(x) for x in _slicer ]
-        self.assertEqual( ans, [] )
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = self.m.b[1,2,3,...]
 
-        _slicer = self.m.b[1,:,2]
-        self.assertIsInstance(_slicer, IndexedComponent_slice)
-        ans = [ str(x) for x in _slicer ]
-        self.assertEqual( ans, [] )
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = self.m.b[1,:,2]
 
         self.assertRaisesRegexp(
             IndexError, 'wildcard slice .* can only appear once',
@@ -547,6 +547,49 @@ class TestComponentSlices(unittest.TestCase):
         self.assertIsNot(a._call_stack, b1._call_stack)
         self.assertEqual(a._len+1, b1._len)
         self.assertEqual(hash(b), hash(b1))
+
+    def test_invalid_slices(self):
+        m = self.m
+        m.x = Var()
+        for var in m.x[:]:
+            self.assertIs(var, m.x)
+
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = m.b[:]
+
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = m.b[:, :, :]
+
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = m.b[:].c[...].x
+
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = m.b[:].c[:,:,:].x
+
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = m.b[2, :].c[:,:,:].x
+            # Error not raised immediately because accessing c is deferred
+            # until iteration.
+            for var in _slicer:
+                pass
+
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = m.b[2, :].c[:].x
+            for var in _slicer:
+                pass
+
 
 if __name__ == "__main__":
     unittest.main()
