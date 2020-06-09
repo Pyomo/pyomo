@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 from pyomo.core.base import Block, Var, Reference
 from pyomo.core.base.block import SubclassOf
-from pyomo.core.base.indexed_component_slice import _IndexedComponent_slice
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 
 
 def generate_time_only_slices(obj, time):
@@ -49,7 +49,7 @@ def generate_time_only_slices(obj, time):
     tmp_sliced = {i: slice(None) for i in regular_idx}
     tmp_fixed = {time_idx: time.first()}
     tmp_ellipsis = ellipsis_idx
-    _slice = _IndexedComponent_slice(
+    _slice = IndexedComponent_slice(
         obj, tmp_fixed, tmp_sliced, tmp_ellipsis
     )
     # For each combination of regular indices, we can generate a single
@@ -62,7 +62,7 @@ def generate_time_only_slices(obj, time):
             (i, val) if i<time_idx else (i+1, val)
             for i,val in enumerate(key)
         )
-        yield _IndexedComponent_slice(obj, time_fixed, time_sliced, None)
+        yield IndexedComponent_slice(obj, time_fixed, time_sliced, None)
 
 
 def generate_time_indexed_block_slices(block, time):
@@ -81,12 +81,12 @@ def generate_time_indexed_block_slices(block, time):
         for sub_b in b.component_objects(Block, descend_into=False):
             _name = sub_b.local_name
             for idx in sub_b:
-                queue.append(_slice.duplicate().component(_name)[idx])
+                queue.append(_slice.component(_name)[idx])
         # Any Vars must be mapped to slices and returned
         for v in b.component_objects(Var, descend_into=False):
             _name = v.local_name
             for idx in v:
-                yield _slice.duplicate().component(_name)[idx]
+                yield _slice.component(_name)[idx]
         
 
 def flatten_dae_variables(model, time):
@@ -123,15 +123,18 @@ def flatten_dae_variables(model, time):
             for _slice in generate_time_indexed_block_slices(b, time):
                 time_indexed_vars.append(Reference(_slice))
             continue
-        block_queue.extend(
-            list(b.component_objects(Block, descend_into=False))
-        )
-        for v in b.component_objects(SubclassOf(Var), descend_into=False):
-            v_sets = v.index_set().subsets()
-            if time in v_sets:
-                for _slice in generate_time_only_slices(v, time):
-                    time_indexed_vars.append(Reference(_slice))
-            else:
-                regular_vars.extend(list(v.values()))
+        for blkdata in b.values():
+            block_queue.extend(
+                blkdata.component_objects(Block, descend_into=False)
+            )
+        for blkdata in b.values():
+            for v in blkdata.component_objects(SubclassOf(Var), 
+                    descend_into=False):
+                v_sets = v.index_set().subsets()
+                if time in v_sets:
+                    for _slice in generate_time_only_slices(v, time):
+                        time_indexed_vars.append(Reference(_slice))
+                else:
+                    regular_vars.extend(v.values())
 
     return regular_vars, time_indexed_vars

@@ -84,7 +84,8 @@ def create_test_method(model,
         else:
             model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
             model_class.save_current_solution(save_filename, suffixes=model_class.test_suffixes)
-        rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
+        rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes,
+                                                   exclude_suffixes=test_case.exclude_suffixes)
 
         if is_expected_failure:
             if rc[0]:
@@ -119,9 +120,19 @@ def create_test_method(model,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_this(self):
-            return self.skipTest(test_case.msg)
-        return skipping_this
+        def skipping_test(self):
+            self.skipTest(test_case.msg)
+        return skipping_test
+
+    # If this solver is in demo mode
+    size = getattr(test_case.model, 'size', (None, None, None))
+    for prb, sol in zip(size, test_case.demo_limits):
+        if prb is None or sol is None:
+            continue
+        if prb > sol:
+            def skipping_test(self):
+                self.skipTest("Problem is too large for unlicensed %s solver" % solver)
+            return skipping_test
 
     if is_expected_failure:
         @unittest.expectedFailure
@@ -149,6 +160,7 @@ for model in test_models():
         cls = new.classobj(name, (unittest.TestCase,), {})
     else:
         cls = types.new_class(name, (unittest.TestCase,))
+        cls.__module__ = __name__
     cls = unittest.category(*case.level)(cls)
     driver[model] = cls
     globals()[name] = cls
@@ -164,13 +176,17 @@ for key, value in test_scenarios():
     test_name = "test_"+solver+"_"+io +"_symbolic_labels"
     test_method = create_test_method(model, solver, io, value, True)
     if test_method is not None:
+        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
+        test_method = None
 
     # Non-symbolic labels
     test_name = "test_"+solver+"_"+io +"_nonsymbolic_labels"
     test_method = create_test_method(model, solver, io, value, False)
     if test_method is not None:
+        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
+        test_method = None
 
 # Reset the cls variable, since it contains a unittest.TestCase subclass.
 # This prevents this class from being processed twice!
