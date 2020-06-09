@@ -736,14 +736,28 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
             #
             # If there is one linear term, then we compute the quadratic expression for it.
             #
-            elif len(res.linear) == 1:
-                key, coef = res.linear.popitem()
-                var = idMap[key]
+            # elif len(res.linear) == 1:
+            #     key, coef = res.linear.popitem()
+            #     var = idMap[key]
+            #     ans = Results()
+            #     if not (res.constant.__class__ in native_numeric_types and res.constant == 0):
+            #         ans.constant = multiplier*res.constant*res.constant
+            #         ans.linear[key] = 2*multiplier*coef*res.constant
+            #     ans.quadratic[key,key] = multiplier*coef*coef
+            #     return ans
+            else:
                 ans = Results()
-                if not (res.constant.__class__ in native_numeric_types and res.constant == 0):
+                has_cons = (res.constant.__class__ not in native_numeric_types
+                         or res.constant != 0)
+                if has_cons:
                     ans.constant = multiplier*res.constant*res.constant
-                    ans.linear[key] = 2*multiplier*coef*res.constant
-                ans.quadratic[key,key] = multiplier*coef*coef
+                while len(res.linear) > 0:
+                    key1, coef1 = res.linear.popitem()
+                    if has_cons:
+                        ans.linear[key1] = 2*multiplier*coef1*res.constant
+                    ans.quadratic[key1,key1] = multiplier*coef1*coef1
+                    for key2, coef2 in res.linear.items():
+                        ans.quadratic[key1,key2] = 2*multiplier*coef1*coef2
                 return ans
 
     #
