@@ -9,9 +9,6 @@
 #  ___________________________________________________________________________
 
 import pickle
-import os
-from os.path import join, dirname, abspath
-import warnings
 import types
 try:
     import new
