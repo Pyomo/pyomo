@@ -118,7 +118,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
-        domain=In(["ipopt"]),
+        domain=In(["ipopt", "gams"]),
         description="NLP subsolver name",
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
             "subproblems"
@@ -191,7 +191,7 @@ class MindtPySolver(object):
         description="Tolerance on variable bounds."
     ))
     CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-10,
+        default=1E-8,
         description="Tolerance on variable equal to zero."
     ))
     CONFIG.declare("initial_feas", ConfigValue(
@@ -210,7 +210,7 @@ class MindtPySolver(object):
         domain=bool
     ))
     CONFIG.declare("add_integer_cuts", ConfigValue(
-        default=True,
+        default=False,
         description="Add integer cuts (no-good cuts) to binary variables to disallow same integer solution again."
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
@@ -229,6 +229,21 @@ class MindtPySolver(object):
         default=False,
         description="whether add slack variable here."
                     "slack variables here are used to deal with nonconvex MINLP",
+        domain=bool
+    ))
+    CONFIG.declare("continuous_var_bound", ConfigValue(
+        default=1e10,
+        description="default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
+    CONFIG.declare("integer_var_bound", ConfigValue(
+        default=1e9,
+        description="default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
+    CONFIG.declare("cycling_check", ConfigValue(
+        default=True,
+        description="check if OA algorithm is stalled in a cycle and terminate.",
         domain=bool
     ))
 
@@ -273,6 +288,8 @@ class MindtPySolver(object):
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()
+        solve_data.curr_int_sol = []
+        solve_data.prev_int_sol = []
 
         solve_data.original_model = model
         solve_data.working_model = model.clone()
@@ -288,7 +305,7 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            process_objective(solve_data, config)
+            process_objective(solve_data, config, use_mcpp=False)
 
             # Save model initial values.
             solve_data.initial_var_values = list(
@@ -415,6 +432,10 @@ class MindtPySolver(object):
         solve_data.results.solver.wallclock_time = solve_data.timing.total
 
         solve_data.results.solver.iterations = solve_data.mip_iter
+
+        if config.single_tree:
+            solve_data.results.solver.num_nodes = solve_data.nlp_iter - \
+                (1 if config.init_strategy == 'rNLP' else 0)
 
         return solve_data.results
 
