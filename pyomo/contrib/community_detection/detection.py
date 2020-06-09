@@ -10,7 +10,7 @@ Original implementation developed by Rahul Joglekar in the Grossmann research gr
 from logging import getLogger
 
 from pyomo.common.dependencies import attempt_import
-from pyomo.core import ConcreteModel, Var
+from pyomo.core import ConcreteModel
 from pyomo.contrib.community_detection.community_graph import _generate_model_graph
 from pyomo.common.dependencies import networkx as nx
 
