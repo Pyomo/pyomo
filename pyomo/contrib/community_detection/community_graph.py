@@ -14,17 +14,6 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
     This function takes in a Pyomo optimization model, then creates a graphical representation of the model with
     specific features of the graph determined by the user (see Parameters below).
 
-    As for how the graphs are created:
-    If the user chooses constraint nodes, then the edge between two given nodes is created if those two constraint
-    equations share a common variable. The weight of each edge depends on the number of variables common to the two
-    constraint equations.
-    If the user chooses variable nodes, then the edge between two given nodes is created if those two variables occur
-    together in the same constraint equation. The weight of each edge depends on the number of constraint equations
-    in which the two variables occur together.
-    If the user chooses both constraint and variable nodes (bipartite graph), then edges will only be created between a
-    variable and a constraint (not between two nodes of the same type). The weight of each edge depends on the number
-    of times a variable appears in a constraint.
-
     This function is designed to be called by detect_communities, get_edge_list, or get_adj_list.
 
     Parameters
@@ -40,8 +29,8 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
         a Boolean argument that specifies whether or not the objective function will be
         included as a node/constraint (depending on what node_type is specified as (see prior argument))
     weighted_graph: bool
-        a Boolean argument that specifies whether a weighted or unweighted graph is to be
-        created from the Pyomo model
+        a Boolean argument that specifies whether a weighted or unweighted graph is to be created from the Pyomo
+        model; the default is True (node_type='b' creates an unweighted graph regardless of this parameter)
 
     Returns
     -------
@@ -54,21 +43,22 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
         a dictionary that maps the string of a constraint to a list of the strings of the variables in the constraint
     """
 
-    # Initialize the data structure needed to keep track of edges in the graph
+    # Start off by making a bipartite graph (regardless of node_type), then if node_type = 'v' or 'c',
+    # "collapse" this bipartite graph into a variable node or constraint node graph
+
+    # Initialize the data structure needed to keep track of edges in the graph (this graph will be made
+    # without edge weights, because edge weights are not useful for this bipartite graph)
     edge_set = set()
 
-    # Initialize the three items to be returned by this function
-    model_graph = nx.Graph()
-    collapsed_model_graph = nx.Graph()
-    collapsed_model_graph_nodes = []
-    constraint_variable_map = {}  # this will not be used if node_type = 'b'
-    string_map = {}
+    model_graph = nx.Graph()  # Initialize networkX graph for the bipartite graph
+    collapsed_model_graph_nodes = []  # Initialize list of nodes to be created for the collapsed graph
+    constraint_variable_map = {}  # Initialize map of variables in constraints; this will not be used if node_type = 'b'
+    string_map = {}  # Initialize dictionary to map between strings of modeling components and the actual components
+    variable_node_set = set()  # Initialize set to check membership for type of node
 
-    # Initialize set to check membership for type of node
-    variable_node_set = set()
-
-    # Create nodes based on variables in the Pyomo model
+    # Loop through all variables in the Pyomo model
     for model_variable in model.component_data_objects(Var, descend_into=True):
+        # Create nodes based on variables in the Pyomo model
         model_graph.add_node(str(model_variable))
 
         # Update string_map
@@ -77,7 +67,7 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
         # Update variable_node_set
         variable_node_set.add(str(model_variable))
 
-    # Loop through all constraints in the Pyomo model in the Pyomo model to determine what edges need to be created
+    # Loop through all constraints in the Pyomo model to determine what edges need to be created
     for model_constraint in model.component_data_objects(Constraint, descend_into=True):
         # Create nodes based on constraints in the Pyomo model
         model_graph.add_node(str(model_constraint))
@@ -100,7 +90,7 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
         edge_set.update(new_edges)
 
     # This if statement will be executed if the user chooses to include the objective function as a node in
-    # this model graph
+    # the model graph
     if with_objective:
         # Use a loop to account for the possibility of multiple objective functions
         for objective_function in model.component_data_objects(Objective, descend_into=True):
@@ -116,7 +106,7 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
                                                                     variables_in_objective_function]
             string_map[str(objective_function)] = objective_function
 
-            # Create a list of all the edges that need to be created based on the variables in the objective
+            # Create a list of all the edges that need to be created based on the variables in the objective function
             edges_between_nodes = [(objective_function, variable_in_constraint)
                                    for variable_in_constraint in variables_in_objective_function]
 
@@ -124,23 +114,33 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
             new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_nodes}
             edge_set.update(new_edges)
 
-    model_graph_edges = sorted(edge_set)
+    model_graph_edges = sorted(edge_set)  # Create list from edges in edge_set
     model_graph.add_edges_from(model_graph_edges)
     del edge_set
 
+    # Both variable and constraint nodes (bipartite graph); this is the graph we made above
+    if node_type == 'b':
+        return model_graph, string_map, constraint_variable_map
+
     # Constraint nodes
-    if node_type == 'c':
+    elif node_type == 'c':
         if weighted_graph:
             edge_weight_dict = dict()
         else:
             edge_set = set()
 
         for node in model_graph.nodes():
-            if node in variable_node_set:
-                connected_constraints = []
+            if node in variable_node_set:  # If the node represents a variable
+                connected_constraints = []  # Initialize list of constraints that share this variable
 
+                # Loop through the variable node's edges
                 for edge in model_graph.edges(node):
+                    # The first node in the edge tuple will always be the node fed into 'model_graph.edges(node)';
+                    # thus, the relevant node is the second one in the tuple 'edge[1]'
                     connected_constraints.append(edge[1])
+
+                # Create all possible two-node combinations from connected_constraints; in other words, create a list
+                # of all the edges that need to be created between constraints based on connected_constraints
                 edges_between_constraints = list(combinations(connected_constraints, 2))
 
                 # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
@@ -152,6 +152,8 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
                 else:
                     new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_constraints}
                     edge_set.update(new_edges)
+
+            # If the node is not a variable, then we want it as a node in our constraint node graph
             else:
                 collapsed_model_graph_nodes.append(node)
 
@@ -163,11 +165,13 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
             edge_set = set()
 
         for node in model_graph.nodes():
-            if node not in variable_node_set:
-                connected_variables = []
+            if node not in variable_node_set:  # If the node represents a constraint (or objective)
 
-                for edge in model_graph.edges(node):
-                    connected_variables.append(edge[1])
+                # Create list of variables in the constraint equation
+                connected_variables = constraint_variable_map[node]
+
+                # Create all possible two-node combinations from connected_variables; in other words, create a list
+                # of all the edges that need to be created between variables based on connected_variables
                 edges_between_variables = list(combinations(connected_variables, 2))
 
                 # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
@@ -179,21 +183,23 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
                 else:
                     new_edges = {tuple(sorted([str(edge[0]), str(edge[1])])) for edge in edges_between_variables}
                     edge_set.update(new_edges)
+
+            # If the node is not a constraint/objective, then we want it as a node in our variable node graph
             else:
                 collapsed_model_graph_nodes.append(node)
 
-    # Bipartite graph - both variable and constraint nodes
-    elif node_type == 'b':
-        return model_graph, string_map, constraint_variable_map
-
+    collapsed_model_graph = nx.Graph()  # Initialize networkX graph for the collapsed version of model_graph
     collapsed_model_graph.add_nodes_from(sorted(collapsed_model_graph_nodes))
 
     # Now, using edge_weight_dict or edge_set (based on if the user wants a weighted graph or an unweighted graph,
     # respectively), the networkX graph (collapsed_model_graph) will be updated with all of the edges determined above
     if weighted_graph:
+
+        # Add edges to collapsed_model_graph
         collapsed_model_graph_edges = sorted(edge_weight_dict)
         collapsed_model_graph.add_edges_from(collapsed_model_graph_edges)
 
+        # Iterate through the edges in edge_weight_dict and add them to collapsed_model_graph
         seen_edges = set()
         for edge in edge_weight_dict:
             node_one = edge[0]
@@ -208,6 +214,7 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
         del seen_edges
 
     else:
+        # Add edges to collapsed_model_graph
         collapsed_model_graph_edges = sorted(edge_set)
         collapsed_model_graph.add_edges_from(collapsed_model_graph_edges)
         del edge_set
@@ -226,6 +233,7 @@ def _event_log(model, model_graph):
     This function takes in the same Pyomo model as _generate_community_graph and the model_graph generated by
     _generate_model_graph (which is a networkX graph of nodes and edges based on the Pyomo model). Then, some relevant
     information about the model and model_graph is determined and logged using the logger.
+
     This function is designed to be called by _generate_community_graph.
 
     Args:

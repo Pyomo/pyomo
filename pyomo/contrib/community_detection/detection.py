@@ -46,8 +46,8 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
         included as a node/constraint (depending on what node_type is specified as (see prior argument)), the default
         is True
     weighted_graph: bool, optional
-        a Boolean argument that specifies whether a weighted or unweighted graph is to be
-        created from the Pyomo model (the default is True)
+        a Boolean argument that specifies whether a weighted or unweighted graph is to be created from the Pyomo
+        model; the default is True (node_type='b' creates an unweighted graph regardless of this parameter)
     random_seed: int, optional
         An integer that is used as the random seed for the heuristic Louvain community detection
     string_output: bool, optional
@@ -65,7 +65,7 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
                                              "ConcreteModel" % model
 
-    assert node_type in ('c', 'v', 'b'), "Invalid node type specified: 'node_type=%s' - Valid " \
+    assert node_type in ('b', 'c', 'v'), "Invalid node type specified: 'node_type=%s' - Valid " \
                                          "values: 'c', 'v', 'b'" % node_type
 
     assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
