@@ -14,16 +14,18 @@ import re
 import time
 import logging
 
-import pyomo.common
-import pyutilib.common
-import pyutilib.misc
+from pyomo.common import Executable
+from pyutilib.common import ApplicationError
+from pyutilib.misc import Options, Bunch, yaml_fix
+from pyutilib.services import TempfileManager
+from pyutilib.subprocess import run
 
-from pyomo.opt.base import *
+from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver, BranchDirection
 from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.opt.results import SolverResults, SolverStatus, TerminationCondition, SolutionStatus, ProblemSense, Solution
+from pyomo.opt.solver import SolverFactory, ILMLicensedSystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
-from pyomo.core.base import Var, ComponentMap, Suffix, active_export_suffix_generator
+from pyomo.core.base import Var, ComponentMap, Suffix, active_export_suffix_generator, export_suffix_generator
 from pyomo.core.kernel.block import IBlock
 from pyomo.util.components import iter_component
 
@@ -165,7 +167,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Options()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -236,7 +238,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         if isinstance(instance, IBlock):
             suffixes = (
                 (suf.name, suf)
-                for suf in pyomo.core.kernel.suffix.export_suffix_generator(
+                for suf in export_suffix_generator(
                     instance, datatype=Suffix.INT, active=True, descend_into=False
                 )
             )
@@ -293,7 +295,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
 
         # if the first argument is a string (representing a filename),
         # then we don't have an instance => the solver is being applied
@@ -318,7 +320,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             # and the warm start file-name is (obviously) needed there.
             if self._warm_start_file_name is None:
                 assert not user_warmstart
-                self._warm_start_file_name = pyutilib.services.TempfileManager.\
+                self._warm_start_file_name = TempfileManager.\
                                              create_tempfile(suffix = '.cplex.mst')
 
         self._priorities_solve = kwds.pop("priorities", False)
@@ -332,7 +334,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             and not isinstance(args[0], basestring)
             and not user_priorities
         ):
-            self._priorities_file_name = pyutilib.services.TempfileManager.create_tempfile(
+            self._priorities_file_name = TempfileManager.create_tempfile(
                 suffix=".cplex.ord"
             )
 
@@ -372,7 +374,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     )
 
     def _default_executable(self):
-        executable = pyomo.common.Executable("cplex")
+        executable = Executable("cplex")
         if not executable:
             logger.warning("Could not locate the 'cplex' executable"
                            ", which is required for solver %s"
@@ -388,7 +390,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = pyutilib.subprocess.run( [solver_exec,'-c','quit'], timelimit=1 )
+        results = run( [solver_exec,'-c','quit'], timelimit=1 )
         return _extract_version(results[1])
 
     def create_command_line(self, executable, problem_files):
@@ -398,7 +400,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # The log file in CPLEX contains the solution trace, but the solver status can be found in the solution file.
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                             create_tempfile(suffix = '.cplex.log')
         self._log_file = _validate_file_name(self, self._log_file, "log")
 
@@ -407,7 +409,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # As indicated above, contains (in XML) both the solution and solver status.
         #
         if self._soln_file is None:
-            self._soln_file = pyutilib.services.TempfileManager.\
+            self._soln_file = TempfileManager.\
                               create_tempfile(suffix = '.cplex.sol')
         self._soln_file = _validate_file_name(self, self._soln_file, "solution")
 
@@ -454,7 +456,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
         if self._keepfiles:
-            script_fname = pyutilib.services.TempfileManager.\
+            script_fname = TempfileManager.\
                            create_tempfile(suffix = '.cplex.script')
             tmp = open(script_fname,'w')
             tmp.write(script)
@@ -475,7 +477,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch(cmd=cmd, script=script,
+        return Bunch(cmd=cmd, script=script,
                                    log_file=self._log_file, env=None)
 
     def process_logfile(self):
@@ -612,7 +614,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            results.solver.termination_message = pyutilib.misc.yaml_fix(results.solver.termination_message)
+            results.solver.termination_message = yaml_fix(results.solver.termination_message)
         except:
             pass
         return results
@@ -888,7 +890,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # manager, created populated *directly* by this plugin. does not
         # include, for example, the execution script. but does include
         # the warm-start file.
-        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         return results
 
@@ -901,7 +903,7 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
     def __init__(self, **kwds):
         try:
             CPLEXSHELL.__init__(self, **kwds)
-        except pyutilib.common.ApplicationError: #pragma:nocover
+        except ApplicationError: #pragma:nocover
             pass                        #pragma:nocover
         MockMIP.__init__(self,"cplex")
 

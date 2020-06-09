@@ -10,7 +10,6 @@
 
 __all__ = ['test_solver_cases', 'available_solvers']
 
-import os
 import six
 import logging
 

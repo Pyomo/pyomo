@@ -9,10 +9,6 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.PyomoModel import ConcreteModel
-from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.var import Var
-from pyomo.core.base.sos import SOSConstraint
 from pyomo.solvers.plugins.solvers.cplex_direct import CPLEXDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt.base import SolverFactory
