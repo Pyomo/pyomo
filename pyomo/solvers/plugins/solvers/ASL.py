@@ -18,11 +18,12 @@ from pyutilib.misc import Options, Bunch
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
-from pyomo.opt.base import ProblemFormat, ResultsFormat, TransformationFactory
+from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.solver import SystemCallSolver
 from pyomo.core.kernel.block import IBlock
 from pyomo.solvers.mockmip import MockMIP
+from pyomo.core import TransformationFactory
 
 import logging
 logger = logging.getLogger('pyomo.solvers')
