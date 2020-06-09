@@ -41,9 +41,8 @@ def configure_glpk_direct():
 from pyutilib.misc import Bunch, Options
 
 from pyomo.opt.base import OptSolver
-from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverResults, SolverStatus, SolutionStatus, ProblemSense
-from pyomo.opt.solver import SolverFactory
 from pyomo.core.base.numvalue import value
 
 import logging

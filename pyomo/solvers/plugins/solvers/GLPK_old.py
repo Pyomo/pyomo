@@ -20,9 +20,9 @@ import pyutilib.subprocess
 
 from pyomo.common import Executable
 from pyomo.opt.base import ProblemFormat, ResultsFormat
-from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverResults, SolverStatus, TerminationCondition, SolutionStatus, ProblemSense
-from pyomo.opt.solver import SolverFactory, SystemCallSolver
+from pyomo.opt.solver import SystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
 from pyomo.solvers.plugins.solvers.GLPK import _glpk_version, configure_glpk
 

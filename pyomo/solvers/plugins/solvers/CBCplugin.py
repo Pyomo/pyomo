@@ -25,9 +25,9 @@ from pyutilib.subprocess import run
 
 from pyomo.core.kernel.block import IBlock
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver, Var
-from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverResults, SolverStatus, TerminationCondition, SolutionStatus, ProblemSense, Solution
-from pyomo.opt.solver import SolverFactory, SystemCallSolver
+from pyomo.opt.solver import SystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
 
 logger = logging.getLogger('pyomo.solvers')

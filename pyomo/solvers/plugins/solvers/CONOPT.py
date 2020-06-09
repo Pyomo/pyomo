@@ -16,9 +16,9 @@ from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
-from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverStatus
-from pyomo.opt.solver import SolverFactory, SystemCallSolver
+from pyomo.opt.solver import  SystemCallSolver
 
 import logging
 logger = logging.getLogger('pyomo.solvers')

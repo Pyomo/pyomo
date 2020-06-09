@@ -21,9 +21,9 @@ from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
-from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.results import SolverStatus, TerminationCondition, SolutionStatus, ProblemSense, Solution
-from pyomo.opt.solver import SolverFactory, ILMLicensedSystemCallSolver
+from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
