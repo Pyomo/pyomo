@@ -66,7 +66,7 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
                                              "ConcreteModel" % model
 
     assert node_type in ('b', 'c', 'v'), "Invalid node type specified: 'node_type=%s' - Valid " \
-                                         "values: 'c', 'v', 'b'" % node_type
+                                         "values: 'b', 'c', 'v'" % node_type
 
     assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
                                          "must be a Boolean" % with_objective
@@ -83,9 +83,14 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
     # string_map maps the string of Pyomo modeling components to the actual components themselves
     # constraint_variable_map maps a constraint to the variables it contains
-    model_graph, string_map, constraint_variable_map = _generate_model_graph(
-        model, node_type=node_type, with_objective=with_objective,
-        weighted_graph=weighted_graph)
+    if node_type == 'b':
+        model_graph, string_map, variable_node_set = _generate_model_graph(
+            model, node_type=node_type, with_objective=with_objective,
+            weighted_graph=weighted_graph)
+    else:
+        model_graph, string_map, constraint_variable_map = _generate_model_graph(
+            model, node_type=node_type, with_objective=with_objective,
+            weighted_graph=weighted_graph)
 
     # Use Louvain community detection - this returns a dictionary mapping individual nodes to their communities
     partition_of_graph = community_louvain.best_partition(model_graph, random_state=random_seed)
@@ -100,12 +105,25 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     # At this point, we have str_community_map, which maps an integer (the community number) to a list of the strings
     # of the Pyomo modeling components in each community
 
-    # Now, we want to include another list (so that each key in str_community_map corresponds to a tuple of two lists),
-    # which wil be determined based on the node_type given by the user
+    # Now, we want to include another list which will be determined based on the node_type given by the user
+    # Thus, each key in str_community_map will map to a tuple of two lists, a constraint list and a variable list
+
+    # Both variable and constraint nodes (bipartite graph) - for a given community, we simply want to separate the
+    # nodes into their two groups; thus, we create a list of constraints and a list of variables
+    if node_type == 'b':
+        for community_key in str_community_map:
+            constraint_node_list, variable_node_list = [], []
+            node_community_list = str_community_map[community_key]
+            for str_node in node_community_list:
+                if str_node in variable_node_set:
+                    variable_node_list.append(str_node)
+                else:
+                    constraint_node_list.append(str_node)
+            str_community_map[community_key] = (constraint_node_list, variable_node_list)
 
     # Constraint node type - for a given community, we want to create a second list that contains all of the variables
     # contained in the given constraints
-    if node_type == 'c':
+    elif node_type == 'c':
         for community_key in str_community_map:
             constraint_list = str_community_map[community_key]
             variable_list = []
@@ -125,20 +143,6 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
                                         str_variable in constraint_variable_map[constraint_key]])
             constraint_list = sorted(set(constraint_list))
             str_community_map[community_key] = (constraint_list, variable_list)
-
-    # Both variable and constraint nodes (bipartite graph) - for a given community, we simply want to separate the
-    # nodes into their two groups; thus, we create a list of constraints and a list of variables
-    elif node_type == 'b':
-        for community_key in str_community_map:
-            constraint_node_list, variable_node_list = [], []
-            node_community_list = str_community_map[community_key]
-            for str_node in node_community_list:
-                node = string_map[str_node]
-                if isinstance(node, Var):
-                    variable_node_list.append(str_node)
-                else:
-                    constraint_node_list.append(str_node)
-            str_community_map[community_key] = (constraint_node_list, variable_node_list)
 
     # Log information about the number of communities found from the model
     logger.info("%s communities were found in the model" % number_of_communities)

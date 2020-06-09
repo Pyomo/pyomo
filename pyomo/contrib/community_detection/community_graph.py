@@ -120,7 +120,7 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
 
     # Both variable and constraint nodes (bipartite graph); this is the graph we made above
     if node_type == 'b':
-        return model_graph, string_map, constraint_variable_map
+        return model_graph, string_map, variable_node_set
 
     # Constraint nodes
     elif node_type == 'c':
