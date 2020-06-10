@@ -666,7 +666,24 @@ value() function.""" % ( self.name, i ))
                 fixed[i - len(idx)] = val
 
         if sliced or ellipsis is not None:
-            if self.dim() is None:
+            if (not normalize_index.flatten and 
+                ellipsis is None and 
+                len(idx) != len(self._implicit_subsets)):
+                # dim will be None. Absent an ellipsis, the number of indices
+                # passed in should be the length of _implicit_subsets.
+                raise IndexError(
+                    "Index %s contains an invalid number of entries for "
+                    "component %s. Expected %s, got %s." 
+                    % (idx, self.name, len(self._implicit_subsets), len(idx)))
+            elif (not normalize_index.flatten and 
+                len(fixed) + len(sliced) > len(self._implicit_subsets)):
+                # dim is still None. Raise an error if the number of fixed
+                # and sliced indices exceeds the length of _implicit_subsets.
+                raise IndexError(
+                    "Index %s contains an invalid number of entries for "
+                    "component %s. Expected no more than %s, got %s." 
+                    % (idx, self.name, len(self._implicit_subsets), len(idx)))
+            elif self.dim() is None:
                 # Assume that the right thing to do here is return
                 # an IndexedComponent_slice
                 pass
