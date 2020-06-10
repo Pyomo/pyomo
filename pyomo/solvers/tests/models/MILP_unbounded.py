@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Integers, Binary, NonNegativeReals, Integers
+from pyomo.kernel import block, variable, objective, IntegerSet
+from pyomo.core import ConcreteModel, Var, Objective, Integers
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
@@ -57,11 +57,11 @@ class MILP_unbounded(_BaseTestModel):
 class MILP_unbounded_kernel(MILP_unbounded):
 
     def _generate_model(self):
-        self.model = pmo.block()
+        self.model =  block()
         model = self.model
         model._name = self.description
 
-        model.x = pmo.variable(domain=pmo.IntegerSet)
-        model.y = pmo.variable(domain=pmo.IntegerSet)
+        model.x =  variable(domain= IntegerSet)
+        model.y =  variable(domain= IntegerSet)
 
-        model.o = pmo.objective(model.x+model.y)
+        model.o =  objective(model.x+model.y)
