@@ -16,20 +16,16 @@ from __future__ import division, print_function, absolute_import
 __author__ = "John Eslick"
 
 import os
-import warnings
 import logging
-import re
 
 _log = logging.getLogger(__name__)
 
-from pyomo.contrib.viewer.qt import *
+from pyomo.contrib.viewer.qt import QLineEdit, QItemEditorFactory, QtCore, QComboBox, QAbstractItemView, QAbstractItemModel, QColor
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
 
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.constraint import _ConstraintData
-from pyomo.core.base.expression import _ExpressionData
-from pyomo.network.port import SimplePort
 from pyomo.core.base.param import _ParamData
 from pyomo.environ import Block, Var, Constraint, Param, Expression, value
 

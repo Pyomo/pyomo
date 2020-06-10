@@ -28,7 +28,7 @@ from pyomo.opt import SolverFactory
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import fit_rect_dist, fit_mvn_dist, fit_kde_dist
+from pyomo.contrib.parmest.graphics import fit_rect_dist, fit_mvn_dist, fit_kde_dist, pairwise_plot, grouped_boxplot, grouped_violinplot
 
 __version__ = 0.1
 
