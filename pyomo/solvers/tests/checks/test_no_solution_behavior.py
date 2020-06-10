@@ -78,9 +78,9 @@ def create_test_method(model,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_this(self):
+        def skipping_test(self):
             return self.skipTest(test_case.msg)
-        return skipping_this
+        return skipping_test
 
     if is_expected_failure:
         @unittest.expectedFailure
@@ -108,6 +108,7 @@ for model in test_models():
             cls = new.classobj(name, (unittest.TestCase,), {})
         else:
             cls = types.new_class(name, (unittest.TestCase,))
+            cls.__module__ = __name__
         cls = unittest.category(*case.level)(cls)
         driver[model] = cls
         globals()[name] = cls
@@ -126,7 +127,10 @@ for key, value in test_scenarios():
             test_name = "test_"+solver+"_"+io
             test_method = create_test_method(model, solver, io, value)
             if test_method is not None:
+                test_method = unittest.category('smoke','nightly',solver)(
+                    test_method)
                 setattr(cls, test_name, test_method)
+                test_method = None
 
 # Reset the cls variable, since it contains a unittest.TestCase subclass.
 # This prevents this class from being processed twice!

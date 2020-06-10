@@ -93,12 +93,6 @@ class MindtPySolver(object):
             "covering problem (max_binary), and fix the initial value for "
             "the integer variables (initial_binary)"
     ))
-    CONFIG.declare("integer_cuts", ConfigValue(
-        default=True,
-        domain=bool,
-        description="Integer cuts",
-        doc="Add integer cuts after finding a feasible solution to the MINLP"
-    ))
     CONFIG.declare("max_slack", ConfigValue(
         default=1000.0,
         domain=PositiveFloat,
@@ -124,7 +118,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
-        domain=In(["ipopt"]),
+        domain=In(["ipopt", "gams"]),
         description="NLP subsolver name",
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
             "subproblems"
@@ -137,7 +131,8 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
-        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams"]),
+        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams",
+                   "gurobi_persistent", "cplex_persistent"]),
         description="MIP subsolver name",
         doc="Which MIP subsolver is going to be used for solving the mixed-"
             "integer master problems"
@@ -196,7 +191,7 @@ class MindtPySolver(object):
         description="Tolerance on variable bounds."
     ))
     CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-15,
+        default=1E-8,
         description="Tolerance on variable equal to zero."
     ))
     CONFIG.declare("initial_feas", ConfigValue(
@@ -218,6 +213,37 @@ class MindtPySolver(object):
         default=False,
         description="Add integer cuts (no-good cuts) to binary variables to disallow same integer solution again."
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
+        domain=bool
+    ))
+    CONFIG.declare("single_tree", ConfigValue(
+        default=False,
+        description="Use single tree implementation in solving the MILP master problem.",
+        domain=bool
+    ))
+    CONFIG.declare("solution_pool", ConfigValue(
+        default=False,
+        description="Use solution pool in solving the MILP master problem.",
+        domain=bool
+    ))
+    CONFIG.declare("add_slack", ConfigValue(
+        default=False,
+        description="whether add slack variable here."
+                    "slack variables here are used to deal with nonconvex MINLP",
+        domain=bool
+    ))
+    CONFIG.declare("continuous_var_bound", ConfigValue(
+        default=1e10,
+        description="default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
+    CONFIG.declare("integer_var_bound", ConfigValue(
+        default=1e9,
+        description="default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
+    CONFIG.declare("cycling_check", ConfigValue(
+        default=True,
+        description="check if OA algorithm is stalled in a cycle and terminate.",
         domain=bool
     ))
 
@@ -246,9 +272,24 @@ class MindtPySolver(object):
         """
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
+
+        # configration confirmation
+        if config.single_tree:
+            config.iteration_limit = 1
+            config.add_slack = False
+            config.add_integer_cuts = False
+            config.mip_solver = 'cplex_persistent'
+            config.logger.info(
+                "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
+        # if the slacks fix to zero, just don't add them
+        if config.max_slack == 0.0:
+            config.add_slack = False
+
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()
+        solve_data.curr_int_sol = []
+        solve_data.prev_int_sol = []
 
         solve_data.original_model = model
         solve_data.working_model = model.clone()
@@ -256,16 +297,15 @@ class MindtPySolver(object):
             TransformationFactory('contrib.integer_to_binary'). \
                 apply_to(solve_data.working_model)
 
-
         new_logging_level = logging.INFO if config.tee else None
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
-             lower_logger_level_to(config.logger, new_logging_level), \
-             create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
+                lower_logger_level_to(config.logger, new_logging_level), \
+                create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
             config.logger.info("---Starting MindtPy---")
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            process_objective(solve_data, config)
+            process_objective(solve_data, config, use_mcpp=False)
 
             # Save model initial values.
             solve_data.initial_var_values = list(
@@ -345,7 +385,9 @@ class MindtPySolver(object):
             #     MindtPy.feas_inverse_map[n] = c
 
             # Create slack variables for OA cuts
-            lin.slack_vars = VarList(bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
+            if config.add_slack:
+                lin.slack_vars = VarList(
+                    bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
             # Create slack variables for feasibility problem
             feas.slack_var = Var(feas.constraint_set,
                                  domain=NonNegativeReals, initialize=1)
@@ -390,6 +432,10 @@ class MindtPySolver(object):
         solve_data.results.solver.wallclock_time = solve_data.timing.total
 
         solve_data.results.solver.iterations = solve_data.mip_iter
+
+        if config.single_tree:
+            solve_data.results.solver.num_nodes = solve_data.nlp_iter - \
+                (1 if config.init_strategy == 'rNLP' else 0)
 
         return solve_data.results
 

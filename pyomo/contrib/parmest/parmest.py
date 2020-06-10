@@ -328,9 +328,11 @@ class Estimator(object):
         Indicates that ef solver output should be teed
     diagnostic_mode: bool, optional
         If True, print diagnostics from the solver
+    solver_options: dict, optional
+        Provides options to the solver (also the name of an attribute)
     """
     def __init__(self, model_function, data, theta_names, obj_function=None, 
-                 tee=False, diagnostic_mode=False):
+                 tee=False, diagnostic_mode=False, solver_options=None):
         
         self.model_function = model_function
         self.callback_data = data
@@ -343,6 +345,7 @@ class Estimator(object):
         self.obj_function = obj_function 
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
+        self.solver_options = solver_options
         
         self._second_stage_cost_exp = "SecondStageCost"
         self._numbers_list = list(range(len(data)))
@@ -411,7 +414,8 @@ class Estimator(object):
         return model
     
 
-    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt", return_values=[], bootlist=None):
+    def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
+               return_values=[], bootlist=None):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -451,9 +455,9 @@ class Estimator(object):
                                   tree_model = tree_model)
         
         if solver == "ef_ipopt":
-            sopts = {}
-            sopts['max_iter'] = 6000
-            ef_sol = stsolver.solve_ef('ipopt', sopts=sopts, tee=self.tee)
+            ef_sol = stsolver.solve_ef('ipopt',
+                                       sopts=self.solver_options,
+                                       tee=self.tee)
             if self.diagnostic_mode:
                 print('    Solver termination condition = ',
                        str(ef_sol.solver.termination_condition))

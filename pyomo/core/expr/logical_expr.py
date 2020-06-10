@@ -33,7 +33,7 @@ from .expr_common import (
 )
 from .numeric_expr import _LinearOperatorExpression, _process_arg
 
-if _using_chained_inequality:               #pragma: no cover
+if _using_chained_inequality:
     class _chainedInequality(object):
 
         prev = None
@@ -70,7 +70,7 @@ if _using_chained_inequality:               #pragma: no cover
             if value(expression <= 5):
         """ % args
 
-else:                               #pragma: no cover
+else:
     _chainedInequality = None
 
 
@@ -185,7 +185,7 @@ class InequalityExpression(_LinearOperatorExpression):
         return state
 
     def __nonzero__(self):
-        if _using_chained_inequality and not self.is_constant():    #pragma: no cover
+        if _using_chained_inequality and not self.is_constant():
             deprecation_warning("Chained inequalities are deprecated. "
                                 "Use the inequality() function to "
                                 "express ranged inequality expressions.")     # Remove in Pyomo 6.0
@@ -313,7 +313,7 @@ class EqualityExpression(_LinearOperatorExpression):
 
 
 if _using_chained_inequality:
-    def _generate_relational_expression(etype, lhs, rhs):               #pragma: no cover
+    def _generate_relational_expression(etype, lhs, rhs):
         # We cannot trust Python not to recycle ID's for temporary POD data
         # (e.g., floats).  So, if it is a "native" type, we will record the
         # value, otherwise we will record the ID.  The tuple for native
@@ -406,7 +406,7 @@ if _using_chained_inequality:
             elif etype == _lt:
                 strict = True
             else:
-                raise ValueError("Unknown relational expression type '%s'" % etype) #pragma: no cover
+                raise ValueError("Unknown relational expression type '%s'" % etype)
             if lhs_is_relational:
                 if lhs.__class__ is InequalityExpression:
                     if rhs_is_relational:
@@ -435,7 +435,7 @@ if _using_chained_inequality:
 
 else:
 
-    def _generate_relational_expression(etype, lhs, rhs):               #pragma: no cover
+    def _generate_relational_expression(etype, lhs, rhs):
         rhs_is_relational = False
         lhs_is_relational = False
 
@@ -472,7 +472,7 @@ else:
             elif etype == _lt:
                 strict = True
             else:
-                raise ValueError("Unknown relational expression type '%s'" % etype) #pragma: no cover
+                raise ValueError("Unknown relational expression type '%s'" % etype)
             if lhs_is_relational:
                 if lhs.__class__ is InequalityExpression:
                     if rhs_is_relational:

@@ -46,11 +46,22 @@ class _UnindexedComponent_set(GlobalSetBase):
             return value
         return default
     def __iter__(self):
-        yield None
+        return (None,).__iter__()
     def subsets(self):
-        return [self]
+        return [ self ]
     def construct(self):
         pass
     def __len__(self):
         return 1
+    def __eq__(self, other):
+        return self is other
+    def __ne__(self, other):
+        return self is not other
+    def isdiscrete(self):
+        return True
+    def isfinite(self):
+        return True
+    def isordered(self):
+        # As this set only has a single element, it is implicitly "ordered"
+        return True
 UnindexedComponent_set = _UnindexedComponent_set('UnindexedComponent_set')

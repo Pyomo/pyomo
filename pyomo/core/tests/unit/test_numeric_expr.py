@@ -16,6 +16,8 @@ import pickle
 import math
 import os
 import re
+from collections import defaultdict
+
 import six
 import sys
 from os.path import abspath, dirname
@@ -55,7 +57,7 @@ from pyomo.core.expr.current import Expr_if
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
-from pyomo.core.base.template_expr import IndexTemplate
+from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 from pyomo.repn import generate_standard_repn
@@ -2089,7 +2091,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         t = IndexTemplate(m.I)
 
         e = m.x[t+m.P[t+1]] + 3
-        self.assertEqual("sum(x(sum({I}, P(sum({I}, 1)))), 3)", str(e))
+        self.assertEqual("sum(getitem(x, sum({I}, getitem(P, sum({I}, 1)))), 3)", str(e))
 
     def test_small_expression(self):
         #
@@ -2326,7 +2328,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         t = IndexTemplate(m.I)
 
         e = m.x[t+m.P[t+1]] + 3
-        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
+        self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e))
 
     def test_associativity_rules(self):
         m = ConcreteModel()
@@ -3429,10 +3431,19 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,1,0)
         self.assertEqual(expr.polynomial_degree(), 0)
         #
+        # A nonconstant expression has degree if both arguments have the
+        # same degree, as long as the IF is fixed (even if it is not
+        # defined)
+        #
+        expr = Expr_if(m.e,m.a,0)
+        self.assertEqual(expr.polynomial_degree(), 0)
+        expr = Expr_if(m.e,5*m.b,1+m.b)
+        self.assertEqual(expr.polynomial_degree(), 1)
+        #
         # A nonconstant expression has degree None because
         # m.e is an uninitialized parameter
         #
-        expr = Expr_if(m.e,m.a,0)
+        expr = Expr_if(m.e,m.b,0)
         self.assertEqual(expr.polynomial_degree(), None)
 
 
@@ -4002,7 +4013,7 @@ class TestCloneExpression(unittest.TestCase):
 
             e = m.x[t+m.P[t+1]] + 3
             e_ = e.clone()
-            self.assertEqual("x({I} + P({I} + 1)) + 3", str(e_))
+            self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e_))
             #
             total = counter.count - start
             self.assertEqual(total, 1)
@@ -5012,7 +5023,7 @@ class Test_pickle(unittest.TestCase):
         e = m.x[t+m.P[t+1]] + 3
         s = pickle.dumps(e)
         e_ = pickle.loads(s)
-        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
+        self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e))
 
     def test_abs(self):
         M = ConcreteModel()
@@ -5211,6 +5222,44 @@ class TestDirect_LinearExpression(unittest.TestCase):
         self.assertAlmostEqual(repn.constant, 1.0)
         self.assertTrue(len(repn.linear_coefs) == N)
         self.assertTrue(len(repn.linear_vars) == N)
+
+    def test_LinearExpression_polynomial_degree(self):
+        m = ConcreteModel()
+        m.S = RangeSet(2)
+        m.var_1 = Var(initialize=0)
+        m.var_2 = Var(initialize=0)
+        m.var_3 = Var(m.S, initialize=0)
+
+        def con_rule(model):
+            return model.var_1 - (model.var_2 + sum_product(defaultdict(lambda: 6), model.var_3)) <= 0
+
+        m.c1 = Constraint(rule=con_rule)
+
+        m.var_1.fix(1)
+        m.var_2.fix(1)
+        m.var_3.fix(1)
+
+        self.assertTrue(is_fixed(m.c1.body))
+        self.assertEqual(polynomial_degree(m.c1.body), 0)
+
+    def test_LinearExpression_is_fixed(self):
+        m = ConcreteModel()
+        m.S = RangeSet(2)
+        m.var_1 = Var(initialize=0)
+        m.var_2 = Var(initialize=0)
+        m.var_3 = Var(m.S, initialize=0)
+
+        def con_rule(model):
+            return model.var_1 - (model.var_2 + sum_product(defaultdict(lambda: 6), model.var_3)) <= 0
+
+        m.c1 = Constraint(rule=con_rule)
+
+        m.var_1.fix(1)
+        m.var_2.fix(1)
+
+        self.assertFalse(is_fixed(m.c1.body))
+        self.assertEqual(polynomial_degree(m.c1.body), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
