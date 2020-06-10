@@ -600,6 +600,7 @@ class TestComponentSlices(unittest.TestCase):
 
         m.a = Var(m.I, m.J, m.K)
         m.b = Var(m.IJ, m.K)
+        m.c = Var()
         
         with self.assertRaisesRegexp(
             IndexError, 'Index .* contains an invalid number of '
@@ -633,6 +634,9 @@ class TestComponentSlices(unittest.TestCase):
 
         _slicer = m.b[0,...]
         self.assertEqual([], [var.name for var in _slicer])
+
+        _slicer = m.c[:]
+        self.assertEqual(['c'], [var.name for var in _slicer])
 
         normalize_index.flatten = True
 

@@ -666,7 +666,15 @@ value() function.""" % ( self.name, i ))
                 fixed[i - len(idx)] = val
 
         if sliced or ellipsis is not None:
-            if (not normalize_index.flatten and 
+            if self.dim() == 0 and idx == (slice(None),):
+                # If dim == 0 and idx is slice(None), the component was
+                # a scalar passed a single slice. Since scalar components
+                # can be accessed with a "1-dimensional" index of None,
+                # this behavior is allowed.
+                #
+                # NOTE: dim will still be 0 if nomalize_index.flatten is False
+                pass
+            elif (not normalize_index.flatten and 
                 ellipsis is None and 
                 len(idx) != len(self._implicit_subsets)):
                 # dim will be None. Absent an ellipsis, the number of indices
@@ -686,12 +694,6 @@ value() function.""" % ( self.name, i ))
             elif self.dim() is None:
                 # Assume that the right thing to do here is return
                 # an IndexedComponent_slice
-                pass
-            elif self.dim() == 0 and idx == (slice(None),):
-                # If dim == 0 and idx is slice(None), the component was
-                # a scalar passed a single slice. Since scalar components
-                # can be accessed with a "1-dimensional" index of None,
-                # this behavior is allowed.
                 pass
             elif ellipsis is None and len(idx) != self.dim():
                 # If there is no ellipse and the index doesn't match the 
