@@ -588,6 +588,54 @@ class TestComponentSlices(unittest.TestCase):
             _slicer = m.b[2, :].c[:].x
             list(_slicer)
 
+    def test_flatten_false(self):
+        from pyomo.core.base.set import normalize_index
+        normalize_index.flatten = False
+
+        m = ConcreteModel()
+        m.I = Set(initialize=range(2))
+        m.J = Set(initialize=range(2,4))
+        m.K = Set(initialize=['a','b','c'])
+        m.IJ = m.I*m.J
+
+        m.a = Var(m.I, m.J, m.K)
+        m.b = Var(m.IJ, m.K)
+        
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = m.a[(0,2),:]
+
+        _slicer = m.a[0,2,:]
+        names = [ 'a[0,2,a]', 'a[0,2,b]', 'a[0,2,c]' ]
+        self.assertEqual(names, [var.name for var in _slicer])
+
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = m.b[0,2,:]
+        
+        _slicer = m.b[(0,2),:]
+        names = [ 'b[(0,2),a]', 'b[(0,2),b]', 'b[(0,2),c]' ]
+        self.assertEqual(names, [var.name for var in _slicer])
+
+        with self.assertRaisesRegexp(
+            IndexError, 'Index .* contains an invalid number of '
+            'entries for component .*'):
+            _slicer = m.b[:,2,'b']
+
+        _slicer = m.b[:,'b']
+        names = [ 'b[(0,2),b]', 'b[(0,3),b]',
+                  'b[(1,2),b]', 'b[(1,3),b]' ]
+        self.assertEqual(names, [var.name for var in _slicer])
+        _slicer = m.b[...,'b']
+        self.assertEqual(names, [var.name for var in _slicer])
+
+        _slicer = m.b[0,...]
+        self.assertEqual([], [var.name for var in _slicer])
+
+        normalize_index.flatten = True
+
 
 if __name__ == "__main__":
     unittest.main()
