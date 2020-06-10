@@ -3154,8 +3154,12 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 0)
         baseline = { (id(m.a), id(m.a)): 1,
-                     (id(m.a), id(m.b)): 2,
                      (id(m.b), id(m.b)): 1 }
+        if id(m.a) < id(m.b):
+            baseline[id(m.a), id(m.b)] = 2
+        else:
+            baseline[id(m.b), id(m.a)] = 2
+
         self.assertEqual(baseline, repn_to_dict(rep))
 
         e = (m.a+3)**2
