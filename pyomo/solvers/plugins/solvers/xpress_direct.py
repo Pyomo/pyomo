@@ -125,11 +125,19 @@ class XpressDirect(DirectSolver):
             self._solver_model.addcbmessage(_print_message, None, 0)
 
         # set xpress options
+        # if the user specifies a 'mipgap', set it, and
+        # set xpress's related options to 0.
+        if self.options.mipgap is not None:
+            self._solver_model.setControl('miprelstop', float(self.options.mipgap))
+            self._solver_model.setControl('miprelcutoff', 0.0)
+            self._solver_model.setControl('mipaddcutoff', 0.0)
         # xpress is picky about the type which is passed
         # into a control. So we will infer and cast
         # get the xpress valid controls
         xp_controls = self._xpress.controls
         for key, option in self.options.items():
+            if key == 'mipgap': # handled above
+                continue
             try: 
                 self._solver_model.setControl(key, option)
             except self._XpressException:
