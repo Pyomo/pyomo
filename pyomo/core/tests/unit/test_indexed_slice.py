@@ -580,15 +580,13 @@ class TestComponentSlices(unittest.TestCase):
             _slicer = m.b[2, :].c[:,:,:].x
             # Error not raised immediately because accessing c is deferred
             # until iteration.
-            for var in _slicer:
-                pass
+            list(_slicer)
 
         with self.assertRaisesRegexp(
             IndexError, 'Index .* contains an invalid number of '
             'entries for component .*'):
             _slicer = m.b[2, :].c[:].x
-            for var in _slicer:
-                pass
+            list(_slicer)
 
 
 if __name__ == "__main__":
