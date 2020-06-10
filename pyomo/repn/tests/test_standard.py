@@ -3141,19 +3141,21 @@ class Test(unittest.TestCase):
         rep = generate_standard_repn(e, compute_values=False, quadratic=True)
         #
         self.assertFalse( rep.is_fixed() )
-        self.assertEqual( rep.polynomial_degree(), None )
+        self.assertEqual( rep.polynomial_degree(), 2 )
         self.assertFalse( rep.is_constant() )
         self.assertFalse( rep.is_linear() )
-        self.assertFalse( rep.is_quadratic() )
+        self.assertTrue( rep.is_quadratic() )
         self.assertTrue( rep.is_nonlinear() )
         #
         self.assertTrue(len(rep.linear_vars) == 0)
         self.assertTrue(len(rep.linear_coefs) == 0)
-        self.assertTrue(len(rep.quadratic_vars) == 0)
-        self.assertTrue(len(rep.quadratic_coefs) == 0)
-        self.assertFalse(rep.nonlinear_expr is None)
-        self.assertTrue(len(rep.nonlinear_vars) == 2)
-        baseline = { }
+        self.assertTrue(len(rep.quadratic_vars) == 3)
+        self.assertTrue(len(rep.quadratic_coefs) == 3)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { (id(m.a), id(m.a)): 1,
+                     (id(m.a), id(m.b)): 2,
+                     (id(m.b), id(m.b)): 1 }
         self.assertEqual(baseline, repn_to_dict(rep))
 
         e = (m.a+3)**2
