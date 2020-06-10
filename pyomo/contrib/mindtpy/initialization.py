@@ -1,10 +1,18 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Initialization functions."""
 from __future__ import division
 
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values
-from pyomo.contrib.mindtpy.cut_generation import (
-    add_oa_cuts, add_objective_linearization,
-)
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
 from pyomo.core import (ConstraintList, Objective,
@@ -12,8 +20,8 @@ from pyomo.core import (ConstraintList, Objective,
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
+from pyomo.contrib.mindtpy.nlp_solve import (handle_NLP_subproblem_optimal,
+                                             handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
 
 

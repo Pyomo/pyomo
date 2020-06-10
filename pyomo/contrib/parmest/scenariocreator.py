@@ -1,9 +1,17 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # ScenariosCreator.py - Class to create and deliver scenarios using parmest
 # DLW March 2020
 
-import json
-import pyomo.contrib.parmest.parmest as parmest
-import pyomo.environ as pyo
+from pyomo.environ import SolverFactory, value
 
 
 class ScenarioSet(object):
@@ -135,13 +143,13 @@ class ScenarioCreator(object):
             ##print("Experiment number=", exp_num)
             model = self.pest._instance_creation_callback(exp_num,
                                                         self.pest.callback_data)
-            opt = pyo.SolverFactory(self.solvername)
+            opt = SolverFactory(self.solvername)
             results = opt.solve(model)  # solves and updates model
             ## pyo.check_termination_optimal(results)
             ThetaVals = dict()
             for theta in self.pest.theta_names:
                 tvar = eval('model.'+theta)
-                tval = pyo.value(tvar)
+                tval = value(tvar)
                 ##print("    theta, tval=", tvar, tval)
                 ThetaVals[theta] = tval
             addtoSet.addone(ParmestScen("ExpScen"+str(exp_num), ThetaVals, prob))

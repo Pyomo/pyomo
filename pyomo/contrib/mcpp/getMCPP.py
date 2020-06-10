@@ -10,7 +10,6 @@
 
 import logging
 import os
-import stat
 import sys
 from pyomo.common.download import FileDownloader
 
