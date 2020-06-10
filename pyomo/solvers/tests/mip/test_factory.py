@@ -22,6 +22,7 @@ from pyutilib.services import TempfileManager
 from pyomo.opt import AbstractProblemWriter, AbstractResultsReader, OptSolver, ReaderFactory, SolverFactory, WriterFactory
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.opt.plugins.sol import ResultsReader_sol
+from pyomo.solvers.plugins.solvers import PICO
 
 
 old_tempdir = None
@@ -58,7 +59,6 @@ class OptFactoryDebug(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import pyomo.environ
-        from pyomo.solvers.plugins.solvers import PICO
 
     def tearDown(self):
         TempfileManager.clear_tempfiles()
