@@ -676,17 +676,22 @@ value() function.""" % ( self.name, i ))
                 # can be accessed with a "1-dimensional" index of None,
                 # this behavior is allowed.
                 pass
-            elif ((ellipsis is None and len(idx) != self.dim()) or 
+            elif ellipsis is None and len(idx) != self.dim():
                 # If there is no ellipse and the index doesn't match the 
                 # component's dimension, raise an error.
                 # NOTE: Should this do something different for unflattened 
                 # indices?
-                (len(fixed) + len(sliced) > self.dim())):
+                raise IndexError(
+                    "Index %s contains an invalid number of entries for "
+                    "component %s. Expected %s, got %s." 
+                    % (idx, self.name, self.dim(), len(idx)))
+            elif len(fixed) + len(sliced) > self.dim():
                 # If an ellipsis is present and the index exceeds the dimension
                 # of the component, raise an error.
                 raise IndexError(
                     "Index %s contains an invalid number of entries for "
-                    "component %s." % (idx, self.name))
+                    "component %s. Expected no more than %s, got %s." 
+                    % (idx, self.name, self.dim(), len(idx)))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:
             if len(idx) == 1:
