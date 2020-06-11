@@ -23,7 +23,7 @@ class TestGDPReclassificationError(unittest.TestCase):
         m.d2.c =  Constraint(expr=m.x == 0)
         with self.assertRaisesRegexp(
                  GDP_Error, '.*not found in any Disjunctions.*'):
-             TransformationFactory('dae.bigm').apply_to(m)
+             TransformationFactory('gdp.bigm').apply_to(m)
 
     def test_disjunct_not_in_active_disjunction(self):
         m =  ConcreteModel()
@@ -37,4 +37,4 @@ class TestGDPReclassificationError(unittest.TestCase):
         with self.assertRaisesRegexp(
                  GDP_Error, '.*While it participates in a Disjunction, '
                 'that Disjunction is currently deactivated.*'):
-             TransformationFactory('dae.bigm').apply_to(m)
+             TransformationFactory('gdp.bigm').apply_to(m)
