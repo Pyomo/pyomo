@@ -7,7 +7,7 @@
 # rights in this software.
 # This software is distributed under the 3-clause BSD License
 # ______________________________________________________________________________
-from pyomo.environ import Param, Var, Block, ComponentMap, Objective, Constraint, ConstraintList, ExpresssionReplacementVisitor, Suffix, value
+from pyomo.environ import Param, Var, Block, ComponentMap, Objective, Constraint, ConstraintList, Suffix, value
 
 from pyomo.core.base.misc import sorted_robust
 from pyomo.core.expr.current import ExpressionReplacementVisitor
@@ -151,7 +151,7 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
                     remove_named_expressions=True).dfs_postorder_stack(cc.expr))
         else:
             try:
-                b.constList.add(expr=ExpresssionReplacementVisitor(
+                b.constList.add(expr=ExpressionReplacementVisitor(
                     substitute=variableSubMap,
                     remove_named_expressions=True).dfs_postorder_stack(cc.expr))
             except:
