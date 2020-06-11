@@ -18,7 +18,7 @@ def norm(x, ord=None):
     f = np.linalg.norm
     if isinstance(x, np.ndarray):
         return f(x, ord=ord)
-    elif isinstance(x, BlockVector):
+    elif isinstance(x, block_vector.BlockVector):
         flat_x = x.flatten()
         return f(flat_x, ord=ord)
     else:

@@ -9,25 +9,24 @@
 #  ___________________________________________________________________________
 from pyomo.contrib.pynumero.interfaces import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.nlp_compositions import TwoStageStochasticNLP
-from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockVector
+from pyomo.contrib.pynumero.sparse import BlockSymMatrix
 import matplotlib.pylab as plt
-import pyomo.environ as aml
+from pyomo.environ import ConcreteModel, Var, Constraint, Objective, minimize
 import numpy as np
-import os
 
 def create_basic_dense_qp(G, A, b, c):
 
     nx = G.shape[0]
     nl = A.shape[0]
 
-    model = aml.ConcreteModel()
+    model = ConcreteModel()
     model.var_ids = range(nx)
     model.con_ids = range(nl)
-    model.x = aml.Var(model.var_ids, initialize=0.0)
+    model.x = Var(model.var_ids, initialize=0.0)
     
     def equality_constraint_rule(m, i):
         return sum(A[i, j] * m.x[j] for j in m.var_ids) == b[i]
-    model.equalities = aml.Constraint(model.con_ids, rule=equality_constraint_rule)
+    model.equalities = Constraint(model.con_ids, rule=equality_constraint_rule)
 
     def objective_rule(m):
         accum = 0.0
@@ -37,7 +36,7 @@ def create_basic_dense_qp(G, A, b, c):
         accum += sum(m.x[j] * c[j] for j in m.var_ids)
         return accum
 
-    model.obj = aml.Objective(rule=objective_rule, sense=aml.minimize)
+    model.obj = Objective(rule=objective_rule, sense=minimize)
 
     return model
 

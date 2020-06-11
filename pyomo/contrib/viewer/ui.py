@@ -15,14 +15,8 @@ from __future__ import division, print_function, absolute_import
 
 __author__ = "John Eslick"
 
-import time
 import os
-import warnings
 import logging
-import threading
-import datetime
-import json
-import sys
 try:
     from IPython import get_ipython
 except ImportError:
