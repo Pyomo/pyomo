@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
-import pyomo.environ as aml
+from pyomo.environ import ConcreteModel, Var, Param, Objective, Constraint, Reals,  Expression, minimize
 import os
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available, scipy_sparse, scipy_available
@@ -31,30 +31,30 @@ def create_basic_dense_qp(G, A, b, c, complicated_var_ids):
     nx = G.shape[0]
     nl = A.shape[0]
 
-    model = aml.ConcreteModel()
+    model =  ConcreteModel()
     model.var_ids = range(nx)
     model.complicated_var_ids = complicated_var_ids
     model.con_ids = range(nl)
 
-    model.x = aml.Var(model.var_ids, initialize=0.0)
+    model.x =  Var(model.var_ids, initialize=0.0)
 
     model.x[0].value = 1.0
     model.x[0].setlb(-100.0)
     model.x[0].setub(100.0)
 
-    model.z = aml.Var(model.complicated_var_ids, initialize=0.0)
-    model.hessian_f = aml.Param(model.var_ids, model.var_ids, mutable=True, rule=lambda m, i, j: G[i, j])
-    model.jacobian_c = aml.Param(model.con_ids, model.var_ids, mutable=True, rule=lambda m, i, j: A[i, j])
-    model.rhs = aml.Param(model.con_ids, mutable=True, rule=lambda m, i: b[i])
-    model.grad_f = aml.Param(model.var_ids, mutable=True, rule=lambda m, i: c[i])
+    model.z =  Var(model.complicated_var_ids, initialize=0.0)
+    model.hessian_f =  Param(model.var_ids, model.var_ids, mutable=True, rule=lambda m, i, j: G[i, j])
+    model.jacobian_c =  Param(model.con_ids, model.var_ids, mutable=True, rule=lambda m, i, j: A[i, j])
+    model.rhs =  Param(model.con_ids, mutable=True, rule=lambda m, i: b[i])
+    model.grad_f =  Param(model.var_ids, mutable=True, rule=lambda m, i: c[i])
 
     def equality_constraint_rule(m, i):
         return sum(m.jacobian_c[i, j] * m.x[j] for j in m.var_ids) == m.rhs[i]
-    model.equalities = aml.Constraint(model.con_ids, rule=equality_constraint_rule)
+    model.equalities =  Constraint(model.con_ids, rule=equality_constraint_rule)
 
     def fixing_constraints_rule(m, i):
         return m.z[i] == m.x[i]
-    model.fixing_constraints = aml.Constraint(model.complicated_var_ids, rule=fixing_constraints_rule)
+    model.fixing_constraints =  Constraint(model.complicated_var_ids, rule=fixing_constraints_rule)
 
     def second_stage_cost_rule(m):
         accum = 0.0
@@ -64,30 +64,30 @@ def create_basic_dense_qp(G, A, b, c, complicated_var_ids):
         accum += sum(m.x[j] * m.grad_f[j] for j in m.var_ids)
         return accum
 
-    model.FirstStageCost = aml.Expression(expr=0.0)
-    model.SecondStageCost = aml.Expression(rule=second_stage_cost_rule)
+    model.FirstStageCost =  Expression(expr=0.0)
+    model.SecondStageCost =  Expression(rule=second_stage_cost_rule)
 
-    model.obj = aml.Objective(expr=model.FirstStageCost + model.SecondStageCost,
-                             sense=aml.minimize)
+    model.obj =  Objective(expr=model.FirstStageCost + model.SecondStageCost,
+                             sense= minimize)
 
     return model
 
 
 def create_basic_model():
 
-    m = aml.ConcreteModel()
-    m.x = aml.Var([1, 2, 3], domain=aml.Reals)
+    m =  ConcreteModel()
+    m.x =  Var([1, 2, 3], domain= Reals)
     for i in range(1, 4):
         m.x[i].value = i
-    m.c1 = aml.Constraint(expr=m.x[1] ** 2 - m.x[2] - 1 == 0)
-    m.c2 = aml.Constraint(expr=m.x[1] - m.x[3] - 0.5 == 0)
-    m.d1 = aml.Constraint(expr=m.x[1] + m.x[2] <= 100.0)
-    m.d2 = aml.Constraint(expr=m.x[2] + m.x[3] >= -100.0)
-    m.d3 = aml.Constraint(expr=m.x[2] + m.x[3] + m.x[1] >= -500.0)
+    m.c1 =  Constraint(expr=m.x[1] ** 2 - m.x[2] - 1 == 0)
+    m.c2 =  Constraint(expr=m.x[1] - m.x[3] - 0.5 == 0)
+    m.d1 =  Constraint(expr=m.x[1] + m.x[2] <= 100.0)
+    m.d2 =  Constraint(expr=m.x[2] + m.x[3] >= -100.0)
+    m.d3 =  Constraint(expr=m.x[2] + m.x[3] + m.x[1] >= -500.0)
     m.x[2].setlb(0.0)
     m.x[3].setlb(0.0)
     m.x[2].setub(100.0)
-    m.obj = aml.Objective(expr=m.x[2]**2)
+    m.obj =  Objective(expr=m.x[2]**2)
     return m
 
 
