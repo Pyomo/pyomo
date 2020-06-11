@@ -37,6 +37,14 @@ _test_solver_cases = {}
 def initialize(**kwds):
     obj = Options(**kwds)
     #
+    # Set the limits for the solver's "demo" (unlicensed) mode:
+    #   ( nVars, nCons, nNonZeros )
+    obj.demo_limits = (None, None, None)
+    if (obj.name == "baron") and \
+       (not BARONSHELL.license_is_valid()):
+        obj.demo_limits = (10, 10, 50)
+    #
+    #
     # Set obj.available
     #
     opt = None
@@ -48,9 +56,6 @@ def initialize(**kwds):
         obj.available = False
     elif (obj.name == "gurobi") and \
        (not GUROBISHELL.license_is_valid()):
-        obj.available = False
-    elif (obj.name == "baron") and \
-       (not BARONSHELL.license_is_valid()):
         obj.available = False
     elif (obj.name == "mosek") and \
        (not MosekDirect.license_is_valid()):

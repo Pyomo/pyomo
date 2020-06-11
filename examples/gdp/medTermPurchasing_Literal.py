@@ -606,7 +606,7 @@ def build_model():
 
 
 if __name__ == "__main__":
-    m = build_model().create_instance('medTermPurchasing_Literal_Chull.dat')
+    m = build_model().create_instance('medTermPurchasing_Literal_Hull.dat')
     TransformationFactory('gdp.bigm').apply_to(m)
     SolverFactory('gams').solve(m, solver='baron', tee=True, add_options=['option optcr=1e-6;'])
     m.profit.display()

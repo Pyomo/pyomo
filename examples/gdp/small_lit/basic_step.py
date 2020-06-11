@@ -39,14 +39,14 @@ def build_gdp_model():
 
 def solve_base_model():
     m_base = build_gdp_model()
-    m_chull = TransformationFactory('gdp.chull').create_using(m_base)
+    m_hull = TransformationFactory('gdp.hull').create_using(m_base)
     #m_bigm = TransformationFactory('gdp.bigm').create_using(m_base, bigM=100)
     solver = SolverFactory('gams')
-    solver.solve(m_chull, solver='baron')
-    #m_chull.pprint()
-    m_chull.objective.display()
-    m_chull.x1.display()
-    m_chull.x2.display()
+    solver.solve(m_hull, solver='baron')
+    #m_hull.pprint()
+    m_hull.objective.display()
+    m_hull.x1.display()
+    m_hull.x2.display()
 
 
 def solve_basic_step_model():
@@ -57,7 +57,7 @@ def solve_basic_step_model():
     #with open('pprint.log','w') as outputfile: 
     #    m_base.disjunctions.pprint(outputfile)
 
-    #m_bs_chull = TransformationFactory('gdp.chull').create_using(m_base)
+    #m_bs_hull = TransformationFactory('gdp.hull').create_using(m_base)
     m_bigm = TransformationFactory('gdp.bigm').create_using(m_base, bigM=100)
     m_bigm.pprint()
 
