@@ -7,7 +7,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import pyomo.environ as pyo
+
+from pyomo.environ import ConcreteModel, Param, Var, Objective, Constraint, SolverFactory, value
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockMatrix, BlockVector
 from scipy.sparse import identity
@@ -16,24 +17,24 @@ import numpy as np
 
 
 def create_model(eta1, eta2):
-    model = pyo.ConcreteModel()
+    model =  ConcreteModel()
     # variables
-    model.x1 = pyo.Var(initialize=0.15)
-    model.x2 = pyo.Var(initialize=0.15)
-    model.x3 = pyo.Var(initialize=0.0)
+    model.x1 =  Var(initialize=0.15)
+    model.x2 =  Var(initialize=0.15)
+    model.x3 =  Var(initialize=0.0)
     # parameters
-    model.eta1 = pyo.Var()
-    model.eta2 = pyo.Var()
+    model.eta1 =  Var()
+    model.eta2 =  Var()
 
-    model.nominal_eta1 = pyo.Param(initialize=eta1, mutable=True)
-    model.nominal_eta2 = pyo.Param(initialize=eta2, mutable=True)
+    model.nominal_eta1 =  Param(initialize=eta1, mutable=True)
+    model.nominal_eta2 =  Param(initialize=eta2, mutable=True)
 
     # constraints + objective
-    model.const1 = pyo.Constraint(expr=6*model.x1+3*model.x2+2*model.x3 - model.eta1 == 0)
-    model.const2 = pyo.Constraint(expr=model.eta2*model.x1+model.x2-model.x3-1 == 0)
-    model.cost = pyo.Objective(expr=model.x1**2 + model.x2**2 + model.x3**2)
-    model.consteta1 = pyo.Constraint(expr=model.eta1 == model.nominal_eta1)
-    model.consteta2 = pyo.Constraint(expr=model.eta2 == model.nominal_eta2)
+    model.const1 =  Constraint(expr=6*model.x1+3*model.x2+2*model.x3 - model.eta1 == 0)
+    model.const2 =  Constraint(expr=model.eta2*model.x1+model.x2-model.x3-1 == 0)
+    model.cost =  Objective(expr=model.x1**2 + model.x2**2 + model.x3**2)
+    model.consteta1 =  Constraint(expr=model.eta1 == model.nominal_eta1)
+    model.consteta2 =  Constraint(expr=model.eta2 == model.nominal_eta2)
 
     return model
 
@@ -71,7 +72,7 @@ def compute_init_lam(nlp, x=None, lam_max=1e3):
 
 #################################################################
 m = create_model(4.5, 1.0)
-opt = pyo.SolverFactory('ipopt')
+opt =  SolverFactory('ipopt')
 results = opt.solve(m, tee=True)
 
 #################################################################
@@ -97,7 +98,7 @@ ds = spsolve(M.tocsc(), -Np.tocsc())
 print("ds:\n", ds.todense())
 #################################################################
 
-p0 = np.array([pyo.value(m.nominal_eta1), pyo.value(m.nominal_eta2)])
+p0 = np.array([ value(m.nominal_eta1),  value(m.nominal_eta2)])
 p = np.array([4.45, 1.05])
 dp = p - p0
 dx = ds.dot(dp)[0:3]
@@ -111,7 +112,7 @@ print("Sensitivity based x:\n", new_x)
 
 #################################################################
 m = create_model(4.45, 1.05)
-opt = pyo.SolverFactory('ipopt')
+opt =  SolverFactory('ipopt')
 results = opt.solve(m, tee=False)
 nlp = PyomoNLP(m)
 new_x = nlp.init_primals()

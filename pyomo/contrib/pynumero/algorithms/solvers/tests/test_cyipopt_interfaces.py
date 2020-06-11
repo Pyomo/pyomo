@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
-import pyomo.environ as pyo
+from pyomo.environ import  ConcreteModel, Var, Objective, Constraint
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available, scipy_sparse as spa, scipy_available
@@ -33,11 +33,11 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptNLP
 
 
 def create_model1():
-    m = pyo.ConcreteModel()
-    m.x = pyo.Var([1, 2, 3], initialize=4.0)
-    m.d = pyo.Constraint(expr=m.x[1] + m.x[2] ** 2 <= 18.0)
-    m.c = pyo.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
-    m.o = pyo.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
+    m =  ConcreteModel()
+    m.x =  Var([1, 2, 3], initialize=4.0)
+    m.d =  Constraint(expr=m.x[1] + m.x[2] ** 2 <= 18.0)
+    m.c =  Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
+    m.o =  Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
     m.x[1].setlb(0.0)
     m.x[2].setlb(0.0)
     return m

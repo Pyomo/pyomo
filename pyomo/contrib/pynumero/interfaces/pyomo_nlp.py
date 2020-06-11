@@ -12,9 +12,9 @@ This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
 """
 import pyomo
-import pyomo.environ as aml
+from pyomo.environ import Objective
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
-import pyutilib
+from pyutilib.services import TempfileManager
 
 from scipy.sparse import coo_matrix
 import numpy as np
@@ -33,10 +33,10 @@ class PyomoNLP(AslNLP):
         pyomo_model: pyomo.environ.ConcreteModel
             Pyomo concrete model
         """
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
         try:
             # get the temp file names for the nl file
-            nl_file = pyutilib.services.TempfileManager.create_tempfile(suffix='pynumero.nl')
+            nl_file = TempfileManager.create_tempfile(suffix='pynumero.nl')
 
             
             # The current AmplInterface code only supports a single objective function
@@ -46,7 +46,7 @@ class PyomoNLP(AslNLP):
             # this objective later
             # TODO: extend the AmplInterface and the AslNLP to correctly handle this
             # This currently addresses issue #1217
-            objectives = list(pyomo_model.component_data_objects(ctype=aml.Objective, active=True, descend_into=True))
+            objectives = list(pyomo_model.component_data_objects(ctype=Objective, active=True, descend_into=True))
             if len(objectives) != 1:
                 raise NotImplementedError('The ASL interface and PyomoNLP in PyNumero currently only support single objective'
                                           ' problems. Deactivate any extra objectives you may have, or add a dummy objective'
@@ -74,7 +74,7 @@ class PyomoNLP(AslNLP):
 
         finally:
             # delete the nl file
-            pyutilib.services.TempfileManager.pop()
+            TempfileManager.pop()
 
     def pyomo_model(self):
         """

@@ -22,7 +22,7 @@ import pyomo.scripting.pyomo_command as main
 from pyomo.scripting.util import cleanup
 from pyomo.neos.kestrel import kestrelAMPL
 
-import pyomo.environ as pyo
+from pyomo.environ import ConcreteModel, Var, Objective, Constraint, SolverManagerFactory, SolverStatus, maximize, value
 
 neos_available = False
 try:
@@ -74,16 +74,16 @@ class TestKestrel(unittest.TestCase):
             os.remove(results)
 
     def test_kestrel_plugin(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(0,1), initialize=0)
-        m.c = pyo.Constraint(expr=m.x <= 0.5)
-        m.obj = pyo.Objective(expr=2*m.x, sense=pyo.maximize)
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(0,1), initialize=0)
+        m.c =  Constraint(expr=m.x <= 0.5)
+        m.obj =  Objective(expr=2*m.x, sense= maximize)
 
-        solver_manager = pyo.SolverManagerFactory('neos')
+        solver_manager =  SolverManagerFactory('neos')
         results = solver_manager.solve(m, opt='cbc')
 
-        self.assertEqual(results.solver[0].status, pyo.SolverStatus.ok)
-        self.assertAlmostEqual(pyo.value(m.x), 0.5)
+        self.assertEqual(results.solver[0].status,  SolverStatus.ok)
+        self.assertAlmostEqual( value(m.x), 0.5)
 
 
 if __name__ == "__main__":
