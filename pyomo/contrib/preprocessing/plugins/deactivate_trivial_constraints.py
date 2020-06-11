@@ -94,7 +94,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                     continue
                 else:
                     raise ValueError(
-                        'Trivial constraint {} violates LB {} ≤ BODY {}.'
+                        'Trivial constraint {} violates LB {} leq BODY {}.'
                         .format(constr.name, constr_lb, constr_value))
 
             # Check if the upper bound is violated outside a given tolerance
