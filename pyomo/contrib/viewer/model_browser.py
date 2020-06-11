@@ -20,7 +20,7 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-from pyomo.contrib.viewer.qt import QLineEdit, QItemEditorFactory, QtCore, QComboBox, QAbstractItemView, QAbstractItemModel, QColor
+from pyomo.contrib.viewer.qt import *
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
 
 from pyomo.core.base.block import _BlockData
