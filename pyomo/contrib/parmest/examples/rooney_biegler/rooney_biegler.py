@@ -13,23 +13,23 @@ model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 47(8), 1794-1804.
 """
 import pandas as pd
-import pyomo.environ as pyo
+from pyomo.environ import ConcreteModel, Var, Expression, Objective, SolverFactory, exp, minimize
 
 def rooney_biegler_model(data):
     
-    model = pyo.ConcreteModel()
+    model =  ConcreteModel()
 
-    model.asymptote = pyo.Var(initialize = 15)
-    model.rate_constant = pyo.Var(initialize = 0.5)
+    model.asymptote =  Var(initialize = 15)
+    model.rate_constant =  Var(initialize = 0.5)
     
     def response_rule(m, h):
-        expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
+        expr = m.asymptote * (1 -  exp(-m.rate_constant * h))
         return expr
-    model.response_function = pyo.Expression(data.hour, rule = response_rule)
+    model.response_function =  Expression(data.hour, rule = response_rule)
     
     def SSE_rule(m):
         return sum((data.y[i] - m.response_function[data.hour[i]])**2 for i in data.index)
-    model.SSE = pyo.Objective(rule = SSE_rule, sense=pyo.minimize)
+    model.SSE =  Objective(rule = SSE_rule, sense= minimize)
     
     return model
 
@@ -39,7 +39,7 @@ if __name__ == '__main__':
                         columns=['hour', 'y'])
     
     model = rooney_biegler_model(data)
-    solver = pyo.SolverFactory('ipopt')
+    solver =  SolverFactory('ipopt')
     solver.solve(model)
     print('asymptote = ', model.asymptote())
     print('rate constant = ', model.rate_constant())

@@ -1,5 +1,15 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyutilib.th as unittest
-import pyomo.environ as pe
+from pyomo.environ import ConcreteModel, Var, Objective, Constraint, exp
 from pyomo.common.dependencies import attempt_import
 
 np, numpy_availalbe = attempt_import('numpy', 'Interior point requires numpy', minimum_version='1.13.0')
@@ -25,12 +35,12 @@ ma27_available = MA27Interface.available()
 @unittest.skipIf(not asl_available, 'asl is not available')
 class TestSolveInteriorPoint(unittest.TestCase):
     def _test_solve_interior_point_1(self, linear_solver):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pe.Constraint(expr=m.y == pe.exp(m.x))
-        m.c2 = pe.Constraint(expr=m.y >= (m.x - 1)**2)
+        m =  ConcreteModel()
+        m.x =  Var()
+        m.y =  Var()
+        m.obj =  Objective(expr=m.x**2 + m.y**2)
+        m.c1 =  Constraint(expr=m.y ==  exp(m.x))
+        m.c2 =  Constraint(expr=m.y >= (m.x - 1)**2)
         interface = ip.InteriorPointInterface(m)
         ip_solver = ip.InteriorPointSolver(linear_solver)
         status = ip_solver.solve(interface)
@@ -47,9 +57,9 @@ class TestSolveInteriorPoint(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 1)
 
     def _test_solve_interior_point_2(self, linear_solver):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(1, 4))
-        m.obj = pe.Objective(expr=m.x**2)
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(1, 4))
+        m.obj =  Objective(expr=m.x**2)
         interface = ip.InteriorPointInterface(m)
         ip_solver = ip.InteriorPointSolver(linear_solver)
         status = ip_solver.solve(interface)

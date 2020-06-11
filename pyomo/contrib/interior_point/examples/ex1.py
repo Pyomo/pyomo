@@ -1,4 +1,14 @@
-import pyomo.environ as pe
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+from pyomo.environ import ConcreteModel, Var, Objective, Constraint, exp
 from pyomo.contrib.interior_point.interior_point import InteriorPointSolver
 from pyomo.contrib.interior_point.interface import InteriorPointInterface
 from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
@@ -11,12 +21,12 @@ logging.basicConfig(level=logging.INFO)
 # it gets propagated to a mysterious root logger with
 # level NOTSET...
 
-m = pe.ConcreteModel()
-m.x = pe.Var()
-m.y = pe.Var()
-m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-m.c1 = pe.Constraint(expr=m.y == pe.exp(m.x))
-m.c2 = pe.Constraint(expr=m.y >= (m.x - 1)**2)
+m =  ConcreteModel()
+m.x =  Var()
+m.y =  Var()
+m.obj =  Objective(expr=m.x**2 + m.y**2)
+m.c1 =  Constraint(expr=m.y ==  exp(m.x))
+m.c2 =  Constraint(expr=m.y >= (m.x - 1)**2)
 interface = InteriorPointInterface(m)
 linear_solver = MumpsInterface(
 #        log_filename='lin_sol.log',
