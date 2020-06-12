@@ -109,7 +109,7 @@ import six
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_numeric_types
-from pyomo.core.base.template_expr import IndexTemplate
+from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr import current as EXPR
 
 pint_module, pint_available = attempt_import(
