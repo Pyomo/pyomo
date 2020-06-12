@@ -15,6 +15,8 @@ from pyomo.contrib.community_detection.community_graph import _generate_model_gr
 from pyomo.common.dependencies import networkx as nx
 
 import os
+import matplotlib.pyplot as plt
+from matplotlib import cm
 
 logger = getLogger('pyomo.contrib.community_detection')
 
@@ -24,7 +26,7 @@ community_louvain, community_louvain_available = attempt_import(
 
 
 def detect_communities(model, node_type='c', with_objective=True, weighted_graph=True, random_seed=None,
-                       string_output=False):
+                       string_output=False, draw_graph=None):
     """
     Detects communities in a Pyomo optimization model
 
@@ -74,11 +76,14 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     assert type(weighted_graph) == bool, "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph " \
                                          "must be a Boolean" % weighted_graph
 
-    assert type(random_seed) == int or random_seed is None, "Invalid value for random_seed: 'random_seed=%s' - " \
+    assert random_seed is None or type(random_seed) == int, "Invalid value for random_seed: 'random_seed=%s' - " \
                                                             "random_seed must be a non-negative integer" % random_seed
 
     assert type(string_output) == bool, "Invalid value for with_objective: 'string_output=%s' - string_output " \
                                         "must be a Boolean" % string_output
+
+    assert draw_graph is None or draw_graph in ('b', 'c', 'v'), "Invalid value for draw_graph: 'draw_graph=%s' - " \
+                                                                "Valid values: 'b', 'c', 'v'" % draw_graph
 
     # Generate the model_graph (a networkX graph) based on the given Pyomo optimization model
     # string_map maps the string of Pyomo modeling components to the actual components themselves
@@ -152,6 +157,15 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
         logger.warning("Community detection found that with the given parameters, the model could not be decomposed - "
                        "only one community was found")
 
+    if draw_graph is not None:
+        type_of_map = draw_graph
+        if type_of_map == node_type:
+            function_call_info = [model_graph, partition_of_graph]
+            draw_model_graph(function_call_info, node_type, type_of_map)
+        else:
+            function_call_info = [model_graph, model, with_objective, weighted_graph]
+            draw_model_graph(function_call_info, node_type, type_of_map)
+
     # If the user desires an easy-to-read output, setting string_output to True will return the str_community_map
     # that we have right now
     if string_output:
@@ -173,6 +187,53 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     # Return community_map, which has integer keys that now map to a tuple of two lists
     # containing Pyomo modeling components
     return community_map
+
+
+def draw_model_graph(function_call_info, node_type, type_of_map):
+    """
+
+    Still in progress
+
+    """
+
+    if type_of_map == node_type:
+        model_graph, partition_of_graph = function_call_info
+        color_map = cm.get_cmap('viridis', max(partition_of_graph.values()) + 1)
+
+        node_list = list(partition_of_graph.keys())
+        color_list = [partition_of_graph[i] for i in node_list]
+
+    else:
+        model_graph, model, with_objective, weighted_graph = function_call_info
+        community_map = detect_communities(model, node_type=type_of_map, with_objective=with_objective,
+                                           weighted_graph=weighted_graph, string_output=True)
+        color_map = cm.get_cmap('viridis', len(community_map))
+
+        position = 0 if node_type == 'c' else 1
+
+        nonflattened_list_of_nodes = list(i[position] for i in community_map.values())
+        node_list = [node for sublist in nonflattened_list_of_nodes for node in sublist]
+
+        color_list = []
+        for node in node_list:
+            not_found = True
+            for community_key in community_map:
+                if not_found and node in community_map[community_key][position]:
+                    color_list.append(community_key)
+                    not_found = False
+    if node_type == 'b':
+        top = nx.bipartite.sets(model_graph)[0]  # Need to fix - This line will raise an error for ambiguous solutions
+        pos = nx.bipartite_layout(model_graph, top)
+    else:
+        pos = nx.spring_layout(model_graph)
+
+    print('top:', top)
+    print('node_list:', node_list)
+    print('color_list:', color_list)
+    nx.draw_networkx_nodes(model_graph, pos, nodelist=node_list, node_size=40, cmap=color_map, node_color=color_list)
+    nx.draw_networkx_edges(model_graph, pos, alpha=0.5)
+
+    plt.show()
 
 
 def get_edge_list(model, node_type='c', with_objective=True, weighted_graph=True, file_path=None):
