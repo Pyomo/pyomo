@@ -13,13 +13,32 @@
 
 import pyutilib.th as unittest
 from pyomo.environ import *
+from pyomo.dae import ContinuousSet
+from pyomo.mpec import Complementarity, complements
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.base.units_container import (
     pint_available, UnitsError,
 )
 from pyomo.util.check_units import assert_units_consistent, assert_units_equivalent, check_units_equivalent
 
+def python_callback_function(arg1, arg2):
+    return 42.0
+
 @unittest.skipIf(not pint_available, 'Testing units requires pint')
 class TestUnitsChecking(unittest.TestCase):
+    def _create_model_and_vars(self):
+        u = units
+        m = ConcreteModel()
+        m.dx = Var(units=u.m, initialize=0.10188943773836046)
+        m.dy = Var(units=u.m, initialize=0.0)
+        m.vx = Var(units=u.m/u.s, initialize=0.7071067769802851)
+        m.vy = Var(units=u.m/u.s, initialize=0.7071067769802851)
+        m.t = Var(units=u.s, bounds=(1e-5,10.0), initialize=0.0024015570927624456)
+        m.theta = Var(bounds=(0, 0.49*3.14), initialize=0.7853981693583533, units=u.radians)
+        m.a = Param(initialize=-32.2, units=u.ft/u.s**2)
+        m.x_unitless = Var()
+        return m
+    
     def test_assert_units_consistent_equivalent(self):
         u = units
         m = ConcreteModel()
@@ -133,6 +152,51 @@ class TestUnitsChecking(unittest.TestCase):
         assert_units_consistent(m.unitless[2])  # check var
         assert_units_consistent(m.vel_con[2]) # check constraint data
         assert_units_consistent(m.unitless_con[2]) # check unitless constraint data
+
+    def test_assert_units_consistent_all_components(self):
+        """
+    Objective: _assert_units_consistent_property_expr,
+    Constraint:  _assert_units_consistent_constraint_data,
+    Var: _assert_units_consistent_expression,
+    Expression: _assert_units_consistent_property_expr,
+    Suffix: None,
+    Param: _assert_units_consistent_expression,
+    Set: None,
+    RangeSet: None,
+    Disjunct:_assert_units_consistent_block,
+    Disjunction: None,
+    Block: _assert_units_consistent_block,
+    ExternalFunction: None,
+    ContinuousSet: None, # ToDo: change this when continuous sets have units assigned
+    Complementarity: _assert_units_complementarity
+    """
+        # test all scalar components consistent
+        u = units
+        m = self._create_model_and_vars()
+        m.obj = Objective(expr=m.dx/m.t - m.vx)
+        m.con = Constraint(expr=m.dx/m.t == m.vx)
+        # vars already added
+        m.exp = Expression(expr=m.dx/m.t - m.vx)
+        m.suff = Suffix(direction=Suffix.LOCAL)
+        # params already added
+        # sets already added
+        m.rs = RangeSet(5)
+        m.disj1 = Disjunct()
+        m.disj1.constraint = Constraint(expr=m.dx/m.t <= m.vx)
+        m.disj2 = Disjunct()
+        m.disj2.constraint = Constraint(expr=m.dx/m.t <= m.vx)
+        m.disjn = Disjunction(expr=[m.disj1, m.disj2])
+        # block tested as part of model
+        m.extfn = ExternalFunction(python_callback_function, units=u.m/u.s, arg_units=[u.m, u.s])
+        m.conext = Constraint(expr=m.extfn(m.dx, m.t) - m.vx==0)
+        m.cset = ContinuousSet(bounds=(0,1))
+
+        # complementarities do not work yet
+        # The expression system removes the u.m since it is multiplied by zero.
+        # We need to change the units_container to allow 0 when comparing units 
+        # m.compl = Complementarity(expr=complements(m.dx/m.t >= m.vx, m.dx == 0*u.m))
+
+        assert_units_consistent(m)
 
 if __name__ == "__main__":
     unittest.main()
