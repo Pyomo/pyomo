@@ -112,8 +112,8 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
         if constr.body.polynomial_degree() in (0, 1):
             continue
 
-        constr_vars = list(identify_variables(constr.body))
-        jacs = solve_data.jacobians
+        # constr_vars = list(identify_variables(constr.body))
+        # jacs = solve_data.jacobians
 
         # Equality constraint (makes the problem nonconvex)
         if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
