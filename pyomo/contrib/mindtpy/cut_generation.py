@@ -34,7 +34,6 @@ def add_objective_linearization(solve_data, config):
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
 
-'''
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True,
@@ -95,9 +94,9 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                           + (slack_var if config.add_slack else 0)
                           >= constr.lower)
                 )
+
+
 '''
-
-
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True,
@@ -111,9 +110,6 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                                     dual_values):
         if constr.body.polynomial_degree() in (0, 1):
             continue
-
-        # constr_vars = list(identify_variables(constr.body))
-        # jacs = solve_data.jacobians
 
         # Equality constraint (makes the problem nonconvex)
         if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
@@ -156,7 +152,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                         + (slack_var if config.add_slack else 0)
                         >= constr.lower)
                 )
-
+'''
 # def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
 #     """More general case for outer approximation
 

@@ -32,7 +32,7 @@ def MindtPy_initialize_master(solve_data, config):
     m.dual.deactivate()
 
     if config.strategy == 'OA':
-        # calc_jacobians(solve_data, config)  # preload jacobians
+        calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts')
     # elif config.strategy == 'ECP':

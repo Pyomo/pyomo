@@ -15,6 +15,8 @@ from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
+MAX_SYMBOLIC_DERIV_SIZE = 1000
+
 
 class MindtPySolveData(object):
     """Data container to hold solve-instance data.
@@ -78,8 +80,12 @@ def calc_jacobians(solve_data, config):
         if c.body.polynomial_degree() in (1, 0):
             continue  # skip linear constraints
         vars_in_constr = list(EXPR.identify_variables(c.body))
+        if len(vars_in_constr) >= MAX_SYMBOLIC_DERIV_SIZE:
+            mode = differentiate.Modes.reverse_numeric
+        else:
+            mode = differentiate.Modes.sympy
         jac_list = differentiate(
-            c.body, wrt_list=vars_in_constr, mode=differentiate.Modes.sympy)
+            c.body, wrt_list=vars_in_constr, mode=mode)
         solve_data.jacobians[c] = ComponentMap(
             (var, jac_wrt_var)
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))
