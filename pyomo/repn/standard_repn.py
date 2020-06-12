@@ -743,12 +743,15 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
                                 or res.constant != 0)
                 if has_constant:
                     ans.constant = multiplier*res.constant*res.constant
-                while len(res.linear) > 0:
-                    key1, coef1 = res.linear.popitem()
+                keys = sorted(res.linear.keys())
+                while len(keys) > 0:
+                    key1 = keys.pop()
+                    coef1 = res.linear[key1]
                     if has_constant:
                         ans.linear[key1] = 2*multiplier*coef1*res.constant
                     ans.quadratic[key1,key1] = multiplier*coef1*coef1
-                    for key2, coef2 in res.linear.items():
+                    for key2 in keys:
+                        coef2 = res.linear[key2]
                         ans.quadratic[key1,key2] = 2*multiplier*coef1*coef2
                 return ans
 
