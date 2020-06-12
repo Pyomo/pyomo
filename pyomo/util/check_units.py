@@ -16,7 +16,8 @@ module objects.
 from pyomo.core.base.units_container import units, UnitsError, UnitExtractionVisitor
 from pyomo.core.base import (Objective, Constraint, Var, Param,
                              Suffix, Set, RangeSet, Block,
-                             ExternalFunction, Expression)
+                             ExternalFunction, Expression,
+                             value)
 from pyomo.dae import ContinuousSet
 from pyomo.mpec import Complementarity
 from pyomo.gdp import Disjunct, Disjunction
@@ -82,12 +83,18 @@ def _assert_units_consistent_constraint_data(condata):
     # Therefore, if the lower and/or upper is 0, we allow it to be unitless
     # and check the consistency of the body only
     args = list()
-    if condata.lower != 0.0 and condata.lower is not None:
+    if condata.lower is not None and value(condata.lower) != 0.0:
         args.append(condata.lower)
+
     args.append(condata.body)
-    if condata.upper != 0.0 and condata.upper is not None:
+
+    if condata.upper is not None and value(condata.upper) != 0.0:
         args.append(condata.upper)
-    assert_units_equivalent(*args)
+
+    if len(args) == 1:
+        assert_units_consistent(*args)
+    else:
+        assert_units_equivalent(*args)
 
 def _assert_units_consistent_property_expr(obj):
     """

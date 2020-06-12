@@ -154,22 +154,6 @@ class TestUnitsChecking(unittest.TestCase):
         assert_units_consistent(m.unitless_con[2]) # check unitless constraint data
 
     def test_assert_units_consistent_all_components(self):
-        """
-    Objective: _assert_units_consistent_property_expr,
-    Constraint:  _assert_units_consistent_constraint_data,
-    Var: _assert_units_consistent_expression,
-    Expression: _assert_units_consistent_property_expr,
-    Suffix: None,
-    Param: _assert_units_consistent_expression,
-    Set: None,
-    RangeSet: None,
-    Disjunct:_assert_units_consistent_block,
-    Disjunction: None,
-    Block: _assert_units_consistent_block,
-    ExternalFunction: None,
-    ContinuousSet: None, # ToDo: change this when continuous sets have units assigned
-    Complementarity: _assert_units_complementarity
-    """
         # test all scalar components consistent
         u = units
         m = self._create_model_and_vars()
