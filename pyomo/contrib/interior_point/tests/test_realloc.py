@@ -48,6 +48,7 @@ class TestReallocation(unittest.TestCase):
 
         return ip_solver
 
+    @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_mumps(self):
         n = 20000
         m = make_model_tri(n, small_val=1e-7)
