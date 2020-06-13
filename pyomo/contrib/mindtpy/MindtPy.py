@@ -130,7 +130,7 @@ class MindtPySolver(object):
             "solving the nonlinear subproblems"
     ))
     CONFIG.declare("mip_solver", ConfigValue(
-        default="gurobi",
+        default="glpk",
         domain=In(["gurobi", "cplex", "cbc", "glpk", "gams",
                    "gurobi_persistent", "cplex_persistent"]),
         description="MIP subsolver name",
