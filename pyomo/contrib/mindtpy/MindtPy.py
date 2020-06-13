@@ -246,6 +246,12 @@ class MindtPySolver(object):
         description="check if OA algorithm is stalled in a cycle and terminate.",
         domain=bool
     ))
+    CONFIG.declare("feasibility_norm", ConfigValue(
+        default="L1",
+        domain=In(["L1", "L2", "L_infinity"]),
+        description="Initialization strategy",
+        doc="different forms of objective function in feasibility subproblem"
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -370,27 +376,31 @@ class MindtPySolver(object):
             lin.nl_constraint_set = RangeSet(
                 len(nonlinear_constraints),
                 doc="Integer index set over the nonlinear constraints")
-            feas.constraint_set = RangeSet(
-                len(MindtPy.constraint_list),
-                doc="integer index set over the constraints")
 
-            # # Mapping Constraint -> integer index
-            # MindtPy.feas_map = {}
-            # # Mapping integer index -> Constraint
-            # MindtPy.feas_inverse_map = {}
-            # # Generate the two maps. These maps may be helpful for later
-            # # interpreting indices on the slack variables or generated cuts.
-            # for c, n in zip(MindtPy.constraint_list, feas.constraint_set):
-            #     MindtPy.feas_map[c] = n
-            #     MindtPy.feas_inverse_map[n] = c
+            if config.feasibility_norm == 'L1' or config.feasibility_norm == 'L2':
+                feas.constraint_set = RangeSet(
+                    len(MindtPy.constraint_list),
+                    doc="integer index set over the constraints")
+                # Create slack variables for feasibility problem
+                feas.slack_var = Var(feas.constraint_set,
+                                     domain=NonNegativeReals, initialize=1)
+            else:
+                feas.slack_var = Var(domain=NonNegativeReals, initialize=1)
 
-            # Create slack variables for OA cuts
+                # # Mapping Constraint -> integer index
+                # MindtPy.feas_map = {}
+                # # Mapping integer index -> Constraint
+                # MindtPy.feas_inverse_map = {}
+                # # Generate the two maps. These maps may be helpful for later
+                # # interpreting indices on the slack variables or generated cuts.
+                # for c, n in zip(MindtPy.constraint_list, feas.constraint_set):
+                #     MindtPy.feas_map[c] = n
+                #     MindtPy.feas_inverse_map[n] = c
+
+                # Create slack variables for OA cuts
             if config.add_slack:
                 lin.slack_vars = VarList(
                     bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
-            # Create slack variables for feasibility problem
-            feas.slack_var = Var(feas.constraint_set,
-                                 domain=NonNegativeReals, initialize=1)
 
             # Flag indicating whether the solution improved in the past
             # iteration or not

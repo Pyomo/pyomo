@@ -72,8 +72,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             # Equality constraint (makes the problem nonconvex)
             if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
                 sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-                rhs = ((0 if constr.upper is None else constr.upper)
-                       + (0 if constr.lower is None else constr.lower))
                 rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
 
                 # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
@@ -237,4 +235,3 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         else:
             self.handle_lazy_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                               solve_data, config)
-

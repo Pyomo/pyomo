@@ -80,26 +80,34 @@ def calc_jacobians(solve_data, config):
         if c.body.polynomial_degree() in (1, 0):
             continue  # skip linear constraints
         vars_in_constr = list(EXPR.identify_variables(c.body))
-        if len(vars_in_constr) >= MAX_SYMBOLIC_DERIV_SIZE:
-            mode = differentiate.Modes.reverse_numeric
-        else:
-            mode = differentiate.Modes.sympy
+        # if len(vars_in_constr) >= MAX_SYMBOLIC_DERIV_SIZE:
+        #     mode = differentiate.Modes.reverse_numeric
+        # else:
+        #     mode = differentiate.Modes.sympy
         jac_list = differentiate(
-            c.body, wrt_list=vars_in_constr, mode=mode)
+            c.body, wrt_list=vars_in_constr, mode=differentiate.Modes.sympy)
         solve_data.jacobians[c] = ComponentMap(
             (var, jac_wrt_var)
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))
 
 
-def add_feas_slacks(m):
+def add_feas_slacks(m, config):
     MindtPy = m.MindtPy_utils
     # generate new constraints
-    for i, constr in enumerate(MindtPy.constraint_list, 1):
-        if constr.body.polynomial_degree() not in [0, 1]:
-            rhs = constr.upper if constr.has_ub() else constr.lower
-            c = MindtPy.MindtPy_feas.feas_constraints.add(
-                constr.body - rhs
-                <= MindtPy.MindtPy_feas.slack_var[i])
+    if config.feasibility_norm == 'L1' or config.feasibility_norm == 'L2':
+        for i, constr in enumerate(MindtPy.constraint_list, 1):
+            if constr.body.polynomial_degree() not in [0, 1]:
+                rhs = constr.upper if constr.has_ub() else constr.lower
+                c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    constr.body - rhs
+                    <= MindtPy.MindtPy_feas.slack_var[i])
+    else:
+        for i, constr in enumerate(MindtPy.constraint_list, 1):
+            if constr.body.polynomial_degree() not in [0, 1]:
+                rhs = constr.upper if constr.has_ub() else constr.lower
+                c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    constr.body - rhs
+                    <= MindtPy.MindtPy_feas.slack_var)
 
 
 def var_bound_add(solve_data, config):
