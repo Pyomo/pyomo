@@ -59,13 +59,13 @@ class MindtPySolver(object):
         default=1E-5,
         domain=PositiveFloat,
         description="Bound tolerance",
-        doc="Relative tolerance for bound feasibility checks"
+        doc="Relative tolerance for bound feasibility checks."
     ))
     CONFIG.declare("iteration_limit", ConfigValue(
         default=30,
         domain=PositiveInt,
         description="Iteration limit",
-        doc="Number of maximum iterations in the decomposition methods"
+        doc="Number of maximum iterations in the decomposition methods."
     ))
     CONFIG.declare("time_limit", ConfigValue(
         default=600,
@@ -82,7 +82,7 @@ class MindtPySolver(object):
         doc="MINLP Decomposition strategy to be applied to the method. "
             "Currently available Outer Approximation (OA), Extended Cutting "
             "Plane (ECP), Partial Surrogate Cuts (PSC), and Generalized "
-            "Benders Decomposition (GBD)"
+            "Benders Decomposition (GBD)."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
         default="rNLP",
@@ -91,14 +91,14 @@ class MindtPySolver(object):
         doc="Initialization strategy used by any method. Currently the "
             "continuous relaxation of the MINLP (rNLP), solve a maximal "
             "covering problem (max_binary), and fix the initial value for "
-            "the integer variables (initial_binary)"
+            "the integer variables (initial_binary)."
     ))
     CONFIG.declare("max_slack", ConfigValue(
         default=1000.0,
         domain=PositiveFloat,
         description="Maximum slack variable",
         doc="Maximum slack variable value allowed for the Outer Approximation "
-            "cuts"
+            "cuts."
     ))
     CONFIG.declare("OA_penalty_factor", ConfigValue(
         default=1000.0,
@@ -106,7 +106,7 @@ class MindtPySolver(object):
         description="Outer Approximation slack penalty factor",
         doc="In the objective function of the Outer Approximation method, the "
             "slack variables corresponding to all the constraints get "
-            "multiplied by this number and added to the objective"
+            "multiplied by this number and added to the objective."
     ))
     CONFIG.declare("ECP_tolerance", ConfigValue(
         default=1E-4,
@@ -114,20 +114,20 @@ class MindtPySolver(object):
         description="ECP tolerance",
         doc="Feasibility tolerance used to determine the stopping criterion in"
             "the ECP method. As long as nonlinear constraint are violated for "
-            "more than this tolerance, the method will keep iterating"
+            "more than this tolerance, the method will keep iterating."
     ))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
         domain=In(["ipopt", "gams"]),
         description="NLP subsolver name",
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
-            "subproblems"
+            "subproblems."
     ))
     CONFIG.declare("nlp_solver_args", ConfigBlock(
         implicit=True,
         description="NLP subsolver options",
         doc="Which NLP subsolver options to be passed to the solver while "
-            "solving the nonlinear subproblems"
+            "solving the nonlinear subproblems."
     ))
     CONFIG.declare("mip_solver", ConfigValue(
         default="glpk",
@@ -135,13 +135,13 @@ class MindtPySolver(object):
                    "gurobi_persistent", "cplex_persistent"]),
         description="MIP subsolver name",
         doc="Which MIP subsolver is going to be used for solving the mixed-"
-            "integer master problems"
+            "integer master problems."
     ))
     CONFIG.declare("mip_solver_args", ConfigBlock(
         implicit=True,
         description="MIP subsolver options",
         doc="Which MIP subsolver options to be passed to the solver while "
-            "solving the mixed-integer master problems"
+            "solving the mixed-integer master problems."
     ))
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing(),
@@ -206,7 +206,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("integer_to_binary", ConfigValue(
         default=False,
-        description="Convert integer variables to binaries (for integer cuts)",
+        description="Convert integer variables to binaries (for integer cuts).",
         domain=bool
     ))
     CONFIG.declare("add_integer_cuts", ConfigValue(
@@ -228,7 +228,7 @@ class MindtPySolver(object):
     CONFIG.declare("add_slack", ConfigValue(
         default=False,
         description="whether add slack variable here."
-                    "slack variables here are used to deal with nonconvex MINLP",
+                    "slack variables here are used to deal with nonconvex MINLP.",
         domain=bool
     ))
     CONFIG.declare("continuous_var_bound", ConfigValue(
@@ -249,12 +249,12 @@ class MindtPySolver(object):
     CONFIG.declare("feasibility_norm", ConfigValue(
         default="L1",
         domain=In(["L1", "L2", "L_infinity"]),
-        description="different forms of objective function in feasibility subproblem"
+        description="different forms of objective function in feasibility subproblem."
     ))
     CONFIG.declare("differentiate_mode", ConfigValue(
         default="reverse_symbolic",
         domain=In(["reverse_symbolic", "sympy"]),
-        description="differentiate mode to calculate jacobian"
+        description="differentiate mode to calculate jacobian."
     ))
     CONFIG.declare("linearize_inactive", ConfigValue(
         default=False,
