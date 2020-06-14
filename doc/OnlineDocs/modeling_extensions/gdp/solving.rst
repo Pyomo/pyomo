@@ -37,7 +37,7 @@ This may be accomplished via transformation:
 
     TransformationFactory('core.logical_to_linear').apply_to(model)
 
-The transformation creates a constraint list named ``logic_to_linear`` upon which the algebraic equivalents of the logical constraints are placed.
+The transformation creates a constraint list with a unique name starting with ``logic_to_linear``, upon which the algebraic equivalents of the logical constraints are placed.
 If not already associated with a binary variable, each ``BooleanVar`` object will receive a generated binary counterpart.
 These associated binary variables may be accessed via the `get_associated_binary()` function.
 
