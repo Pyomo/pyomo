@@ -371,18 +371,13 @@ class MindtPySolver(object):
             # Set of MIP iterations for which cuts were generated in ECP
             lin.mip_iters = Set(dimen=1)
 
-            nonlinear_constraints = [c for c in MindtPy.constraint_list if
-                                     c.body.polynomial_degree() not in (1, 0)]
-            lin.nl_constraint_set = RangeSet(
-                len(nonlinear_constraints),
-                doc="Integer index set over the nonlinear constraints")
-
             if config.feasibility_norm == 'L1' or config.feasibility_norm == 'L2':
-                feas.constraint_set = RangeSet(
-                    len(MindtPy.constraint_list),
-                    doc="integer index set over the constraints")
+                feas.nl_constraint_set = Set(initialize=[i for i, constr in enumerate(MindtPy.constraint_list, 1) if
+                                                         constr.body.polynomial_degree() not in (1, 0)],
+                                             doc="Integer index set over the nonlinear constraints."
+                                             "The set corresponds to the index of nonlinear constraint in constraint_set")
                 # Create slack variables for feasibility problem
-                feas.slack_var = Var(feas.constraint_set,
+                feas.slack_var = Var(feas.nl_constraint_set,
                                      domain=NonNegativeReals, initialize=1)
             else:
                 feas.slack_var = Var(domain=NonNegativeReals, initialize=1)
