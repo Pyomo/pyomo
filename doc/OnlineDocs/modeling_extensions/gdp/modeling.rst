@@ -214,102 +214,6 @@ Here, we demonstrate this capability with a toy example:
 .. doctest::
 
     >>> m = ConcreteModel()
-        >>> m.s = RangeSet(4)
-        >>> m.ds = RangeSet(2)
-        >>> m.Y = BooleanVar(m.s)
-        >>> m.d = Disjunct(m.s)
-        >>> m.djn = Disjunction(m.ds)
-        >>> m.djn[1] = [m.d[1], m.d[2]]
-        >>> m.djn[2] = [m.d[3], m.d[4]]
-        >>> m.x = Var(bounds=(-2, 10))
-        >>> m.d[1].c = Constraint(expr=m.x >= 2)
-        >>> m.d[2].c = Constraint(expr=m.x >= 3)
-        >>> m.d[3].c = Constraint(expr=m.x <= 8)
-        >>> m.d[4].c = Constraint(expr=m.x == 2.5)
-        >>> m.o = Objective(expr=m.x)
-
-        >>> # Associate Boolean vars with auto-generated disjunct binaries
-        >>> for i in m.s:
-        ...     m.Y[i].associate_binary_var(m.d[i].indicator_var)
-
-        >>> # Add the logical proposition
-        >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[4]))
-        >>> # Note: the implicit XOR enforced by m.djn[1] and m.djn[2] still apply
-
-        >>> # Convert logical propositions to linear algebraic constraints
-        >>> # and apply the Big-M reformulation.
-        >>> TransformationFactory('core.logical_to_linear').apply_to(m)
-        >>> TransformationFactory('gdp.bigm').apply_to(m)
-
-        >>> m.Y.display()  # Before solve, Boolean vars have no value
-        Y : Size=4, Index=s
-            Key : Value : Fixed : Stale
-              1 :  None : False :  True
-              2 :  None : False :  True
-              3 :  None : False :  True
-              4 :  None : False :  True
-
-        >>> # Solve the reformulated model and update the Boolean variables
-        >>> # based on the algebraic model results
-        >>> run_data = SolverFactory('cbc').solve(m)
-        >>> update_boolean_vars_from_binary(m)
-        >>> m.Y.display()
-        Y : Size=4, Index=s
-            Key : Value : Fixed : Stale
-              1 :  True : False :  True
-              2 : False : False :  True
-              3 : False : False :  True
-              4 :  True : False :  True
-
-    We elaborate on the
-        >>> m.s = RangeSet(4)
-        >>> m.ds = RangeSet(2)
-        >>> m.Y = BooleanVar(m.s)
-        >>> m.d = Disjunct(m.s)
-        >>> m.djn = Disjunction(m.ds)
-        >>> m.djn[1] = [m.d[1], m.d[2]]
-        >>> m.djn[2] = [m.d[3], m.d[4]]
-        >>> m.x = Var(bounds=(-2, 10))
-        >>> m.d[1].c = Constraint(expr=m.x >= 2)
-        >>> m.d[2].c = Constraint(expr=m.x >= 3)
-        >>> m.d[3].c = Constraint(expr=m.x <= 8)
-        >>> m.d[4].c = Constraint(expr=m.x == 2.5)
-        >>> m.o = Objective(expr=m.x)
-
-        >>> # Associate Boolean vars with auto-generated disjunct binaries
-        >>> for i in m.s:
-        ...     m.Y[i].associate_binary_var(m.d[i].indicator_var)
-
-        >>> # Add the logical proposition
-        >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[4]))
-        >>> # Note: the implicit XOR enforced by m.djn[1] and m.djn[2] still apply
-
-        >>> # Convert logical propositions to linear algebraic constraints
-        >>> # and apply the Big-M reformulation.
-        >>> TransformationFactory('core.logical_to_linear').apply_to(m)
-        >>> TransformationFactory('gdp.bigm').apply_to(m)
-
-        >>> m.Y.display()  # Before solve, Boolean vars have no value
-        Y : Size=4, Index=s
-            Key : Value : Fixed : Stale
-              1 :  None : False :  True
-              2 :  None : False :  True
-              3 :  None : False :  True
-              4 :  None : False :  True
-
-        >>> # Solve the reformulated model and update the Boolean variables
-        >>> # based on the algebraic model results
-        >>> run_data = SolverFactory('cbc').solve(m)
-        >>> update_boolean_vars_from_binary(m)
-        >>> m.Y.display()
-        Y : Size=4, Index=s
-            Key : Value : Fixed : Stale
-              1 :  True : False :  True
-              2 : False : False :  True
-              3 : False : False :  True
-              4 :  True : False :  True
-
-    We elaborate on the
     >>> m.s = RangeSet(4)
     >>> m.ds = RangeSet(2)
     >>> m.Y = BooleanVar(m.s)
@@ -326,7 +230,7 @@ Here, we demonstrate this capability with a toy example:
 
     >>> # Associate Boolean vars with auto-generated disjunct binaries
     >>> for i in m.s:
-    ...     m.Y[i].set_binary_var(m.d[i].indicator_var)
+    ...     m.Y[i].associate_binary_var(m.d[i].indicator_var)
 
     >>> # Add the logical proposition
     >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[4]))
