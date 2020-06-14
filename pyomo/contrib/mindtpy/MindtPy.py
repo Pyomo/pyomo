@@ -256,6 +256,11 @@ class MindtPySolver(object):
         domain=In(["reverse_symbolic", "sympy"]),
         description="differentiate mode to calculate jacobian"
     ))
+    CONFIG.declare("linearize_inactive", ConfigValue(
+        default=False,
+        description="Add OA cuts for inactive constraints.",
+        domain=bool
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.

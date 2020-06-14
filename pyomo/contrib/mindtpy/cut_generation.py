@@ -36,8 +36,7 @@ def add_objective_linearization(solve_data, config):
 
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
-                linearize_violated=True,
-                linearize_inactive=False):
+                linearize_violated=True):
     """Linearizes nonlinear constraints.
 
     For nonconvex problems, turn on 'config.add_slack'. Slack variables will
@@ -68,7 +67,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             if constr.has_ub() \
                 and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.uslack() < 0) \
-                    or (linearize_inactive and constr.uslack() > 0):
+                    or (config.linearize_inactive and constr.uslack() > 0):
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
@@ -82,7 +81,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             if constr.has_lb() \
                 and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.lslack() < 0) \
-                    or (linearize_inactive and constr.lslack() > 0):
+                    or (config.linearize_inactive and constr.lslack() > 0):
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
