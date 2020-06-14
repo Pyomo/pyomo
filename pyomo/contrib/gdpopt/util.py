@@ -206,8 +206,7 @@ def copy_var_list_values(from_list, to_list, config,
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
             if ignore_integrality \
-                and ('is not in domain Binary' in err_msg
-                     or 'is not in domain Integers' in err_msg):
+                    and not v_to.is_continuous():
                 v_to.value = value(v_from, exception=False)
             elif 'is not in domain Binary' in err_msg and (
                     fabs(var_val - 1) <= config.integer_tolerance or

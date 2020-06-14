@@ -80,12 +80,8 @@ def calc_jacobians(solve_data, config):
         if c.body.polynomial_degree() in (1, 0):
             continue  # skip linear constraints
         vars_in_constr = list(EXPR.identify_variables(c.body))
-        # if len(vars_in_constr) >= MAX_SYMBOLIC_DERIV_SIZE:
-        #     mode = differentiate.Modes.reverse_numeric
-        # else:
-        #     mode = differentiate.Modes.sympy
         jac_list = differentiate(
-            c.body, wrt_list=vars_in_constr, mode=differentiate.Modes.sympy)
+            c.body, wrt_list=vars_in_constr, mode=differentiate.Modes.reverse_symbolic)
         solve_data.jacobians[c] = ComponentMap(
             (var, jac_wrt_var)
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))
