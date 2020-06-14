@@ -249,8 +249,12 @@ class MindtPySolver(object):
     CONFIG.declare("feasibility_norm", ConfigValue(
         default="L1",
         domain=In(["L1", "L2", "L_infinity"]),
-        description="Initialization strategy",
-        doc="different forms of objective function in feasibility subproblem"
+        description="different forms of objective function in feasibility subproblem"
+    ))
+    CONFIG.declare("differentiate_mode", ConfigValue(
+        default="reverse_symbolic",
+        domain=In(["reverse_symbolic", "sympy"]),
+        description="differentiate mode to calculate jacobian"
     ))
 
     def available(self, exception_flag=True):
