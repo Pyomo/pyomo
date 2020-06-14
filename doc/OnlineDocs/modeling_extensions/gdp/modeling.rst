@@ -39,7 +39,7 @@ To demonstrate modeling with disjunctions in Pyomo.GDP, we revisit the small exa
 Expanded syntax: more descriptive
 ---------------------------------
 
-Pyomo.GDP expanded syntax (see below) provides more clarity in the declaration of each modeling object.
+Pyomo.GDP expanded syntax (see below) provides more clarity in the declaration of each modeling object,  and gives the user explicit control over the ``Disjunct`` names.
 Assuming the ``ConcreteModel`` object :code:`m` and variables have been defined, lines 1 and 5 declare the ``Disjunct`` objects corresponding to selection of unit 1 and 2, respectively.
 Lines 2 and 6 define the input-output relations for each unit, and lines 3-4 and 7-8 enforce zero flow through the unit that is not selected.
 Finally, line 9 declares the logical disjunction between the two disjunctive terms.
@@ -107,7 +107,7 @@ The ``BooleanVar`` object in Pyomo represents Boolean variables, analogous to ``
     For historical reasons, the ``indicator_var`` variable automatically added to disjuncts in Pyomo.GDP has type ``binary`` rather than ``Boolean``.
     This may be corrected in the future.
 
-Using these Boolean variables, we can define ``LogicalConstraint`` objects, analogous to numeric ``Constraint`` objects.
+Using these Boolean variables, we can define ``LogicalConstraint`` objects, analogous to algebraic ``Constraint`` objects.
 
 .. doctest::
 
@@ -139,7 +139,7 @@ Pyomo.GDP logical expression system supported operators and their usage are list
 | Equivalence  | :code:`Y[1] == Y[2]`   | :code:`Y[1].equivalent_to(Y[2])`  | :code:`Equivalent(Y[1], Y[2])` |
 +--------------+------------------------+-----------------------------------+--------------------------------+
 
-In addition, the following constraint programming inspired operators are provided: ``Exactly``, ``AtMost``, and ``AtLeast``.
+In addition, the following constraint-programming-inspired operators are provided: ``Exactly``, ``AtMost``, and ``AtLeast``.
 These predicates enforce, respectively, that exactly, at most, or at least N of their ``BooleanVar`` arguments are ``True``.
 
 Usage:
@@ -167,7 +167,7 @@ Usage:
 Indexed logical constraints
 ---------------------------
 
-Like ``Constraint`` objects for numerical expressions, ``LogicalConstraint`` objects can be indexed.
+Like ``Constraint`` objects for algebraic expressions, ``LogicalConstraint`` objects can be indexed.
 An example of this usage may be found below for the expression:
 
 .. math::
@@ -197,7 +197,7 @@ Integration with Disjunctions
 -----------------------------
 
 The logical expression system is designed to augment the previously introduced ``Disjunct`` and ``Disjunction`` components, the only original logical modeling types in Pyomo.GDP.
-As noted above, the disjunct indicator variable is Boolean; however, for historical reasons, it was originally implemented in Pyomo.GDP as a binary variable.
+Mathematically, the disjunct indicator variable is Boolean; however, for historical reasons, it was originally implemented in Pyomo.GDP as a binary variable.
 To maintain backwards-compatibility, we introduce the ability to now associate a Boolean variable to each disjunct and involve them in logical propositions.
 
 Here, we demonstrate this capability with a toy example:
@@ -214,6 +214,102 @@ Here, we demonstrate this capability with a toy example:
 .. doctest::
 
     >>> m = ConcreteModel()
+        >>> m.s = RangeSet(4)
+        >>> m.ds = RangeSet(2)
+        >>> m.Y = BooleanVar(m.s)
+        >>> m.d = Disjunct(m.s)
+        >>> m.djn = Disjunction(m.ds)
+        >>> m.djn[1] = [m.d[1], m.d[2]]
+        >>> m.djn[2] = [m.d[3], m.d[4]]
+        >>> m.x = Var(bounds=(-2, 10))
+        >>> m.d[1].c = Constraint(expr=m.x >= 2)
+        >>> m.d[2].c = Constraint(expr=m.x >= 3)
+        >>> m.d[3].c = Constraint(expr=m.x <= 8)
+        >>> m.d[4].c = Constraint(expr=m.x == 2.5)
+        >>> m.o = Objective(expr=m.x)
+
+        >>> # Associate Boolean vars with auto-generated disjunct binaries
+        >>> for i in m.s:
+        ...     m.Y[i].associate_binary_var(m.d[i].indicator_var)
+
+        >>> # Add the logical proposition
+        >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[4]))
+        >>> # Note: the implicit XOR enforced by m.djn[1] and m.djn[2] still apply
+
+        >>> # Convert logical propositions to linear algebraic constraints
+        >>> # and apply the Big-M reformulation.
+        >>> TransformationFactory('core.logical_to_linear').apply_to(m)
+        >>> TransformationFactory('gdp.bigm').apply_to(m)
+
+        >>> m.Y.display()  # Before solve, Boolean vars have no value
+        Y : Size=4, Index=s
+            Key : Value : Fixed : Stale
+              1 :  None : False :  True
+              2 :  None : False :  True
+              3 :  None : False :  True
+              4 :  None : False :  True
+
+        >>> # Solve the reformulated model and update the Boolean variables
+        >>> # based on the algebraic model results
+        >>> run_data = SolverFactory('cbc').solve(m)
+        >>> update_boolean_vars_from_binary(m)
+        >>> m.Y.display()
+        Y : Size=4, Index=s
+            Key : Value : Fixed : Stale
+              1 :  True : False :  True
+              2 : False : False :  True
+              3 : False : False :  True
+              4 :  True : False :  True
+
+    We elaborate on the
+        >>> m.s = RangeSet(4)
+        >>> m.ds = RangeSet(2)
+        >>> m.Y = BooleanVar(m.s)
+        >>> m.d = Disjunct(m.s)
+        >>> m.djn = Disjunction(m.ds)
+        >>> m.djn[1] = [m.d[1], m.d[2]]
+        >>> m.djn[2] = [m.d[3], m.d[4]]
+        >>> m.x = Var(bounds=(-2, 10))
+        >>> m.d[1].c = Constraint(expr=m.x >= 2)
+        >>> m.d[2].c = Constraint(expr=m.x >= 3)
+        >>> m.d[3].c = Constraint(expr=m.x <= 8)
+        >>> m.d[4].c = Constraint(expr=m.x == 2.5)
+        >>> m.o = Objective(expr=m.x)
+
+        >>> # Associate Boolean vars with auto-generated disjunct binaries
+        >>> for i in m.s:
+        ...     m.Y[i].associate_binary_var(m.d[i].indicator_var)
+
+        >>> # Add the logical proposition
+        >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[4]))
+        >>> # Note: the implicit XOR enforced by m.djn[1] and m.djn[2] still apply
+
+        >>> # Convert logical propositions to linear algebraic constraints
+        >>> # and apply the Big-M reformulation.
+        >>> TransformationFactory('core.logical_to_linear').apply_to(m)
+        >>> TransformationFactory('gdp.bigm').apply_to(m)
+
+        >>> m.Y.display()  # Before solve, Boolean vars have no value
+        Y : Size=4, Index=s
+            Key : Value : Fixed : Stale
+              1 :  None : False :  True
+              2 :  None : False :  True
+              3 :  None : False :  True
+              4 :  None : False :  True
+
+        >>> # Solve the reformulated model and update the Boolean variables
+        >>> # based on the algebraic model results
+        >>> run_data = SolverFactory('cbc').solve(m)
+        >>> update_boolean_vars_from_binary(m)
+        >>> m.Y.display()
+        Y : Size=4, Index=s
+            Key : Value : Fixed : Stale
+              1 :  True : False :  True
+              2 : False : False :  True
+              3 : False : False :  True
+              4 :  True : False :  True
+
+    We elaborate on the
     >>> m.s = RangeSet(4)
     >>> m.ds = RangeSet(2)
     >>> m.Y = BooleanVar(m.s)
@@ -351,7 +447,7 @@ or equivalently,
     m.p = LogicalConstraint(
         expr=AtLeast(2, m.Y[1], Exactly(2, m.Y[2], m.Y[3], m.Y[4]), m.Y[5], m.Y[6]))
 
-In our transformation, we automatically convert these special disjunctions to linear form using a Big M reformulation.
+In the ``logical_to_linear`` transformation, we automatically convert these special disjunctions to linear form using a Big M reformulation.
 
 Additional Examples
 ===================

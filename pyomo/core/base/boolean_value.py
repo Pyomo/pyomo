@@ -1,4 +1,4 @@
-#logical version for numvalie
+#logical version for numvalue
 
 import sys
 from pyomo.core.expr import boolean_value

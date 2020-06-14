@@ -28,7 +28,7 @@ from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
-    _warn_for_active_logical_statement, target_list, is_child_of, get_src_disjunction,
+    _warn_for_active_logical_constraint, target_list, is_child_of, get_src_disjunction,
     get_src_constraint, get_transformed_constraints,
     _get_constraint_transBlock, get_src_disjunct,
     _warn_for_active_disjunction,
@@ -553,7 +553,7 @@ class BigM_Transformation(Transformation):
 
     def _warn_for_active_logical_statement(
             self, logical_statment, disjunct, infodict, bigMargs, suffix_list):
-        _warn_for_active_logical_statement(logical_statment, disjunct, NAME_BUFFER)
+        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
 
     def _transform_block_on_disjunct(self, block, disjunct, bigMargs, arg_list,
                                      suffix_list):

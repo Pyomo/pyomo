@@ -39,11 +39,11 @@ This may be accomplished via transformation:
 
 The transformation creates a constraint list named ``logic_to_linear`` upon which the algebraic equivalents of the logical constraints are placed.
 If not already associated with a binary variable, each ``BooleanVar`` object will receive a generated binary counterpart.
-These associated binary variables may be accessed via the `as_binary()` function.
+These associated binary variables may be accessed via the `get_associated_binary()` function.
 
 .. code::
 
-    m.Y[1].as_binary()
+    m.Y[1].get_associated_binary()
 
 Additional augmented variables and their corresponding constraints may also be created, as described in :ref:`gdp-advanced-examples`.
 
@@ -70,7 +70,7 @@ Big M (BM) Reformulation
 The Big M reformulation\ [#gdp-bm]_ results in a smaller transformed model, avoiding the need to add extra variables; however, it yields a looser continuous relaxation.
 By default, the BM transformation will estimate reasonably tight M values for you if variables are bounded.
 For nonlinear models where finite expression bounds may be inferred from variable bounds, the BM transformation may also be able to automatically compute M values for you.
-For all other models, you will need to provide the M values through a "BigM" Suffix.
+For all other models, you will need to provide the M values through a "BigM" Suffix, or through the `bigM` argument to the transformation.
 We will raise a ``GDP_Error`` for missing M values.
 We implement the multiple-parameter Big-M (MBM) approach described in literature\ [#gdp-mbm]_.
 
@@ -124,7 +124,7 @@ This transformation is accessible via:
 Direct GDP solvers
 ==================
 
-Pyomo includes the contributed GDPopt solver, which can direct solve GDP models.
+Pyomo includes the contributed GDPopt solver, which can directly solve GDP models.
 Its usage is described within the :ref:`contributed packages documentation <gdpopt-main-page>`.
 
 References

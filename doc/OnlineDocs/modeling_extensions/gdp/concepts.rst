@@ -87,6 +87,24 @@ Boolean variables are decision variables that may take a value of ``True`` or ``
 These are most often encountered as the indicator variables of disjuncts.
 However, they can also be independently defined to represent other problem decisions.
 
+.. note::
+
+    Boolean variables are not intended to participate in algebraic expressions.
+    That is, :math:`3 \times \text{True}` does not make sense; hence, :math:`x = 3 Y_1` does not make sense.
+    Instead, you may have the disjunction
+
+    .. math::
+
+        \left[\begin{gathered}
+        Y_1 \\
+        x = 3
+        \end{gathered}
+        \right] \bigvee \left[\begin{gathered}
+        \neg Y_1 \\
+        x = 0
+        \end{gathered}
+        \right]
+
 Logical Propositions
 ====================
 

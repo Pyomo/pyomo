@@ -296,7 +296,7 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
                             name_buffer=NAME_BUFFER)))
 
 
-def _warn_for_active_logical_statement(logical_statement, disjunct, NAME_BUFFER):
+def _warn_for_active_logical_constraint(logical_statement, disjunct, NAME_BUFFER):
     # this should only have gotten called if the logical constraint is active
     assert logical_statement.active
     problem_statement = logical_statement
@@ -307,7 +307,7 @@ def _warn_for_active_logical_statement(logical_statement, disjunct, NAME_BUFFER)
                 # it specifically.
                 problem_statement = logical_statement[i]
                 break
-        # None of the _LogicalStatmentDatas were actually active. We
+        # None of the _LogicalConstraintDatas were actually active. We
         # are OK and we can deactivate the container.
         else:
             logical_statement.deactivate()
@@ -315,7 +315,7 @@ def _warn_for_active_logical_statement(logical_statement, disjunct, NAME_BUFFER)
     # the logical constraint should only have been active if it wasn't transformed
     _probStatementName = problem_statement.getname(
         fully_qualified=True, name_buffer=NAME_BUFFER)
-    raise GDP_Error("Found untransformed logical statment %s in disjunct %s! "
-                    "The logical statment must be transformed before the "
+    raise GDP_Error("Found untransformed logical constraint %s in disjunct %s! "
+                    "The logical constraint must be transformed before the "
                     "disjunct. Use the logical_to_linear transformation."
                     % (_probStatementName, disjunct.name))
