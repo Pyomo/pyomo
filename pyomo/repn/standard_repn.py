@@ -743,7 +743,11 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
                                 or res.constant != 0)
                 if has_constant:
                     ans.constant = multiplier*res.constant*res.constant
-                keys = sorted(res.linear.keys())
+
+                # this is reversed since we want to pop off the end for efficiency
+                # and the quadratic terms have a convention that the indexing tuple
+                # of key1, key2 is such that key1 <= key2
+                keys = sorted(res.linear.keys(), reverse=True)
                 while len(keys) > 0:
                     key1 = keys.pop()
                     coef1 = res.linear[key1]
