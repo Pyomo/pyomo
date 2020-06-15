@@ -111,17 +111,21 @@ def _assert_units_consistent_expression(expr):
     """
     pyomo_unit, pint_unit = units._get_units_tuple(expr)
 
-def _assert_units_complementarity(cdata):
-    """
-    Raise an exception if any units in either of the complementarity
-    expressions are inconsistent, and also check the standard block
-    methods.
-    """
-    if cdata._args[0] is not None:
-        pyomo_unit, pint_unit = units._get_units_tuple(cdata._args[0])
-    if cdata._args[1] is not None:
-        pyomo_unit, pint_unit = units._get_units_tuple(cdata._args[1])
-    _assert_units_consistent_block(cdata)
+# Complementarities that are not in standard form do not
+# current work with the checking code. The Units container
+# should be modified to allow sum and relationals with zero
+# terms (e.g., unitless). Then this code can be enabled.
+#def _assert_units_complementarity(cdata):
+#    """
+#    Raise an exception if any units in either of the complementarity
+#    expressions are inconsistent, and also check the standard block
+#    methods.
+#    """
+#    if cdata._args[0] is not None:
+#        pyomo_unit, pint_unit = units._get_units_tuple(cdata._args[0])
+#    if cdata._args[1] is not None:
+#        pyomo_unit, pint_unit = units._get_units_tuple(cdata._args[1])
+#    _assert_units_consistent_block(cdata)
 
 def _assert_units_consistent_block(obj):
     """
