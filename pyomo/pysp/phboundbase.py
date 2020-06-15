@@ -17,7 +17,7 @@ import copy
 from six import iteritems
 from operator import itemgetter
 
-from pyomo.pysp.phutils import *
+from pyomo.pysp.phutils import indexToString
 from pyomo.opt import UndefinedData
 
 logger = logging.getLogger('pyomo.pysp')
@@ -51,8 +51,8 @@ def ExtractInternalNodeSolutionsWithClosestScenarioNodebyNode(ph):
                 if ClosestScenDist == 0:
                     break
                 thisdist = ScenXbarDist(scenario, tree_node)
-                if ClosestScenDist == None or thisdist < ClosestScenDist:
-                     ClosestScenDist = thisdist
+                if ClosestScenDist == None or thisdist < ClostScenDist:
+                     ClosestScendist = thisdist
                      ClosestScen = scenario
 
             for variable_id in tree_node._standard_variable_ids:
