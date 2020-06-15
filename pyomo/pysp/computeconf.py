@@ -15,7 +15,7 @@ import math
 import time
 import traceback
 
-import pyutilib.common
+from pyutilib.common import ApplicationError
 
 from pyomo.core import minimize
 # this is a hack, in order to pick up the UndefinedData class. this is
@@ -35,7 +35,6 @@ from pyomo.pysp.phinit import (construct_ph_options_parser,
                                PHCleanup)
 from pyomo.pysp.ef_writer_script import ExtensiveFormAlgorithm
 from pyomo.pysp.phutils import _OLD_OUTPUT
-import pyomo.pysp.phboundbase
 
 from six import iteritems, iterkeys
 
@@ -805,7 +804,7 @@ def main(args=None):
     except IOError as str:
         print("IO ERROR:")
         print(str)
-    except pyutilib.common.ApplicationError as str:
+    except ApplicationError as str:
         print("APPLICATION ERROR:")
         print(str)
     except RuntimeError as str:
