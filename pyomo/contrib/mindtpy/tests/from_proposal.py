@@ -2,7 +2,7 @@
 See David Bernal PhD proposal example.
 """
 
-
+from __future__ import division
 from pyomo.environ import (ConcreteModel, Constraint, Reals, Integers,
                            Objective, Var, sqrt, minimize)
 

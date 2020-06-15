@@ -391,17 +391,7 @@ class MindtPySolver(object):
             else:
                 feas.slack_var = Var(domain=NonNegativeReals, initialize=1)
 
-                # # Mapping Constraint -> integer index
-                # MindtPy.feas_map = {}
-                # # Mapping integer index -> Constraint
-                # MindtPy.feas_inverse_map = {}
-                # # Generate the two maps. These maps may be helpful for later
-                # # interpreting indices on the slack variables or generated cuts.
-                # for c, n in zip(MindtPy.constraint_list, feas.constraint_set):
-                #     MindtPy.feas_map[c] = n
-                #     MindtPy.feas_inverse_map[n] = c
-
-                # Create slack variables for OA cuts
+            # Create slack variables for OA cuts
             if config.add_slack:
                 lin.slack_vars = VarList(
                     bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)

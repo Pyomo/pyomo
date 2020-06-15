@@ -15,8 +15,6 @@ from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
-MAX_SYMBOLIC_DERIV_SIZE = 1000
-
 
 class MindtPySolveData(object):
     """Data container to hold solve-instance data.
@@ -94,7 +92,7 @@ def calc_jacobians(solve_data, config):
 def add_feas_slacks(m, config):
     MindtPy = m.MindtPy_utils
     # generate new constraints
-    if config.feasibility_norm == 'L1' or config.feasibility_norm == 'L2':
+    if config.feasibility_norm in {'L1', 'L2'}:
         for i, constr in enumerate(MindtPy.constraint_list, 1):
             if constr.body.polynomial_degree() not in [0, 1]:
                 rhs = constr.upper if constr.has_ub() else constr.lower
