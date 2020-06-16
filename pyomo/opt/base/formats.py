@@ -65,6 +65,9 @@ class ResultsFormat(str, enum.Enum):
     yaml='yaml'
     json='json'
 
+    def __str__(self):
+        return self.value
+
 
 def guess_format(filename):
     formats = {}

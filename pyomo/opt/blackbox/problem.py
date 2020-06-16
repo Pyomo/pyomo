@@ -31,6 +31,9 @@ class response_enum(str, enum.Enum):
     NonlinearConstraintValues='NonlinearConstraintValues'
     Jacobian='Jacobian'
 
+    def __str__(self):
+        return self.value
+
 
 class OptProblem(object):
     """
