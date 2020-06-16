@@ -11,18 +11,15 @@
 
 __all__ = ['ActionManagerError', 'ActionHandle', 'AsynchronousActionManager', 'ActionStatus', 'FailedActionHandle', 'solve_all_instances']
 
-try:
-    from enum import Enum
-except:
-    from enum34 import Enum
+import enum
 from six import itervalues
 
-class ActionStatus(Enum):
-    done=1
-    error=2
-    queued=3
-    executing=4
-    unknown=5
+class ActionStatus(str, enum.Enum):
+    done='done'
+    error='error'
+    queued='queued'
+    executing='executing'
+    unknown='unknown'
 
 def solve_all_instances(solver_manager, solver, instances, **kwds):
     """

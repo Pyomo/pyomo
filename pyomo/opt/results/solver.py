@@ -10,63 +10,60 @@
 
 __all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition', 'check_optimal_termination', 'assert_optimal_termination']
 
-try:
-    from enum import Enum
-except:
-    from enum34 import Enum
+import enum
 from pyomo.opt.results.container import MapContainer, ScalarType
 
 
 #
 # A coarse summary of how the solver terminated.
 #
-class SolverStatus(Enum):
-    ok=1                   # Normal termination
-    warning=2              # Termination with unusual condition
-    error=3                # Terminated internally with error
-    aborted=4              # Terminated due to external conditions
-                           #   (e.g. interrupts)
-    unknown=5              # An unitialized value
+class SolverStatus(str, enum.Enum):
+    ok='ok'                        # Normal termination
+    warning='warning'              # Termination with unusual condition
+    error='error'                  # Terminated internally with error
+    aborted='aborted'              # Terminated due to external conditions
+                                   #   (e.g. interrupts)
+    unknown='unknown'              # An unitialized value
 
 #
 # A description of how the solver terminated
 #
-class TerminationCondition(Enum):
+class TerminationCondition(str, enum.Enum):
     # UNKNOWN
-    unknown=1                 # An unitialized value
+    unknown='unknown'                               # An unitialized value
     # OK
-    maxTimeLimit=2            # Exceeded maximum time limited allowed by user
-                              #    but having return a feasible solution
-    maxIterations=3           # Exceeded maximum number of iterations allowed
-                              #    by user (e.g., simplex iterations)
-    minFunctionValue=4        # Found solution smaller than specified function
-                              #    value
-    minStepLength=5           # Step length is smaller than specified limit
-    globallyOptimal=6         # Found a globally optimal solution
-    locallyOptimal=7          # Found a locally optimal solution
-    feasible=8                # Found a solution that is feasible
-    optimal=9                 # Found an optimal solution
-    maxEvaluations=10         # Exceeded maximum number of problem evaluations
-                              #    (e.g., branch and bound nodes)
-    other=11                  # Other, uncategorized normal termination
+    maxTimeLimit='maxTimeLimit'                     # Exceeded maximum time limited allowed by user
+                                                    #    but having return a feasible solution
+    maxIterations='maxIterations'                   # Exceeded maximum number of iterations allowed
+                                                    #    by user (e.g., simplex iterations)
+    minFunctionValue='minFunctionValue'             # Found solution smaller than specified function
+                                                    #    value
+    minStepLength='minStepLength'                   # Step length is smaller than specified limit
+    globallyOptimal='globallyOptimal'               # Found a globally optimal solution
+    locallyOptimal='locallyOptimal'                 # Found a locally optimal solution
+    feasible='feasible'                             # Found a solution that is feasible
+    optimal='optimal'                               # Found an optimal solution
+    maxEvaluations='maxEvaluations'                 # Exceeded maximum number of problem evaluations
+                                                    #    (e.g., branch and bound nodes)
+    other='other'                                   # Other, uncategorized normal termination
     # WARNING
-    unbounded=12              # Demonstrated that problem is unbounded
-    infeasible=13             # Demonstrated that the problem is infeasible
-    infeasibleOrUnbounded=14  # Problem is either infeasible or unbounded
-    invalidProblem=15         # The problem setup or characteristics are not
-                              #    valid for the solver
-    intermediateNonInteger=16 # A non-integer solution has been returned
-    noSolution=17             # No feasible solution found but infeasibility
-                              #    not proven
+    unbounded='unbounded'                           # Demonstrated that problem is unbounded
+    infeasible='infeasible'                         # Demonstrated that the problem is infeasible
+    infeasibleOrUnbounded='infeasibleOrUnbounded'   # Problem is either infeasible or unbounded
+    invalidProblem='invalidProblem'                 # The problem setup or characteristics are not
+                                                    #    valid for the solver
+    intermediateNonInteger='intermediateNonInteger' # A non-integer solution has been returned
+    noSolution='noSolution'                         # No feasible solution found but infeasibility
+                                                    #    not proven
     # ERROR
-    solverFailure=18          # Solver failed to terminate correctly
-    internalSolverError=19    # Internal solver error
-    error=20                  # Other errors
+    solverFailure='solverFailure'                   # Solver failed to terminate correctly
+    internalSolverError='internalSolverError'       # Internal solver error
+    error='error'                                   # Other errors
     # ABORTED
-    userInterrupt=21          # Interrupt signal generated by user
-    resourceInterrupt=22      # Interrupt signal in resources used by
-                              #    optimizer
-    licensingProblems=23      # Problem accessing solver license
+    userInterrupt='userInterrupt'                   # Interrupt signal generated by user
+    resourceInterrupt='resourceInterrupt'           # Interrupt signal in resources used by
+                                                    #    optimizer
+    licensingProblems='licensingProblems'           # Problem accessing solver license
 
 
 def check_optimal_termination(results):

@@ -15,11 +15,7 @@ import math
 
 import pyutilib.math
 from pyutilib.misc import Bunch
-try:
-    from enum import Enum
-except:
-    from enum34 import Enum
-
+import enum
 from six import iterkeys, itervalues, iteritems, advance_iterator, StringIO
 from six.moves import xrange
 try:
@@ -27,13 +23,13 @@ try:
 except NameError:
     basestring = unicode = str
 
-class ScalarType(Enum):
-    int=1
-    time=2
-    string=3
-    float=4
-    enum=5
-    undefined=6
+class ScalarType(str, enum.Enum):
+    int='int'
+    time='time'
+    string='string'
+    float='float'
+    enum='enum'
+    undefined='undefined'
 
 default_print_options = Bunch(schema=False, ignore_time=False)
 

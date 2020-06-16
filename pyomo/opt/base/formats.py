@@ -13,10 +13,7 @@
 #
 __all__ = ['ProblemFormat', 'ResultsFormat', 'guess_format']
 
-try:
-    from enum import Enum
-except:
-    from enum34 import Enum
+import enum 
 
 #
 # pyomo - A pyomo.core.PyomoModel object, or a *.py file that defines such an object
@@ -34,19 +31,19 @@ except:
 # bar - A Baron input file
 # gams - A GAMS input file
 #
-class ProblemFormat(Enum):
-    colin=1
-    pyomo=2
-    cpxlp=3
-    nl=4
-    mps=5
-    mod=6
-    lpxlp=7
-    osil=8
-    colin_optproblem=9
-    FuncDesigner=10
-    bar=11
-    gams=12
+class ProblemFormat(str, enum.Enum):
+    colin='colin'
+    pyomo='pyomo'
+    cpxlp='cpxlp'
+    nl='nl'
+    mps='mps'
+    mod='mod'
+    lpxlp='lpxlp'
+    osil='osil'
+    colin_optproblem='colin_optproblem'
+    FuncDesigner='FuncDesigner'
+    bar='bar'
+    gams='gams'
 
 #
 # osrl - osrl XML file defined by the COIN-OR OS project: Result
@@ -56,13 +53,13 @@ class ProblemFormat(Enum):
 # yaml - A Pyomo results file in YAML format
 # json - A Pyomo results file in JSON format
 #
-class ResultsFormat(Enum):
-    osrl=1
-    results=2
-    sol=3
-    soln=4
-    yaml=5
-    json=6
+class ResultsFormat(str, enum.Enum):
+    osrl='osrl'
+    results='results'
+    sol='sol'
+    soln='soln'
+    yaml='yaml'
+    json='json'
 
 
 def guess_format(filename):

@@ -18,21 +18,18 @@ __all__ = ['OptProblem', 'RealOptProblem', 'MixedIntOptProblem', 'response_enum'
 import os
 import sys
 
-try:
-    from enum import Enum
-except:
-    from enum34 import Enum
+import enum
 
 from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 from pyomo.opt.blackbox.point import MixedIntVars, RealVars
 
-class response_enum(Enum):
-    FunctionValue=1
-    FunctionValues=2
-    Gradient=3
-    Hessian=4
-    NonlinearConstraintValues=6
-    Jacobian=7
+class response_enum(str, enum.Enum):
+    FunctionValue='FunctionValue'
+    FunctionValues='FunctionValues'
+    Gradient='Gradient'
+    Hessian='Hessian'
+    NonlinearConstraintValues='NonlinearConstraintValues'
+    Jacobian='Jacobian'
 
 
 class OptProblem(object):
