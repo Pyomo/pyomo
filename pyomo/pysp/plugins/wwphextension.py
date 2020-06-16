@@ -17,12 +17,12 @@ import random
 from pyomo.common.dependencies import yaml, yaml_load_args
 import pyomo.common.plugin
 from pyomo.pysp import phextension
-from pyomo.pysp.phutils import *
+from pyomo.pysp.phutils import isVariableNameIndexed, extractVariableNameAndIndex, indexMatchesTemplate, indexToString
 from pyomo.pysp.phsolverserverutils import \
     transmit_external_function_invocation_to_worker
 from pyomo.pysp.generators import \
     scenario_tree_node_variables_generator_noinstances
-from pyomo.core.base import *
+# from pyomo.core.base import *
 
 import six
 from six import iteritems

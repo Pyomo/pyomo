@@ -6,17 +6,12 @@ Author: David L. Woodruff, started February 2017
 """
 
 import inspect
-from pyomo.environ import *
+from pyomo.environ import SolverFactory
 from pyomo.pysp.scenariotree.instance_factory \
     import ScenarioTreeInstanceFactory
-import pyomo.pysp.ef as pyspef # import (create_ef_instance, solve_ef)
-from pyomo.pysp.ef_writer_script import ExtensiveFormAlgorithm
-from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
-from pyomo.pysp.scenariotree.instance_factory import \
-                ScenarioTreeInstanceFactory
+from pyomo.pysp.ef import create_ef_instance
 
-import pyomo.pysp.phinit as phinit
-import os
+from pyomo.pysp.phinit import construct_ph_options_parser, GenerateScenarioTreeForPH, PHAlgorithmBuilder
 
 def _optiondict_2_list(phopts, args_list = None):
     """ A little utility to change the format of options"""
@@ -100,7 +95,7 @@ class StochSolver:
         if fsfct is None:
             # Changed in October 2018: None implies AbstractModel
             args_list = _optiondict_2_list(phopts)
-            parser = phinit.construct_ph_options_parser("")
+            parser = construct_ph_options_parser("")
             options = parser.parse_args(args_list)
 
             scenario_instance_factory = \
@@ -108,7 +103,7 @@ class StochSolver:
 
             try:
                 self.scenario_tree = \
-                    phinit.GenerateScenarioTreeForPH(options,
+                    GenerateScenarioTreeForPH(options,
                                                      scenario_instance_factory)
             except:
                 print ("ERROR in StochSolver called from",inspect.stack()[1][3])
@@ -169,7 +164,7 @@ class StochSolver:
         Returns:
             ef_instance: the ef object
         """
-        return pyspef.create_ef_instance(self.scenario_tree,
+        return create_ef_instance(self.scenario_tree,
                                          verbose_output=verbose,
                                          generate_weighted_cvar = generate_weighted_cvar,
                                          cvar_weight = cvar_weight,
@@ -268,7 +263,7 @@ class StochSolver:
         ph = None
 
         # Build up the options for PH.
-        parser = phinit.construct_ph_options_parser("")
+        parser = construct_ph_options_parser("")
         phargslist = ['--default-rho',str(default_rho)]
         phargslist.append('--solver')
         phargslist.append(str(subsolver))
@@ -285,7 +280,7 @@ class StochSolver:
 
         # construct the PH solver object
         try:
-            ph = phinit.PHAlgorithmBuilder(phoptions, self.scenario_tree)
+            ph = PHAlgorithmBuilder(phoptions, self.scenario_tree)
         except:
             print ("Internal error: ph construction failed.")
             if ph is not None:
