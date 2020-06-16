@@ -549,12 +549,15 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(
             len(list(m.component_objects(Disjunct))), 1)
 
-        # Each relaxed disjunct should have 3 vars + the indicator_var
-        # reference, but i "d[i].c" Constraints
+        # Each relaxed disjunct should have 3 disaggregated vars, but i "d[i].c"
+        # Constraints
         for i in [1,2,3]:
             relaxed = transBlock.relaxedDisjuncts[i-1]
-            self.assertEqual(len(list(relaxed.component_objects(Var))), 4)
-            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 4)
+            self.assertEqual(
+                len(list(relaxed.disaggregatedVars.component_objects(Var))), 3)
+            self.assertEqual(
+                len(list(relaxed.disaggregatedVars.component_data_objects(Var))),
+                3)
             self.assertEqual(
                 len(list(relaxed.component_objects(Constraint))), 4)
             # Note: m.x LB == 0, so only 3 bounds constriants (not 6)
@@ -583,12 +586,15 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(
             len(list(m.component_objects(Disjunct))), 1)
 
-        # Each relaxed disjunct should have 3 vars + the indicator_var
-        # reference, but i "d[i].c" Constraints
+        # Each relaxed disjunct should have 3 disaggregated vars, but i "d[i].c"
+        # Constraints
         for i in [1,2,3]:
             relaxed = transBlock.relaxedDisjuncts[i-1]
-            self.assertEqual(len(list(relaxed.component_objects(Var))), 4)
-            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 4)
+            self.assertEqual(
+                len(list(relaxed.disaggregatedVars.component_objects( Var))), 3)
+            self.assertEqual(
+                len(list(relaxed.disaggregatedVars.component_data_objects(
+                    Var))), 3)
             self.assertEqual(
                 len(list(relaxed.component_objects(Constraint))), 4)
             self.assertEqual(
@@ -1309,14 +1315,14 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertIs(disj1.disaggregatedVars.x, 
                       hull.get_disaggregated_var(m.x, m.d1))
         self.assertIs(m.x, hull.get_src_var(disj1.disaggregatedVars.x))
-        d3 = disj1.disaggregatedVars.component("indicator_var")
+        d3 = disj1.disaggregatedVars.component("d1.d3.indicator_var")
         self.assertEqual(d3.lb, 0)
         self.assertEqual(d3.ub, 1)
         self.assertIsInstance(d3, Var)
         self.assertIs(d3, hull.get_disaggregated_var(m.d1.d3.indicator_var,
                                                       m.d1))
         self.assertIs(m.d1.d3.indicator_var, hull.get_src_var(d3))
-        d4 = disj1.disaggregatedVars.component("indicator_var_4")
+        d4 = disj1.disaggregatedVars.component("d1.d4.indicator_var")
         self.assertIsInstance(d4, Var)
         self.assertEqual(d4.lb, 0)
         self.assertEqual(d4.ub, 1)
@@ -1345,12 +1351,14 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.check_bounds_constraint_ub(disj1.x_bounds, 2,
                                         disj1.disaggregatedVars.x,
                                         m.d1.indicator_var)
-        self.check_bounds_constraint_ub(disj1.indicator_var_bounds, 1,
-                                        disj1.disaggregatedVars.indicator_var,
-                                        m.d1.indicator_var)
-        self.check_bounds_constraint_ub(disj1.indicator_var_4_bounds, 1,
-                                        disj1.disaggregatedVars.indicator_var_4,
-                                        m.d1.indicator_var)
+        self.check_bounds_constraint_ub(
+            disj1.component("d1.d3.indicator_var_bounds"), 1, 
+            disj1.disaggregatedVars.component("d1.d3.indicator_var"), 
+            m.d1.indicator_var)
+        self.check_bounds_constraint_ub(
+            disj1.component("d1.d4.indicator_var_bounds"), 1,
+            disj1.disaggregatedVars.component("d1.d4.indicator_var"), 
+            m.d1.indicator_var)
 
         # check the transformed constraints
 
@@ -1366,10 +1374,12 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertTrue(repn.is_linear())
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 3)
-        ct.check_linear_coef(self, repn, disj1.disaggregatedVars.indicator_var,
-                             1)
-        ct.check_linear_coef(self, repn,
-                             disj1.disaggregatedVars.indicator_var_4, 1)
+        ct.check_linear_coef(
+            self, repn,
+            disj1.disaggregatedVars.component("d1.d3.indicator_var"), 1)
+        ct.check_linear_coef(
+            self, repn,
+            disj1.disaggregatedVars.component("d1.d4.indicator_var"), 1)
         ct.check_linear_coef(self, repn, m.d1.indicator_var, -1)
 
         # inner disjunction disaggregation constraint
@@ -1396,10 +1406,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
             "d1._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0].x_bounds")
         original_cons = m.d1._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0].\
                         x_bounds
-        self.check_inner_disaggregated_var_bounds(x3_bounds, x3,
-                                                  disj1.disaggregatedVars.\
-                                                  indicator_var,
-                                                  original_cons)
+        self.check_inner_disaggregated_var_bounds(
+            x3_bounds, x3, 
+            disj1.disaggregatedVars.component("d1.d3.indicator_var"),
+            original_cons)
 
 
         # disaggregated d4.x bounds constraints
@@ -1407,10 +1417,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
             "d1._pyomo_gdp_hull_reformulation.relaxedDisjuncts[1].x_bounds")
         original_cons = m.d1._pyomo_gdp_hull_reformulation.relaxedDisjuncts[1].\
                         x_bounds
-        self.check_inner_disaggregated_var_bounds(x4_bounds, x4,
-                                                  disj1.disaggregatedVars.\
-                                                  indicator_var_4,
-                                                  original_cons)
+        self.check_inner_disaggregated_var_bounds(
+            x4_bounds, x4,
+            disj1.disaggregatedVars.component("d1.d4.indicator_var"),
+            original_cons)
 
         # transformed x >= 1.2
         cons = disj1.component(
@@ -1418,10 +1428,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         first_transformed = m.d1._pyomo_gdp_hull_reformulation.\
                             relaxedDisjuncts[0].component("d1.d3.c")
         original = m.d1.d3.c
-        self.check_inner_transformed_constraint(cons, x3, 1.2,
-                                                disj1.disaggregatedVars.\
-                                                indicator_var,
-                                                first_transformed, original)
+        self.check_inner_transformed_constraint(
+            cons, x3, 1.2,
+            disj1.disaggregatedVars.component("d1.d3.indicator_var"),
+            first_transformed, original)
 
         # transformed x >= 1.3
         cons = disj1.component(
@@ -1429,10 +1439,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         first_transformed = m.d1._pyomo_gdp_hull_reformulation.\
                             relaxedDisjuncts[1].component("d1.d4.c")
         original = m.d1.d4.c
-        self.check_inner_transformed_constraint(cons, x4, 1.3,
-                                                disj1.disaggregatedVars.\
-                                                indicator_var_4,
-                                                first_transformed, original)
+        self.check_inner_transformed_constraint(
+            cons, x4, 1.3,
+            disj1.disaggregatedVars.component("d1.d4.indicator_var"),
+            first_transformed, original)
 
         # outer disjunction transformed constraint
         cons = disj1.component("d1.c")
@@ -1504,6 +1514,34 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
                       m.d1._pyomo_gdp_hull_reformulation.relaxedDisjuncts[1])
         self.assertIs(hull.get_src_disjunct(
             m.d1._pyomo_gdp_hull_reformulation.relaxedDisjuncts[1]), m.d1.d4)
+
+    @unittest.skipIf(not linear_solvers, "No linear solver available")
+    def test_solve_nested_model(self):
+        # This is really a test that our variable references have all been moved
+        # up correctly.
+        m = models.makeNestedDisjunctions_NestedDisjuncts()
+
+        hull = TransformationFactory('gdp.hull')
+        m_hull = hull.create_using(m)
+
+        SolverFactory(linear_solvers[0]).solve(m_hull)
+
+        # check solution
+        self.assertEqual(value(m_hull.d1.indicator_var), 0)
+        self.assertEqual(value(m_hull.d2.indicator_var), 1)
+        self.assertEqual(value(m_hull.x), 1.1)
+
+        # transform inner problem with bigm, outer with hull and make sure it
+        # still works
+        TransformationFactory('gdp.bigm').apply_to(m.d1.disj2)
+        hull.apply_to(m)
+
+        SolverFactory(linear_solvers[0]).solve(m)
+
+        # check solution
+        self.assertEqual(value(m.d1.indicator_var), 0)
+        self.assertEqual(value(m.d2.indicator_var), 1)
+        self.assertEqual(value(m.x), 1.1)
 
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):
