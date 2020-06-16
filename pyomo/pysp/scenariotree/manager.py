@@ -246,7 +246,6 @@ _deprecated_invocation_types = \
      InvocationType.PerScenarioChainedInvocation: InvocationType.PerScenarioChained,
      InvocationType.PerBundleInvocation: InvocationType.PerBundle,
      InvocationType.PerBundleChainedInvocation: InvocationType.PerBundleChained}
-
 def _map_deprecated_invocation_type(invocation_type):
     if invocation_type in _deprecated_invocation_types:      #pragma:nocover
         logger.warning("DEPRECATED: %s has been renamed to %s"
