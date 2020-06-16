@@ -29,17 +29,17 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
     perturbed solution with updated bounds on the decision variable. 
     
     Arguments:
-        instance     : ConcreteModel: Expectation No Exceptions
+        instance     : ConcreteModel
             pyomo model object
+            Expectation : No Exceptions            
 
-        paramSubList : Param         
+        paramSubList : Param
             list of mutable parameters
             Exception : "paramSubList argument is expecting a List of Params"    
 
-        perturbList  : Param        
+        perturbList  : Param
             list of perturbed parameter values
             Exception : "perturbList argument is expecting a List of Params"
-
             length(paramSubList) must equal length(perturbList)
             Exception : "paramSubList will not map to perturbList"  
 

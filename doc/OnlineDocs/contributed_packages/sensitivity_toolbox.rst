@@ -69,7 +69,7 @@ And finally we call sIPOPT:
     ...
     EXIT: Optimal Solution Found.
 
-The first argument is the Pyomo model. The second argument is a list of the original parameters. The third argument is a list of the perturbed parameters. sIPOPT requires these two lists are the same length. The `...` represents extra lines that were cut from the documentation.
+The first argument is the Pyomo model. The second argument is a list of the original parameters. The third argument is a list of the perturbed parameters. sIPOPT requires these two lists are the same length. The ```...``` represents extra lines of output that were cut from this page for brevity.
 
 We can now inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
