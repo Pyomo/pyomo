@@ -451,7 +451,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(
             len(list(m.component_objects(Disjunct))), 1)
 
-        # Each relaxed disjunct should have 1 vars (the reference to the
+        # Each relaxed disjunct should have 1 var (the reference to the
         # indicator var), and i "d[i].c" Constraints
         for i in [1,2,3]:
             relaxed = transBlock.relaxedDisjuncts[i-1]

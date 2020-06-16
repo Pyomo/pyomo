@@ -17,9 +17,9 @@ detect variables inside of Disjuncts or deactivated Blocks.
 import logging
 import textwrap
 from pyomo.common.plugin import alias
-from pyomo.core.base import Transformation, Block, Constraint, Reference, Var
+from pyomo.core.base import Transformation, Block, Constraint
 from pyomo.gdp import Disjunct, GDP_Error, Disjunction
-from pyomo.core import TraversalStrategy, TransformationFactory, SimpleVar
+from pyomo.core import TraversalStrategy, TransformationFactory
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import unique_component_name
@@ -39,7 +39,11 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
 
     """
     @deprecated(msg="The gdp.reclasify transformation has been deprecated in "
-                "favor of the gdp.reference_indicator_vars transformation.",
+                "favor of the gdp transformations creating References to "
+                "variables local to each Disjunct during the transformation. "
+                "Validation that the model has been completely transformed "
+                "to an algebraic model has been moved to the "
+                "assert_model_algebraic function in gdp.util.",
                 version='5.6.10')
     def _apply_to(self, instance, **kwds):
         assert not kwds  # no keywords expected to the transformation
