@@ -18,6 +18,9 @@ class ProblemSense(str, enum.Enum):
     minimize='minimize'
     maximize='maximize'
 
+    def __str__(self):
+        return self.value
+
 
 class ProblemInformation(MapContainer):
 

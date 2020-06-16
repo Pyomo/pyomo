@@ -31,6 +31,9 @@ class ScalarType(str, enum.Enum):
     enum='enum'
     undefined='undefined'
 
+    def __str__(self):
+        return self.value
+
 default_print_options = Bunch(schema=False, ignore_time=False)
 
 strict=False
@@ -55,7 +58,9 @@ class ScalarData(object):
         self._required=required
 
     def get_value(self):
-        if type(self.value) is UndefinedData:
+        if isinstance(self.value, enum.Enum):
+            value = str(self.value)
+        elif type(self.value) is UndefinedData:
             value = '<undefined>'
         else:
             value = self.value
