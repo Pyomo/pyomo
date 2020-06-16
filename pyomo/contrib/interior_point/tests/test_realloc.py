@@ -55,7 +55,8 @@ class TestReallocation(unittest.TestCase):
         m = make_model_tri(n, small_val=1e-7)
         interface = ip.InteriorPointInterface(m)
         linear_solver = ip.linalg.MumpsInterface()
-        linear_solver.set_icntl(14, 20) # Default memory "buffer" factor: 20
+        # Default memory "buffer" factor: 20
+        linear_solver.set_icntl(14, 20)
 
         kkt = interface.evaluate_primal_dual_kkt_matrix()
         res = linear_solver.do_symbolic_factorization(kkt)
@@ -65,8 +66,11 @@ class TestReallocation(unittest.TestCase):
         actual = linear_solver.get_icntl(23)
 
         self.assertTrue(predicted == 12 or predicted == 11)
-        self.assertTrue(actual > predicted+1)
+        self.assertTrue(actual > predicted)
         #self.assertEqual(actual, 14)
+        # NOTE: This test will break if Mumps (or your Mumps version)
+        # gets more conservative at estimating memory requirement,
+        # or if the numeric factorization gets more efficient.
 
 
 if __name__ == '__main__':
