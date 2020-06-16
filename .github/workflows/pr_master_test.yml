@@ -1,0 +1,411 @@
+name: GitHub CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+env:
+  PYTHONWARNINGS: ignore::UserWarning
+  PYTHON_BASE_PKGS: >
+      coverage cython dill ipython networkx nose openpyxl pathos
+      pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd wheel
+  PYTHON_NUMPY_PKGS: >
+      numpy scipy pyodbc pandas matplotlib seaborn
+
+jobs:
+  pyomo-tests:
+    name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.NAME }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
+        mpi: [0]
+        include:
+        - os: ubuntu-latest
+          TARGET: linux
+          PYENV: pip
+
+        - os: macos-latest
+          TARGET: osx
+          PYENV: pip
+
+        - os: windows-latest
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk
+
+        - os: ubuntu-latest
+          python: 3.7
+          mpi: 3
+          TARGET: linux
+          PYENV: conda
+          PACKAGES: mpi4py
+          NAME: /mpi
+
+        exclude:
+        - {os: macos-latest, python: pypy2}
+        - {os: macos-latest, python: pypy3}
+        - {os: windows-latest, python: pypy2}
+        - {os: windows-latest, python: pypy3}
+
+
+    steps:
+    - uses: actions/checkout@v2
+
+    # Ideally we would cache the conda downloads; however, each cache is
+    # over 850MB, and with 5 python versions, that would consume 4.2 of
+    # the 5 GB GitHub allows.
+    #
+    #- name: Conda package cache
+    #  uses: actions/cache@v1
+    #  if: matrix.PYENV == 'conda'
+    #  id: conda-cache
+    #  with:
+    #    path: cache/conda
+    #    key: conda-v2-${{runner.os}}-${{matrix.python}}
+
+    - name: Pip package cache
+      uses: actions/cache@v1
+      if: matrix.PYENV == 'pip'
+      id: pip-cache
+      with:
+        path: cache/pip
+        key: pip-v2-${{runner.os}}-${{matrix.python}}
+
+    - name: OS package cache
+      uses: actions/cache@v1
+      id: os-cache
+      with:
+        path: cache/os
+        key: pkg-v2-${{runner.os}}
+
+    - name: TPL package download cache
+      uses: actions/cache@v1
+      id: download-cache
+      with:
+        path: cache/download
+        key: download-v3-${{runner.os}}
+
+    - name: Update OSX
+      if: matrix.TARGET == 'osx'
+      run: |
+        mkdir -p ${GITHUB_WORKSPACE}/cache/os
+        export HOMEBREW_CACHE=${GITHUB_WORKSPACE}/cache/os
+        brew update
+        # Notes:
+        #  - install glpk
+        #  - pyodbc needs: gcc pkg-config unixodbc freetds
+        for pkg in bash pkg-config unixodbc freetds glpk; do
+            brew list $pkg || brew install $pkg
+        done
+        #brew link --overwrite gcc
+
+    - name: Update Linux
+      if: matrix.TARGET == 'linux'
+      run: |
+        mkdir -p ${GITHUB_WORKSPACE}/cache/os
+        # Notes:
+        #  - install glpk
+        #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
+        sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
+            install libopenblas-dev gfortran liblapack-dev glpk-utils
+        sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
+
+    - name: Set up Python ${{ matrix.python }}
+      if: matrix.PYENV == 'pip'
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Set up Miniconda Python ${{ matrix.python }}
+      if: matrix.PYENV == 'conda'
+      uses: goanpeca/setup-miniconda@v1
+      with:
+        auto-update-conda: true
+        python-version: ${{ matrix.python }}
+
+    # GitHub actions is very fragile when it comes to setting up various
+    # Python interpreters, expecially the setup-miniconda interface.
+    # Per the setup-miniconda documentation, it is important to always
+    # invoke bash as a login shell ('shell: bash -l {0}') so that the
+    # conda environment is properly activated.  However, running within
+    # a login shell appears to foul up the link to python from
+    # setup-python.  Further, we have anecdotal evidence that
+    # subprocesses invoked through $(python -c ...) and `python -c ...`
+    # will not pick up the python activated by setup-python on OSX.
+    #
+    # Our solution is to define a PYTHON_EXE environment variable that
+    # can be explicitly called within subprocess calls to reach the
+    # correct interpreter.  Note that we must explicitly run in a *non*
+    # login shell to set up the environment variable for the
+    # setup-python environments.
+
+    - name: Install Python Packages (pip)
+      if: matrix.PYENV == 'pip'
+      shell: bash
+      run: |
+        python -m pip install --cache-dir cache/pip --upgrade pip
+        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
+        pip install --cache-dir cache/pip ${PYTHON_BASE_PKGS} \
+            ${{matrix.PACKAGES}}
+        if [[ ${{matrix.python}} != pypy* ]]; then
+            # NumPy and derivatives either don't build under pypy, or if
+            # they do, the builds take forever.
+            pip install --cache-dir cache/pip ${PYTHON_NUMPY_PKGS}
+        fi
+        pip install --cache-dir cache/pip cplex \
+            || echo "WARNING: CPLEX Community Edition is not available"
+        pip install --cache-dir cache/pip xpress \
+            || echo "WARNING: Xpress Community Edition is not available"
+        python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
+            % (sys.executable,))'
+
+    - name: Install Python packages (conda)
+      if: matrix.PYENV == 'conda'
+      run: |
+        mkdir -p $GITHUB_WORKSPACE/cache/conda
+        conda config --set always_yes yes
+        conda config --set auto_update_conda false
+        conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
+        conda info
+        conda config --show-sources
+        conda list --show-channel-urls
+        conda install -q -y -c conda-forge ${PYTHON_BASE_PKGS} \
+            ${PYTHON_NUMPY_PKGS} ${{matrix.PACKAGES}}
+        # Note: CPLEX 12.9 (the last version in conda that supports
+        #    Python 2.7) causes a seg fault in the tests.
+        conda install -q -y -c ibmdecisionoptimization cplex=12.10 \
+            || echo "WARNING: CPLEX Community Edition is not available"
+        conda install -q -y -c fico-xpress xpress \
+            || echo "WARNING: Xpress Community Edition is not available"
+        python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
+            % (sys.executable,))'
+
+    - name: Setup TPL package directories
+      run: |
+        TPL_DIR="${GITHUB_WORKSPACE}/cache/tpl"
+        mkdir -p "$TPL_DIR"
+        DOWNLOAD_DIR="${GITHUB_WORKSPACE}/cache/download"
+        mkdir -p "$DOWNLOAD_DIR"
+        echo "::set-env name=TPL_DIR::$TPL_DIR"
+        echo "::set-env name=DOWNLOAD_DIR::$DOWNLOAD_DIR"
+
+    - name: Install Ipopt
+      run: |
+        IPOPT_DIR=$TPL_DIR/ipopt
+        echo "::add-path::$IPOPT_DIR"
+        mkdir -p $IPOPT_DIR
+        IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
+        if test ! -e $IPOPT_TAR; then
+            echo "...downloading Ipopt"
+            URL=https://github.com/IDAES/idaes-ext/releases/download/2.0.0
+            if test "${{matrix.TARGET}}" == osx; then
+                echo "IDAES Ipopt not available on OSX"
+                exit 0
+            elif test "${{matrix.TARGET}}" == linux; then
+                curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
+                    > $IPOPT_TAR
+            else
+                curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
+                    $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
+            fi
+        fi
+        cd $IPOPT_DIR
+        tar -xzi < $IPOPT_TAR
+
+    - name: Install GAMS
+      # We install using Powershell because the GAMS installer hangs
+      # when launched from bash on Windows
+      shell: pwsh
+      run: |
+        $GAMS_DIR="${env:TPL_DIR}/gams"
+        echo "::add-path::$GAMS_DIR"
+        echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
+        echo "::set-env name=DYLD_LIBRARY_PATH::${env:DYLD_LIBRARY_PATH}:$GAMS_DIR"
+        $INSTALLER="${env:DOWNLOAD_DIR}/gams_install.exe"
+        $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            $URL = "$URL/windows/windows_x64_64.exe"
+        } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
+            $URL = "$URL/macosx/osx_x64_64_sfx.exe"
+        } else {
+            $URL = "$URL/linux/linux_x64_64_sfx.exe"
+        }
+        if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
+            echo "...downloading GAMS"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+        }
+        echo "...installing GAMS"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            Start-Process -FilePath "$INSTALLER" -ArgumentList `
+                "/SP- /NORESTART /VERYSILENT /DIR=$GAMS_DIR /NOICONS" `
+                -Wait
+        } else {
+            chmod 777 $INSTALLER
+            Start-Process -FilePath "$INSTALLER" -ArgumentList `
+                "-q -d $GAMS_DIR" -Wait
+            mv $GAMS_DIR/*/* $GAMS_DIR/.
+        }
+
+    - name: Install GAMS Python bindings
+      run: |
+        GAMS_DIR="$TPL_DIR/gams"
+        py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
+            ;print(v if v != "_27" else "")')
+        if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
+            echo "Installing GAMS Python bindings"
+            pushd $GAMS_DIR/apifiles/Python/api$py_ver
+            $PYTHON_EXE setup.py install
+            popd
+        fi
+
+    - name: Install BARON
+      shell: pwsh
+      run: |
+        $BARON_DIR="${env:TPL_DIR}/baron"
+        echo "::add-path::$BARON_DIR"
+        $URL="https://www.minlp.com/downloads/xecs/baron/current/"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
+            $URL += "baron-win64.exe"
+        } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
+            $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.zip"
+            $URL += "baron-osx64.zip"
+        } else {
+            $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.zip"
+            $URL += "baron-lin64.zip"
+        }
+        if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
+            echo "...downloading BARON ($URL)"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+        }
+        echo "...installing BARON"
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            Start-Process -FilePath "$INSTALLER" -ArgumentList `
+                "/SP- /NORESTART /VERYSILENT /DIR=$BARON_DIR /NOICONS" `
+                -Wait
+        } else {
+            unzip -q $INSTALLER
+            mv baron-* $BARON_DIR
+        }
+
+    - name: Install GJH_ASL_JSON
+      if: matrix.TARGET != 'win'
+      run: |
+        GJH_DIR="$TPL_DIR/gjh"
+        echo "::add-path::${GJH_DIR}"
+        INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
+        if test ! -e "$INSTALL_DIR/bin"; then
+            mkdir -p "$INSTALL_DIR"
+            INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
+            URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
+            curl --retry 8 -L $URL > $INSTALLER
+            cd $INSTALL_DIR
+            unzip -q $INSTALLER
+            cd gjh_asl_json-master/Thirdparty
+            ./get.ASL
+            cd ..
+            make
+            mv bin "$INSTALL_DIR/bin"
+        fi
+        cp -rp "$INSTALL_DIR/bin" "$GJH_DIR"
+
+    - name: Install Pyomo and PyUtilib
+      run: |
+        echo ""
+        echo "Clone Pyomo-model-libraries..."
+        git clone https://github.com/Pyomo/pyomo-model-libraries.git
+        echo ""
+        echo "Install PyUtilib..."
+        echo ""
+        $PYTHON_EXE -m pip install git+https://github.com/PyUtilib/pyutilib
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
+        $PYTHON_EXE setup.py develop
+        echo ""
+        echo "Set custom PYOMO_CONFIG_DIR"
+        echo ""
+        echo "::set-env name=PYOMO_CONFIG_DIR::${GITHUB_WORKSPACE}/config"
+
+    - name: Set up coverage tracking
+      run: |
+        if test "${{matrix.TARGET}}" == win; then
+            COVERAGE_BASE=${GITHUB_WORKSPACE}\\.cover
+        else
+            COVERAGE_BASE=${GITHUB_WORKSPACE}/.cover
+        fi
+        COVERAGE_RC=${COVERAGE_BASE}_rc
+        echo "::set-env name=COVERAGE_RCFILE::$COVERAGE_RC"
+        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
+        cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
+        echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
+        SITE_PACKAGES=$($PYTHON_EXE -c "from distutils.sysconfig import \
+            get_python_lib; print(get_python_lib())")
+        echo "Python site-packages: $SITE_PACKAGES"
+        echo 'import coverage; coverage.process_startup()' \
+            > ${SITE_PACKAGES}/run_coverage_at_startup.pth
+
+    - name: Download and install extensions
+      run: |
+        echo ""
+        echo "Pyomo download-extensions"
+        echo ""
+        pyomo download-extensions
+        echo ""
+        echo "Pyomo build-extensions"
+        echo ""
+        pyomo build-extensions --parallel 2
+
+    - name: Report pyomo plugin information
+      run: |
+        pyomo help --solvers || exit 1
+        pyomo help --transformations || exit 1
+        pyomo help --writers || exit 1
+
+    - name: Run Pyomo tests
+      if: matrix.mpi == 0
+      run: |
+        test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
+
+    - name: Run Pyomo MPI tests
+      if: matrix.mpi != 0
+      run: |
+        # Manually invoke the DAT parser so that parse_table_datacmds.py
+        # is fully generated by a single process before invoking MPI
+        python -c "from pyomo.dataportal.parse_datacmds import \
+            parse_data_commands; parse_data_commands(data='')"
+        mpirun -np ${{matrix.mpi}} --oversubscribe nosetests -v \
+            --eval-attr="mpi and (not fragile)" \
+            pyomo `pwd`/pyomo-model-libraries
+
+    - name: Process code coverage report
+      env:
+        CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
+      run: |
+        coverage combine
+        coverage report -i
+        coverage xml -i
+        i=0
+        while : ; do
+            curl --retry 8 -L https://codecov.io/bash -o codecov.sh
+            bash codecov.sh -Z -X gcov -f coverage.xml
+            if test $? == 0; then
+                break
+            elif test $i -ge 4; then
+                exit 1
+            fi
+            DELAY=$(( RANDOM % 30 + 30))
+            echo "Pausing $DELAY seconds before re-attempting upload"
+            sleep $DELAY
+        done

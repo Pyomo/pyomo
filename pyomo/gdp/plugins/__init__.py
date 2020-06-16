@@ -10,7 +10,7 @@
 
 def load():
     import pyomo.gdp.plugins.bigm
-    import pyomo.gdp.plugins.chull
+    import pyomo.gdp.plugins.hull
     import pyomo.gdp.plugins.bilinear
     import pyomo.gdp.plugins.gdp_var_mover
     import pyomo.gdp.plugins.cuttingplane

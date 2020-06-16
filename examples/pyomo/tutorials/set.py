@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -29,7 +29,7 @@ model.A = Set()
 #
 # An index set of sets can also be specified by providing sets as options
 # to the Set() object:
-# 
+#
 model.B = Set()
 model.C = Set(model.A,model.B)
 #
@@ -54,8 +54,8 @@ model.Hsub = Set(within=model.A * model.B)
 ## Data for Simple Sets
 ##
 #
-# A set can be constructed with the _initialize_ option, which is a function 
-# that accepts the set indices and model and returns the value of that set 
+# A set can be constructed with the _initialize_ option, which is a function
+# that accepts the set indices and model and returns the value of that set
 # element:
 #
 def I_init(model):
@@ -64,16 +64,16 @@ def I_init(model):
         for b in model.B:
             ans.append( (a,b) )
     return ans
-model.I = model.A*model.B
-model.I.initialize = I_init
+model.I = Set(within=model.A*model.B, initialize=I_init)
 #
 # Note that the set model.I is not created when this set object is
 # constructed.  Instead, I_init() is called during the construction of a
 # problem instance.
 #
-# A set can also be explicitly constructed by add set elements:
+# A set can also be explicitly constructed by adding set elements:
 #
 model.J = Set()
+model.J.construct()
 model.J.add(1,4,9)
 #
 # The _initialize_ option can also be used to specify the values in
@@ -113,14 +113,13 @@ model.O = Set(validate=O_validate)
 ## Data for Set Arrays
 ##
 #
-# A set array can be constructed with the _initialize_ option, which is a 
-# function that accepts the set indices and model and returns the set for that 
+# A set array can be constructed with the _initialize_ option, which is a
+# function that accepts the set indices and model and returns the set for that
 # array index:
 #
 def P_init(model, i, j):
     return range(0,i*j)
-model.P = Set(model.B,model.B)
-model.P.initialize = P_init
+model.P = Set(model.B,model.B,initialize=P_init)
 #
 # A set array CANNOT be explicitly constructed by adding set elements
 # to individual arrays.  For example, the following is invalid:
@@ -135,7 +134,7 @@ model.P.initialize = P_init
 #
 # declares set Q with an abstract index set B.  However, B is not initialized
 # until the 'model.create_instance()' call is executed at the end of this file.  We
-# could, however, execute 
+# could, however, execute
 #
 #   model.Q[2].add(4)
 #   model.Q[4].add(16)
@@ -143,7 +142,7 @@ model.P.initialize = P_init
 # after the execution of 'model.create_instance()'.
 #
 # The _initialize_ option can also be used to specify the values in
-# a set array.  These default values are defined in a dictionary, which 
+# a set array.  These default values are defined in a dictionary, which
 # specifies how each array element is initialized:
 #
 R_init={}
@@ -171,12 +170,12 @@ model.T = Set(model.B, validate=M_validate)
 # By default, sets are unordered.  That is, the internal representation
 # may place the set elements in any order.  In some cases, we need to know
 # the order in which set elements are declared.  In such cases, we can declare
-# a set to be ordered with an additional constructor option.  
+# a set to be ordered with an additional constructor option.
 #
-# An ordered set can take a initialization function with an additional option 
-# that specifies the index into the ordered set.  In this case, the function is 
+# An ordered set can take a initialization function with an additional option
+# that specifies the index into the ordered set.  In this case, the function is
 # called repeatedly to construct each element in the set:
-# 
+#
 def U_init(model, z):
     if z==6:
         return Set.End
@@ -201,7 +200,7 @@ def V_init(model, z, i):
 model.V = Set(RangeSet(1,4), initialize=V_init, ordered=True)
 
 ##
-## Process an input file and confirm that we get appropriate 
+## Process an input file and confirm that we get appropriate
 ## set instances.
 ##
 instance = model.create_instance("set.dat")

@@ -12,7 +12,7 @@ This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
 """
 try:
-    import pyomo.contrib.pynumero.extensions.asl as _asl
+    import pyomo.contrib.pynumero.asl as _asl
 except ImportError as e:
     print('{}'.format(e))
     raise ImportError('Error importing asl.'
@@ -503,6 +503,7 @@ class AslNLP(ExtendedNLP):
         # this computation into one
         if not self._jac_full_is_cached:
             self._asl.eval_jac_g(self._primals, self._cached_jac_full.data)
+            self._jac_full_is_cached = True
 
     # overloaded from NLP
     def evaluate_jacobian(self, out=None):

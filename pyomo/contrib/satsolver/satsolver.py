@@ -22,11 +22,6 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor,
 )
-from pyomo.core.kernel.set_types import (
-    RealSet,
-    IntegerSet,
-    BooleanSet
-)
 from pyomo.gdp import Disjunction
 
 _z3_available = True
@@ -132,17 +127,17 @@ class SMTSatSolver(object):
     def add_var(self, var):
         label = self.variable_label_map.getSymbol(var)
         domain = var.domain
-        if isinstance(domain, RealSet):
+        if var.is_continuous():
             self.variable_list.append("(declare-fun " + label + "() Real)\n")
             self._add_bound(var)
-        elif isinstance(domain, IntegerSet):
+        elif var.is_binary():
             self.variable_list.append("(declare-fun " + label + "() Int)\n")
             self._add_bound(var)
-        elif isinstance(domain, BooleanSet):
+        elif var.is_integer():
             self.variable_list.append("(declare-fun " + label + "() Int)\n")
             self._add_bound(var)
         else:
-            raise NotImplementedError("SMT cannot handle" + str(domain) + "variables")
+            raise NotImplementedError("SMT cannot handle " + str(domain) + " variables")
         return label
 
     # Defines SMT expression from pyomo expression
@@ -282,20 +277,20 @@ class SMT_visitor(StreamBasedExpressionVisitor):
             raise NotImplementedError(str(type(node)) + " expression not handled by z3 interface")
         return ans
 
-    def beforeChild(self, node, child):
+    def beforeChild(self, node, child, child_idx):
         if type(child) in nonpyomo_leaf_types:
             # This means the child is POD
             # i.e., int, float, string
             return False, str(child)
-        elif child.is_variable_type():
-            return False, str(self.variable_label_map.getSymbol(child))
-        elif child.is_parameter_type():
-            return False, str(value(child))
-        elif not child.is_expression_type():
-            return False, str(child)
-        else:
-            # this is an expression node
+        elif child.is_expression_type():
             return True, ""
+        elif child.is_numeric_type():
+            if child.is_fixed():
+                return False, str(value(child))
+            else:
+                return False, str(self.variable_label_map.getSymbol(child))
+        else:
+            return False, str(child)
 
     def finalizeResult(self, node_result):
         return node_result

@@ -19,6 +19,7 @@ from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
 from pyutilib.math import isclose
 
+from pyomo.common.collections import OrderedSet
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.core.expr.numvalue import (
@@ -29,8 +30,8 @@ from pyomo.core.base import (SortComponents,
                              SymbolMap,
                              ShortNameLabeler,
                              NumericLabeler,
-                             BooleanSet, Constraint,
-                             IntegerSet, Objective,
+                             Constraint,
+                             Objective,
                              Var, Param)
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.set_types import *
@@ -142,15 +143,10 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
 
         if node.is_expression_type():
             # we will descend into this, so type checking will happen later
-            if node.is_component_type():
-                self.treechecker(node)
             return False, None
 
         if node.is_component_type():
-            if isinstance(node, ICategorizedObject):
-                _ctype = node.ctype
-            else:
-                _ctype = node.type()
+            _ctype = node.ctype
             if _ctype not in valid_expr_ctypes_minlp:
                 # Make sure all components in active constraints
                 # are basic ctypes we know how to deal with.
@@ -207,7 +203,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                  skip_trivial_constraints,
                                  sorter):
 
-        referenced_variable_ids = set()
+        referenced_variable_ids = OrderedSet()
 
         def _skip_trivial(constraint_data):
             if skip_trivial_constraints:
@@ -418,7 +414,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                                c_eqns,
                                                l_eqns):
 
-            variables = set()
+            variables = OrderedSet()
             #print(symbol_map.byObject.keys())
             eqn_body = expression_to_string(constraint_data.body, variables, smap=symbol_map)
             #print(symbol_map.byObject.keys())
@@ -499,7 +495,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 else:
                     output_file.write("maximize ")
 
-                variables = set()
+                variables = OrderedSet()
                 #print(symbol_map.byObject.keys())
                 obj_string = expression_to_string(objective_data.expr, variables, smap=symbol_map)
                 #print(symbol_map.byObject.keys())

@@ -49,7 +49,7 @@ class ConstructionTimer(object):
         except AttributeError:
             name = '(unknown)'
         try:
-            _type = self.obj.type().__name__
+            _type = self.obj.ctype.__name__
         except AttributeError:
             _type = type(self.obj).__name__
         try:

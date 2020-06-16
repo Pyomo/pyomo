@@ -18,6 +18,10 @@ from pyomo.environ import (
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.dae.simulator import (
+    is_pypy,
+    scipy_available,
+    casadi,
+    casadi_available,
     Simulator, 
     _check_getitemexpression, 
     _check_productexpression,
@@ -25,7 +29,7 @@ from pyomo.dae.simulator import (
     _check_viewsumexpression, 
     substitute_pyomo2casadi,
 )
-from pyomo.core.base.template_expr import (
+from pyomo.core.expr.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
 )
@@ -38,21 +42,8 @@ from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
 
-try:
-    import casadi 
-    casadi_available = True
-except ImportError:
-    casadi_available = False
-
-try:
-    import platform
-    if platform.python_implementation() == "PyPy":
-        # Scipy is importable into PyPy, but ODE integrators don't work. (2/18)
-        raise ImportError
-    import scipy 
-    scipy_available = True
-except ImportError:
-    scipy_available = False
+# We will skip tests unless we have scipy and not running in pypy
+scipy_available = scipy_available and not is_pypy
 
 
 class TestSimulator(unittest.TestCase):
@@ -931,8 +922,8 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_getitemexpression(e, 0)
         self.assertIs(e.arg(0), temp[0])
         self.assertIs(e.arg(1), temp[1])
-        self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(m.v, temp[1]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
+        self.assertIs(m.v, temp[1].arg(0))
         temp = _check_getitemexpression(e, 1)
         self.assertIsNone(temp)
 
@@ -940,8 +931,8 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_getitemexpression(e, 1)
         self.assertIs(e.arg(0), temp[1])
         self.assertIs(e.arg(1), temp[0])
-        self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(m.v, temp[1]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
+        self.assertIs(m.v, temp[1].arg(0))
         temp = _check_getitemexpression(e, 0)
         self.assertIsNone(temp)
 
@@ -963,36 +954,36 @@ class TestExpressionCheckers(unittest.TestCase):
         # Check multiplication by constant
         e = 5 * m.dv[t] == m.v[t]
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         e = m.v[t] == 5 * m.dv[t]
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         # Check multiplication by fixed param
         e = m.p * m.dv[t] == m.v[t]
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         e = m.v[t] == m.p * m.dv[t]
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         # Check multiplication by mutable param
         e = m.mp * m.dv[t] == m.v[t]
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.mp, temp[1].arg(1))      # Reciprocal
         self.assertIs(e.arg(1), temp[1].arg(0))
 
         e = m.v[t] == m.mp * m.dv[t]
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.mp, temp[1].arg(1))      # Reciprocal
         self.assertIs(e.arg(0), temp[1].arg(0))
@@ -1000,14 +991,14 @@ class TestExpressionCheckers(unittest.TestCase):
         # Check multiplication by var
         e = m.y * m.dv[t] / m.z == m.v[t]
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(e.arg(1), temp[1].arg(0).arg(0))
         self.assertIs(m.z,        temp[1].arg(0).arg(1))
 
         e = m.v[t] == m.y * m.dv[t] / m.z
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(e.arg(0), temp[1].arg(0).arg(0))
         self.assertIs(m.z, temp[1].arg(0).arg(1))
@@ -1015,14 +1006,14 @@ class TestExpressionCheckers(unittest.TestCase):
         # Check having the DerivativeVar in the denominator
         e = m.y / (m.dv[t] * m.z) == m.mp
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.y,        temp[1].arg(0))
         self.assertIs(e.arg(1), temp[1].arg(1).arg(0))
 
         e = m.mp == m.y / (m.dv[t] * m.z)
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.y,        temp[1].arg(0))
         self.assertIs(e.arg(0), temp[1].arg(1).arg(0))
@@ -1044,8 +1035,8 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_negationexpression(e, 0)
         self.assertIs(e.arg(0).arg(0), temp[0])
         self.assertIs(e.arg(1), temp[1].arg(0))
-        self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(m.v, temp[1].arg(0)._base)
+        self.assertIs(m.dv, temp[0].arg(0))
+        self.assertIs(m.v, temp[1].arg(0).arg(0))
         temp = _check_negationexpression(e, 1)
         self.assertIsNone(temp)
 
@@ -1053,8 +1044,8 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_negationexpression(e, 1)
         self.assertIs(e.arg(0), temp[1].arg(0))
         self.assertIs(e.arg(1).arg(0), temp[0])
-        self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(m.v, temp[1].arg(0)._base)
+        self.assertIs(m.dv, temp[0].arg(0))
+        self.assertIs(m.v, temp[1].arg(0).arg(0))
         temp = _check_negationexpression(e, 0)
         self.assertIsNone(temp)
 
@@ -1077,7 +1068,7 @@ class TestExpressionCheckers(unittest.TestCase):
 
         e = m.dv[t] + m.y + m.z == m.v[t]
         temp = _check_viewsumexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.SumExpression)
         self.assertIs(type(temp[1].arg(0)), EXPR.GetItemExpression)
         self.assertIs(type(temp[1].arg(1)), EXPR.MonomialTermExpression)
@@ -1089,7 +1080,7 @@ class TestExpressionCheckers(unittest.TestCase):
 
         e = m.v[t] == m.y + m.dv[t] + m.z
         temp = _check_viewsumexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.SumExpression)
         self.assertIs(type(temp[1].arg(0)), EXPR.GetItemExpression)
         self.assertIs(type(temp[1].arg(1)), EXPR.MonomialTermExpression)
@@ -1099,7 +1090,7 @@ class TestExpressionCheckers(unittest.TestCase):
 
         e = 5 * m.dv[t] + 5 * m.y - m.z == m.v[t]
         temp = _check_viewsumexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         self.assertIs(type(temp[1].arg(0).arg(0)), EXPR.GetItemExpression)

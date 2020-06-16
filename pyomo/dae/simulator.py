@@ -6,14 +6,18 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-from pyomo.core.base import Constraint, Param, value, Suffix, Block
+from pyomo.core.base import Constraint, Param, Var, value, Suffix, Block
 
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import NumericValue, native_numeric_types
-from pyomo.core.base.template_expr import IndexTemplate, _GetItemIndexer
+from pyomo.core.expr.numvalue import (
+    NumericValue, native_numeric_types, nonpyomo_leaf_types,
+)
+from pyomo.core.expr.template_expr import IndexTemplate, _GetItemIndexer
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.reference import Reference
 
 from six import iterkeys, itervalues
 
@@ -22,28 +26,29 @@ import logging
 __all__ = ('Simulator', )
 logger = logging.getLogger('pyomo.core')
 
-# Check numpy availability
-numpy_available = True
-try:
-    import numpy as np
-except ImportError:
-    numpy_available = True
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available, attempt_import,
+)
 
 # Check integrator availability
-scipy_available = True
-try:
-    import platform
-    if platform.python_implementation() == "PyPy":  # pragma:nocover
-        # scipy is importable into PyPy, but ODE integrators don't work. (2/18)
-        raise ImportError
-    import scipy.integrate as scipy
-except ImportError:
-    scipy_available = False
+# scipy_available = True
+# try:
+#     import platform
+#     if platform.python_implementation() == "PyPy":  # pragma:nocover
+#         # scipy is importable into PyPy, but ODE integrators don't work. (2/18)
+#         raise ImportError
+#     import scipy.integrate as scipy
+# except ImportError:
+#     scipy_available = False
+import platform
+is_pypy = platform.python_implementation() == "PyPy"
 
-casadi_available = True
-try:
-    import casadi
-    casadi_intrinsic = {
+scipy, scipy_available = attempt_import('scipy.integrate', alt_names=['scipy'])
+
+casadi_intrinsic = {}
+def _finalize_casadi(casadi, available):
+    if available:
+        casadi_intrinsic.update({
             'log': casadi.log,
             'log10': casadi.log10,
             'sin': casadi.sin,
@@ -61,9 +66,9 @@ try:
             'acosh': casadi.acosh,
             'atanh': casadi.atanh,
             'ceil': casadi.ceil,
-            'floor': casadi.floor}
-except ImportError:
-    casadi_available = False
+            'floor': casadi.floor,
+        })
+casadi, casadi_available = attempt_import('casadi', callback=_finalize_casadi)
 
 
 def _check_getitemexpression(expr, i):
@@ -74,7 +79,7 @@ def _check_getitemexpression(expr, i):
     GetItemExpression for the :py:class:`DerivativeVar<DerivativeVar>` and
     the RHS. If not, return None.
     """
-    if type(expr.arg(i)._base) is DerivativeVar:
+    if type(expr.arg(i).arg(0)) is DerivativeVar:
         return [expr.arg(i), expr.arg(1 - i)]
     else:
         return None
@@ -93,7 +98,7 @@ def _check_productexpression(expr, i):
     stack = [(expr_, 1)]
     pterms = []
     dv = None
-    
+
     while stack:
         curr, e_ = stack.pop()
         if curr.__class__ is EXPR.ProductExpression:
@@ -105,7 +110,7 @@ def _check_productexpression(expr, i):
         elif curr.__class__ is EXPR.ReciprocalExpression:
             stack.append((curr.arg(0), - e_))
         elif type(curr) is EXPR.GetItemExpression and \
-             type(curr._base) is DerivativeVar:
+             type(curr.arg(0)) is DerivativeVar:
             dv = (curr, e_)
         else:
             pterms.append((curr, e_))
@@ -117,9 +122,9 @@ def _check_productexpression(expr, i):
     denom = 1
     for term, e_ in pterms:
         if e_ == 1:
-            denom *= term 
+            denom *= term
         else:
-            numer *= term 
+            numer *= term
     curr, e_ = dv
     if e_ == 1:
         return [curr, expr.arg(1 - i) * numer / denom]
@@ -139,7 +144,7 @@ def _check_negationexpression(expr, i):
     arg = expr.arg(i).arg(0)
 
     if type(arg) is EXPR.GetItemExpression and \
-       type(arg._base) is DerivativeVar:
+       type(arg.arg(0)) is DerivativeVar:
         return [arg, - expr.arg(1 - i)]
 
     if type(arg) is EXPR.ProductExpression:
@@ -150,7 +155,7 @@ def _check_negationexpression(expr, i):
                     not lhs.is_potentially_variable()):
             return None
         if not (type(rhs) is EXPR.GetItemExpression and
-                        type(rhs._base) is DerivativeVar):
+                        type(rhs.arg(0)) is DerivativeVar):
             return None
 
         return [rhs, - expr.arg(1 - i) / lhs]
@@ -177,7 +182,7 @@ def _check_viewsumexpression(expr, i):
         if dv is not None:
             items.append(item)
         elif type(item) is EXPR.GetItemExpression and \
-           type(item._base) is DerivativeVar:
+           type(item.arg(0)) is DerivativeVar:
             dv = item
         elif type(item) is EXPR.ProductExpression:
             # This will contain the constant coefficient if there is one
@@ -187,7 +192,7 @@ def _check_viewsumexpression(expr, i):
             if (type(lhs) in native_numeric_types or
                     not lhs.is_potentially_variable()) \
                 and (type(rhs) is EXPR.GetItemExpression and
-                             type(rhs._base) is DerivativeVar):
+                             type(rhs.arg(0)) is DerivativeVar):
                 dv = rhs
                 dvcoef = lhs
         else:
@@ -204,33 +209,31 @@ def _check_viewsumexpression(expr, i):
     return None
 
 
-if scipy_available:
-    class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
-        """
-        Expression walker that replaces _GetItemExpression
-        instances with mutable parameters.
-        """
+class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
+    """
+    Expression walker that replaces _GetItemExpression
+    instances with mutable parameters.
+    """
 
-        def __init__(self, templatemap):
-            super(Pyomo2Scipy_Visitor, self).__init__()
-            self.templatemap = templatemap
+    def __init__(self, templatemap):
+        super(Pyomo2Scipy_Visitor, self).__init__()
+        self.templatemap = templatemap
 
-        def visiting_potential_leaf(self, node):
-            if type(node) is IndexTemplate:
-                return True, node
+    def visiting_potential_leaf(self, node):
+        if type(node) is IndexTemplate:
+            return True, node
 
-            if type(node) is EXPR.GetItemExpression:
-                _id = _GetItemIndexer(node)
-                if _id not in self.templatemap:
-                    self.templatemap[_id] = Param(mutable=True)
-                    self.templatemap[_id].construct()
-                    _args = []
-                    self.templatemap[_id]._name = "%s[%s]" % (
-                        node._base.name, ','.join(str(x) for x in _id._args))
-                return True, self.templatemap[_id]
+        if type(node) is EXPR.GetItemExpression:
+            _id = _GetItemIndexer(node)
+            if _id not in self.templatemap:
+                self.templatemap[_id] = Param(mutable=True)
+                self.templatemap[_id].construct()
+                self.templatemap[_id]._name = "%s[%s]" % (
+                    _id.base.name, ','.join(str(x) for x in _id.args))
+            return True, self.templatemap[_id]
 
-            return super(
-                Pyomo2Scipy_Visitor, self).visiting_potential_leaf(node)
+        return super(
+            Pyomo2Scipy_Visitor, self).visiting_potential_leaf(node)
 
 
 def convert_pyomo2scipy(expr, templatemap):
@@ -253,84 +256,83 @@ def convert_pyomo2scipy(expr, templatemap):
     return visitor.dfs_postorder_stack(expr)
 
 
-if casadi_available:
-    class Substitute_Pyomo2Casadi_Visitor(EXPR.ExpressionReplacementVisitor):
+class Substitute_Pyomo2Casadi_Visitor(EXPR.ExpressionReplacementVisitor):
+    """
+    Expression walker that replaces
+
+       * _UnaryFunctionExpression instances with unary functions that
+         point to casadi intrinsic functions.
+
+       * _GetItemExpressions with _GetItemIndexer objects that references
+         CasADi variables.
+    """
+
+    def __init__(self, templatemap):
+        super(Substitute_Pyomo2Casadi_Visitor, self).__init__()
+        self.templatemap = templatemap
+
+    def visit(self, node, values):
+        """Replace a node if it's a unary function."""
+        if type(node) is EXPR.UnaryFunctionExpression:
+            return EXPR.UnaryFunctionExpression(
+                            values[0],
+                            node._name,
+                            casadi_intrinsic[node._name])
+        return node
+
+    def visiting_potential_leaf(self, node):
+        """Replace a node if it's a _GetItemExpression."""
+        if type(node) is EXPR.GetItemExpression:
+            _id = _GetItemIndexer(node)
+            if _id not in self.templatemap:
+                name = "%s[%s]" % (
+                    _id.base.name, ','.join(str(x) for x in _id.args))
+                self.templatemap[_id] = casadi.SX.sym(name)
+            return True, self.templatemap[_id]
+
+        if type(node) in native_numeric_types or \
+           not node.is_expression_type() or \
+           type(node) is IndexTemplate:
+            return True, node
+
+        return False, None
+
+
+class Convert_Pyomo2Casadi_Visitor(EXPR.ExpressionValueVisitor):
+    """
+    Expression walker that evaluates an expression
+    generated by the Substitute_Pyomo2Casadi_Visitor walker.
+
+    In Coopr3 this walker was not necessary because the expression could
+    be simply evaluated.  But in Pyomo5, the evaluation logic was
+    changed to be non-recursive, which involves checks on the types of
+    leaves in the expression tree. Hence, the evaluation logic fails if
+    leaves in the tree are not standard Pyomo5 variable types.
+    """
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        return node._apply_operation(values)
+
+    def visiting_potential_leaf(self, node):
         """
-        Expression walker that replaces 
+        Visiting a potential leaf.
 
-           * _UnaryFunctionExpression instances with unary functions that
-             point to casadi intrinsic functions.
-
-           * _GetItemExpressions with _GetItemIndexer objects that references
-             CasADi variables.
+        Return True if the node is not expanded.
         """
+        if node.__class__ in native_numeric_types:
+            return True, node
 
-        def __init__(self, templatemap):
-            super(Substitute_Pyomo2Casadi_Visitor, self).__init__()
-            self.templatemap = templatemap
+        if node.__class__ is casadi.SX:
+            return True, node
 
-        def visit(self, node, values):
-            """Replace a node if it's a unary function."""
-            if type(node) is EXPR.UnaryFunctionExpression:
-                return EXPR.UnaryFunctionExpression(
-                                values[0], 
-                                node._name, 
-                                casadi_intrinsic[node._name])
-            return node
+        if node.is_variable_type():
+            return True, value(node)
 
-        def visiting_potential_leaf(self, node):
-            """Replace a node if it's a _GetItemExpression."""
-            if type(node) is EXPR.GetItemExpression:
-                _id = _GetItemIndexer(node)
-                if _id not in self.templatemap:
-                    name = "%s[%s]" % (
-                        node._base.name, ','.join(str(x) for x in _id._args))
-                    self.templatemap[_id] = casadi.SX.sym(name)
-                return True, self.templatemap[_id]
+        if not node.is_expression_type():
+            return True, value(node)
 
-            if type(node) in native_numeric_types or \
-               not node.is_expression_type() or \
-               type(node) is IndexTemplate:
-                return True, node
-
-            return False, None
-
-
-    class Convert_Pyomo2Casadi_Visitor(EXPR.ExpressionValueVisitor):
-        """
-        Expression walker that evaluates an expression 
-        generated by the Substitute_Pyomo2Casadi_Visitor walker.
-
-        In Coopr3 this walker was not necessary because the expression could
-        be simply evaluated.  But in Pyomo5, the evaluation logic was
-        changed to be non-recursive, which involves checks on the types of
-        leaves in the expression tree. Hence, the evaluation logic fails if
-        leaves in the tree are not standard Pyomo5 variable types.
-        """
-
-        def visit(self, node, values):
-            """ Visit nodes that have been expanded """
-            return node._apply_operation(values)
-
-        def visiting_potential_leaf(self, node):
-            """ 
-            Visiting a potential leaf.
-
-            Return True if the node is not expanded.
-            """
-            if node.__class__ in native_numeric_types:
-                return True, node
-
-            if node.__class__ is casadi.SX:
-                return True, node
-
-            if node.is_variable_type():
-                return True, value(node)
-
-            if not node.is_expression_type():
-                return True, value(node)
-
-            return False, None
+        return False, None
 
 
 def substitute_pyomo2casadi(expr, templatemap):
@@ -393,7 +395,7 @@ class Simulator:
     """
 
     def __init__(self, m, package='scipy'):
-        
+
         self._intpackage = package
         if self._intpackage not in ['scipy', 'casadi']:
             raise DAE_Error(
@@ -404,14 +406,20 @@ class Simulator:
             if not scipy_available:
                 # Converting this to a warning so that Simulator initialization
                 # can be tested even when scipy is unavailable
-                logger.warning("The scipy module is not available. You may "
-                               "build the Simulator object but you will not "
-                               "be able to run the simulation.")
+                logger.warning(
+                    "The scipy module is not available. "
+                    "You may build the Simulator object but you will not "
+                    "be able to run the simulation.")
+            elif is_pypy:
+                logger.warning(
+                    "The scipy ODE integrators do not work in pypy. "
+                    "You may build the Simulator object but you will not "
+                    "be able to run the simulation.")
         else:
             if not casadi_available:
                 # Initializing the simulator for use with casadi requires
                 # access to casadi objects. Therefore, we must throw an error
-                # here instead of a warning. 
+                # here instead of a warning.
                 raise ValueError("The casadi module is not available. "
                                   "Cannot simulate model.")
 
@@ -452,17 +460,17 @@ class Simulator:
         # RHS. Must find a RHS for every derivative var otherwise ERROR. Build
         # dictionary of DerivativeVar:RHS equation.
         for con in m.component_objects(Constraint, active=True):
-            
+
             # Skip the discretization equations if model is discretized
             if '_disc_eq' in con.name:
                 continue
-            
+
             # Check dimension of the Constraint. Check if the
             # Constraint is indexed by the continuous set and
             # determine its order in the indexing sets
             if con.dim() == 0:
                 continue
-                
+
             conindex = con.index_set()
             if not hasattr(conindex, 'set_tuple'):
                 # Check if the continuous set is the indexing set
@@ -497,7 +505,7 @@ class Simulator:
 
             for i in noncsidx:
                 # Insert the index template and call the rule to
-                # create a templated expression              
+                # create a templated expression
                 if i is None:
                     tempexp = conrule(m, cstemplate)
                 else:
@@ -509,14 +517,14 @@ class Simulator:
                 # Check to make sure it's an EqualityExpression
                 if not type(tempexp) is EXPR.EqualityExpression:
                     continue
-            
+
                 # Check to make sure it's a differential equation with
                 # separable RHS
                 args = None
-                # Case 1: m.dxdt[t] = RHS 
+                # Case 1: m.dxdt[t] = RHS
                 if type(tempexp.arg(0)) is EXPR.GetItemExpression:
                     args = _check_getitemexpression(tempexp, 0)
-            
+
                 # Case 2: RHS = m.dxdt[t]
                 if args is None:
                     if type(tempexp.arg(1)) is EXPR.GetItemExpression:
@@ -581,7 +589,7 @@ class Simulator:
                     algexp = substitute_pyomo2casadi(tempexp, templatemap)
                     alglist.append(algexp)
                     continue
-            
+
                 # Add the differential equation to rhsdict and derivlist
                 dv = args[0]
                 RHS = args[1]
@@ -590,7 +598,7 @@ class Simulator:
                     raise DAE_Error(
                         "Found multiple RHS expressions for the "
                         "DerivativeVar %s" % str(dvkey))
-            
+
                 derivlist.append(dvkey)
                 if self._intpackage == 'casadi':
                     rhsdict[dvkey] = substitute_pyomo2casadi(RHS, templatemap)
@@ -610,7 +618,7 @@ class Simulator:
         diffvars = []
 
         for deriv in derivlist:
-            sv = deriv._base.get_state_var()
+            sv = deriv.base.get_state_var()
             diffvars.append(_GetItemIndexer(sv[deriv._args]))
 
         # Create ordered list of algebraic variables and time-varying
@@ -618,7 +626,7 @@ class Simulator:
         algvars = []
 
         for item in iterkeys(templatemap):
-            if item._base.name in derivs:
+            if item.base.name in derivs:
                 # Make sure there are no DerivativeVars in the
                 # template map
                 raise DAE_Error(
@@ -627,7 +635,7 @@ class Simulator:
             if item not in diffvars:
                 # Finds time varying parameters and algebraic vars
                 algvars.append(item)
-                
+
         if self._intpackage == 'scipy':
             # Function sent to scipy integrator
             def _rhsfun(t, x):
@@ -641,14 +649,14 @@ class Simulator:
                     residual.append(rhsdict[d]())
 
                 return residual
-            self._rhsfun = _rhsfun   
-            
+            self._rhsfun = _rhsfun
+
         # Add any diffvars not added by expression walker to self._templatemap
         if self._intpackage == 'casadi':
             for _id in diffvars:
                 if _id not in templatemap:
                     name = "%s[%s]" % (
-                        _id._base.name, ','.join(str(x) for x in _id._args))
+                        _id.base.name, ','.join(str(x) for x in _id.args))
                     templatemap[_id] = casadi.SX.sym(name)
 
         self._contset = contset
@@ -693,7 +701,7 @@ class Simulator:
         -------
         `list`
 
-        """        
+        """
         if vartype == 'time-varying':
             return self._algvars
         elif vartype == 'algebraic':
@@ -702,7 +710,7 @@ class Simulator:
             return self._siminputvars
         else:
             return self._diffvars
-        
+
     def simulate(self, numpoints=None, tstep=None, integrator=None,
                  varying_inputs=None, initcon=None, integrator_options=None):
         """
@@ -765,7 +773,7 @@ class Simulator:
                 integrator = 'lsoda'
         else:
             # Specify the casadi integrator to use for simulation.
-            # Only a subset of these integrators may be used for 
+            # Only a subset of these integrators may be used for
             # DAE simulation. We defer this check to CasADi.
             valid_integrators = ['cvodes', 'idas', 'collocation', 'rk']
             if integrator is None:
@@ -784,7 +792,7 @@ class Simulator:
             raise ValueError(
                 "The step size %6.2f is larger than the span of the "
                 "ContinuousSet %s" % (tstep, self._contset.name()))
-        
+
         if tstep is not None and numpoints is not None:
             raise ValueError(
                 "Cannot specify both the step size and the number of "
@@ -818,7 +826,7 @@ class Simulator:
 
             for alg in self._algvars:
                 if alg._base in varying_inputs:
-                    # Find all the switching points         
+                    # Find all the switching points
                     switchpts += varying_inputs[alg._base].keys()
                     # Add to dictionary of siminputvars
                     self._siminputvars[alg._base] = alg
@@ -835,7 +843,7 @@ class Simulator:
                                 "for more information.")
 
             # Get the set of unique points
-            switchpts = list(set(switchpts)) 
+            switchpts = list(set(switchpts))
             switchpts.sort()
 
             # Make sure all the switchpts are within the bounds of
@@ -881,7 +889,10 @@ class Simulator:
         if self._intpackage == 'scipy':
             if not scipy_available:
                 raise ValueError("The scipy module is not available. "
-                                  "Cannot simulate the model.")
+                                 "Cannot simulate the model.")
+            if is_pypy:
+                raise ValueError("The scipy ODE integrators do not work "
+                                 "under pypy. Cannot simulate the model.")
             tsim, profile = self._simulate_with_scipy(initcon, tsim, switchpts,
                                                       varying_inputs,
                                                       integrator,
@@ -902,7 +913,7 @@ class Simulator:
 
         self._tsim = tsim
         self._simsolution = profile
-            
+
         return [tsim, profile]
 
     def _simulate_with_scipy(self, initcon, tsim, switchpts,
@@ -1041,11 +1052,11 @@ class Simulator:
                 "Tried to initialize the model without simulating it first")
 
         tvals = list(self._contset)
- 
+
         # Build list of state and algebraic variables
         # that can be initialized
         initvars = self._diffvars + self._simalgvars
-               
+
         for idx, v in enumerate(initvars):
             for idx2, i in enumerate(v._args):
                     if type(i) is IndexTemplate:

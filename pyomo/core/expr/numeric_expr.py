@@ -19,6 +19,7 @@ logger = logging.getLogger('pyomo.core')
 
 from pyutilib.math.util import isclose
 from pyomo.common.deprecation import deprecated
+from pyomo.common.errors import DeveloperError
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -629,10 +630,7 @@ class ExternalFunctionExpression(ExpressionBase):
         return self._fcn.getname(*args, **kwds)
 
     def _compute_polynomial_degree(self, result):
-        # If the expression is constant, then
-        # this is detected earlier.  Hence, we can safely
-        # return None.
-        return None
+        return 0 if all(arg == 0 for arg in result) else None
 
     def _apply_operation(self, result):
         return self._fcn.evaluate( result )
@@ -640,6 +638,13 @@ class ExternalFunctionExpression(ExpressionBase):
     def _to_string(self, values, verbose, smap, compute_values):
         return "{0}({1})".format(self.getname(), ", ".join(values))
 
+    def get_arg_units(self):
+        """ Return the units for this external functions arguments """
+        return self._fcn.get_arg_units()
+
+    def get_units(self):
+        """ Get the units of the return value for this external function """
+        return self._fcn.get_units()
 
 class NPV_ExternalFunctionExpression(ExternalFunctionExpression):
     __slots__ = ()
@@ -1058,85 +1063,6 @@ class _MutableSumExpression(SumExpression):
         return self
 
 
-class GetItemExpression(ExpressionBase):
-    """
-    Expression to call :func:`__getitem__` on the base object.
-    """
-    __slots__ = ('_base',)
-    PRECEDENCE = 1
-
-    def _precedence(self):  #pragma: no cover
-        return GetItemExpression.PRECEDENCE
-
-    def __init__(self, args, base=None):
-        """Construct an expression with an operation and a set of arguments"""
-        self._args_ = args
-        self._base = base
-
-    def nargs(self):
-        return len(self._args_)
-
-    def create_node_with_local_data(self, args):
-        return self.__class__(args, self._base)
-
-    def __getstate__(self):
-        state = super(GetItemExpression, self).__getstate__()
-        for i in GetItemExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    def getname(self, *args, **kwds):
-        return self._base.getname(*args, **kwds)
-
-    def is_potentially_variable(self):
-        if any(arg.is_potentially_variable() for arg in self._args_
-               if arg.__class__ not in nonpyomo_leaf_types):
-            return True
-        for x in itervalues(self._base):
-            if x.__class__ not in nonpyomo_leaf_types \
-               and x.is_potentially_variable():
-                return True
-        return False
-
-    def is_fixed(self):
-        if any(self._args_):
-            for x in itervalues(self._base):
-                if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
-                    return False
-        return True
-
-    def _is_fixed(self, values):
-        for x in itervalues(self._base):
-            if not x.__class__ in nonpyomo_leaf_types and not x.is_fixed():
-                return False
-        return True
-
-    def _compute_polynomial_degree(self, result):       # TODO: coverage
-        if any(x != 0 for x in result):
-            return None
-        ans = 0
-        for x in itervalues(self._base):
-            if x.__class__ in nonpyomo_leaf_types:
-                continue
-            tmp = x.polynomial_degree()
-            if tmp is None:
-                return None
-            elif tmp > ans:
-                ans = tmp
-        return ans
-
-    def _apply_operation(self, result):                 # TODO: coverage
-        return value(self._base.__getitem__( tuple(result) ))
-
-    def _to_string(self, values, verbose, smap, compute_values):
-        if verbose:
-            return "{0}({1})".format(self.getname(), values[0])
-        return "%s%s" % (self.getname(), values[0])
-
-    def resolve_template(self):                         # TODO: coverage
-        return self._base.__getitem__(tuple(value(i) for i in self._args_))
-
-
 class Expr_ifExpression(ExpressionBase):
     """
     A logical if-then-else expression::
@@ -1178,11 +1104,13 @@ class Expr_ifExpression(ExpressionBase):
 
     def _is_fixed(self, args):
         assert(len(args) == 3)
-        if args[0]: #self._if.is_constant():
+        if args[0]: # self._if.is_fixed():
+            if args[1] and args[2]:
+                return True
             if value(self._if):
-                return args[1] #self._then.is_constant()
+                return args[1] # self._then.is_fixed()
             else:
-                return args[2] #self._else.is_constant()
+                return args[2] # self._else.is_fixed()
         else:
             return False
 
@@ -1204,6 +1132,8 @@ class Expr_ifExpression(ExpressionBase):
     def _compute_polynomial_degree(self, result):
         _if, _then, _else = result
         if _if == 0:
+            if _then == _else:
+                return _then
             try:
                 return _then if value(self._if) else _else
             except ValueError:
@@ -1363,18 +1293,16 @@ class LinearExpression(ExpressionBase):
         return 'sum'
 
     def _compute_polynomial_degree(self, result):
-        return 1 if len(self.linear_vars) > 0 else 0
+        return 1 if not self.is_fixed() else 0
 
     def is_constant(self):
         return len(self.linear_vars) == 0
 
+    def _is_fixed(self, values=None):
+        return all(v.fixed for v in self.linear_vars)
+
     def is_fixed(self):
-        if len(self.linear_vars) == 0:
-            return True
-        for v in self.linear_vars:
-            if not v.fixed:
-                return False
-        return True
+        return self._is_fixed()
 
     def _to_string(self, values, verbose, smap, compute_values):
         tmp = []
@@ -1649,23 +1577,20 @@ def _decompose_linear_terms(expr, multiplier=1):
 
 
 def _process_arg(obj):
-    try:
-        if obj.is_parameter_type() and not obj._component()._mutable and obj._constructed:
-            # Return the value of an immutable SimpleParam or ParamData object
-            return obj()
-
-        elif obj.__class__ is NumericConstant:
-            return obj.value
-
-        return obj
-    except AttributeError:
-        if obj.is_indexed():
-            raise TypeError(
-                    "Argument for expression is an indexed numeric "
-                    "value\nspecified without an index:\n\t%s\nIs this "
-                    "value defined over an index that you did not specify?"
-                    % (obj.name, ) )
-        raise
+    # Note: caller is responsible for filtering out native types and
+    # expressions.
+    if obj.is_numeric_type() and obj.is_constant():
+        # Resolve constants (e.g., immutable scalar Params & NumericConstants)
+        return value(obj)
+    # User assistance: provide a helpful exception when using an indexed
+    # object in an expression
+    if obj.is_component_type() and obj.is_indexed():
+        raise TypeError(
+            "Argument for expression is an indexed numeric "
+            "value\nspecified without an index:\n\t%s\nIs this "
+            "value defined over an index that you did not specify?"
+            % (obj.name, ) )
+    return obj
 
 
 #@profile

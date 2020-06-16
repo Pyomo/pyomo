@@ -1,13 +1,9 @@
-import pyutilib.th as unittest
 import math
-import pyomo.contrib.fbbt.interval as interval
+import pyutilib.th as unittest
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.errors import InfeasibleConstraintException
-try:
-    import numpy as np
-    numpy_available = True
-    np.random.seed(0)
-except ImportError:
-    numpy_available = False
+import pyomo.contrib.fbbt.interval as interval
+
 try:
     isfinite = math.isfinite
 except AttributeError:
@@ -16,6 +12,10 @@ except AttributeError:
         return not (math.isnan(x) or math.isinf(x))
 
 class TestInterval(unittest.TestCase):
+    def setUp(self):
+        if numpy_available:
+            np.random.seed(0)
+
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_add(self):
         xl = -2.5
@@ -252,55 +252,55 @@ class TestInterval(unittest.TestCase):
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_asin(self):
-        yl, yu = interval.asin(-0.5, 0.5, -interval.inf, interval.inf)
+        yl, yu = interval.asin(-0.5, 0.5, -interval.inf, interval.inf, feasibility_tol=1e-8)
         self.assertEqual(yl, -interval.inf)
         self.assertEqual(yu, interval.inf)
-        yl, yu = interval.asin(-0.5, 0.5, -math.pi, math.pi)
+        yl, yu = interval.asin(-0.5, 0.5, -math.pi, math.pi, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, -math.pi, 12)
         self.assertAlmostEqual(yu, math.pi, 12)
-        yl, yu = interval.asin(-0.5, 0.5, -math.pi/2, math.pi/2)
+        yl, yu = interval.asin(-0.5, 0.5, -math.pi/2, math.pi/2, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, math.asin(-0.5))
         self.assertAlmostEqual(yu, math.asin(0.5))
-        yl, yu = interval.asin(-0.5, 0.5, -math.pi/2-0.1, math.pi/2+0.1)
+        yl, yu = interval.asin(-0.5, 0.5, -math.pi/2-0.1, math.pi/2+0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, math.asin(-0.5))
         self.assertAlmostEqual(yu, math.asin(0.5))
-        yl, yu = interval.asin(-0.5, 0.5, -math.pi/2+0.1, math.pi/2-0.1)
+        yl, yu = interval.asin(-0.5, 0.5, -math.pi/2+0.1, math.pi/2-0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, math.asin(-0.5))
         self.assertAlmostEqual(yu, math.asin(0.5))
-        yl, yu = interval.asin(-0.5, 0.5, -1.5*math.pi, 1.5*math.pi)
+        yl, yu = interval.asin(-0.5, 0.5, -1.5*math.pi, 1.5*math.pi, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, -3.6651914291880920, 12)
         self.assertAlmostEqual(yu, 3.6651914291880920, 12)
-        yl, yu = interval.asin(-0.5, 0.5, -1.5*math.pi-0.1, 1.5*math.pi+0.1)
+        yl, yu = interval.asin(-0.5, 0.5, -1.5*math.pi-0.1, 1.5*math.pi+0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, -3.6651914291880920, 12)
         self.assertAlmostEqual(yu, 3.6651914291880920, 12)
-        yl, yu = interval.asin(-0.5, 0.5, -1.5*math.pi+0.1, 1.5*math.pi-0.1)
+        yl, yu = interval.asin(-0.5, 0.5, -1.5*math.pi+0.1, 1.5*math.pi-0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, -3.6651914291880920, 12)
         self.assertAlmostEqual(yu, 3.6651914291880920, 12)
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_acos(self):
-        yl, yu = interval.acos(-0.5, 0.5, -interval.inf, interval.inf)
+        yl, yu = interval.acos(-0.5, 0.5, -interval.inf, interval.inf, feasibility_tol=1e-8)
         self.assertEqual(yl, -interval.inf)
         self.assertEqual(yu, interval.inf)
-        yl, yu = interval.acos(-0.5, 0.5, -0.5*math.pi, 0.5*math.pi)
+        yl, yu = interval.acos(-0.5, 0.5, -0.5*math.pi, 0.5*math.pi, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, -0.5*math.pi, 12)
         self.assertAlmostEqual(yu, 0.5*math.pi, 12)
-        yl, yu = interval.acos(-0.5, 0.5, 0, math.pi)
+        yl, yu = interval.acos(-0.5, 0.5, 0, math.pi, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, math.acos(0.5))
         self.assertAlmostEqual(yu, math.acos(-0.5))
-        yl, yu = interval.acos(-0.5, 0.5, 0-0.1, math.pi+0.1)
+        yl, yu = interval.acos(-0.5, 0.5, 0-0.1, math.pi+0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, math.acos(0.5))
         self.assertAlmostEqual(yu, math.acos(-0.5))
-        yl, yu = interval.acos(-0.5, 0.5, 0+0.1, math.pi-0.1)
+        yl, yu = interval.acos(-0.5, 0.5, 0+0.1, math.pi-0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, math.acos(0.5))
         self.assertAlmostEqual(yu, math.acos(-0.5))
-        yl, yu = interval.acos(-0.5, 0.5, -math.pi, 0)
+        yl, yu = interval.acos(-0.5, 0.5, -math.pi, 0, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, -math.acos(-0.5), 12)
         self.assertAlmostEqual(yu, -math.acos(0.5), 12)
-        yl, yu = interval.acos(-0.5, 0.5, -math.pi-0.1, 0+0.1)
+        yl, yu = interval.acos(-0.5, 0.5, -math.pi-0.1, 0+0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, -math.acos(-0.5), 12)
         self.assertAlmostEqual(yu, -math.acos(0.5), 12)
-        yl, yu = interval.acos(-0.5, 0.5, -math.pi+0.1, 0-0.1)
+        yl, yu = interval.acos(-0.5, 0.5, -math.pi+0.1, 0-0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(yl, -math.acos(-0.5), 12)
         self.assertAlmostEqual(yu, -math.acos(0.5), 12)
 

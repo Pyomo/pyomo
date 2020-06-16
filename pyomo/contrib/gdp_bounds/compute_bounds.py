@@ -30,7 +30,7 @@ def disjunctive_obbt(model, solver):
     model._disjuncts_to_process = list(model.component_data_objects(
         ctype=Disjunct, active=True, descend_into=(Block, Disjunct),
         descent_order=TraversalStrategy.BreadthFirstSearch))
-    if model.type() == Disjunct:
+    if model.ctype == Disjunct:
         model._disjuncts_to_process.insert(0, model)
 
     linear_var_set = ComponentSet()
@@ -145,7 +145,7 @@ def fbbt_disjunct(disj, parent_bounds):
     try:
         new_bnds = fbbt(disj)
     except InfeasibleConstraintException as e:
-        if disj.type() == Disjunct:
+        if disj.ctype == Disjunct:
             disj.deactivate()  # simply prune the disjunct
         new_bnds = parent_bounds
     bnds_manager.pop_bounds()

@@ -62,15 +62,15 @@ Transformation
 
 To use standard commercial solvers, you must convert the disjunctive model to a standard MIP/MINLP model.
 The two classical strategies for doing so are the (included) Big-M and Hull reformulations.
-From the Pyomo command line,  include the option ``--transform pyomo.gdp.bigm`` or ``--transform pyomo.gdp.chull``.
+From the Pyomo command line,  include the option ``--transform pyomo.gdp.bigm`` or ``--transform pyomo.gdp.hull``.
 If you are using a Python script, ``TransformationFactory`` accomplishes the same functionality:
 
 - ``TransformationFactory('gdp.bigm').apply_to(model)``
-- ``TransformationFactory('gdp.chull').apply_to(model)``
+- ``TransformationFactory('gdp.hull').apply_to(model)``
 
 .. note::
 
-    - all variables that appear in disjuncts need upper and lower bounds for chull
+    - all variables that appear in disjuncts need upper and lower bounds for hull
 
     - for linear models, the BigM transform can estimate reasonably tight M
       values for you if variables are bounded.

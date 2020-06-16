@@ -48,17 +48,17 @@ class TestArc(unittest.TestCase):
         m = ConcreteModel()
         m.c1 = Arc([1, 2, 3])
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype, Arc)
 
         m = AbstractModel()
         m.c1 = Arc([1, 2, 3])
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype, Arc)
 
 
         inst = m.create_instance()
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype, Arc)
 
     def test_with_scalar_ports(self):
         def rule(m):
@@ -173,10 +173,10 @@ class TestArc(unittest.TestCase):
         m.prt2 = Port(m.s)
         m.c1 = Arc(m.s, rule=rule1)
         self.assertEqual(len(m.c1), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype, Arc)
         m.c2 = Arc(m.s, rule=rule2)
         self.assertEqual(len(m.c2), 0)
-        self.assertIs(m.c1.type(), Arc)
+        self.assertIs(m.c1.ctype, Arc)
 
         inst = m.create_instance()
         self.assertEqual(len(inst.c1), 5)
@@ -1163,8 +1163,9 @@ class TestArc(unittest.TestCase):
 
         ref = """
 1 Set Declarations
-    time : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
+    time : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
 
 5 Block Declarations
     cs1_expanded : Size=1, Index=None, Active=True
@@ -1359,8 +1360,9 @@ class TestArc(unittest.TestCase):
         m.pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """1 Set Declarations
-    comp : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
-        ['a', 'b', 'c']
+    comp : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'a', 'b', 'c'}
 
 16 Block Declarations
     feed : Size=1, Index=None, Active=True

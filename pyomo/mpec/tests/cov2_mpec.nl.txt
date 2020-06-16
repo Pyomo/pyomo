@@ -1,6 +1,7 @@
 1 Set Declarations
-    cc_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(0, 2)
-        [0, 1, 2]
+    cc_index : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {0, 1, 2}
 
 4 Var Declarations
     x1 : Size=1, Index=None

@@ -152,7 +152,7 @@ class PyomoInterface(object):
         TRF = Block()
 
         # Get all varibles
-        seenVar = Set()
+        seenVar = set()
         allVariables = []
         for var in model.component_data_objects(Var):
             if id(var) not in seenVar:
@@ -186,7 +186,7 @@ class PyomoInterface(object):
         # xvars and zvars are lists of x and z varibles as in the paper
         TRF.xvars = []
         TRF.zvars = []
-        seenVar = Set()
+        seenVar = set()
         for varss in TRF.exfn_xvars:
             for var in varss:
                 if id(var) not in seenVar:

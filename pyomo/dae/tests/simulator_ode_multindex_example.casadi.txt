@@ -1,17 +1,22 @@
+1 RangeSet Declarations
+    t_domain : Dimen=1, Size=Inf, Bounds=(0, 20)
+        Key  : Finite : Members
+        None :  False : [0.0..20.0]
+
 2 Param Declarations
     b : Size=51, Index=t, Domain=Any, Default=(function), Mutable=False
-        Key  : Value
-         0.0 :  0.25
-        20.0 :  0.25
+        Key : Value
+          0 :  0.25
+         20 :  0.25
     c : Size=51, Index=t, Domain=Any, Default=(function), Mutable=False
-        Key  : Value
-         0.0 :   5.0
-        20.0 :   5.0
+        Key : Value
+          0 :   5.0
+         20 :   5.0
 
 4 Var Declarations
     domegadt : Size=51, Index=t
         Key       : Lower : Value : Upper : Fixed : Stale : Domain
-              0.0 :  None :  None :  None : False :  True :  Reals
+                0 :  None :  None :  None : False :  True :  Reals
          0.114208 :  None :  None :  None : False :  True :  Reals
          0.553686 :  None :  None :  None : False :  True :  Reals
          1.167181 :  None :  None :  None : False :  True :  Reals
@@ -61,10 +66,10 @@
         18.553686 :  None :  None :  None : False :  True :  Reals
         19.167181 :  None :  None :  None : False :  True :  Reals
          19.72048 :  None :  None :  None : False :  True :  Reals
-             20.0 :  None :  None :  None : False :  True :  Reals
+               20 :  None :  None :  None : False :  True :  Reals
     dthetadt : Size=51, Index=t
         Key       : Lower : Value : Upper : Fixed : Stale : Domain
-              0.0 :  None :  None :  None : False :  True :  Reals
+                0 :  None :  None :  None : False :  True :  Reals
          0.114208 :  None :  None :  None : False :  True :  Reals
          0.553686 :  None :  None :  None : False :  True :  Reals
          1.167181 :  None :  None :  None : False :  True :  Reals
@@ -114,118 +119,118 @@
         18.553686 :  None :  None :  None : False :  True :  Reals
         19.167181 :  None :  None :  None : False :  True :  Reals
          19.72048 :  None :  None :  None : False :  True :  Reals
-             20.0 :  None :  None :  None : False :  True :  Reals
+               20 :  None :  None :  None : False :  True :  Reals
     omega : Size=51, Index=t
-        Key       : Lower : Value            : Upper : Fixed : Stale : Domain
-              0.0 :  None :              0.0 :  None : False : False :  Reals
-         0.114208 :  None : -0.0584052578938 :  None : False : False :  Reals
-         0.553686 :  None :  -0.339032970813 :  None : False : False :  Reals
-         1.167181 :  None :    -1.3085813728 :  None : False : False :  Reals
-          1.72048 :  None :   -3.31953476548 :  None : False : False :  Reals
-              2.0 :  None :   -3.97140607556 :  None : False : False :  Reals
-         2.114208 :  None :   -3.79414242508 :  None : False : False :  Reals
-         2.553686 :  None :   -1.87415989325 :  None : False : False :  Reals
-         3.167181 :  None :    1.15054360239 :  None : False : False :  Reals
-          3.72048 :  None :    3.15494012302 :  None : False : False :  Reals
-              4.0 :  None :    2.95904997851 :  None : False : False :  Reals
-         4.114208 :  None :    2.56317201727 :  None : False : False :  Reals
-         4.553686 :  None :   0.437993838251 :  None : False : False :  Reals
-         5.167181 :  None :   -2.24814541938 :  None : False : False :  Reals
-          5.72048 :  None :   -2.17126376795 :  None : False : False :  Reals
-              6.0 :  None :   -1.03460743462 :  None : False : False :  Reals
-         6.114208 :  None :  -0.511210101297 :  None : False : False :  Reals
-         6.553686 :  None :    1.37740185505 :  None : False : False :  Reals
-         7.167181 :  None :   0.889332600945 :  None : False : False :  Reals
-          7.72048 :  None :   0.279189792878 :  None : False : False :  Reals
-              8.0 :  None :    1.25264983609 :  None : False : False :  Reals
-         8.114208 :  None :   0.360039532424 :  None : False : False :  Reals
-         8.553686 :  None :   -0.37650136964 :  None : False : False :  Reals
-         9.167181 :  None :   -1.08194831437 :  None : False : False :  Reals
-          9.72048 :  None :    1.47263866269 :  None : False : False :  Reals
-             10.0 :  None :  -0.617334302628 :  None : False : False :  Reals
-        10.114208 :  None :   -1.42837229393 :  None : False : False :  Reals
-        10.553686 :  None :    1.16122545389 :  None : False : False :  Reals
-        11.167181 :  None :  -0.709902142476 :  None : False : False :  Reals
-         11.72048 :  None :  -0.143033280586 :  None : False : False :  Reals
-             12.0 :  None :  -0.834040087779 :  None : False : False :  Reals
-        12.114208 :  None :  -0.264764663766 :  None : False : False :  Reals
-        12.553686 :  None :   0.329045088402 :  None : False : False :  Reals
-        13.167181 :  None :    0.69325749595 :  None : False : False :  Reals
-         13.72048 :  None :  -0.912242843384 :  None : False : False :  Reals
-             14.0 :  None :   0.332757536694 :  None : False : False :  Reals
-        14.114208 :  None :    0.81993163423 :  None : False : False :  Reals
-        14.553686 :  None :  -0.819092714178 :  None : False : False :  Reals
-        15.167181 :  None :   0.520931768276 :  None : False : False :  Reals
-         15.72048 :  None :  0.0909453934102 :  None : False : False :  Reals
-             16.0 :  None :   0.647547856913 :  None : False : False :  Reals
-        16.114208 :  None :   0.159231570628 :  None : False : False :  Reals
-        16.553686 :  None :  -0.230675325002 :  None : False : False :  Reals
-        17.167181 :  None :  -0.623976486551 :  None : False : False :  Reals
-         17.72048 :  None :   0.655441416139 :  None : False : False :  Reals
-             18.0 :  None :  -0.318472771289 :  None : False : False :  Reals
-        18.114208 :  None :  -0.620355007629 :  None : False : False :  Reals
-        18.553686 :  None :   0.682800758587 :  None : False : False :  Reals
-        19.167181 :  None :  -0.447135799476 :  None : False : False :  Reals
-         19.72048 :  None : -0.0584028363221 :  None : False : False :  Reals
-             20.0 :  None :  -0.709688679945 :  None : False : False :  Reals
+        Key       : Lower : Value                 : Upper : Fixed : Stale : Domain
+                0 :  None :                   0.0 :  None : False : False :  Reals
+         0.114208 :  None : -0.058405257893819534 :  None : False : False :  Reals
+         0.553686 :  None :   -0.3390329708133848 :  None : False : False :  Reals
+         1.167181 :  None :   -1.3085813728049587 :  None : False : False :  Reals
+          1.72048 :  None :   -3.3195347654783536 :  None : False : False :  Reals
+              2.0 :  None :    -3.971406075558495 :  None : False : False :  Reals
+         2.114208 :  None :   -3.7941424250814775 :  None : False : False :  Reals
+         2.553686 :  None :   -1.8741598932456631 :  None : False : False :  Reals
+         3.167181 :  None :    1.1505436023920077 :  None : False : False :  Reals
+          3.72048 :  None :     3.154940123020708 :  None : False : False :  Reals
+              4.0 :  None :    2.9590499785149884 :  None : False : False :  Reals
+         4.114208 :  None :     2.563172017271247 :  None : False : False :  Reals
+         4.553686 :  None :    0.4379938382509232 :  None : False : False :  Reals
+         5.167181 :  None :   -2.2481454193787926 :  None : False : False :  Reals
+          5.72048 :  None :   -2.1712637679471816 :  None : False : False :  Reals
+              6.0 :  None :   -1.0346074346163499 :  None : False : False :  Reals
+         6.114208 :  None :   -0.5112101012972221 :  None : False : False :  Reals
+         6.553686 :  None :    1.3774018550511653 :  None : False : False :  Reals
+         7.167181 :  None :    0.8893326009446438 :  None : False : False :  Reals
+          7.72048 :  None :   0.27918979287827206 :  None : False : False :  Reals
+              8.0 :  None :    1.2526498360902396 :  None : False : False :  Reals
+         8.114208 :  None :   0.36003953242394293 :  None : False : False :  Reals
+         8.553686 :  None :   -0.3765013696399606 :  None : False : False :  Reals
+         9.167181 :  None :   -1.0819483143725557 :  None : False : False :  Reals
+          9.72048 :  None :    1.4726386626855357 :  None : False : False :  Reals
+             10.0 :  None :   -0.6173343026282454 :  None : False : False :  Reals
+        10.114208 :  None :   -1.4283722939263455 :  None : False : False :  Reals
+        10.553686 :  None :     1.161225453894422 :  None : False : False :  Reals
+        11.167181 :  None :   -0.7099021424761176 :  None : False : False :  Reals
+         11.72048 :  None :   -0.1430332805861001 :  None : False : False :  Reals
+             12.0 :  None :   -0.8340400877789892 :  None : False : False :  Reals
+        12.114208 :  None :  -0.26476466376602426 :  None : False : False :  Reals
+        12.553686 :  None :     0.329045088402266 :  None : False : False :  Reals
+        13.167181 :  None :    0.6932574959499878 :  None : False : False :  Reals
+         13.72048 :  None :   -0.9122428433839129 :  None : False : False :  Reals
+             14.0 :  None :   0.33275753669359476 :  None : False : False :  Reals
+        14.114208 :  None :    0.8199316342299731 :  None : False : False :  Reals
+        14.553686 :  None :   -0.8190927141775143 :  None : False : False :  Reals
+        15.167181 :  None :    0.5209317682758074 :  None : False : False :  Reals
+         15.72048 :  None :   0.09094539341023089 :  None : False : False :  Reals
+             16.0 :  None :    0.6475478569127426 :  None : False : False :  Reals
+        16.114208 :  None :   0.15923157062775206 :  None : False : False :  Reals
+        16.553686 :  None :  -0.23067532500173027 :  None : False : False :  Reals
+        17.167181 :  None :    -0.623976486550823 :  None : False : False :  Reals
+         17.72048 :  None :    0.6554414161388513 :  None : False : False :  Reals
+             18.0 :  None :  -0.31847277128926654 :  None : False : False :  Reals
+        18.114208 :  None :   -0.6203550076289002 :  None : False : False :  Reals
+        18.553686 :  None :    0.6828007585871902 :  None : False : False :  Reals
+        19.167181 :  None :  -0.44713579947646104 :  None : False : False :  Reals
+         19.72048 :  None :  -0.05840283632215004 :  None : False : False :  Reals
+               20 :  None :   -0.7096886799454517 :  None : False : False :  Reals
     theta : Size=51, Index=t
-        Key       : Lower : Value            : Upper : Fixed : Stale : Domain
-              0.0 :  None :             3.04 :  None : False : False :  Reals
-         0.114208 :  None :    3.03414968935 :  None : False : False :  Reals
-         0.553686 :  None :     2.9527910798 :  None : False : False :  Reals
-         1.167181 :  None :    2.50353492264 :  None : False : False :  Reals
-          1.72048 :  None :    1.25038734969 :  None : False : False :  Reals
-              2.0 :  None :   0.214977757715 :  None : False : False :  Reals
-         2.114208 :  None :  -0.224858250303 :  None : False : False :  Reals
-         2.553686 :  None :   -1.52697150354 :  None : False : False :  Reals
-         3.167181 :  None :    -1.7242388562 :  None : False : False :  Reals
-          3.72048 :  None :  -0.449765913555 :  None : False : False :  Reals
-              4.0 :  None :   0.436416451536 :  None : False : False :  Reals
-         4.114208 :  None :   0.745364697702 :  None : False : False :  Reals
-         4.553686 :  None :    1.41918820376 :  None : False : False :  Reals
-         5.167181 :  None :   0.804036306996 :  None : False : False :  Reals
-          5.72048 :  None :  -0.582363112315 :  None : False : False :  Reals
-              6.0 :  None :   -1.04032085734 :  None : False : False :  Reals
-         6.114208 :  None :   -1.13000769903 :  None : False : False :  Reals
-         6.553686 :  None :  -0.918025239162 :  None : False : False :  Reals
-         7.167181 :  None :    0.20387757648 :  None : False : False :  Reals
-          7.72048 :  None :   -0.24868114103 :  None : False : False :  Reals
-              8.0 :  None :   0.126051094754 :  None : False : False :  Reals
-         8.114208 :  None :   0.241463566602 :  None : False : False :  Reals
-         8.553686 :  None :  -0.202793188079 :  None : False : False :  Reals
-         9.167181 :  None :   0.117930402934 :  None : False : False :  Reals
-          9.72048 :  None :  0.0203203438467 :  None : False : False :  Reals
-             10.0 :  None :   0.145997082822 :  None : False : False :  Reals
-        10.114208 :  None :  0.0525273120298 :  None : False : False :  Reals
-        10.553686 :  None : -0.0560898179522 :  None : False : False :  Reals
-        11.167181 :  None :  -0.118326206618 :  None : False : False :  Reals
-         11.72048 :  None :   0.176485174765 :  None : False : False :  Reals
-             12.0 :  None : -0.0601043180384 :  None : False : False :  Reals
-        12.114208 :  None :  -0.161024576532 :  None : False : False :  Reals
-        12.553686 :  None :   0.135994004702 :  None : False : False :  Reals
-        13.167181 :  None : -0.0872828635129 :  None : False : False :  Reals
-         13.72048 :  None : -0.0146516681089 :  None : False : False :  Reals
-             14.0 :  None : -0.0985083880672 :  None : False : False :  Reals
-        14.114208 :  None : -0.0280094635414 :  None : False : False :  Reals
-        14.553686 :  None :  0.0397261585264 :  None : False : False :  Reals
-        15.167181 :  None :   0.084135158928 :  None : False : False :  Reals
-         15.72048 :  None :  -0.101500735908 :  None : False : False :  Reals
-             16.0 :  None :  0.0418304000833 :  None : False : False :  Reals
-        16.114208 :  None :  0.0955793974675 :  None : False : False :  Reals
-        16.553686 :  None :  -0.106759456842 :  None : False : False :  Reals
-        17.167181 :  None :  0.0727930738426 :  None : False : False :  Reals
-         17.72048 :  None :  0.0109256078817 :  None : False : False :  Reals
-             18.0 :  None :  0.0961324284498 :  None : False : False :  Reals
-        18.114208 :  None :  0.0223686975544 :  None : False : False :  Reals
-        18.553686 :  None : -0.0279649824344 :  None : False : False :  Reals
-        19.167181 :  None : -0.0807160101341 :  None : False : False :  Reals
-         19.72048 :  None :  0.0866781225585 :  None : False : False :  Reals
-             20.0 :  None : -0.0505391218538 :  None : False : False :  Reals
+        Key       : Lower : Value                 : Upper : Fixed : Stale : Domain
+                0 :  None :                  3.04 :  None : False : False :  Reals
+         0.114208 :  None :     3.034149689345565 :  None : False : False :  Reals
+         0.553686 :  None :    2.9527910797992223 :  None : False : False :  Reals
+         1.167181 :  None :     2.503534922642672 :  None : False : False :  Reals
+          1.72048 :  None :    1.2503873496946145 :  None : False : False :  Reals
+              2.0 :  None :    0.2149777577146028 :  None : False : False :  Reals
+         2.114208 :  None :  -0.22485825030310633 :  None : False : False :  Reals
+         2.553686 :  None :   -1.5269715035397742 :  None : False : False :  Reals
+         3.167181 :  None :   -1.7242388562041047 :  None : False : False :  Reals
+          3.72048 :  None :   -0.4497659135545762 :  None : False : False :  Reals
+              4.0 :  None :   0.43641645153623326 :  None : False : False :  Reals
+         4.114208 :  None :    0.7453646977022939 :  None : False : False :  Reals
+         4.553686 :  None :    1.4191882037645018 :  None : False : False :  Reals
+         5.167181 :  None :    0.8040363069964814 :  None : False : False :  Reals
+          5.72048 :  None :   -0.5823631123145809 :  None : False : False :  Reals
+              6.0 :  None :   -1.0403208573355598 :  None : False : False :  Reals
+         6.114208 :  None :   -1.1300076990343362 :  None : False : False :  Reals
+         6.553686 :  None :   -0.9180252391621243 :  None : False : False :  Reals
+         7.167181 :  None :    0.2038775764796361 :  None : False : False :  Reals
+          7.72048 :  None :   -0.2486811410298265 :  None : False : False :  Reals
+              8.0 :  None :   0.12605109475399842 :  None : False : False :  Reals
+         8.114208 :  None :   0.24146356660202348 :  None : False : False :  Reals
+         8.553686 :  None :  -0.20279318807903304 :  None : False : False :  Reals
+         9.167181 :  None :   0.11793040293354336 :  None : False : False :  Reals
+          9.72048 :  None :   0.02032034384667457 :  None : False : False :  Reals
+             10.0 :  None :   0.14599708282230592 :  None : False : False :  Reals
+        10.114208 :  None :  0.052527312029783904 :  None : False : False :  Reals
+        10.553686 :  None :  -0.05608981795218815 :  None : False : False :  Reals
+        11.167181 :  None :  -0.11832620661813081 :  None : False : False :  Reals
+         11.72048 :  None :   0.17648517476460931 :  None : False : False :  Reals
+             12.0 :  None :   -0.0601043180383843 :  None : False : False :  Reals
+        12.114208 :  None :  -0.16102457653244065 :  None : False : False :  Reals
+        12.553686 :  None :   0.13599400470178863 :  None : False : False :  Reals
+        13.167181 :  None :  -0.08728286351287967 :  None : False : False :  Reals
+         13.72048 :  None : -0.014651668108868976 :  None : False : False :  Reals
+             14.0 :  None :  -0.09850838806721349 :  None : False : False :  Reals
+        14.114208 :  None : -0.028009463541409152 :  None : False : False :  Reals
+        14.553686 :  None :    0.0397261585263506 :  None : False : False :  Reals
+        15.167181 :  None :   0.08413515892803465 :  None : False : False :  Reals
+         15.72048 :  None :  -0.10150073590817216 :  None : False : False :  Reals
+             16.0 :  None :  0.041830400083312666 :  None : False : False :  Reals
+        16.114208 :  None :   0.09557939746750668 :  None : False : False :  Reals
+        16.553686 :  None :  -0.10675945684210272 :  None : False : False :  Reals
+        17.167181 :  None :   0.07279307384256278 :  None : False : False :  Reals
+         17.72048 :  None :  0.010925607881672905 :  None : False : False :  Reals
+             18.0 :  None :   0.09613242844978831 :  None : False : False :  Reals
+        18.114208 :  None :  0.022368697554386544 :  None : False : False :  Reals
+        18.553686 :  None : -0.027964982434405053 :  None : False : False :  Reals
+        19.167181 :  None :  -0.08071601013411439 :  None : False : False :  Reals
+         19.72048 :  None :    0.0866781225585102 :  None : False : False :  Reals
+               20 :  None :  -0.05053912185375176 :  None : False : False :  Reals
 
 4 Constraint Declarations
     diffeq1 : Size=51, Index=t, Active=True
         Key       : Lower : Body                                                                       : Upper : Active
-              0.0 :   0.0 :                   domegadt[0.0] - (-0.25*omega[0.0] - 5.0*sin(theta[0.0])) :   0.0 :   True
+                0 :   0.0 :                         domegadt[0] - (-0.25*omega[0] - 5.0*sin(theta[0])) :   0.0 :   True
          0.114208 :   0.0 :      domegadt[0.114208] - (-0.25*omega[0.114208] - 5*sin(theta[0.114208])) :   0.0 :   True
          0.553686 :   0.0 :      domegadt[0.553686] - (-0.25*omega[0.553686] - 5*sin(theta[0.553686])) :   0.0 :   True
          1.167181 :   0.0 :      domegadt[1.167181] - (-0.25*omega[1.167181] - 5*sin(theta[1.167181])) :   0.0 :   True
@@ -275,10 +280,10 @@
         18.553686 :   0.0 : domegadt[18.553686] - (-0.025*omega[18.553686] - 50*sin(theta[18.553686])) :   0.0 :   True
         19.167181 :   0.0 : domegadt[19.167181] - (-0.025*omega[19.167181] - 50*sin(theta[19.167181])) :   0.0 :   True
          19.72048 :   0.0 :    domegadt[19.72048] - (-0.025*omega[19.72048] - 50*sin(theta[19.72048])) :   0.0 :   True
-             20.0 :   0.0 :                domegadt[20.0] - (-0.25*omega[20.0] - 5.0*sin(theta[20.0])) :   0.0 :   True
+               20 :   0.0 :                      domegadt[20] - (-0.25*omega[20] - 5.0*sin(theta[20])) :   0.0 :   True
     diffeq2 : Size=51, Index=t, Active=True
         Key       : Lower : Body                                   : Upper : Active
-              0.0 :   0.0 :             dthetadt[0.0] - omega[0.0] :   0.0 :   True
+                0 :   0.0 :                 dthetadt[0] - omega[0] :   0.0 :   True
          0.114208 :   0.0 :   dthetadt[0.114208] - omega[0.114208] :   0.0 :   True
          0.553686 :   0.0 :   dthetadt[0.553686] - omega[0.553686] :   0.0 :   True
          1.167181 :   0.0 :   dthetadt[1.167181] - omega[1.167181] :   0.0 :   True
@@ -328,14 +333,14 @@
         18.553686 :   0.0 : dthetadt[18.553686] - omega[18.553686] :   0.0 :   True
         19.167181 :   0.0 : dthetadt[19.167181] - omega[19.167181] :   0.0 :   True
          19.72048 :   0.0 :   dthetadt[19.72048] - omega[19.72048] :   0.0 :   True
-             20.0 :   0.0 :           dthetadt[20.0] - omega[20.0] :   0.0 :   True
+               20 :   0.0 :               dthetadt[20] - omega[20] :   0.0 :   True
     domegadt_disc_eq : Size=50, Index=t, Active=True
         Key       : Lower : Body                                                                                                                                                                                                                : Upper : Active
-         0.114208 :   0.0 :          domegadt[0.114208] - (-5.5193396206*omega[0.0] + 4.37796198897*omega[0.114208] + 1.44597130769*omega[0.553686] - 0.4375931981*omega[1.167181] + 0.19985260397*omega[1.72048] - 0.0668530819246*omega[2.0]) :   0.0 :   True
-         0.553686 :   0.0 :        domegadt[0.553686] - (1.79153426125*omega[0.0] - 3.58069036007*omega[0.114208] + 0.903038862042*omega[0.553686] + 1.18189858803*omega[1.167181] - 0.432950390142*omega[1.72048] + 0.137169038888*omega[2.0]) :   0.0 :   True
-         1.167181 :   0.0 :        domegadt[1.167181] - (-1.17208577895*omega[0.0] + 2.06108262312*omega[0.114208] - 2.24800856291*omega[0.553686] + 0.428382622699*omega[1.167181] + 1.25916047461*omega[1.72048] - 0.328531378567*omega[2.0]) :   0.0 :   True
-          1.72048 :   0.0 :              domegadt[1.72048] - (1.1413177501*omega[0.0] - 1.93933160986*omega[0.114208] + 1.69657595903*omega[0.553686] - 2.5941704532*omega[1.167181] + 0.29061652629*omega[1.72048] + 1.40499182764*omega[2.0]) :   0.0 :   True
-              2.0 :   0.0 :                                    domegadt[2.0] - (-2.5*omega[0.0] + 4.2062121118*omega[0.114208] - 3.48512805833*omega[0.553686] + 4.38855710208*omega[1.167181] - 9.10964115554*omega[1.72048] + 6.5*omega[2.0]) :   0.0 :   True
+         0.114208 :   0.0 :            domegadt[0.114208] - (-5.5193396206*omega[0] + 4.37796198897*omega[0.114208] + 1.44597130769*omega[0.553686] - 0.4375931981*omega[1.167181] + 0.19985260397*omega[1.72048] - 0.0668530819246*omega[2.0]) :   0.0 :   True
+         0.553686 :   0.0 :          domegadt[0.553686] - (1.79153426125*omega[0] - 3.58069036007*omega[0.114208] + 0.903038862042*omega[0.553686] + 1.18189858803*omega[1.167181] - 0.432950390142*omega[1.72048] + 0.137169038888*omega[2.0]) :   0.0 :   True
+         1.167181 :   0.0 :          domegadt[1.167181] - (-1.17208577895*omega[0] + 2.06108262312*omega[0.114208] - 2.24800856291*omega[0.553686] + 0.428382622699*omega[1.167181] + 1.25916047461*omega[1.72048] - 0.328531378567*omega[2.0]) :   0.0 :   True
+          1.72048 :   0.0 :                domegadt[1.72048] - (1.1413177501*omega[0] - 1.93933160986*omega[0.114208] + 1.69657595903*omega[0.553686] - 2.5941704532*omega[1.167181] + 0.29061652629*omega[1.72048] + 1.40499182764*omega[2.0]) :   0.0 :   True
+              2.0 :   0.0 :                                      domegadt[2.0] - (-2.5*omega[0] + 4.2062121118*omega[0.114208] - 3.48512805833*omega[0.553686] + 4.38855710208*omega[1.167181] - 9.10964115554*omega[1.72048] + 6.5*omega[2.0]) :   0.0 :   True
          2.114208 :   0.0 :          domegadt[2.114208] - (-5.5193396206*omega[2.0] + 4.37796198897*omega[2.114208] + 1.44597130769*omega[2.553686] - 0.4375931981*omega[3.167181] + 0.19985260397*omega[3.72048] - 0.0668530819246*omega[4.0]) :   0.0 :   True
          2.553686 :   0.0 :        domegadt[2.553686] - (1.79153426125*omega[2.0] - 3.58069036007*omega[2.114208] + 0.903038862042*omega[2.553686] + 1.18189858803*omega[3.167181] - 0.432950390142*omega[3.72048] + 0.137169038888*omega[4.0]) :   0.0 :   True
          3.167181 :   0.0 :        domegadt[3.167181] - (-1.17208577895*omega[2.0] + 2.06108262312*omega[2.114208] - 2.24800856291*omega[2.553686] + 0.428382622699*omega[3.167181] + 1.25916047461*omega[3.72048] - 0.328531378567*omega[4.0]) :   0.0 :   True
@@ -376,18 +381,18 @@
         17.167181 :   0.0 : domegadt[17.167181] - (-1.17208577895*omega[16.0] + 2.06108262312*omega[16.114208] - 2.24800856291*omega[16.553686] + 0.428382622699*omega[17.167181] + 1.25916047461*omega[17.72048] - 0.328531378567*omega[18.0]) :   0.0 :   True
          17.72048 :   0.0 :       domegadt[17.72048] - (1.1413177501*omega[16.0] - 1.93933160986*omega[16.114208] + 1.69657595903*omega[16.553686] - 2.5941704532*omega[17.167181] + 0.29061652629*omega[17.72048] + 1.40499182764*omega[18.0]) :   0.0 :   True
              18.0 :   0.0 :                             domegadt[18.0] - (-2.5*omega[16.0] + 4.2062121118*omega[16.114208] - 3.48512805833*omega[16.553686] + 4.38855710208*omega[17.167181] - 9.10964115554*omega[17.72048] + 6.5*omega[18.0]) :   0.0 :   True
-        18.114208 :   0.0 :   domegadt[18.114208] - (-5.5193396206*omega[18.0] + 4.37796198897*omega[18.114208] + 1.44597130769*omega[18.553686] - 0.4375931981*omega[19.167181] + 0.19985260397*omega[19.72048] - 0.0668530819246*omega[20.0]) :   0.0 :   True
-        18.553686 :   0.0 : domegadt[18.553686] - (1.79153426125*omega[18.0] - 3.58069036007*omega[18.114208] + 0.903038862042*omega[18.553686] + 1.18189858803*omega[19.167181] - 0.432950390142*omega[19.72048] + 0.137169038888*omega[20.0]) :   0.0 :   True
-        19.167181 :   0.0 : domegadt[19.167181] - (-1.17208577895*omega[18.0] + 2.06108262312*omega[18.114208] - 2.24800856291*omega[18.553686] + 0.428382622699*omega[19.167181] + 1.25916047461*omega[19.72048] - 0.328531378567*omega[20.0]) :   0.0 :   True
-         19.72048 :   0.0 :       domegadt[19.72048] - (1.1413177501*omega[18.0] - 1.93933160986*omega[18.114208] + 1.69657595903*omega[18.553686] - 2.5941704532*omega[19.167181] + 0.29061652629*omega[19.72048] + 1.40499182764*omega[20.0]) :   0.0 :   True
-             20.0 :   0.0 :                             domegadt[20.0] - (-2.5*omega[18.0] + 4.2062121118*omega[18.114208] - 3.48512805833*omega[18.553686] + 4.38855710208*omega[19.167181] - 9.10964115554*omega[19.72048] + 6.5*omega[20.0]) :   0.0 :   True
+        18.114208 :   0.0 :     domegadt[18.114208] - (-5.5193396206*omega[18.0] + 4.37796198897*omega[18.114208] + 1.44597130769*omega[18.553686] - 0.4375931981*omega[19.167181] + 0.19985260397*omega[19.72048] - 0.0668530819246*omega[20]) :   0.0 :   True
+        18.553686 :   0.0 :   domegadt[18.553686] - (1.79153426125*omega[18.0] - 3.58069036007*omega[18.114208] + 0.903038862042*omega[18.553686] + 1.18189858803*omega[19.167181] - 0.432950390142*omega[19.72048] + 0.137169038888*omega[20]) :   0.0 :   True
+        19.167181 :   0.0 :   domegadt[19.167181] - (-1.17208577895*omega[18.0] + 2.06108262312*omega[18.114208] - 2.24800856291*omega[18.553686] + 0.428382622699*omega[19.167181] + 1.25916047461*omega[19.72048] - 0.328531378567*omega[20]) :   0.0 :   True
+         19.72048 :   0.0 :         domegadt[19.72048] - (1.1413177501*omega[18.0] - 1.93933160986*omega[18.114208] + 1.69657595903*omega[18.553686] - 2.5941704532*omega[19.167181] + 0.29061652629*omega[19.72048] + 1.40499182764*omega[20]) :   0.0 :   True
+               20 :   0.0 :                                 domegadt[20] - (-2.5*omega[18.0] + 4.2062121118*omega[18.114208] - 3.48512805833*omega[18.553686] + 4.38855710208*omega[19.167181] - 9.10964115554*omega[19.72048] + 6.5*omega[20]) :   0.0 :   True
     dthetadt_disc_eq : Size=50, Index=t, Active=True
         Key       : Lower : Body                                                                                                                                                                                                                : Upper : Active
-         0.114208 :   0.0 :          dthetadt[0.114208] - (-5.5193396206*theta[0.0] + 4.37796198897*theta[0.114208] + 1.44597130769*theta[0.553686] - 0.4375931981*theta[1.167181] + 0.19985260397*theta[1.72048] - 0.0668530819246*theta[2.0]) :   0.0 :   True
-         0.553686 :   0.0 :        dthetadt[0.553686] - (1.79153426125*theta[0.0] - 3.58069036007*theta[0.114208] + 0.903038862042*theta[0.553686] + 1.18189858803*theta[1.167181] - 0.432950390142*theta[1.72048] + 0.137169038888*theta[2.0]) :   0.0 :   True
-         1.167181 :   0.0 :        dthetadt[1.167181] - (-1.17208577895*theta[0.0] + 2.06108262312*theta[0.114208] - 2.24800856291*theta[0.553686] + 0.428382622699*theta[1.167181] + 1.25916047461*theta[1.72048] - 0.328531378567*theta[2.0]) :   0.0 :   True
-          1.72048 :   0.0 :              dthetadt[1.72048] - (1.1413177501*theta[0.0] - 1.93933160986*theta[0.114208] + 1.69657595903*theta[0.553686] - 2.5941704532*theta[1.167181] + 0.29061652629*theta[1.72048] + 1.40499182764*theta[2.0]) :   0.0 :   True
-              2.0 :   0.0 :                                    dthetadt[2.0] - (-2.5*theta[0.0] + 4.2062121118*theta[0.114208] - 3.48512805833*theta[0.553686] + 4.38855710208*theta[1.167181] - 9.10964115554*theta[1.72048] + 6.5*theta[2.0]) :   0.0 :   True
+         0.114208 :   0.0 :            dthetadt[0.114208] - (-5.5193396206*theta[0] + 4.37796198897*theta[0.114208] + 1.44597130769*theta[0.553686] - 0.4375931981*theta[1.167181] + 0.19985260397*theta[1.72048] - 0.0668530819246*theta[2.0]) :   0.0 :   True
+         0.553686 :   0.0 :          dthetadt[0.553686] - (1.79153426125*theta[0] - 3.58069036007*theta[0.114208] + 0.903038862042*theta[0.553686] + 1.18189858803*theta[1.167181] - 0.432950390142*theta[1.72048] + 0.137169038888*theta[2.0]) :   0.0 :   True
+         1.167181 :   0.0 :          dthetadt[1.167181] - (-1.17208577895*theta[0] + 2.06108262312*theta[0.114208] - 2.24800856291*theta[0.553686] + 0.428382622699*theta[1.167181] + 1.25916047461*theta[1.72048] - 0.328531378567*theta[2.0]) :   0.0 :   True
+          1.72048 :   0.0 :                dthetadt[1.72048] - (1.1413177501*theta[0] - 1.93933160986*theta[0.114208] + 1.69657595903*theta[0.553686] - 2.5941704532*theta[1.167181] + 0.29061652629*theta[1.72048] + 1.40499182764*theta[2.0]) :   0.0 :   True
+              2.0 :   0.0 :                                      dthetadt[2.0] - (-2.5*theta[0] + 4.2062121118*theta[0.114208] - 3.48512805833*theta[0.553686] + 4.38855710208*theta[1.167181] - 9.10964115554*theta[1.72048] + 6.5*theta[2.0]) :   0.0 :   True
          2.114208 :   0.0 :          dthetadt[2.114208] - (-5.5193396206*theta[2.0] + 4.37796198897*theta[2.114208] + 1.44597130769*theta[2.553686] - 0.4375931981*theta[3.167181] + 0.19985260397*theta[3.72048] - 0.0668530819246*theta[4.0]) :   0.0 :   True
          2.553686 :   0.0 :        dthetadt[2.553686] - (1.79153426125*theta[2.0] - 3.58069036007*theta[2.114208] + 0.903038862042*theta[2.553686] + 1.18189858803*theta[3.167181] - 0.432950390142*theta[3.72048] + 0.137169038888*theta[4.0]) :   0.0 :   True
          3.167181 :   0.0 :        dthetadt[3.167181] - (-1.17208577895*theta[2.0] + 2.06108262312*theta[2.114208] - 2.24800856291*theta[2.553686] + 0.428382622699*theta[3.167181] + 1.25916047461*theta[3.72048] - 0.328531378567*theta[4.0]) :   0.0 :   True
@@ -428,15 +433,16 @@
         17.167181 :   0.0 : dthetadt[17.167181] - (-1.17208577895*theta[16.0] + 2.06108262312*theta[16.114208] - 2.24800856291*theta[16.553686] + 0.428382622699*theta[17.167181] + 1.25916047461*theta[17.72048] - 0.328531378567*theta[18.0]) :   0.0 :   True
          17.72048 :   0.0 :       dthetadt[17.72048] - (1.1413177501*theta[16.0] - 1.93933160986*theta[16.114208] + 1.69657595903*theta[16.553686] - 2.5941704532*theta[17.167181] + 0.29061652629*theta[17.72048] + 1.40499182764*theta[18.0]) :   0.0 :   True
              18.0 :   0.0 :                             dthetadt[18.0] - (-2.5*theta[16.0] + 4.2062121118*theta[16.114208] - 3.48512805833*theta[16.553686] + 4.38855710208*theta[17.167181] - 9.10964115554*theta[17.72048] + 6.5*theta[18.0]) :   0.0 :   True
-        18.114208 :   0.0 :   dthetadt[18.114208] - (-5.5193396206*theta[18.0] + 4.37796198897*theta[18.114208] + 1.44597130769*theta[18.553686] - 0.4375931981*theta[19.167181] + 0.19985260397*theta[19.72048] - 0.0668530819246*theta[20.0]) :   0.0 :   True
-        18.553686 :   0.0 : dthetadt[18.553686] - (1.79153426125*theta[18.0] - 3.58069036007*theta[18.114208] + 0.903038862042*theta[18.553686] + 1.18189858803*theta[19.167181] - 0.432950390142*theta[19.72048] + 0.137169038888*theta[20.0]) :   0.0 :   True
-        19.167181 :   0.0 : dthetadt[19.167181] - (-1.17208577895*theta[18.0] + 2.06108262312*theta[18.114208] - 2.24800856291*theta[18.553686] + 0.428382622699*theta[19.167181] + 1.25916047461*theta[19.72048] - 0.328531378567*theta[20.0]) :   0.0 :   True
-         19.72048 :   0.0 :       dthetadt[19.72048] - (1.1413177501*theta[18.0] - 1.93933160986*theta[18.114208] + 1.69657595903*theta[18.553686] - 2.5941704532*theta[19.167181] + 0.29061652629*theta[19.72048] + 1.40499182764*theta[20.0]) :   0.0 :   True
-             20.0 :   0.0 :                             dthetadt[20.0] - (-2.5*theta[18.0] + 4.2062121118*theta[18.114208] - 3.48512805833*theta[18.553686] + 4.38855710208*theta[19.167181] - 9.10964115554*theta[19.72048] + 6.5*theta[20.0]) :   0.0 :   True
+        18.114208 :   0.0 :     dthetadt[18.114208] - (-5.5193396206*theta[18.0] + 4.37796198897*theta[18.114208] + 1.44597130769*theta[18.553686] - 0.4375931981*theta[19.167181] + 0.19985260397*theta[19.72048] - 0.0668530819246*theta[20]) :   0.0 :   True
+        18.553686 :   0.0 :   dthetadt[18.553686] - (1.79153426125*theta[18.0] - 3.58069036007*theta[18.114208] + 0.903038862042*theta[18.553686] + 1.18189858803*theta[19.167181] - 0.432950390142*theta[19.72048] + 0.137169038888*theta[20]) :   0.0 :   True
+        19.167181 :   0.0 :   dthetadt[19.167181] - (-1.17208577895*theta[18.0] + 2.06108262312*theta[18.114208] - 2.24800856291*theta[18.553686] + 0.428382622699*theta[19.167181] + 1.25916047461*theta[19.72048] - 0.328531378567*theta[20]) :   0.0 :   True
+         19.72048 :   0.0 :         dthetadt[19.72048] - (1.1413177501*theta[18.0] - 1.93933160986*theta[18.114208] + 1.69657595903*theta[18.553686] - 2.5941704532*theta[19.167181] + 0.29061652629*theta[19.72048] + 1.40499182764*theta[20]) :   0.0 :   True
+               20 :   0.0 :                                 dthetadt[20] - (-2.5*theta[18.0] + 4.2062121118*theta[18.114208] - 3.48512805833*theta[18.553686] + 4.38855710208*theta[19.167181] - 9.10964115554*theta[19.72048] + 6.5*theta[20]) :   0.0 :   True
 
 1 ContinuousSet Declarations
-    t : Dim=0, Dimen=1, Size=51, Domain=None, Ordered=Sorted, Bounds=(0.0, 20.0)
-        [0.0, 0.114208, 0.553686, 1.167181, 1.72048, 2.0, 2.114208, 2.553686, 3.167181, 3.72048, 4.0, 4.114208, 4.553686, 5.167181, 5.72048, 6.0, 6.114208, 6.553686, 7.167181, 7.72048, 8.0, 8.114208, 8.553686, 9.167181, 9.72048, 10.0, 10.114208, 10.553686, 11.167181, 11.72048, 12.0, 12.114208, 12.553686, 13.167181, 13.72048, 14.0, 14.114208, 14.553686, 15.167181, 15.72048, 16.0, 16.114208, 16.553686, 17.167181, 17.72048, 18.0, 18.114208, 18.553686, 19.167181, 19.72048, 20.0]
+    t : Size=1, Index=None, Ordered=Sorted
+        Key  : Dimen : Domain      : Size : Members
+        None :     1 : [0.0..20.0] :   51 : {0, 0.114208, 0.553686, 1.167181, 1.72048, 2.0, 2.114208, 2.553686, 3.167181, 3.72048, 4.0, 4.114208, 4.553686, 5.167181, 5.72048, 6.0, 6.114208, 6.553686, 7.167181, 7.72048, 8.0, 8.114208, 8.553686, 9.167181, 9.72048, 10.0, 10.114208, 10.553686, 11.167181, 11.72048, 12.0, 12.114208, 12.553686, 13.167181, 13.72048, 14.0, 14.114208, 14.553686, 15.167181, 15.72048, 16.0, 16.114208, 16.553686, 17.167181, 17.72048, 18.0, 18.114208, 18.553686, 19.167181, 19.72048, 20}
 
 1 Suffix Declarations
     var_input : Direction=Suffix.LOCAL, Datatype=Suffix.FLOAT
@@ -444,7 +450,7 @@
           b : {0: 0.25, 15: 0.025}
           c : {0: 5.0, 7: 50}
 
-12 Declarations: t b c omega theta domegadt dthetadt diffeq1 diffeq2 var_input domegadt_disc_eq dthetadt_disc_eq
+13 Declarations: t_domain t b c omega theta domegadt dthetadt diffeq1 diffeq2 var_input domegadt_disc_eq dthetadt_disc_eq
 [[ 0.0000  3.0400]
  [-0.1033  3.0297]
  [-0.2223  2.9972]

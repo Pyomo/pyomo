@@ -208,11 +208,9 @@ class CCTests(object):
     def test_cov6(self):
         # Testing construction with indexing and an expression
         M = self._setup()
-        try:
+        with self.assertRaisesRegex(
+                ValueError, "Invalid tuple for Complementarity"):
             M.cc = Complementarity([0,1], expr=())
-            self.fail("Expected an IndexError")
-        except IndexError:
-            pass
 
     def test_cov7(self):
         # Testing error checking with return value
@@ -313,7 +311,10 @@ class CCTests(object):
 
     def test_list5(self):
         M = self._setup()
-        M.cc = ComplementarityList(rule=(complements(M.y + M.x3, M.x1 + 2*M.x2 == i) for i in range(3)))
+        M.cc = ComplementarityList(
+            rule=( complements(M.y + M.x3, M.x1 + 2*M.x2 == i)
+                   for i in range(3) )
+        )
         self._test("list5", M)
 
     def test_list6(self):

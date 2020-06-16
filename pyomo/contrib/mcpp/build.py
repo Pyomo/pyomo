@@ -12,14 +12,15 @@ import os
 import shutil
 import tempfile
 
-import distutils.core
-from distutils.command.build_ext import build_ext
-from setuptools.extension import Extension
-
 from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file_dir, find_dir
+from pyomo.common.download import FileDownloader
 
 def _generate_configuration():
+    # defer the import until use (this eventually imports pkg_resources,
+    # which is slow to import)
+    from setuptools.extension import Extension
+
     # Try and find MC++.  Defer to the MCPP_ROOT if it is set;
     # otherwise, look in common locations for a mcpp directory.
     pathlist=[
@@ -67,27 +68,30 @@ def _generate_configuration():
     return package_config
 
 
-class _BuildWithoutPlatformInfo(build_ext, object):
-    # Python3.x puts platform information into the generated SO file
-    # name, which is usually fine for python extensions, but since this
-    # is not a "real" extension, we will hijack things to remove the
-    # platform information from the filename so that Pyomo can more
-    # easily locate it.  Note that build_ext is not a new-style class in
-    # Python 2.7, so we will add an explicit inheritance from object so
-    # that super() works.
-    def get_ext_filename(self, ext_name):
-        filename = super(_BuildWithoutPlatformInfo, self).get_ext_filename(
-            ext_name).split('.')
-        filename = '.'.join([filename[0],filename[-1]])
-        return filename
-
 def build_mcpp():
+    import distutils.core
+    from distutils.command.build_ext import build_ext
+
+    class _BuildWithoutPlatformInfo(build_ext, object):
+        # Python3.x puts platform information into the generated SO file
+        # name, which is usually fine for python extensions, but since this
+        # is not a "real" extension, we will hijack things to remove the
+        # platform information from the filename so that Pyomo can more
+        # easily locate it.  Note that build_ext is not a new-style class in
+        # Python 2.7, so we will add an explicit inheritance from object so
+        # that super() works.
+        def get_ext_filename(self, ext_name):
+            filename = super(_BuildWithoutPlatformInfo, self).get_ext_filename(
+                ext_name).split('.')
+            filename = '.'.join([filename[0],filename[-1]])
+            return filename
+
+    print("\n**** Building MCPP library ****")
     package_config = _generate_configuration()
     package_config['cmdclass'] = {'build_ext': _BuildWithoutPlatformInfo}
     dist = distutils.core.Distribution(package_config)
     install_dir = os.path.join(PYOMO_CONFIG_DIR, 'lib')
     dist.get_command_obj('install_lib').install_dir = install_dir
-    print("**** Building library ****")
     try:
         basedir = os.path.abspath(os.path.curdir)
         tmpdir = os.path.abspath(tempfile.mkdtemp())
@@ -98,6 +102,13 @@ def build_mcpp():
     finally:
         os.chdir(basedir)
         shutil.rmtree(tmpdir)
+
+class MCPPBuilder(object):
+    def __call__(self, parallel):
+        return build_mcpp()
+
+    def skip(self):
+        return FileDownloader.get_sysinfo()[0] == 'windows'
 
 
 if __name__ == "__main__":

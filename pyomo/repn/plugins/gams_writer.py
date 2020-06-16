@@ -134,15 +134,15 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             return False, None
 
         if node.is_component_type():
-            if self.ctype(node) not in valid_expr_ctypes_minlp:
+            if node.ctype not in valid_expr_ctypes_minlp:
                 # Make sure all components in active constraints
                 # are basic ctypes we know how to deal with.
                 raise RuntimeError(
                     "Unallowable component '%s' of type %s found in an active "
                     "constraint or objective.\nThe GAMS writer cannot export "
                     "expressions with this component type."
-                    % (node.name, self.ctype(node).__name__))
-            if self.ctype(node) is not Var:
+                    % (node.name, node.ctype.__name__))
+            if node.ctype is not Var:
                 # For these, make sure it's on the right model. We can check
                 # Vars later since they don't disappear from the expressions
                 self.treechecker(node)
@@ -155,12 +155,6 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 return True, label
 
         return True, ftoa(value(node))
-
-    def ctype(self, comp):
-        if isinstance(comp, ICategorizedObject):
-            return comp.ctype
-        else:
-            return comp.type()
 
 
 def expression_to_string(expr, treechecker, labeler=None, smap=None):
@@ -186,11 +180,14 @@ class Categorizer(object):
         self.ints = []
         self.positive = []
         self.reals = []
+        self.fixed = []
 
         # categorize variables
         for var in var_list:
             v = symbol_map.getObject(var)
-            if v.is_binary():
+            if v.is_fixed():
+                self.fixed.append(var)
+            elif v.is_binary():
                 self.binary.append(var)
             elif v.is_integer():
                 if (v.has_lb() and (value(v.lb) >= 0)) and \
@@ -328,8 +325,16 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 |     2 : sort keys AND sort names (over declaration order)
             - put_results=None
                 Filename for optionally writing solution values and
-                marginals to (put_results).dat, and solver statuses
-                to (put_results + 'stat').dat.
+                marginals.  If put_results_format is 'gdx', then GAMS
+                will write solution values and marginals to
+                GAMS_MODEL_p.gdx and solver statuses to
+                {put_results}_s.gdx.  If put_results_format is 'dat',
+                then solution values and marginals are written to
+                (put_results).dat, and solver statuses to (put_results +
+                'stat').dat.
+            - put_results_format='gdx'
+                Format used for put_results, one of 'gdx', 'dat'.
+
         """
 
         # Make sure not to modify the user's dictionary,
@@ -348,6 +353,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         # If None, will chose from lp, nlp, mip, and minlp.
         mtype = io_options.pop("mtype", None)
+
+        # Improved GAMS calling options
+        solprint = io_options.pop("solprint", "off")
+        limrow = io_options.pop("limrow", 0)
+        limcol = io_options.pop("limcol", 0)
+        solvelink = io_options.pop("solvelink", 5)
 
         # Lines to add before solve statement.
         add_options = io_options.pop("add_options", None)
@@ -374,6 +385,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # Filename for optionally writing solution values and marginals
         # Set to True by GAMSSolver
         put_results = io_options.pop("put_results", None)
+        put_results_format = io_options.pop("put_results_format", 'gdx')
+        assert put_results_format in ('gdx','dat')
 
         if len(io_options):
             raise ValueError(
@@ -414,7 +427,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             # to start with a letter.  We will (randomly) choose "s_"
             # (for 'shortened')
             var_labeler = con_labeler = ShortNameLabeler(
-                63, prefix='s_', suffix='_', caseInsensitive=True,
+                60, prefix='s_', suffix='_', caseInsensitive=True,
                 legalRegex='^[a-zA-Z]')
         elif labeler is None:
             var_labeler = NumericLabeler('x')
@@ -467,8 +480,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     warmstart=warmstart,
                     solver=solver,
                     mtype=mtype,
+                    solprint=solprint,
+                    limrow=limrow,
+                    limcol=limcol,
+                    solvelink=solvelink,
                     add_options=add_options,
-                    put_results=put_results
+                    put_results=put_results,
+                    put_results_format=put_results_format,
                 )
             finally:
                 if isinstance(output_filename, string_types):
@@ -489,8 +507,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
                      warmstart,
                      solver,
                      mtype,
+                     solprint,
+                     limrow,
+                     limcol,
+                     solvelink,
                      add_options,
-                     put_results):
+                     put_results,
+                     put_results_format,
+                 ):
         constraint_names = []
         ConstraintIO = StringIO()
         linear = True
@@ -584,6 +608,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         categorized_vars = Categorizer(var_list, symbolMap)
 
         # Write the GAMS model
+        output_file.write("$offlisting\n")
         # $offdigit ignores extra precise digits instead of erroring
         output_file.write("$offdigit\n\n")
         output_file.write("EQUATIONS\n\t")
@@ -599,8 +624,16 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write(";\n\nPOSITIVE VARIABLES\n\t")
             output_file.write("\n\t".join(categorized_vars.positive))
         output_file.write(";\n\nVARIABLES\n\tGAMS_OBJECTIVE\n\t")
-        output_file.write("\n\t".join(categorized_vars.reals))
+        output_file.write("\n\t".join(
+            categorized_vars.reals + categorized_vars.fixed
+        ))
         output_file.write(";\n\n")
+
+        for var in categorized_vars.fixed:
+            output_file.write("%s.fx = %s;\n" % (
+                var, ftoa(value(symbolMap.getObject(var)))
+            ))
+        output_file.write("\n")
 
         for line in ConstraintIO.getvalue().splitlines():
             if len(line) > 80000:
@@ -685,6 +718,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                  % (solver, mtype))
             output_file.write("option %s=%s;\n" % (mtype, solver))
 
+        output_file.write("option solprint=%s;\n" % solprint)
+        output_file.write("option limrow=%d;\n" % limrow)
+        output_file.write("option limcol=%d;\n" % limcol)
+        output_file.write("option solvelink=%d;\n" % solvelink)
+        
+        if put_results is not None and put_results_format == 'gdx':
+            output_file.write("option savepoint=1;\n")
+
         if add_options is not None:
             output_file.write("\n* START USER ADDITIONAL OPTIONS\n")
             for line in add_options:
@@ -726,28 +767,33 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write("ETSOLVE = %s.etsolve\n\n" % model_name)
 
         if put_results is not None:
-            results = put_results + '.dat'
-            output_file.write("\nfile results /'%s'/;" % results)
-            output_file.write("\nresults.nd=15;")
-            output_file.write("\nresults.nw=21;")
-            output_file.write("\nput results;")
-            output_file.write("\nput 'SYMBOL  :  LEVEL  :  MARGINAL' /;")
-            for var in var_list:
-                output_file.write("\nput %s %s.l %s.m /;" % (var, var, var))
-            for con in constraint_names:
-                output_file.write("\nput %s %s.l %s.m /;" % (con, con, con))
-            output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
-                              "GAMS_OBJECTIVE.m;\n")
+            if put_results_format == 'gdx':
+                output_file.write("\nexecute_unload '%s_s.gdx'" % put_results)
+                for stat in stat_vars:
+                    output_file.write(", %s" % stat)
+                output_file.write(";\n")
+            else:
+                results = put_results + '.dat'
+                output_file.write("\nfile results /'%s'/;" % results)
+                output_file.write("\nresults.nd=15;")
+                output_file.write("\nresults.nw=21;")
+                output_file.write("\nput results;")
+                output_file.write("\nput 'SYMBOL  :  LEVEL  :  MARGINAL' /;")
+                for var in var_list:
+                    output_file.write("\nput %s %s.l %s.m /;" % (var, var, var))
+                for con in constraint_names:
+                    output_file.write("\nput %s %s.l %s.m /;" % (con, con, con))
+                output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
+                                  "GAMS_OBJECTIVE.m;\n")
 
-            statresults = put_results + 'stat.dat'
-            output_file.write("\nfile statresults /'%s'/;" % statresults)
-            output_file.write("\nstatresults.nd=15;")
-            output_file.write("\nstatresults.nw=21;")
-            output_file.write("\nput statresults;")
-            output_file.write("\nput 'SYMBOL   :   VALUE' /;")
-            for stat in stat_vars:
-                output_file.write("\nput '%s' %s /;\n" % (stat, stat))
-
+                statresults = put_results + 'stat.dat'
+                output_file.write("\nfile statresults /'%s'/;" % statresults)
+                output_file.write("\nstatresults.nd=15;")
+                output_file.write("\nstatresults.nw=21;")
+                output_file.write("\nput statresults;")
+                output_file.write("\nput 'SYMBOL   :   VALUE' /;")
+                for stat in stat_vars:
+                    output_file.write("\nput '%s' %s /;\n" % (stat, stat))
 
 valid_solvers = {
 'ALPHAECP': {'MINLP','MIQCP'},

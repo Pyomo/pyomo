@@ -11,13 +11,16 @@ from __future__ import division
 import sys
 import pyutilib.th as unittest
 
-import pyomo.contrib.pynumero as pn
-if not (pn.sparse.numpy_available and pn.sparse.scipy_available):
-    raise unittest.SkipTest("Pynumero needs scipy and numpy to run BlockVector tests")
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available, scipy_available
+)
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest(
+        "Pynumero needs scipy and numpy to run BlockVector tests")
 
-import numpy as np
-from pyomo.contrib.pynumero.sparse.block_vector import BlockVector, NotFullyDefinedBlockVectorError
-
+from pyomo.contrib.pynumero.sparse.block_vector import (
+    BlockVector, NotFullyDefinedBlockVectorError
+)
 
 class TestBlockVector(unittest.TestCase):
 
@@ -1147,6 +1150,21 @@ class TestBlockVector(unittest.TestCase):
             flat_res = fun(v.flatten(), v2.flatten())
             res = fun(v, v2)
             self.assertTrue(np.allclose(flat_res, res.flatten()))
+
+    def test_min_with_empty_blocks(self):
+        b = BlockVector(3)
+        b.set_block(0, np.zeros(3))
+        b.set_block(1, np.zeros(0))
+        b.set_block(2, np.zeros(3))
+        self.assertEqual(b.min(), 0)
+
+    def test_max_with_empty_blocks(self):
+        b = BlockVector(3)
+        b.set_block(0, np.zeros(3))
+        b.set_block(1, np.zeros(0))
+        b.set_block(2, np.zeros(3))
+        self.assertEqual(b.max(), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

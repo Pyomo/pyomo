@@ -59,7 +59,7 @@ class TestErrors(unittest.TestCase):
 
     def test_ordered(self):
         M = ConcreteModel()
-        M.v = Var([1,2,3])
+        M.v = Var({1,2,3})
         try:
             M.c = SOSConstraint(var=M.v, sos=2)
             self.fail("Expected ValueError")

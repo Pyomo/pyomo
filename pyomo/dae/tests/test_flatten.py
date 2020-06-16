@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 
-from pyomo.environ import ConcreteModel, Block, Var, Reference
+from pyomo.environ import ConcreteModel, Block, Var, Reference, Set
 from pyomo.dae import ContinuousSet
 # This inport will have to change when we decide where this should go...
 from pyomo.dae.flatten import flatten_dae_variables
@@ -107,6 +107,47 @@ class TestCategorize(unittest.TestCase):
         }
         self.assertEqual(len(time), len(ref_data))
         for ref in time:
+            self.assertIn(self._hashRef(ref), ref_data)
+
+
+    def test_2dim_set(self):
+        m = ConcreteModel()
+        m.time = ContinuousSet(bounds=(0,1))
+
+        m.v = Var(m.time, [('a',1), ('b',2)])
+
+        scalar, dae = flatten_dae_variables(m, m.time)
+        self.assertEqual(len(scalar), 0)
+        ref_data = {
+                self._hashRef(Reference(m.v[:,'a',1])),
+                self._hashRef(Reference(m.v[:,'b',2])),
+                }
+        self.assertEqual(len(dae), len(ref_data))
+        for ref in dae:
+            self.assertIn(self._hashRef(ref), ref_data)
+
+    
+    def test_indexed_block(self):
+        m = ConcreteModel()
+        m.time = ContinuousSet(bounds=(0,1))
+        m.comp = Set(initialize=['a', 'b'])
+
+        def bb_rule(bb, t):
+            bb.dae_var = Var()
+
+        def b_rule(b, c):
+            b.bb = Block(m.time, rule=bb_rule)
+
+        m.b = Block(m.comp, rule=b_rule)
+
+        scalar, dae = flatten_dae_variables(m, m.time)
+        self.assertEqual(len(scalar), 0)
+        ref_data = {
+                self._hashRef(Reference(m.b['a'].bb[:].dae_var)),
+                self._hashRef(Reference(m.b['b'].bb[:].dae_var)),
+                }
+        self.assertEqual(len(dae), len(ref_data))
+        for ref in dae:
             self.assertIn(self._hashRef(ref), ref_data)
 
     # TODO: Add tests for Sets with dimen==None

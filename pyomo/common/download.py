@@ -14,22 +14,29 @@ import io
 import logging
 import os
 import platform
+import re
 import ssl
 import sys
 import zipfile
 
-from six.moves.urllib.request import urlopen
+from pyutilib.subprocess import run
 
 from .config import PYOMO_CONFIG_DIR
 from .deprecation import deprecated
 from .errors import DeveloperError
 import pyomo.common
+from pyomo.common.dependencies import attempt_import
+
+request = attempt_import('six.moves.urllib.request')[0]
+distro, distro_available = attempt_import('distro')
 
 logger = logging.getLogger('pyomo.common.download')
 
 DownloadFactory = pyomo.common.Factory('library downloaders')
 
 class FileDownloader(object):
+    _os_version = None
+
     def __init__(self, insecure=False, cacert=None):
         self._fname = None
         self.target = None
@@ -42,7 +49,8 @@ class FileDownloader(object):
                     % (self.cacert,))
 
 
-    def get_sysinfo(self):
+    @classmethod
+    def get_sysinfo(cls):
         """Return a tuple (platform_name, bits) for the current system
 
         Returns
@@ -58,9 +66,127 @@ class FileDownloader(object):
         bits = 64 if sys.maxsize > 2**32 else 32
         return system, bits
 
+    @classmethod
+    def _get_distver_from_os_release(cls):
+        dist = ''
+        ver = ''
+        with open('/etc/os-release', 'rt') as FILE:
+            for line in FILE:
+                line = line.strip()
+                if not line:
+                    continue
+                key,val = line.lower().split('=')
+                if key == 'id':
+                    dist = val
+                elif key == 'version_id':
+                    if val[0] == val[-1] and val[0] in '"\'':
+                        ver = val[1:-1]
+                    else:
+                        ver = val
+        return cls._map_dist(dist), ver
+
+    @classmethod
+    def _get_distver_from_redhat_release(cls):
+        # RHEL6 did not include /etc/os-release
+        with open('/etc/redhat-release', 'rt') as FILE:
+            dist = FILE.readline().lower().strip()
+            ver = ''
+            for word in dist.split():
+                if re.match('^[0-9\.]+', word):
+                    ver = word
+                    break
+        return cls._map_dist(dist), ver
+
+    @classmethod
+    def _get_distver_from_lsb_release(cls):
+        rc, dist = run(['lsb_release', '-si'])
+        rc, ver = run(['lsb_release', '-sr'])
+        return cls._map_dist(dist.lower().strip()), ver.strip()
+
+    @classmethod
+    def _get_distver_from_distro(cls):
+        return distro.id(), distro.version(best=True)
+
+    @classmethod
+    def _map_dist(cls, dist):
+        dist = dist.lower()
+        _map = {
+            'centos': 'centos',
+            'redhat': 'rhel',
+            'red hat': 'rhel', # RHEL6 reports 'red hat enterprise'
+            'fedora': 'fedora',
+            'debian': 'debian',
+            'ubuntu': 'ubuntu',
+        }
+        for key in _map:
+            if key in dist:
+                return _map[key]
+        return dist
+
+    @classmethod
+    def _get_os_version(cls):
+        _os = cls.get_sysinfo()[0]
+        if _os == 'linux':
+            if distro_available:
+                dist, ver = cls._get_distver_from_distro()
+            elif os.path.exists('/etc/redhat-release'):
+                dist, ver = cls._get_distver_from_redhat_release()
+            elif run(['lsb_release'])[0] == 0:
+                dist, ver = cls._get_distver_from_lsb_release()
+            elif os.path.exists('/etc/os-release'):
+                # Note that (at least on centos), os_release is an
+                # imprecise version string
+                dist, ver = cls._get_distver_from_os_release()
+            else:
+                dist, ver = '',''
+            return dist, ver
+        elif _os == 'darwin':
+            return 'macos', platform.mac_ver()[0]
+        elif _os == 'windows':
+            return 'win', platform.win32_ver()[0]
+        else:
+            return '', ''
+
+    @classmethod
+    def get_os_version(cls, normalize=True):
+        """Return a standardized representation of the OS version
+
+        This method was designed to help identify compatible binaries,
+        and will return strings similar to:
+          - rhel6
+          - fedora24
+          - ubuntu18.04
+          - macos10.13
+          - win10
+
+        Parameters
+        ----------
+        normalize : bool, optional
+            If True (the default) returns a simplified normalized string
+            (e.g., `'rhel7'`) instead of the raw (os, version) tuple
+            (e.g., `('centos', '7.7.1908')`)
+
+        """
+        if FileDownloader._os_version is None:
+            FileDownloader._os_version = cls._get_os_version()
+
+        if not normalize:
+            return FileDownloader._os_version
+
+        _os, _ver = FileDownloader._os_version
+        _map = {
+            'centos': 'rhel',
+        }
+        if _os in _map:
+            _os = _map[_os]
+
+        if _os in {'ubuntu','macos','win'}:
+            return _os + ''.join(_ver.split('.')[:2])
+        else:
+            return _os + _ver.split('.')[0]
 
     @deprecated("get_url() is deprecated. Use get_platform_url()",
-                version='TBD')
+                version='5.6.9')
     def get_url(self, urlmap):
         return self.get_platform_url(urlmap)
 
@@ -155,33 +281,36 @@ class FileDownloader(object):
             if self.insecure:
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
-            fetch = urlopen(url, context=ctx)
+            fetch = request.urlopen(url, context=ctx)
         except AttributeError:
             # Revert to pre-2.7.9 syntax
-            fetch = urlopen(url)
+            fetch = request.urlopen(url)
         ans = fetch.read()
         logger.info("  ...downloaded %s bytes" % (len(ans),))
         return ans
 
 
-    def get_file(self, url, mode):
+    def get_file(self, url, binary):
         if self._fname is None:
             raise DeveloperError("target file name has not been initialized "
                                  "with set_destination_filename")
-        with open(self._fname, mode) as FILE:
+        with open(self._fname, 'wb' if binary else 'wt') as FILE:
             raw_file = self.retrieve_url(url)
-            FILE.write(raw_file)
+            if binary:
+                FILE.write(raw_file)
+            else:
+                FILE.write(raw_file.decode())
             logger.info("  ...wrote %s bytes" % (len(raw_file),))
 
 
     def get_binary_file(self, url):
         """Retrieve the specified url and write as a binary file"""
-        return self.get_file(url, mode='wb')
+        return self.get_file(url, binary=True)
 
 
     def get_text_file(self, url):
         """Retrieve the specified url and write as a text file"""
-        return self.get_file(url, mode='wt')
+        return self.get_file(url, binary=False)
 
 
     def get_binary_file_from_zip_archive(self, url, srcname):

@@ -46,6 +46,8 @@ class ExternalFunction(Component):
             return AMPLExternalFunction.__new__(AMPLExternalFunction)
 
     def __init__(self, *args, **kwds):
+        self._units = kwds.pop('units', None)
+        self._arg_units = kwds.pop('arg_units', None)
         kwds.setdefault('ctype', ExternalFunction)
         Component.__init__(self, **kwds)
         self._constructed = True
@@ -54,6 +56,14 @@ class ExternalFunction(Component):
         # block._add_temporary_set assumes ALL components define an
         # index.  Sigh.
         self._index = None
+        
+    def get_units(self):
+        """Return the units for this ExternalFunction"""
+        return self._units
+
+    def get_arg_units(self):
+        """Return the units for this ExternalFunctions arguments"""
+        return self._arg_units
 
     def __call__(self, *args):
         args_ = []
@@ -192,12 +202,12 @@ class PythonCallbackFunction(ExternalFunction):
                     "single positional positional arguments" )
         if not args:
             self._fcn = kwds.pop('function')
-        if kwds:
-            raise ValueError(
-                "PythonCallbackFunction constructor does not support "
-                "keyword arguments" )
+
         self._library = 'pyomo_ampl.so'
         self._function = 'pyomo_socket_server'
+        arg_units = kwds.get('arg_units', None)
+        if arg_units is not None:
+            kwds['arg_units'] = [None]+list(arg_units)
         ExternalFunction.__init__(self, *args, **kwds)
         self._fcn_id = PythonCallbackFunction.register_instance(self)
 
