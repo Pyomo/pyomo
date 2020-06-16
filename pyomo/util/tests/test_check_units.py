@@ -13,7 +13,7 @@
 
 import pyutilib.th as unittest
 from pyomo.environ import *
-from pyomo.dae import ContinuousSet
+from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.mpec import Complementarity, complements
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.base.units_container import (
@@ -174,6 +174,8 @@ class TestUnitsChecking(unittest.TestCase):
         m.extfn = ExternalFunction(python_callback_function, units=u.m/u.s, arg_units=[u.m, u.s])
         m.conext = Constraint(expr=m.extfn(m.dx, m.t) - m.vx==0)
         m.cset = ContinuousSet(bounds=(0,1))
+        m.svar = Var(m.cset, units=u.m)
+        m.dvar = DerivativeVar(sVar=m.svar, units=u.m/u.s)
 
         # complementarities do not work yet
         # The expression system removes the u.m since it is multiplied by zero.
