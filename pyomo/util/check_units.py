@@ -19,6 +19,7 @@ from pyomo.core.base import (Objective, Constraint, Var, Param,
                              ExternalFunction, Expression,
                              value)
 from pyomo.dae import ContinuousSet, DerivativeVar
+from pyomo.network import Port, Arc
 from pyomo.mpec import Complementarity
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.expr.template_expr import IndexTemplate
@@ -141,6 +142,8 @@ _component_data_handlers = {
     Constraint:  _assert_units_consistent_constraint_data,
     Var: _assert_units_consistent_expression,
     DerivativeVar: _assert_units_consistent_expression,
+    Port: None,
+    Arc: None,
     Expression: _assert_units_consistent_property_expr,
     Suffix: None,
     Param: _assert_units_consistent_expression,
