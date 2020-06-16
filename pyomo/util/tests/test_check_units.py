@@ -177,11 +177,15 @@ class TestUnitsChecking(unittest.TestCase):
         m.cset = ContinuousSet(bounds=(0,1))
         m.svar = Var(m.cset, units=u.m)
         m.dvar = DerivativeVar(sVar=m.svar, units=u.m/u.s)
-        def rule(m):
+        def prt1_rule(m):
+            return {'avar': m.dx}
+        def prt2_rule(m):
+            return {'avar': m.dy}
+        m.prt1 = Port(rule=prt1_rule)
+        m.prt2 = Port(rule=prt2_rule)
+        def arcrule(m):
             return dict(source=m.prt1, destination=m.prt2)
-        m.prt1 = Port()
-        m.prt2 = Port()
-        m.arc = Arc(rule=rule)
+        m.arc = Arc(rule=arcrule)
 
         # complementarities do not work yet
         # The expression system removes the u.m since it is multiplied by zero.
