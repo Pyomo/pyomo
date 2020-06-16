@@ -44,6 +44,10 @@ class ProblemFormat(str, enum.Enum):
     FuncDesigner='FuncDesigner'
     bar='bar'
     gams='gams'
+    
+    def __str__(self):
+        return self.value
+
 
 #
 # osrl - osrl XML file defined by the COIN-OR OS project: Result

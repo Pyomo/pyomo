@@ -42,6 +42,9 @@ class SolutionStatus(str, enum.Enum):
     unknown='unknown'
     unsure='unsure'
 
+    def __str__(self):
+        return self.value
+
 
 try:
     unicode

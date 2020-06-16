@@ -55,8 +55,6 @@ class ScalarData(object):
         self._required=required
 
     def get_value(self):
-        #if type(self.value) is EnumValue:
-        #    value = str(self.value)
         if type(self.value) is UndefinedData:
             value = '<undefined>'
         else:

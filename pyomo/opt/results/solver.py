@@ -25,6 +25,9 @@ class SolverStatus(str, enum.Enum):
                                    #   (e.g. interrupts)
     unknown='unknown'              # An unitialized value
 
+    def __str__(self):
+        return self.value
+
 #
 # A description of how the solver terminated
 #
@@ -64,6 +67,9 @@ class TerminationCondition(str, enum.Enum):
     resourceInterrupt='resourceInterrupt'           # Interrupt signal in resources used by
                                                     #    optimizer
     licensingProblems='licensingProblems'           # Problem accessing solver license
+
+    def __str__(self):
+        return self.value
 
 
 def check_optimal_termination(results):
