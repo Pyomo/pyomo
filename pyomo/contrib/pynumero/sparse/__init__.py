@@ -8,9 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from .. import numpy_available, scipy_available
+from ..dependencies import numpy_available, scipy_available
 
 if numpy_available and scipy_available:
-    from .coo import empty_matrix, diagonal_matrix
-    from .block_vector import BlockVector
-    from .block_matrix import BlockMatrix, BlockSymMatrix
+    from .block_vector import BlockVector, NotFullyDefinedBlockVectorError
+    from .block_matrix import BlockMatrix, NotFullyDefinedBlockMatrixError

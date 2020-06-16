@@ -105,7 +105,7 @@ def presolve_lp_nlp(solve_data, config):
     return False, None
 
 
-def process_objective(solve_data, config, move_linear_objective=False):
+def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=True):
     """Process model objective function.
 
     Check that the model has only 1 valid objective.
@@ -144,10 +144,11 @@ def process_objective(solve_data, config, move_linear_objective=False):
         if move_linear_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
-            config.logger.info("Objective is nonlinear. Moving it to constraint set.")
+            config.logger.info(
+                "Objective is nonlinear. Moving it to constraint set.")
 
         util_blk.objective_value = Var(domain=Reals, initialize=0)
-        if mcpp_available():
+        if mcpp_available() and use_mcpp:
             mc_obj = McCormick(main_obj.expr)
             util_blk.objective_value.setub(mc_obj.upper())
             util_blk.objective_value.setlb(mc_obj.lower())
@@ -206,8 +207,8 @@ def copy_var_list_values(from_list, to_list, config,
             # Check to see if this is just a tolerance issue
             if ignore_integrality \
                 and ('is not in domain Binary' in err_msg
-                or 'is not in domain Integers' in err_msg):
-               v_to.value = value(v_from, exception=False)
+                     or 'is not in domain Integers' in err_msg):
+                v_to.value = value(v_from, exception=False)
             elif 'is not in domain Binary' in err_msg and (
                     fabs(var_val - 1) <= config.integer_tolerance or
                     fabs(var_val) <= config.integer_tolerance):
@@ -431,8 +432,9 @@ def get_main_elapsed_time(timing_data_obj):
 
 
 @deprecated(
-    "'restore_logger_level()' has been deprecated in favor of the more specific "
-    "'lower_logger_level_to()' function.", version='TBD', remove_in='TBD')
+    "'restore_logger_level()' has been deprecated in favor of the more "
+    "specific 'lower_logger_level_to()' function.",
+    version='5.6.9')
 @contextmanager
 def restore_logger_level(logger):
     old_logger_level = logger.getEffectiveLevel()

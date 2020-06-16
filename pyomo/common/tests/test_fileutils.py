@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import ctypes
 import logging
 import os
 import platform
@@ -27,6 +28,7 @@ from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
     PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
 )
+from pyomo.common.download import FileDownloader
 
 try:
     samefile = os.path.samefile
@@ -192,6 +194,26 @@ class TestFileUtils(unittest.TestCase):
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
         os.chdir(self.tmpdir)
 
+        # Find a system library (before we muck with the PATH)
+        _args = {'cwd':False, 'include_PATH':False, 'pathlist':[]}
+        if FileDownloader.get_sysinfo()[0] == 'windows':
+            a = find_library('ntdll', **_args)
+            b = find_library('ntdll.dll', **_args)
+            c = find_library('foo\\bar\\ntdll.dll', **_args)
+        else:
+            a = find_library('c', **_args)
+            b = find_library('libc.so', **_args)
+            c = find_library('foo/bar/libc.so', **_args)
+        self.assertIsNotNone(a)
+        self.assertIsNotNone(b)
+        self.assertIsNotNone(c)
+        self.assertEqual(a,b)
+        self.assertEqual(a,c)
+        # Verify that the library is loadable (they are all the same
+        # file, so only check one)
+        _lib = ctypes.cdll.LoadLibrary(a)
+        self.assertIsNotNone(_lib)
+
         config.PYOMO_CONFIG_DIR = self.tmpdir
         config_libdir = os.path.join(self.tmpdir, 'lib')
         os.mkdir(config_libdir)
@@ -242,9 +264,17 @@ class TestFileUtils(unittest.TestCase):
             os.path.join(pathdir, f_in_path),
             find_library(f_in_path)
         )
-        self.assertIsNone(
-            find_library(f_in_path, include_PATH=False)
-        )
+        if _system() == 'windows':
+            self._check_file(
+                os.path.join(pathdir, f_in_path),
+                find_library(f_in_path, include_PATH=False)
+            )
+        else:
+            # Note that on Windows, ctypes.util.find_library *always*
+            # searches the PATH
+            self.assertIsNone(
+                find_library(f_in_path, include_PATH=False)
+            )
         self._check_file(
             os.path.join(pathdir, f_in_path),
             find_library(f_in_path, pathlist=os.pathsep+pathdir+os.pathsep)

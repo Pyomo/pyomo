@@ -23,7 +23,9 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
+from pyomo.core.base import Var, ComponentMap, Suffix, active_export_suffix_generator
 from pyomo.core.kernel.block import IBlock
+from pyomo.util.components import iter_component
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -112,6 +114,28 @@ class CPLEX(OptSolver):
         return opt
 
 
+class ORDFileSchema(object):
+    HEADER = "* ENCODING=ISO-8859-1\nNAME             Priority Order\n"
+    FOOTER = "ENDATA\n"
+
+    @classmethod
+    def ROW(cls, name, priority, branch_direction=None):
+        return " %s %s %s\n" % (
+            cls._direction_to_str(branch_direction),
+            name,
+            priority,
+        )
+
+    @staticmethod
+    def _direction_to_str(branch_direction):
+        try:
+            return {BranchDirection.down: "DN", BranchDirection.up: "UP"}[
+                branch_direction
+            ]
+        except KeyError:
+            return ""
+
+
 @SolverFactory.register('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
 class CPLEXSHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the CPLEX LP/MIP solver
@@ -162,9 +186,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     # write a warm-start file in the CPLEX MST format.
     #
     def _warm_start(self, instance):
-
-        from pyomo.core.base import Var
-
         # for each variable in the symbol_map, add a child to the
         # variables element.  Both continuous and discrete are accepted
         # (and required, depending on other options), according to the
@@ -201,6 +222,72 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             mst_file.write("</variables>\n")
             mst_file.write("</CPLEXSolution>\n")
 
+    # Expected names of `Suffix` components for branching priorities and directions respectively
+    SUFFIX_PRIORITY_NAME = "priority"
+    SUFFIX_DIRECTION_NAME = "direction"
+
+    def _write_priorities_file(self, instance):
+        """ Write a variable priorities file in the CPLEX ORD format. """
+        priorities, directions = self._get_suffixes(instance)
+        rows = self._convert_priorities_to_rows(instance, priorities, directions)
+        self._write_priority_rows(rows)
+
+    def _get_suffixes(self, instance):
+        if isinstance(instance, IBlock):
+            suffixes = (
+                (suf.name, suf)
+                for suf in pyomo.core.kernel.suffix.export_suffix_generator(
+                    instance, datatype=Suffix.INT, active=True, descend_into=False
+                )
+            )
+        else:
+            suffixes = active_export_suffix_generator(instance, datatype=Suffix.INT)
+        suffixes = dict(suffixes)
+
+        if self.SUFFIX_PRIORITY_NAME not in suffixes:
+            raise ValueError(
+                "Cannot write branching priorities file as `model.%s` Suffix has not been declared."
+                % (self.SUFFIX_PRIORITY_NAME,)
+            )
+
+        return (
+            suffixes[self.SUFFIX_PRIORITY_NAME],
+            suffixes.get(self.SUFFIX_DIRECTION_NAME, ComponentMap()),
+        )
+
+    def _convert_priorities_to_rows(self, instance, priorities, directions):
+        if isinstance(instance, IBlock):
+            smap = getattr(instance, "._symbol_maps")[self._smap_id]
+        else:
+            smap = instance.solutions.symbol_map[self._smap_id]
+        byObject = smap.byObject
+
+        rows = []
+        for var, priority in priorities.items():
+            if priority is None or not var.active:
+                continue
+
+            if not (0 <= priority == int(priority)):
+                raise ValueError("`priority` must be a non-negative integer")
+
+            var_direction = directions.get(var, BranchDirection.default)
+
+            for child_var in iter_component(var):
+                if id(child_var) not in byObject:
+                    continue
+
+                child_var_direction = directions.get(child_var, var_direction)
+
+                rows.append((byObject[id(child_var)], priority, child_var_direction))
+        return rows
+
+    def _write_priority_rows(self, rows):
+        with open(self._priorities_file_name, "w") as ord_file:
+            ord_file.write(ORDFileSchema.HEADER)
+            for var_name, priority, direction in rows:
+                ord_file.write(ORDFileSchema.ROW(var_name, priority, direction))
+            ord_file.write(ORDFileSchema.FOOTER)
+
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
 
@@ -234,6 +321,21 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 self._warm_start_file_name = pyutilib.services.TempfileManager.\
                                              create_tempfile(suffix = '.cplex.mst')
 
+        self._priorities_solve = kwds.pop("priorities", False)
+        self._priorities_file_name = _validate_file_name(
+            self, kwds.pop("priorities_file", None), "branching priorities"
+        )
+        user_priorities = self._priorities_file_name is not None
+
+        if (
+            self._priorities_solve
+            and not isinstance(args[0], basestring)
+            and not user_priorities
+        ):
+            self._priorities_file_name = pyutilib.services.TempfileManager.create_tempfile(
+                suffix=".cplex.ord"
+            )
+
         # let the base class handle any remaining keywords/actions.
         ILMLicensedSystemCallSolver._presolve(self, *args, **kwds)
 
@@ -258,6 +360,16 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 if self._report_timing:
                     print("Warm start write time= %.2f seconds"
                           % (end_time-start_time))
+
+            if self._priorities_solve and (not user_priorities):
+                start_time = time.time()
+                self._write_priorities_file(args[0])
+                end_time = time.time()
+                if self._report_timing:
+                    print(
+                        "Branching priorities write time= %.2f seconds"
+                        % (end_time - start_time)
+                    )
 
     def _default_executable(self):
         executable = pyomo.common.Executable("cplex")
@@ -328,6 +440,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
            (self._warm_start_file_name is not None):
             script += 'read %s\n' % (self._warm_start_file_name,)
 
+        if self._priorities_solve and self._priorities_file_name is not None:
+            script += "read %s\n" % (self._priorities_file_name,)
+
         if 'relax_integrality' in self.options:
             script += 'change problem lp\n'
 
@@ -350,6 +465,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                (self._warm_start_file_name is not None):
                 print("Solver warm-start file="
                       +self._warm_start_file_name)
+
+            if self._priorities_solve and self._priorities_file_name is not None:
+                print("Solver priorities file=" + self._priorities_file_name)
 
         #
         # Define command line

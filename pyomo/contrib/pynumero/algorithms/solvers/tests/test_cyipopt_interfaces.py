@@ -11,19 +11,17 @@
 import pyutilib.th as unittest
 import pyomo.environ as pyo
 
-from pyomo.contrib.pynumero import numpy_available, scipy_available
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available, scipy_sparse as spa, scipy_available
+)
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-import scipy.sparse as spa
-import numpy as np
-
-from pyomo.contrib.pynumero.extensions.asl import AmplInterface
+from pyomo.contrib.pynumero.asl import AmplInterface
 if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run CyIpoptSolver tests")
 
-import scipy.sparse as sp
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
 try:
@@ -103,10 +101,10 @@ class TestCyIpoptNLP(unittest.TestCase):
         
         # test jacobian
         expected = np.asarray([[8.0, 0, 1.0],[0.0, 8.0, 1.0]])
-        spexpected = sp.coo_matrix(expected).todense()
+        spexpected = spa.coo_matrix(expected).todense()
         rows, cols = cynlp.jacobianstructure()
         values = cynlp.jacobian(x)
-        jac = sp.coo_matrix((values, (rows,cols)), shape=(len(constraints), len(x))).todense()
+        jac = spa.coo_matrix((values, (rows,cols)), shape=(len(constraints), len(x))).todense()
         self.assertTrue(np.allclose(spexpected, jac))
 
         # test hessian
@@ -114,6 +112,6 @@ class TestCyIpoptNLP(unittest.TestCase):
         y.fill(1.0)
         rows, cols = cynlp.hessianstructure()
         values = cynlp.hessian(x, y, obj_factor=1.0)
-        hess_lower = sp.coo_matrix((values, (rows,cols)), shape=(len(x), len(x))).todense()
+        hess_lower = spa.coo_matrix((values, (rows,cols)), shape=(len(x), len(x))).todense()
         expected_hess_lower = np.asarray([[-286.0, 0.0, 0.0], [0.0, 4.0, 0.0], [-144.0, 0.0, 192.0]], dtype=np.float64)
         self.assertTrue(np.allclose(expected_hess_lower, hess_lower))

@@ -407,7 +407,7 @@ class EmbeddedSP(object):
         # remove the parent blocks from this map
         keys_to_delete = []
         for var in self.variable_symbols:
-            if var.parent_component().type() is not Var:
+            if var.parent_component().ctype is not Var:
                 keys_to_delete.append(var)
         for key in keys_to_delete:
             del self.variable_symbols[key]
@@ -663,13 +663,17 @@ class EmbeddedSP(object):
     def _create_scenario_tree_model(self, size):
         assert size > 0
         stm = CreateAbstractScenarioTreeModel()
-        stm.Stages.add('t1')
-        stm.Stages.add('t2')
-        stm.Nodes.add('root')
+        _stages = ["t1", "t2"]
+        _nodes = ["root"]
+        _scenarios = []
         for i in xrange(1, size+1):
-            stm.Nodes.add('n'+str(i))
-            stm.Scenarios.add('s'+str(i))
-        stm = stm.create_instance()
+            _nodes.append('n'+str(i))
+            _scenarios.append('s'+str(i))
+        stm = stm.create_instance(
+            data={None: {"Stages": _stages,
+                         "Nodes": _nodes,
+                         "Scenarios": _scenarios}}
+        )
         stm.NodeStage['root'] = 't1'
         stm.ConditionalProbability['root'] = 1.0
         weight = 1.0/float(size)

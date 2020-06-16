@@ -10,13 +10,13 @@
 
 from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
-from pyomo.core.base.sets import SetOf, _SetProduct, _SetDataBase
+from pyomo.core.base.set import SetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set
 )
 from pyomo.core.base.indexed_component_slice import (
-    _IndexedComponent_slice, _IndexedComponent_slice_iter
+    IndexedComponent_slice, _IndexedComponent_slice_iter
 )
 
 import six
@@ -143,14 +143,14 @@ class _ReferenceDict(collections_MutableMapping):
     """A dict-like object whose values are defined by a slice.
 
     This implements a dict-like object whose keys and values are defined
-    by a component slice (:py:class:`_IndexedComponent_slice`).  The
+    by a component slice (:py:class:`IndexedComponent_slice`).  The
     intent behind this object is to replace the normal ``_data``
     :py:class:`dict` in :py:class:`IndexedComponent` containers to
     create "reference" components.
 
     Parameters
     ----------
-    component_slice : :py:class:`_IndexedComponent_slice`
+    component_slice : :py:class:`IndexedComponent_slice`
         The slice object that defines the "members" of this mutable mapping.
     """
     def __init__(self, component_slice):
@@ -192,19 +192,19 @@ class _ReferenceDict(collections_MutableMapping):
     def __setitem__(self, key, val):
         tmp = self._slice.duplicate()
         op = tmp._call_stack[-1][0]
-        if op == _IndexedComponent_slice.get_item:
+        if op == IndexedComponent_slice.get_item:
             tmp._call_stack[-1] = (
-                _IndexedComponent_slice.set_item,
+                IndexedComponent_slice.set_item,
                 tmp._call_stack[-1][1],
                 val )
-        elif op == _IndexedComponent_slice.slice_info:
+        elif op == IndexedComponent_slice.slice_info:
             tmp._call_stack[-1] = (
-                _IndexedComponent_slice.set_item,
+                IndexedComponent_slice.set_item,
                 tmp._call_stack[-1][1],
                 val )
-        elif op == _IndexedComponent_slice.get_attribute:
+        elif op == IndexedComponent_slice.get_attribute:
             tmp._call_stack[-1] = (
-                _IndexedComponent_slice.set_attribute,
+                IndexedComponent_slice.set_attribute,
                 tmp._call_stack[-1][1],
                 val )
         else:
@@ -218,13 +218,13 @@ class _ReferenceDict(collections_MutableMapping):
     def __delitem__(self, key):
         tmp = self._slice.duplicate()
         op = tmp._call_stack[-1][0]
-        if op == _IndexedComponent_slice.get_item:
+        if op == IndexedComponent_slice.get_item:
             # If the last attribute of the slice gets an item,
             # change it to delete the item
             tmp._call_stack[-1] = (
-                _IndexedComponent_slice.del_item,
+                IndexedComponent_slice.del_item,
                 tmp._call_stack[-1][1] )
-        elif op == _IndexedComponent_slice.slice_info:
+        elif op == IndexedComponent_slice.slice_info:
             assert len(tmp._call_stack) == 1
             _iter = self._get_iter(tmp, key)
             try:
@@ -233,11 +233,11 @@ class _ReferenceDict(collections_MutableMapping):
                 return
             except StopIteration:
                 raise KeyError("KeyError: %s" % (key,))
-        elif op == _IndexedComponent_slice.get_attribute:
+        elif op == IndexedComponent_slice.get_attribute:
             # If the last attribute of the slice retrieves an attribute,
             # change it to delete the attribute
             tmp._call_stack[-1] = (
-                _IndexedComponent_slice.del_attribute,
+                IndexedComponent_slice.del_attribute,
                 tmp._call_stack[-1][1] )
         else:
             raise DeveloperError(
@@ -300,7 +300,7 @@ class _ReferenceSet(collections_Set):
     """A set-like object whose values are defined by a slice.
 
     This implements a dict-like object whose members are defined by a
-    component slice (:py:class:`_IndexedComponent_slice`).
+    component slice (:py:class:`IndexedComponent_slice`).
     :py:class:`_ReferenceSet` differs from the
     :py:class:`_ReferenceDict` above in that it looks in the underlying
     component ``index_set()`` for values that match the slice, and not
@@ -308,7 +308,7 @@ class _ReferenceSet(collections_Set):
 
     Parameters
     ----------
-    component_slice : :py:class:`_IndexedComponent_slice`
+    component_slice : :py:class:`IndexedComponent_slice`
         The slice object that defines the "members" of this set
 
     """
@@ -347,14 +347,6 @@ class _ReferenceSet(collections_Set):
         )
 
 
-def _get_base_sets(_set):
-    if isinstance(_set, _SetProduct):
-        for subset in _set.set_tuple:
-            for _ in _get_base_sets(subset):
-                yield _
-    else:
-        yield _set
-
 def _identify_wildcard_sets(iter_stack, index):
     # if we have already decided that there isn't a comon index for the
     # slices, there is nothing more we can do.  Bail.
@@ -368,7 +360,7 @@ def _identify_wildcard_sets(iter_stack, index):
         if level is not None:
             offset = 0
             wildcard_sets = {}
-            for j,s in enumerate(_get_base_sets(level.component.index_set())):
+            for j,s in enumerate(level.component.index_set().subsets()):
                 if s is UnindexedComponent_set:
                     wildcard_sets[j] = s
                     offset += 1
@@ -439,7 +431,7 @@ def Reference(reference, ctype=_NotSpecified):
 
     Parameters
     ----------
-    reference : :py:class:`_IndexedComponent_slice`
+    reference : :py:class:`IndexedComponent_slice`
         component slice that defines the data to include in the
         Reference component
 
@@ -514,7 +506,7 @@ def Reference(reference, ctype=_NotSpecified):
               4 :     1 :    10 :  None : False : False :  Reals
 
     """
-    if isinstance(reference, _IndexedComponent_slice):
+    if isinstance(reference, IndexedComponent_slice):
         pass
     elif isinstance(reference, Component):
         reference = reference[...]
@@ -535,7 +527,7 @@ def Reference(reference, ctype=_NotSpecified):
         ctypes = set((1,2))
     index = []
     for obj in _iter:
-        ctypes.add(obj.type())
+        ctypes.add(obj.ctype)
         if not isinstance(obj, ComponentData):
             # This object is not a ComponentData (likely it is a pure
             # IndexedComponent container).  As the Reference will treat

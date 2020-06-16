@@ -16,11 +16,12 @@ import datetime
 import textwrap
 import logging
 import argparse
+import socket
 
 import pyutilib.subprocess
 from pyutilib.misc import Options
 
-from pyomo.common import get_pyomo_commands
+import pyomo.common
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -86,7 +87,7 @@ def help_commands():
     print("")
     print("The following commands are installed with Pyomo:")
     print("-"*75)
-    registry = get_pyomo_commands()
+    registry = pyomo.common.get_pyomo_commands()
     d = max(len(key) for key in registry)
     fmt = "%%-%ds  %%s" % d
     for key in sorted(registry.keys(), key=lambda v: v.upper()):
@@ -139,7 +140,6 @@ def help_datamanagers(options):
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
 def help_api(options):
-    import pyomo.common
     services = pyomo.common.PyomoAPIFactory.services()
     #
     f = {}
@@ -259,7 +259,19 @@ def help_transformations():
     print("---------------------------")
     for xform in sorted(TransformationFactory):
         print("  "+xform)
-        print(wrapper.fill(TransformationFactory.doc(xform)))
+        _doc = TransformationFactory.doc(xform) or ""
+        # Ideally, the Factory would ensure that the doc string
+        # indicated deprecation, but as @deprecated() is Pyomo
+        # functionality and the Factory comes directly from PyUtilib,
+        # PyUtilib probably shouldn't contain Pyomo-specific processing.
+        # The next best thing is to ensure that the deprecation status
+        # is indicated here.
+        _init_doc = TransformationFactory.get_class(xform).__init__.__doc__ \
+                    or ""
+        if _init_doc.startswith('DEPRECATION') and 'DEPRECAT' not in _doc:
+            _doc = ' '.join(('[DEPRECATED]', _doc))
+        if _doc:
+            print(wrapper.fill(_doc))
 
 def help_solvers():
     import pyomo.environ
@@ -289,31 +301,53 @@ def help_solvers():
     print("")
     solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
-    n = max(map(len, solver_list))
-    wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
+    _data = []
     try:
         # Disable warnings
         logging.disable(logging.WARNING)
         for s in solver_list:
             # Create a solver, and see if it is available
             with pyomo.opt.SolverFactory(s) as opt:
-                if s == 'py' or (hasattr(opt, "_metasolver") and opt._metasolver):
+                ver = ''
+                if opt.available(False):
+                    avail = '-'
+                    if not hasattr(opt, 'license_is_valid'):
+                        avail = '+'
+                    elif opt.license_is_valid():
+                        avail = '+'
+                    try:
+                        ver = opt.version()
+                        if ver:
+                            while len(ver) > 2 and ver[-1] == 0:
+                                ver = ver[:-1]
+                            ver = '.'.join(str(v) for v in ver)
+                        else:
+                            ver = ''
+                    except (AttributeError, NameError):
+                        pass
+                elif s == 'py' or (hasattr(opt, "_metasolver") and opt._metasolver):
                     # py is a metasolver, but since we don't specify a subsolver
                     # for this test, opt is actually an UnknownSolver, so we
                     # can't try to get the _metasolver attribute from it.
                     # Also, default to False if the attribute isn't implemented
-                    msg = '    %-'+str(n)+'s   + %s'
-                elif opt.available(False):
-                    msg = '    %-'+str(n)+'s   * %s'
+                    avail = '*'
                 else:
-                    msg = '    %-'+str(n)+'s     %s'
-                print(wrapper.fill(msg % (s, pyomo.opt.SolverFactory.doc(s))))
+                    avail = ''
+                _data.append((avail, s, ver, pyomo.opt.SolverFactory.doc(s)))
     finally:
         # Reset logging level
         logging.disable(logging.NOTSET)
+    nameFieldLen = max(len(line[1]) for line in _data)
+    verFieldLen = max(len(line[2]) for line in _data)
+    fmt = '   %%1s%%-%ds %%-%ds %%s' % (nameFieldLen, verFieldLen)
+    wrapper = textwrap.TextWrapper(
+        subsequent_indent=' '*(nameFieldLen + verFieldLen + 6))
+    for _line in _data:
+        print(wrapper.fill(fmt % _line))
+
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("An asterisk indicates solvers that are currently available to be run from Pyomo with the serial solver manager. A plus indicates meta-solvers, that are always available."))
+    print(wrapper.fill("""The leading symbol (one of *, -, +) indicates the current solver availability.  A plus (+) indicates the solver is currently available to be run from Pyomo with the serial solver manager, and (if applicable) has a valid license.  A minus (-) indicates the solver executables are available but do not reporthaving a valid license.  The solver may still be usable in an unlicensed or "demo" mode for limited problem sizes. An asterisk (*) indicates meta-solvers or generic interfaces, which are always available."""))
     print('')
     print(wrapper.fill('Pyomo also supports solver interfaces that are wrappers around third-party solver interfaces. These interfaces require a subsolver specification that indicates the solver being executed.  For example, the following indicates that the ipopt solver will be used:'))
     print('')
@@ -327,6 +361,7 @@ def help_solvers():
     print('')
     try:
         logging.disable(logging.WARNING)
+        socket.setdefaulttimeout(10)
         import pyomo.neos.kestrel
         kestrel = pyomo.neos.kestrel.kestrelAMPL()
         #print "HERE", solver_list
@@ -354,6 +389,7 @@ def help_solvers():
         pass
     finally:
         logging.disable(logging.NOTSET)
+        socket.setdefaulttimeout(None)
 
 def print_components(data):
     """

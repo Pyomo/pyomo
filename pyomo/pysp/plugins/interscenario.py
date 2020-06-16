@@ -21,9 +21,7 @@ from pyomo.core import (
     minimize, value, TransformationFactory,
     ComponentUID, Block, Constraint, ConstraintList,
     Param, Var, VarList, Set, Objective, Suffix,
-    Binary, Boolean,
-    Integers, PositiveIntegers, NonPositiveIntegers,
-    NegativeIntegers, NonNegativeIntegers, IntegerInterval,
+    Binary, NonNegativeIntegers,
 )
 from pyomo.opt import (
     SolverFactory, SolverStatus, TerminationCondition, ProblemFormat )
@@ -56,16 +54,6 @@ _infeasible_termination_conditions = set([
     TerminationCondition.infeasible,
     TerminationCondition.invalidProblem,
 ])
-
-_BinaryDomains = ( Binary, Boolean )
-_IntegerDomains = (
-    Integers,
-    PositiveIntegers,
-    NonPositiveIntegers,
-    NegativeIntegers,
-    NonNegativeIntegers,
-    IntegerInterval,
-)
 
 def get_modified_instance( ph, scenario_tree, scenario_or_bundle, **options):
     # Find the model

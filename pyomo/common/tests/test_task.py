@@ -16,13 +16,6 @@ from pyomo.common.log import LoggingIntercept
 
 from six import StringIO
 
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
-
-
 class TestData(unittest.TestCase):
 
     def test_print_PyomoAPIData_string(self):
@@ -46,7 +39,6 @@ c:
     y: 2""")
         self.assertEqual(len(data._dirty_), 0)
 
-    @unittest.skipIf(not yaml_available, "No YAML interface available")
     def test_print_PyomoAPIData_repr(self):
         #"""Print PyomoAPIData representation"""
         data = PyomoAPIData()

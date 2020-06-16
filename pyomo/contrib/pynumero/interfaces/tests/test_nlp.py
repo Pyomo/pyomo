@@ -10,14 +10,13 @@
 import pyutilib.th as unittest
 import os
 
-from pyomo.contrib.pynumero import numpy_available, scipy_available
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available, scipy_available
+)
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-import scipy.sparse as sp
-import numpy as np
-
-from pyomo.contrib.pynumero.extensions.asl import AmplInterface
+from pyomo.contrib.pynumero.asl import AmplInterface
 if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run NLP tests")
@@ -345,7 +344,7 @@ def execute_extended_nlp_interface(self, anlp):
     expected_hess = np.asarray(expected_hess, dtype=np.float64)
     self.assertTrue(np.array_equal(dense_hess, expected_hess))
 
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
+
 class TestAslNLP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -363,7 +362,6 @@ class TestAslNLP(unittest.TestCase):
         anlp = AslNLP(self.filename)
         execute_extended_nlp_interface(self, anlp)
         
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestAmplNLP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -441,7 +439,6 @@ class TestAmplNLP(unittest.TestCase):
         self.assertEqual(sum(ineq_constraint_idxs), 3)
 
 
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestPyomoNLP(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -550,7 +547,6 @@ class TestPyomoNLP(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             nlp = PyomoNLP(m)
 
-@unittest.skipIf(os.name in ['nt', 'dos'], "Do not test on windows")
 class TestUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

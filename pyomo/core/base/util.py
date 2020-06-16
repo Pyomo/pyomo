@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -16,7 +16,7 @@ import functools
 import inspect
 import six
 
-from six import iteritems
+from six import iteritems, iterkeys
 
 if six.PY2:
     getargspec = inspect.getargspec
@@ -111,7 +111,7 @@ def disable_methods(methods):
     that override key methods to raise exceptions.  When the construct()
     method is called, the class instance changes type back to the
     original scalar component and the full class functionality is
-    restored.  The prevents most class methods from having to begin with
+    restored.  This prevents most class methods from having to begin with
     "`if not self.parent_component()._constructed: raise RuntimeError`"
     """
     def class_decorator(cls):
@@ -119,6 +119,8 @@ def disable_methods(methods):
         base = cls.__bases__[0]
 
         def construct(self, data=None):
+            if hasattr(self, '_name') and self._name == self.__class__.__name__:
+                self._name = base.__name__
             self.__class__ = base
             return base.construct(self, data)
         construct.__doc__ = base.construct.__doc__
@@ -152,6 +154,14 @@ def Initializer(init,
                 allow_generators=False,
                 treat_sequences_as_mappings=True,
                 arg_not_specified=None):
+    """Standardized processing of Component keyword arguments
+
+    Component keyword arguments accept a number of possible inputs, from
+    scalars to dictionaries, to functions (rules) and generators.  This
+    function standardizes the processing of keyword arguments and
+    returns "initializer classes" that are specialized to the specific
+    data type provided.
+    """
     if init.__class__ in native_types:
         if init is arg_not_specified:
             return None
@@ -176,27 +186,62 @@ def Initializer(init,
             return ItemInitializer(init)
         else:
             return ConstantInitializer(init)
-    elif inspect.isgenerator(init) or hasattr(init, 'next') \
-         or hasattr(init, '__next__'):
+    elif inspect.isgenerator(init) or (
+            ( hasattr(init, 'next') or hasattr(init, '__next__') )
+              and not hasattr(init, '__len__')):
+        # This catches generators and iterators (like enumerate()), but
+        # skips "reusable" iterators like range() as well as Pyomo
+        # (finite) Set objects.
         if not allow_generators:
             raise ValueError("Generators are not allowed")
-        return ConstantInitializer(init)
+        # Deepcopying generators is problematic (e.g., it generates a
+        # segfault in pypy3 7.3.0).  We will immediately expand the
+        # generator into a tuple and then store it as a constant.
+        return ConstantInitializer(tuple(init))
     else:
         return ConstantInitializer(init)
 
+
 class InitializerBase(object):
+    """Base class for all Initializer objects"""
     __slots__ = ()
 
     verified = False
 
     def __getstate__(self):
+        """Class serializer
+
+        This class must declare __getstate__ because it is slotized.
+        This implementation should be sufficient for simple derived
+        classes (where __slots__ are only declared on the most derived
+        class).
+        """
         return {k:getattr(self,k) for k in self.__slots__}
 
     def __setstate__(self, state):
         for key, val in iteritems(state):
             object.__setattr__(self, key, val)
 
+    def constant(self):
+        """Return True if this initializer is constant across all indices"""
+        return False
+
+    def contains_indices(self):
+        """Return True if this initializer contains embedded indices"""
+        return False
+
+    def indices(self):
+        """Return a generator over the embedded indices
+
+        This will raise a RuntimeError if this initializer does not
+        contain embedded indices
+        """
+        raise RuntimeError("Initializer %s does not contain embedded indices"
+                           % (type(self).__name__,))
+
+
 class ConstantInitializer(InitializerBase):
+    """Initializer for constant values"""
     __slots__ = ('val','verified')
 
     def __init__(self, val):
@@ -209,7 +254,9 @@ class ConstantInitializer(InitializerBase):
     def constant(self):
         return True
 
+
 class ItemInitializer(InitializerBase):
+    """Initializer for dict-like values supporting __getitem__()"""
     __slots__ = ('_dict',)
 
     def __init__(self, _dict):
@@ -218,10 +265,15 @@ class ItemInitializer(InitializerBase):
     def __call__(self, parent, idx):
         return self._dict[idx]
 
-    def constant(self):
-        return False
+    def contains_indices(self):
+        return True
+
+    def indices(self):
+        return iterkeys(self._dict)
+
 
 class IndexedCallInitializer(InitializerBase):
+    """Initializer for functions and callable objects"""
     __slots__ = ('_fcn',)
 
     def __init__(self, _fcn):
@@ -237,23 +289,27 @@ class IndexedCallInitializer(InitializerBase):
         else:
             return self._fcn(parent, idx)
 
-    def constant(self):
-        return False
 
 
 class CountedCallGenerator(object):
-    def __init__(self, fcn, scalar, parent, idx):
+    """Generator implementing the "counted call" initialization scheme
+
+    This generator implements the older "counted call" scheme, where the
+    first argument past the parent block is a monotonically-increasing
+    integer beginning at 1.
+    """
+    def __init__(self, ctype, fcn, scalar, parent, idx):
         # Note: this is called by a component using data from a Set (so
         # any tuple-like type should have already been checked and
         # converted to a tuple; or flattening is turned off and it is
         # the user's responsibility to sort things out.
         self._count = 0
         if scalar:
-            self._fcn = lambda c: self._filter(fcn(parent, c))
+            self._fcn = lambda c: self._filter(ctype, fcn(parent, c))
         elif idx.__class__ is tuple:
-            self._fcn = lambda c: self._filter(fcn(parent, c, *idx))
+            self._fcn = lambda c: self._filter(ctype, fcn(parent, c, *idx))
         else:
-            self._fcn = lambda c: self._filter(fcn(parent, c, idx))
+            self._fcn = lambda c: self._filter(ctype, fcn(parent, c, idx))
 
     def __iter__(self):
         return self
@@ -262,22 +318,24 @@ class CountedCallGenerator(object):
         self._count += 1
         return self._fcn(self._count)
 
+    next = __next__
+
     @staticmethod
-    def _filter(x):
+    def _filter(ctype, x):
         if x is None:
             raise ValueError(
-                """Counted Set rule returned None instead of Set.End.
-    Counted Set rules of the form fcn(model, count, *idx) will be called
+                """Counted %s rule returned None instead of %s.End.
+    Counted %s rules of the form fcn(model, count, *idx) will be called
     repeatedly with an increasing count parameter until the rule returns
-    Set.End.  None is not a valid Set member in this case due to the
-    likelihood that an error in the rule can incorrectly return None.""")
+    %s.End.  None is not a valid return value in this case due to the
+    likelihood that an error in the rule can incorrectly return None."""
+                % ((ctype.__name__,)*4))
         return x
 
 
-    next = __next__
-
-
 class CountedCallInitializer(InitializerBase):
+    """Initializer for functions implementing the "counted call" API.
+    """
     # Pyomo has a historical feature for some rules, where the number of
     # times[*1] the rule was called could be passed as an additional
     # argument between the block and the index.  This was primarily
@@ -300,12 +358,13 @@ class CountedCallInitializer(InitializerBase):
     # consistent form of the original implementation for backwards
     # compatability, but I believe that we should deprecate this syntax
     # entirely.
-    __slots__ = ('_fcn','_is_counted_rule', '_scalar',)
+    __slots__ = ('_fcn','_is_counted_rule', '_scalar','_ctype')
 
     def __init__(self, obj, _indexed_init):
         self._fcn = _indexed_init._fcn
         self._is_counted_rule = None
         self._scalar = not obj.is_indexed()
+        self._ctype = obj.ctype
         if self._scalar:
             self._is_counted_rule = True
 
@@ -320,7 +379,8 @@ class CountedCallInitializer(InitializerBase):
             else:
                 return self._fcn(parent, idx)
         if self._is_counted_rule == True:
-            return CountedCallGenerator(self._fcn, self._scalar, parent, idx)
+            return CountedCallGenerator(
+                self._ctype, self._fcn, self._scalar, parent, idx)
 
         # Note that this code will only be called once, and only if
         # the object is not a scalar.
@@ -332,10 +392,9 @@ class CountedCallInitializer(InitializerBase):
             self._is_counted_rule = False
         return self.__call__(parent, idx)
 
-    def constant(self):
-        return False
 
 class ScalarCallInitializer(InitializerBase):
+    """Initializer for functions taking only the parent block argument."""
     __slots__ = ('_fcn',)
 
     def __init__(self, _fcn):
@@ -343,7 +402,3 @@ class ScalarCallInitializer(InitializerBase):
 
     def __call__(self, parent, idx):
         return self._fcn(parent)
-
-    def constant(self):
-        return False
-

@@ -19,14 +19,13 @@ import weakref
 from six import iteritems, iterkeys
 from six.moves import xrange
 
-from pyutilib.misc.misc import flatten_tuple
-
 from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
 )
+from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.util import (
     disable_methods, InitializerBase, Initializer, ConstantInitializer,
     CountedCallInitializer, ItemInitializer, IndexedCallInitializer,
@@ -39,20 +38,78 @@ from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
 )
+from pyomo.core.base.global_set import (
+    GlobalSets, GlobalSetBase,
+)
 from pyomo.core.base.misc import sorted_robust
 
 if six.PY3:
     from collections.abc import Sequence as collections_Sequence
+    def formatargspec(fn):
+        return str(inspect.signature(fn))
 else:
     from collections import Sequence as collections_Sequence
+    def formatargspec(fn):
+        return str(inspect.formatargspec(*inspect.getargspec(fn)))
 
 
 logger = logging.getLogger('pyomo.core')
 
 _prePython37 = sys.version_info[:2] < (3,7)
 
+_inf = float('inf')
+
 FLATTEN_CROSS_PRODUCT = True
 
+"""Set objects
+
+Pyomo `Set` objects are designed to be "API-compatible" with Python
+`set` objects.  However, not all Set objects implement the full `set`
+API (e.g., only finite discrete Sets support `add()`).
+
+All Sets implement one of the following APIs:
+
+0. `class _SetDataBase(ComponentData)`
+   *(pure virtual interface)*
+
+1. `class _SetData(_SetDataBase)`
+   *(base class for all AML Sets)*
+
+2. `class _FiniteSetMixin(object)`
+   *(pure virtual interface, adds support for discrete/iterable sets)*
+
+4. `class _OrderedSetMixin(object)`
+   *(pure virtual interface, adds support for ordered Sets)*
+
+This is a bit of a change from python set objects.  First, the
+lowest-level (non-abstract) Data object supports infinite sets; that is,
+sets that contain an infinite number of values (this includes both
+bounded continuous ranges as well as unbounded discrete ranges).  As
+there are an infinite number of values, iteration is *not*
+supported. The base class also implements all Python set operations.
+Note that `_SetData` does *not* implement `len()`, as Python requires
+`len()` to return a positive integer.
+
+Finite sets add iteration and support for `len()`.  In addition, they
+support access to members through three methods: `data()` returns the
+members as a tuple (in the internal storage order), and may not be
+deterministic.  `ordered_data()` returns the members, and is guaranteed
+to be in a deterministic order (in the case of insertion order sets, up
+to the determinism of the script that populated the set).  Finally,
+`sorted_data()` returns the members in a sorted order (guaranteed
+deterministic, up to the implementation of < and ==).
+
+..TODO: should these three members all return generators?  This would
+further change the implementation of `data()`, but would allow consumers
+to potentially access the members in a more efficient manner.
+
+Ordered sets add support for `ord()` and `__getitem__`, as well as the
+`first`, `last`, `next` and `prev` methods for stepping over set
+members.
+
+Note that the base APIs are all declared (and to the extent possible,
+implemented) through Mixin classes.
+"""
 
 def process_setarg(arg):
     if isinstance(arg, _SetDataBase):
@@ -60,7 +117,7 @@ def process_setarg(arg):
     elif isinstance(arg, IndexedComponent):
         raise TypeError("Cannot apply a Set operator to an "
                         "indexed %s component (%s)"
-                        % (arg.type().__name__, arg.name,))
+                        % (arg.ctype.__name__, arg.name,))
     elif isinstance(arg, Component):
         raise TypeError("Cannot apply a Set operator to a non-Set "
                         "%s component (%s)"
@@ -69,19 +126,23 @@ def process_setarg(arg):
         raise TypeError("Cannot apply a Set operator to a non-Set "
                         "component data (%s)" % (arg.name,))
 
-    # TODO: DEPRECATE this functionality? It has never been documented,
+    # DEPRECATED: This functionality has never been documented,
     # and I don't know of a use of it in the wild.
-    try:
+    if hasattr(arg, 'set_options'):
         # If the argument has a set_options attribute, then use
         # it to initialize a set
-        args = getattr(arg,'set_options')
+        args = arg.set_options
         args.setdefault('initialize', arg)
         args.setdefault('ordered', type(arg) not in Set._UnorderedInitializers)
         ans = Set(**args)
-        ans.construct()
+
+        _init = args['initialize']
+        if not ( inspect.isgenerator(_init)
+                 or inspect.isfunction(_init)
+                 or ( isinstance(_init, ComponentData)
+                      and not _init.parent_component().is_constructed() )):
+            ans.construct()
         return ans
-    except AttributeError:
-        pass
 
     # TBD: should lists/tuples be copied into Sets, or
     # should we preserve the reference using SetOf?
@@ -91,19 +152,35 @@ def process_setarg(arg):
     #               ordered=type(arg) in {tuple, list}))
     # ans.construct()
     #
-    # But this causes problems, especially because Set()'s
-    # constructor needs to know if the object is ordered
-    # (Set defaults to ordered, and will toss a warning if
-    # the underlying data is not ordered)).  While we could
-    # add checks where we create the Set (like here and in
-    # the __r*__ operators) and pass in a reasonable value
-    # for ordered, it is starting to make more sense to use
-    # SetOf (which has that logic).  Alternatively, we could
-    # use SetOf to create the Set:
+    # But this causes problems, especially because Set()'s constructor
+    # needs to know if the object is ordered (Set defaults to ordered,
+    # and will toss a warning if the underlying data source is not
+    # ordered)).  While we could add checks where we create the Set
+    # (like here and in the __r*__ operators) and pass in a reasonable
+    # value for ordered, it is starting to make more sense to use SetOf
+    # (which has that logic).  Alternatively, we could use SetOf to
+    # create the Set:
     #
-    tmp = SetOf(arg)
-    ans = Set(initialize=tmp, ordered=tmp.isordered())
-    ans.construct()
+    _defer_construct = False
+    if inspect.isgenerator(arg):
+        _ordered = True
+        _defer_construct = True
+    elif inspect.isfunction(arg):
+        _ordered = True
+        _defer_construct = True
+    else:
+        arg = SetOf(arg)
+        _ordered = arg.isordered()
+
+    ans = Set(initialize=arg, ordered=_ordered)
+    #
+    # Because the resulting set will be attached to the model (at least
+    # for the time being), we will NOT construct it here unless the data
+    # is already determined (either statically provided, or through an
+    # already-constructed component).
+    #
+    if not _defer_construct:
+        ans.construct()
     #
     # Or we can do the simple thing and just use SetOf:
     #
@@ -111,7 +188,9 @@ def process_setarg(arg):
     return ans
 
 
-@deprecated('The set_options decorator seems nonessential and is deprecated',
+@deprecated('The set_options decorator is deprecated; create Sets from '
+            'functions explicitly by passing the function to the Set '
+            'constructor using the "initialize=" keyword argument.',
             version='TBD')
 def set_options(**kwds):
     """
@@ -147,16 +226,39 @@ def simple_set_rule( fn ):
         ...
     """
 
-    def wrapper_function ( *args, **kwargs ):
-        value = fn( *args, **kwargs )
+    # Because some of our processing of initializer functions relies on
+    # knowing the number of positional arguments, we will go to extra
+    # effort here to preserve the original function signature.
+    _funcdef = """def wrapper_function%s:
+        args, varargs, kwds, local_env = inspect.getargvalues(
+            inspect.currentframe())
+        args = tuple(local_env[_] for _ in args) + (varargs or ())
+        value = fn(*args, **(kwds or {}))
+        # Map None -> Set.End
         if value is None:
             return Set.End
         return value
-    return wrapper_function
+""" % (formatargspec(fn),)
+    # Create the wrapper in a temporary environment that mimics this
+    # function's environment.
+    _env = dict(globals())
+    _env.update(locals())
+    exec(_funcdef, _env)
+    return _env['wrapper_function']
+
 
 class UnknownSetDimen(object): pass
 
 class SetInitializer(InitializerBase):
+    """An Initializer wrapper for returning Set objects
+
+    This initializer wraps another Initializer and converts the return
+    value to a proper Pyomo Set.  If the initializer is None, then Any
+    is returned.  This initializer can be 'intersected' with another
+    initializer to return the SetIntersect of the Sets returned by the
+    initializers.
+
+    """
     __slots__ = ('_set','verified')
 
     def __init__(self, init, allow_generators=True):
@@ -184,16 +286,32 @@ class SetInitializer(InitializerBase):
         if self._set is None:
             return Any
         else:
-            return self._set(parent, idx)
+            return process_setarg(self._set(parent, idx))
 
     def constant(self):
         return self._set is None or self._set.constant()
 
+    def contains_indices(self):
+        return self._set is not None and self._set.contains_indices()
+
+    def indices(self):
+        if self._set is not None:
+            return self._set.indices()
+        else:
+            super(SetInitializer, self).indices()
+
     def setdefault(self, val):
         if self._set is None:
-            self._set = ConstantInitializer(val)
+            self._set = Initializer(val)
 
 class SetIntersectInitializer(InitializerBase):
+    """An Initializer that returns the intersection of two SetInitializers
+
+    Users will typically not create a SetIntersectInitializer directly.
+    Instead, SetInitializer.intersect() may return a SetInitializer that
+    contains a SetIntersectInitializer instance.
+
+    """
     __slots__ = ('_A','_B',)
     def __init__(self, setA, setB):
         self._A = setA
@@ -205,9 +323,37 @@ class SetIntersectInitializer(InitializerBase):
     def constant(self):
         return self._A.constant() and self._B.constant()
 
-class RangeSetInitializer(InitializerBase):
+    def contains_indices(self):
+        return self._A.contains_indices() or self._B.contains_indices()
+
+    def indices(self):
+        if self._A.contains_indices():
+            if self._B.contains_indices():
+                if set(self._A.indices()) != set (self._B.indices()):
+                    raise ValueError(
+                        "SetIntersectInitializer contains two "
+                        "sub-initializers with inconsistent external indices")
+            return self._A.indices()
+        else:
+            # It is OK (and desirable) for this to raise the exception
+            # if B does not contain external indices
+            return self._B.indices()
+
+class BoundsInitializer(InitializerBase):
+    """An Initializer wrapper that converts bounds information to a RangeSet
+
+    The BoundsInitializer wraps another initializer that is expected to
+    return valid arguments to the RangeSet constructor.  Nominally, this
+    would be bounds information in the form of (lower bound, upper
+    bound), but could also be a single scalar or a 3-tuple.  Calling
+    this initializer will return a RangeSet object.
+
+    BoundsInitializer objects can be intersected with other
+    SetInitializer objects using the SetInitializer.intersect() method.
+
+    """
     __slots__ = ('_init', 'default_step',)
-    def __init__(self, init, default_step=1):
+    def __init__(self, init, default_step=0):
         self._init = Initializer(init, treat_sequences_as_mappings=False)
         self.default_step = default_step
 
@@ -215,10 +361,18 @@ class RangeSetInitializer(InitializerBase):
         val = self._init(parent, idx)
         if not isinstance(val, collections_Sequence):
             val = (1, val, self.default_step)
-        if len(val) < 3:
-            val = tuple(val) + (self.default_step,)
+        else:
+            val = tuple(val)
+            if len(val) == 2:
+                val += (self.default_step,)
+            elif len(val) == 1:
+                val = (1, val[0], self.default_step)
+            elif len(val) == 0:
+                val = (None, None, self.default_step)
         ans = RangeSet(*tuple(val))
-        ans.construct()
+        # We don't need to construct here, as the RangeSet will
+        # automatically construct itself if it can
+        #ans.construct()
         return ans
 
     def constant(self):
@@ -228,50 +382,68 @@ class RangeSetInitializer(InitializerBase):
         # This is a real range set... there is no default to set
         pass
 
-#
-# DESIGN NOTES
-#
-# What do sets do?
-#
-# ALL:
-#   __contains__
-#
-# Note: FINITE implies DISCRETE. Infinite discrete sets cannot be iterated
-#
-# FINITE: ALL +
-#   __len__ (Note: Python len() requires __len__ to return non-negative int)
-#   __iter__, __reversed__
-#   add()
-#   sorted(), ordered_data()
-#
-# ORDERED: FINITE +
-#   __getitem__
-#   next(), prev(), first(), last()
-#   ord()
-#
-# When we do math, the least specific set dictates the API of the resulting set.
-#
-# Note that isfinite and isordered must be resolvable when the class
-# is instantiated (*before* construction).  We will key off these fields
-# when performing set operations to know what type of operation to
-# create, and we will allow set operations in Abstract before
-# construction.
+class TuplizeError(PyomoException):
+    pass
 
-#
-# Set rewrite TODOs:
-#
-#   - Test index/ord for equivalence of 1 and (1,)
-#
-#   - Make sure that all classes implement the appropriate methods
-#     (e.g., bounds)
-#
-#   - Sets created with Set.Skip should produce intelligible errors
-#
-#   - Resolve nonnumeric range operations on tuples of numeric ranges
-#
-#   - Ensure the range operators raise exeptions for unexpected
-#     (non-range/non list arguments.
-#
+class TuplizeValuesInitializer(InitializerBase):
+    """An initializer wrapper that will "tuplize" a sequence
+
+    This initializer takes the result of another initializer, and if it
+    is a sequence that does not already contain tuples, wil convert it
+    to a sequence of tuples, each of length 'dimen' before returning it.
+
+    """
+    __slots__ = ('_init', '_dimen')
+
+    def __new__(cls, *args):
+        if args == (None,):
+            return None
+        else:
+            return super(TuplizeValuesInitializer, cls).__new__(cls)
+
+    def __init__(self, _init):
+        self._init = _init
+        self._dimen = UnknownSetDimen
+
+    def __call__(self, parent, index):
+        _val = self._init(parent, index)
+        if self._dimen in {1, None, UnknownSetDimen}:
+            return _val
+        elif _val is Set.Skip:
+            return _val
+        elif not _val:
+            return _val
+
+        if not isinstance(_val, collections_Sequence):
+            _val = tuple(_val)
+        if len(_val) == 0:
+            return _val
+        if isinstance(_val[0], tuple):
+            return _val
+        return self._tuplize(_val, parent, index)
+
+    def constant(self):
+        return self._init.constant()
+
+    def contains_indices(self):
+        return self._init.contains_indices()
+
+    def indices(self):
+        return self._init.indices()
+
+    def _tuplize(self, _val, parent, index):
+        d = self._dimen
+        if len(_val) % d:
+            raise TuplizeError(
+                "Cannot tuplize list data for set %%s%%s because its "
+                "length %s is not a multiple of dimen=%s" % (len(_val), d))
+
+        return list(tuple(_val[d*i:d*(i+1)]) for i in xrange(len(_val)//d))
+
+
+class _NotFound(object):
+    "Internal type flag used to indicate if an object is not found in a set"
+    pass
 
 
 # A trivial class that we can use to test if an object is a "legitimate"
@@ -291,8 +463,28 @@ class _SetData(_SetDataBase):
     __slots__ = ()
 
     def __contains__(self, value):
+        try:
+            ans = self.get(value, _NotFound)
+        except TypeError:
+            # In Python 3.x, Sets are unhashable
+            if isinstance(value, _SetData):
+                ans = _NotFound
+            else:
+                raise
+
+        if ans is _NotFound:
+            if isinstance(value, _SetData):
+                deprecation_warning(
+                    "Testing for set subsets with 'a in b' is deprecated.  "
+                    "Use 'a.issubset(b)'.", version='TBD')
+                return value.issubset(self)
+            else:
+                return False
+        return True
+
+    def get(self, value, default=None):
         raise DeveloperError("Derived set class (%s) failed to "
-                             "implement __contains__" % (type(self).__name__,))
+                             "implement get()" % (type(self).__name__,))
 
     def isdiscrete(self):
         """Returns True if this set admits only discrete members"""
@@ -306,12 +498,36 @@ class _SetData(_SetDataBase):
         """Returns True if this is an ordered finite discrete (iterable) Set"""
         return False
 
+    def subsets(self, expand_all_set_operators=None):
+        return [ self ]
+
+    def __iter__(self):
+        """Iterate over the set members
+
+        Raises AttributeError for non-finite sets.  This must be
+        declared for non-finite sets because scalar sets inherit from
+        IndexedComponent, which provides an iterator (over the
+        underlying indexing set).
+        """
+        raise TypeError(
+            "'%s' object is not iterable (non-finite Set '%s' "
+            "is not iterable)" % (self.__class__.__name__, self.name))
+
     def __eq__(self, other):
         if self is other:
             return True
-        try:
+        # Special case: non-finite range sets that only contain finite
+        # ranges (or no ranges).  We will re-generate non-finite sets to
+        # make sure we get an accurate "finiteness" flag.
+        if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
-        except:
+            if not other_isfinite:
+                try:
+                    other = RangeSet(ranges=list(other.ranges()))
+                    other_isfinite = other.isfinite()
+                except TypeError:
+                    pass
+        elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
             other_isfinite = True
@@ -320,6 +536,13 @@ class _SetData(_SetDataBase):
                 # converting it to a Python set() for efficient lookup.
                 other = set(other)
             except:
+                pass
+        else:
+            return False
+        if not self.isfinite():
+            try:
+                self = RangeSet(ranges=list(self.ranges()))
+            except TypeError:
                 pass
         if self.isfinite():
             if not other_isfinite:
@@ -345,6 +568,11 @@ class _SetData(_SetDataBase):
     def dimen(self):
         raise DeveloperError("Derived set class (%s) failed to "
                              "implement dimen" % (type(self).__name__,))
+
+    @property
+    def domain(self):
+        raise DeveloperError("Derived set class (%s) failed to "
+                             "implement domain" % (type(self).__name__,))
 
     def ranges(self):
         raise DeveloperError("Derived set class (%s) failed to "
@@ -375,6 +603,12 @@ class _SetData(_SetDataBase):
                         break
                 else:
                     ub = max(ub, _ub)
+        if lb is not None:
+            if int(lb) == lb:
+                lb = int(lb)
+        if ub is not None:
+            if int(ub) == ub:
+                ub = int(ub)
         return lb, ub
 
     def get_interval(self):
@@ -400,7 +634,7 @@ class _SetData(_SetDataBase):
         # Note: I'd like to use set() for ranges, since we will be
         # randomly removing elelments from the list; however, since we
         # do it by enumerating over ranges, using set() would make this
-        # routine nondeterministic.  Not a hoge issue for the result,
+        # routine nondeterministic.  Not a huge issue for the result,
         # but problemmatic for code coverage.
         ranges = list(self.ranges())
         try:
@@ -569,15 +803,49 @@ class _SetData(_SetDataBase):
         return (interval.start, interval.end, interval.step)
 
     @property
-    @deprecated("The 'virtual' flag is no longer supported", version='TBD')
+    @deprecated("The 'virtual' attribute is no longer supported", version='TBD')
     def virtual(self):
-        return False
+        return isinstance(self, (_AnySet, SetOperator, _InfiniteRangeSetData))
+
+    @virtual.setter
+    def virtual(self, value):
+        if value != self.virtual:
+            raise ValueError(
+                "Attempting to set the (deprecated) 'virtual' attribute on %s "
+                "to an invalid value (%s)" % (self.name, value))
 
     @property
-    @deprecated("The 'concrete' flag is no longer supported.  "
+    @deprecated("The 'concrete' attribute is no longer supported.  "
                 "Use isdiscrete() or isfinite()", version='TBD')
     def concrete(self):
         return self.isfinite()
+
+    @concrete.setter
+    def concrete(self, value):
+        if value != self.concrete:
+            raise ValueError(
+                "Attempting to set the (deprecated) 'concrete' attribute on %s "
+                "to an invalid value (%s)" % (self.name, value))
+
+    @property
+    @deprecated("The 'ordered' attribute is no longer supported.  "
+                "Use isordered()", version='TBD')
+    def ordered(self):
+        return self.isordered()
+
+    @property
+    @deprecated("'filter' is no longer a public attribute.",
+                version='TBD')
+    def filter(self):
+        return None
+
+    @deprecated("check_values() is deprecated: Sets only contain valid members",
+                version='TBD')
+    def check_values(self):
+        """
+        Verify that the values in this set are valid.
+        """
+        return True
 
     def isdisjoint(self, other):
         """Test if this Set is disjoint from `other`
@@ -591,9 +859,9 @@ class _SetData(_SetDataBase):
         -------
         bool : True if this set is disjoint from `other`
         """
-        try:
+        if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
-        except:
+        elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
             other_isfinite = True
@@ -603,6 +871,10 @@ class _SetData(_SetDataBase):
                 other = set(other)
             except:
                 pass
+        else:
+            # Raise an exception consistent with Python's set.isdisjoint()
+            raise TypeError(
+                "'%s' object is not iterable" % (type(other).__name__,))
         if self.isfinite():
             for x in self:
                 if x in other:
@@ -628,9 +900,18 @@ class _SetData(_SetDataBase):
         -------
         bool : True if this set is a subset of `other`
         """
-        try:
+        # Special case: non-finite range sets that only contain finite
+        # ranges (or no ranges).  We will re-generate non-finite sets to
+        # make sure we get an accurate "finiteness" flag.
+        if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
-        except:
+            if not other_isfinite:
+                try:
+                    other = RangeSet(ranges=list(other.ranges()))
+                    other_isfinite = other.isfinite()
+                except TypeError:
+                    pass
+        elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
             other_isfinite = True
@@ -639,6 +920,15 @@ class _SetData(_SetDataBase):
                 # converting it to a Python set() for efficient lookup.
                 other = set(other)
             except:
+                pass
+        else:
+            # Raise an exception consistent with Python's set.issubset()
+            raise TypeError(
+                "'%s' object is not iterable" % (type(other).__name__,))
+        if not self.isfinite():
+            try:
+                self = RangeSet(ranges=list(self.ranges()))
+            except TypeError:
                 pass
         if self.isfinite():
             for x in self:
@@ -660,9 +950,29 @@ class _SetData(_SetDataBase):
             return True
 
     def issuperset(self, other):
-        try:
+        """Test if this Set is a superset of `other`
+
+        Parameters
+        ----------
+            other : ``Set`` or ``iterable``
+                The Set or iterable object to compare this Set against
+
+        Returns
+        -------
+        bool : True if this set is a superset of `other`
+        """
+        # Special case: non-finite range sets that only contain finite
+        # ranges (or no ranges).  We will re-generate non-finite sets to
+        # make sure we get an accurate "finiteness" flag.
+        if hasattr(other, 'isfinite'):
             other_isfinite = other.isfinite()
-        except:
+            if not other_isfinite:
+                try:
+                    other = RangeSet(ranges=list(other.ranges()))
+                    other_isfinite = other.isfinite()
+                except TypeError:
+                    pass
+        elif hasattr(other, '__contains__'):
             # we assume that everything that does not implement
             # isfinite() is a discrete set.
             other_isfinite = True
@@ -672,6 +982,10 @@ class _SetData(_SetDataBase):
                 other = set(other)
             except:
                 pass
+        else:
+            # Raise an exception consistent with Python's set.issuperset()
+            raise TypeError(
+                "'%s' object is not iterable" % (type(other).__name__,))
         if other_isfinite:
             for x in other:
                 # Other may contain elements that are not representable
@@ -683,7 +997,12 @@ class _SetData(_SetDataBase):
                 except TypeError:
                     return False
             return True
-        elif self.isfinite():
+        if not self.isfinite():
+            try:
+                self = RangeSet(ranges=list(self.ranges()))
+            except TypeError:
+                pass
+        if self.isfinite():
             return False
         else:
             return other.issubset(self)
@@ -808,9 +1127,20 @@ class _FiniteSetMixin(object):
         raise DeveloperError("Derived finite set class (%s) failed to "
                              "implement __len__" % (type(self).__name__,))
 
-    def __iter__(self):
+    def _iter_impl(self):
         raise DeveloperError("Derived finite set class (%s) failed to "
-                             "implement __iter__" % (type(self).__name__,))
+                             "implement _iter_impl" % (type(self).__name__,))
+
+    def __iter__(self):
+        """Iterate over the finite set
+
+        Note: derived classes should NOT reimplement this method, and
+        should instead overload _iter_impl.  The expression template
+        system relies on being able to replace this method for all Sets
+        during template generation.
+
+        """
+        return self._iter_impl()
 
     def __reversed__(self):
         return reversed(self.data())
@@ -825,6 +1155,19 @@ class _FiniteSetMixin(object):
 
     def data(self):
         return tuple(self)
+
+    @property
+    @deprecated("The 'value' attribute is deprecated.  Use .data() to "
+                "retrieve the values in a finite set.", version='TBD')
+    def value(self):
+        return set(self)
+
+    @property
+    @deprecated("The 'value_list' attribute is deprecated.  Use "
+                ".ordered_data() to retrieve the values from a finite set "
+                "in a deterministic order.", version='TBD')
+    def value_list(self):
+        return list(self.ordered_data())
 
     def sorted_data(self):
         return tuple(sorted_robust(self.data()))
@@ -880,7 +1223,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         # storage
         if not hasattr(self, '_values'):
             self._values = set()
-        self._domain = None
+        self._domain = Any
         self._validate = None
         self._filter = None
         self._dimen = UnknownSetDimen
@@ -897,7 +1240,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __contains__(self, value):
+    def get(self, value, default=None):
         """
         Return True if the set contains a given value.
 
@@ -906,9 +1249,11 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         if normalize_index.flatten:
             value = normalize_index(value)
 
-        return value in self._values
+        if value in self._values:
+            return value
+        return default
 
-    def __iter__(self):
+    def _iter_impl(self):
         return iter(self._values)
 
     def __len__(self):
@@ -926,74 +1271,93 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     @property
     def dimen(self):
+        if self._dimen is UnknownSetDimen:
+            # Special case: abstract Sets with constant dimen
+            # initializers have a known dimen before construction
+            _comp = self.parent_component()
+            if not _comp._constructed and _comp._init_dimen.constant():
+                return _comp._init_dimen.val
         return self._dimen
 
-    def add(self, value):
-        if normalize_index.flatten:
-            _value = normalize_index(value)
-            if _value.__class__ is tuple:
-                _d = len(_value)
-            else:
-                _d = 1
-        else:
-            # If we are not normalizing indices, then we cannot reliably
-            # infer the set dimen
-            _value = value
-            _d = None
+    @property
+    def domain(self):
+        return self._domain
 
-        if _value not in self._domain:
-            raise ValueError("Cannot add value %s to Set %s.\n"
-                             "\tThe value is not in the domain %s"
-                             % (value, self.name, self._domain))
+    @property
+    @deprecated("'filter' is no longer a public attribute.",
+                version='TBD')
+    def filter(self):
+        return self._filter
 
-        # We wrap this check in a try-except because some values (like lists)
-        #  are not hashable and can raise exceptions.
-        try:
-            if _value in self:
-                logger.warning(
-                    "Element %s already exists in Set %s; no action taken"
-                    % (value, self.name))
-                return False
-        except:
-            exc = sys.exc_info()
-            raise TypeError("Unable to insert '%s' into Set %s:\n\t%s: %s"
-                            % (value, self.name, exc[0].__name__, exc[1]))
-
-        if self._filter is not None:
-            if not self._filter(self, _value):
-                return False
-
-        if self._validate is not None:
-            try:
-                flag = self._validate(self, _value)
-            except:
-                logger.error(
-                    "Exception raised while validating element '%s' for Set %s"
-                    % (value, self.name))
-                raise
-            if not flag:
-                raise ValueError(
-                    "The value=%s violates the validation rule of Set %s"
-                    % (value, self.name))
-
-        # If the Set has a fixed dimension, check that this element is
-        # compatible.
-        if self._dimen is not None:
-            if _d != self._dimen:
-                if self._dimen is UnknownSetDimen:
-                    # The first thing added to a Set with unknown
-                    # dimension sets its dimension
-                    self._dimen = _d
+    def add(self, *values):
+        count = 0
+        _block = self.parent_block()
+        for value in values:
+            if normalize_index.flatten:
+                _value = normalize_index(value)
+                if _value.__class__ is tuple:
+                    _d = len(_value)
                 else:
-                    raise ValueError(
-                        "The value=%s has dimension %s and is not valid for "
-                        "Set %s which has dimen=%s"
-                        % (value, _d, self.name, self._dimen))
+                    _d = 1
+            else:
+                # If we are not normalizing indices, then we cannot reliably
+                # infer the set dimen
+                _value = value
+                _d = None
+            if _value not in self._domain:
+                raise ValueError("Cannot add value %s to Set %s.\n"
+                                 "\tThe value is not in the domain %s"
+                                 % (value, self.name, self._domain))
 
-        # Add the value to this object (this last redirection allows
-        # derived classes to implement a different storage mmechanism)
-        self._add_impl(_value)
-        return True
+            # We wrap this check in a try-except because some values
+            #  (like lists) are not hashable and can raise exceptions.
+            try:
+                if _value in self:
+                    logger.warning(
+                        "Element %s already exists in Set %s; no action taken"
+                        % (value, self.name))
+                    continue
+            except:
+                exc = sys.exc_info()
+                raise TypeError("Unable to insert '%s' into Set %s:\n\t%s: %s"
+                                % (value, self.name, exc[0].__name__, exc[1]))
+
+            if self._filter is not None:
+                if not self._filter(_block, _value):
+                    continue
+
+            if self._validate is not None:
+                try:
+                    flag = self._validate(_block, _value)
+                except:
+                    logger.error(
+                        "Exception raised while validating element '%s' "
+                        "for Set %s" % (value, self.name))
+                    raise
+                if not flag:
+                    raise ValueError(
+                        "The value=%s violates the validation rule of Set %s"
+                        % (value, self.name))
+
+            # If the Set has a fixed dimension, check that this element is
+            # compatible.
+            if self._dimen is not None:
+                if _d != self._dimen:
+                    if self._dimen is UnknownSetDimen:
+                        # The first thing added to a Set with unknown
+                        # dimension sets its dimension
+                        self._dimen = _d
+                    else:
+                        raise ValueError(
+                            "The value=%s has dimension %s and is not "
+                            "valid for Set %s which has dimen=%s"
+                            % (value, _d, self.name, self._dimen))
+
+            # Add the value to this object (this last redirection allows
+            # derived classes to implement a different storage mechanism)
+            self._add_impl(_value)
+            count += 1
+        return count
 
     def _add_impl(self, value):
         self._values.add(value)
@@ -1165,7 +1529,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __iter__(self):
+    def _iter_impl(self):
         """
         Return an iterator for the set.
         """
@@ -1256,7 +1620,7 @@ class _InsertionOrderSetData(_OrderedSetData):
     __slots__ = ()
 
     def set_value(self, val):
-        if type(val) in self._UnorderedInitializers:
+        if type(val) in Set._UnorderedInitializers:
             logger.warning(
                 "Calling set_value() on an insertion order Set with "
                 "a fundamentally unordered data source (type: %s).  "
@@ -1265,7 +1629,7 @@ class _InsertionOrderSetData(_OrderedSetData):
         super(_InsertionOrderSetData, self).set_value(val)
 
     def update(self, values):
-        if type(values) in self._UnorderedInitializers:
+        if type(values) in Set._UnorderedInitializers:
             logger.warning(
                 "Calling update() on an insertion order Set with "
                 "a fundamentally unordered data source (type: %s).  "
@@ -1308,13 +1672,13 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __iter__(self):
+    def _iter_impl(self):
         """
         Return an iterator for the set.
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).__iter__()
+        return super(_SortedSetData, self)._iter_impl()
 
     def __reversed__(self):
         if not self._is_sorted:
@@ -1373,7 +1737,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
 
 _SET_API = (
     ('__contains__', 'test membership in'),
-    'ranges', 'bounds',
+    'get', 'ranges', 'bounds',
 )
 _FINITESET_API = _SET_API + (
     ('__iter__', 'iterate over'),
@@ -1386,9 +1750,11 @@ _SETDATA_API = (
     'set_value', 'add', 'remove', 'discard', 'clear', 'update', 'pop',
 )
 
+
+@ModelComponentFactory.register(
+    "Set data that is used to define a model instance.")
 class Set(IndexedComponent):
-    """
-    A component used to index other Pyomo components.
+    """A component used to index other Pyomo components.
 
     This class provides a Pyomo component that is API-compatible with
     Python `set` objects, with additional features, including:
@@ -1413,8 +1779,9 @@ class Set(IndexedComponent):
             constructed.  Values passed to `initialize` may be
             overridden by `data` passed to the :py:meth:`construct`
             method.
-        dimen : initializer(int)
-            Specify the Set's arity, or None if no arity is enforced
+        dimen : initializer(int), optional
+            Specify the Set's arity (the required tuple length for all
+            members of the Set), or None if no arity is enforced
         ordered : bool or Set.InsertionOrder or Set.SortedOrder or function
             Specifies whether the set is ordered. Possible values are:
                 False               Unordered
@@ -1429,8 +1796,8 @@ class Set(IndexedComponent):
             A set that defines the valid values that can be contained
             in this set
         bounds : initializer(tuple), optional
-            A 2-tuple that specifies the lower and upper bounds for
-            valid Set values
+            A tuple that specifies the bounds for valid Set values
+            (accepts 1-, 2-, or 3-tuple RangeSet arguments)
         filter : initializer(rule), optional
             A rule for determining membership in this set. This has the
             functional form:
@@ -1455,6 +1822,7 @@ class Set(IndexedComponent):
         valid set values.  If more than one is specified, Set values
         will be restricted to the intersection of `domain`, `within`,
         and `bounds`.
+
     """
 
     class End(object): pass
@@ -1546,15 +1914,14 @@ class Set(IndexedComponent):
             self._init_domain.intersect(SetInitializer(_within))
         _bounds = kwds.pop('bounds', None)
         if _bounds is not None:
-            self._init_domain.intersect(RangeSetInitializer(
-                _bounds, default_step=0))
+            self._init_domain.intersect(BoundsInitializer(_bounds))
 
         self._init_dimen = Initializer(
             kwds.pop('dimen', UnknownSetDimen),
             arg_not_specified=UnknownSetDimen)
-        self._init_values = Initializer(
-            kwds.pop('initialize', ()),
-            treat_sequences_as_mappings=False, allow_generators=True)
+        self._init_values = TuplizeValuesInitializer(Initializer(
+            kwds.pop('initialize', None),
+            treat_sequences_as_mappings=False, allow_generators=True))
         self._init_validate = Initializer(kwds.pop('validate', None))
         self._init_filter = Initializer(kwds.pop('filter', None))
 
@@ -1569,8 +1936,27 @@ class Set(IndexedComponent):
         # HACK to make the "counted call" syntax work.  We wait until
         # after the base class is set up so that is_indexed() is
         # reliable.
-        if self._init_values.__class__ is IndexedCallInitializer:
-            self._init_values = CountedCallInitializer(self, self._init_values)
+        if self._init_values is not None \
+           and self._init_values._init.__class__ is IndexedCallInitializer:
+            self._init_values._init = CountedCallInitializer(
+                self, self._init_values._init)
+        # HACK: the DAT parser needs to know the domain of a set in
+        # order to correctly parse the data stream.
+        if not self.is_indexed():
+            if self._init_domain.constant():
+                self._domain = self._init_domain(self.parent_block(), None)
+            if self._init_dimen.constant():
+                self._dimen = self._init_dimen(self.parent_block(), None)
+
+
+    @deprecated("check_values() is deprecated: Sets only contain valid members",
+                version='TBD')
+    def check_values(self):
+        """
+        Verify that the values in this set are valid.
+        """
+        return True
+
 
     def construct(self, data=None):
         if self._constructed:
@@ -1583,15 +1969,22 @@ class Set(IndexedComponent):
         if data is not None:
             # Data supplied to construct() should override data provided
             # to the constructor
-            tmp_init, self._init_values = self._init_values, Initializer(
-                    data, treat_sequences_as_mappings=False)
+            tmp_init, self._init_values \
+                = self._init_values, TuplizeValuesInitializer(
+                    Initializer(data, treat_sequences_as_mappings=False))
         try:
-            if type(self._init_values) is ItemInitializer:
-                for index in iterkeys(self._init_values._dict):
-                    # The index is coming in externally; we need to
-                    # validate it
+            if self._init_values is None:
+                if not self.is_indexed():
+                    # This ensures backwards compatibility by causing all
+                    # scalar sets (including set operators) to be
+                    # initialized (and potentially empty) after construct().
+                    self._getitem_when_not_present(None)
+            elif self._init_values.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in self._init_values.indices():
                     IndexedComponent.__getitem__(self, index)
             else:
+                # Bypass the index validation and create the member directly
                 for index in self.index_set():
                     self._getitem_when_not_present(index)
         finally:
@@ -1606,35 +1999,58 @@ class Set(IndexedComponent):
     #
     def _getitem_when_not_present(self, index):
         """Returns the default component data value."""
+        # Because we allow sets within an IndexedSet to have different
+        # dimen, we have moved the tuplization logic from PyomoModel
+        # into Set (because we cannot know the dimen of a _SetData until
+        # we are actually constructing that index).  This also means
+        # that we need to potentially communicate the dimen to the
+        # (wrapped) value initializer.  So, we will get the dimen first,
+        # then get the values.  Only then will we know that this index
+        # will actually be constructed (and not Skipped).
+        _block = self.parent_block()
+
+        #Note: _init_dimen and _init_domain are guaranteed to be non-None
+        _d = self._init_dimen(_block, index)
+        if ( not normalize_index.flatten and _d is not UnknownSetDimen
+             and _d is not None ):
+            logger.warning(
+                "Ignoring non-None dimen (%s) for set %s%s "
+                "(normalize_index.flatten is False, so dimen "
+                "verification is not available)." % (
+                    _d, self.name,
+                    ("[%s]" % (index,) if self.is_indexed() else "") ))
+            _d = None
+
+        domain = self._init_domain(_block, index)
+        if _d is UnknownSetDimen and domain is not None \
+           and domain.dimen is not None:
+            _d = domain.dimen
+
         if self._init_values is not None:
-            _values = self._init_values(self, index)
+            self._init_values._dimen = _d
+            try:
+                _values = self._init_values(_block, index)
+            except TuplizeError as e:
+                raise ValueError( str(e) % (
+                    self._name, "[%s]" % index if self.is_indexed() else ""))
+
             if _values is Set.Skip:
                 return
             elif _values is None:
                 raise ValueError(
                     "Set rule or initializer returned None instead of Set.Skip")
-
         if index is None and not self.is_indexed():
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
-        if self._init_dimen is not None:
-            _d = self._init_dimen(self, index)
-            if _d is not UnknownSetDimen and (not normalize_index.flatten) \
-               and _d is not None:
-                logger.warning(
-                    "Ignoring non-None dimen (%s) for set %s "
-                    "(normalize_index.flatten is False, so dimen "
-                    "verification is not available)." % (_d, obj.name))
-                _d = None
+        if _d is not UnknownSetDimen:
             obj._dimen = _d
-        if self._init_domain is not None:
-            obj._domain = self._init_domain(self, index)
-            if isinstance(obj._domain, _SetOperator):
-                obj._domain.construct()
+        if domain is not None:
+            obj._domain = domain
+            domain.parent_component().construct()
         if self._init_validate is not None:
             try:
-                obj._validate = Initializer(self._init_validate(self, index))
+                obj._validate = Initializer(self._init_validate(_block, index))
                 if obj._validate.constant():
                     # _init_validate was the actual validate function; use it.
                     obj._validate = self._init_validate
@@ -1645,7 +2061,7 @@ class Set(IndexedComponent):
                 obj._validate = self._init_validate
         if self._init_filter is not None:
             try:
-                _filter = Initializer(self._init_filter(self, index))
+                _filter = Initializer(self._init_filter(_block, index))
                 if _filter.constant():
                     # _init_filter was the actual filter function; use it.
                     _filter = self._init_filter
@@ -1659,20 +2075,31 @@ class Set(IndexedComponent):
         if self._init_values is not None:
             # _values was initialized above...
             if obj.isordered() \
-                   and type(_values) in self._UnorderedInitializers:
+                   and type(_values) in Set._UnorderedInitializers:
                 logger.warning(
-                    "Initializing an ordered Set with a fundamentally "
+                    "Initializing ordered Set %s with a fundamentally "
                     "unordered data source (type: %s).  This WILL potentially "
                     "lead to nondeterministic behavior in Pyomo"
-                    % (type(_values).__name__,))
+                    % (self.name, type(_values).__name__,))
             # Special case: set operations that are not first attached
             # to the model must be constructed.
-            if isinstance(_values, _SetOperator):
+            if isinstance(_values, SetOperator):
                 _values.construct()
-            for val in _values:
+            try:
+                val_iter = iter(_values)
+            except TypeError:
+                logger.error(
+                    "Initializer for Set %s%s returned non-iterable object "
+                    "of type %s." % (
+                        self.name,
+                        ("[%s]" % (index,) if self.is_indexed() else ""),
+                        _values if _values.__class__ is type
+                        else type(_values).__name__ ))
+                raise
+            for val in val_iter:
                 if val is Set.End:
                     break
-                if _filter is None or _filter(self, val):
+                if _filter is None or _filter(_block, val):
                     obj.add(val)
         # We defer adding the filter until now so that add() doesn't
         # call it a second time.
@@ -1701,7 +2128,7 @@ class Set(IndexedComponent):
 
     @staticmethod
     def _pprint_domain(x):
-        if x._domain is x:
+        if x._domain is x and isinstance(x, SetOperator):
             return x._expression_str()
         else:
             return x._domain
@@ -1773,11 +2200,19 @@ class FiniteSimpleSet(_FiniteSetData, Set):
 
 class OrderedSimpleSet(_InsertionOrderSetData, Set):
     def __init__(self, **kwds):
+        # In case someone inherits from us, we will provide a rational
+        # default for the "ordered" flag
+        kwds.setdefault('ordered', Set.InsertionOrder)
+
         _InsertionOrderSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
 class SortedSimpleSet(_SortedSetData, Set):
     def __init__(self, **kwds):
+        # In case someone inherits from us, we will provide a rational
+        # default for the "ordered" flag
+        kwds.setdefault('ordered', Set.SortedOrder)
+
         _SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
@@ -1813,20 +2248,22 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         Component.__init__(self, **kwds)
         self._ref = reference
 
-    def __contains__(self, value):
+    def get(self, value, default=None):
         # Note that the efficiency of this depends on the reference object
         #
         # The bulk of single-value set members were stored as scalars.
         # Check that first.
         if value.__class__ is tuple and len(value) == 1:
             if value[0] in self._ref:
-                return True
-        return value in self._ref
+                return value[0]
+        if value in self._ref:
+            return value
+        return default
 
     def __len__(self):
         return len(self._ref)
 
-    def __iter__(self):
+    def _iter_impl(self):
         return iter(self._ref)
 
     def __str__(self):
@@ -1860,6 +2297,10 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
             if _this != ans:
                 return None
         return ans
+
+    @property
+    def domain(self):
+        return self
 
     def _pprint(self):
         """
@@ -1903,6 +2344,7 @@ class OrderedSetOf(_OrderedSetMixin, SetOf):
 
 ############################################################################
 
+
 class _InfiniteRangeSetData(_SetData):
     """Data class for a infinite set.
 
@@ -1930,14 +2372,16 @@ class _InfiniteRangeSetData(_SetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __contains__(self, value):
+    def get(self, value, default=None):
         # The bulk of single-value set members were stored as scalars.
         # Check that first.
         if value.__class__ is tuple and len(value) == 1:
             v = value[0]
             if any(v in r for r in self._ranges):
-                return True
-        return any(value in r for r in self._ranges)
+                return v
+        if any(value in r for r in self._ranges):
+            return value
+        return default
 
     def isdiscrete(self):
         """Returns True if this set admits only discrete members"""
@@ -1946,6 +2390,13 @@ class _InfiniteRangeSetData(_SetData):
     @property
     def dimen(self):
         return 1
+
+    @property
+    def domain(self):
+        return Reals
+
+    def clear(self):
+        self._ranges = ()
 
     def ranges(self):
         return iter(self._ranges)
@@ -1971,7 +2422,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
                 i += 1
                 n = start + i*step
 
-    def __iter__(self):
+    def _iter_impl(self):
         # If there is only a single underlying range, then we will
         # iterate over it
         nIters = len(self._ranges) - 1
@@ -2049,16 +2500,71 @@ class _FiniteRangeSetData( _SortedSetMixin,
             "Cannot identify position of %s in Set %s: item not in Set"
             % (item, self.name))
 
-    # We must redefine ranges() and bounds() so that we get the
+    # We must redefine ranges(), bounds(), and domain so that we get the
     # _InfiniteRangeSetData version and not the one from
     # _FiniteSetMixin.
     bounds = _InfiniteRangeSetData.bounds
     ranges = _InfiniteRangeSetData.ranges
+    domain = _InfiniteRangeSetData.domain
 
 
+@ModelComponentFactory.register(
+    "A sequence of numeric values.  RangeSet(start,end,step) is a sequence "
+    "starting a value 'start', and increasing in values by 'step' until a "
+    "value greater than or equal to 'end' is reached.")
 class RangeSet(Component):
-    """
-    A set object that represents a set of numeric values
+    """A set object that represents a set of numeric values
+
+    `RangeSet` objects are based around `NumericRange` objects, which
+    include support for non-finite ranges (both continuous and
+    unbounded). Similarly, boutique ranges (like semi-continuous
+    domains) can be represented, e.g.:
+
+    ..code:
+        RangeSet(ranges=(NumericRange(0,0,0), NumericRange(1,100,0)))
+
+    The `RangeSet` object continues to support the notation for
+    specifying discrete ranges using "[first=1], last, [step=1]" values:
+
+    ..code:
+        RangeSet(3)          # [1, 2, 3]
+        RangeSet(2,5)        # [2, 3, 4, 5]
+        RangeSet(2,5,2)      # [2, 4]
+        RangeSet(2.5,4,0.5)  # [2.5, 3, 3.5, 4]
+
+    By implementing RangeSet using NumericRanges, the global Sets (like
+    `Reals`, `Integers`, `PositiveReals`, etc.) are trivial
+    instances of a RangeSet and support all Set operations.
+
+    Parameters
+    ----------
+    *args: int | float | None
+        The range defined by ([start=1], end, [step=1]).  If only a
+        single positional parameter, `end` is supplied, then the
+        RangeSet will be the integers starting at 1 up through and
+        including end.  Providing two positional arguments, `x` and `y`,
+        will result in a range starting at x up to and including y,
+        incrementing by 1.  Providing a 3-tuple enables the
+        specification of a step other than 1.
+
+    finite: bool, optional
+        This sets if this range is finite (discrete and bounded) or infinite
+
+    ranges: iterable, optional
+        The list of range objects that compose this RangeSet
+
+    bounds: tuple, optional
+        The lower and upper bounds of values that are admissible in this
+        RangeSet
+
+    filter: function, optional
+        Function (rule) that returns True if the specified value is in
+        the RangeSet or False if it is not.
+
+    validate: function, optional
+        Data validation function (rule).  The function will be called
+        for every data member of the set, and if it returns False, a
+        ValueError will be raised.
 
     """
 
@@ -2071,10 +2577,28 @@ class RangeSet(Component):
             if 'ranges' in kwds:
                 if any(not r.isfinite() for r in kwds['ranges']):
                     finite = False
-            if all(type(_) in native_types for _ in args):
-                if None in args or (len(args) > 2 and args[2] == 0):
+            for i,_ in enumerate(args):
+                if type(_) not in native_types:
+                    # Strange nosetest coverage issue: if the logic is
+                    # negated and the continue is in the "else", that
+                    # line is not caught as being covered.
+                    if not isinstance(_, ComponentData) \
+                       or not _.parent_component().is_constructed():
+                        continue
+                    else:
+                        # "Peek" at constructed components to try and
+                        # infer if this component will be Infinite
+                        _ = value(_)
+                if i < 2:
+                    if _ in {None, _inf, -_inf}:
+                        finite = False
+                        break
+                elif _ == 0 and args[0] is not args[1]:
                     finite = False
             if finite is None:
+                # Assume "undetermined" RangeSets will be finite.  If a
+                # user wants them to be infinite, they can always
+                # specify finite=False
                 finite = True
 
         if finite:
@@ -2094,6 +2618,12 @@ class RangeSet(Component):
             args,
             kwds.pop('ranges', ()),
         )
+        self._init_validate = Initializer(kwds.pop('validate', None))
+        self._init_filter = Initializer(kwds.pop('filter', None))
+        self._init_bounds = kwds.pop('bounds', None)
+        if self._init_bounds is not None:
+            self._init_bounds = BoundsInitializer(self._init_bounds)
+
         Component.__init__(self, **kwds)
         # Shortcut: if all the relevant construction information is
         # simple (hard-coded) values, then it is safe to go ahead and
@@ -2102,15 +2632,25 @@ class RangeSet(Component):
         # NOTE: We will need to revisit this if we ever allow passing
         # data into the construct method (which would override the
         # hard-coded values here).
-        if all(type(_) in native_types for _ in args):
-            self.construct()
+        try:
+            if all( type(_) in native_types
+                    or _.parent_component().is_constructed()
+                    for _ in args ):
+                self.construct()
+        except AttributeError:
+            pass
 
 
     def __str__(self):
         if self.parent_block() is not None:
             return self.name
+        # Unconstructed floating components return their type
         if not self._constructed:
             return type(self).__name__
+        # Named, constructed components should return their name e.g., Reals
+        if type(self).__name__ != self._name:
+            return self.name
+        # Floating, unnamed constructed components return their ranges()
         ans = ' | '.join(str(_) for _ in self.ranges())
         if ' | ' in ans:
             return "(" + ans + ")"
@@ -2150,7 +2690,7 @@ class RangeSet(Component):
             # the old RangeSet implementation, where we did less
             # validation of the RangeSet arguments, and allowed the
             # creation of 0-length RangeSets
-            if args[1] - args[0] != -1:
+            if None in args or args[1] - args[0] != -1:
                 args = (args[0],args[1],1)
 
         if len(args) == 3:
@@ -2159,19 +2699,37 @@ class RangeSet(Component):
             # the NumericRange object.  We will just discretize this
             # range (mostly for backwards compatability)
             start, end, step = args
-            if step and int(step) != step:
-                if (end >= start) ^ (step > 0):
-                    raise ValueError(
-                        "RangeSet: start, end ordering incompatible with "
-                        "step direction (got [%s:%s:%s])" % (start,end,step))
-                n = start
-                i = 0
-                while (step > 0 and n <= end) or (step < 0 and n >= end):
-                    ranges = ranges + (NumericRange(n,n,0),)
-                    i += 1
-                    n = start + step*i
+            if step:
+                if start is None:
+                    start, end = end, start
+                    step *= -1
+
+                if start is None:
+                    # Backwards compatability: assume unbounded RangeSet
+                    # is grounded at 0
+                    ranges += ( NumericRange(0, None, step),
+                                NumericRange(0, None, -step) )
+                elif int(step) != step:
+                    if end is None:
+                        raise ValueError(
+                            "RangeSet does not support unbounded ranges "
+                            "with a non-integer step (got [%s:%s:%s])"
+                            % (start, end, step))
+                    if (end >= start) ^ (step > 0):
+                        raise ValueError(
+                            "RangeSet: start, end ordering incompatible with "
+                            "step direction (got [%s:%s:%s])"
+                            % (start, end, step))
+                    n = start
+                    i = 0
+                    while (step > 0 and n <= end) or (step < 0 and n >= end):
+                        ranges += (NumericRange(n,n,0),)
+                        i += 1
+                        n = start + step*i
+                else:
+                    ranges += (NumericRange(start, end, step),)
             else:
-                ranges = ranges + (NumericRange(*args),)
+                ranges += (NumericRange(*args),)
 
         for r in ranges:
             if not isinstance(r, NumericRange):
@@ -2185,9 +2743,99 @@ class RangeSet(Component):
                     "specify 'finite=False' when declaring the RangeSet"
                     % (r,))
 
+        _block = self.parent_block()
+        if self._init_bounds is not None:
+            bnds = self._init_bounds(_block, None)
+            tmp = []
+            for r in ranges:
+                tmp.extend(r.range_intersection(bnds.ranges()))
+            ranges = tuple(tmp)
+
         self._ranges = ranges
 
+        if self._init_filter is not None:
+            if not self.isfinite():
+                raise ValueError(
+                    "The 'filter' keyword argument is not valid for "
+                    "non-finite RangeSet component (%s)" % (self.name,))
+
+            try:
+                _filter = Initializer(self._init_filter(_block, None))
+                if _filter.constant():
+                    # _init_filter was the actual filter function; use it.
+                    _filter = self._init_filter
+            except:
+                # We will assume any exceptions raised when getting the
+                # filter for this index indicate that the function
+                # should have been passed directly to the underlying sets.
+                _filter = self._init_filter
+
+            # If this is a finite set, then we can go ahead and filter
+            # all the ranges.  This allows pprint and len to be correct,
+            # without special handling
+            new_ranges = []
+            old_ranges = list(self.ranges())
+            old_ranges.reverse()
+            while old_ranges:
+                r = old_ranges.pop()
+                for i,val in enumerate(_FiniteRangeSetData._range_gen(r)):
+                    if not _filter(_block, val):
+                        split_r = r.range_difference((NumericRange(val,val,0),))
+                        if len(split_r) == 2:
+                            new_ranges.append(split_r[0])
+                            old_ranges.append(split_r[1])
+                        elif len(split_r) == 1:
+                            if i == 0:
+                                old_ranges.append(split_r[0])
+                            else:
+                                new_ranges.append(split_r[0])
+                        i = None
+                        break
+                if i is not None:
+                    new_ranges.append(r)
+            self._ranges = new_ranges
+
+        if self._init_validate is not None:
+            if not self.isfinite():
+                raise ValueError(
+                    "The 'validate' keyword argument is not valid for "
+                    "non-finite RangeSet component (%s)" % (self.name,))
+
+            try:
+                _validate = Initializer(self._init_validate(_block, None))
+                if _validate.constant():
+                    # _init_validate was the actual validate function; use it.
+                    _validate = self._init_validate
+            except:
+                # We will assume any exceptions raised when getting the
+                # validator for this index indicate that the function
+                # should have been passed directly to the underlying set.
+                _validate = self._init_validate
+
+            for val in self:
+                try:
+                    flag = _validate(_block, val)
+                except:
+                    logger.error(
+                        "Exception raised while validating element '%s' "
+                        "for Set %s" % (val, self.name))
+                    raise
+                if not flag:
+                    raise ValueError(
+                        "The value=%s violates the validation rule of "
+                        "Set %s" % (val, self.name))
+
         timer.report()
+
+    #
+    # Until the time that we support indexed RangeSet objects, we will
+    # mock up some of the IndexedComponent API for consistency with the
+    # previous (<=5.6.7) implementation.
+    #
+    def dim(self):
+        return 0
+    def index_set(self):
+        return UnindexedComponent_set
 
 
     def _pprint(self):
@@ -2236,8 +2884,8 @@ class AbstractFiniteSimpleRangeSet(FiniteSimpleRangeSet):
 # Set Operators
 ############################################################################
 
-class _SetOperator(_SetData, Set):
-    __slots__ = ('_sets','_implicit_subsets')
+class SetOperator(_SetData, Set):
+    __slots__ = ('_sets',)
 
     def __init__(self, *args, **kwds):
         _SetData.__init__(self, component=self)
@@ -2251,13 +2899,17 @@ class _SetOperator(_SetData, Set):
                 implicit.append(_new_set)
         self._sets = tuple(sets)
         self._implicit_subsets = tuple(implicit)
+        # We will implicitly construct all set operators if the operands
+        # are all constructed.
+        if all(_.parent_component()._constructed for _ in self._sets):
+            self.construct()
 
     def __getstate__(self):
         """
         This method must be defined because this class uses slots.
         """
-        state = super(_SetOperator, self).__getstate__()
-        for i in _SetOperator.__slots__:
+        state = super(SetOperator, self).__getstate__()
+        for i in SetOperator.__slots__:
             state[i] = getattr(self, i)
         return state
 
@@ -2269,8 +2921,27 @@ class _SetOperator(_SetData, Set):
                 logger.debug("Constructing SetOperator, name=%s, from data=%r"
                              % (self.name, data))
         for s in self._sets:
-            s.construct()
-        super(_SetOperator, self).construct(data)
+            s.parent_component().construct()
+        super(SetOperator, self).construct()
+        if data:
+            deprecation_warning(
+                "Providing construction data to SetOperator objects is "
+                "deprecated.  This data is ignored and in a future version "
+                "will not be allowed", version='TBD')
+            fail = len(data) > 1 or None not in data
+            if not fail:
+                _data = data[None]
+                if len(_data) != len(self):
+                    fail = True
+                else:
+                    for v in _data:
+                        if v not in self:
+                            fail = True
+                            break
+            if fail:
+                raise ValueError(
+                    "Constructing SetOperator %s with incompatible data "
+                    "(data=%s}" % (self.name, data))
         timer.report()
 
     # Note: because none of the slots on this class need to be edited,
@@ -2301,11 +2972,45 @@ class _SetOperator(_SetData, Set):
             return self.name
         return self._expression_str()
 
+    def __deepcopy__(self, memo):
+        # SetOperators form an expression system.  As we allow operators
+        # on abstract Set objects, it is important to *always* deepcopy
+        # SetOperators that have not been assigned to a Block.  For
+        # example, consider an abstract indexed model component whose
+        # domain is specified by a Set expression:
+        #
+        #   def x_init(m,i):
+        #       if i == 2:
+        #           return Set.Skip
+        #       else:
+        #           return []
+        #   m.x = Set( [1,2],
+        #              domain={1: m.A*m.B, 2: m.A*m.A},
+        #              initialize=x_init )
+        #
+        # We do not want to automatically add all the Set operators to
+        # the model at declaration time, as m.x[2] is never actually
+        # created.  Plus, doing so would require complex parsing of the
+        # initializers.  BUT, we need to ensure that the operators are
+        # deepcopied, otherwise when the model is cloned before
+        # construction the operators will still refer to the sets on the
+        # original abstract model (in particular, the Set x will have an
+        # unknown dimen).
+        #
+        # Our solution is to cause SetOperators to be automatically
+        # cloned if they haven't been assigned to a block.
+        if '__block_scope__' in memo:
+            if self.parent_block() is None:
+                # Hijack the block scope rules to cause this object to
+                # be deepcopied.
+                memo['__block_scope__'][id(self)] = True
+        return super(SetOperator, self).__deepcopy__(memo)
+
     def _expression_str(self):
         _args = []
         for arg in self._sets:
             arg_str = str(arg)
-            if ' ' in arg_str and isinstance(arg, _SetOperator):
+            if ' ' in arg_str and isinstance(arg, SetOperator):
                 arg_str = "(" + arg_str + ")"
             _args.append(arg_str)
         return self._operator.join(_args)
@@ -2314,9 +3019,42 @@ class _SetOperator(_SetData, Set):
         """Returns True if this set admits only discrete members"""
         return all(r.isdiscrete() for r in self.ranges())
 
+    def subsets(self, expand_all_set_operators=None):
+        if not isinstance(self, SetProduct):
+            if expand_all_set_operators is None:
+                logger.warning("""
+                Extracting subsets for Set %s, which is a SetOperator
+                other than a SetProduct.  Returning this set and not
+                descending into the set operands.  To descend into this
+                operator, specify
+                'subsets(expand_all_set_operators=True)' or to suppress
+                this warning, specify
+                'subsets(expand_all_set_operators=False)'""" % ( self.name, ))
+                yield self
+                return
+            elif not expand_all_set_operators:
+                yield self
+                return
+        for s in self._sets:
+            for ss in s.subsets(
+                    expand_all_set_operators=expand_all_set_operators):
+                yield ss
+
+    @property
+    @deprecated("SetProduct.set_tuple is deprecated.  "
+                "Use SetProduct.subsets() to get the operator arguments.",
+                version='TBD')
+    def set_tuple(self):
+        # Despite its name, in the old SetProduct, set_tuple held a list
+        return list(self.subsets())
+
+    @property
+    def domain(self):
+        return self._domain
+
     @property
     def _domain(self):
-        # We hijack the _domain attribute of _SetOperator so that pprint
+        # We hijack the _domain attribute of SetOperator so that pprint
         # prints out the expression as the Set's "domain".  Doing this
         # as a property prevents the circular reference
         return self
@@ -2327,10 +3065,6 @@ class _SetOperator(_SetData, Set):
             raise ValueError(
                 "Setting the domain of a Set Operator is not allowed: %s" % val)
 
-    @property
-    @deprecated("The 'virtual' flag is no longer supported", version='TBD')
-    def virtual(self):
-        return True
 
     @staticmethod
     def _checkArgs(*sets):
@@ -2346,7 +3080,7 @@ class _SetOperator(_SetData, Set):
 
 ############################################################################
 
-class SetUnion(_SetOperator):
+class SetUnion(SetOperator):
     __slots__ = tuple()
 
     _operator = " | "
@@ -2355,7 +3089,7 @@ class SetUnion(_SetOperator):
         if cls != SetUnion:
             return super(SetUnion, cls).__new__(cls)
 
-        set0, set1 = _SetOperator._checkArgs(*args)
+        set0, set1 = SetOperator._checkArgs(*args)
         if set0[0] and set1[0]:
             cls = SetUnion_OrderedSet
         elif set0[1] and set1[1]:
@@ -2384,14 +3118,19 @@ class SetUnion(_SetOperator):
 class SetUnion_InfiniteSet(SetUnion):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return any(val in s for s in self._sets)
+    def get(self, val, default=None):
+        #return any(val in s for s in self._sets)
+        for s in self._sets:
+            v = s.get(val, default)
+            if v is not default:
+                return v
+        return default
 
 
 class SetUnion_FiniteSet(_FiniteSetMixin, SetUnion_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0 = self._sets[0]
         return itertools.chain(
             set0,
@@ -2457,7 +3196,7 @@ class SetUnion_OrderedSet(_OrderedSetMixin, SetUnion_FiniteSet):
 
 ############################################################################
 
-class SetIntersection(_SetOperator):
+class SetIntersection(SetOperator):
     __slots__ = tuple()
 
     _operator = " & "
@@ -2466,7 +3205,7 @@ class SetIntersection(_SetOperator):
         if cls != SetIntersection:
             return super(SetIntersection, cls).__new__(cls)
 
-        set0, set1 = _SetOperator._checkArgs(*args)
+        set0, set1 = SetOperator._checkArgs(*args)
         if set0[0] or set1[0]:
             cls = SetIntersection_OrderedSet
         elif set0[1] or set1[1]:
@@ -2510,14 +3249,19 @@ class SetIntersection(_SetOperator):
 class SetIntersection_InfiniteSet(SetIntersection):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return all(val in s for s in self._sets)
+    def get(self, val, default=None):
+        #return all(val in s for s in self._sets)
+        for s in self._sets:
+            v = s.get(val, default)
+            if v is default:
+                return default
+        return v
 
 
 class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0, set1 = self._sets
         if not set0.isordered():
             if set1.isordered():
@@ -2578,7 +3322,7 @@ class SetIntersection_OrderedSet(_OrderedSetMixin, SetIntersection_FiniteSet):
 
 ############################################################################
 
-class SetDifference(_SetOperator):
+class SetDifference(SetOperator):
     __slots__ = tuple()
 
     _operator = " - "
@@ -2587,7 +3331,7 @@ class SetDifference(_SetOperator):
         if cls != SetDifference:
             return super(SetDifference, cls).__new__(cls)
 
-        set0, set1 = _SetOperator._checkArgs(*args)
+        set0, set1 = SetOperator._checkArgs(*args)
         if set0[0]:
             cls = SetDifference_OrderedSet
         elif set0[1]:
@@ -2608,14 +3352,21 @@ class SetDifference(_SetOperator):
 class SetDifference_InfiniteSet(SetDifference):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return val in self._sets[0] and not val in self._sets[1]
+    def get(self, val, default=None):
+        #return val in self._sets[0] and not val in self._sets[1]
+        v_l = self._sets[0].get(val, default)
+        if v_l is default:
+            return default
+        v_r = self._sets[1].get(val, default)
+        if v_r is default:
+            return v_l
+        return default
 
 
 class SetDifference_FiniteSet(_FiniteSetMixin, SetDifference_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0, set1 = self._sets
         return (_ for _ in set0 if _ not in set1)
 
@@ -2661,7 +3412,7 @@ class SetDifference_OrderedSet(_OrderedSetMixin, SetDifference_FiniteSet):
 
 ############################################################################
 
-class SetSymmetricDifference(_SetOperator):
+class SetSymmetricDifference(SetOperator):
     __slots__ = tuple()
 
     _operator = " ^ "
@@ -2670,7 +3421,7 @@ class SetSymmetricDifference(_SetOperator):
         if cls != SetSymmetricDifference:
             return super(SetSymmetricDifference, cls).__new__(cls)
 
-        set0, set1 = _SetOperator._checkArgs(*args)
+        set0, set1 = SetOperator._checkArgs(*args)
         if set0[0] and set1[0]:
             cls = SetSymmetricDifference_OrderedSet
         elif set0[1] and set1[1]:
@@ -2704,15 +3455,22 @@ class SetSymmetricDifference(_SetOperator):
 class SetSymmetricDifference_InfiniteSet(SetSymmetricDifference):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return (val in self._sets[0]) ^ (val in self._sets[1])
+    def get(self, val, default=None):
+        #return (val in self._sets[0]) ^ (val in self._sets[1])
+        v_l = self._sets[0].get(val, default)
+        v_r = self._sets[1].get(val, default)
+        if v_l is default:
+            return v_r
+        if v_r is default:
+            return v_l
+        return default
 
 
 class SetSymmetricDifference_FiniteSet(_FiniteSetMixin,
                                         SetSymmetricDifference_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0, set1 = self._sets
         return itertools.chain(
             (_ for _ in set0 if _ not in set1),
@@ -2762,7 +3520,7 @@ class SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
 
 ############################################################################
 
-class SetProduct(_SetOperator):
+class SetProduct(SetOperator):
     __slots__ = tuple()
 
     _operator = "*"
@@ -2771,7 +3529,7 @@ class SetProduct(_SetOperator):
         if cls != SetProduct:
             return super(SetProduct, cls).__new__(cls)
 
-        _sets = _SetOperator._checkArgs(*args)
+        _sets = SetOperator._checkArgs(*args)
         if all(_[0] for _ in _sets):
             cls = SetProduct_OrderedSet
         elif all(_[1] for _ in _sets):
@@ -2780,24 +3538,14 @@ class SetProduct(_SetOperator):
             cls = SetProduct_InfiniteSet
         return cls.__new__(cls)
 
-    def flatten_cross_product(self):
-        # This is recursive, but the chances of a deeply nested product
-        # of Sets is exceptionally low.
-        for s in self._sets:
-            if isinstance(s, SetProduct):
-                for ss in s.flatten_cross_product():
-                    yield ss
-            else:
-                yield s
-
     def ranges(self):
         yield RangeProduct(list(
-            list(_.ranges()) for _ in self.flatten_cross_product()
+            list(_.ranges()) for _ in self.subsets(False)
         ))
 
     def bounds(self):
-        return ( tuple(_.bounds()[0] for _ in self.flatten_cross_product()),
-                 tuple(_.bounds()[1] for _ in self.flatten_cross_product()) )
+        return ( tuple(_.bounds()[0] for _ in self.subsets(False)),
+                 tuple(_.bounds()[1] for _ in self.subsets(False)) )
 
     @property
     def dimen(self):
@@ -2818,12 +3566,30 @@ class SetProduct(_SetOperator):
                 ans += s_dim
         return UnknownSetDimen if _unknown else ans
 
+    def _flatten_product(self, val):
+        """Flatten any nested set product terms (due to nested products)
+
+        Note that because this is called in a recursive context, this
+        method is assured that there is no more than a single level of
+        nested tuples (so this only needs to check the top-level terms)
+
+        """
+        for i in xrange(len(val)-1, -1, -1):
+            if val[i].__class__ is tuple:
+                val = val[:i] + val[i] + val[i+1:]
+        return val
 
 class SetProduct_InfiniteSet(SetProduct):
     __slots__ = tuple()
 
-    def __contains__(self, val):
-        return self._find_val(val) is not None
+    def get(self, val, default=None):
+        #return self._find_val(val) is not None
+        v = self._find_val(val)
+        if v is None:
+            return default
+        if normalize_index.flatten:
+            return self._flatten_product(v[0])
+        return v[0]
 
     def _find_val(self, val):
         """Locate a value in this SetProduct
@@ -2863,6 +3629,12 @@ class SetProduct_InfiniteSet(SetProduct):
 
         # Get the dimentionality of all the component sets
         setDims = list(s.dimen for s in self._sets)
+
+        # For this search, if a subset has an unknown dimension, assume
+        # it is "None".
+        for i,d in enumerate(setDims):
+            if d is UnknownSetDimen:
+                setDims[i] = None
         # Find the starting index for each subset (based on dimentionality)
         index = [None]*len(setDims)
         lastIndex = 0
@@ -2884,7 +3656,10 @@ class SetProduct_InfiniteSet(SetProduct):
         # If there were no non-dimentioned sets, then we have checked
         # each subset, found a match, and can reach a verdict:
         if None not in setDims:
-            return val, index
+            if lastIndex == v_len:
+                return val, index
+            else:
+                return None
 
         # If a subset is non-dimentioned, then we will have broken out
         # of the forward loop early.  Start at the end and work
@@ -2968,13 +3743,13 @@ class SetProduct_InfiniteSet(SetProduct):
 class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         _iter = itertools.product(*self._sets)
         # Note: if all the member sets are simple 1-d sets, then there
-        # is no need to call flatten_tuple.
+        # is no need to call flatten_product.
         if FLATTEN_CROSS_PRODUCT and normalize_index.flatten \
            and self.dimen != len(self._sets):
-            return (flatten_tuple(_) for _ in _iter)
+            return (self._flatten_product(_) for _ in _iter)
         return _iter
 
     def __len__(self):
@@ -2983,7 +3758,7 @@ class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
         """
         ans = 1
         for s in self._sets:
-            ans *= max(1, len(s))
+            ans *= max(0, len(s))
         return ans
 
 
@@ -3002,7 +3777,7 @@ class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
         ans = tuple(s[i+1] for s,i in zip(self._sets, _ord))
         if FLATTEN_CROSS_PRODUCT and normalize_index.flatten \
            and self.dimen != len(ans):
-            return flatten_tuple(ans)
+            return self._flatten_product(ans)
         return ans
 
     def ord(self, item):
@@ -3036,11 +3811,17 @@ class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
 class _AnySet(_SetData, Set):
     def __init__(self, **kwds):
         _SetData.__init__(self, component=self)
+        # There is a chicken-and-egg game here: the SetInitializer uses
+        # Any as part of the processing of the domain/within/bounds
+        # domain restrictions.  However, Any has not been declared when
+        # constructing Any, so we need to bypass that logic.  This
+        # works, but requires us to declare a special domain setter to
+        # accept (and ignore) this value.
         kwds.setdefault('domain', self)
         Set.__init__(self, **kwds)
 
-    def __contains__(self, val):
-        return True
+    def get(self, val, default=None):
+        return val
 
     def ranges(self):
         yield AnyRange()
@@ -3048,12 +3829,74 @@ class _AnySet(_SetData, Set):
     def bounds(self):
         return (None, None)
 
+    # We need to implement this to override the clear() from IndexedComponent
+    def clear(self):
+        return
+
+    # We need to implement this to override __len__ from IndexedComponent
+    def __len__(self):
+        raise TypeError("object of type 'Any' has no len()")
+
     @property
     def dimen(self):
         return None
 
+    @property
+    def domain(self):
+        return Any
 
-def DeclareGlobalSet(obj):
+    def __str__(self):
+        if self.parent_block() is not None:
+            return self.name
+        return type(self).__name__
+
+
+class _AnyWithNoneSet(_AnySet):
+    # Note that we put the deprecation warning on contains() and not on
+    # the class because we will always create a global instance for
+    # backwards compatability with the Book.
+    @deprecated("The AnyWithNone set is deprecated.  "
+                "Use Any, which includes None", version='TBD')
+    def get(self, val, default=None):
+        return super(_AnyWithNoneSet, self).get(val, default)
+
+
+class _EmptySet(_FiniteSetMixin, _SetData, Set):
+    def __init__(self, **kwds):
+        _SetData.__init__(self, component=self)
+        Set.__init__(self, **kwds)
+
+    def get(self, val, default=None):
+        return default
+
+    # We need to implement this to override clear from IndexedComponent
+    def clear(self):
+        pass
+
+    # We need to implement this to override __len__ from IndexedComponent
+    def __len__(self):
+        return 0
+
+    def _iter_impl(self):
+        return iter(tuple())
+
+    @property
+    def dimen(self):
+        return 0
+
+    @property
+    def domain(self):
+        return EmptySet
+
+    def __str__(self):
+        if self.parent_block() is not None:
+            return self.name
+        return type(self).__name__
+
+
+############################################################################
+
+def DeclareGlobalSet(obj, caller_globals=None):
     """Declare a copy of a set as a global set in the calling module
 
     This takes a Set object and declares a duplicate of it as a
@@ -3067,7 +3910,33 @@ def DeclareGlobalSet(obj):
 
     """
     obj.construct()
-    class GlobalSet(obj.__class__):
+    assert obj.parent_component() is obj
+    assert obj.parent_block() is None
+
+    # Build the global set before registering its name so that we don't
+    # run afoul of the logic in GlobalSet.__new__
+    _name = obj.local_name
+    if _name in GlobalSets and obj is not GlobalSets[_name]:
+        raise RuntimeError("Duplicate Global Set declaration, %s"
+                           % (_name,))
+
+    # Push this object into the caller's module namespace
+    # Stack: 0: DeclareGlobalSet()
+    #        1: the caller
+    if caller_globals is None:
+        caller_globals = inspect.currentframe().f_back.f_globals
+    if _name in caller_globals and obj is not caller_globals[_name]:
+        raise RuntimeError("Refusing to overwrite global object, %s"
+                           % (_name,))
+
+    if _name in GlobalSets:
+        _set = caller_globals[_name] = GlobalSets[_name]
+        return _set
+
+    # Handle duplicate registrations before defining the GlobalSet
+    # object to avoid inconsistent MRO order.
+
+    class GlobalSet(GlobalSetBase, obj.__class__):
         __doc__ = """%s
 
         References to this object will not be duplicated by deepcopy
@@ -3075,95 +3944,178 @@ def DeclareGlobalSet(obj):
 
         """ % (obj.doc,)
         # Note: a simple docstring does not appear to be picked up (at
-        # least in Python 2.7, so we will explicitly set the __doc__
+        # least in Python 2.7), so we will explicitly set the __doc__
         # attribute.
 
         __slots__ = ()
 
-        def __init__(self, _obj):
-            _obj.__class__.__setstate__(self, _obj.__getstate__())
-            self._component = weakref.ref(self)
-            self.construct()
-            assert _obj.parent_component() is _obj
-            assert _obj.parent_block() is None
-            caller_globals = inspect.stack()[1][0].f_globals
-            assert self.local_name not in caller_globals
-            caller_globals[self.local_name] = self
+        global_name = None
 
-        def __reduce__(self):
-            # Cause pickle to preserve references to this object
-            return self.name
+        def __new__(cls, **kwds):
+            """Hijack __new__ to mock up old RealSet el al. interface
 
-        def __deepcopy__(self, memo):
-            # Prevent deepcopy from duplicating this object
-            return self
+            In the original Set implementation (Pyomo<=5.6.7), the
+            global sets were instances of their own virtual set classes
+            (RealSet, IntegerSet, BooleanSet), and one could create new
+            instances of those sets with modified bounds.  Since the
+            GlobalSet mechanism also declares new classes for every
+            GlobalSet, we can mock up the old behavior through how we
+            handle __new__().
+            """
+            if cls is GlobalSet and GlobalSet.global_name \
+               and issubclass(GlobalSet, RangeSet):
+                base_set = GlobalSets[GlobalSet.global_name]
+                bounds = kwds.pop('bounds', None)
+                range_init = SetInitializer(base_set)
+                if bounds is not None:
+                    range_init.intersect(BoundsInitializer(bounds))
+                name = name_kwd = kwds.pop('name', None)
+                cls_name = kwds.pop('class_name', None)
+                if name is None:
+                    if cls_name is None:
+                        name = base_set.name
+                    else:
+                        name = cls_name
+                ans = RangeSet( ranges=list(range_init(None, None).ranges()),
+                                name=name )
+                if name_kwd is None and (
+                        cls_name is not None or bounds is not None):
+                    ans._name += str(ans.bounds())
+            else:
+                ans = super(GlobalSet, cls).__new__(cls, **kwds)
+            if kwds:
+                raise RuntimeError("Unexpected keyword arguments: %s" % (kwds,))
+            return ans
 
-        def __str__(self):
-            # Override str() to always print out the global set name
-            return self.name
+    _set = GlobalSet()
+    # TODO: Can GlobalSets be a proper Block?
+    GlobalSets[_name] = caller_globals[_name] = _set
+    GlobalSet.global_name = _name
 
-    return GlobalSet(obj)
+    _set.__class__.__setstate__(_set, obj.__getstate__())
+    _set._component = weakref.ref(_set)
+    _set.construct()
+    return _set
 
 
 DeclareGlobalSet(_AnySet(
     name='Any',
     doc="A global Pyomo Set that admits any value",
-))
+), globals())
+DeclareGlobalSet(_AnyWithNoneSet(
+    name='AnyWithNone',
+    doc="A global Pyomo Set that admits any value",
+), globals())
+DeclareGlobalSet(_EmptySet(
+    name='EmptySet',
+    doc="A global Pyomo Set that contains no members",
+), globals())
 
 DeclareGlobalSet(RangeSet(
     name='Reals',
     doc='A global Pyomo Set that admits any real (floating point) value',
     ranges=(NumericRange(None,None,0),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NonNegativeReals',
     doc='A global Pyomo Set admitting any real value in [0, +inf]',
     ranges=(NumericRange(0,None,0),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NonPositiveReals',
     doc='A global Pyomo Set admitting any real value in [-inf, 0]',
     ranges=(NumericRange(None,0,0),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NegativeReals',
     doc='A global Pyomo Set admitting any real value in [-inf, 0)',
     ranges=(NumericRange(None,0,0,(True,False)),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='PositiveReals',
     doc='A global Pyomo Set admitting any real value in (0, +inf]',
     ranges=(NumericRange(0,None,0,(False,True)),),
-))
+), globals())
 
 DeclareGlobalSet(RangeSet(
     name='Integers',
     doc='A global Pyomo Set admitting any integer value',
     ranges=(NumericRange(0,None,1), NumericRange(0,None,-1)),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NonNegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in [0, +inf]',
     ranges=(NumericRange(0,None,1),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NonPositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in [-inf, 0]',
     ranges=(NumericRange(0,None,-1),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='NegativeIntegers',
     doc='A global Pyomo Set admitting any integer value in [-inf, -1]',
     ranges=(NumericRange(-1,None,-1),),
-))
+), globals())
 DeclareGlobalSet(RangeSet(
     name='PositiveIntegers',
     doc='A global Pyomo Set admitting any integer value in [1, +inf]',
     ranges=(NumericRange(1,None,1),),
-))
+), globals())
 
 DeclareGlobalSet(RangeSet(
     name='Binary',
     doc='A global Pyomo Set admitting the integers {0, 1}',
     ranges=(NumericRange(0,1,1),),
-))
+), globals())
+
+#TODO: Convert Boolean from an alias for Binary to a proper Boolean Set
+#      admitting {True, False})
+DeclareGlobalSet(RangeSet(
+    name='Boolean',
+    doc='A global Pyomo Set admitting the integers {0, 1}',
+    ranges=(NumericRange(0,1,1),),
+), globals())
+
+DeclareGlobalSet(RangeSet(
+    name='PercentFraction',
+    doc='A global Pyomo Set admitting any real value in [0, 1]',
+    ranges=(NumericRange(0,1,0),),
+), globals())
+DeclareGlobalSet(RangeSet(
+    name='UnitInterval',
+    doc='A global Pyomo Set admitting any real value in [0, 1]',
+    ranges=(NumericRange(0,1,0),),
+), globals())
+
+# DeclareGlobalSet(Set(
+#     initialize=[None],
+#     name='UnindexedComponent_set',
+#     doc='A global Pyomo Set for unindexed (scalar) IndexedComponent objects',
+# ), globals())
+
+
+RealSet = Reals.__class__
+IntegerSet = Integers.__class__
+BinarySet = Binary.__class__
+BooleanSet = Boolean.__class__
+
+
+#
+# Backwards compatibility: declare the RealInterval and IntegerInterval
+# classes (leveraging the new global RangeSet objects)
+#
+
+class RealInterval(RealSet):
+    @deprecated("RealInterval has been deprecated.  Please use "
+                "RangeSet(lower, upper, 0)", version='TBD')
+    def __new__(cls, **kwds):
+        kwds.setdefault('class_name', 'RealInterval')
+        return super(RealInterval, cls).__new__(RealSet, **kwds)
+
+class IntegerInterval(IntegerSet):
+    @deprecated("IntegerInterval has been deprecated.  Please use "
+                "RangeSet(lower, upper, 1)", version='TBD')
+    def __new__(cls, **kwds):
+        kwds.setdefault('class_name', 'IntegerInterval')
+        return super(IntegerInterval, cls).__new__(IntegerSet, **kwds)

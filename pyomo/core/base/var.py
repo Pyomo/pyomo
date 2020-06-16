@@ -16,12 +16,12 @@ from weakref import ref as weakref_ref
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
-from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
+from pyomo.core.base.set_types import Reals, Binary
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.sets import Set
+from pyomo.core.base.set import Set, _SetDataBase
 from pyomo.core.base.util import is_functor
 
 from six import iteritems, itervalues
@@ -97,18 +97,25 @@ class _VarData(ComponentData, NumericValue):
         raise AttributeError("Assignment not allowed. Use the setub and setlb methods")
 
     def is_integer(self):
-        """Returns True when the domain class is IntegerSet."""
-        # optimization: this is the most common case
-        if self.domain.__class__ is IntegerSet:
+        """Returns True when the domain is a contiguous integer range."""
+        # optimization: Reals and Binary are the most common cases, so
+        # we will explicitly test that before generating the interval
+        if self.domain is Reals:
+            return False
+        elif self.domain is Binary:
             return True
-        return isinstance(self.domain, IntegerSet)
+        _interval = self.domain.get_interval()
+        return _interval is not None and _interval[2] == 1
 
     def is_binary(self):
-        """Returns True when the domain class is BooleanSet."""
-        # optimization: this is the most common case
-        if self.domain.__class__ is BooleanSet:
+        """Returns True when the domain is restricted to Binary values."""
+        # optimization: Reals and Binary are the most common cases, so
+        # we will explicitly test that before generating the interval
+        if self.domain is Reals:
+            return False
+        elif self.domain is Binary:
             return True
-        return isinstance(self.domain, BooleanSet)
+        return self.domain.get_interval() == (0,1,1)
 
 # TODO?
 #    def is_semicontinuous(self):
@@ -123,11 +130,15 @@ class _VarData(ComponentData, NumericValue):
 #        return self.domain.__class__ is SemiIntegerSet
 
     def is_continuous(self):
-        """Returns True when the domain is an instance of RealSet."""
-        # optimization: this is the most common case
-        if self.domain.__class__ is RealSet:
+        """Returns True when the domain is a continuous real range"""
+        # optimization: Reals and Binary are the most common cases, so
+        # we will explicitly test that before generating the interval
+        if self.domain is Reals:
             return True
-        return isinstance(self.domain, RealSet)
+        elif self.domain is Binary:
+            return False
+        _interval = self.domain.get_interval()
+        return _interval is not None and _interval[2] == 0
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
@@ -137,17 +148,9 @@ class _VarData(ComponentData, NumericValue):
         """Returns False because this is not a constant in an expression."""
         return False
 
-    def is_parameter_type(self):
-        """Returns False because this is not a parameter object."""
-        return False
-
     def is_variable_type(self):
         """Returns True because this is a variable."""
         return True
-
-    def is_expression_type(self):
-        """Returns False because this is not an expression"""
-        return False
 
     def is_potentially_variable(self):
         """Returns True because this is a variable."""
@@ -182,7 +185,8 @@ class _VarData(ComponentData, NumericValue):
         ans = val is None or val in self.domain
         if not ans and use_exception:
             raise ValueError("Numeric value `%s` (%s) is not in "
-                             "domain %s" % (val, type(val), self.domain))
+                             "domain %s for Var %s" %
+                             (val, type(val), self.domain, self.name))
         return ans
 
     def clear(self):
@@ -332,14 +336,17 @@ class _GeneralVarData(_VarData):
         self.stale = True
         # don't call the property setter here because
         # the SimplVar constructor will fail
-        if hasattr(domain, 'bounds'):
+        #
+        # TODO: this should be migrated over to using a SetInitializer
+        # to handle the checking / conversion of the argument to a
+        # proper Pyomo Set and not use isinstance() of a private class.
+        if isinstance(domain, _SetDataBase):
             self._domain = domain
         elif domain is not None:
             raise ValueError(
                 "%s is not a valid domain. Variable domains must be an "
-                "instance of one of %s, or an object that declares a method "
-                "for bounds (like a Pyomo Set). Examples: NonNegativeReals, "
-                "Integers, Binary" % (domain, (RealSet, IntegerSet, BooleanSet)))
+                "instance of a Pyomo Set.  Examples: NonNegativeReals, "
+                "Integers, Binary" % (domain,))
 
     def __getstate__(self):
         state = super(_GeneralVarData, self).__getstate__()
@@ -373,14 +380,16 @@ class _GeneralVarData(_VarData):
     @domain.setter
     def domain(self, domain):
         """Set the domain for this variable."""
-        if hasattr(domain, 'bounds'):
+        # TODO: this should be migrated over to using a SetInitializer
+        # to handle the checking / conversion of the argument to a
+        # proper Pyomo Set and not use isinstance() of a private class.
+        if isinstance(domain, _SetDataBase):
             self._domain = domain
         else:
             raise ValueError(
                 "%s is not a valid domain. Variable domains must be an "
-                "instance of one of %s, or an object that declares a method "
-                "for bounds (like a Pyomo Set). Examples: NonNegativeReals, "
-                "Integers, Binary" % (domain, (RealSet, IntegerSet, BooleanSet)))
+                "instance of a Pyomo Set.  Examples: NonNegativeReals, "
+                "Integers, Binary" % (domain,))
 
     @property
     def lb(self):
@@ -407,6 +416,12 @@ class _GeneralVarData(_VarData):
     @ub.setter
     def ub(self, val):
         raise AttributeError("Assignment not allowed. Use the setub method")
+
+    def get_units(self):
+        """Return the units for this variable entry."""
+        # parent_component() returns self if this is scalar, or the owning
+        # component if not scalar
+        return self.parent_component()._units
 
     # fixed is an attribute
 
@@ -476,6 +491,8 @@ class Var(IndexedComponent):
             `index_set()` when constructing the Var (True) or just the
             variables returned by `initialize`/`rule` (False).  Defaults
             to True.
+        units (pyomo units expression, optional): Set the units corresponding                                                  
+            to the entries in this variable.
     """
 
     _ComponentDataClass = _GeneralVarData
@@ -498,7 +515,8 @@ class Var(IndexedComponent):
         domain = kwd.pop('domain', domain)
         bounds = kwd.pop('bounds', None)
         self._dense = kwd.pop('dense', True)
-
+        self._units = kwd.pop('units', None)
+        
         #
         # Initialize the base class
         #
@@ -535,10 +553,6 @@ class Var(IndexedComponent):
         elif bounds is not None:
             raise ValueError("Variable 'bounds' keyword must be a tuple or function")
 
-    def is_expression_type(self):
-        """Returns False because this is not an expression"""
-        return False
-
     def flag_as_stale(self):
         """
         Set the 'stale' attribute of every variable data object to True.
@@ -567,6 +581,10 @@ class Var(IndexedComponent):
         """
         for index, new_value in iteritems(new_values):
             self[index].set_value(new_value, valid)
+
+    def get_units(self):
+        """Return the units expression for this Var."""
+        return self._units
 
     def construct(self, data=None):
         """Construct this component."""
@@ -967,13 +985,19 @@ class VarList(IndexedVar):
 
     def __init__(self, **kwds):
         #kwds['dense'] = False
-        args = (Set(),)
+        args = (Set(dimen=1),)
         IndexedVar.__init__(self, *args, **kwds)
 
     def construct(self, data=None):
         """Construct this component."""
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Constructing variable list %s", self.name)
+
+        if self._constructed:
+            return
+        # Note: do not set _constructed here, or the super() call will
+        # not actually construct the component.
+        self.index_set().construct()
 
         # We need to ensure that the indices needed for initialization are
         # added to the underlying implicit set.  We *could* verify that the

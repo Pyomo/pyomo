@@ -1,3 +1,12 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 """
 Continuously stirred tank reactor model, based on
 pyomo\examples\doc\pyomobook\nonlinear-ch\react_design\ReactorDesign.py
@@ -20,10 +29,12 @@ def reactor_design_model(data):
     model.k3.fixed = True
     
     # Inlet concentration of A, gmol/m^3
-    model.caf = float(data['caf']) 
-	
+    model.caf = Var(initialize = float(data['caf']), within=PositiveReals)
+    model.caf.fixed = True
+    
 	# Space velocity (flowrate/volume)
-    model.sv = float(data['sv']) 
+    model.sv = Var(initialize = float(data['sv']), within=PositiveReals)
+    model.sv.fixed = True
     
     # Outlet concentration of each component
     model.ca = Var(initialize = 5000.0, within=PositiveReals) 

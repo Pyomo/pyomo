@@ -1,0 +1,110 @@
+name: Pyomo Release Distribution Creation
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  manylinux:
+    name: ${{ matrix.TARGET }}/wheel_creation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        include:
+        - os: ubuntu-latest
+          TARGET: manylinux
+        python-version: [3.7]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine wheel setuptools
+    - name: Build manylinux Python wheels
+      uses: RalfG/python-wheels-manylinux-build@v0.2.2-manylinux2010_x86_64
+      with:
+        python-versions: 'cp27-cp27mu cp35-cp35m cp36-cp36m cp37-cp37m cp38-cp38'
+        build-requirements: 'cython'
+        package-path: ''
+        pip-wheel-args: ''
+        # When locally testing, --no-deps flag is necessary (PyUtilib dependency will trigger an error otherwise)
+    - name: Delete linux wheels
+      run: |
+        sudo rm -rf wheelhouse/*-linux_x86_64.whl
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: manylinux-wheels
+        path: wheelhouse
+  osx:
+    name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest]
+        include:
+        - os: macos-latest
+          TARGET: osx
+        python-version: [ 2.7, 3.5, 3.6, 3.7, 3.8 ]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine wheel setuptools cython
+    - name: Build OSX Python wheels
+      run: |
+        python setup.py  --with-cython sdist --format=gztar bdist_wheel
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: osx-wheels
+        path: dist
+
+
+  windows:
+    name: ${{ matrix.TARGET }}py${{ matrix.python-version }}/wheel_creation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        include:
+        - os: windows-latest
+          TARGET: win
+        python-version: [ 3.6, 3.7, 3.8 ]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      shell: pwsh
+      run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
+        Invoke-Expression "python -m pip install --upgrade pip"
+        Invoke-Expression "pip install setuptools twine wheel cython"
+    - name: Build Windows Python wheels
+      shell: pwsh
+      run: |
+        $env:PYTHONWARNINGS="ignore::UserWarning"
+        Invoke-Expression "python setup.py  --with-cython sdist --format=gztar bdist_wheel"
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: win-wheels
+        path: dist
