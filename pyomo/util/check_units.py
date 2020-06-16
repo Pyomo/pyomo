@@ -16,11 +16,11 @@ module objects.
 from pyomo.core.base.units_container import units, UnitsError, UnitExtractionVisitor
 from pyomo.core.base import (Objective, Constraint, Var, Param,
                              Suffix, Set, RangeSet, Block,
-                             ExternalFunction, Expression)
+                             ExternalFunction, Expression,
+                             value)
+from pyomo.dae import ContinuousSet
+from pyomo.mpec import Complementarity
 from pyomo.gdp import Disjunct, Disjunction
-                             
-from pyomo.gdp import Disjunct
-from pyomo.gdp import Disjunction
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.numvalue import native_types
 
@@ -78,18 +78,23 @@ def _assert_units_consistent_constraint_data(condata):
     ConstraintData object are not consistent or are not equivalent
     with each other.
     """
-    if condata.equality:
-        if condata.lower == 0.0:
-            # Pyomo can rearrange expressions, resulting in a value
-            # of 0 for the RHS that does not have units associated
-            # Therefore, if the RHS is 0, we allow it to be unitless
-            # and check the consistency of the body only
-            assert condata.upper == 0.0
-            _assert_units_consistent_expression(condata.body)
-        else:
-            assert_units_equivalent(condata.lower, condata.body)
+    # Pyomo can rearrange expressions, resulting in a value
+    # of 0 for upper or lower that does not have units associated
+    # Therefore, if the lower and/or upper is 0, we allow it to be unitless
+    # and check the consistency of the body only
+    args = list()
+    if condata.lower is not None and value(condata.lower) != 0.0:
+        args.append(condata.lower)
+
+    args.append(condata.body)
+
+    if condata.upper is not None and value(condata.upper) != 0.0:
+        args.append(condata.upper)
+
+    if len(args) == 1:
+        assert_units_consistent(*args)
     else:
-        assert_units_equivalent(condata.lower, condata.body, condata.upper)
+        assert_units_equivalent(*args)
 
 def _assert_units_consistent_property_expr(obj):
     """
@@ -105,6 +110,22 @@ def _assert_units_consistent_expression(expr):
     pyomo_unit, pint_unit = units._get_units_tuple(expr=expr)
     """
     pyomo_unit, pint_unit = units._get_units_tuple(expr)
+
+# Complementarities that are not in standard form do not
+# current work with the checking code. The Units container
+# should be modified to allow sum and relationals with zero
+# terms (e.g., unitless). Then this code can be enabled.
+#def _assert_units_complementarity(cdata):
+#    """
+#    Raise an exception if any units in either of the complementarity
+#    expressions are inconsistent, and also check the standard block
+#    methods.
+#    """
+#    if cdata._args[0] is not None:
+#        pyomo_unit, pint_unit = units._get_units_tuple(cdata._args[0])
+#    if cdata._args[1] is not None:
+#        pyomo_unit, pint_unit = units._get_units_tuple(cdata._args[1])
+#    _assert_units_consistent_block(cdata)
 
 def _assert_units_consistent_block(obj):
     """
@@ -127,7 +148,11 @@ _component_data_handlers = {
     Disjunct:_assert_units_consistent_block,
     Disjunction: None,
     Block: _assert_units_consistent_block,
-    ExternalFunction: None
+    ExternalFunction: None,
+    ContinuousSet: None, # ToDo: change this when continuous sets have units assigned
+    # complementarities that are not in normal form are not working yet
+    # see comment in test_check_units
+    # Complementarity: _assert_units_complementarity
     }
 
 def assert_units_consistent(obj):
@@ -151,7 +176,11 @@ def assert_units_consistent(obj):
     if objtype in native_types:
         return
     elif obj.is_expression_type() or objtype is IndexTemplate:
-        _assert_units_consistent_expression(obj)
+        try:
+            _assert_units_consistent_expression(obj)
+        except UnitsError:
+            print('Units problem with expression {}'.format(obj))
+            raise
         return
 
     # if object is not in our component handler, raise an exception
@@ -166,6 +195,15 @@ def assert_units_consistent(obj):
     if obj.is_indexed():
         # check all the component data objects
         for cdata in obj.values():
-            handler(cdata)
+            try:
+                handler(cdata)
+            except UnitsError:
+                print('Error in units when checking {}'.format(cdata))
+                raise
     else:
-        handler(obj)
+        try:
+            handler(obj)
+        except UnitsError:
+                print('Error in units when checking {}'.format(obj))
+                raise
+            
