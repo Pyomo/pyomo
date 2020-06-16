@@ -11,7 +11,6 @@
 import sys
 import fnmatch
 import os
-import subprocess
 from os.path import abspath, dirname, join, basename
 
 try:
