@@ -1017,7 +1017,7 @@ class NotExpression(UnaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'Logical Negation'
 
-    def _precendence(self):
+    def _precedence(self):
         return NotExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1050,7 +1050,7 @@ class EquivalenceExpression(BinaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'iff'
 
-    def _precendence(self):
+    def _precedence(self):
         return EquivalenceExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1071,7 +1071,7 @@ class XorExpression(BinaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'xor'
 
-    def _precendence(self):
+    def _precedence(self):
         return XorExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1092,7 +1092,7 @@ class ImplicationExpression(BinaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'implies'
 
-    def _precendence(self):
+    def _precedence(self):
         return ImplicationExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1151,7 +1151,7 @@ class AndExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'and'
 
-    def _precendence(self):
+    def _precedence(self):
         return AndExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1180,7 +1180,7 @@ class OrExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'or'
 
-    def _precendence(self):
+    def _precedence(self):
         return OrExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1215,7 +1215,7 @@ class ExactlyExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'exactly'
 
-    def _precendence(self):
+    def _precedence(self):
         return ExactlyExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1242,7 +1242,7 @@ class AtMostExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'atmost'
 
-    def _precendence(self):
+    def _precedence(self):
         return AtMostExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
@@ -1269,7 +1269,7 @@ class AtLeastExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'atleast'
 
-    def _precendence(self):
+    def _precedence(self):
         return AtLeastExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
