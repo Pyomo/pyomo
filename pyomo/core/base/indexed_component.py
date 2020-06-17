@@ -666,51 +666,37 @@ value() function.""" % ( self.name, i ))
                 fixed[i - len(idx)] = val
 
         if sliced or ellipsis is not None:
-            if self.dim() == 0 and idx == (slice(None),):
+            slice_dim = len(idx)
+            if ellipsis is not None:
+                slice_dim -= 1
+            if normalize_index.flatten:
+                set_dim = self.dim()
+            elif self._implicit_subsets is None:
+                # Scalar component.
+                set_dim = 0
+            else:
+                set_dim = len(self._implicit_subsets)
+
+            structurally_valid = False
+            if slice_dim == set_dim or set_dim is None:
+                structurally_valid = True
+            elif ellipsis is not None and slice_dim < set_dim:
+                structurally_valid = True
+            elif set_dim == 0 and idx == (slice(None),):
                 # If dim == 0 and idx is slice(None), the component was
                 # a scalar passed a single slice. Since scalar components
                 # can be accessed with a "1-dimensional" index of None,
                 # this behavior is allowed.
                 #
-                # NOTE: dim will still be 0 if nomalize_index.flatten is False
-                pass
-            elif (not normalize_index.flatten and 
-                ellipsis is None and 
-                len(idx) != len(self._implicit_subsets)):
-                # dim will be None. Absent an ellipsis, the number of indices
-                # passed in should be the length of _implicit_subsets.
+                # Note that x[...] is caught above, as slice_dim will be
+                # 0 in that case
+                structurally_valid = True
+
+            if not structurally_valid:
                 raise IndexError(
                     "Index %s contains an invalid number of entries for "
                     "component %s. Expected %s, got %s." 
-                    % (idx, self.name, len(self._implicit_subsets), len(idx)))
-            elif (not normalize_index.flatten and 
-                len(fixed) + len(sliced) > len(self._implicit_subsets)):
-                # dim is still None. Raise an error if the number of fixed
-                # and sliced indices exceeds the length of _implicit_subsets.
-                raise IndexError(
-                    "Index %s contains an invalid number of entries for "
-                    "component %s. Expected no more than %s, got %s." 
-                    % (idx, self.name, len(self._implicit_subsets), len(idx)))
-            elif self.dim() is None:
-                # Assume that the right thing to do here is return
-                # an IndexedComponent_slice
-                pass
-            elif ellipsis is None and len(idx) != self.dim():
-                # If there is no ellipse and the index doesn't match the 
-                # component's dimension, raise an error.
-                # NOTE: Should this do something different for unflattened 
-                # indices?
-                raise IndexError(
-                    "Index %s contains an invalid number of entries for "
-                    "component %s. Expected %s, got %s." 
-                    % (idx, self.name, self.dim(), len(idx)))
-            elif len(fixed) + len(sliced) > self.dim():
-                # If an ellipsis is present and the index exceeds the dimension
-                # of the component, raise an error.
-                raise IndexError(
-                    "Index %s contains an invalid number of entries for "
-                    "component %s. Expected no more than %s, got %s." 
-                    % (idx, self.name, self.dim(), len(idx)))
+                    % (idx, self.name, set_dim, slice_dim))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:
             if len(idx) == 1:

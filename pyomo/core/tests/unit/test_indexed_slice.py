@@ -567,78 +567,118 @@ class TestComponentSlices(unittest.TestCase):
         with self.assertRaisesRegexp(
             IndexError, 'Index .* contains an invalid number of '
             'entries for component .*'):
-            _slicer = m.b[:].c[...].x
+            _slicer = m.b[:,:,:,...]
 
+        # valid slice for b, but not c
+        _slicer = m.b[:,:,...].c[:,:,:].x
         with self.assertRaisesRegexp(
             IndexError, 'Index .* contains an invalid number of '
             'entries for component .*'):
-            _slicer = m.b[:].c[:,:,:].x
-
-        with self.assertRaisesRegexp(
-            IndexError, 'Index .* contains an invalid number of '
-            'entries for component .*'):
-            _slicer = m.b[2, :].c[:,:,:].x
             # Error not raised immediately because accessing c is deferred
             # until iteration.
             list(_slicer)
 
+        # valid slice for b, but not c
+        _slicer = m.b[2, :].c[:].x
         with self.assertRaisesRegexp(
             IndexError, 'Index .* contains an invalid number of '
             'entries for component .*'):
-            _slicer = m.b[2, :].c[:].x
             list(_slicer)
+
+    def test_nondim_set(self):
+        m = ConcreteModel()
+        m.I = Set(dimen=None, initialize=[1,(2,3)])
+        m.x = Var(m.I)
+
+        ref = list(m.x[:])
+        self.assertEqual(len(ref), 1)
+        self.assertIs(ref[0], m.x[1])
+
+        ref = list(m.x[:,...,:])
+        self.assertEqual(len(ref), 1)
+        self.assertIs(ref[0], m.x[2,3])
+
+        ref = list(m.x[2,...])
+        self.assertEqual(len(ref), 1)
+        self.assertIs(ref[0], m.x[2,3])
+
+        from pyomo.core.base.set import normalize_index
+        _old_flatten = normalize_index.flatten
+        try:
+            normalize_index.flatten = False
+
+            m = ConcreteModel()
+            m.I = Set(dimen=None, initialize=[1,(2,3)])
+            m.x = Var(m.I)
+
+            ref = list(m.x[:])
+            self.assertEqual(len(ref), 2)
+            self.assertIs(ref[0], m.x[1])
+
+            with self.assertRaisesRegexp(
+                    IndexError, 'Index .* contains an invalid number of '
+                    'entries for component .*'):
+                # If we are not flattening the sets, then
+                # non-dimensioned Sets *still expect a single "slice".
+                list(m.x[:,...,:])
+
+        finally:
+            normalize_index.flatten = _old_flatten
 
     def test_flatten_false(self):
         from pyomo.core.base.set import normalize_index
-        normalize_index.flatten = False
+        _old_flatten = normalize_index.flatten
+        try:
+            normalize_index.flatten = False
 
-        m = ConcreteModel()
-        m.I = Set(initialize=range(2))
-        m.J = Set(initialize=range(2,4))
-        m.K = Set(initialize=['a','b','c'])
-        m.IJ = m.I*m.J
+            m = ConcreteModel()
+            m.I = Set(initialize=range(2))
+            m.J = Set(initialize=range(2,4))
+            m.K = Set(initialize=['a','b','c'])
+            m.IJ = m.I*m.J
 
-        m.a = Var(m.I, m.J, m.K)
-        m.b = Var(m.IJ, m.K)
-        m.c = Var()
-        
-        with self.assertRaisesRegexp(
-            IndexError, 'Index .* contains an invalid number of '
-            'entries for component .*'):
-            _slicer = m.a[(0,2),:]
+            m.a = Var(m.I, m.J, m.K)
+            m.b = Var(m.IJ, m.K)
+            m.c = Var()
 
-        _slicer = m.a[0,2,:]
-        names = [ 'a[0,2,a]', 'a[0,2,b]', 'a[0,2,c]' ]
-        self.assertEqual(names, [var.name for var in _slicer])
+            with self.assertRaisesRegexp(
+                IndexError, 'Index .* contains an invalid number of '
+                'entries for component .*'):
+                _slicer = m.a[(0,2),:]
 
-        with self.assertRaisesRegexp(
-            IndexError, 'Index .* contains an invalid number of '
-            'entries for component .*'):
-            _slicer = m.b[0,2,:]
-        
-        _slicer = m.b[(0,2),:]
-        names = [ 'b[(0,2),a]', 'b[(0,2),b]', 'b[(0,2),c]' ]
-        self.assertEqual(names, [var.name for var in _slicer])
+            _slicer = m.a[0,2,:]
+            names = [ 'a[0,2,a]', 'a[0,2,b]', 'a[0,2,c]' ]
+            self.assertEqual(names, [var.name for var in _slicer])
 
-        with self.assertRaisesRegexp(
-            IndexError, 'Index .* contains an invalid number of '
-            'entries for component .*'):
-            _slicer = m.b[:,2,'b']
+            with self.assertRaisesRegexp(
+                IndexError, 'Index .* contains an invalid number of '
+                'entries for component .*'):
+                _slicer = m.b[0,2,:]
 
-        _slicer = m.b[:,'b']
-        names = [ 'b[(0,2),b]', 'b[(0,3),b]',
-                  'b[(1,2),b]', 'b[(1,3),b]' ]
-        self.assertEqual(names, [var.name for var in _slicer])
-        _slicer = m.b[...,'b']
-        self.assertEqual(names, [var.name for var in _slicer])
+            _slicer = m.b[(0,2),:]
+            names = [ 'b[(0,2),a]', 'b[(0,2),b]', 'b[(0,2),c]' ]
+            self.assertEqual(names, [var.name for var in _slicer])
 
-        _slicer = m.b[0,...]
-        self.assertEqual([], [var.name for var in _slicer])
+            with self.assertRaisesRegexp(
+                IndexError, 'Index .* contains an invalid number of '
+                'entries for component .*'):
+                _slicer = m.b[:,2,'b']
 
-        _slicer = m.c[:]
-        self.assertEqual(['c'], [var.name for var in _slicer])
+            _slicer = m.b[:,'b']
+            names = [ 'b[(0,2),b]', 'b[(0,3),b]',
+                      'b[(1,2),b]', 'b[(1,3),b]' ]
+            self.assertEqual(names, [var.name for var in _slicer])
+            _slicer = m.b[...,'b']
+            self.assertEqual(names, [var.name for var in _slicer])
 
-        normalize_index.flatten = True
+            _slicer = m.b[0,...]
+            self.assertEqual([], [var.name for var in _slicer])
+
+            _slicer = m.c[:]
+            self.assertEqual(['c'], [var.name for var in _slicer])
+
+        finally:
+            normalize_index.flatten = _old_flatten
 
 
 if __name__ == "__main__":
