@@ -11,7 +11,7 @@ if not (numpy_available and scipy_available):
 if scipy_available:
     from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
 if mumps_available:
-    from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface    
+    from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
 
 
 import numpy as np
@@ -141,7 +141,7 @@ class TestProcessInit(unittest.TestCase):
         process_init_duals_ub(x, ub)
         self.assertTrue(np.allclose(x, np.array([2, 2, 0, 2], dtype=np.double)))
 
-        
+
 class TestFractionToTheBoundary(unittest.TestCase):
     def test_fraction_to_the_boundary_helper_lb(self):
         tau = 0.9
