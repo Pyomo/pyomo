@@ -13,12 +13,6 @@ Flexible Solution Suite
 
 Once a model is formulated as a GDP model, a range of solution strategies are available to manipulate and solve it.
 
-.. figure:: gdp-solution-paths.png
-    :scale: 45%
-    :align: center
-
-    GDP solution approaches. Image from literature\ [#gdp-pse-paper]_.
-
 The traditional approach is reformulation to MINLP, but various other techniques are possible, including direct solution via the :ref:`GDPopt solver <gdpopt-main-page>`.
 Below, we describe some of these capabilities.
 
@@ -61,12 +55,6 @@ The two classical strategies for doing so are the (included) Big-M and Hull refo
 Big M (BM) Reformulation
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. figure:: bm.png
-    :scale: 50%
-    :align: center
-
-    BM reformulation. Image adapted from preprint material\ [#gdp-review-2013]_.
-
 The Big M reformulation\ [#gdp-bm]_ results in a smaller transformed model, avoiding the need to add extra variables; however, it yields a looser continuous relaxation.
 By default, the BM transformation will estimate reasonably tight M values for you if variables are bounded.
 For nonlinear models where finite expression bounds may be inferred from variable bounds, the BM transformation may also be able to automatically compute M values for you.
@@ -84,12 +72,6 @@ From the Pyomo command line, include the ``--transform pyomo.gdp.bigm`` option.
 
 Hull Reformulation (HR)
 ^^^^^^^^^^^^^^^^^^^^^^^
-
-.. figure:: hr.png
-    :scale: 50%
-    :align: center
-
-    Hull reformulation. Image adapted from preprint material\ [#gdp-review-2013]_.
 
 The Hull Reformulation requires a lifting into a higher-dimensional space and consequently introduces disaggregated variables and their corresponding constraints.
 
