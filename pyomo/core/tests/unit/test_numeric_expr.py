@@ -24,8 +24,9 @@ import pyutilib.th as unittest
 from pyutilib.th import nottest
 
 from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
-from pyomo.kernel import variable, expression
+from pyomo.kernel import variable, expression, objective
 from pyomo.core.expr.numvalue import (NumericConstant, as_numeric,
+                                      native_numeric_types,
                                       is_potentially_variable, polynomial_degree)
 from pyomo.core.expr.numeric_expr import (
     ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
@@ -44,6 +45,7 @@ from pyomo.core.expr.current import Expr_if
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr import expr_common
+from pyomo.core.base.var import _GeneralVarData
 
 from pyomo.repn import generate_standard_repn
 
@@ -214,7 +216,6 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
@@ -226,7 +227,7 @@ class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
         self.expectConstExpression = False
 
     def create(self, val, domain):
-        tmp=pyomo.core.base.var._GeneralVarData()
+        tmp=_GeneralVarData()
         tmp.domain = domain
         tmp.value=val
         return tmp
@@ -235,7 +236,6 @@ class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
 class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
@@ -256,7 +256,6 @@ class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
 class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
@@ -278,7 +277,6 @@ class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
 class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
@@ -298,7 +296,6 @@ class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConsta
 class TestExpression_Evaluate_MutableParam(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
