@@ -283,6 +283,8 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: 0 * m.Y2
             yield lambda: 0 / m.Y2
             yield lambda: 0**m.Y2
+
+        def invalid_unary_expression_generator():
             yield lambda: -m.Y1
             yield lambda: +m.Y1
 
@@ -292,11 +294,16 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: m.Y1 > 0
             yield lambda: m.Y1 < 0
 
-        numeric_error_msg = "Unable to perform arithmetic operations between Boolean values."
+        numeric_error_msg = r"unsupported operand type\(s\) for"
         for invalid_expr_fcn in invalid_expression_generator():
             with self.assertRaisesRegex(TypeError, numeric_error_msg):
                 _ = invalid_expr_fcn()
-        comparison_error_msg = "Numeric comparison with BooleanValue Y1 is not allowed."
+
+        for invalid_expr_fcn in invalid_unary_expression_generator():
+            with self.assertRaisesRegex(TypeError, "bad operand type for unary"):
+                _ = invalid_expr_fcn()
+
+        comparison_error_msg = "not supported between instances of"
         for invalid_expr_fcn in invalid_comparison_generator():
             with self.assertRaisesRegex(TypeError, comparison_error_msg):
                 _ = invalid_expr_fcn()
@@ -306,13 +313,13 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
 
         with self.assertRaisesRegex(
-                TypeError, "Implicit conversion of Pyomo BooleanValue type "
-                "'Y1' to a float is disabled."):
+                TypeError, r"float\(\) argument must be a string "
+                           "or a number, not 'SimpleBooleanVar'"):
             float(m.Y1)
 
         with self.assertRaisesRegex(
-                TypeError, "Implicit conversion of Pyomo BooleanValue type "
-                "'Y1' to an integer is disabled."):
+                TypeError, "int\(\) argument must be a string, "
+                           "a bytes-like object or a number, not 'SimpleBooleanVar'"):
             int(m.Y1)
 
 
