@@ -15,8 +15,6 @@
 __all__ = ['sum_product', 'summation', 'dot_product', 'sequence', 'prod', 'quicksum']
 
 from six.moves import xrange
-from functools import reduce
-import operator
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.numeric_expr import decompose_term
 from pyomo.core.expr import current as EXPR

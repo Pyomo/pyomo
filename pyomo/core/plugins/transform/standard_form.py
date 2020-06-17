@@ -8,10 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+from pyomo.core import TransformationFactory
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.core.plugins.transform.nonnegative_transform import *
-from pyomo.core.plugins.transform.equality_transform import *
+from pyomo.core.plugins.transform.nonnegative_transform import NonNegativeTransformation
+from pyomo.core.plugins.transform.equality_transform import EqualityTransform
 
 
 @TransformationFactory.register("core.standard_form", doc="Create an equivalent LP model in standard form.")
