@@ -11,53 +11,11 @@ import pyutilib.th as unittest
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.environ import *
-
-
-def create_model1(y):
-    # model 1 with 5 checkpoints, 11 literals
-    c1 = (Implies(y[1], y[2])).equals(Xor(y[3], y[4]))
-    c2 = y[0] & Not(c1)
-    c3 = Not(Implies(y[5], y[6]))
-    c4 = Or(y[7], y[8], y[9])
-    c5 = And((c3 & c4), y[10])
-    root_node = c2 | Not(c5)
-    return root_node
-
-
-def create_model2(y):
-    # model 2 with 3 checkpoints, 11 literals
-    c1 = Not(y[1]).implies(y[2] ^ y[3])
-    c2 = And(Or(y[4], y[5], y[6]))
-    c3 = Equivalent(Xor(y[8], y[9]), y[10])
-    root_node = Or(y[0], And(c1, c2), Not(y[7]), c3)
-    return root_node
-
-
-def create_model3(y):
-    # model3
-    a1 = And(y[0].implies(y[1]), Not(y[2]))
-    a3 = And(Xor(y[4], y[5]))
-    root_node = a1 | And(y[3]) | a3
-    return root_node
-
-
-def create_model4(y):
-    # model4
-    a0 = y[0].implies(y[1])
-    a1 = Not(y[2])
-    a2 = a0 & a1
-    a3 = a2 | y[3]
-    return a3
-    # return (y[0].implies(y[1]) and Not(y[2])) or y[3]
-
-
-def create_model5(y):
-    # model 5, for cnf walker
-    a2 = And(y[0], y[1])
-    o1 = Or(a2, y[3])
-    a1 = And(o1, y[4])
-    return a1
+from pyomo.environ import (
+    And, AtLeast, AtMost, BooleanConstant, BooleanVarList, ComponentMap, Equivalent, Exactly, Implies, Or, RangeSet,
+    value,
+    ConcreteModel, BooleanVar,
+    Not, Xor, )
 
 
 def _generate_possible_truth_inputs(nargs):
@@ -261,6 +219,9 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertEqual(str(AtLeast(1, m.Y1, m.Y2)), "AtLeast(1: [Y1, Y2])")
         self.assertEqual(str(AtMost(1, m.Y1, m.Y2)), "AtMost(1: [Y1, Y2])")
         self.assertEqual(str(Exactly(1, m.Y1, m.Y2)), "Exactly(1: [Y1, Y2])")
+
+        # Precedence check
+        self.assertEquals(str(m.Y1.implies(m.Y2).or_(m.Y3)), "(Y1 --> Y2) ∨ Y3")
 
     def test_node_types(self):
         m = ConcreteModel()
