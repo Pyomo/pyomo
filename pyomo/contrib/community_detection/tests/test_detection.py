@@ -21,7 +21,7 @@ from six import StringIO
 from pyomo.common.dependencies import networkx_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Objective, Var, Integers, minimize, RangeSet
-from pyomo.contrib.community_detection.detection import detect_communities, community_louvain_available
+from pyomo.contrib.community_detection.detection import detect_communities, easy_to_read, community_louvain_available
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QP_simple import QP_simple
@@ -298,41 +298,29 @@ def collect_test_results(model, with_string_tests=False):
     random_seed_test = 5
 
     community_map_b_unweighted_without = detect_communities(model, node_type='b', with_objective=False,
-                                                            weighted_graph=False, random_seed=random_seed_test,
-                                                            string_output=False)
+                                                            weighted_graph=False, random_seed=random_seed_test)
     community_map_b_weighted_without = detect_communities(model, node_type='b', with_objective=False,
-                                                          weighted_graph=True, random_seed=random_seed_test,
-                                                          string_output=False)
+                                                          weighted_graph=True, random_seed=random_seed_test)
     community_map_b_unweighted_with = detect_communities(model, node_type='b', with_objective=True,
-                                                         weighted_graph=False, random_seed=random_seed_test,
-                                                         string_output=False)
+                                                         weighted_graph=False, random_seed=random_seed_test)
     community_map_b_weighted_with = detect_communities(model, node_type='b', with_objective=True,
-                                                       weighted_graph=True, random_seed=random_seed_test,
-                                                       string_output=False)
+                                                       weighted_graph=True, random_seed=random_seed_test)
     community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                            weighted_graph=False, random_seed=random_seed_test,
-                                                            string_output=False)
+                                                            weighted_graph=False, random_seed=random_seed_test)
     community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                          weighted_graph=True, random_seed=random_seed_test,
-                                                          string_output=False)
+                                                          weighted_graph=True, random_seed=random_seed_test)
     community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                         weighted_graph=False, random_seed=random_seed_test,
-                                                         string_output=False)
+                                                         weighted_graph=False, random_seed=random_seed_test)
     community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                       weighted_graph=True, random_seed=random_seed_test,
-                                                       string_output=False)
+                                                       weighted_graph=True, random_seed=random_seed_test)
     community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                            weighted_graph=False, random_seed=random_seed_test,
-                                                            string_output=False)
+                                                            weighted_graph=False, random_seed=random_seed_test)
     community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                          weighted_graph=True, random_seed=random_seed_test,
-                                                          string_output=False)
+                                                          weighted_graph=True, random_seed=random_seed_test)
     community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                         weighted_graph=False, random_seed=random_seed_test,
-                                                         string_output=False)
+                                                         weighted_graph=False, random_seed=random_seed_test)
     community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                       weighted_graph=True, random_seed=random_seed_test,
-                                                       string_output=False)
+                                                       weighted_graph=True, random_seed=random_seed_test)
 
     test_results = (community_map_b_unweighted_without,
                     community_map_b_weighted_without,
@@ -350,42 +338,30 @@ def collect_test_results(model, with_string_tests=False):
     if not with_string_tests:
         return test_results
 
-    str_community_map_b_unweighted_without = detect_communities(model, node_type='b', with_objective=False,
-                                                                weighted_graph=False, random_seed=random_seed_test,
-                                                                string_output=True)
-    str_community_map_b_weighted_without = detect_communities(model, node_type='b', with_objective=False,
-                                                              weighted_graph=True, random_seed=random_seed_test,
-                                                              string_output=True)
-    str_community_map_b_unweighted_with = detect_communities(model, node_type='b', with_objective=True,
-                                                             weighted_graph=False, random_seed=random_seed_test,
-                                                             string_output=True)
-    str_community_map_b_weighted_with = detect_communities(model, node_type='b', with_objective=True,
-                                                           weighted_graph=True, random_seed=random_seed_test,
-                                                           string_output=True)
-    str_community_map_c_unweighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                                weighted_graph=False, random_seed=random_seed_test,
-                                                                string_output=True)
-    str_community_map_c_weighted_without = detect_communities(model, node_type='c', with_objective=False,
-                                                              weighted_graph=True, random_seed=random_seed_test,
-                                                              string_output=True)
-    str_community_map_c_unweighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                             weighted_graph=False, random_seed=random_seed_test,
-                                                             string_output=True)
-    str_community_map_c_weighted_with = detect_communities(model, node_type='c', with_objective=True,
-                                                           weighted_graph=True, random_seed=random_seed_test,
-                                                           string_output=True)
-    str_community_map_v_unweighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                                weighted_graph=False, random_seed=random_seed_test,
-                                                                string_output=True)
-    str_community_map_v_weighted_without = detect_communities(model, node_type='v', with_objective=False,
-                                                              weighted_graph=True, random_seed=random_seed_test,
-                                                              string_output=True)
-    str_community_map_v_unweighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                             weighted_graph=False, random_seed=random_seed_test,
-                                                             string_output=True)
-    str_community_map_v_weighted_with = detect_communities(model, node_type='v', with_objective=True,
-                                                           weighted_graph=True, random_seed=random_seed_test,
-                                                           string_output=True)
+    str_community_map_b_unweighted_without = easy_to_read(model, node_type='b', with_objective=False,
+                                                          weighted_graph=False, random_seed=random_seed_test)
+    str_community_map_b_weighted_without = easy_to_read(model, node_type='b', with_objective=False,
+                                                        weighted_graph=True, random_seed=random_seed_test)
+    str_community_map_b_unweighted_with = easy_to_read(model, node_type='b', with_objective=True,
+                                                       weighted_graph=False, random_seed=random_seed_test)
+    str_community_map_b_weighted_with = easy_to_read(model, node_type='b', with_objective=True,
+                                                     weighted_graph=True, random_seed=random_seed_test)
+    str_community_map_c_unweighted_without = easy_to_read(model, node_type='c', with_objective=False,
+                                                          weighted_graph=False, random_seed=random_seed_test)
+    str_community_map_c_weighted_without = easy_to_read(model, node_type='c', with_objective=False,
+                                                        weighted_graph=True, random_seed=random_seed_test)
+    str_community_map_c_unweighted_with = easy_to_read(model, node_type='c', with_objective=True,
+                                                       weighted_graph=False, random_seed=random_seed_test)
+    str_community_map_c_weighted_with = easy_to_read(model, node_type='c', with_objective=True,
+                                                     weighted_graph=True, random_seed=random_seed_test)
+    str_community_map_v_unweighted_without = easy_to_read(model, node_type='v', with_objective=False,
+                                                          weighted_graph=False, random_seed=random_seed_test)
+    str_community_map_v_weighted_without = easy_to_read(model, node_type='v', with_objective=False,
+                                                        weighted_graph=True, random_seed=random_seed_test)
+    str_community_map_v_unweighted_with = easy_to_read(model, node_type='v', with_objective=True,
+                                                       weighted_graph=False, random_seed=random_seed_test)
+    str_community_map_v_weighted_with = easy_to_read(model, node_type='v', with_objective=True,
+                                                     weighted_graph=True, random_seed=random_seed_test)
 
     str_test_results = (str_community_map_b_unweighted_without,
                         str_community_map_b_weighted_without,
