@@ -1,10 +1,10 @@
 import pyutilib.th as unittest
 
-from pyomo.core import AtLeast, AtMost, Exactly
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
-from pyomo.environ import ConcreteModel, BooleanVar, LogicalConstraint, TransformationFactory, RangeSet, \
-    Var, Constraint, ComponentMap, value, BooleanSet
+from pyomo.environ import (
+    ConcreteModel, BooleanVar, LogicalConstraint, Or, TransformationFactory, RangeSet,
+    Var, Constraint, ComponentMap, value, BooleanSet, AtLeast, AtMost, Exactly)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
 
@@ -99,7 +99,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m = ConcreteModel()
         m.s = RangeSet(3)
         m.Y = BooleanVar(m.s)
-        m.p = LogicalConstraint(expr=m.Y[1] >> (m.Y[2] | m.Y[3]))
+        m.p = LogicalConstraint(expr=m.Y[1].implies(Or(m.Y[2], m.Y[3])))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         _constrs_contained_within(
             self, [
@@ -150,7 +150,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m = ConcreteModel()
         m.s = RangeSet(3)
         m.Y = BooleanVar(m.s)
-        m.p = LogicalConstraint(expr=m.Y[1] >> AtLeast(2, m.Y[1], m.Y[2], m.Y[3]))
+        m.p = LogicalConstraint(expr=m.Y[1].implies(AtLeast(2, m.Y[1], m.Y[2], m.Y[3])))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         Y_aug = m.logic_to_linear.augmented_vars
         self.assertEqual(len(Y_aug), 1)
@@ -165,7 +165,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m = ConcreteModel()
         m.s = RangeSet(3)
         m.Y = BooleanVar(m.s)
-        m.p = LogicalConstraint(expr=m.Y[1] >> AtMost(2, m.Y[1], m.Y[2], m.Y[3]))
+        m.p = LogicalConstraint(expr=m.Y[1].implies(AtMost(2, m.Y[1], m.Y[2], m.Y[3])))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         Y_aug = m.logic_to_linear.augmented_vars
         self.assertEqual(len(Y_aug), 1)
@@ -180,7 +180,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m = ConcreteModel()
         m.s = RangeSet(3)
         m.Y = BooleanVar(m.s)
-        m.p = LogicalConstraint(expr=m.Y[1] >> Exactly(2, m.Y[1], m.Y[2], m.Y[3]))
+        m.p = LogicalConstraint(expr=m.Y[1].implies(Exactly(2, m.Y[1], m.Y[2], m.Y[3])))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         Y_aug = m.logic_to_linear.augmented_vars
         self.assertEqual(len(Y_aug), 3)
@@ -200,7 +200,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.s = RangeSet(3)
         m.Y = BooleanVar(m.s)
         m.x = Var(bounds=(1, 3))
-        m.p = LogicalConstraint(expr=m.Y[1] >> Exactly(m.x, m.Y[1], m.Y[2], m.Y[3]))
+        m.p = LogicalConstraint(expr=m.Y[1].implies(Exactly(m.x, m.Y[1], m.Y[2], m.Y[3])))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         Y_aug = m.logic_to_linear.augmented_vars
         self.assertEqual(len(Y_aug), 3)
@@ -217,7 +217,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
 
     def test_xfrm_atleast_nested(self):
         m = _generate_boolean_model(4)
-        m.p = LogicalConstraint(expr=AtLeast(1, AtLeast(2, m.Y[1], m.Y[1] | m.Y[2], m.Y[2]) | m.Y[3], m.Y[4]))
+        m.p = LogicalConstraint(expr=AtLeast(1, AtLeast(2, m.Y[1], m.Y[1].or_(m.Y[2]), m.Y[2]).or_(m.Y[3]), m.Y[4]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         Y_aug = m.logic_to_linear.augmented_vars
         self.assertEqual(len(Y_aug), 3)
@@ -259,7 +259,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.Y[2].associate_binary_var(m.d2.indicator_var)
         m.Y[3].associate_binary_var(m.dd[1].indicator_var)
         m.Y[4].associate_binary_var(m.dd[2].indicator_var)
-        m.p = LogicalConstraint(expr=m.Y[1] >> m.Y[3] | m.Y[4])
+        m.p = LogicalConstraint(expr=m.Y[1].implies(Or(m.Y[3], m.Y[4])))
         m.p2 = LogicalConstraint(expr=AtMost(2, *m.Y[:]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         _constrs_contained_within(
@@ -271,7 +271,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
     def test_gdp_nesting(self):
         m = _generate_boolean_model(2)
         m.disj = Disjunction(expr=[
-            [m.Y[1] >> m.Y[2]],
+            [m.Y[1].implies(m.Y[2])],
             [m.Y[2].equivalent_to(False)]
         ])
         TransformationFactory('core.logical_to_linear').apply_to(m)

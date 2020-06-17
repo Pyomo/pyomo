@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Testing for the logical expression system
 """
@@ -106,13 +107,13 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         op_static = Equivalent(m.Y1, m.Y2)
         op_class = m.Y1.equivalent_to(m.Y2)
-        op_operator = m.Y1 == m.Y2
+        # op_operator = m.Y1 == m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
             m.Y1.value, m.Y2.value = truth_combination[0], truth_combination[1]
             correct_value = operator.eq(*truth_combination)
             self.assertEquals(value(op_static), correct_value)
             self.assertEquals(value(op_class), correct_value)
-            self.assertEquals(value(op_operator), correct_value)
+            # self.assertEquals(value(op_operator), correct_value)
 
     def test_binary_xor(self):
         m = ConcreteModel()
@@ -120,13 +121,13 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         op_static = Xor(m.Y1, m.Y2)
         op_class = m.Y1.xor(m.Y2)
-        op_operator = m.Y1 ^ m.Y2
+        # op_operator = m.Y1 ^ m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
             m.Y1.value, m.Y2.value = truth_combination[0], truth_combination[1]
             correct_value = operator.xor(*truth_combination)
             self.assertEquals(value(op_static), correct_value)
             self.assertEquals(value(op_class), correct_value)
-            self.assertEquals(value(op_operator), correct_value)
+            # self.assertEquals(value(op_operator), correct_value)
 
     def test_binary_implies(self):
         m = ConcreteModel()
@@ -134,16 +135,16 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         op_static = Implies(m.Y1, m.Y2)
         op_class = m.Y1.implies(m.Y2)
-        op_loperator = m.Y2 << m.Y1
-        op_roperator = m.Y1 >> m.Y2
+        # op_loperator = m.Y2 << m.Y1
+        # op_roperator = m.Y1 >> m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
             m.Y1.value, m.Y2.value = truth_combination[0], truth_combination[1]
             correct_value = (not truth_combination[0]) or truth_combination[1]
             self.assertEquals(value(op_static), correct_value)
             self.assertEquals(value(op_class), correct_value)
-            self.assertEquals(value(op_loperator), correct_value)
-            self.assertEquals(value(op_roperator), correct_value)
-            nnf = Not(m.Y1) | m.Y2
+            # self.assertEquals(value(op_loperator), correct_value)
+            # self.assertEquals(value(op_roperator), correct_value)
+            nnf = Not(m.Y1).or_(m.Y2)
             self.assertEquals(value(op_static), value(nnf))
 
     def test_binary_and(self):
@@ -152,13 +153,13 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         op_static = And(m.Y1, m.Y2)
         op_class = m.Y1.and_(m.Y2)
-        op_operator = m.Y1 & m.Y2
+        # op_operator = m.Y1 & m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
             m.Y1.value, m.Y2.value = truth_combination[0], truth_combination[1]
             correct_value = all(truth_combination)
             self.assertEquals(value(op_static), correct_value)
             self.assertEquals(value(op_class), correct_value)
-            self.assertEquals(value(op_operator), correct_value)
+            # self.assertEquals(value(op_operator), correct_value)
 
     def test_binary_or(self):
         m = ConcreteModel()
@@ -166,13 +167,13 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         op_static = Or(m.Y1, m.Y2)
         op_class = m.Y1.or_(m.Y2)
-        op_operator = m.Y1 | m.Y2
+        # op_operator = m.Y1 | m.Y2
         for truth_combination in _generate_possible_truth_inputs(2):
             m.Y1.value, m.Y2.value = truth_combination[0], truth_combination[1]
             correct_value = any(truth_combination)
             self.assertEquals(value(op_static), correct_value)
             self.assertEquals(value(op_class), correct_value)
-            self.assertEquals(value(op_operator), correct_value)
+            # self.assertEquals(value(op_operator), correct_value)
 
     def test_nary_and(self):
         nargs = 3
@@ -181,16 +182,16 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y = BooleanVar(m.s)
         op_static = And(*(m.Y[i] for i in m.s))
         op_class = BooleanConstant(True)
-        op_operator = True
+        # op_operator = True
         for y in m.Y.values():
             op_class = op_class.and_(y)
-            op_operator &= y
+            # op_operator &= y
         for truth_combination in _generate_possible_truth_inputs(nargs):
             m.Y.set_values(dict(enumerate(truth_combination, 1)))
             correct_value = all(truth_combination)
             self.assertEquals(value(op_static), correct_value)
             self.assertEquals(value(op_class), correct_value)
-            self.assertEquals(value(op_operator), correct_value)
+            # self.assertEquals(value(op_operator), correct_value)
 
     def test_nary_or(self):
         nargs = 3
@@ -199,16 +200,16 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y = BooleanVar(m.s)
         op_static = Or(*(m.Y[i] for i in m.s))
         op_class = BooleanConstant(False)
-        op_operator = False
+        # op_operator = False
         for y in m.Y.values():
             op_class = op_class.or_(y)
-            op_operator |= y
+            # op_operator |= y
         for truth_combination in _generate_possible_truth_inputs(nargs):
             m.Y.set_values(dict(enumerate(truth_combination, 1)))
             correct_value = any(truth_combination)
             self.assertEquals(value(op_static), correct_value)
             self.assertEquals(value(op_class), correct_value)
-            self.assertEquals(value(op_operator), correct_value)
+            # self.assertEquals(value(op_operator), correct_value)
 
     def test_nary_exactly(self):
         nargs = 5
@@ -252,8 +253,14 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y2 = BooleanVar()
         m.Y3 = BooleanVar()
 
-        self.assertEqual(str(And(m.Y1, m.Y2, m.Y3)), "Y1 & Y2 & Y3")
-        # TODO need to test other combinations as well
+        self.assertEqual(str(And(m.Y1, m.Y2, m.Y3)), "Y1 ∧ Y2 ∧ Y3")
+        self.assertEqual(str(Or(m.Y1, m.Y2, m.Y3)), "Y1 ∨ Y2 ∨ Y3")
+        self.assertEqual(str(Equivalent(m.Y1, m.Y2)), "Y1 iff Y2")
+        self.assertEqual(str(Implies(m.Y1, m.Y2)), "Y1 --> Y2")
+        self.assertEqual(str(Xor(m.Y1, m.Y2)), "Y1 ⊻ Y2")
+        self.assertEqual(str(AtLeast(1, m.Y1, m.Y2)), "AtLeast(1: [Y1, Y2])")
+        self.assertEqual(str(AtMost(1, m.Y1, m.Y2)), "AtMost(1: [Y1, Y2])")
+        self.assertEqual(str(Exactly(1, m.Y1, m.Y2)), "Exactly(1: [Y1, Y2])")
 
     def test_node_types(self):
         m = ConcreteModel()
@@ -342,7 +349,7 @@ class TestCNF(unittest.TestCase):
         m.extraY = BooleanVarList()
         indicator_map = ComponentMap()
         x = to_cnf(nestedatleast, m.extraY, indicator_map)
-        self.assertEquals(str(x[0]), "extraY[1] | (~Y1)")
+        self.assertEquals(str(x[0]), "extraY[1] ∨ (~Y1)")
         self.assertIs(indicator_map[m.extraY[1]], atleast)
 
     # TODO need to test other combinations as well

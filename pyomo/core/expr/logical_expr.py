@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -1061,7 +1062,7 @@ class EquivalenceExpression(BinaryBooleanExpression):
 
 class XorExpression(BinaryBooleanExpression):
     """
-    Logical Exclusive OR statement: Y_1 ^ Y_2
+    Logical Exclusive OR statement: Y_1 ⊻ Y_2
     """
     __slots__ = ()
 
@@ -1074,7 +1075,7 @@ class XorExpression(BinaryBooleanExpression):
         return XorExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return " ^ ".join(values)
+        return " ⊻ ".join(values)
 
     def _apply_operation(self, result):
         return operator.xor(result[0], result[1])
@@ -1082,7 +1083,7 @@ class XorExpression(BinaryBooleanExpression):
 
 class ImplicationExpression(BinaryBooleanExpression):
     """
-    Logical Implication statement: Y_1 >> Y_2.
+    Logical Implication statement: Y_1 --> Y_2.
     """
     __slots__ = ()
 
@@ -1095,7 +1096,7 @@ class ImplicationExpression(BinaryBooleanExpression):
         return ImplicationExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return " >> ".join(values)
+        return " --> ".join(values)
 
     def _apply_operation(self, result):
         return (not result[0]) or result[1]
@@ -1154,7 +1155,7 @@ class AndExpression(NaryBooleanExpression):
         return AndExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return " & ".join(values)
+        return " ∧ ".join(values)
 
     def _apply_operation(self, result):
         return all(result)
@@ -1183,7 +1184,7 @@ class OrExpression(NaryBooleanExpression):
         return OrExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return " | ".join(values)
+        return " ∨ ".join(values)
 
     def _apply_operation(self, result):
         return any(result)
