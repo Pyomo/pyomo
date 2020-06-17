@@ -1,6 +1,6 @@
 import pyutilib.th as unittest
 
-from pyomo.core.expr.logical_expr import AtLeast, AtMost, Exactly
+from pyomo.core import AtLeast, AtMost, Exactly
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 from pyomo.environ import ConcreteModel, BooleanVar, LogicalConstraint, TransformationFactory, RangeSet, \
@@ -69,7 +69,7 @@ class TestAtomicTransformations(unittest.TestCase):
         m.p = LogicalConstraint(expr=m.x.implies(m.y))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         _constrs_contained_within(
-            self, [(1, (1 - m.x.as_binary()) + m.y.as_binary(), None)], m.logic_to_linear)
+            self, [(1, (1 - m.x.get_associated_binary()) + m.y.get_associated_binary(), None)], m.logic_to_linear)
 
     def test_literal(self):
         m = ConcreteModel()
@@ -77,7 +77,7 @@ class TestAtomicTransformations(unittest.TestCase):
         m.p = LogicalConstraint(expr=m.Y)
         TransformationFactory('core.logical_to_linear').apply_to(m)
         _constrs_contained_within(
-            self, [(1, m.Y.as_binary(), 1)], m.logic_to_linear)
+            self, [(1, m.Y.get_associated_binary(), 1)], m.logic_to_linear)
 
     def test_constant_True(self):
         m = ConcreteModel()
@@ -102,7 +102,10 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         TransformationFactory('core.logical_to_linear').apply_to(m)
         _constrs_contained_within(
             self, [
-                (1, m.Y[2].as_binary() + m.Y[3].as_binary() + (1 - m.Y[1].as_binary()), None)
+                (1,
+                 m.Y[2].get_associated_binary() + m.Y[3].get_associated_binary()
+                 + (1 - m.Y[1].get_associated_binary()),
+                 None)
             ], m.logic_to_linear)
 
     def test_xfrm_atleast_statement(self):
@@ -113,7 +116,9 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         TransformationFactory('core.logical_to_linear').apply_to(m)
         _constrs_contained_within(
             self, [
-                (2, m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary(), None)
+                (2,
+                 m.Y[1].get_associated_binary() + m.Y[2].get_associated_binary() + m.Y[3].get_associated_binary(),
+                 None)
             ], m.logic_to_linear)
 
     def test_xfrm_atmost_statement(self):
@@ -124,7 +129,9 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         TransformationFactory('core.logical_to_linear').apply_to(m)
         _constrs_contained_within(
             self, [
-                (None, m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary(), 2)
+                (None,
+                 m.Y[1].get_associated_binary() + m.Y[2].get_associated_binary() + m.Y[3].get_associated_binary(),
+                 2)
             ], m.logic_to_linear)
 
     def test_xfrm_exactly_statement(self):
@@ -135,7 +142,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         TransformationFactory('core.logical_to_linear').apply_to(m)
         _constrs_contained_within(
             self, [
-                (2, m.Y[1].as_binary() + m.Y[2].as_binary() + m.Y[3].as_binary(), 2)
+                (2, m.Y[1].get_associated_binary() + m.Y[2].get_associated_binary() + m.Y[3].get_associated_binary(), 2)
             ], m.logic_to_linear)
 
     def test_xfrm_special_atoms_nonroot(self):
@@ -149,9 +156,9 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         self.assertEqual(Y_aug[1].domain, BooleanSet)
         _constrs_contained_within(
             self, [
-                (None, sum(m.Y[:].as_binary()) - (1 + 2 * Y_aug[1].as_binary()), 0),
-                (1, (1 - m.Y[1].as_binary()) + Y_aug[1].as_binary(), None),
-                (None, 2 - 2 * (1 - Y_aug[1].as_binary()) - sum(m.Y[:].as_binary()), 0)
+                (None, sum(m.Y[:].get_associated_binary()) - (1 + 2 * Y_aug[1].get_associated_binary()), 0),
+                (1, (1 - m.Y[1].get_associated_binary()) + Y_aug[1].get_associated_binary(), None),
+                (None, 2 - 2 * (1 - Y_aug[1].get_associated_binary()) - sum(m.Y[:].get_associated_binary()), 0)
             ], m.logic_to_linear)
 
         m = ConcreteModel()
@@ -164,9 +171,9 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         self.assertEqual(Y_aug[1].domain, BooleanSet)
         _constrs_contained_within(
             self, [
-                (None, sum(m.Y[:].as_binary()) - (1 - Y_aug[1].as_binary() + 2), 0),
-                (1, (1 - m.Y[1].as_binary()) + Y_aug[1].as_binary(), None),
-                (None, 3 - 3 * Y_aug[1].as_binary() - sum(m.Y[:].as_binary()), 0)
+                (None, sum(m.Y[:].get_associated_binary()) - (1 - Y_aug[1].get_associated_binary() + 2), 0),
+                (1, (1 - m.Y[1].get_associated_binary()) + Y_aug[1].get_associated_binary(), None),
+                (None, 3 - 3 * Y_aug[1].get_associated_binary() - sum(m.Y[:].get_associated_binary()), 0)
             ], m.logic_to_linear)
 
         m = ConcreteModel()
@@ -179,12 +186,12 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         self.assertEqual(Y_aug[1].domain, BooleanSet)
         _constrs_contained_within(
             self, [
-                (1, (1 - m.Y[1].as_binary()) + Y_aug[1].as_binary(), None),
-                (None, sum(m.Y[:].as_binary()) - (1 - Y_aug[1].as_binary() + 2), 0),
-                (None, 2 - 2 * (1 - Y_aug[1].as_binary()) - sum(m.Y[:].as_binary()), 0),
-                (1, sum(Y_aug[:].as_binary()), None),
-                (None, sum(m.Y[:].as_binary()) - (1 + 2*(1 - Y_aug[2].as_binary())), 0),
-                (None, 3 - 3*(1 - Y_aug[3].as_binary()) - sum(m.Y[:].as_binary()), 0),
+                (1, (1 - m.Y[1].get_associated_binary()) + Y_aug[1].get_associated_binary(), None),
+                (None, sum(m.Y[:].get_associated_binary()) - (1 - Y_aug[1].get_associated_binary() + 2), 0),
+                (None, 2 - 2 * (1 - Y_aug[1].get_associated_binary()) - sum(m.Y[:].get_associated_binary()), 0),
+                (1, sum(Y_aug[:].get_associated_binary()), None),
+                (None, sum(m.Y[:].get_associated_binary()) - (1 + 2 * (1 - Y_aug[2].get_associated_binary())), 0),
+                (None, 3 - 3 * (1 - Y_aug[3].get_associated_binary()) - sum(m.Y[:].get_associated_binary()), 0),
             ], m.logic_to_linear)
 
         # Note: x is now a variable
@@ -199,12 +206,12 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         self.assertEqual(Y_aug[1].domain, BooleanSet)
         _constrs_contained_within(
             self, [
-                (1, (1 - m.Y[1].as_binary()) + Y_aug[1].as_binary(), None),
-                (None, sum(m.Y[:].as_binary()) - (m.x + 2*(1 - Y_aug[1].as_binary())), 0),
-                (None, m.x - 3*(1 - Y_aug[1].as_binary()) - sum(m.Y[:].as_binary()), 0),
-                (1, sum(Y_aug[:].as_binary()), None),
-                (None, sum(m.Y[:].as_binary()) - (m.x - 1 + 3*(1 - Y_aug[2].as_binary())), 0),
-                (None, m.x + 1 - 4*(1 - Y_aug[3].as_binary()) - sum(m.Y[:].as_binary()), 0),
+                (1, (1 - m.Y[1].get_associated_binary()) + Y_aug[1].get_associated_binary(), None),
+                (None, sum(m.Y[:].get_associated_binary()) - (m.x + 2 * (1 - Y_aug[1].get_associated_binary())), 0),
+                (None, m.x - 3 * (1 - Y_aug[1].get_associated_binary()) - sum(m.Y[:].get_associated_binary()), 0),
+                (1, sum(Y_aug[:].get_associated_binary()), None),
+                (None, sum(m.Y[:].get_associated_binary()) - (m.x - 1 + 3 * (1 - Y_aug[2].get_associated_binary())), 0),
+                (None, m.x + 1 - 4 * (1 - Y_aug[3].get_associated_binary()) - sum(m.Y[:].get_associated_binary()), 0),
             ], m.logic_to_linear)
 
     def test_xfrm_atleast_nested(self):
@@ -215,15 +222,26 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         self.assertEqual(len(Y_aug), 3)
         _constrs_contained_within(
             self, [
-                (1, Y_aug[1].as_binary() + m.Y[4].as_binary(), None),
-                (1, 1 - Y_aug[2].as_binary() + Y_aug[1].as_binary(), None),
-                (1, 1 - m.Y[3].as_binary() + Y_aug[1].as_binary(), None),
-                (1, Y_aug[2].as_binary() + m.Y[3].as_binary() + 1 - Y_aug[1].as_binary(), None),
-                (1, 1 - m.Y[1].as_binary() + Y_aug[3].as_binary(), None),
-                (1, 1 - m.Y[2].as_binary() + Y_aug[3].as_binary(), None),
-                (1, m.Y[1].as_binary() + m.Y[2].as_binary() + 1 - Y_aug[3].as_binary(), None),
-                (None, 2 - 2*(1 - Y_aug[2].as_binary()) - (m.Y[1].as_binary() + Y_aug[3].as_binary() + m.Y[2].as_binary()), 0),
-                (None, m.Y[1].as_binary() + Y_aug[3].as_binary() + m.Y[2].as_binary() - (1 + 2*Y_aug[2].as_binary()), 0)
+                (1, Y_aug[1].get_associated_binary() + m.Y[4].get_associated_binary(), None),
+                (1, 1 - Y_aug[2].get_associated_binary() + Y_aug[1].get_associated_binary(), None),
+                (1, 1 - m.Y[3].get_associated_binary() + Y_aug[1].get_associated_binary(), None),
+                (1,
+                 Y_aug[2].get_associated_binary() + m.Y[3].get_associated_binary()
+                 + 1 - Y_aug[1].get_associated_binary(),
+                 None),
+                (1, 1 - m.Y[1].get_associated_binary() + Y_aug[3].get_associated_binary(), None),
+                (1, 1 - m.Y[2].get_associated_binary() + Y_aug[3].get_associated_binary(), None),
+                (1,
+                 m.Y[1].get_associated_binary() + m.Y[2].get_associated_binary() + 1 - Y_aug[3].get_associated_binary(),
+                 None),
+                (None,
+                 2 - 2 * (1 - Y_aug[2].get_associated_binary())
+                 - (m.Y[1].get_associated_binary() + Y_aug[3].get_associated_binary() + m.Y[2].get_associated_binary()),
+                 0),
+                (None,
+                 m.Y[1].get_associated_binary() + Y_aug[3].get_associated_binary() + m.Y[2].get_associated_binary()
+                 - (1 + 2 * Y_aug[2].get_associated_binary()),
+                 0)
             ], m.logic_to_linear)
 
     def test_link_with_gdp_indicators(self):
@@ -236,10 +254,10 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.d2.c = Constraint(expr=m.x <= 10)
         m.dd[1].c = Constraint(expr=m.x >= 5)
         m.dd[2].c = Constraint(expr=m.x <= 6)
-        m.Y[1].set_binary_var(m.d1.indicator_var)
-        m.Y[2].set_binary_var(m.d2.indicator_var)
-        m.Y[3].set_binary_var(m.dd[1].indicator_var)
-        m.Y[4].set_binary_var(m.dd[2].indicator_var)
+        m.Y[1].associate_binary_var(m.d1.indicator_var)
+        m.Y[2].associate_binary_var(m.d2.indicator_var)
+        m.Y[3].associate_binary_var(m.dd[1].indicator_var)
+        m.Y[4].associate_binary_var(m.dd[2].indicator_var)
         m.p = LogicalConstraint(expr=m.Y[1] >> m.Y[3] | m.Y[4])
         m.p2 = LogicalConstraint(expr=AtMost(2, *m.Y[:]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
@@ -258,11 +276,11 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         TransformationFactory('core.logical_to_linear').apply_to(m)
         _constrs_contained_within(
             self, [
-                (1, 1 - m.Y[1].as_binary() + m.Y[2].as_binary(), None),
+                (1, 1 - m.Y[1].get_associated_binary() + m.Y[2].get_associated_binary(), None),
             ], m.disj_disjuncts[0].logic_to_linear)
         _constrs_contained_within(
             self, [
-                (1, 1 - m.Y[2].as_binary(), 1),
+                (1, 1 - m.Y[2].get_associated_binary(), 1),
             ], m.disj_disjuncts[1].logic_to_linear)
 
 

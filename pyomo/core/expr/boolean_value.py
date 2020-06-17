@@ -150,6 +150,10 @@ class BooleanValue(object):
         """Return True if this Logical value is an indexed object"""
         return False
 
+    def is_numeric_type(self):
+        """Boolean values are not numeric."""
+        return False
+
     def __float__(self):
         raise TypeError(
             "Implicit conversion of Pyomo BooleanValue type "

@@ -32,7 +32,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
         fixed       If True, then this variable is treated as a
                         fixed constant in the model.
         stale       A Boolean indicating whether the value of this variable is
-                        legitimiate.  This value is true if the value should
+                        legitimate.  This value is true if the value should
                         be considered legitimate for purposes of reporting or
                         other interrogation.
         value       The numeric value of this variable.
@@ -169,7 +169,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
     these attributes in certain cases.
     """
 
-    __slots__ = ('_value', '_domain', 'fixed', 'stale', '_as_binary')
+    __slots__ = ('_value', '_domain', 'fixed', 'stale', '_associated_binary')
 
     def __init__(self, component=None):
         #
@@ -185,14 +185,14 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self.fixed = False
         self.stale = True
 
-        self._as_binary = None
+        self._associated_binary = None
 
     def __getstate__(self):
         state = super(_GeneralBooleanVarData, self).__getstate__()
         for i in _GeneralBooleanVarData.__slots__:
             state[i] = getattr(self, i)
-        if self._as_binary is not None:
-            state['_as_binary'] = self._as_binary()
+        if self._associated_binary is not None:
+            state['_associated_binary'] = self._associated_binary()
         return state
 
     def __setstate__(self, state):
@@ -201,8 +201,8 @@ class _GeneralBooleanVarData(_BooleanVarData):
         Note: adapted from class ComponentData in pyomo.core.base.component
 
         """
-        if state['_as_binary'] is not None and type(state['_as_binary']) is not weakref_ref:
-            state['_as_binary'] = weakref_ref(state['_as_binary'])
+        if state['_associated_binary'] is not None and type(state['_associated_binary']) is not weakref_ref:
+            state['_associated_binary'] = weakref_ref(state['_associated_binary'])
 
         _base = super(_GeneralBooleanVarData, self)
         if hasattr(_base, '__setstate__'):
@@ -251,13 +251,13 @@ class _GeneralBooleanVarData(_BooleanVarData):
 
     free = unfix
 
-    def as_binary(self):
+    def get_associated_binary(self):
         """Get the binary _VarData associated with this _GeneralBooleanVarData"""
-        return self._as_binary() if self._as_binary is not None else None
+        return self._associated_binary() if self._associated_binary is not None else None
 
-    def set_binary_var(self, binary_var):
+    def associate_binary_var(self, binary_var):
         """Associate a binary _VarData to this _GeneralBooleanVarData"""
-        self._as_binary = weakref_ref(binary_var) if binary_var is not None else None
+        self._associated_binary = weakref_ref(binary_var) if binary_var is not None else None
 
 
 @ModelComponentFactory.register("Logical decision variables.")

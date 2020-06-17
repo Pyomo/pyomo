@@ -65,7 +65,7 @@ def build_model():
     m.disjuncts = Disjunct(m.contract_time_choices)
     m.Y = BooleanVar(m.contract_time_choices)
     for t, c in m.contract_time_choices:
-        m.Y[t, c].set_binary_var(m.disjuncts[t, c].indicator_var)
+        m.Y[t, c].associate_binary_var(m.disjuncts[t, c].indicator_var)
 
     # Create disjuncts for contracts in each timeset
     for t in m.T:
@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     # m.pprint('model.log')
     TransformationFactory('core.logical_to_linear').apply_to(m)
-    m_trafo = TransformationFactory('gdp.chull').create_using(m)
+    m_trafo = TransformationFactory('gdp.hull').create_using(m)
     # m_trafo = TransformationFactory('gdp.bigm').create_using(m, bigM=5000)
     # res = SolverFactory('gams').solve(m_trafo, solver='cbc', tee=True)
     res = SolverFactory('glpk').solve(m_trafo, tee=True)

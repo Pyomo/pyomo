@@ -25,14 +25,14 @@ class LogicalToLinear(IsomorphicTransformation):
         for boolean_var in model.component_objects(ctype=BooleanVar, descend_into=(Block, Disjunct)):
             new_varlist = None
             for bool_vardata in boolean_var.values():
-                if new_varlist is None and bool_vardata.as_binary() is None:
+                if new_varlist is None and bool_vardata.get_associated_binary() is None:
                     new_var_list_name = unique_component_name(model, boolean_var.local_name + '_asbinary')
                     new_varlist = VarList(domain=Binary)
                     setattr(model, new_var_list_name, new_varlist)
 
-                if bool_vardata.as_binary() is None:
+                if bool_vardata.get_associated_binary() is None:
                     new_binary_vardata = new_varlist.add()
-                    bool_vardata.set_binary_var(new_binary_vardata)
+                    bool_vardata.associate_binary_var(new_binary_vardata)
                     if bool_vardata.value is not None:
                         new_binary_vardata.value = int(bool_vardata.value)
                     if bool_vardata.fixed:
@@ -48,7 +48,7 @@ class LogicalToLinear(IsomorphicTransformation):
 def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
     """Updates all Boolean variables based on the value of their linked binary variables."""
     for boolean_var in model.component_data_objects(BooleanVar, descend_into=(Block, Disjunct)):
-        binary_var = boolean_var.as_binary()
+        binary_var = boolean_var.get_associated_binary()
         if binary_var is not None and binary_var.value is not None:
             if abs(binary_var.value - 1) <= integer_tolerance:
                 boolean_var.value = True
@@ -79,7 +79,7 @@ def _process_logical_constraints_in_logical_context(context):
     # Associate new Boolean vars to new binary variables
     for bool_vardata in new_boolvarlist.values():
         new_binary_vardata = new_varlist.add()
-        bool_vardata.set_binary_var(new_binary_vardata)
+        bool_vardata.associate_binary_var(new_binary_vardata)
 
     # Add constraints associated with each CNF statement
     for cnf_statement in cnf_statements:
@@ -99,7 +99,7 @@ def _process_logical_constraints_in_logical_context(context):
     if num_new:
         for binary_vardata in list_o_vars[-num_new:]:
             new_bool_vardata = new_boolvarlist.add()
-            new_bool_vardata.set_binary_var(binary_vardata)
+            new_bool_vardata.associate_binary_var(binary_vardata)
 
     # If added components were not used, remove them.
     # Note: it is ok to simply delete the index_set for these components, because by
@@ -127,7 +127,7 @@ def _cnf_to_linear_constraint_list(cnf_expr, indicator_var=None, binary_varlist=
     if cnf_expr.is_expression_type():
         return CnfToLinearVisitor(indicator_var, binary_varlist).walk_expression(cnf_expr)
     else:
-        return [cnf_expr.as_binary() == 1]  # Assume that cnf_expr is a BooleanVar
+        return [cnf_expr.get_associated_binary() == 1]  # Assume that cnf_expr is a BooleanVar
 
 
 _numeric_relational_types = {InequalityExpression, EqualityExpression, RangedExpression}
@@ -170,7 +170,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
                     "Cannnot generate linear constraints for %s([N, *logical_args]) with unbounded N. "
                     "Detected %s <= N <= %s." % (type(node).__name__, rhs_lb, rhs_ub)
                 )
-            indicator_binary = self._indicator.as_binary()
+            indicator_binary = self._indicator.get_associated_binary()
             if type(node) == AtLeastExpression:
                 return [
                     sum_values >= values[0] - rhs_ub * (1 - indicator_binary),
@@ -205,7 +205,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
             return True, None
 
         # Only thing left should be _BooleanVarData
-        return False, child.as_binary()
+        return False, child.get_associated_binary()
 
     def finalizeResult(self, result):
         if type(result) is list:

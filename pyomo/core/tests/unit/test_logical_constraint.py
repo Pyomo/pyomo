@@ -4,7 +4,7 @@ from pyomo.environ import AbstractModel, BooleanVar, ConcreteModel, LogicalConst
 from pyomo.gdp import Disjunction, GDP_Error
 
 
-class TestLogicalStatementCreation(unittest.TestCase):
+class TestLogicalConstraintCreation(unittest.TestCase):
     def create_model(self, abstract=False):
         if abstract is True:
             model = AbstractModel()
@@ -28,9 +28,9 @@ class TestLogicalStatementCreation(unittest.TestCase):
         model.disj = Disjunction(expr=[
             [model.x | model.y], [model.y | model.z]
         ])
-        with self.assertRaisesRegex(GDP_Error, "Found untransformed logical statment.*"):
+        with self.assertRaisesRegex(GDP_Error, "Found untransformed logical constraint.*"):
             TransformationFactory('gdp.bigm').create_using(model)
-        with self.assertRaisesRegex(GDP_Error, "Found untransformed logical statment.*"):
+        with self.assertRaisesRegex(GDP_Error, "Found untransformed logical constraint.*"):
             TransformationFactory('gdp.hull').create_using(model)
 
     # TODO look to test_con.py for inspiration

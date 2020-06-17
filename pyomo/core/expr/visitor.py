@@ -10,9 +10,18 @@
 
 from __future__ import division
 
+import inspect
 import logging
+import six
 from copy import deepcopy
 from collections import deque
+
+if six.PY2:
+    getargspec = inspect.getargspec
+else:
+    # For our needs, getfullargspec is a drop-in replacement for
+    # getargspec (which was removed in Python 3.x)
+    getargspec = inspect.getfullargspec
 
 logger = logging.getLogger('pyomo.core')
 
@@ -22,6 +31,7 @@ from pyutilib.math.util import isclose
 from .symbol_map import SymbolMap
 from . import expr_common as common
 from .expr_errors import TemplateExpressionError
+from pyomo.common.deprecation import deprecation_warning
 
 from pyomo.core.expr.boolean_value import (
     BooleanValue,)
@@ -165,6 +175,26 @@ class StreamBasedExpressionVisitor(object):
                 setattr(self, field, None)
         if kwds:
             raise RuntimeError("Unrecognized keyword arguments: %s" % (kwds,))
+
+        # Handle deprecated APIs
+        _fcns = (('beforeChild',2), ('acceptChildResult',3), ('afterChild',2))
+        for name, nargs in _fcns:
+            fcn = getattr(self, name)
+            if fcn is None:
+                continue
+            _args = getargspec(fcn)
+            _self_arg = 1 if inspect.ismethod(fcn) else 0
+            if len(_args.args) == nargs + _self_arg and _args.varargs is None:
+                deprecation_warning(
+                    "Note that the API for the StreamBasedExpressionVisitor "
+                    "has changed to include the child index for the %s() "
+                    "method.  Please update your walker callbacks." % (name,))
+                def wrap(fcn, nargs):
+                    def wrapper(*args):
+                        return fcn(*args[:nargs])
+                    return wrapper
+                setattr(self, name, wrap(fcn, nargs))
+
 
     def walk_expression(self, expr):
         """Walk an expression, calling registered callbacks.
@@ -928,21 +958,24 @@ class _EvaluationVisitor(ExpressionValueVisitor):
         if node.__class__ in nonpyomo_leaf_types:
             return True, node
 
-        if isinstance(node, BooleanValue):
-            # [QC 2020-06-03]: I need to revisit what is going on here.
-            if node.is_variable_type():
-                return True, value(node)
-            if not node.is_expression_type():
-                return True, value(node)
-            return False, None
-
         if node.is_expression_type():
             return False, None
 
         if node.is_numeric_type():
             return True, value(node)
         else:
-            return True, node
+            # Until there is a node.is_logical_type(),
+            # this is how we need to identify Boolean expression nodes
+            if isinstance(node, BooleanValue):
+                if node.is_variable_type():
+                    return True, value(node)
+                if not node.is_expression_type():
+                    # Capture BooleanConstant type
+                    return True, value(node)
+                # Boolean expressions should have been captured earlier.
+                return False, None
+            else:
+                return True, node
 
 
 

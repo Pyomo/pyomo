@@ -32,6 +32,10 @@ from .boolean_value import (
 from .numeric_expr import linear_expression, nonlinear_expression
 from .logical_expr import inequality
 
+from .logical_expr import (
+    And, Or, Equivalent, Exactly, AtLeast, AtMost, Implies, Not, Xor
+)
+
 from .current import (
     log, log10, sin, cos, tan, cosh, sinh, tanh,
     asin, acos, atan, exp, sqrt, asinh, acosh,

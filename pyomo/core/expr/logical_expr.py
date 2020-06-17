@@ -362,9 +362,9 @@ if _using_chained_inequality:
             prevExpr = _chainedInequality.prev
             match = []
             # This is tricky because the expression could have been posed
-            # with >= operators, so we must figure out which argsuments
+            # with >= operators, so we must figure out which arguments
             # match.  One edge case is when the upper and lower bounds are
-            # the same (implicit equality) - in which case *both* argsuments
+            # the same (implicit equality) - in which case *both* arguments
             # match, and this should be converted into an equality
             # expression.
             for i,args in enumerate(_chainedInequality.cloned_from):
@@ -659,7 +659,7 @@ class BooleanExpressionBase(BooleanValue):
 
         Returns 1 if this operator is left-to-right associative or -1 if
         it is right-to-left associative.  Any other return value will be
-        interpreted as "not associative" (implying any argsuments that
+        interpreted as "not associative" (implying any arguments that
         are at this operator's _precedence() will be enclosed in parens).
         """
         return 1
@@ -697,11 +697,11 @@ class BooleanExpressionBase(BooleanValue):
         """
         Return the text name of a function associated with this expression object.
 
-        In general, no argsuments are passed to this function.
+        In general, no arguments are passed to this function.
 
         args:
-            *arg: a variable length list of argsuments
-            **kwds: keyword argsuments
+            *arg: a variable length list of arguments
+            **kwds: keyword arguments
 
         Returns:
             A string name for the function.
@@ -734,7 +734,7 @@ class BooleanExpressionBase(BooleanValue):
 
     def create_node_with_local_data(self, args):
         """
-        Construct a node using given argsuments.
+        Construct a node using given arguments.
 
         This method provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.  In the simplest
@@ -743,7 +743,7 @@ class BooleanExpressionBase(BooleanValue):
             self.__class__(args)
 
         But in general this creates an expression object using local
-        data as well as argsuments that represent the child nodes.
+        data as well as arguments that represent the child nodes.
 
         args:
             args (list): A list of child nodes for the new expression
@@ -867,10 +867,10 @@ class BooleanExpressionBase(BooleanValue):
 
         Note:
             This method applies the logical operation of the
-            operator to the argsuments.  It does *not* evaluate
-            the argsuments in the process, but assumes that they
+            operator to the arguments.  It does *not* evaluate
+            the arguments in the process, but assumes that they
             have been previously evaluated.  But noted that if
-            this class contains auxilliary data (e.g. like the
+            this class contains auxiliary data (e.g. like the
             numeric coefficients in the :class:`LinearExpression
             <pyomo.core.expr.current.LinearExpression>` class, then
             those values *must* be evaluated as part of this

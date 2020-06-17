@@ -26,7 +26,7 @@ from pyomo.core import (
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
-    _warn_for_active_logical_statement, clone_without_expression_components, target_list,
+    _warn_for_active_logical_constraint, clone_without_expression_components, target_list,
     is_child_of, get_src_disjunction,
     get_src_constraint, get_transformed_constraints,
     get_src_disjunct, _warn_for_active_disjunction,
@@ -693,7 +693,7 @@ class Hull_Reformulation(Transformation):
     def _warn_for_active_logical_statement(
             self, logical_statment, disjunct, var_substitute_map,
             zero_substitute_map):
-        _warn_for_active_logical_statement(logical_statment, disjunct, NAME_BUFFER)
+        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
 
     def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
                                       zero_substitute_map):

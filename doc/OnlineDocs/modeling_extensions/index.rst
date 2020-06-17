@@ -7,6 +7,6 @@ Modeling Extensions
    bilevel.rst
    dae.rst
    mpec.rst
-   gdp.rst
+   gdp/index.rst
    pysp.rst
    network.rst
