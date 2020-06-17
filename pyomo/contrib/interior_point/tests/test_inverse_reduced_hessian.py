@@ -2,7 +2,6 @@ import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.opt import check_optimal_termination
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
 
 np, numpy_available = attempt_import('numpy', 'inverse_reduced_hessian numpy',
                                      minimum_version='1.13.0')
@@ -23,6 +22,7 @@ try:
 except:
     numdiff_available = False
 
+from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
                  
 class TestInverseReducedHessian(unittest.TestCase):
     # the original test
