@@ -18,6 +18,11 @@ class ProblemSense(str, enum.Enum):
     minimize='minimize'
     maximize='maximize'
 
+    # Overloading __str__ is needed to match the behavior of the old
+    # pyutilib.enum class (removed June 2020). There are spots in the
+    # code base that expect the string representation for items in the
+    # enum to not include the class name. New uses of enum shouldn't
+    # need to do this.
     def __str__(self):
         return self.value
 
