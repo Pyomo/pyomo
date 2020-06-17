@@ -310,7 +310,7 @@ class TestCNF(unittest.TestCase):
         m.extraY = BooleanVarList()
         indicator_map = ComponentMap()
         x = to_cnf(nestedatleast, m.extraY, indicator_map)
-        self.assertEquals(str(x[0]), "extraY[1] ∨ (~Y1)")
+        self.assertEquals(str(x[0]), "extraY[1] ∨ ~Y1")
         self.assertIs(indicator_map[m.extraY[1]], atleast)
 
     # TODO need to test other combinations as well
