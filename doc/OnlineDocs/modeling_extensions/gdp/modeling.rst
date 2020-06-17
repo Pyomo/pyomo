@@ -356,11 +356,11 @@ In the ``logical_to_linear`` transformation, we automatically convert these spec
 Additional Examples
 ===================
 
-The following models all work and are equivalent:
+The following models all work and are equivalent for :math:`\left[x = 0\right] \underline{\lor} \left[y = 0\right]`:
 
 .. doctest::
 
-   Option 1: maximal verbosity, abstract-like
+   Option 1: Rule-based construction
 
    >>> from pyomo.environ import *
    >>> from pyomo.gdp import *
@@ -385,7 +385,7 @@ The following models all work and are equivalent:
    ...    return [model.d[0], model.d[1]]
    >>> model.c = Disjunction(rule=_c)
 
-   Option 2: Maximal verbosity, concrete-like:
+   Option 2: Explicit disjuncts
 
    >>> from pyomo.environ import *
    >>> from pyomo.gdp import *
