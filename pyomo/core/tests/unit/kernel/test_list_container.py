@@ -11,7 +11,7 @@
 import pickle
 
 import pyutilib.th as unittest
-import pyomo.kernel as pmo
+from pyomo.kernel import generate_names, preorder_traversal
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
@@ -19,8 +19,7 @@ from pyomo.core.kernel.base import \
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 from pyomo.core.kernel.list_container import ListContainer
-from pyomo.core.kernel.block import (IBlock,
-                                     block,
+from pyomo.core.kernel.block import (block,
                                      block_list)
 
 import six
@@ -434,7 +433,7 @@ class _TestListContainerBase(object):
         self.assertEqual(clist.local_name, None)
         self.assertEqual(clist.name, None)
         clist.extend(children)
-        names = pmo.generate_names(clist)
+        names =  generate_names(clist)
         for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertEqual(c.local_name, "[%s]" % (i))
@@ -450,7 +449,7 @@ class _TestListContainerBase(object):
         self.assertTrue(clist.parent is model)
         self.assertEqual(clist.local_name, "clist")
         self.assertEqual(clist.name, "clist")
-        names = pmo.generate_names(model)
+        names =  generate_names(model)
         for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertEqual(c.local_name, "[%s]" % (i))
@@ -467,7 +466,7 @@ class _TestListContainerBase(object):
         self.assertTrue(clist.parent is model)
         self.assertEqual(clist.local_name, "clist")
         self.assertEqual(clist.name, "model.clist")
-        names = pmo.generate_names(b)
+        names =  generate_names(b)
         for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertEqual(c.local_name, "[%s]" % (i))
@@ -500,7 +499,7 @@ class _TestListContainerBase(object):
         self.assertTrue(clist.parent is model)
         self.assertEqual(clist.local_name, "clist")
         self.assertEqual(clist.name, "blist[0].model.clist")
-        names = pmo.generate_names(m)
+        names =  generate_names(m)
         for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertEqual(c.local_name, "[%s]" % (i))
@@ -510,7 +509,7 @@ class _TestListContainerBase(object):
         for c in clist.components():
             self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
-        names = pmo.generate_names(m)
+        names =  generate_names(m)
         for c in m.children():
             self.assertEqual(c.name, names[c])
 
@@ -573,11 +572,11 @@ class _TestListContainerBase(object):
         descend = lambda x: not x._is_heterogeneous_container
 
         self.assertEqual([c.name for c in traversal],
-                         [c.name for c in pmo.preorder_traversal(
+                         [c.name for c in  preorder_traversal(
                              clist,
                              descend=descend)])
         self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in pmo.preorder_traversal(
+                         [id(c) for c in  preorder_traversal(
                              clist,
                              descend=descend)])
 
@@ -601,7 +600,7 @@ class _TestListContainerBase(object):
             descend.seen.append(x)
             return False
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
+        order = list( preorder_traversal(clist,
                                             descend=descend))
         self.assertEqual(len(order), 1)
         self.assertIs(order[0], clist)
@@ -613,7 +612,7 @@ class _TestListContainerBase(object):
             descend.seen.append(x)
             return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
+        order = list( preorder_traversal(clist,
                                             descend=descend))
         self.assertEqual([c.name for c in traversal],
                          [c.name for c in order])
@@ -631,7 +630,7 @@ class _TestListContainerBase(object):
             descend.seen.append(x)
             return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
+        order = list( preorder_traversal(clist,
                                             descend=descend))
         self.assertEqual([c.name for c in traversal],
                          [c.name for c in order])
@@ -919,33 +918,33 @@ class _TestActiveListContainerBase(_TestListContainerBase):
 
         clist[1].deactivate()
         self.assertEqual([None,'[0]','[2]'],
-                         [c.name for c in pmo.preorder_traversal(
+                         [c.name for c in  preorder_traversal(
                              clist,
                              active=True,
                              descend=descend)])
         self.assertEqual([id(clist),id(clist[0]),id(clist[2])],
-                         [id(c) for c in pmo.preorder_traversal(
+                         [id(c) for c in  preorder_traversal(
                              clist,
                              active=True,
                              descend=descend)])
 
         clist[1].deactivate(shallow=False)
         self.assertEqual([c.name for c in traversal if c.active],
-                         [c.name for c in pmo.preorder_traversal(
+                         [c.name for c in  preorder_traversal(
                              clist,
                              active=True,
                              descend=descend)])
         self.assertEqual([id(c) for c in traversal if c.active],
-                         [id(c) for c in pmo.preorder_traversal(
+                         [id(c) for c in  preorder_traversal(
                              clist,
                              active=True,
                              descend=descend)])
 
         clist.deactivate()
-        self.assertEqual(len(list(pmo.preorder_traversal(clist,
+        self.assertEqual(len(list( preorder_traversal(clist,
                                                          active=True))),
                          0)
-        self.assertEqual(len(list(pmo.generate_names(clist,
+        self.assertEqual(len(list( generate_names(clist,
                                                      active=True))),
                          0)
 
@@ -960,7 +959,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             descend.seen.append(x)
             return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
+        order = list( preorder_traversal(clist,
                                             active=True,
                                             descend=descend))
         self.assertEqual([None,'[0]','[2]'],
@@ -983,7 +982,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             descend.seen.append(x)
             return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
+        order = list( preorder_traversal(clist,
                                             active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
@@ -1007,7 +1006,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             descend.seen.append(x)
             return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
+        order = list( preorder_traversal(clist,
                                             active=True,
                                             descend=descend))
         self.assertEqual([c.name for c in traversal if c.active],
@@ -1028,7 +1027,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             descend.seen.append(x)
             return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
+        order = list( preorder_traversal(clist,
                                             active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
@@ -1052,11 +1051,11 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             descend.seen.append(x)
             return True
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
+        order = list( preorder_traversal(clist,
                                             active=True,
                                             descend=descend))
         self.assertEqual(len(descend.seen), 0)
-        self.assertEqual(len(list(pmo.generate_names(clist,
+        self.assertEqual(len(list( generate_names(clist,
                                                      active=True))),
                          0)
 
@@ -1065,7 +1064,7 @@ class _TestActiveListContainerBase(_TestListContainerBase):
             descend.seen.append(x)
             return x.active
         descend.seen = []
-        order = list(pmo.preorder_traversal(clist,
+        order = list( preorder_traversal(clist,
                                             active=None,
                                             descend=descend))
         self.assertEqual(len(descend.seen), 1)

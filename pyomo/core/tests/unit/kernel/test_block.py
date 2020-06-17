@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import tempfile
 import os
 import pickle
@@ -50,7 +60,6 @@ from pyomo.core.kernel.block import (IBlock,
 from pyomo.core.kernel.sos import sos
 from pyomo.opt.results import Solution
 
-import six
 from six import StringIO
 
 def _path_to_object_exists(obj, descendent):
@@ -670,7 +679,6 @@ class TestMisc(unittest.TestCase):
         b.c3 = constraint(body=b.v, ub=b.eu)
         b.dual = suffix(direction=suffix.IMPORT)
 
-        import pyomo.environ
         from pyomo.opt.base.solvers import UnknownSolver
         from pyomo.opt import SolverFactory
         from pyomo.opt import SolverStatus, TerminationCondition

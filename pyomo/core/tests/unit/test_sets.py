@@ -41,7 +41,7 @@ import pyomo.core.base
 from pyomo.environ import (Set, SetOf, RangeSet, Param, ConcreteModel, 
                            AbstractModel, Expression, EmptySet, NonPositiveIntegers,
                            NonPositiveReals, PositiveReals, NegativeReals, 
-                           _VirtualSet, IntegerSet, NegativeIntegers, 
+                           IntegerSet, NegativeIntegers, 
                            PositiveIntegers, RealSet, BooleanSet, 
                            IntegerInterval, RealInterval, Binary,
                            PercentFraction, UnitInterval, NonNegativeIntegers,
