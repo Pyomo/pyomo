@@ -26,7 +26,7 @@ currdir = dirname( abspath(__file__) )
 import pyutilib.th as unittest
 from pyutilib.services import TempfileManager
 
-from pyomo.environ import AbstractModel, ConcreteModel, Var, Set, Param, Block, Suffix, Constraint, Component, Objective, Expression, SOSConstraint, SortComponents, NonNegativeIntegers, TraversalStrategy, RangeSet, TempBlock, SolverFactory, value, sum_product
+from pyomo.environ import AbstractModel, ConcreteModel, Var, Set, Param, Block, Suffix, Constraint, Component, Objective, Expression, SOSConstraint, SortComponents, NonNegativeIntegers, TraversalStrategy, RangeSet, SolverFactory, value, sum_product
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.block import SimpleBlock, SubclassOf, _BlockData, declare_custom_block
 from pyomo.core.expr import current as EXPR

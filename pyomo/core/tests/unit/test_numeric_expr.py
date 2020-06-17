@@ -15,50 +15,35 @@ import copy
 import pickle
 import math
 import os
-import re
 from collections import defaultdict
 
-import six
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 from pyutilib.th import nottest
 
-from pyomo.environ import *
-import pyomo.kernel
-from pyomo.core.expr.numvalue import (
-    native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, 
-    is_potentially_variable,
-)
+from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
+from pyomo.kernel import variable, expression
+from pyomo.core.expr.numvalue import (NumericConstant, as_numeric,
+                                      is_potentially_variable, polynomial_degree)
 from pyomo.core.expr.numeric_expr import (
     ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
-    ProductExpression, ReciprocalExpression, NegationExpression,
+    ProductExpression, NegationExpression, linear_expression,
     MonomialTermExpression, LinearExpression, DivisionExpression,
-    NPV_NegationExpression, NPV_ProductExpression, NPV_ReciprocalExpression,
+    NPV_NegationExpression, NPV_ProductExpression, 
     NPV_PowExpression, NPV_DivisionExpression,
-    decompose_term, clone_counter,
+    decompose_term, clone_counter, nonlinear_expression,
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
     LinearDecompositionError,
 )
 import pyomo.core.expr.logical_expr as logical_expr
-from pyomo.core.expr.logical_expr import (
-    InequalityExpression, EqualityExpression, RangedExpression,
-)
-from pyomo.core.expr.visitor import (
-    FixedExpressionError, NonConstantExpressionError,
-    StreamBasedExpressionVisitor, ExpressionReplacementVisitor,
-    evaluate_expression, expression_to_string, replace_expressions,
-    clone_expression, sizeof_expression,
-    identify_variables, identify_components, identify_mutable_parameters,
-)
+from pyomo.core.expr.visitor import (expression_to_string, 
+                                     clone_expression)
 from pyomo.core.expr.current import Expr_if
-from pyomo.core.base.var import SimpleVar
-from pyomo.core.base.param import _ParamData, SimpleParam
-from pyomo.core.base.label import *
+from pyomo.core.base.label import NumericLabeler
 from pyomo.core.expr.template_expr import IndexTemplate
-from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.core.expr import expr_common
 
 from pyomo.repn import generate_standard_repn
 
@@ -5099,14 +5084,14 @@ class TestNamedExpressionDuckTyping(unittest.TestCase):
         self.check_api(M.e[0])
 
     def test_expression(self):
-        x = pyomo.kernel.variable()
-        e = pyomo.kernel.expression()
+        x = variable()
+        e = expression()
         e.expr = x
         self.check_api(e)
 
     def test_objective(self):
-        x = pyomo.kernel.variable()
-        e = pyomo.kernel.objective()
+        x = variable()
+        e = objective()
         e.expr = x
         self.check_api(e)
 
@@ -5151,7 +5136,7 @@ class TestNumValueDuckTyping(unittest.TestCase):
         self.check_api(M.x[0])
 
     def test_variable(self):
-        x = pyomo.kernel.variable()
+        x = variable()
         self.check_api(x)
 
 class TestDirect_LinearExpression(unittest.TestCase):
