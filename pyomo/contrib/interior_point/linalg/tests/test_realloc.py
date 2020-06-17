@@ -53,7 +53,7 @@ class TestReallocation(unittest.TestCase):
         self.assertEqual(res.status, LinearSolverStatus.successful)
 
         # Expected memory allocation (MB)
-        self.assertEqual(linear_solver._prev_allocation, 6)
+        self.assertEqual(linear_solver._prev_allocation, 2*predicted)
 
         actual = linear_solver.get_infog(18)
 
