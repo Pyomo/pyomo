@@ -11,7 +11,7 @@
 import pickle
 
 import pyutilib.th as unittest
-import pyomo.kernel as pmo
+from pyomo.kernel import pprint, preorder_traversal, generate_names
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
@@ -19,8 +19,7 @@ from pyomo.core.kernel.base import \
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 from pyomo.core.kernel.dict_container import DictContainer
-from pyomo.core.kernel.block import (IBlock,
-                                     block,
+from pyomo.core.kernel.block import (block,
                                      block_dict)
 
 import six
@@ -401,7 +400,7 @@ class _TestDictContainerBase(object):
         self.assertEqual(cdict.local_name, None)
         self.assertEqual(cdict.name, None)
         cdict.update(children)
-        names = pmo.generate_names(cdict)
+        names =  generate_names(cdict)
         for key, c in children.items():
             self.assertTrue(c.parent is cdict)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
@@ -423,7 +422,7 @@ class _TestDictContainerBase(object):
         self.assertTrue(cdict.parent is model)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "cdict")
-        names = pmo.generate_names(model)
+        names =  generate_names(model)
         for key, c in children.items():
             self.assertTrue(c.parent is cdict)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
@@ -446,7 +445,7 @@ class _TestDictContainerBase(object):
         self.assertTrue(cdict.parent is model)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "model.cdict")
-        names = pmo.generate_names(b)
+        names =  generate_names(b)
         for key, c in children.items():
             self.assertTrue(c.parent is cdict)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
@@ -490,7 +489,7 @@ class _TestDictContainerBase(object):
         self.assertTrue(cdict.parent is model)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "bdict[0].model.cdict")
-        names = pmo.generate_names(m)
+        names =  generate_names(m)
         for key, c in children.items():
             self.assertTrue(c.parent is cdict)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
@@ -505,7 +504,7 @@ class _TestDictContainerBase(object):
         for c in cdict.components():
             self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
-        names = pmo.generate_names(m)
+        names =  generate_names(m)
         for c in m.children():
             self.assertEqual(c.name, names[c])
 
@@ -525,11 +524,11 @@ class _TestDictContainerBase(object):
         descend = lambda x: not x._is_heterogeneous_container
 
         self.assertEqual([c.name for c in traversal],
-                         [c.name for c in pmo.preorder_traversal(
+                         [c.name for c in  preorder_traversal(
                              cdict,
                              descend=descend)])
         self.assertEqual([id(c) for c in traversal],
-                         [id(c) for c in pmo.preorder_traversal(
+                         [id(c) for c in  preorder_traversal(
                              cdict,
                              descend=descend)])
         return cdict, traversal
@@ -552,7 +551,7 @@ class _TestDictContainerBase(object):
             descend.seen.append(x)
             return False
         descend.seen = []
-        order = list(pmo.preorder_traversal(cdict,
+        order = list( preorder_traversal(cdict,
                                             descend=descend))
         self.assertEqual(len(order), 1)
         self.assertIs(order[0], cdict)
@@ -564,7 +563,7 @@ class _TestDictContainerBase(object):
             descend.seen.append(x)
             return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(pmo.preorder_traversal(cdict,
+        order = list( preorder_traversal(cdict,
                                             descend=descend))
         self.assertEqual([c.name for c in traversal],
                          [c.name for c in order])
@@ -582,7 +581,7 @@ class _TestDictContainerBase(object):
             descend.seen.append(x)
             return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(pmo.preorder_traversal(cdict,
+        order = list( preorder_traversal(cdict,
                                             descend=descend))
         self.assertEqual([c.name for c in traversal],
                          [c.name for c in order])
@@ -807,33 +806,33 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
 
         cdict[1].deactivate()
         self.assertEqual([None, '[0]', '[2]'],
-                         [c.name for c in pmo.preorder_traversal(
+                         [c.name for c in  preorder_traversal(
                              cdict,
                              active=True,
                              descend=descend)])
         self.assertEqual([id(cdict),id(cdict[0]),id(cdict[2])],
-                         [id(c) for c in pmo.preorder_traversal(
+                         [id(c) for c in  preorder_traversal(
                              cdict,
                              active=True,
                              descend=descend)])
 
         cdict[1].deactivate(shallow=False)
         self.assertEqual([c.name for c in traversal if c.active],
-                         [c.name for c in pmo.preorder_traversal(
+                         [c.name for c in  preorder_traversal(
                              cdict,
                              active=True,
                              descend=descend)])
         self.assertEqual([id(c) for c in traversal if c.active],
-                         [id(c) for c in pmo.preorder_traversal(
+                         [id(c) for c in  preorder_traversal(
                              cdict,
                              active=True,
                              descend=descend)])
 
         cdict.deactivate()
-        self.assertEqual(len(list(pmo.preorder_traversal(cdict,
+        self.assertEqual(len(list( preorder_traversal(cdict,
                                                          active=True))),
                          0)
-        self.assertEqual(len(list(pmo.generate_names(cdict,
+        self.assertEqual(len(list( generate_names(cdict,
                                                      active=True))),
                          0)
 
@@ -848,8 +847,8 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             descend.seen.append(x)
             return not x._is_heterogeneous_container
         descend.seen = []
-        pmo.pprint(cdict)
-        order = list(pmo.preorder_traversal(cdict,
+        pprint(cdict)
+        order = list( preorder_traversal(cdict,
                                             active=True,
                                             descend=descend))
         self.assertEqual([None, '[0]', '[2]'],
@@ -872,7 +871,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             descend.seen.append(x)
             return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
-        order = list(pmo.preorder_traversal(cdict,
+        order = list( preorder_traversal(cdict,
                                             active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
@@ -895,7 +894,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             descend.seen.append(x)
             return not x._is_heterogeneous_container
         descend.seen = []
-        order = list(pmo.preorder_traversal(cdict,
+        order = list( preorder_traversal(cdict,
                                             active=True,
                                             descend=descend))
         self.assertEqual([c.name for c in traversal if c.active],
@@ -915,7 +914,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             descend.seen.append(x)
             return x.active and (not x._is_heterogeneous_container)
         descend.seen = []
-        order = list(pmo.preorder_traversal(cdict,
+        order = list( preorder_traversal(cdict,
                                             active=None,
                                             descend=descend))
         self.assertEqual([None,'[0]','[1]','[2]'],
@@ -938,11 +937,11 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             descend.seen.append(x)
             return True
         descend.seen = []
-        order = list(pmo.preorder_traversal(cdict,
+        order = list( preorder_traversal(cdict,
                                             active=True,
                                             descend=descend))
         self.assertEqual(len(descend.seen), 0)
-        self.assertEqual(len(list(pmo.generate_names(cdict,
+        self.assertEqual(len(list( generate_names(cdict,
                                                      active=True))),
                          0)
 
@@ -950,7 +949,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
             descend.seen.append(x)
             return x.active
         descend.seen = []
-        order = list(pmo.preorder_traversal(cdict,
+        order = list( preorder_traversal(cdict,
                                             active=None,
                                             descend=descend))
         self.assertEqual(len(descend.seen), 1)
