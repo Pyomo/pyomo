@@ -23,7 +23,6 @@ from pyomo.core import TraversalStrategy, TransformationFactory
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.config import ConfigBlock, ConfigValue
 
 from six import itervalues
 
