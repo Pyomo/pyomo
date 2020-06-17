@@ -23,23 +23,23 @@ Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while 
 
 .. doctest::
 
-    # Import Pyomo and sipopt from the sensitivity toolbox
+    Import Pyomo and sipopt from the sensitivity toolbox
     >>> from pyomo.environ import * 
     >>> from pyomo.contrib.sensitivity_toolbox.sens import sipopt
     
-    # Create a concrete model
+    Create a concrete model
     >>> m = ConcreteModel()
     
-    # Define the variables with bounds and initial values
+    Define the variables with bounds and initial values
     >>> m.x1 = Var(initialize = 0.15, within=NonNegativeReals)
     >>> m.x2 = Var(initialize = 0.15, within=NonNegativeReals)
     >>> m.x3 = Var(initialize = 0.0, within=NonNegativeReals)
     
-    # Define the parameters
+    Define the parameters
     >>> m.eta1 = Param(initialize=4.5,mutable=True)
     >>> m.eta2 = Param(initialize=1.0,mutable=True)
     
-    # Define the constraints and objective
+    Define the constraints and objective
     >>> m.const1 = Constraint(expr=6*m.x1+3*m.x2+2*m.x3-m.eta1 ==0)
     >>> m.const2 = Constraint(expr=m.eta2*m.x1+m.x2-m.x3-1 ==0)
     >>> m.cost = Objective(expr=m.x1**2+m.x2**2+m.x3**2)
@@ -77,14 +77,14 @@ We can now inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 .. doctest::
     :skipif: not sipopt_available
     
-    >>> ### Original parameter values
+    Original parameter values
     >>> print("eta1 =",m.eta1())
     eta1 = 4.5
     
     >>> print("eta2 =",m.eta2())
     eta2 = 1.0
     
-    >>> ### Solution with the original parameter values:
+    Solution with the original parameter values:
     >>> print("x1 =",m.x1())
     x1 = 0.15
     
@@ -99,14 +99,14 @@ Likewise, we can inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\h
 .. doctest::
     :skipif: not sipopt_available    
 
-    >>> ### New parameter values:
+    New parameter values:
     >>> print("eta1 =",m_sipopt.perturbed_eta1())
     eta1 = 4.0
     
     >>> print("eta2 =",m_sipopt.perturbed_eta2())
     eta2 = 1.0
     
-    >>> ### (Approximate) solution with the new parameter values:
+    (Approximate) solution with the new parameter values:
     >>> print("x1 =",m_sipopt.x1())
     x1 = 0.5000000037913185
     
