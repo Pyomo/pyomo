@@ -355,7 +355,6 @@ if __name__ == "__main__":
 
     _disable_stdout_test = False
 
-    import sys
     if '--include' in sys.argv:
         _test_name_wildcard_include = []
         while '--include' in sys.argv:
