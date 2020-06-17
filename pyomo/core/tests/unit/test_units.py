@@ -12,7 +12,7 @@
 #
 
 import pyutilib.th as unittest
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Param, Set, Constraint, Objective, Expression, Block, ExternalFunction, value, log, log10, exp, sqrt, cos, sin, tan, asin, acos, atan, cosh, sinh, tanh, asinh, acosh, atanh, ceil, floor, sum_product, maximize, units
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.units_container import (
