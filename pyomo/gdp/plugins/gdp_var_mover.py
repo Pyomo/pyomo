@@ -42,8 +42,8 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                 "variables local to each Disjunct during the transformation. "
                 "Validation that the model has been completely transformed "
                 "to an algebraic model has been moved to the "
-                "assert_model_algebraic function in gdp.util.",
-                version='5.6.10')
+                "check_model_algebraic function in gdp.util.",
+                version='TBD')
     def _apply_to(self, instance, **kwds):
         assert not kwds  # no keywords expected to the transformation
         disjunct_generator = instance.component_objects(
