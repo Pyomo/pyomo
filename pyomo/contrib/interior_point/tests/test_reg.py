@@ -73,16 +73,16 @@ class TestRegularization(unittest.TestCase):
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_mumps(self):
-        solver = ip.linalg.MumpsInterface()
+        solver = ip.linalg.mumps_interface.MumpsInterface()
         self._test_regularization(solver)
 
     def test_scipy(self):
-        solver = ip.linalg.ScipyInterface(compute_inertia=True)
+        solver = ip.linalg.scipy_interface.ScipyInterface(compute_inertia=True)
         self._test_regularization(solver)
 
     @unittest.skipIf(not ma27_available, 'MA27 is not available')
     def test_ma27(self):
-        solver = ip.linalg.InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
+        solver = ip.linalg.ma27_interface.InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
         self._test_regularization(solver)
 
     def _test_regularization_2(self, linear_solver):
@@ -98,16 +98,16 @@ class TestRegularization(unittest.TestCase):
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_mumps_2(self):
-        solver = ip.linalg.MumpsInterface()
+        solver = ip.linalg.mumps_interface.MumpsInterface()
         self._test_regularization_2(solver)
 
     def test_scipy_2(self):
-        solver = ip.linalg.ScipyInterface(compute_inertia=True)
+        solver = ip.linalg.scipy_interface.ScipyInterface(compute_inertia=True)
         self._test_regularization_2(solver)
 
     @unittest.skipIf(not ma27_available, 'MA27 is not available')
     def test_ma27_2(self):
-        solver = ip.linalg.InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
+        solver = ip.linalg.ma27_interface.InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
         self._test_regularization_2(solver)
 
 

@@ -58,33 +58,33 @@ class TestSolveInteriorPoint(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 1)
 
     def test_ip1_scipy(self):
-        solver = ip.linalg.ScipyInterface()
+        solver = ip.linalg.scipy_interface.ScipyInterface()
         solver.compute_inertia = True
         self._test_solve_interior_point_1(solver)
 
     def test_ip2_scipy(self):
-        solver = ip.linalg.ScipyInterface()
+        solver = ip.linalg.scipy_interface.ScipyInterface()
         solver.compute_inertia = True
         self._test_solve_interior_point_2(solver)
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_ip1_mumps(self):
-        solver = ip.linalg.MumpsInterface()
+        solver = ip.linalg.mumps_interface.MumpsInterface()
         self._test_solve_interior_point_1(solver)
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_ip2_mumps(self):
-        solver = ip.linalg.MumpsInterface()
+        solver = ip.linalg.mumps_interface.MumpsInterface()
         self._test_solve_interior_point_2(solver)
 
     @unittest.skipIf(not ma27_available, 'MA27 is not available')
     def test_ip1_ma27(self):
-        solver = ip.linalg.InteriorPointMA27Interface()
+        solver = ip.linalg.ma27_interface.InteriorPointMA27Interface()
         self._test_solve_interior_point_1(solver)
 
     @unittest.skipIf(not ma27_available, 'MA27 is not available')
     def test_ip2_ma27(self):
-        solver = ip.linalg.InteriorPointMA27Interface()
+        solver = ip.linalg.ma27_interface.InteriorPointMA27Interface()
         self._test_solve_interior_point_2(solver)
 
 
