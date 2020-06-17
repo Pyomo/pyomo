@@ -31,9 +31,16 @@ import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
     fit_rect_dist, fit_mvn_dist, fit_kde_dist
-    
-from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
-    
+
+if numpy_available and scipy_available:
+    from pyomo.contrib.pynumero.asl import AmplInterface
+    asl_available = AmplInterface.available()
+else:
+    asl_available=False
+
+if asl_available:
+    from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
+
 __version__ = 0.1
 
 #=============================================
@@ -487,7 +494,8 @@ class Estimator(object):
                 else:
                     solve_result = solver.solve(self.ef_instance, tee = self.tee)
 
-                
+            elif not asl_available:
+                raise ImportError("parmest requires ASL to calculate the covariance matrix with solver 'ipopt'")
             else:
                 # parmest makes the fitted parameters stage 1 variables
                 # thus we need to convert from var names (string) to 

@@ -41,6 +41,12 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
+if numpy_available:
+    from pyomo.contrib.pynumero.asl import AmplInterface
+    asl_available = AmplInterface.available()
+else:
+    asl_available=False
+
 testdir = os.path.dirname(os.path.abspath(__file__))
 
 class Object_from_string_Tester(unittest.TestCase):
@@ -227,8 +233,16 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
             return expr
         
         self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
-
+    
     def test_theta_est(self):
+        objval, thetavals = self.pest.theta_est(calc_cov=False)
+        
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 0.5311 from the paper
+    
+    @unittest.skipIf(not asl_available, "Cannot test covariance matrix: required ASL dependency is missing")
+    def test_theta_est_cov(self):
         objval, thetavals, cov = self.pest.theta_est(calc_cov=True)
         
         self.assertAlmostEqual(objval, 4.3317112, places=2)
