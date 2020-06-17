@@ -36,10 +36,10 @@ To demonstrate modeling with disjunctions in Pyomo.GDP, we revisit the small exa
     \end{gathered}
     \right]
 
-Expanded syntax: more descriptive
+Explicit syntax: more descriptive
 ---------------------------------
 
-Pyomo.GDP expanded syntax (see below) provides more clarity in the declaration of each modeling object,  and gives the user explicit control over the ``Disjunct`` names.
+Pyomo.GDP explicit syntax (see below) provides more clarity in the declaration of each modeling object,  and gives the user explicit control over the ``Disjunct`` names.
 Assuming the ``ConcreteModel`` object :code:`m` and variables have been defined, lines 1 and 5 declare the ``Disjunct`` objects corresponding to selection of unit 1 and 2, respectively.
 Lines 2 and 6 define the input-output relations for each unit, and lines 3-4 and 7-8 enforce zero flow through the unit that is not selected.
 Finally, line 9 declares the logical disjunction between the two disjunctive terms.
