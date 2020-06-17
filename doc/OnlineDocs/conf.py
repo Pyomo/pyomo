@@ -203,22 +203,12 @@ texinfo_documents = [
 
 doctest_global_setup = '''
 
-try:
-    import pyomo.opt
-    ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
-except:
-    ipopt_available = False
+import pyomo.opt
 
-try:
-    import pyomo.opt
-    sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
-except:
-    sipopt_available = False
-
-try:
-    import pyomo.opt
-    baron_available = bool(pyomo.opt.check_available_solvers('baron'))
-except:
-    baron_available = False
-
+# Not using SolverFactory to check solver availability because
+# as of June 2020 there is no way to supress warnings when 
+# solvers are not available
+ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
+sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
+baron_available = bool(pyomo.opt.check_available_solvers('baron'))
 '''
