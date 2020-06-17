@@ -2,7 +2,7 @@
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import TransformationFactory, BooleanVar, VarList, Binary, LogicalConstraint, Block, ConstraintList, \
-    native_types, BooleanVarList, as_boolean
+    native_types, BooleanVarList
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.logical_expr import AndExpression, OrExpression, NotExpression, AtLeastExpression, \
     AtMostExpression, ExactlyExpression, special_boolean_atom_types, EqualityExpression, InequalityExpression, \
@@ -59,16 +59,14 @@ def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
 
 
 def _process_logical_constraints_in_logical_context(context):
-    new_constrlist_name = unique_component_name(context, 'logic_to_linear')
-    new_constrlist = ConstraintList()
-    setattr(context, new_constrlist_name, new_constrlist)
+    new_xfrm_block_name = unique_component_name(context, 'logic_to_linear')
+    new_xfrm_block = Block(doc="Transformation objects for logic_to_linear")
+    setattr(context, new_xfrm_block_name, new_xfrm_block)
 
-    new_boolvar_list_name = unique_component_name(context, 'logic_to_linear_augmented_vars')
-    new_boolvarlist = BooleanVarList()
-    setattr(context, new_boolvar_list_name, new_boolvarlist)
-    new_var_list_name = unique_component_name(context, 'logic_to_linear_augmented_vars_asbinary')
-    new_varlist = VarList(domain=Binary)
-    setattr(context, new_var_list_name, new_varlist)
+    new_constrlist = new_xfrm_block.transformed_constraints = ConstraintList()
+    new_boolvarlist = new_xfrm_block.augmented_vars = BooleanVarList()
+    new_varlist = new_xfrm_block.augmented_vars_asbinary = VarList(domain=Binary)
+
     indicator_map = ComponentMap()
     cnf_statements = []
     # Convert all logical constraints to CNF
@@ -105,14 +103,18 @@ def _process_logical_constraints_in_logical_context(context):
     # Note: it is ok to simply delete the index_set for these components, because by
     # default, a new set object is generated for each [Thing]List.
     if len(new_constrlist) == 0:
-        context.del_component(new_constrlist.index_set())
-        context.del_component(new_constrlist)
+        new_xfrm_block.del_component(new_constrlist.index_set())
+        new_xfrm_block.del_component(new_constrlist)
     if len(new_boolvarlist) == 0:
-        context.del_component(new_boolvarlist.index_set())
-        context.del_component(new_boolvarlist)
+        new_xfrm_block.del_component(new_boolvarlist.index_set())
+        new_xfrm_block.del_component(new_boolvarlist)
     if len(new_varlist) == 0:
-        context.del_component(new_varlist.index_set())
-        context.del_component(new_varlist)
+        new_xfrm_block.del_component(new_varlist.index_set())
+        new_xfrm_block.del_component(new_varlist)
+
+    # If block was entirely unused, remove it
+    if all(len(l) == 0 for l in (new_constrlist, new_boolvarlist, new_varlist)):
+        context.del_component(new_xfrm_block)
 
 
 def _cnf_to_linear_constraint_list(cnf_expr, indicator_var=None, binary_varlist=None):
