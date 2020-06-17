@@ -123,15 +123,18 @@ def flatten_dae_variables(model, time):
             for _slice in generate_time_indexed_block_slices(b, time):
                 time_indexed_vars.append(Reference(_slice))
             continue
-        block_queue.extend(
-            list(b.component_objects(Block, descend_into=False))
-        )
-        for v in b.component_objects(SubclassOf(Var), descend_into=False):
-            v_sets = v.index_set().subsets()
-            if time in v_sets:
-                for _slice in generate_time_only_slices(v, time):
-                    time_indexed_vars.append(Reference(_slice))
-            else:
-                regular_vars.extend(list(v.values()))
+        for blkdata in b.values():
+            block_queue.extend(
+                blkdata.component_objects(Block, descend_into=False)
+            )
+        for blkdata in b.values():
+            for v in blkdata.component_objects(SubclassOf(Var), 
+                    descend_into=False):
+                v_sets = v.index_set().subsets()
+                if time in v_sets:
+                    for _slice in generate_time_only_slices(v, time):
+                        time_indexed_vars.append(Reference(_slice))
+                else:
+                    regular_vars.extend(v.values())
 
     return regular_vars, time_indexed_vars

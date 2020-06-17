@@ -7,7 +7,6 @@ from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 import logging
 import numpy as np
 
-
 class ScipyInterface(LinearSolverInterface):
     def __init__(self, compute_inertia=False):
         self._lu = None

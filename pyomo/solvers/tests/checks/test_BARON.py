@@ -1,7 +1,23 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Tests the BARON interface."""
+
+from six import StringIO
+
 import pyutilib.th as unittest
-from pyomo.environ import (ConcreteModel, Constraint, Objective, Var, log10,
-                           minimize)
+
+from pyomo.common.log import LoggingIntercept
+from pyomo.environ import (
+    ConcreteModel, Constraint, Objective, Var, log10, minimize,
+)
 from pyomo.opt import SolverFactory, TerminationCondition
 
 # check if BARON is available
@@ -57,6 +73,23 @@ class BaronTest(unittest.TestCase):
             self.assertEqual(results.solver.termination_condition,
                              TerminationCondition.optimal)
 
+    def test_BARON_option_warnings(self):
+        os = StringIO()
+        with LoggingIntercept(os, 'pyomo.solvers'):
+            m = ConcreteModel()
+            m.x = Var()
+            m.obj = Objective(expr=m.x**2)
+
+            with SolverFactory("baron") as opt:
+                results = opt.solve(m, options={'ResName': 'results.lst',
+                                                'TimName': 'results.tim'})
+
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.optimal)
+        self.assertIn('Ignoring user-specified option "ResName=results.lst"',
+                      os.getvalue())
+        self.assertIn('Ignoring user-specified option "TimName=results.tim"',
+                      os.getvalue())
 
 if __name__ == '__main__':
     unittest.main()

@@ -83,8 +83,12 @@ def solve_OA_master(solve_data, config):
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
         masteropt.options['timelimit'] = config.time_limit
+    mip_args = dict(config.mip_solver_args)
+    if config.mip_solver == 'gams':
+        mip_args['add_options'] = mip_args.get('add_options', [])
+        mip_args['add_options'].append('option optcr=0.0;')
     master_mip_results = masteropt.solve(
-        solve_data.mip, **config.mip_solver_args)  # , tee=True)
+        solve_data.mip, **mip_args)  # , tee=True)
 
     if master_mip_results.solver.termination_condition is tc.optimal:
         if config.single_tree:
@@ -92,7 +96,7 @@ def solve_OA_master(solve_data, config):
                 solve_data.LB = max(
                     master_mip_results.problem.lower_bound, solve_data.LB)
                 solve_data.LB_progress.append(solve_data.LB)
-
+            else:
                 solve_data.UB = min(
                     master_mip_results.problem.upper_bound, solve_data.UB)
                 solve_data.UB_progress.append(solve_data.UB)
@@ -115,10 +119,10 @@ def handle_master_mip_optimal(master_mip, solve_data, config, copy=True):
         master_mip.component_data_objects(Objective, active=True))
     # check if the value of binary variable is valid
     for var in MindtPy.variable_list:
-        if var.value == None:
+        if var.value == None and var.is_integer():
             config.logger.warning(
-                "Variables {} not initialized are set to it's lower bound when using the initial_binary initialization method".format(var.name))
-            var.value = 0  # nlp_var.bounds[0]
+                "Integer variable {} not initialized. It is set to it's lower bound when using the initial_binary initialization method".format(var.name))
+            var.value = var.lb  # nlp_var.bounds[0]
     copy_var_list_values(
         master_mip.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
@@ -189,10 +193,8 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
     main_objective = next(
         master_mip.component_data_objects(Objective, active=True))
     if main_objective.sense == minimize:
-        solve_data.LB = float('inf')
-        solve_data.LB_progress.append(solve_data.UB)
+        solve_data.LB_progress.append(solve_data.LB)
     else:
-        solve_data.UB = float('-inf')
         solve_data.UB_progress.append(solve_data.UB)
 
 
