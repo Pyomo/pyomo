@@ -81,29 +81,17 @@ class TestRegularization(unittest.TestCase):
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_mumps(self):
-<<<<<<< HEAD
         solver = MumpsInterface()
-=======
-        solver = ip.linalg.mumps_interface.MumpsInterface()
->>>>>>> 7ea173be9bcdb06859c453ce99461d24d37b2a68
         self._test_regularization(solver)
 
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_scipy(self):
-<<<<<<< HEAD
         solver = ScipyInterface(compute_inertia=True)
-=======
-        solver = ip.linalg.scipy_interface.ScipyInterface(compute_inertia=True)
->>>>>>> 7ea173be9bcdb06859c453ce99461d24d37b2a68
         self._test_regularization(solver)
 
     @unittest.skipIf(not ma27_available, 'MA27 is not available')
     def test_ma27(self):
-<<<<<<< HEAD
         solver = InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
-=======
-        solver = ip.linalg.ma27_interface.InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
->>>>>>> 7ea173be9bcdb06859c453ce99461d24d37b2a68
         self._test_regularization(solver)
 
     def _test_regularization_2(self, linear_solver):
@@ -119,29 +107,17 @@ class TestRegularization(unittest.TestCase):
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_mumps_2(self):
-<<<<<<< HEAD
         solver = MumpsInterface()
-=======
-        solver = ip.linalg.mumps_interface.MumpsInterface()
->>>>>>> 7ea173be9bcdb06859c453ce99461d24d37b2a68
         self._test_regularization_2(solver)
 
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_scipy_2(self):
-<<<<<<< HEAD
         solver = ScipyInterface(compute_inertia=True)
-=======
-        solver = ip.linalg.scipy_interface.ScipyInterface(compute_inertia=True)
->>>>>>> 7ea173be9bcdb06859c453ce99461d24d37b2a68
         self._test_regularization_2(solver)
 
     @unittest.skipIf(not ma27_available, 'MA27 is not available')
     def test_ma27_2(self):
-<<<<<<< HEAD
         solver = InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
-=======
-        solver = ip.linalg.ma27_interface.InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
->>>>>>> 7ea173be9bcdb06859c453ce99461d24d37b2a68
         self._test_regularization_2(solver)
 
 
