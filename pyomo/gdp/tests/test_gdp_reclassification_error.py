@@ -1,7 +1,7 @@
 import pyutilib.th as unittest
 import pyomo.environ as pe
 import pyomo.gdp as gdp
-from pyomo.gdp.util import assert_model_algebraic
+from pyomo.gdp.util import check_model_algebraic
 from pyomo.common.log import LoggingIntercept
 import logging
 from six import StringIO
@@ -18,7 +18,7 @@ class TestGDPReclassificationError(unittest.TestCase):
         pe.TransformationFactory('gdp.bigm').apply_to(m)
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.WARNING):
-            assert_model_algebraic(m)
+            check_model_algebraic(m)
         self.assertRegexpMatches( log.getvalue(), 
                                   '.*not found in any Disjunctions.*')
 
@@ -34,7 +34,7 @@ class TestGDPReclassificationError(unittest.TestCase):
         pe.TransformationFactory('gdp.bigm').apply_to(m)
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.WARNING):
-            assert_model_algebraic(m)
+            check_model_algebraic(m)
         self.assertRegexpMatches(log.getvalue(), 
                                  '.*While it participates in a Disjunction, '
                                  'that Disjunction is currently deactivated.*')

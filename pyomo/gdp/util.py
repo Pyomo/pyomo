@@ -297,7 +297,7 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
                             fully_qualified=True,
                             name_buffer=NAME_BUFFER)))
 
-def assert_model_algebraic(instance):
+def check_model_algebraic(instance):
     """Checks if there are any active Disjuncts or Disjunctions reachable via
     active Blocks. If there are not, it returns True. If there are, it issues
     a warning detailing where in the model there are remaining non-algebraic
