@@ -197,3 +197,28 @@ texinfo_documents = [
 
 #autodoc_member_order = 'bysource'
 #autodoc_member_order = 'groupwise'
+
+# -- Check which conditional dependencies are available ------------------
+# Used for skipping certain doctests
+
+doctest_global_setup = '''
+
+try:
+    import pyomo.opt
+    ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
+except:
+    ipopt_available = False
+
+try:
+    import pyomo.opt
+    sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
+except:
+    sipopt_available = False
+
+try:
+    import pyomo.opt
+    baron_available = bool(pyomo.opt.check_available_solvers('baron'))
+except:
+    baron_available = False
+
+'''

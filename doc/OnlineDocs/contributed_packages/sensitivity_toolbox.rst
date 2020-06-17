@@ -57,7 +57,8 @@ Next we define the perturbed parameter values :math:`\hat{p}_1` and :math:`\hat{
 And finally we call sIPOPT:
 
 .. doctest::
-    
+    :skipif: not sipopt_available
+
     >>> m_sipopt = sipopt(m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], streamSoln=True)
     Ipopt 3.13.2: run_sens=yes
     ...
@@ -74,6 +75,7 @@ The first argument is the Pyomo model. The second argument is a list of the orig
 We can now inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
 .. doctest::
+    :skipif: not sipopt_available
     
     >>> ### Original parameter values
     >>> print("eta1 =",m.eta1())
@@ -95,7 +97,8 @@ We can now inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 Likewise, we can inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`:
 
 .. doctest::
-    
+    :skipif: not sipopt_available    
+
     >>> ### New parameter values:
     >>> print("eta1 =",m_sipopt.perturbed_eta1())
     eta1 = 4.0
