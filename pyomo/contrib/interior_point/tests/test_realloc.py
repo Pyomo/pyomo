@@ -15,9 +15,9 @@ from pyomo.contrib.pynumero.asl import AmplInterface
 asl_available = AmplInterface.available()
 if not asl_available:
     raise unittest.SkipTest('Regularization tests require ASL')
-import pyomo.contrib.interior_point as ip
-from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
-ma27_available = MA27Interface.available()
+from pyomo.contrib.interior_point.interface import InteriorPointInterface
+from pyomo.contrib.interior_point.interior_point import InteriorPointSolver
+from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
 
 
 def make_model_tri(n, small_val=1e-7, big_val=1e2):
@@ -35,7 +35,7 @@ def make_model_tri(n, small_val=1e-7, big_val=1e2):
 
 class TestReallocation(unittest.TestCase):
     def _test_ip_with_reallocation(self, linear_solver, interface):
-        ip_solver = ip.InteriorPointSolver(linear_solver,
+        ip_solver = InteriorPointSolver(linear_solver,
                 max_reallocation_iterations=3,
                 reallocation_factor=1.1,
                 # The small factor is to ensure that multiple iterations of
@@ -53,8 +53,8 @@ class TestReallocation(unittest.TestCase):
     def test_mumps(self):
         n = 20000
         m = make_model_tri(n, small_val=1e-7)
-        interface = ip.InteriorPointInterface(m)
-        linear_solver = ip.linalg.MumpsInterface()
+        interface = InteriorPointInterface(m)
+        linear_solver = MumpsInterface()
         # Default memory "buffer" factor: 20
         linear_solver.set_icntl(14, 20)
 
