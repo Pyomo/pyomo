@@ -213,3 +213,4 @@ class SolverInformation(MapContainer):
         # termination status.
         self.declare('termination_message')
         self.declare('statistics', value=SolverStatistics(), active=False)
+        self.declare('warm_start_objective_value', type=ScalarType.float)

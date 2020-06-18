@@ -448,5 +448,17 @@ CPLEX>"""
         )
         self.assertEqual(results.solver.deterministic_time, 100.00)
 
+    def test_log_file_shows_warm_start_objective_value(self):
+        log_file_text = """
+1 of 1 MIP starts provided solutions.
+MIP start 'm1' defined initial solution with objective 25210.5363.
+"""
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.warm_start_objective_value, 25210.5363)
+
+
 if __name__ == "__main__":
     unittest.main()
