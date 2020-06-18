@@ -39,7 +39,7 @@ class TestDecomposition(unittest.TestCase):
         m_class._generate_model()
         model = m = m_class.model
 
-        test_results = collect_test_results(model)
+        test_results = _collect_test_results(model)
 
         correct_community_maps = (
             {0: ([m.c1[2], m.c2[2]], [m.x]), 1: ([m.c1[3], m.c2[1]], [m.y]), 2: ([m.B[2].c], [m.z])},
@@ -62,7 +62,7 @@ class TestDecomposition(unittest.TestCase):
         m_class._generate_model()
         model = m = m_class.model
 
-        test_results = collect_test_results(model)
+        test_results = _collect_test_results(model)
 
         correct_community_maps = ({0: ([m.c2], [m.x]), 1: ([m.c1], [m.y])}, {0: ([m.c2], [m.x]), 1: ([m.c1], [m.y])},
                                   {0: ([m.c2], [m.x]), 1: ([m.obj, m.c1], [m.y])},
@@ -79,7 +79,7 @@ class TestDecomposition(unittest.TestCase):
         m_class._generate_model()
         model = m = m_class.model
 
-        test_results = collect_test_results(model)
+        test_results = _collect_test_results(model)
 
         correct_community_maps = (
             {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([], [m.x]), 1: ([], [m.y])}, {0: ([m.o], [m.x, m.y])},
@@ -94,7 +94,7 @@ class TestDecomposition(unittest.TestCase):
         m_class._generate_model()
         model = m = m_class.model
 
-        test_results = collect_test_results(model)
+        test_results = _collect_test_results(model)
 
         correct_community_maps = ({0: ([m.c2], [m.x]), 1: ([m.c4], [m.y[1]]), 2: ([m.c1], [m.y[2]])},
                                   {0: ([m.c2], [m.x]), 1: ([m.c4], [m.y[1]]), 2: ([m.c1], [m.y[2]])},
@@ -114,7 +114,7 @@ class TestDecomposition(unittest.TestCase):
     def test_communities_5(self):
         model = m = create_model_5()
 
-        test_results = collect_test_results(model)
+        test_results = _collect_test_results(model)
 
         correct_community_maps = ({0: ([m.c1, m.c2, m.c3, m.c4, m.c5], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
                                   {0: ([m.c1, m.c2, m.c3, m.c4, m.c5], [m.i1, m.i2, m.i3, m.i4, m.i5, m.i6])},
@@ -136,7 +136,7 @@ class TestDecomposition(unittest.TestCase):
     def test_communities_6(self):
         model = m = create_model_6()
 
-        test_results = collect_test_results(model, with_string_tests=True)
+        test_results = _collect_test_results(model, with_string_tests=True)
 
         correct_community_maps = (
             {0: ([m.c1], [m.x1, m.x2]), 1: ([m.c2], [m.x3, m.x4])},
@@ -169,7 +169,7 @@ class TestDecomposition(unittest.TestCase):
     def test_communities_7(self):
         model = m = disconnected_model()
 
-        test_results = collect_test_results(model)
+        test_results = _collect_test_results(model)
 
         correct_community_maps = ({0: ([m.c1], [m.x1]), 1: ([], [m.x2])}, {0: ([m.c1], [m.x1]), 1: ([], [m.x2])},
                                   {0: ([m.obj, m.c1], [m.x1]), 1: ([], [m.x2]), 2: ([m.OBJ], [])},
@@ -186,7 +186,7 @@ class TestDecomposition(unittest.TestCase):
     def test_decogo_1(self):
         model = m = decogo_model_1()
 
-        test_results = collect_test_results(model)
+        test_results = _collect_test_results(model)
 
         correct_community_maps = ({0: ([m.c1, m.c2], [m.x1, m.x2]), 1: ([m.c3, m.c4, m.c5], [m.x3, m.x4])},
                                   {0: ([m.c1, m.c2], [m.x1, m.x2]), 1: ([m.c3, m.c4, m.c5], [m.x3, m.x4])},
@@ -206,7 +206,7 @@ class TestDecomposition(unittest.TestCase):
     def test_decogo_2(self):
         model = m = decogo_model_2()
 
-        test_results = collect_test_results(model)
+        test_results = _collect_test_results(model)
 
         correct_community_maps = (
             {0: ([m.c1, m.c2], [m.x[1], m.x[2], m.x[3]]),
@@ -276,7 +276,7 @@ class TestDecomposition(unittest.TestCase):
             detect_communities(model, random_seed=random_seed)
 
 
-def collect_test_results(model, with_string_tests=False):
+def _collect_test_results(model, with_string_tests=False):
     random_seed_test = 5
 
     community_map_b_unweighted_without = detect_communities(model, node_type='b', with_objective=False,

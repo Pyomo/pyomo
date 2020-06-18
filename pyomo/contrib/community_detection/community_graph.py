@@ -285,14 +285,14 @@ def _event_log(model, model_graph, constraint_set, node_type, with_objective):
         if node_type == 'b':
             if graph_is_connected:
                 top_nodes, bottom_nodes = nx.bipartite.sets(model_graph)
-                for node in top_nodes:
-                    if node in constraint_set:
-                        constraint_nodes = top_nodes
-                        variable_nodes = bottom_nodes
-                    else:
-                        constraint_nodes = bottom_nodes
-                        variable_nodes = top_nodes
-                    break
+                if len(top_nodes) == 0:
+                    top_nodes, bottom_nodes = bottom_nodes, top_nodes
+                if list(top_nodes)[0] in constraint_set:
+                    constraint_nodes = top_nodes
+                    variable_nodes = bottom_nodes
+                else:
+                    constraint_nodes = bottom_nodes
+                    variable_nodes = top_nodes
             else:
                 constraint_nodes = {node for node in model_graph.nodes() if node in constraint_set}
                 variable_nodes = set(model_graph) - constraint_nodes
@@ -342,7 +342,7 @@ def _event_log(model, model_graph, constraint_set, node_type, with_objective):
         if with_objective:
             logging.warning("No active objective(s) found in the model")
         else:
-            logging.warning("No active objective(s) found in the model")
+            logging.info("No active objective(s) found in the model")
 
     if number_of_nodes == 0:
         logging.warning("No nodes were created for the graph (based on the model and the given parameters)")

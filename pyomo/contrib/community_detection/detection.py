@@ -279,9 +279,11 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
                     color_list.append(community_key)
                     not_found = False
 
-        # Find top_nodes (one of the two "groups" of nodes in a bipartite graph) for
-        # the pos argument in the nx.draw_networkx_nodes function
+        # Find top_nodes (one of the two "groups" of nodes in a bipartite graph), which will be used to
+        # determine the graph layout
         if model_graph.number_of_nodes() > 0 and nx.is_connected(model_graph):
+            # Index of 1 used because this tends to place constraint nodes on the left, which is consistent with the
+            # else case
             top_nodes = nx.bipartite.sets(model_graph)[1]
         else:
             top_nodes = {node for node in model_graph.nodes() if node in constraint_variable_map}
