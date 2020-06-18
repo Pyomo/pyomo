@@ -1,52 +1,30 @@
-Pyomo Documentation |release|
-=============================
+Third-Party Contributions
+=========================
 
-.. image:: /../logos/pyomo/PyomoNewBlue3.png
-   :scale: 10%
-   :align: right
+Pyomo includes a variety of additional features and functionality
+provided by third parties through the ``pyomo.contrib`` package.  This
+package includes both contributions included with the main Pyomo
+distribution and wrappers for third-party packages that must be
+installed separately.
 
-Pyomo is a Python-based, open-source optimization modeling language
-with a diverse set of optimization capabilities.
+These packages are maintained by the original contributors and are
+managed as *optional* Pyomo packages.
+
+Contributed packages distributed with Pyomo:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   installation.rst
-   citing_pyomo.rst
-   pyomo_overview/index.rst
-   pyomo_modeling_components/index.rst
-   solving_pyomo_models.rst
-   working_models.rst
-   working_abstractmodels/index.rst
-   modeling_extensions/index.rst
-   tutorial_examples.rst
-   model_debugging/index.rst
-   advanced_topics/index.rst
-   developer_reference/index.rst
-   library_reference/index.rst
-   contribution_guide.rst
-   contributed_packages/index.rst
-   bibliography.rst
+   preprocessing.rst
+   gdpopt.rst
+   multistart.rst
+   parmest/index.rst
+   mcpp.rst
+   mindtpy.rst
+   satsolver.rst
+   community.rst
 
-Indices and Tables
-------------------
+Contributed packages distributed independently of Pyomo, but accessible
+through ``pyomo.contrib``:
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-
-Pyomo Resources
----------------
-
-The Pyomo home page provides resources for Pyomo users:
-
-* http://pyomo.org
-
-Pyomo development is hosted at GitHub:
-
-* https://github.com/Pyomo/pyomo
-
-See the Pyomo Forum for online discussions of Pyomo:
-
-* http://groups.google.com/group/pyomo-forum/
+* `pyomo.contrib.simplemodel <http://pyomocontrib-simplemodel.readthedocs.io/en/latest/source.html>`_
