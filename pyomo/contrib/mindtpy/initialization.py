@@ -57,14 +57,14 @@ def MindtPy_initialize_master(solve_data, config):
         #     add_ecp_cut(solve_data, config)
         # else:
 
-        fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
-        if fixed_nlp_result.solver.termination_condition is tc.optimal:
-            handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
-        elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-            handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
-        else:
-            handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                    solve_data, config)
+    fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
+    if fixed_nlp_result.solver.termination_condition is tc.optimal:
+        handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
+    elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
+        handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+    else:
+        handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                solve_data, config)
 
 
 def init_rNLP(solve_data, config):
