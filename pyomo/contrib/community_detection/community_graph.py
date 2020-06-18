@@ -115,7 +115,6 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
             edge_set.update(edges_between_nodes)
 
     bipartite_model_graph.add_edges_from(sorted(edge_set))
-    del edge_set
 
     # Both variable and constraint nodes (bipartite graph); this is exactly the graph we made above
     if node_type == 'b':
@@ -206,12 +205,9 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
             node_one, node_two = edge[0], edge[1]
             collapsed_model_graph[node_one][node_two]['weight'] = edge_weight_dict[edge]
 
-        del edge_weight_dict
-
     else:
         # Add edges to collapsed_model_graph
         collapsed_model_graph.add_edges_from(sorted(edge_set))
-        del edge_set
 
     # Log important information with the following logger function
     _event_log(model, collapsed_model_graph, set(constraint_variable_map), node_type, with_objective)
