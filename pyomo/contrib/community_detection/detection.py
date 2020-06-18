@@ -154,8 +154,8 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     return community_map
 
 
-def draw_model_graph(model, community_map=None, node_type='c', with_objective=True, weighted_graph=True,
-                     random_seed=None, type_of_map='c'):
+def visualize_model_graph(model, community_map=None, node_type='c', with_objective=True, weighted_graph=True,
+                          random_seed=None, type_of_map='c'):
     """
     This function draws a graph of the communities for a Pyomo model.
 
@@ -260,12 +260,12 @@ def draw_model_graph(model, community_map=None, node_type='c', with_objective=Tr
     # drawing, we will now get the node list and the color list, which describes how to color nodes
     # according to their communities (which is based on community_map)
     if node_type == 'b':
-        nonflattened_list_of_nodes = [list_of_nodes for list_tuple in community_map.values() for list_of_nodes in
-                                      list_tuple]
+        list_of_node_lists = [list_of_nodes for list_tuple in community_map.values() for list_of_nodes in
+                              list_tuple]
 
-        # nonflattened_list_of_nodes is a list of lists, so we will use the one-list comprehension below to flatten
+        # list_of_node_lists is a list of lists, so we will use the one-list comprehension below to flatten
         # the list and get our one-dimensional node list
-        node_list = [node for sublist in nonflattened_list_of_nodes for node in sublist]
+        node_list = [node for sublist in list_of_node_lists for node in sublist]
 
         color_list = []
         # Now, we will find the first community that a node appears in and color the node based on that community
@@ -290,11 +290,11 @@ def draw_model_graph(model, community_map=None, node_type='c', with_objective=Tr
 
         # Constraints should be in the first list in the tuple and variables should be in the second list
         position = 0 if node_type == 'c' else 1
-        nonflattened_list_of_nodes = list(i[position] for i in community_map.values())
+        list_of_node_lists = list(i[position] for i in community_map.values())
 
-        # nonflattened_list_of_nodes is a list of lists, so we will use the one-list comprehension below to flatten
+        # list_of_node_lists is a list of lists, so we will use the one-list comprehension below to flatten
         # the list and get our one-dimensional node list
-        node_list = [node for sublist in nonflattened_list_of_nodes for node in sublist]
+        node_list = [node for sublist in list_of_node_lists for node in sublist]
 
         # Now, we will find the first community that a node appears in and color the node based on that community
         # (because in community_map, certain nodes may appear in multiple communities)
@@ -318,8 +318,8 @@ def draw_model_graph(model, community_map=None, node_type='c', with_objective=Tr
     plt.show()
 
 
-def easy_to_read(model=None, community_map=None, node_type='c', with_objective=True, weighted_graph=True,
-                 random_seed=None):
+def stringify_community_map(model=None, community_map=None, node_type='c', with_objective=True, weighted_graph=True,
+                            random_seed=None):
     """
     This function takes in a community map of Pyomo components and returns the same community map with the strings
     of the Pyomo components or takes in a model and returns a community map (based on Louvain community detection)
@@ -375,7 +375,7 @@ def easy_to_read(model=None, community_map=None, node_type='c', with_objective=T
 
     if community_map is None:
         # If no community map is given by the user, then a community map of strings will be created using the given
-        # model and the easy_to_read function
+        # model and the stringify_community_map function
         community_map = detect_communities(model, node_type=node_type, with_objective=with_objective,
                                            weighted_graph=weighted_graph, random_seed=random_seed)
     else:
