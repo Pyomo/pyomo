@@ -54,8 +54,9 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     Returns
     -------
     community_map: dict
-        a Python dictionary whose keys are integers from zero to the number of communities minus one
-        with values that are sorted lists of the nodes in the given community
+        a Python dictionary that maps arbitrary keys (in this case, integers from zero to the number of
+        communities minus one) to values that are two-list tuples containing Pyomo components that belong
+        to the given community
     """
 
     # Check that all arguments are of the correct type
@@ -188,7 +189,8 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
         a Boolean argument that specifies whether a weighted or unweighted graph is to be created from the Pyomo
         model; the default is True (node_type='b' creates an unweighted graph regardless of this parameter)
     random_seed: int, optional
-        An integer that is used as the random seed for the heuristic Louvain community detection (only used if no community_map is given)
+        An integer that is used as the random seed for the heuristic Louvain community detection (only used if no
+        community_map is given)
     type_of_map:
         This is used as the node_type in the function detect_communities to create a community_map, which will be used
         for coloring the graph and drawing the edges (only used if no community_map is given)
@@ -237,18 +239,18 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
     else:  # This is the case where the user has provided their own community_map
 
         # Check that the contents of the dictionary are of the right types
-        assert type(community_map) == dict
-        assert list(community_map.keys()) == [integer_key for integer_key in range(len(community_map))]
-        for hopefully_a_tuple in list(community_map.values()):
-            assert type(hopefully_a_tuple) == tuple
-            assert type(hopefully_a_tuple[0]) == list
-            assert type(hopefully_a_tuple[1]) == list
-            assert len(hopefully_a_tuple) == 2
+        assert type(community_map) == dict, "community_map should be a Python dictionary"
+        # Note that the dictionary keys do not have to be anything specific
+        for community_map_value in list(community_map.values()):
+            assert len(community_map_value) == 2 and type(community_map_value) == tuple and \
+                   type(community_map_value[0]) == list and type(community_map_value[1]) == list, \
+                "The values of community_map should all be tuples containing two lists"
 
         for community_key in community_map:
             tuple_of_lists = community_map[community_key]
             for community_member in (tuple_of_lists[0] + tuple_of_lists[1]):
-                assert community_member in component_number_map
+                assert community_member in component_number_map, \
+                    "All of the list items in community_map should be Pyomo components that exist in the given model"
 
     # Now we will use the component_number_map to change the Pyomo modeling components in community_map into the
     # numbers that correspond to their nodes/edges in the networkX graph, model_graph
@@ -328,7 +330,7 @@ def stringify_community_map(model=None, community_map=None, node_type='c', with_
     Parameters
     ----------
     model: Block, optional
-        a Pyomo model or block to be used for community detection
+        a Pyomo model or block to be used for community detection (only used if community_map is None)
     community_map: dict, optional
         a dictionary with values that contain Pyomo components which will be converted to their strings
     node_type: str, optional
@@ -336,21 +338,25 @@ def stringify_community_map(model=None, community_map=None, node_type='c', with_
         'c' returns a dictionary with communities based on constraint nodes,
         'v' returns a dictionary with communities based on variable nodes,
         'b' returns a dictionary with communities based on constraint and variable nodes (bipartite graph).
+        (Only used if community_map is None)
     with_objective: bool, optional
         a Boolean argument that specifies whether or not the objective function will be
         included as a node/constraint (depending on what node_type is specified as (see prior argument)), the default
-        is True
+        is True (only used if community_map is None)
     weighted_graph: bool, optional
         a Boolean argument that specifies whether a weighted or unweighted graph is to be created from the Pyomo
-        model; the default is True (node_type='b' creates an unweighted graph regardless of this parameter)
+        model; the default is True (node_type='b' creates an unweighted graph regardless of this parameter) (only
+        used if community_map is None)
     random_seed: int, optional
-        An integer that is used as the random seed for the heuristic Louvain community detection
+        An integer that is used as the random seed for the heuristic Louvain community detection (only used
+        if community_map is None)
 
     Returns
     -------
     community_map: dict
-        a Python dictionary whose keys are integers from zero to the number of communities minus one
-        with values that are sorted lists of the nodes in the given community
+        a Python dictionary that maps arbitrary keys (in this case, integers from zero to the number of communities
+        minus one) to values that are two-list tuples containing the strings of Pyomo components that belong
+        to the given community
     """
 
     # Check that arguments are of the right type
@@ -378,15 +384,16 @@ def stringify_community_map(model=None, community_map=None, node_type='c', with_
         # model and the stringify_community_map function
         community_map = detect_communities(model, node_type=node_type, with_objective=with_objective,
                                            weighted_graph=weighted_graph, random_seed=random_seed)
-    else:
-        # Make sure community_map is of the correct format
-        assert type(community_map) == dict
-        assert list(community_map.keys()) == [integer_key for integer_key in range(len(community_map))]
-        for hopefully_a_tuple in list(community_map.values()):
-            assert type(hopefully_a_tuple) == tuple
-            assert type(hopefully_a_tuple[0]) == list
-            assert type(hopefully_a_tuple[1]) == list
-            assert len(hopefully_a_tuple) == 2
+
+    else:  # This is the case where the user has provided their own community_map
+
+        # Check that the contents of the dictionary are of the right types
+        assert type(community_map) == dict, "community_map should be a Python dictionary"
+        # Note that the dictionary keys do not have to be anything specific
+        for community_map_value in list(community_map.values()):
+            assert len(community_map_value) == 2 and type(community_map_value) == tuple and \
+                   type(community_map_value[0]) == list and type(community_map_value[1]) == list, \
+                "The values of community_map should all be tuples containing two lists"
 
         # TODO: Add assert statement for list items (to check that they are Pyomo modeling components)
 
