@@ -14,7 +14,7 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
     This function takes in a Pyomo optimization model, then creates a graphical representation of the model with
     specific features of the graph determined by the user (see Parameters below).
 
-    This function is designed to be called by detect_communities, get_edge_list, or get_adj_list.
+    This function is designed to be called by detect_communities or visualize_model_graph.
 
     Parameters
     ----------
@@ -36,13 +36,11 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
     -------
     bipartite_model_graph/collapsed_model_graph: networkX graph
         a networkX graph with nodes and edges based on the given Pyomo optimization model
-    string_map: dict
-        a dictionary that maps the string of a Pyomo modeling component (such as a variable) to the actual component;
-        will be used to convert a string back to the actual modeling component
+    number_component_map: dict
+        a dictionary that has a deterministic mapping of a number to a Pyomo modeling component
     constraint_variable_map: dict
-        a dictionary that maps the string of a constraint to a list of the strings of the variables in the constraint
-    variable_node_set: set
-        a set that contains the string of all variables in the Pyomo model (to be used in function detect_communities)
+        a dictionary that maps a numbered constraint to a list of (numbered) variables that appear in the constraint
+        (the numbers' mapping to the Pyomo components is given in number_component_map)
     """
 
     # Start off by making a bipartite graph (regardless of node_type), then if node_type = 'v' or 'c',
@@ -120,7 +118,7 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
     # Both variable and constraint nodes (bipartite graph); this is exactly the graph we made above
     if node_type == 'b':
         # Log important information with the following logger function
-        _event_log(model, bipartite_model_graph, set(constraint_variable_map), node_type)
+        _event_log(model, bipartite_model_graph, set(constraint_variable_map), node_type, with_objective)
 
         # Return the bipartite networkX graph, the dictionary of node numbers mapped to their respective Pyomo
         # components, and the map of constraints to the variables they contain
@@ -221,14 +219,14 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
         del edge_set
 
     # Log important information with the following logger function
-    _event_log(model, collapsed_model_graph, set(constraint_variable_map), node_type)
+    _event_log(model, collapsed_model_graph, set(constraint_variable_map), node_type, with_objective)
 
     # Return the collapsed networkX graph, the dictionary of node numbers mapped to their respective Pyomo
     # components, and the map of constraints to the variables they contain
     return collapsed_model_graph, number_component_map, constraint_variable_map
 
 
-def _event_log(model, model_graph, constraint_set, node_type):
+def _event_log(model, model_graph, constraint_set, node_type, with_objective):
     """
     Logs information about the results of the code in _generate_model_graph
 
@@ -307,14 +305,16 @@ def _event_log(model, model_graph, constraint_set, node_type):
                              "density = %s" % constraint_density)
             else:
                 logging.info(
-                    "For the bipartite graph constructed from the model, the density for constraint nodes is %s" % constraint_density)
+                    "For the bipartite graph constructed from the model, the density for constraint nodes is %s" %
+                    constraint_density)
 
             if variable_density > warning_density_value:
                 logging.info("The bipartite graph constructed from the model has a high density for variable nodes - "
                              "density = %s" % constraint_density)
             else:
                 logging.info(
-                    "For the bipartite graph constructed from the model, the density for variable nodes is %s" % variable_density)
+                    "For the bipartite graph constructed from the model, the density for variable nodes is %s" %
+                    variable_density)
 
         else:
             graph_density = round(nx.density(model_graph), 2)
@@ -334,11 +334,17 @@ def _event_log(model, model_graph, constraint_set, node_type):
         logging.warning("No active constraints found in the model")
 
     if all_objectives_count == 0:
-        logging.warning("No objective(s) found in the model")
+        if with_objective:
+            logging.warning("No objective(s) found in the model")
+        else:
+            logging.info("No objective(s) found in the model")
     elif active_objectives_count == 0:
-        logging.warning("No active objective(s) found in the model")
+        if with_objective:
+            logging.warning("No active objective(s) found in the model")
+        else:
+            logging.warning("No active objective(s) found in the model")
 
     if number_of_nodes == 0:
-        logging.warning("No nodes found in the graph created from the model")
+        logging.warning("No nodes were created for the graph (based on the model and the given parameters)")
     if number_of_edges == 0:
-        logging.warning("No edges found in the graph created from the model")
+        logging.warning("No edges were created for the graph (based on the model and the given parameters)")
