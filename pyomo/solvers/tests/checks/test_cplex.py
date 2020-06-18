@@ -517,6 +517,30 @@ Solution pool: 1 solution saved.
         results = CPLEXSHELL.process_logfile(self.solver)
         self.assertEqual(results.solver.n_solutions_found, 1)
 
+    def test_log_file_shows_number_of_binary_variables(self):
+        log_file_text = """
+Objective sense      : Minimize
+Variables            :     506  [Nneg: 206,  Binary: 300]
+Objective nonzeros   :      32
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.problem.number_of_binary_variables, 300)
+
+    def test_log_file_shows_number_of_continuous_variables(self):
+        log_file_text = """
+Objective sense      : Minimize
+Variables            :     506  [Nneg: 206,  Binary: 300]
+Objective nonzeros   :      32
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.problem.number_of_continuous_variables, 206)
+
 
 if __name__ == "__main__":
     unittest.main()

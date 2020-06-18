@@ -563,6 +563,10 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             elif len(tokens) >= 3 and tokens[0] == "Variables":
                 if results.problem.number_of_variables is None: # CPLEX 11.2 and subsequent versions have two Variables sections in the log file output.
                     results.problem.number_of_variables = int(tokens[2])
+                if "Nneg" in tokens[3]:
+                    results.problem.number_of_continuous_variables = int(tokens[4][:-1])  # remove trailing comma
+                if "Binary" in tokens[5]:
+                    results.problem.number_of_binary_variables = int(tokens[6][:-1])  # remove trailing bracket
             # In CPLEX 11 (and presumably before), there was only a single line output to
             # indicate the constriant count, e.g., "Linear constraints : 16 [Less: 7, Greater: 6, Equal: 3]".
             # In CPLEX 11.2 (or somewhere in between 11 and 11.2 - I haven't bothered to track it down
