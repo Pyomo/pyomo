@@ -174,7 +174,7 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
          a Pyomo model or block to be used for community detection
     community_map: dict, optional
         a dictionary that maps an integer key (which corresponds to a community number) to a tuple of two lists.
-        The first list is made up of the constraints in the given community and the second list is made up of the
+        The first list should contain the constraints in the given community and the second list should contain the
         variables in the given community.
     node_type: str, optional
         A string that specifies the types of nodes to be drawn, the default is 'c'.
@@ -193,7 +193,7 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
         community_map is given)
     type_of_map:
         This is used as the node_type in the function detect_communities to create a community_map, which will be used
-        for coloring the graph and drawing the edges (only used if no community_map is given)
+        for coloring the graph and drawing the edges (default is 'c') (only used if community_map is None)
 
     Returns
     -------
@@ -233,10 +233,13 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
         # If no community map is given by the user, then a community map will be created using the given
         # model and the detect_communities function
 
+        user_provided_community_map = False  # Will be used for the graph title
+
         community_map = detect_communities(model, node_type=type_of_map, with_objective=with_objective,
                                            weighted_graph=weighted_graph, random_seed=random_seed)
 
     else:  # This is the case where the user has provided their own community_map
+        user_provided_community_map = True  # Will be used for the graph title
 
         # Check that the contents of the dictionary are of the right types
         assert type(community_map) == dict, "community_map should be a Python dictionary"
@@ -318,6 +321,17 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
     # Draw the graph
     nx.draw_networkx_nodes(model_graph, pos, nodelist=node_list, node_size=40, cmap=color_map, node_color=color_list)
     nx.draw_networkx_edges(model_graph, pos, alpha=0.5)
+
+    # Make the title
+    node_name_map = {'b': 'Bipartite', 'c': 'Constraint', 'v': 'Variable'}
+    community_map_type = node_name_map[type_of_map]
+    graph_type = node_name_map[node_type]
+    if user_provided_community_map:
+        plot_title = "%s graph - colored using user-provided community map" % graph_type
+    else:
+        plot_title = "%s graph - colored using %s community map" % (graph_type, community_map_type)
+    plt.title(plot_title)
+
     # Display the graph
     plt.show()
 
@@ -400,13 +414,13 @@ def stringify_community_map(model=None, community_map=None, node_type='c', with_
         # TODO: Add assert statement for list items (to check that they are Pyomo modeling components)
 
         # As of right now, there is no check to make sure all of the items in the lists are Pyomo modeling
-        # components; currently waiting on an elegant way to check this
+        # components
 
         # Current best idea is to have something like this for every list item in the community map:
         # assert isinstance(list_item,
         # (Var, Constraint, Objective, _GeneralVarData, _GeneralConstraintData, _GeneralObjectiveData))
 
-        # Only having Var, Constraint, Objective doesn't seem to catch indexed components or piecewise components
+        # (Only checking Var, Constraint, Objective doesn't seem to catch indexed components or piecewise components)
 
     # Convert the components in community_map to their strings
     for key in community_map:

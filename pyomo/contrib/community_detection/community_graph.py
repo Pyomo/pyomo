@@ -1,10 +1,12 @@
 """Model Graph Generator Code"""
-from pyomo.core.kernel.component_set import ComponentSet
+from logging import getLogger
+
+from itertools import combinations
 from pyomo.common.dependencies import networkx as nx
 from pyomo.core import Constraint, Objective, Var, ComponentMap, SortComponents
 from pyomo.core.expr.current import identify_variables
-from itertools import combinations
-import logging
+
+logger = getLogger('pyomo.contrib.community_detection')
 
 
 def _generate_model_graph(model, node_type, with_objective, weighted_graph):
@@ -57,11 +59,11 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
     # in the networkX graph)
     if with_objective:
         component_number_map = ComponentMap((component, number) for number, component in enumerate(
-            model.component_data_objects(ctype=(Constraint, Var, Objective), active=True,
+            model.component_data_objects(ctype=(Constraint, Var, Objective), active=True, descend_into=True,
                                          sort=SortComponents.deterministic)))
     else:
         component_number_map = ComponentMap((component, number) for number, component in enumerate(
-            model.component_data_objects(ctype=(Constraint, Var), active=True,
+            model.component_data_objects(ctype=(Constraint, Var), active=True, descend_into=True,
                                          sort=SortComponents.deterministic)))
 
     # Create the reverse of component_number_map, which will be used in detect_communities to convert the node numbers
@@ -200,18 +202,11 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
         collapsed_model_graph.add_edges_from(sorted(edge_weight_dict))
 
         # Iterate through the edges in edge_weight_dict and add them to collapsed_model_graph
-        seen_edges = set()
         for edge in edge_weight_dict:
-            node_one = edge[0]
-            node_two = edge[1]
-            if edge in seen_edges:
-                collapsed_model_graph[node_one][node_two]['weight'] += edge_weight_dict[edge]
-            else:
-                collapsed_model_graph[node_one][node_two]['weight'] = edge_weight_dict[edge]
-                seen_edges.add(edge)
+            node_one, node_two = edge[0], edge[1]
+            collapsed_model_graph[node_one][node_two]['weight'] = edge_weight_dict[edge]
 
         del edge_weight_dict
-        del seen_edges
 
     else:
         # Add edges to collapsed_model_graph
@@ -260,27 +255,25 @@ def _event_log(model, model_graph, constraint_set, node_type, with_objective):
     number_of_nodes, number_of_edges = model_graph.number_of_nodes(), model_graph.number_of_edges()
 
     # Log this information as info
-    logging.info("%s variables found in the model" % all_variables_count)
+    logger.info("%s variables found in the model" % all_variables_count)
 
-    logging.info("%s constraints found in the model" % all_constraints_count)
-    logging.info("%s active constraints found in the model" % active_constraints_count)
+    logger.info("%s constraints found in the model" % all_constraints_count)
+    logger.info("%s active constraints found in the model" % active_constraints_count)
 
-    logging.info("%s objective(s) found in the model" % all_objectives_count)
-    logging.info("%s active objective(s) found in the model" % active_objectives_count)
+    logger.info("%s objective(s) found in the model" % all_objectives_count)
+    logger.info("%s active objective(s) found in the model" % active_objectives_count)
 
-    logging.info("%s nodes found in the graph created from the model" % number_of_nodes)
-    logging.info("%s edges found in the graph created from the model" % number_of_edges)
+    logger.info("%s nodes found in the graph created from the model" % number_of_nodes)
+    logger.info("%s edges found in the graph created from the model" % number_of_edges)
 
     # Log information on connectivity and density
     if number_of_nodes > 0:
         if nx.is_connected(model_graph):
-            logging.info("The graph created from the model is connected.")
+            logger.info("The graph created from the model is connected.")
             graph_is_connected = True
         else:
-            logging.info("The graph created from the model is disconnected.")
+            logger.info("The graph created from the model is disconnected.")
             graph_is_connected = False
-
-        warning_density_value = 0.8
 
         if node_type == 'b':
             if graph_is_connected:
@@ -300,51 +293,45 @@ def _event_log(model, model_graph, constraint_set, node_type, with_objective):
             constraint_density = round(nx.bipartite.density(model_graph, constraint_nodes), 2)
             variable_density = round(nx.bipartite.density(model_graph, variable_nodes), 2)
 
-            if constraint_density > warning_density_value:
-                logging.info("The bipartite graph constructed from the model has a high density for constraint nodes - "
-                             "density = %s" % constraint_density)
+            if constraint_density == 1 or variable_density == 1:  # If the graph is complete, both will equal 1
+                logger.warning("The bipartite graph constructed from the model is complete (graph density equals 1)")
             else:
-                logging.info(
+                logger.info(
                     "For the bipartite graph constructed from the model, the density for constraint nodes is %s" %
                     constraint_density)
-
-            if variable_density > warning_density_value:
-                logging.info("The bipartite graph constructed from the model has a high density for variable nodes - "
-                             "density = %s" % constraint_density)
-            else:
-                logging.info(
+                logger.info(
                     "For the bipartite graph constructed from the model, the density for variable nodes is %s" %
                     variable_density)
 
         else:
             graph_density = round(nx.density(model_graph), 2)
 
-            if graph_density > warning_density_value:
-                logging.info("The graph constructed from the model has a high density - density = %s" % graph_density)
+            if graph_density == 1:
+                logger.warning("The graph constructed from the model is complete (graph density equals 1)")
             else:
-                logging.info("The graph constructed from the model has a density of %s" % graph_density)
+                logger.info("The graph constructed from the model has a density of %s" % graph_density)
 
     # Given one of the conditionals below, we will log this information as a warning
     if all_variables_count == 0:
-        logging.warning("No variables found in the model")
+        logger.warning("No variables found in the model")
 
     if all_constraints_count == 0:
-        logging.warning("No constraints found in the model")
+        logger.warning("No constraints found in the model")
     elif active_constraints_count == 0:
-        logging.warning("No active constraints found in the model")
+        logger.warning("No active constraints found in the model")
 
     if all_objectives_count == 0:
         if with_objective:
-            logging.warning("No objective(s) found in the model")
+            logger.warning("No objective(s) found in the model")
         else:
-            logging.info("No objective(s) found in the model")
+            logger.info("No objective(s) found in the model")
     elif active_objectives_count == 0:
         if with_objective:
-            logging.warning("No active objective(s) found in the model")
+            logger.warning("No active objective(s) found in the model")
         else:
-            logging.info("No active objective(s) found in the model")
+            logger.info("No active objective(s) found in the model")
 
     if number_of_nodes == 0:
-        logging.warning("No nodes were created for the graph (based on the model and the given parameters)")
+        logger.warning("No nodes were created for the graph (based on the model and the given parameters)")
     if number_of_edges == 0:
-        logging.warning("No edges were created for the graph (based on the model and the given parameters)")
+        logger.warning("No edges were created for the graph (based on the model and the given parameters)")
