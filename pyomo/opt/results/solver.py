@@ -216,3 +216,5 @@ class SolverInformation(MapContainer):
         self.declare('warm_start_objective_value', type=ScalarType.float)
         # Semantics: The total time spent processing the root node.
         self.declare('root_node_processing_time', type=ScalarType.time)
+        # Semantics: The total time spent processing the MIP search tree.
+        self.declare('tree_processing_time', type=ScalarType.time)

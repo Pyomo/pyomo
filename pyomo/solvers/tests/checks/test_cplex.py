@@ -459,24 +459,43 @@ MIP start 'm1' defined initial solution with objective 25210.5363.
         results = CPLEXSHELL.process_logfile(self.solver)
         self.assertEqual(results.solver.warm_start_objective_value, 25210.5363)
 
-    def test_log_file_shows_root_node_processing(self):
+    def test_log_file_shows_root_node_processing_time(self):
         log_file_text = """
 Presolve time = 0.14 sec. (181.11 ticks)
 
 Root node processing (before b&c):
   Real time             =    123.45 sec. (211.39 ticks)
 Parallel b&c, 16 threads:
-  Real time             =    0.00 sec. (0.00 ticks)
+  Real time             =    67.89 sec. (56.98 ticks)
   Sync time (average)   =    0.00 sec.
   Wait time (average)   =    0.00 sec.
                           ------------
-Total (root+branch&cut) =    0.18 sec. (211.39 ticks)
+Total (root+branch&cut) =    191.34 sec. (268.37 ticks)
  """
         with open(self.solver._log_file, "w") as f:
             f.write(log_file_text)
 
         results = CPLEXSHELL.process_logfile(self.solver)
         self.assertEqual(results.solver.root_node_processing_time, 123.45)
+
+    def test_log_file_shows_tree_processing_time(self):
+        log_file_text = """
+Presolve time = 0.14 sec. (181.11 ticks)
+
+Root node processing (before b&c):
+  Real time             =    123.45 sec. (211.39 ticks)
+Parallel b&c, 16 threads:
+  Real time             =    67.89 sec. (56.98 ticks)
+  Sync time (average)   =    0.00 sec.
+  Wait time (average)   =    0.00 sec.
+                          ------------
+Total (root+branch&cut) =    191.34 sec. (268.37 ticks)
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.tree_processing_time, 67.89)
 
 
 if __name__ == "__main__":

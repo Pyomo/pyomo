@@ -514,10 +514,16 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         # use regular expressions to use multi-line match patterns:
         root_node_processing_time = re.findall(
-            r'Root node processing \(before b&c\):\n\s+Real time\s+=\s+(\d+\.\d+) sec\.', output
+            r'Root node processing \(before b&c\):\n\s+Real time\s+=\s+(\d+\.\d+) sec', output
         )
         if root_node_processing_time:
             results.solver.root_node_processing_time = float(root_node_processing_time[0])
+
+        tree_processing_time = re.findall(
+            r'[Parallel, \d+ threads b&c|Sequential b&c]:\n\s+Real time\s+=\s+(\d+\.\d+) sec', output
+        )
+        if tree_processing_time:
+            results.solver.tree_processing_time = float(tree_processing_time[0])
 
         for line in output.split("\n"):
             tokens = re.split('[ \t]+',line.strip())
