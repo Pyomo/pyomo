@@ -497,6 +497,26 @@ Total (root+branch&cut) =    191.34 sec. (268.37 ticks)
         results = CPLEXSHELL.process_logfile(self.solver)
         self.assertEqual(results.solver.tree_processing_time, 67.89)
 
+    def test_log_file_shows_n_solutions_found_when_multiple(self):
+        log_file_text = """
+Solution pool: 15 solutions saved.
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.n_solutions_found, 15)
+
+    def test_log_file_shows_n_solutions_found_when_single(self):
+        log_file_text = """
+Solution pool: 1 solution saved.
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.n_solutions_found, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
