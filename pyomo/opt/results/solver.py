@@ -214,3 +214,5 @@ class SolverInformation(MapContainer):
         self.declare('termination_message')
         self.declare('statistics', value=SolverStatistics(), active=False)
         self.declare('warm_start_objective_value', type=ScalarType.float)
+        # Semantics: The total time spent processing the root node.
+        self.declare('root_node_processing_time', type=ScalarType.time)

@@ -512,6 +512,13 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self._best_bound = None
         self._gap = None
 
+        # use regular expressions to use multi-line match patterns:
+        root_node_processing_time = re.findall(
+            r'Root node processing \(before b&c\):\n\s+Real time\s+=\s+(\d+\.\d+) sec\.', output
+        )
+        if root_node_processing_time:
+            results.solver.root_node_processing_time = float(root_node_processing_time[0])
+
         for line in output.split("\n"):
             tokens = re.split('[ \t]+',line.strip())
             if len(tokens) > 3 and ("CPLEX", "Error") in {tuple(tokens[0:2]), tuple(tokens[1:3])}:
