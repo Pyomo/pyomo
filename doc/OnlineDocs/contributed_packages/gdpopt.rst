@@ -102,6 +102,7 @@ eventually activating all disjunctions and presenting the globally optimal solut
 To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
 
 .. doctest::
+  :skipif: not baron_available
 
   Required imports
   >>> from pyomo.environ import *

@@ -8,9 +8,6 @@ object, which has methods to add ``ParmestScen`` scenario objects to a
 ``ScenarioSet`` object, which can write them to a csv file or output them
 via an iterator method.
 
-Example
--------
-
 This example is in the semibatch subdirectory of the examples directory in
 the file ``scencreate.py``. It creates a csv file with scenarios that
 correspond one-to-one with the experiments used as input data. It also
@@ -23,12 +20,3 @@ scenarios to the screen, accessing them via the ``ScensItator`` a ``print``
 .. note::
    This example may produce an error message your version of Ipopt is not based
    on a good linear solver.
-
-	      
-API
----
-
-.. automodule:: pyomo.contrib.parmest.scenariocreator
-    :members:
-    :undoc-members:
-    :show-inheritance:
