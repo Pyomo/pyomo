@@ -26,7 +26,7 @@ from __future__ import division
 
 from six import iteritems
 
-from pyomo.core.expr.logical_expr import And
+from pyomo.core.expr.logical_expr import land
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
                            Objective, Param, RangeSet, Var, exp, minimize, BooleanVar, LogicalConstraint)
 from pyomo.gdp import Disjunction
@@ -113,7 +113,7 @@ def build_eight_process_flowsheet():
              m.flow[12] == 0,
              m.flow[14] == 0],
             # No unit 4 or 5 disjunct
-            [And(~m.use_unit[4], ~m.use_unit[5]),
+            [land(~m.use_unit[4], ~m.use_unit[5]),
              m.flow[15] == 0,
              m.flow[12] == 0,
              m.flow[14] == 0]
@@ -133,7 +133,7 @@ def build_eight_process_flowsheet():
              m.flow[19] == 0,
              m.flow[20] == 0],
             # No unit 6 or 7 disjunct
-            [And(~m.use_unit[6], ~m.use_unit[7]),
+            [land(~m.use_unit[6], ~m.use_unit[7]),
              m.flow[21] == 0,
              m.flow[22] == 0,
              m.flow[19] == 0,

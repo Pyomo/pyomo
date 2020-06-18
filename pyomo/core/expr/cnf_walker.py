@@ -10,8 +10,8 @@ from pyomo.core.expr.logical_expr import (
     NotExpression, BinaryBooleanExpression, NaryBooleanExpression,
     AndExpression, OrExpression, ImplicationExpression, EquivalenceExpression,
     XorExpression,
-    ExactlyExpression, AtMostExpression, AtLeastExpression, Not, Equivalent,
-    Or, Implies, And, Exactly, AtMost, AtLeast, Xor,
+    ExactlyExpression, AtMostExpression, AtLeastExpression, lnot, equivalent,
+    lor, implies, land, exactly, atmost, atleast, xor,
     special_boolean_atom_types)
 
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
@@ -21,11 +21,11 @@ sympy_available = True
 try:
     import sympy
     _operatorMap = {
-        sympy.Or: Or,
-        sympy.And: And,
-        sympy.Implies: Implies,
-        sympy.Equivalent: Equivalent,
-        sympy.Not: Not,
+        sympy.Or: lor,
+        sympy.And: land,
+        sympy.Implies: implies,
+        sympy.Equivalent: equivalent,
+        sympy.Not: lnot,
     }
 
     _pyomo_operator_map = {

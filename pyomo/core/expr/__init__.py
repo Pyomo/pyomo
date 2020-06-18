@@ -33,7 +33,7 @@ from .numeric_expr import linear_expression, nonlinear_expression
 from .logical_expr import inequality
 
 from .logical_expr import (
-    And, Or, Equivalent, Exactly, AtLeast, AtMost, Implies, Not, Xor
+    land, lor, equivalent, exactly, atleast, atmost, implies, lnot, xor
 )
 
 from .current import (

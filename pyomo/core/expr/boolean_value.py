@@ -156,25 +156,19 @@ class BooleanValue(object):
 
     def equivalent_to(self, other):
         """
-        Construct an EquivalenceExpression using method "equivalent_to"
+        Construct an EquivalenceExpression between this BooleanValue and its operand.
         """
         return _generate_logical_proposition(_equiv, self, other)
 
-    def and_(self, other):
+    def land(self, other):
         """
-        Construct an AndExpression using method "and_"
-
-        Trailing underscore avoids name conflict with keyword 'and'.
-
+        Construct an AndExpression (Logical And) between this BooleanValue and its operand.
         """
         return _generate_logical_proposition(_and, self, other)
 
-    def or_(self, other):
+    def lor(self, other):
         """
-        Construct an OrExpression using method "or_"
-
-        Trailing underscore avoids name conflict with keyword 'or'.
-
+        Construct an OrExpression (Logical OR) between this BooleanValue and its operand.
         """
         return _generate_logical_proposition(_or, self, other)
 

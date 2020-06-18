@@ -11,7 +11,7 @@
 
 from random import randint, seed
 
-from pyomo.core.expr.logical_expr import Or
+from pyomo.core.expr.logical_expr import lor
 from pyomo.environ import (
     ConcreteModel, Constraint, Set, RangeSet, Param,
     Objective, Var, NonNegativeReals, Block,
@@ -102,7 +102,7 @@ def build_model():
     # Long-term contract implies '0'-disjunct in following timesteps
     for t in range(2, m.T_max+1):
         m.logical_blocks[t].equiv = LogicalConstraint(
-            expr=m.Y[t, '0'].equivalent_to(Or(m.Y[t_, str(q)] for t_ in range(1, t) for q in range(t-t_, m.T_max-t_+1)))
+            expr=m.Y[t, '0'].equivalent_to(lor(m.Y[t_, str(q)] for t_ in range(1, t) for q in range(t - t_, m.T_max - t_ + 1)))
         )
 
     # Objective function

@@ -529,9 +529,9 @@ def _generate_logical_proposition(etype, lhs, rhs):
     elif etype == _impl:
         return ImplicationExpression((lhs, rhs))
     elif etype == _and:
-        return And(lhs, rhs)
+        return land(lhs, rhs)
     elif etype == _or:
-        return Or(lhs, rhs)
+        return lor(lhs, rhs)
     else:
         raise ValueError("Unknown logical proposition type '%s'" % etype)  # pragma: no cover
 
@@ -897,28 +897,28 @@ do the exact same thing as the class methods as well as overloaded operators.
 """
 
 
-def Not(Y):
+def lnot(Y):
     """
-    Construct a NotExpression using function"
+    Construct a NotExpression for the passed BooleanValue.
     """
     return NotExpression((Y,))
 
 
-def Equivalent(Y1, Y2):
+def equivalent(Y1, Y2):
     """
     Construct an EquivalenceExpression Y1 == Y2
     """
     return EquivalenceExpression((Y1, Y2))
 
 
-def Xor(Y1, Y2):
+def xor(Y1, Y2):
     """
     Construct an XorExpression Y1 xor Y2
     """
     return XorExpression((Y1, Y2))
 
 
-def Implies(Y1, Y2):
+def implies(Y1, Y2):
     """
     Construct an Implication using function, where Y1 implies Y2
     """
@@ -941,7 +941,7 @@ def _flattened(args):
                 yield arg
 
 
-def And(*args):
+def land(*args):
     """
     Construct an AndExpression between passed arguments.
     """
@@ -951,7 +951,7 @@ def And(*args):
     return result
 
 
-def Or(*args):
+def lor(*args):
     """
     Construct an OrExpression between passed arguments.
     """
@@ -961,7 +961,7 @@ def Or(*args):
     return result
 
 
-def Exactly(n, *args):
+def exactly(n, *args):
     """Creates a new ExactlyExpression
 
     Require exactly n arguments to be True, to make the expression True
@@ -973,7 +973,7 @@ def Exactly(n, *args):
     return result
 
 
-def AtMost(n, *args):
+def atmost(n, *args):
     """Creates a new AtMostExpression
 
     Require at most n arguments to be True, to make the expression True
@@ -985,12 +985,12 @@ def AtMost(n, *args):
     return result
 
 
-def AtLeast(n, *args):
+def atleast(n, *args):
     """Creates a new AtLeastExpression
 
     Require at least n arguments to be True, to make the expression True
 
-    Usage: AtLeast(2, m.Y1, m.Y2, m.Y3, ...)
+    Usage: atleast(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
     result = AtLeastExpression([n, ] + list(_flattened(args)))
@@ -1259,7 +1259,7 @@ class AtLeastExpression(NaryBooleanExpression):
     The first argument N is expected to be a numeric non-negative integer.
     Subsequent arguments are expected to be Boolean.
 
-    Usage: AtLeast(1, True, False, False) --> True
+    Usage: atleast(1, True, False, False) --> True
 
     """
     __slots__ = ()
@@ -1273,7 +1273,7 @@ class AtLeastExpression(NaryBooleanExpression):
         return AtLeastExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return "AtLeast(%s: [%s])" % (values[0], ", ".join(values[1:]))
+        return "atleast(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
     def _apply_operation(self, result):
         return sum(result[1:]) >= result[0]

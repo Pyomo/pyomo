@@ -26,7 +26,7 @@ class TestLogicalConstraintCreation(unittest.TestCase):
     def test_statement_in_Disjunct(self):
         model = self.create_model()
         model.disj = Disjunction(expr=[
-            [model.x.or_(model.y)], [model.y.or_(model.z)]
+            [model.x.lor(model.y)], [model.y.lor(model.z)]
         ])
         with self.assertRaisesRegex(GDP_Error, "Found untransformed logical constraint.*"):
             TransformationFactory('gdp.bigm').create_using(model)

@@ -174,7 +174,7 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
                 "Found '%s'.\n"
                 "Expecting a logical expression or Boolean value. Examples:"
                 "\n   (m.Y1 & m.Y2).implies(m.Y3)"
-                "\n   AtLeast(1, m.Y1, m.Y2)"
+                "\n   atleast(1, m.Y1, m.Y2)"
             )
             raise ValueError(msg)
 
