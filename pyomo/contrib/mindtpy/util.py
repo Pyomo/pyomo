@@ -92,17 +92,14 @@ def calc_jacobians(solve_data, config):
 def add_feas_slacks(m, config):
     MindtPy = m.MindtPy_utils
     # generate new constraints
-    if config.feasibility_norm in {'L1', 'L2'}:
-        for i, constr in enumerate(MindtPy.constraint_list, 1):
-            if constr.body.polynomial_degree() not in [0, 1]:
-                rhs = constr.upper if constr.has_ub() else constr.lower
+    for i, constr in enumerate(MindtPy.constraint_list, 1):
+        if constr.body.polynomial_degree() not in [0, 1]:
+            rhs = constr.upper if constr.has_ub() else constr.lower
+            if config.feasibility_norm in {'L1', 'L2'}:
                 c = MindtPy.MindtPy_feas.feas_constraints.add(
                     constr.body - rhs
                     <= MindtPy.MindtPy_feas.slack_var[i])
-    else:
-        for i, constr in enumerate(MindtPy.constraint_list, 1):
-            if constr.body.polynomial_degree() not in [0, 1]:
-                rhs = constr.upper if constr.has_ub() else constr.lower
+            else:
                 c = MindtPy.MindtPy_feas.feas_constraints.add(
                     constr.body - rhs
                     <= MindtPy.MindtPy_feas.slack_var)
