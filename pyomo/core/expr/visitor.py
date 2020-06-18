@@ -16,9 +16,6 @@ from collections import deque
 
 logger = logging.getLogger('pyomo.core')
 
-from pyutilib.misc.visitor import SimpleVisitor, ValueVisitor
-from pyutilib.math.util import isclose
-
 from .symbol_map import SymbolMap
 from . import expr_common as common
 from .expr_errors import TemplateExpressionError

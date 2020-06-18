@@ -12,12 +12,12 @@ import copy
 import itertools
 import logging
 import sys
-from six import iteritems, itervalues
+from six import itervalues
 from six.moves import builtins
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import (
-    NumericValue, native_numeric_types, native_types, nonpyomo_leaf_types,
+    NumericValue, native_types, nonpyomo_leaf_types,
     as_numeric, value,
 )
 from pyomo.core.expr.numeric_expr import ExpressionBase, SumExpression

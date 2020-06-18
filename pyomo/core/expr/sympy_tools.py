@@ -8,8 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iterkeys
-import pyutilib.misc
+from six import iterkeys
 from pyomo.core.expr import current
 from pyomo.common import DeveloperError
 from pyomo.common.dependencies import attempt_import

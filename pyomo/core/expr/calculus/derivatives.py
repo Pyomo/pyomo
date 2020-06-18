@@ -1,7 +1,16 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from .diff_with_sympy import differentiate as sympy_diff
 from .diff_with_pyomo import reverse_sd, reverse_ad
 from pyutilib.enum import Enum
-from pyomo.core.kernel.component_map import ComponentMap
 
 
 Modes = Enum('sympy', 'reverse_symbolic', 'reverse_numeric')

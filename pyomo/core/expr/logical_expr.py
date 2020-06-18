@@ -24,11 +24,7 @@ from .numvalue import (
      as_numeric,
 )
 from .expr_common import (
-    _add, _sub, _mul, _div,
-    _pow, _neg, _abs, _inplace,
-    _unary, _radd, _rsub, _rmul,
-    _rdiv, _rpow, _iadd, _isub,
-    _imul, _idiv, _ipow, _lt, _le,
+    _lt, _le,
     _eq,
 )
 from .numeric_expr import _LinearOperatorExpression, _process_arg

@@ -10,7 +10,7 @@
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
-import pyutilib.misc
+import logging
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types
@@ -26,6 +26,8 @@ if PY3:
     from collections.abc import Sequence as collections_Sequence
 else:
     from collections import Sequence as collections_Sequence
+    
+logger = logging.getLogger('pyomo.core')
 
 sequence_types = {tuple, list}
 def normalize_index(x):
