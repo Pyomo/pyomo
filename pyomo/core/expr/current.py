@@ -19,10 +19,6 @@ class Mode(object):
 _mode = Mode.pyomo5_trees
 
 #
-# Common intrinsic functions
-#
-from pyomo.core.expr import expr_common as common
-#
 # Pull symbols from the appropriate expression system
 #
 from pyomo.core.expr import numvalue as _numvalue

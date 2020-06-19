@@ -22,7 +22,6 @@ from pyomo.pysp.phsolverserverutils import \
     transmit_external_function_invocation_to_worker
 from pyomo.pysp.generators import \
     scenario_tree_node_variables_generator_noinstances
-# from pyomo.core.base import *
 
 import six
 from six import iteritems

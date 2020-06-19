@@ -31,7 +31,6 @@ from pyomo.core.expr.visitor import (
     identify_variables, identify_components, identify_mutable_parameters,
 )
 from pyomo.core.base.param import _ParamData, SimpleParam
-# from pyomo.core.base.label import *
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.common.log import LoggingIntercept
