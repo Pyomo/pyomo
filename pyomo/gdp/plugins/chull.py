@@ -10,7 +10,7 @@
 
 import logging
 
-import pyomo.common.config as cfg
+from pyomo.common.config import ConfigBlock, ConfigValue, In, PositiveFloat
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 from pyomo.core.kernel.component_map import ComponentMap
@@ -96,8 +96,8 @@ class ConvexHull_Transformation(Transformation):
     """
 
 
-    CONFIG = cfg.ConfigBlock('gdp.chull')
-    CONFIG.declare('targets', cfg.ConfigValue(
+    CONFIG = ConfigBlock('gdp.chull')
+    CONFIG.declare('targets', ConfigValue(
         default=None,
         domain=target_list,
         description="target or list of targets that will be relaxed",
@@ -109,9 +109,9 @@ class ConvexHull_Transformation(Transformation):
         the list of targets should be attached to the model before it is cloned,
         and the list will specify the targets on the cloned instance."""
     ))
-    CONFIG.declare('perspective function', cfg.ConfigValue(
+    CONFIG.declare('perspective function', ConfigValue(
         default='FurmanSawayaGrossmann',
-        domain=cfg.In(['FurmanSawayaGrossmann','LeeGrossmann','GrossmannLee']),
+        domain=In(['FurmanSawayaGrossmann','LeeGrossmann','GrossmannLee']),
         description='perspective function used for variable disaggregation',
         doc="""
         The perspective function used for variable disaggregation
@@ -156,12 +156,12 @@ class ConvexHull_Transformation(Transformation):
            (2016). http://www.optimization-online.org/DB_HTML/2016/07/5544.html.
         """
     ))
-    CONFIG.declare('EPS', cfg.ConfigValue(
+    CONFIG.declare('EPS', ConfigValue(
         default=1e-4,
-        domain=cfg.PositiveFloat,
+        domain=PositiveFloat,
         description="Epsilon value to use in perspective function",
     ))
-    CONFIG.declare('assume_fixed_vars_permanent', cfg.ConfigValue(
+    CONFIG.declare('assume_fixed_vars_permanent', ConfigValue(
         default=False,
         domain=bool,
         description="Boolean indicating whether or not to transform so that the "

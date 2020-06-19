@@ -62,11 +62,11 @@ class CuttingPlane_Transformation(Transformation):
             logger.warning("GDP(CuttingPlanes): unrecognized options:\n%s"
                         % ( '\n'.join(iterkeys(options)), ))
 
-        instance_rBigM, instance_rCHull, var_info, transBlockName \
+        instance_rBigM, instance_rHull, var_info, transBlockName \
             = self._setup_subproblems(instance, bigM)
 
         self._generate_cuttingplanes(
-            instance, instance_rBigM, instance_rCHull, var_info, transBlockName)
+            instance, instance_rBigM, instance_rHull, var_info, transBlockName)
 
 
     def _setup_subproblems(self, instance, bigM):
@@ -85,33 +85,25 @@ class CuttingPlane_Transformation(Transformation):
         # we'll store all the cuts we add together
         transBlock.cuts = Constraint(Any)
 
-        # get bigM and chull relaxations
+        # get bigM and hull relaxations
         bigMRelaxation = TransformationFactory('gdp.bigm')
-        chullRelaxation = TransformationFactory('gdp.chull')
+        hullRelaxation = TransformationFactory('gdp.hull')
         relaxIntegrality = TransformationFactory('core.relax_integrality')
 
-        # HACK: for the current writers, we need to also apply gdp.reclassify so
-        # that the indicator variables stay where they are in the big M model
-        # (since that is what we are eventually going to solve after we add our
-        # cuts).
-        reclassify = TransformationFactory('gdp.reclassify')
-
         #
-        # Generalte the CHull relaxation (used for the separation
+        # Generalte the Hull relaxation (used for the separation
         # problem to generate cutting planes
         #
-        instance_rCHull = chullRelaxation.create_using(instance)
+        instance_rHull = hullRelaxation.create_using(instance)
         # This relies on relaxIntegrality relaxing variables on deactivated
         # blocks, which should be fine.
-        reclassify.apply_to(instance_rCHull)
-        relaxIntegrality.apply_to(instance_rCHull)
+        relaxIntegrality.apply_to(instance_rHull)
 
         #
         # Reformulate the instance using the BigM relaxation (this will
         # be the final instance returned to the user)
         #
         bigMRelaxation.apply_to(instance, bigM=bigM)
-        reclassify.apply_to(instance)
 
         #
         # Generate the continuous relaxation of the BigM transformation
@@ -119,14 +111,14 @@ class CuttingPlane_Transformation(Transformation):
         instance_rBigM = relaxIntegrality.create_using(instance)
 
         #
-        # Add the xstar parameter for the CHull problem
+        # Add the xstar parameter for the Hull problem
         #
-        transBlock_rCHull = instance_rCHull.component(transBlockName)
+        transBlock_rHull = instance_rHull.component(transBlockName)
         #
         # this will hold the solution to rbigm each time we solve it. We
         # add it to the transformation block so that we don't have to
         # worry about name conflicts.
-        transBlock_rCHull.xstar = Param(
+        transBlock_rHull.xstar = Param(
             range(len(transBlock.all_vars)), mutable=True, default=None)
 
         transBlock_rBigM = instance_rBigM.component(transBlockName)
@@ -138,20 +130,20 @@ class CuttingPlane_Transformation(Transformation):
         var_info = tuple(
             (v,
              transBlock_rBigM.all_vars[i],
-             transBlock_rCHull.all_vars[i],
-             transBlock_rCHull.xstar[i])
+             transBlock_rHull.all_vars[i],
+             transBlock_rHull.xstar[i])
             for i,v in enumerate(transBlock.all_vars))
 
         #
-        # Add the separation objective to the chull subproblem
+        # Add the separation objective to the hull subproblem
         #
-        self._add_separation_objective(var_info, transBlock_rCHull)
+        self._add_separation_objective(var_info, transBlock_rHull)
 
-        return instance_rBigM, instance_rCHull, var_info, transBlockName
+        return instance_rBigM, instance_rHull, var_info, transBlockName
 
 
     def _generate_cuttingplanes(
-            self, instance, instance_rBigM, instance_rCHull,
+            self, instance, instance_rBigM, instance_rHull,
             var_info, transBlockName):
 
         opt = SolverFactory(SOLVER)
@@ -187,15 +179,15 @@ class CuttingPlane_Transformation(Transformation):
                            % (rBigM_objVal,))
 
             # copy over xstar
-            for x_bigm, x_rbigm, x_chull, x_star in var_info:
+            for x_bigm, x_rbigm, x_hull, x_star in var_info:
                 x_star.value = x_rbigm.value
                 # initialize the X values
-                x_chull.value = x_rbigm.value
+                x_hull.value = x_rbigm.value
 
             # solve separation problem to get xhat.
-            results = opt.solve(instance_rCHull, tee=stream_solvers)
+            results = opt.solve(instance_rHull, tee=stream_solvers)
             if verify_successful_solve(results) is not NORMAL:
-                logger.warning("GDP.cuttingplane: CHull separation subproblem "
+                logger.warning("GDP.cuttingplane: Hull separation subproblem "
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
@@ -224,16 +216,16 @@ class CuttingPlane_Transformation(Transformation):
         return transBlockName, transBlock
 
 
-    def _add_separation_objective(self, var_info, transBlock_rCHull):
+    def _add_separation_objective(self, var_info, transBlock_rHull):
         # Deactivate any/all other objectives
-        for o in transBlock_rCHull.model().component_data_objects(Objective):
+        for o in transBlock_rHull.model().component_data_objects(Objective):
             o.deactivate()
 
         obj_expr = 0
-        for x_bigm, x_rbigm, x_chull, x_star in var_info:
-            obj_expr += (x_chull - x_star)**2
+        for x_bigm, x_rbigm, x_hull, x_star in var_info:
+            obj_expr += (x_hull - x_star)**2
         # add separation objective to transformation block
-        transBlock_rCHull.separation_objective = Objective(expr=obj_expr)
+        transBlock_rHull.separation_objective = Objective(expr=obj_expr)
 
 
     def _add_cut(self, var_info, transBlock, transBlock_rBigM):
@@ -244,12 +236,12 @@ class CuttingPlane_Transformation(Transformation):
 
         cutexpr_bigm = 0
         cutexpr_rBigM = 0
-        for x_bigm, x_rbigm, x_chull, x_star in var_info:
-            # xhat = x_chull.value
+        for x_bigm, x_rbigm, x_hull, x_star in var_info:
+            # xhat = x_hull.value
             cutexpr_bigm += (
-                x_chull.value - x_star.value)*(x_bigm - x_chull.value)
+                x_hull.value - x_star.value)*(x_bigm - x_hull.value)
             cutexpr_rBigM += (
-                x_chull.value - x_star.value)*(x_rbigm - x_chull.value)
+                x_hull.value - x_star.value)*(x_rbigm - x_hull.value)
 
         transBlock.cuts.add(cut_number, cutexpr_bigm >= 0)
         transBlock_rBigM.cuts.add(cut_number, cutexpr_rBigM >= 0)

@@ -23,6 +23,7 @@ class LP_duals_maximize(_BaseTestModel):
     description = "LP_duals_maximize"
     level = ('nightly', 'expensive')
     capabilities = set(['linear'])
+    size = (13, 22, None)
 
     def __init__(self):
         _BaseTestModel.__init__(self)

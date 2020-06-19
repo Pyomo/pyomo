@@ -138,6 +138,7 @@ class PyomoSympyBimap(object):
 class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def __init__(self, object_map):
+        sympy.Add  # this ensures _configure_sympy gets run
         super(Pyomo2SympyVisitor, self).__init__()
         self.object_map = object_map
 
@@ -177,6 +178,7 @@ class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
 class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def __init__(self, object_map):
+        sympy.Add  # this ensures _configure_sympy gets run
         super(Sympy2PyomoVisitor, self).__init__()
         self.object_map = object_map
 

@@ -18,12 +18,26 @@ __all__ = ['OptProblem', 'RealOptProblem', 'MixedIntOptProblem', 'response_enum'
 import os
 import sys
 
-from pyutilib.enum import Enum
+import enum
 
 from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 from pyomo.opt.blackbox.point import MixedIntVars, RealVars
 
-response_enum = Enum("FunctionValue", "FunctionValues", "Gradient", "Hessian", "NonlinearConstraintValues", "Jacobian")
+class response_enum(str, enum.Enum):
+    FunctionValue='FunctionValue'
+    FunctionValues='FunctionValues'
+    Gradient='Gradient'
+    Hessian='Hessian'
+    NonlinearConstraintValues='NonlinearConstraintValues'
+    Jacobian='Jacobian'
+
+    # Overloading __str__ is needed to match the behavior of the old
+    # pyutilib.enum class (removed June 2020). There are spots in the
+    # code base that expect the string representation for items in the
+    # enum to not include the class name. New uses of enum shouldn't
+    # need to do this.
+    def __str__(self):
+        return self.value
 
 
 class OptProblem(object):

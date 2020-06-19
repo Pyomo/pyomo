@@ -8,10 +8,12 @@ if not (numpy_available and scipy_available):
     raise unittest.SkipTest('Interior point tests require numpy and scipy')
 from scipy.sparse import coo_matrix
 import pyomo.contrib.interior_point as ip
+if mumps_available:
+    from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
+from pyomo.contrib.interior_point.linalg.results import LinearSolverStatus
 
-
+@unittest.skipIf(not mumps_available, 'mumps is not available')
 class TestReallocation(unittest.TestCase):
-    @unittest.skipIf(not mumps_available, 'mumps is not available')
     def test_reallocate_memory_mumps(self):
 
         # Create a tri-diagonal matrix with small entries on the diagonal
@@ -34,13 +36,13 @@ class TestReallocation(unittest.TestCase):
 
         matrix = coo_matrix((ent, (irn, jcn)), shape=(n,n))
 
-        linear_solver = ip.linalg.MumpsInterface()
+        linear_solver = MumpsInterface()
         linear_solver.do_symbolic_factorization(matrix)
 
         predicted = linear_solver.get_infog(16)
 
         res = linear_solver.do_numeric_factorization(matrix, raise_on_error=False)
-        self.assertEqual(res.status, ip.linalg.LinearSolverStatus.not_enough_memory)
+        self.assertEqual(res.status, LinearSolverStatus.not_enough_memory)
 
         linear_solver.do_symbolic_factorization(matrix)
 
@@ -48,10 +50,10 @@ class TestReallocation(unittest.TestCase):
         linear_solver.increase_memory_allocation(factor)
 
         res = linear_solver.do_numeric_factorization(matrix)
-        self.assertEqual(res.status, ip.linalg.LinearSolverStatus.successful)
+        self.assertEqual(res.status, LinearSolverStatus.successful)
 
         # Expected memory allocation (MB)
-        self.assertEqual(linear_solver._prev_allocation, 6)
+        self.assertEqual(linear_solver._prev_allocation, 2*predicted)
 
         actual = linear_solver.get_infog(18)
 

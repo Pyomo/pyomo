@@ -47,7 +47,7 @@ In order to use the solvers currently available, one must convert the
 disjunctive model to a standard MIP/MINLP model.  The easiest way to
 do that is using the (included) BigM or Convex Hull transformations.
 From the Pyomo command line, include the option ``--transform pyomo.gdp.bigm``
-or ``--transform pyomo.gdp.chull``
+or ``--transform pyomo.gdp.hull``
 
 Notes
 -----
