@@ -78,7 +78,7 @@ def detect_communities(model, type_of_community_map='c', with_objective=True, we
     assert random_seed is None or (type(random_seed) == int and random_seed >= 0), \
         "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed
 
-    # Generate model_graph (a networkX graph based on the given Pyomo optimization model),
+    # Generate model_graph (a NetworkX graph based on the given Pyomo optimization model),
     # number_component_map (a dictionary to convert the communities into lists of Pyomo components
     # instead of number values), and constraint_variable_map (a dictionary that maps a constraint to the variables
     # it contains)
@@ -171,7 +171,7 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
     This function draws a graph of the communities for a Pyomo model.
 
     This function takes in a Pyomo model and its community map - if no community map is given, a community map is
-    created with the detect_communities function. A networkX graph of the model is created with the function
+    created with the detect_communities function. A NetworkX graph of the model is created with the function
     generate_model_graph, using the parameters specified by the user. The model and some of the given parameters
     (type_of_graph, with_objective) are used to create the nodes and edges for the model graph illustration. The
     community map is used to color the nodes according to their communities, and if no community map is given,
@@ -242,9 +242,9 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
         "Invalid value for type_of_community_map: 'type_of_community_map=%s' - Valid values: 'b', 'c', 'v'" \
         % type_of_community_map
 
-    # No assert statement for pos; the networkX function can handle issues with pos
+    # No assert statement for pos; the NetworkX function can handle issues with pos
 
-    # Use the generate_model_graph function to create a networkX graph of the given model (along with
+    # Use the generate_model_graph function to create a NetworkX graph of the given model (along with
     # number_component_map and constraint_variable_map, which will be used to help with drawing the graph)
     model_graph, number_component_map, constraint_variable_map = generate_model_graph(
         model, type_of_graph=type_of_graph, with_objective=with_objective, weighted_graph=False)
@@ -294,7 +294,7 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
                     "All of the list items in community_map should be Pyomo components that exist in the given model"
 
     # Now we will use the component_number_map to change the Pyomo modeling components in community_map into the
-    # numbers that correspond to their nodes/edges in the networkX graph, model_graph
+    # numbers that correspond to their nodes/edges in the NetworkX graph, model_graph
     for key in community_map:
         community_map[key] = ([component_number_map[component] for component in community_map[key][0]],
                               [component_number_map[component] for component in community_map[key][1]])
