@@ -218,5 +218,5 @@ class SolverInformation(MapContainer):
         self.declare('root_node_processing_time', type=ScalarType.time)
         # Semantics: The total time spent processing the MIP search tree.
         self.declare('tree_processing_time', type=ScalarType.time)
-        # Semantics: The total time spent processing the MIP search tree.
+        # Semantics: The number of feasible solutions found.
         self.declare('n_solutions_found', type=ScalarType.int)
