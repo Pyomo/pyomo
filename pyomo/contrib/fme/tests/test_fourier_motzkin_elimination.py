@@ -504,18 +504,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
              hull.get_disaggregated_var(m.p[1], m.off),
              hull.get_disaggregated_var(m.p[2], m.off)
          ])
-                                          
-        # from nose.tools import set_trace
-        # set_trace()
-        # disaggregatedVars = ComponentSet([relaxationBlocks[0].component("p[1]"),
-        #                                   relaxationBlocks[1].component("p[1]"),
-        #                                   relaxationBlocks[2].component("p[1]"),
-        #                                   relaxationBlocks[2].component("p[2]"),
-        #                                   relaxationBlocks[3].component("p[1]"),
-        #                                   relaxationBlocks[3].component("p[2]"),
-        #                                   relaxationBlocks[4].component("p[1]"),
-        #                                   relaxationBlocks[4].component("p[2]")])
-
+        
         return m, disaggregatedVars
 
     def test_project_disaggregated_vars(self):
@@ -534,15 +523,16 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # we of course get tremendous amounts of garbage, but we make sure that
         # what should be here is:
-        self.check_hull_projected_constraints(m, constraints, [22, 20, 58, 61,
-                                                                56, 38, 32, 1, 2,
+        self.check_hull_projected_constraints(m, constraints, [21, 16, 57, 59,
+                                                                55, 33, 27, 1, 2,
                                                                 4, 5])
         # and when we filter, it's still there.
         constraints = filtered._pyomo_contrib_fme_transformation.\
                       projected_constraints
+        constraints.pprint()
         self.check_hull_projected_constraints(filtered, constraints, [6, 5, 16,
                                                                        17, 15,
-                                                                       11, 8, 1,
+                                                                       9, 8, 1,
                                                                        2, 3, 4])
     
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
@@ -559,7 +549,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # They should be the same as the above, but now these are *all* the
         # constraints
         self.check_hull_projected_constraints(m, constraints, [6, 5, 16, 17,
-                                                                15, 11, 8, 1, 2,
+                                                                15, 9, 8, 1, 2,
                                                                 3, 4])
 
         # and check that we didn't change the model

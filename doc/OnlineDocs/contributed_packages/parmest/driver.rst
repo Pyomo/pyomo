@@ -1,6 +1,6 @@
 .. _driversection:
 
-Parameter Estimation using parmest
+Parameter Estimation 
 ==================================
 
 Parameter Estimation using parmest requires a Pyomo model, experimental
@@ -144,3 +144,4 @@ include `model` and `data` and the objective function returns a Pyomo
 expression which is used to define "SecondStageCost".  The objective
 function can be used to customize data points and weights that are used
 in parameter estimation.
+
