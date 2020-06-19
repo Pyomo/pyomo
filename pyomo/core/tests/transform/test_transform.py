@@ -25,8 +25,10 @@ from pyomo.environ import (AbstractModel, Set, RangeSet, Objective,
                            NonNegativeReals, NegativeReals, NegativeIntegers,
                            PositiveReals, PositiveIntegers, NonPositiveIntegers,
                            NonPositiveReals, TransformationFactory, SolverFactory,
-                           sum_product, NonNegativeTransformation)
+                           sum_product)
 from pyomo.core.plugins import StandardForm
+from pyomo.core.plugins.transform.nonnegative_transform import NonNegativeTransformation
+
 
 solvers = check_available_solvers('glpk')
 
