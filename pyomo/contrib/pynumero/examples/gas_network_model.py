@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.environ import ConcreteModel, Param, RangeSet, Set, Objective, Var, Constraint, PositiveReals, NonNegativeReals, Expression, log10, value, TransformationFactory
+from pyomo.environ import ConcreteModel, Param, RangeSet, Set, Objective, Var, Constraint, PositiveReals, Any, NonNegativeReals, Expression, log10, value, TransformationFactory
 import pyomo.dae as dae
 import numpy as np
 import networkx
@@ -31,14 +31,17 @@ def create_model(demand_factor=1.0):
         start_locations = dict(zip(ll, ls))
         return start_locations[l]
 
-    model.lstartloc =  Param(model.LINK, initialize=rule_startloc)
+    model.lstartloc = Param(model.LINK, initialize=rule_startloc, within=Any)
+
 
     def rule_endloc(m, l):
         ll = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12']
         ls = ['n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10', 'n11', 'n12', 'n13']
         end_locations = dict(zip(ll, ls))
         return end_locations[l]
-    model.lendloc =  Param(model.LINK, initialize=rule_endloc)
+    
+    model.lendloc = Param(model.LINK, initialize=rule_endloc, within=Any)
+
 
     model.ldiam =  Param(model.LINK, initialize=920.0, mutable=True)
 
@@ -46,13 +49,15 @@ def create_model(demand_factor=1.0):
         if l == 'l1' or l == 'l12':
             return 300.0
         return 100.0
+    
     model.llength =  Param(model.LINK, initialize=rule_llength, mutable=True)
 
     def rule_ltype(m, l):
         if l == 'l1' or l == 'l12':
             return 'p'
         return 'a'
-    model.ltype =  Param(model.LINK, initialize=rule_ltype)
+    
+    model.ltype = Param(model.LINK, initialize=rule_ltype, within=Any)
 
     def link_a_init_rule(m):
         return (l for l in m.LINK if m.ltype[l] == "a")
@@ -82,16 +87,16 @@ def create_model(demand_factor=1.0):
     model.pmax =  Param(model.NODE, initialize=rule_pmax, mutable=True)
 
     # supply
-    model.SUP =  Set(initialize=[1])
-    model.sloc =  Param(model.SUP, initialize='n1')
-    model.smin =  Param(model.SUP, within= NonNegativeReals, initialize=0.000, mutable=True)
-    model.smax =  Param(model.SUP, within= NonNegativeReals, initialize=30, mutable=True)
-    model.scost =  Param(model.SUP, within= NonNegativeReals)
+    model.SUP = Set(initialize=[1])
+    model.sloc = Param(model.SUP, initialize='n1', within=Any)
+    model.smin = Param(model.SUP, within=NonNegativeReals, initialize=0.000, mutable=True)
+    model.smax = Param(model.SUP, within=NonNegativeReals, initialize=30, mutable=True)
+    model.scost = Param(model.SUP, within=NonNegativeReals)
 
     # demand
-    model.DEM =  Set(initialize=[1])
-    model.dloc =  Param(model.DEM, initialize='n13')
-    model.d =  Param(model.DEM, within= PositiveReals, initialize=10, mutable=True)
+    model.DEM = Set(initialize=[1])
+    model.dloc = Param(model.DEM, initialize='n13', within=Any)
+    model.d = Param(model.DEM, within=PositiveReals, initialize=10, mutable=True)
 
     # physical data
 

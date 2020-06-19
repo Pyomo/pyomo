@@ -24,10 +24,10 @@ _init_url="$URL$"
 # should generally be left at 0, unless a downstream package is tracking
 # master and needs a hard reference to "suitably new" development.
 major=5
-minor=6
-micro=10
-releaselevel='invalid'
-#releaselevel='final'
+minor=7
+micro=0
+#releaselevel='invalid'
+releaselevel='final'
 serial=0
 
 if releaselevel == 'final':
