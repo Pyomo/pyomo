@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.contrib.pynumero.sparse import BlockSymMatrix
+from pyomo.contrib.pynumero.sparse import BlockMatrix
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import matplotlib.pylab as plt
 
@@ -77,9 +77,10 @@ plt.title('Hessian of the Lagrangian function\n')
 plt.show()
 
 # Build KKT matrix
-kkt = BlockSymMatrix(2)
-kkt[0, 0] = hess_lag
-kkt[1, 0] = jac_full
+kkt = BlockMatrix(2,2)
+kkt.set_block(0, 0, hess_lag)
+kkt.set_block(1, 0, jac_full)
+kkt.set_block(0, 1, jac_full.transpose())
 full_kkt = kkt.tocoo()
 plt.spy(full_kkt)
 plt.title('Karush-Kuhn-Tucker Matrix\n')
