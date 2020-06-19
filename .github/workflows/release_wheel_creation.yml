@@ -46,7 +46,7 @@ jobs:
   #       name: manylinux-wheels
   #       path: wheelhouse
   generictarball:
-    name: ${{ matrix.TARGET }}/wheel_creation
+    name: ${{ matrix.TARGET }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -54,7 +54,7 @@ jobs:
         os: [ubuntu-latest]
         include:
         - os: ubuntu-latest
-          TARGET: generictarball
+          TARGET: generic_tarball
         python-version: [3.7]
     steps:
     - uses: actions/checkout@v2
@@ -68,7 +68,7 @@ jobs:
         pip install twine wheel setuptools
     - name: Build generic tarball
       run: |
-        python setup.py  --with-cython sdist --format=gztar
+        python setup.py --without-cython sdist --format=gztar
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
