@@ -1,7 +1,3 @@
-__all__ = (
-    'BooleanValue', 'TrueConstant', 'FalseConstant',
-    'native_logical_values', 'BooleanConstant', 'as_boolean')
-
 import sys
 import logging
 from six import iteritems
@@ -9,6 +5,7 @@ from six import iteritems
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
+from pyomo.core.pyomoobject import PyomoObject
 
 logger = logging.getLogger('pyomo.core')
 native_logical_values = {True, False, 1, 0}
@@ -51,7 +48,7 @@ def as_boolean(obj):
         "type '%s'" % (str(obj), type(obj).__name__))
 
 
-class BooleanValue(object):
+class BooleanValue(PyomoObject):
     """
     This is the base class for Boolean values used in Pyomo.
     """
@@ -116,35 +113,11 @@ class BooleanValue(object):
         """Return True if this is a non-constant value that has been fixed"""
         return False
 
-    def is_parameter_type(self):
-        """Return False unless this class is a parameter object"""
-        return False
-
-    def is_variable_type(self):
-        """Return False unless this class is a variable object"""
-        return False
-
-    def is_potentially_variable(self):
-        """Return True if variables can appear in this expression"""
-        return True
-
-    def is_named_expression_type(self):
-        """Return True if this Logical value is a named expression"""
-        return False
-
-    def is_expression_type(self):
-        """Return True if this Logical value is an expression"""
-        return False
-
-    def is_component_type(self):
-        """Return True if this class is a Pyomo component"""
-        return False
-
     def is_relational(self):
         """
         Return True if this Logical value represents a relational expression.
         """
-        return True
+        return False
 
     def is_indexed(self):
         """Return True if this Logical value is an indexed object"""
@@ -153,6 +126,9 @@ class BooleanValue(object):
     def is_numeric_type(self):
         """Boolean values are not numeric."""
         return False
+
+    def is_boolean_type(self):
+        return True
 
     def equivalent_to(self, other):
         """
@@ -252,9 +228,7 @@ class BooleanConstant(BooleanValue):
         return str(self.value)
 
     def __nonzero__(self):
-        raise ValueError(
-            "Boolean constant cannot be compared to zero: '%s'"
-            % (self.name,))
+        return self.value
 
     def __bool__(self):
         return self.value
@@ -267,8 +241,3 @@ class BooleanConstant(BooleanValue):
         if ostream is None:         #pragma:nocover
             ostream = sys.stdout
         ostream.write(str(self))
-
-
-# We use as_boolean() so that the constant is also in the cache
-TrueConstant = as_boolean(True)
-FalseConstant = as_boolean(False)

@@ -244,6 +244,13 @@ class _DisjunctionData(ActiveComponentData):
                     if isvar and _tmpe.is_relational():
                         expressions.append(_tmpe)
                         continue
+                    try:
+                        isbool = _tmpe.is_boolean_type()
+                    except AttributeError:
+                        isbool = False
+                    if isbool:
+                        expressions.append(_tmpe)
+                        continue
                     msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
                     raise ValueError(
                         "Unexpected term for Disjunction %s.\n"

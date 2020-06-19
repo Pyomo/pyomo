@@ -1,9 +1,6 @@
 from six import itervalues, iteritems
 
 
-__all__ = ['BooleanVar', '_BooleanVarData', '_GeneralBooleanVarData', 'BooleanVarList', 'SimpleBooleanVar']
-
-
 import logging
 from weakref import ref as weakref_ref
 
@@ -43,9 +40,6 @@ class _BooleanVarData(ComponentData, BooleanValue):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
 
-    def is_binary(self):
-        return False
-
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
         return self.fixed
@@ -54,22 +48,13 @@ class _BooleanVarData(ComponentData, BooleanValue):
         """Returns False because this is not a constant in an expression."""
         return False
 
-    def is_parameter_type(self):
-        """Returns False because this is not a parameter object."""
-        return False
-
     def is_variable_type(self):
         """Returns True because this is a variable."""
         return True
 
-    def is_expression_type(self):
-        """Returns False because this is not an expression"""
-        return False
-
     def is_potentially_variable(self):
         """Returns True because this is a variable."""
         return True
-
 
     def set_value(self, val, valid=False):
         """
@@ -169,7 +154,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
     these attributes in certain cases.
     """
 
-    __slots__ = ('_value', '_domain', 'fixed', 'stale', '_associated_binary')
+    __slots__ = ('_value', 'fixed', 'stale', '_associated_binary')
 
     def __init__(self, component=None):
         #
@@ -181,7 +166,6 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._value = None
-        self._domain = BooleanSet
         self.fixed = False
         self.stale = True
 
@@ -232,7 +216,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
     @property
     def domain(self):
         """Return the domain for this variable."""
-        return self._domain
+        return BooleanSet
 
     def fix(self, *val):
         """
@@ -405,10 +389,6 @@ class BooleanVar(IndexedComponent):
 
     def _initialize_members(self, init_set):
         """Initialize variable data for all indices in a set."""
-        # Initialize domains
-        #
-        # self.domain = BooleanSet
-
         #
         # Initialize values
         #
@@ -465,6 +445,7 @@ class BooleanVar(IndexedComponent):
                                 ]
                  )
 
+
 class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
     
     """A single variable."""
@@ -512,22 +493,9 @@ class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
             "is currently nothing to set."
             % (self.name))
 
-
     @property
     def domain(self):
         return _GeneralBooleanVarData.domain.fget(self)
-
-    @domain.setter
-    def domain(self, domain):
-        """Set the domain for this variable."""
-        if self._constructed:
-            return _GeneralBooleanVarData.domain.fset(self, domain)
-        raise ValueError(
-            "Setting the domain of variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently nothing to set."
-            % (self.name))
-
 
     def fix(self, *val):
         """
@@ -554,6 +522,7 @@ class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
 
     free=unfix
 
+
 class IndexedBooleanVar(BooleanVar):
     """An array of variables."""
 
@@ -572,15 +541,7 @@ class IndexedBooleanVar(BooleanVar):
 
     @property
     def domain(self):
-        raise AttributeError(
-            "The domain is not an attribute for IndexedBooleanVar. It "
-            "can be set for all indices using this property setter, "
-            "but must be accessed for individual variables in this container.")
-    @domain.setter
-    def domain(self, domain):
-        """Sets the domain for all variables in this container."""
-        for boolean_vardata in itervalues(self):
-            boolean_vardata.domain = domain
+        return BooleanSet
 
     free=unfix
     

@@ -368,10 +368,10 @@ if _using_chained_inequality:
             # the same (implicit equality) - in which case *both* arguments
             # match, and this should be converted into an equality
             # expression.
-            for i,args in enumerate(_chainedInequality.cloned_from):
-                if args == cloned_from[0]:
+            for i,arg in enumerate(_chainedInequality.cloned_from):
+                if arg == cloned_from[0]:
                     match.append((i,0))
-                elif args == cloned_from[1]:
+                elif arg == cloned_from[1]:
                     match.append((i,1))
             if etype == _eq:
                 raise TypeError(_chainedInequality.error_message())
@@ -808,31 +808,13 @@ class BooleanExpressionBase(BooleanValue):
         Return :const:`True` if this expression might represent
         a variable expression.
 
-        This method returns :const:`True` when (a) the expression
-        tree contains one or more variables, or (b) the expression
-        tree contains a named expression. In both cases, the
-        expression cannot be treated as constant since (a) the variables
-        may not be fixed, or (b) the named expressions may be changed
-        at a later time to include non-fixed variables.
+        This method returns :const:`True` when the expression
+        tree contains one or more variables
 
         Returns:
             A boolean.  Defaults to :const:`True` for expressions.
         """
         return True
-
-    def is_named_expression_type(self):
-        """
-        Return :const:`True` if this object is a named expression.
-
-        This method returns :const:`False` for this class, and it
-        is included in other classes within Pyomo that are not named
-        expressions, which allows for a check for named expressions
-        without evaluating the class type.
-
-        Returns:
-            A boolean.
-        """
-        return False
 
     def is_expression_type(self):
         """
@@ -1122,10 +1104,11 @@ class NaryBooleanExpression(BooleanExpressionBase):
 
 def _add_to_and_or_expression(orig_expr, new_arg):
     """
-    TODO stub documentation
+    Since AND and OR are Nary expressions, we extend the existing expression
+    instead of creating a nested expression object if the types are compatible.
     """
     # Clone 'self', because AndExpression/OrExpression are immutable
-    if new_arg.__class__ == orig_expr.__class__:
+    if new_arg.__class__ is orig_expr.__class__:
         # adding new AndExpression/OrExpression on the right
         new_expr = orig_expr.__class__(orig_expr._args_)
         new_expr._args_.extend(islice(new_arg._args_, new_arg._nargs))

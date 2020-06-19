@@ -24,10 +24,7 @@ from .numvalue import (
     native_numeric_types, native_types, polynomial_degree,
 )
 
-from .boolean_value import (
-    BooleanValue, TrueConstant,
-    FalseConstant,
-)
+from .boolean_value import BooleanValue
 
 from .numeric_expr import linear_expression, nonlinear_expression
 from .logical_expr import inequality

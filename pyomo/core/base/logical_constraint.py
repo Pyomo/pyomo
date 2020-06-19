@@ -86,8 +86,8 @@ class _LogicalConstraintData(ActiveComponentData):
     # Abstract Interface
     #
     @property
-    def body(self):
-        """Access the body of a logical constraint."""
+    def expr(self):
+        """Get the expression on this logical constraint."""
         raise NotImplementedError
 
     def set_value(self, expr):
@@ -95,7 +95,7 @@ class _LogicalConstraintData(ActiveComponentData):
         raise NotImplementedError
 
     def get_value(self):
-        """Get the expression on this constraint."""
+        """Get the expression on this logical constraint."""
         raise NotImplementedError
 
 
@@ -110,14 +110,14 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
     Public class attributes:
         active          A boolean that is true if this logical constraint is
                             active in the model.
-        body            The Pyomo expression for this logical constraint
+        expr            The Pyomo expression for this logical constraint
 
     Private class attributes:
         _component      The logical constraint component.
         _active         A boolean that indicates whether this data is active
     """
 
-    __slots__ = ('_body',)
+    __slots__ = ('_expr',)
 
     def __init__(self, expr=None, component=None):
         #
@@ -130,7 +130,7 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
             else None
         self._active = True
 
-        self._body = None
+        self._expr = None
         if expr is not None:
             self.set_value(expr)
 
@@ -153,7 +153,7 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
     @property
     def body(self):
         """Access the body of a logical constraint expression."""
-        return self._body
+        return self._expr
 
     @property
     def expr(self):
@@ -164,7 +164,7 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
         """Set the expression on this logical constraint."""
 
         if expr is None:
-            self._body = BooleanConstant(True)
+            self._expr = BooleanConstant(True)
             return
 
         expr_type = type(expr)
@@ -178,11 +178,11 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
             )
             raise ValueError(msg)
 
-        self._body = as_boolean(expr)
+        self._expr = as_boolean(expr)
 
     def get_value(self):
         """Get the expression on this logical constraint."""
-        return self._body
+        return self._expr
 
 
 @ModelComponentFactory.register("General logical constraints.")

@@ -963,19 +963,10 @@ class _EvaluationVisitor(ExpressionValueVisitor):
 
         if node.is_numeric_type():
             return True, value(node)
+        elif node.is_boolean_type():
+            return True, value(node)
         else:
-            # Until there is a node.is_logical_type(),
-            # this is how we need to identify Boolean expression nodes
-            if isinstance(node, BooleanValue):
-                if node.is_variable_type():
-                    return True, value(node)
-                if not node.is_expression_type():
-                    # Capture BooleanConstant type
-                    return True, value(node)
-                # Boolean expressions should have been captured earlier.
-                return False, None
-            else:
-                return True, node
+            return True, node
 
 
 

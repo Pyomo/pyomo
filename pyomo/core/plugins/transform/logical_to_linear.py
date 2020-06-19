@@ -56,6 +56,7 @@ def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
                 boolean_var.value = False
             else:
                 raise ValueError("Binary variable has non-{0,1} value: %s = %s" % (binary_var.name, binary_var.value))
+            boolean_var.stale = binary_var.stale
 
 
 def _process_logical_constraints_in_logical_context(context):

@@ -12,7 +12,7 @@ Modeling in Pyomo.GDP
     from pyomo.environ import (
         ConcreteModel, RangeSet, BooleanVar, LogicalConstraint,
         TransformationFactory, atleast, SolverFactory, Objective,
-        Constraint, Var, And
+        Constraint, Var, land
     )
     from pyomo.gdp import Disjunct, Disjunction
     from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
@@ -111,7 +111,7 @@ Using these Boolean variables, we can define ``LogicalConstraint`` objects, anal
 
 .. doctest::
 
-    >>> m.p = LogicalConstraint(expr=m.Y[1].implies(And(m.Y[2], m.Y[3])).lor(m.Y[4]))
+    >>> m.p = LogicalConstraint(expr=m.Y[1].implies(land(m.Y[2], m.Y[3])).lor(m.Y[4]))
         >>> m.p.pprint()
         p : Size=1, Index=None, Active=True
             Key  : Body                          : Active
@@ -264,10 +264,10 @@ Here, we demonstrate this capability with a toy example:
     >>> m.Y.display()
     Y : Size=4, Index=s
         Key : Value : Fixed : Stale
-          1 :  True : False :  True
-          2 : False : False :  True
-          3 : False : False :  True
-          4 :  True : False :  True
+          1 :  True : False : False
+          2 : False : False : False
+          3 : False : False : False
+          4 :  True : False : False
 
 We elaborate on the ``logical_to_linear`` transformation and the ``update_boolean_vars_from_binary()`` function :ref:`on the next page <gdp-reformulations>`.
 

@@ -1,25 +1,18 @@
-import itertools
-
 from six import iterkeys
 
 from pyomo.common import DeveloperError
-from pyomo.core.expr.numvalue import native_types, value
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.expr.logical_expr import (
-    BooleanExpressionBase,
-    NotExpression, BinaryBooleanExpression, NaryBooleanExpression,
-    AndExpression, OrExpression, ImplicationExpression, EquivalenceExpression,
-    XorExpression,
-    ExactlyExpression, AtMostExpression, AtLeastExpression, lnot, equivalent,
-    lor, implies, land, exactly, atmost, atleast, xor,
-    special_boolean_atom_types)
-
+    AndExpression, EquivalenceExpression, equivalent, ImplicationExpression, implies, land, lnot, lor, NotExpression,
+    OrExpression, special_boolean_atom_types, XorExpression, )
+from pyomo.core.expr.numvalue import native_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
 
-sympy_available = True
-try:
-    import sympy
+from pyomo.common.dependencies import attempt_import
+
+sympy, _sympy_available = attempt_import('sympy')
+
+if _sympy_available:
     _operatorMap = {
         sympy.Or: lor,
         sympy.And: land,
@@ -36,11 +29,9 @@ try:
         XorExpression: sympy.Xor,
         NotExpression: sympy.Not,
     }
-except ImportError:
-    sympy_available = False
 
 
-class PyomoSympyLogicalBimap(object):
+class _PyomoSympyLogicalBimap(object):
     def __init__(self):
         self.pyomo2sympy = ComponentMap()
         self.sympy2pyomo = {}
@@ -65,10 +56,10 @@ class PyomoSympyLogicalBimap(object):
         return iterkeys(self.sympy2pyomo)
 
 
-class Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
+class _Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, object_map, bool_varlist):
-        super(Pyomo2SympyVisitor, self).__init__()
+        super(_Pyomo2SympyVisitor, self).__init__()
         self.object_map = object_map
         self.boolean_variable_list = bool_varlist
         self.special_atom_map = ComponentMap()
@@ -109,10 +100,10 @@ class Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
         return False, value(child)
 
 
-class Sympy2PyomoVisitor(StreamBasedExpressionVisitor):
+class _Sympy2PyomoVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, object_map):
-        super(Sympy2PyomoVisitor, self).__init__()
+        super(_Sympy2PyomoVisitor, self).__init__()
         self.object_map = object_map
 
     def enterNode(self, node):
@@ -171,9 +162,9 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
 
     # While performing conversion to sympy, substitute new boolean variables for
     # non-root special atoms.
-    pyomo_sympy_map = PyomoSympyLogicalBimap()
+    pyomo_sympy_map = _PyomoSympyLogicalBimap()
     bool_var_to_special_atoms = ComponentMap() if bool_var_to_special_atoms is None else bool_var_to_special_atoms
-    visitor = Pyomo2SympyVisitor(pyomo_sympy_map, bool_varlist)
+    visitor = _Pyomo2SympyVisitor(pyomo_sympy_map, bool_varlist)
     sympy_expr = visitor.walk_expression(expr)
 
     new_statements = []
@@ -185,7 +176,7 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
         new_statements.extend(atom_cnf[1:])
 
     cnf_form = sympy.to_cnf(sympy_expr)
-    return [sympy2pyomo_expression(cnf_form, pyomo_sympy_map)] + new_statements  # additional statements
+    return [_sympy2pyomo_expression(cnf_form, pyomo_sympy_map)] + new_statements  # additional statements
 
 
 def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_special_atoms):
@@ -220,8 +211,8 @@ def _convert_children_to_literals(special_atom, bool_varlist, bool_var_to_specia
         return [special_atom]
 
 
-def sympy2pyomo_expression(expr, object_map):
-    visitor = Sympy2PyomoVisitor(object_map)
+def _sympy2pyomo_expression(expr, object_map):
+    visitor = _Sympy2PyomoVisitor(object_map)
     is_expr, ans = visitor.beforeChild(None, expr, None)
     if not is_expr:
         return ans
