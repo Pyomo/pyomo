@@ -206,9 +206,9 @@ def copy_var_list_values(from_list, to_list, config,
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
             if ignore_integrality \
-                    and not v_to.is_continuous():
+                    and v_to.is_integer():  # not v_to.is_continuous()
                 v_to.value = value(v_from, exception=False)
-            elif not v_to.is_continuous() and (fabs(var_val - rounded_val) <= config.integer_tolerance):
+            elif v_to.is_integer() and (fabs(var_val - rounded_val) <= config.integer_tolerance):  # not v_to.is_continuous()
                 v_to.set_value(rounded_val)
             elif 'is not in domain NonNegativeReals' in err_msg and (
                     fabs(var_val) <= config.zero_tolerance):
