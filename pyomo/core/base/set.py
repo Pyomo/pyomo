@@ -16,7 +16,7 @@ import six
 import sys
 import weakref
 
-from six import iteritems, iterkeys
+from six import iteritems
 from six.moves import xrange
 
 from pyomo.common.deprecation import deprecated, deprecation_warning
@@ -27,8 +27,8 @@ from pyomo.core.expr.numvalue import (
 )
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.util import (
-    disable_methods, InitializerBase, Initializer, ConstantInitializer,
-    CountedCallInitializer, ItemInitializer, IndexedCallInitializer,
+    disable_methods, InitializerBase, Initializer, 
+    CountedCallInitializer, IndexedCallInitializer,
 )
 from pyomo.core.base.range import (
     NumericRange, NonNumericRange, AnyRange, RangeProduct,
