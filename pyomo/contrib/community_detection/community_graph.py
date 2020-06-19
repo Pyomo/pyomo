@@ -113,7 +113,8 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
 
             # Update edge_set based on the determined edges between nodes
             edge_set.update(edges_between_nodes)
-
+    # Add edges to bipartite_model_graph (the order in which edges are added can affect community detection, so
+    # sorting prevents any unpredictable changes)
     bipartite_model_graph.add_edges_from(sorted(edge_set))
 
     # Both variable and constraint nodes (bipartite graph); this is exactly the graph we made above
@@ -197,7 +198,8 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
     # respectively), the networkX graph (collapsed_model_graph) will be updated with all of the edges determined above
     if weighted_graph:
 
-        # Add edges to collapsed_model_graph
+        # Add edges to collapsed_model_graph (the order in which edges are added can affect community detection, so
+        # sorting prevents any unpredictable changes)
         collapsed_model_graph.add_edges_from(sorted(edge_weight_dict))
 
         # Iterate through the edges in edge_weight_dict and add them to collapsed_model_graph
@@ -206,7 +208,8 @@ def _generate_model_graph(model, node_type, with_objective, weighted_graph):
             collapsed_model_graph[node_one][node_two]['weight'] = edge_weight_dict[edge]
 
     else:
-        # Add edges to collapsed_model_graph
+        # Add edges to collapsed_model_graph (the order in which edges are added can affect community detection, so
+        # sorting prevents any unpredictable changes)
         collapsed_model_graph.add_edges_from(sorted(edge_set))
 
     # Log important information with the following logger function
