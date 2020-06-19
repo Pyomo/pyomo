@@ -135,7 +135,7 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         raise ValueError('Model has multiple active objectives.')
     else:
         main_obj = active_objectives[0]
-    solve_data.results.problem.sense = main_obj.sense
+    solve_data.results.problem.sense = ProblemSense.minimize if main_obj.sense == 1 else ProblemSense.maximize
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear
@@ -161,11 +161,9 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         if main_obj.sense == minimize:
             util_blk.objective_constr = Constraint(
                 expr=util_blk.objective_value >= main_obj.expr)
-            solve_data.results.problem.sense = ProblemSense.minimize
         else:
             util_blk.objective_constr = Constraint(
                 expr=util_blk.objective_value <= main_obj.expr)
-            solve_data.results.problem.sense = ProblemSense.maximize
         # Deactivate the original objective and add this new one.
         main_obj.deactivate()
         util_blk.objective = Objective(
