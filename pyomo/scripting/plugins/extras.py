@@ -11,6 +11,8 @@
 import six
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
+from pyomo.common.deprecation import deprecated
+
 def get_packages():
     packages = [
         'sympy', 
@@ -30,6 +32,10 @@ def get_packages():
         packages.append(('pyro','Pyro'))
     return packages
 
+@deprecated(
+        "Use of the pyomo install-extras is deprecated. There are known bugs, "
+        "and we do not recommend the use of this code. ",
+        version='TBD')
 def install_extras(args=[], quiet=False):
     #
     # Verify that pip is installed
