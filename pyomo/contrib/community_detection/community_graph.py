@@ -9,7 +9,7 @@ from pyomo.core.expr.current import identify_variables
 logger = getLogger('pyomo.contrib.community_detection')
 
 
-def _generate_model_graph(model, node_type, with_objective, weighted_graph):
+def _generate_model_graph(model, node_type, with_objective=True, weighted_graph=True):
     """
     Creates a networkX graph of nodes and edges based on a Pyomo optimization model
 
@@ -292,7 +292,7 @@ def _event_log(model, model_graph, constraint_set, node_type, with_objective):
             constraint_density = round(nx.bipartite.density(model_graph, constraint_nodes), 2)
             variable_density = round(nx.bipartite.density(model_graph, variable_nodes), 2)
 
-            if constraint_density == 1 or variable_density == 1:  # If the graph is complete, both will equal 1
+            if constraint_density == variable_density == 1.0:  # If the graph is complete, both will equal 1
                 logger.warning("The bipartite graph constructed from the model is complete (graph density equals 1)")
             else:
                 logger.info(
@@ -305,7 +305,7 @@ def _event_log(model, model_graph, constraint_set, node_type, with_objective):
         else:
             graph_density = round(nx.density(model_graph), 2)
 
-            if graph_density == 1:
+            if graph_density == 1.0:
                 logger.warning("The graph constructed from the model is complete (graph density equals 1)")
             else:
                 logger.info("The graph constructed from the model has a density of %s" % graph_density)

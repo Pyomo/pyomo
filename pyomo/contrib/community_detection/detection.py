@@ -1,7 +1,7 @@
 """
 Main module for community detection integration with Pyomo models.
 
-This module separates model variables or constraints into different communities
+This module separates model components (variables, constraints, and objectives) into different communities
 distinguished by the degree of connectivity between community members.
 
 Original implementation developed by Rahul Joglekar in the Grossmann research group.
@@ -24,13 +24,15 @@ community_louvain, community_louvain_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
 
+# TODO: Consider adding an argument that includes inactive constraints/objectives in the community map
+
 def detect_communities(model, node_type='c', with_objective=True, weighted_graph=True, random_seed=None):
     """
     Detects communities in a Pyomo optimization model
 
-    This function takes in a Pyomo optimization model, organizes the variables and constraints into a graph of nodes
-    and edges, and then by using Louvain community detection on the graph, a dictionary is ultimately created, mapping
-    the communities to the nodes in each community.
+    This function takes in a Pyomo optimization model and organizes the variables and constraints into a graph of nodes
+    and edges. Then by using Louvain community detection on the graph, a dictionary is created, mapping (arbitrary)
+    community keys to the nodes and edges in each community.
 
     Parameters
     ----------
@@ -155,15 +157,15 @@ def detect_communities(model, node_type='c', with_objective=True, weighted_graph
     return community_map
 
 
-def visualize_model_graph(model, community_map=None, node_type='c', with_objective=True, weighted_graph=True,
-                          random_seed=None, type_of_map='c'):
+def visualize_model_graph(model, community_map=None, type_of_graph='c', with_objective=True, weighted_graph=True,
+                          random_seed=None, type_of_community_map=None, pos=None):
     """
     This function draws a graph of the communities for a Pyomo model.
 
     This function takes in a Pyomo model and its community map - if no community map is given, a community map is
     created with the detect_communities function (which uses Louvain community detection). A networkX graph of
-    the model is created with the function _generate_model_graph(), using the parameters specified by the user.
-    This model graph and the given parameters (node_type, with_objective, weighted_graph) are used to create
+    the model is created with the function _generate_model_graph, using the parameters specified by the user.
+    The model and the given parameters (type_of_graph, with_objective, weighted_graph) are used to create
     the nodes and edges on the visualization of the model graph. The community map is used to color the nodes
     according to their communities, with preference being given to the first community a node is found
     in (this accounts for the possibility of a node being in more than one community).
@@ -176,24 +178,26 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
         a dictionary that maps an integer key (which corresponds to a community number) to a tuple of two lists.
         The first list should contain the constraints in the given community and the second list should contain the
         variables in the given community.
-    node_type: str, optional
+    type_of_graph: str, optional
         A string that specifies the types of nodes to be drawn, the default is 'c'.
         'c' draws a graph with constraint nodes,
         'v' draws a graph with variable nodes,
         'b' draws a graph with both constraint and variable nodes (bipartite graph).
     with_objective: bool, optional
         a Boolean argument that specifies whether or not the objective function will be
-        included as a node/constraint (depending on what node_type is specified as (see prior argument)), the default
+        included as a node/constraint (depending on what type_of_graph is specified as (see prior argument)), the default
         is True
     weighted_graph: bool, optional
         a Boolean argument that specifies whether a weighted or unweighted graph is to be created from the Pyomo
-        model; the default is True (node_type='b' creates an unweighted graph regardless of this parameter)
+        model; the default is True (type_of_graph='b' creates an unweighted graph regardless of this parameter)
     random_seed: int, optional
         An integer that is used as the random seed for the heuristic Louvain community detection (only used if no
         community_map is given)
-    type_of_map:
-        This is used as the node_type in the function detect_communities to create a community_map, which will be used
-        for coloring the graph and drawing the edges (default is 'c') (only used if community_map is None)
+    type_of_community_map:
+        This is used as the type_of_graph in the function detect_communities to create a community_map, which will be used
+        for coloring the graph and drawing the edges (default is node_type) (only used if community_map is None)
+    pos:
+        NetworkX Position for the plots
 
     Returns
     -------
@@ -205,8 +209,8 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
     assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
                                              "ConcreteModel" % model
 
-    assert node_type in ('b', 'c', 'v'), "Invalid node type specified: 'node_type=%s' - Valid " \
-                                         "values: 'b', 'c', 'v'" % node_type
+    assert type_of_graph in ('b', 'c', 'v'), "Invalid node type specified: 'type_of_graph=%s' - Valid " \
+                                             "values: 'b', 'c', 'v'" % type_of_graph
 
     assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
                                          "must be a Boolean" % with_objective
@@ -217,25 +221,30 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
     assert random_seed is None or type(random_seed) == int, "Invalid value for random_seed: 'random_seed=%s' - " \
                                                             "random_seed must be a non-negative integer" % random_seed
 
-    assert type_of_map in ('b', 'c', 'v'), "Invalid type of map specified: 'type_of_map=%s' - Valid " \
-                                           "values: 'b', 'c', 'v'" % type_of_map
+    assert type_of_community_map in ('b', 'c', 'v') or type_of_community_map is None, \
+        "Invalid type of map specified: 'type_of_community_map=%s' - Valid values: 'b', 'c', 'v'" % \
+        type_of_community_map
 
     # Use the _generate_model_graph function to create a networkX graph of the given model (along with
     # number_component_map and constraint_variable_map, which will be used to help with drawing the graph)
     model_graph, number_component_map, constraint_variable_map = _generate_model_graph(
-        model, node_type=node_type, with_objective=with_objective, weighted_graph=weighted_graph)
+        model, node_type=type_of_graph, with_objective=with_objective, weighted_graph=weighted_graph)
 
     # This line creates the "reverse" of the number_component_map returned by _generate_model_graph above,
     # since component_number_map is more convenient to use in this function
     component_number_map = ComponentMap((comp, number) for number, comp in number_component_map.items())
 
     if community_map is None:
-        # If no community map is given by the user, then a community map will be created using the given
-        # model and the detect_communities function
-
         user_provided_community_map = False  # Will be used for the graph title
 
-        community_map = detect_communities(model, node_type=type_of_map, with_objective=with_objective,
+        # The default value for type_of_community_map is type_of_graph (and type_of_community_map is only used
+        # when community_map is None)
+        if type_of_community_map is None:
+            type_of_community_map = type_of_graph
+
+        # If no community map is given by the user, then a community map will be created using the given
+        # model and the detect_communities function
+        community_map = detect_communities(model, node_type=type_of_community_map, with_objective=with_objective,
                                            weighted_graph=weighted_graph, random_seed=random_seed)
 
     else:  # This is the case where the user has provided their own community_map
@@ -261,10 +270,10 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
         community_map[key] = ([component_number_map[component] for component in community_map[key][0]],
                               [component_number_map[component] for component in community_map[key][1]])
 
-    # Based on node_type, which specifies what Pyomo modeling components are to be drawn as nodes in the graph
+    # Based on type_of_graph, which specifies what Pyomo modeling components are to be drawn as nodes in the graph
     # drawing, we will now get the node list and the color list, which describes how to color nodes
     # according to their communities (which is based on community_map)
-    if node_type == 'b':
+    if type_of_graph == 'b':
         list_of_node_lists = [list_of_nodes for list_tuple in community_map.values() for list_of_nodes in
                               list_tuple]
 
@@ -290,13 +299,14 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
             top_nodes = nx.bipartite.sets(model_graph)[1]
         else:
             top_nodes = {node for node in model_graph.nodes() if node in constraint_variable_map}
-        pos = nx.bipartite_layout(model_graph, top_nodes)
+        if pos is None:
+            pos = nx.bipartite_layout(model_graph, top_nodes)
 
     else:
-        # This is in the case that node_type is 'c' or 'v'
+        # This is in the case that type_of_graph is 'c' or 'v'
 
         # Constraints should be in the first list in the tuple and variables should be in the second list
-        position = 0 if node_type == 'c' else 1
+        position = 0 if type_of_graph == 'c' else 1
         list_of_node_lists = list(i[position] for i in community_map.values())
 
         # list_of_node_lists is a list of lists, so we will use the one-list comprehension below to flatten
@@ -314,7 +324,8 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
                     not_found = False
 
         # Note - there is no strong reason to choose spring layout; it just creates relatively clean graphs
-        pos = nx.spring_layout(model_graph)
+        if pos is None:
+            pos = nx.spring_layout(model_graph)
 
     # Define color_map
     color_map = cm.get_cmap('viridis', len(community_map))
@@ -324,24 +335,23 @@ def visualize_model_graph(model, community_map=None, node_type='c', with_objecti
 
     # Make the title
     node_name_map = {'b': 'Bipartite', 'c': 'Constraint', 'v': 'Variable'}
-    community_map_type = node_name_map[type_of_map]
-    graph_type = node_name_map[node_type]
+    community_map_type = node_name_map[type_of_community_map]
+    graph_type = node_name_map[type_of_graph]
     if user_provided_community_map:
         plot_title = "%s graph - colored using user-provided community map" % graph_type
     else:
         plot_title = "%s graph - colored using %s community map" % (graph_type, community_map_type)
     plt.title(plot_title)
 
-    # Display the graph
-    plt.show()
+    return plt, pos
 
 
 def stringify_community_map(model=None, community_map=None, node_type='c', with_objective=True, weighted_graph=True,
                             random_seed=None):
     """
-    This function takes in a community map of Pyomo components and returns the same community map with the strings
-    of the Pyomo components or takes in a model and returns a community map (based on Louvain community detection)
-    with the strings of Pyomo components
+    This function takes in a community map of Pyomo components and returns the same community map but with the strings
+    of the Pyomo components. Alternatively, this function can take in a model and return a community map
+    (based on Louvain community detection from the function detect_communities) with the strings of Pyomo components.
 
     Parameters
     ----------
@@ -410,17 +420,6 @@ def stringify_community_map(model=None, community_map=None, node_type='c', with_
             assert len(community_map_value) == 2 and type(community_map_value) == tuple and \
                    type(community_map_value[0]) == list and type(community_map_value[1]) == list, \
                 "The values of community_map should all be tuples containing two lists"
-
-        # TODO: Add assert statement for list items (to check that they are Pyomo modeling components)
-
-        # As of right now, there is no check to make sure all of the items in the lists are Pyomo modeling
-        # components
-
-        # Current best idea is to have something like this for every list item in the community map:
-        # assert isinstance(list_item,
-        # (Var, Constraint, Objective, _GeneralVarData, _GeneralConstraintData, _GeneralObjectiveData))
-
-        # (Only checking Var, Constraint, Objective doesn't seem to catch indexed components or piecewise components)
 
     # Convert the components in community_map to their strings
     for key in community_map:
