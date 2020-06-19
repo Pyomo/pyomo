@@ -12,7 +12,6 @@ import logging
 
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
-     _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.dict_container import DictContainer
 from pyomo.core.kernel.container_utils import \

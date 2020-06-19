@@ -8,17 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.core.expr
 from pyomo.core.expr.numvalue import (is_numeric_data,
                                       NumericValue)
 from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _abstract_readwrite_property,
-     _abstract_readonly_property)
+    (ICategorizedObject)
 from pyomo.core.kernel.container_utils import \
     define_simple_containers
-
-import six
 
 class IParameter(ICategorizedObject, NumericValue):
     """The interface for mutable numeric data."""
