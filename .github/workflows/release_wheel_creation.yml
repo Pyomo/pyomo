@@ -69,6 +69,7 @@ jobs:
     - name: Build generic tarball
       run: |
         python setup.py --without-cython sdist --format=gztar
+        ls dist/
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
