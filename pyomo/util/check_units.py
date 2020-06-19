@@ -18,11 +18,13 @@ from pyomo.core.base import (Objective, Constraint, Var, Param,
                              Suffix, Set, RangeSet, Block,
                              ExternalFunction, Expression,
                              value)
-from pyomo.dae import ContinuousSet
+from pyomo.dae import ContinuousSet, DerivativeVar
+from pyomo.network import Port, Arc
 from pyomo.mpec import Complementarity
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.numvalue import native_types
+from pyomo.util.components import iter_component
 
 def check_units_equivalent(*args):
     """
@@ -96,6 +98,30 @@ def _assert_units_consistent_constraint_data(condata):
     else:
         assert_units_equivalent(*args)
 
+def _assert_units_consistent_arc_data(arcdata):
+    """
+    Raise an exception if the any units do not match for the connected ports
+    """
+    sport = arcdata.source
+    dport = arcdata.destination
+    if sport is None or dport is None:
+        # nothing to check
+        return
+
+    # both sport and dport are not None
+    # iterate over the vars in one and check against the other
+    for key in sport.vars:
+        svar = sport.vars[key]
+        dvar = dport.vars[key]
+
+        if svar.is_indexed():
+            for k in svar:
+                svardata = svar[k]
+                dvardata = dvar[k]
+                assert_units_equivalent(svardata, dvardata)
+        else:
+            assert_units_equivalent(svar, dvar)
+
 def _assert_units_consistent_property_expr(obj):
     """
     Check the .expr property of the object and raise
@@ -133,13 +159,16 @@ def _assert_units_consistent_block(obj):
     and checks if the units are consistent on each of them
     """
     # check all the component objects
-    for component in obj.component_objects(descend_into=True):
+    for component in obj.component_objects(descend_into=True, active=True):
         assert_units_consistent(component)
 
 _component_data_handlers = {
     Objective: _assert_units_consistent_property_expr,
     Constraint:  _assert_units_consistent_constraint_data,
     Var: _assert_units_consistent_expression,
+    DerivativeVar: _assert_units_consistent_expression,
+    Port: None,
+    Arc: _assert_units_consistent_arc_data,
     Expression: _assert_units_consistent_property_expr,
     Suffix: None,
     Param: _assert_units_consistent_expression,

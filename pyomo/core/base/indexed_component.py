@@ -666,6 +666,37 @@ value() function.""" % ( self.name, i ))
                 fixed[i - len(idx)] = val
 
         if sliced or ellipsis is not None:
+            slice_dim = len(idx)
+            if ellipsis is not None:
+                slice_dim -= 1
+            if normalize_index.flatten:
+                set_dim = self.dim()
+            elif self._implicit_subsets is None:
+                # Scalar component.
+                set_dim = 0
+            else:
+                set_dim = len(self._implicit_subsets)
+
+            structurally_valid = False
+            if slice_dim == set_dim or set_dim is None:
+                structurally_valid = True
+            elif ellipsis is not None and slice_dim < set_dim:
+                structurally_valid = True
+            elif set_dim == 0 and idx == (slice(None),):
+                # If dim == 0 and idx is slice(None), the component was
+                # a scalar passed a single slice. Since scalar components
+                # can be accessed with a "1-dimensional" index of None,
+                # this behavior is allowed.
+                #
+                # Note that x[...] is caught above, as slice_dim will be
+                # 0 in that case
+                structurally_valid = True
+
+            if not structurally_valid:
+                raise IndexError(
+                    "Index %s contains an invalid number of entries for "
+                    "component %s. Expected %s, got %s." 
+                    % (idx, self.name, set_dim, slice_dim))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:
             if len(idx) == 1:

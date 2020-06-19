@@ -447,16 +447,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         # 2 blocks: the original Disjunct and the transformation block
         self.assertEqual(
-            len(list(m.component_objects(Block, descend_into=False))), 2)
+            len(list(m.component_objects(Block, descend_into=False))), 1)
         self.assertEqual(
-            len(list(m.component_objects(Disjunct))), 0)
+            len(list(m.component_objects(Disjunct))), 1)
 
-        # Each relaxed disjunct should have 0 vars, and i "d[i].c"
-        # Constraints
+        # Each relaxed disjunct should have 1 var (the reference to the
+        # indicator var), and i "d[i].c" Constraints
         for i in [1,2,3]:
             relaxed = transBlock.relaxedDisjuncts[i-1]
-            self.assertEqual(len(list(relaxed.component_objects(Var))), 0)
-            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 0)
+            self.assertEqual(len(list(relaxed.component_objects(Var))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 1)
             self.assertEqual(
                 len(list(relaxed.component_objects(Constraint))), 1)
             self.assertEqual(
@@ -480,16 +480,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         # 2 blocks: the original Disjunct and the transformation block
         self.assertEqual(
-            len(list(m.component_objects(Block, descend_into=False))), 2)
+            len(list(m.component_objects(Block, descend_into=False))), 1)
         self.assertEqual(
-            len(list(m.component_objects(Disjunct))), 0)
+            len(list(m.component_objects(Disjunct))), 1)
 
-        # Each relaxed disjunct should have 0 vars, and i "d[i].c"
-        # Constraints
+        # Each relaxed disjunct should have 1 var (the reference to the
+        # indicator var), and i "d[i].c" Constraints
         for i in [1,2,3]:
             relaxed = transBlock.relaxedDisjuncts[i-1]
-            self.assertEqual(len(list(relaxed.component_objects(Var))), 0)
-            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 0)
+            self.assertEqual(len(list(relaxed.component_objects(Var))), 1)
+            self.assertEqual(len(list(relaxed.component_data_objects(Var))), 1)
             self.assertEqual(
                 len(list(relaxed.component_objects(Constraint))), 1)
             self.assertEqual(
@@ -1729,8 +1729,8 @@ class BlocksOnDisjuncts(unittest.TestCase):
 
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
-        self.assertEqual(len(disjBlock[0].component_map()), 1)
-        self.assertEqual(len(disjBlock[1].component_map()), 4)
+        self.assertEqual(len(disjBlock[0].component_map()), 2)
+        self.assertEqual(len(disjBlock[1].component_map()), 5)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
@@ -1740,6 +1740,10 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertIsInstance(
             disjBlock[1].component("evil[1].b.anotherblock.c"),
                                                      Constraint)
+        self.assertIsInstance(disjBlock[0].component("localVarReferences"),
+                              Block)
+        self.assertIsInstance(disjBlock[1].component("localVarReferences"),
+                              Block)
 
     def test_do_not_transform_deactivated_constraint(self):
         m = models.makeTwoTermDisj_BlockOnDisj()
@@ -1752,14 +1756,18 @@ class BlocksOnDisjuncts(unittest.TestCase):
 
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
-        self.assertEqual(len(disjBlock[0].component_map()), 1)
-        self.assertEqual(len(disjBlock[1].component_map()), 3)
+        self.assertEqual(len(disjBlock[0].component_map()), 2)
+        self.assertEqual(len(disjBlock[1].component_map()), 4)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
                               Constraint)
         self.assertIsInstance(
             disjBlock[1].component("evil[1].b.c_4"), Constraint)
+        self.assertIsInstance(disjBlock[0].component("localVarReferences"),
+                              Block)
+        self.assertIsInstance(disjBlock[1].component("localVarReferences"),
+                              Block)
 
     def test_do_not_transform_deactivated_block(self):
         m = models.makeTwoTermDisj_BlockOnDisj()
@@ -1772,14 +1780,18 @@ class BlocksOnDisjuncts(unittest.TestCase):
 
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
-        self.assertEqual(len(disjBlock[0].component_map()), 1)
-        self.assertEqual(len(disjBlock[1].component_map()), 3)
+        self.assertEqual(len(disjBlock[0].component_map()), 2)
+        self.assertEqual(len(disjBlock[1].component_map()), 4)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
                               Constraint)
         self.assertIsInstance(
             disjBlock[1].component("evil[1].b.c_4"), Constraint)
+        self.assertIsInstance(disjBlock[0].component("localVarReferences"),
+                              Block)
+        self.assertIsInstance(disjBlock[1].component("localVarReferences"),
+                              Block)
 
     def test_pick_up_bigm_suffix_on_block(self):
         m = models.makeTwoTermDisj_BlockOnDisj()
