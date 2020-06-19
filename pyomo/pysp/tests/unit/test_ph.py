@@ -47,6 +47,7 @@ import pyomo.opt
 import pyomo.pysp
 import pyomo.pysp.phinit
 import pyomo.pysp.ef_writer_script
+import pyomo.environ
 
 _diff_tolerance = 1e-5
 _diff_tolerance_relaxed = 1e-3
