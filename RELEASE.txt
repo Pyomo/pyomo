@@ -1,20 +1,13 @@
-We are pleased to announce the release of Pyomo 5.6.9. Pyomo is a collection
+We are pleased to announce the release of Pyomo 5.7.0. Pyomo is a collection
 of Python software packages that supports a diverse set of optimization
 capabilities for formulating and analyzing optimization models.
 
 
-The following are highlights of the 5.6 release series:
+The following are highlights of the 5.7 release series:
 
- - New expression system enables robust support for pypy
- - Significant reduction in the time to import pyomo.environ
- - Dropped support for Python 2.6
- - New contributed packages: preprocessing, parmest, pynumero,
-   sensitivity_toolbox, petsc interface, mindtpy, fbbt, gdpbb,
-   satsolver (Z3), derivatives, viewer
- - New direct interface to Mosek
- - New modeling components: Reference, Port, Arc
- - Overhaul of the documentation and move to pyomo.readthedocs.org
- - Deprecated pyomo.bilevel and pyomo.duality
+ - Standardizing component initialization
+ - Distribution of Cythonized wheels
+ - Reimplementation of the core Set component
  - Numerous bug fixes
 
 A full list of updates and changes is available in the CHANGELOG.txt
