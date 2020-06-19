@@ -8,8 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import (Var, Block, Constraint, Param, Set, Suffix, Expression,
-                        Objective, SortComponents, value, ConstraintList)
+from pyomo.core import (Var, Block, Constraint, Param, Set, SetOf, Suffix,
+                        Expression, Objective, SortComponents, value,
+                        ConstraintList)
 from pyomo.core.base import TransformationFactory, _VarData
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
@@ -137,8 +138,8 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         # collect all of the constraints
         # NOTE that we are ignoring deactivated constraints
         constraints = []
-        ctypes_not_to_transform = set((Block, Param, Objective, Set, Expression,
-                                       Suffix))
+        ctypes_not_to_transform = set((Block, Param, Objective, Set, SetOf,
+                                       Expression, Suffix))
         for obj in instance.component_data_objects(
                 descend_into=Block,
                 sort=SortComponents.deterministic,
@@ -441,7 +442,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             obj = Objective(expr=constraints[i].body - constraints[i].lower)
             m.add_component(obj_name, obj)
             results = solver_factory.solve(m)
-            print(results.solver.termination_condition)
             if results.solver.termination_condition == \
                TerminationCondition.unbounded:
                 obj_val = -float('inf')

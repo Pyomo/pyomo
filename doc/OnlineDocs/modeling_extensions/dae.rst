@@ -460,6 +460,7 @@ method. The code also shows how to add a constraint to a discretized model.
     >>> model.dx1 = DerivativeVar(model.x1)
 
 .. doctest::
+    :skipif: not ipopt_available
 
     Discretize model using Backward Difference method
     >>> discretizer = TransformationFactory('dae.finite_difference')
@@ -528,6 +529,7 @@ function to a discretized model.
     >>> model.x_ref = Param(initialize=5)
 
 .. doctest::
+    :skipif: not ipopt_available
 
     Discretize model using Radau Collocation
     >>> discretizer = TransformationFactory('dae.collocation')

@@ -45,3 +45,21 @@ if __name__=='__main__':
     m_sipopt = sipopt(m,[m.eta1,m.eta2],
                         [m.perturbed_eta1,m.perturbed_eta2],
                         streamSoln=True)
+    
+    print("\nOriginal parameter values:")
+    print("\teta1 =",m.eta1())
+    print("\teta2 =",m.eta2())
+    
+    print("Solution with the original parameter values:")
+    print("\tx1 =",m.x1())
+    print("\tx2 =",m.x2())
+    print("\tx3 =",m.x3())
+    
+    print("\nNew parameter values:")
+    print("\teta1 =",m_sipopt.perturbed_eta1())
+    print("\teta2 =",m_sipopt.perturbed_eta2())
+    
+    print("(Approximate) solution with the new parameter values:")
+    print("\tx1 =",m_sipopt.x1())
+    print("\tx2 =",m_sipopt.x2())
+    print("\tx3 =",m_sipopt.x3())
