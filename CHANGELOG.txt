@@ -20,6 +20,7 @@ Pyomo 5.7.0   18 Jun 2020
   - Prevent exception for transformations missing doc string (#1454)
   - Automate wheel creation using GitHub actions (#1409)
   - Replace uses of pyutilib.enum package (#1506)
+  - Force DAT tabmodule regeneration if source is newer (#1516)
 - Core
   - Units support for Pyomo components and models (#1341, #1460, #1494, #1504)
   - Integrate new Set rewrite into Pyomo (#1319)
@@ -78,7 +79,8 @@ Pyomo 5.7.0   18 Jun 2020
 - Contributed Packages
   - PyNumero updates, add CyIpopt interface, enable build through 
     build-extensions, add HSL interface, package reorganization, add operations 
-    for block vectors/matrices (#1356, #1412, #1381, #1419, #1439, #1467)
+    for block vectors/matrices, fix broken examples (#1356, #1412, #1381, #1419, 
+    #1439, #1467, #1518)
   - Add Fourier-Motzkin elimination transformation (#1370, #1440)
   - GDPOpt updates, fix use of numeric derivatives, preserve implicit config 
     options (#1422, #1432,)
