@@ -26,7 +26,7 @@ from pyomo.environ import (AbstractModel, Set, RangeSet, Objective,
                            PositiveReals, PositiveIntegers, NonPositiveIntegers,
                            NonPositiveReals, TransformationFactory, SolverFactory,
                            sum_product)
-from pyomo.core.plugins import StandardForm
+from pyomo.core.plugins.transform.standard_form import StandardForm
 from pyomo.core.plugins.transform.nonnegative_transform import NonNegativeTransformation
 
 
