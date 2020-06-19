@@ -9,44 +9,44 @@ from pyomo.core.expr.current import identify_variables
 logger = getLogger('pyomo.contrib.community_detection')
 
 
-def _generate_model_graph(model, node_type, with_objective=True, weighted_graph=True):
+def generate_model_graph(model, type_of_graph, with_objective=True, weighted_graph=True):
     """
     Creates a networkX graph of nodes and edges based on a Pyomo optimization model
 
     This function takes in a Pyomo optimization model, then creates a graphical representation of the model with
     specific features of the graph determined by the user (see Parameters below).
 
-    This function is designed to be called by detect_communities or visualize_model_graph.
+    (This function is designed to be called by detect_communities, but can be used solely for the purpose of
+    creating model graphs as well.)
 
     Parameters
     ----------
     model: Block
          a Pyomo model or block to be used for community detection
-    node_type: str
-        A string that specifies the type of graph that is created from the model
+    type_of_graph: str
+        a string that specifies the type of graph that is created from the model
         'c' creates a graph based on constraint nodes,
         'v' creates a graph based on variable nodes,
         'b' creates a graph based on constraint and variable nodes (bipartite graph).
-    with_objective: bool
-        a Boolean argument that specifies whether or not the objective function will be
-        included as a node/constraint (depending on what node_type is specified as (see prior argument))
-    weighted_graph: bool
+    with_objective: bool, optional
+        a Boolean argument that specifies whether or not the objective function is included in the graph; the
+        default is True
+    weighted_graph: bool, optional
         a Boolean argument that specifies whether a weighted or unweighted graph is to be created from the Pyomo
-        model; the default is True (node_type='b' creates an unweighted graph regardless of this parameter)
+        model; the default is True (type_of_graph='b' creates an unweighted graph regardless of this parameter)
 
     Returns
     -------
     bipartite_model_graph/collapsed_model_graph: networkX graph
         a networkX graph with nodes and edges based on the given Pyomo optimization model
     number_component_map: dict
-        a dictionary that has a deterministic mapping of a number to a Pyomo modeling component
+        a dictionary that (deterministically) maps a number to a component in the model
     constraint_variable_map: dict
         a dictionary that maps a numbered constraint to a list of (numbered) variables that appear in the constraint
-        (the numbers' mapping to the Pyomo components is given in number_component_map)
     """
 
-    # Start off by making a bipartite graph (regardless of node_type), then if node_type = 'v' or 'c',
-    # "collapse" this bipartite graph into a variable node or constraint node graph
+    # Start off by making a bipartite graph (regardless of the value of type_of_graph), then if
+    # type_of_graph = 'v' or 'c', we will "collapse" this bipartite graph into a variable node or constraint node graph
 
     # Initialize the data structure needed to keep track of edges in the graph (this graph will be made
     # without edge weights, because edge weights are not useful for this bipartite graph)
@@ -113,21 +113,21 @@ def _generate_model_graph(model, node_type, with_objective=True, weighted_graph=
 
             # Update edge_set based on the determined edges between nodes
             edge_set.update(edges_between_nodes)
+
     # Add edges to bipartite_model_graph (the order in which edges are added can affect community detection, so
     # sorting prevents any unpredictable changes)
     bipartite_model_graph.add_edges_from(sorted(edge_set))
 
-    # Both variable and constraint nodes (bipartite graph); this is exactly the graph we made above
-    if node_type == 'b':
+    if type_of_graph == 'b':  # This is the case where the user wants a bipartite graph, which we made above
         # Log important information with the following logger function
-        _event_log(model, bipartite_model_graph, set(constraint_variable_map), node_type, with_objective)
+        _event_log(model, bipartite_model_graph, set(constraint_variable_map), type_of_graph, with_objective)
 
         # Return the bipartite networkX graph, the dictionary of node numbers mapped to their respective Pyomo
         # components, and the map of constraints to the variables they contain
         return bipartite_model_graph, number_component_map, constraint_variable_map
 
     # If we reach this point of the code, then we will now begin constructing the collapsed version of the bipartite
-    # model graph (the specific manner depends on whether node type is 'c' or 'v')
+    # model graph (the specific manner depends on whether the type of graph is 'c' or 'v')
     if weighted_graph:
         edge_weight_dict = dict()
     else:
@@ -135,8 +135,7 @@ def _generate_model_graph(model, node_type, with_objective=True, weighted_graph=
 
     collapsed_model_graph = nx.Graph()  # Initialize networkX graph for the collapsed version of bipartite_model_graph
 
-    # Constraint nodes - now we will collapse the bipartite graph into a constraint node graph
-    if node_type == 'c':
+    if type_of_graph == 'c':  # Constraint node graph - collapse the bipartite graph into a constraint node graph
 
         for node in bipartite_model_graph.nodes():
 
@@ -167,8 +166,7 @@ def _generate_model_graph(model, node_type, with_objective=True, weighted_graph=
             else:
                 collapsed_model_graph.add_node(node)
 
-    # Variable nodes - now we will collapse the bipartite graph into a variable node graph
-    elif node_type == 'v':
+    elif type_of_graph == 'v':  # Variable node graph - collapse the bipartite graph into a variable node graph
 
         for node in bipartite_model_graph.nodes():
 
@@ -213,22 +211,22 @@ def _generate_model_graph(model, node_type, with_objective=True, weighted_graph=
         collapsed_model_graph.add_edges_from(sorted(edge_set))
 
     # Log important information with the following logger function
-    _event_log(model, collapsed_model_graph, set(constraint_variable_map), node_type, with_objective)
+    _event_log(model, collapsed_model_graph, set(constraint_variable_map), type_of_graph, with_objective)
 
     # Return the collapsed networkX graph, the dictionary of node numbers mapped to their respective Pyomo
     # components, and the map of constraints to the variables they contain
     return collapsed_model_graph, number_component_map, constraint_variable_map
 
 
-def _event_log(model, model_graph, constraint_set, node_type, with_objective):
+def _event_log(model, model_graph, constraint_set, type_of_graph, with_objective):
     """
-    Logs information about the results of the code in _generate_model_graph
+    Logs information about the results of the code in generate_model_graph
 
-    This function takes in the same Pyomo model as _generate_community_graph and the model_graph generated by
-    _generate_model_graph (which is a networkX graph of nodes and edges based on the Pyomo model). Then, some relevant
+    This function takes in the same Pyomo model as generate_model_graph and the model_graph generated by
+    generate_model_graph (which is a networkX graph of nodes and edges based on the Pyomo model). Then, some relevant
     information about the model and model_graph is determined and logged using the logger.
 
-    This function is designed to be called by _generate_community_graph.
+    This function is designed to be called by generate_model_graph.
 
     Parameters
     ----------
@@ -236,6 +234,15 @@ def _event_log(model, model_graph, constraint_set, node_type, with_objective):
          the Pyomo model or block to be used for community detection
     model_graph: networkX graph
         a networkX graph with nodes and edges based on the given Pyomo optimization model
+    constraint_set: set
+        a set of the numbers that correspond to all of the constraints in the given model
+    type_of_graph: str
+        a string that specifies the type of graph that is created from the model
+        'c' creates a graph based on constraint nodes,
+        'v' creates a graph based on variable nodes,
+        'b' creates a graph based on constraint and variable nodes (bipartite graph).
+    with_objective: bool
+        a Boolean argument that specifies whether or not the objective function is included in the graph
 
     Returns
     -------
@@ -274,7 +281,7 @@ def _event_log(model, model_graph, constraint_set, node_type, with_objective):
             logger.info("The graph created from the model is disconnected.")
             graph_is_connected = False
 
-        if node_type == 'b':
+        if type_of_graph == 'b':
             if graph_is_connected:
                 top_nodes, bottom_nodes = nx.bipartite.sets(model_graph)
                 if len(top_nodes) == 0:
@@ -321,12 +328,13 @@ def _event_log(model, model_graph, constraint_set, node_type, with_objective):
 
     if all_objectives_count == 0:
         if with_objective:
-            logger.warning("No objective(s) found in the model")
+            logger.warning("The parameter 'with_objective' was set to True but no objective(s) found in the model")
         else:
             logger.info("No objective(s) found in the model")
     elif active_objectives_count == 0:
         if with_objective:
-            logger.warning("No active objective(s) found in the model")
+            logger.warning("The parameter 'with_objective' was set to True but no active objective(s) found in "
+                           "the model")
         else:
             logger.info("No active objective(s) found in the model")
 
