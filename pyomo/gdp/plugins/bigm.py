@@ -16,11 +16,11 @@ import textwrap
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
-    Block, Connector, Constraint, Param, Set, Suffix, Var,
+    Block, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value,
     RangeSet, NonNegativeIntegers)
 from pyomo.core.base.external import ExternalFunction
-from pyomo.core.base import Transformation, TransformationFactory
+from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
 from pyomo.core.kernel.component_map import ComponentMap
@@ -32,7 +32,6 @@ from pyomo.gdp.util import (target_list, is_child_of, get_src_disjunction,
                             _get_constraint_transBlock, get_src_disjunct,
                             _warn_for_active_disjunction,
                             _warn_for_active_disjunct)
-from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
@@ -41,7 +40,6 @@ from pyomo.common.deprecation import deprecation_warning
 from functools import wraps
 from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
-
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
@@ -85,7 +83,7 @@ class BigM_Transformation(Transformation):
     Specifying "bigM=N" is automatically mapped to "bigM={None: N}".
 
     The transformation will create a new Block with a unique
-    name beginning "_pyomo_gdp_bigm_relaxation".  That Block will
+    name beginning "_pyomo_gdp_bigm_reformulation".  That Block will
     contain an indexed Block named "relaxedDisjuncts", which will hold
     the relaxed disjuncts.  This block is indexed by an integer
     indicating the order in which the disjuncts were relaxed.
@@ -159,6 +157,7 @@ class BigM_Transformation(Transformation):
             Suffix:      False,
             Param:       False,
             Set:         False,
+            SetOf:       False,
             RangeSet:    False,
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
@@ -233,9 +232,6 @@ class BigM_Transformation(Transformation):
         targets = config.targets
         if targets is None:
             targets = (instance, )
-            _HACK_transform_whole_instance = True
-        else:
-            _HACK_transform_whole_instance = False
         # We need to check that all the targets are in fact on instance. As we
         # do this, we will use the set below to cache components we know to be
         # in the tree rooted at instance.
@@ -278,22 +274,13 @@ class BigM_Transformation(Transformation):
                     else:
                         warning_msg += "\t%s\n" % component
                 logger.warn(warning_msg)
-
-        # HACK for backwards compatibility with the older GDP transformations
-        #
-        # Until the writers are updated to find variables on things
-        # other than active blocks, we need to reclassify the Disjuncts
-        # as Blocks after transformation so that the writer will pick up
-        # all the variables that it needs (in this case, indicator_vars).
-        if _HACK_transform_whole_instance:
-            HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
-
+            
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts
         # on
         transBlockName = unique_component_name(
             instance,
-            '_pyomo_gdp_bigm_relaxation')
+            '_pyomo_gdp_bigm_reformulation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
@@ -457,12 +444,13 @@ class BigM_Transformation(Transformation):
         # want it to move with the disjunct transformation blocks in the case of
         # nested constraints, to make it easier to query.
         relaxationBlock.bigm_src = {}
+        relaxationBlock.localVarReferences = Block()
         obj._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._srcDisjunct = weakref_ref(obj)
 
         # This is crazy, but if the disjunction has been previously
         # relaxed, the disjunct *could* be deactivated.  This is a big
-        # deal for CHull, as it uses the component_objects /
+        # deal for Hull, as it uses the component_objects /
         # component_data_objects generators.  For BigM, that is OK,
         # because we never use those generators with active=True.  I am
         # only noting it here for the future when someone (me?) is
@@ -476,10 +464,22 @@ class BigM_Transformation(Transformation):
 
     def _transform_block_components(self, block, disjunct, bigM, arg_list,
                                     suffix_list):
-        # We first need to find any transformed disjunctions that might be here
+        # Find all the variables declared here (including the indicator_var) and
+        # add a reference on the transformation block so these will be
+        # accessible when the Disjunct is deactivated. We don't descend into
+        # Disjuncts because we'll just reference the references which are
+        # already on their transformation blocks.
+        disjunctBlock = disjunct._transformation_block()
+        varRefBlock = disjunctBlock.localVarReferences
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            varRefBlock.add_component(unique_component_name( 
+                varRefBlock, v.getname(fully_qualified=True, 
+                                       name_buffer=NAME_BUFFER)), Reference(v))
+
+        # Now need to find any transformed disjunctions that might be here
         # because we need to move their transformation blocks up onto the parent
         # block before we transform anything else on this block
-        destinationBlock = disjunct._transformation_block().parent_block()
+        destinationBlock = disjunctBlock.parent_block()
         for obj in block.component_data_objects(
                 Disjunction,
                 sort=SortComponents.deterministic,
@@ -521,6 +521,7 @@ class BigM_Transformation(Transformation):
         # to move those over. We know the XOR constraints are on the block, and
         # we need to leave those on the disjunct.
         disjunctList = toBlock.relaxedDisjuncts
+        to_delete = []
         for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
             newblock = disjunctList[len(disjunctList)]
             newblock.transfer_attributes_from(disjunctBlock)
@@ -530,8 +531,12 @@ class BigM_Transformation(Transformation):
             original._transformation_block = weakref_ref(newblock)
             newblock._srcDisjunct = weakref_ref(original)
 
-        # we delete this container because we just moved everything out
-        del fromBlock.relaxedDisjuncts
+            # save index of what we just moved so that we can delete it
+            to_delete.append(idx)
+
+        # delete everything we moved.
+        for idx in to_delete:
+            del fromBlock.relaxedDisjuncts[idx]
 
         # Note that we could handle other components here if we ever needed
         # to, but we control what is on the transformation block and

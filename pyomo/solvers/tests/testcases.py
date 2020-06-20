@@ -24,10 +24,23 @@ from pyomo.core.kernel.block import IBlock
 _trunk_version =  (float('inf'), float('inf'), float('inf'), float('inf'))
 
 # These are usually due to a bug in the latest version of the
-# thirdparty solver Tests will be expected to fail. If they do not,
+# thirdparty solver. Tests will be expected to fail. If they do not,
 # that means the solver has been fixed and that particular case should
 # no longer exist in the list of expected failures
 ExpectedFailures = {}
+
+# These are usually due to a bug in the latest version of the thirdparty
+# solver. The solver is expected to run successfully, but will not
+# return suffix information. If they return suffix information, that
+# means the solver has been fixed and that particular case should no
+# longer exist in the list of expected failures.  This dict has (solver,
+# io, test) tuples as keys and values that are either a dict mapping
+# suffix to "(bool(enforce), set(object_names))" or a list of suffix
+# names (in which case enforcing is set to True and the set is empty,
+# indicating ALL objects).  If enforcing is True the test will fail if
+# the missing suffix was found.  Set enforcing to false for tests where
+# the solver is inconsistent in returning duals.
+MissingSuffixFailures = {}
 
 #
 # MOSEK
@@ -48,24 +61,29 @@ ExpectedFailures['mosek', 'python', 'MIQCP_simple'] = \
 # CPLEX
 #
 
-ExpectedFailures['cplex', 'lp', 'QCP_simple'] = \
-    (lambda v: v <= _trunk_version,
+MissingSuffixFailures['cplex', 'lp', 'QCP_simple'] = (
+    lambda v: v <= _trunk_version,
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
-ExpectedFailures['cplex', 'mps', 'QCP_simple'] =\
-    (lambda v: v <= _trunk_version,
+MissingSuffixFailures['cplex', 'mps', 'QCP_simple'] = (
+    lambda v: v <= _trunk_version,
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
-ExpectedFailures['cplex', 'python', 'QCP_simple'] =\
-    (lambda v: v <= _trunk_version,
+MissingSuffixFailures['cplex', 'python', 'QCP_simple'] = (
+    lambda v: v <= _trunk_version,
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
-ExpectedFailures['cplex_persistent', 'python', 'QCP_simple'] =\
-    (lambda v: v <= _trunk_version,
+MissingSuffixFailures['cplex_persistent', 'python', 'QCP_simple'] = (
+    lambda v: v <= _trunk_version,
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
-ExpectedFailures['cplex', 'nl', 'QCP_simple'] = \
-    (lambda v: v <= (12,5,9,9),
+MissingSuffixFailures['cplex', 'nl', 'QCP_simple'] = (
+    lambda v: v <= (12,5,9,9),
+    {'dual': (True, {'qc0','qc1'})},
     "Cplex does not report duals of quadratic constraints.")
 
 #
@@ -252,25 +270,78 @@ ExpectedFailures['scip', 'nl', 'SOS1_simple'] = \
 # BARON
 #
 
-ExpectedFailures['baron', 'bar', 'LP_piecewise'] = \
-    (lambda v: v <= (15,0,0,0),
+# Known to fail through 18.11.15, but was resolved by 19.12.7
+ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = (
+    lambda v: v <= (18,11,15),
+    ['dual'],
+    "Baron fails to report a MILP model as unbounded")
+
+# Known to work through 18.11.15, and fail in 19.12.7
+MissingSuffixFailures['baron', 'bar', 'LP_piecewise'] = (
+    lambda v: v <= (15,0,0,0) or v > (18,11,15),
+    ['dual'],
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
-ExpectedFailures['baron', 'bar', 'QP_simple'] = \
-    (lambda v: v <= (15,2,0,0),
-    "Baron will not return dual solution when a solution is "
-    "found during preprocessing.")
+# Marking this test suffixes as fragile: Baron 20.4.14 will
+# intermittently return suffixes.
+MissingSuffixFailures['baron', 'bar', 'QP_simple'] = (
+    lambda v: v <= (15,2,0,0) or v > (18,11,15),
+    {'dual': (False, {}), 'rc': (False, {})},
+    "Baron will intermittently return dual solution when "
+    "a solution is found during preprocessing.")
 
 # Known to fail through 17.4.1, but was resolved by 18.5.9
-ExpectedFailures['baron', 'bar', 'QCP_simple'] = \
-    (lambda v: v <= (17,4,1),
+MissingSuffixFailures['baron', 'bar', 'QCP_simple'] = (
+    lambda v: v <= (17,4,1) or v > (18,11,15),
+    ['dual','rc'],
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
-ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = \
-    (lambda v: v < _trunk_version,
-     "Baron fails to report a MILP model as unbounded")
+# Known to work through 18.11.15, and fail in 19.12.7
+MissingSuffixFailures['baron', 'bar', 'LP_block'] = (
+    lambda v: v > (18,11,15),
+    ['dual'],
+    "Baron will not return dual solution when a solution is "
+    "found during preprocessing.")
+
+# Known to work through 18.11.15, and fail in 19.12.7
+MissingSuffixFailures['baron', 'bar', 'LP_inactive_index'] = (
+    lambda v: v > (18,11,15),
+    ['dual'],
+    "Baron will not return dual solution when a solution is "
+    "found during preprocessing.")
+
+# Known to work through 18.11.15, and fail in 19.12.7
+MissingSuffixFailures['baron', 'bar', 'LP_simple'] = (
+    lambda v: v > (18,11,15),
+    ['dual'],
+    "Baron will not return dual solution when a solution is "
+    "found during preprocessing.")
+
+# Known to work through 18.11.15, and fail in 19.12.7
+MissingSuffixFailures['baron', 'bar', 'LP_trivial_constraints'] = (
+    lambda v: v > (18,11,15),
+    ['dual'],
+    "Baron will not return dual solution when a solution is "
+    "found during preprocessing.")
+
+# Known to work through 19.12.7, and fail in 20.4.14
+MissingSuffixFailures['baron', 'bar', 'LP_duals_minimize'] = (
+    lambda v: v > (19,12,7),
+    ['dual','rc'],
+    "Baron will not return dual solution when a solution is "
+    "found during preprocessing.")
+
+# Known to work through 19.12.7, and fail in 20.4.14
+MissingSuffixFailures['baron', 'bar', 'LP_duals_maximize'] = (
+    lambda v: v > (19,12,7),
+    ['dual','rc'],
+    "Baron will not return dual solution when a solution is "
+    "found during preprocessing.")
+
+
+
 
 #
 # KNITROAMPL
@@ -297,6 +368,7 @@ def test_scenarios(arg=None):
                 continue
 
             # Set status values for expected failures
+            exclude_suffixes = {}
             status='ok'
             msg=""
             if not _solver_case.available:
@@ -308,9 +380,22 @@ def test_scenarios(arg=None):
                    case[0](_solver_case.version):
                     status='expected failure'
                     msg=case[1]
+            if (solver,io,_model.description) in MissingSuffixFailures:
+                case = MissingSuffixFailures[solver,io,_model.description]
+                if _solver_case.version is not None and\
+                   case[0](_solver_case.version):
+                    if type(case[1]) is dict:
+                        exclude_suffixes.update(case[1])
+                    else:
+                        for x in case[1]:
+                            exclude_suffixes[x] = (True, {})
+                    msg=case[2]
 
             # Return scenario dimensions and scenario information
-            yield (model, solver, io), Options(status=status, msg=msg, model=_model, solver=None, testcase=_solver_case)
+            yield (model, solver, io), Options(
+                status=status, msg=msg, model=_model, solver=None,
+                testcase=_solver_case, demo_limits=_solver_case.demo_limits,
+                exclude_suffixes=exclude_suffixes)
 
 
 @unittest.nottest

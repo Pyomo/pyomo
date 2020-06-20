@@ -13,10 +13,11 @@ from six import string_types
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_numeric_types
 from pyomo.gdp import GDP_Error, Disjunction
-from pyomo.gdp.disjunct import _DisjunctData
+from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 from copy import deepcopy
 
 from pyomo.core.base.component import _ComponentBase, ComponentUID
+from pyomo.core import Block, TraversalStrategy
 from pyomo.opt import TerminationCondition, SolverStatus
 from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys
@@ -158,7 +159,8 @@ def get_src_disjunction(xor_constraint):
     # block while we do the transformation. And then this method could query
     # that map.
     m = xor_constraint.model()
-    for disjunction in m.component_data_objects(Disjunction):
+    for disjunction in m.component_data_objects(Disjunction,
+                                                descend_into=(Block, Disjunct)):
         if disjunction._algebraic_constraint:
             if disjunction._algebraic_constraint() is xor_constraint:
                 return disjunction
@@ -294,3 +296,86 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
                         outerdisjunct.getname(
                             fully_qualified=True,
                             name_buffer=NAME_BUFFER)))
+
+def check_model_algebraic(instance):
+    """Checks if there are any active Disjuncts or Disjunctions reachable via
+    active Blocks. If there are not, it returns True. If there are, it issues
+    a warning detailing where in the model there are remaining non-algebraic
+    components, and returns False.
+
+    Parameters
+    ----------
+    instance: a Model or Block
+    """
+    disjunction_set = {i for i in instance.component_data_objects(
+        Disjunction, descend_into=(Block, Disjunct), active=None)}
+    active_disjunction_set = {i for i in instance.component_data_objects(
+        Disjunction, descend_into=(Block, Disjunct), active=True)}
+    disjuncts_in_disjunctions = set()
+    for i in disjunction_set:
+        disjuncts_in_disjunctions.update(i.disjuncts)
+    disjuncts_in_active_disjunctions = set()
+    for i in active_disjunction_set:
+        disjuncts_in_active_disjunctions.update(i.disjuncts)
+
+    for disjunct in instance.component_data_objects(
+            Disjunct, descend_into=(Block,),
+            descent_order=TraversalStrategy.PostfixDFS):
+        # check if it's relaxed
+        if disjunct.transformation_block is not None:
+            continue
+        # It's not transformed, check if we should complain
+        elif disjunct.active and _disjunct_not_fixed_true(disjunct) and \
+             _disjunct_on_active_block(disjunct):
+            # If someone thinks they've transformed the whole instance, but
+            # there is still an active Disjunct on the model, we will warn
+            # them. In the future this should be the writers' job.)
+            if disjunct not in disjuncts_in_disjunctions:
+                logger.warning('Disjunct "%s" is currently active, '
+                               'but was not found in any Disjunctions. '
+                               'This is generally an error as the model '
+                               'has not been fully relaxed to a '
+                               'pure algebraic form.' % (disjunct.name,))
+                return False
+            elif disjunct not in disjuncts_in_active_disjunctions:
+                logger.warning('Disjunct "%s" is currently active. While '
+                               'it participates in a Disjunction, '
+                               'that Disjunction is currently deactivated. '
+                               'This is generally an error as the '
+                               'model has not been fully relaxed to a pure '
+                               'algebraic form. Did you deactivate '
+                               'the Disjunction without addressing the '
+                               'individual Disjuncts?' % (disjunct.name,))
+                return False
+            else:
+                logger.warning('Disjunct "%s" is currently active. It must be '
+                               'transformed or deactivated before solving the '
+                               'model.' % (disjunct.name,))
+                return False
+    # We didn't find anything bad.
+    return True
+
+def _disjunct_not_fixed_true(disjunct):
+    # Return true if the disjunct indicator variable is not fixed to True
+    return not (disjunct.indicator_var.fixed and
+                disjunct.indicator_var.value == 1)
+
+def _disjunct_on_active_block(disjunct):
+    # Check first to make sure that the disjunct is not a descendent of an
+    # inactive Block or fixed and deactivated Disjunct, before raising a
+    # warning.
+    parent_block = disjunct.parent_block()
+    while parent_block is not None:
+        # deactivated Block
+        if parent_block.ctype is Block and not parent_block.active:
+            return False
+        # properly deactivated Disjunct
+        elif (parent_block.ctype is Disjunct and not parent_block.active
+              and parent_block.indicator_var.value == 0
+              and parent_block.indicator_var.fixed):
+            return False
+        else:
+            # Step up one level in the hierarchy
+            parent_block = parent_block.parent_block()
+            continue
+    return True

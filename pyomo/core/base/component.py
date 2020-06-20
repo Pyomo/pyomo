@@ -22,6 +22,7 @@ from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
 from pyomo.common import deprecated
+from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 
 logger = logging.getLogger('pyomo.core')
@@ -75,7 +76,7 @@ def cname(*args, **kwds):
 class CloneError(pyomo.common.errors.PyomoException):
     pass
 
-class _ComponentBase(object):
+class _ComponentBase(PyomoObject):
     """A base class for Component and ComponentData
 
     This class defines some fundamental methods and properties that are
@@ -85,6 +86,10 @@ class _ComponentBase(object):
     __slots__ = ()
 
     _PPRINT_INDENT = "    "
+
+    def is_component_type(self):
+        """Return True if this class is a Pyomo component"""
+        return True
 
     def __deepcopy__(self, memo):
         # The problem we are addressing is when we want to clone a
@@ -466,7 +471,7 @@ class Component(_ComponentBase):
         return self._ctype
 
     @deprecated("Component.type() method has been replaced by the "
-                ".ctype property.", version='TBD')
+                ".ctype property.", version='5.7')
     def type(self):
         """Return the class type for this component"""
         return self.ctype
@@ -593,10 +598,6 @@ class Component(_ComponentBase):
     def is_indexed(self):
         """Return true if this component is indexed"""
         return False
-
-    def is_component_type(self):
-        """Return True if this class is a Pyomo component"""
-        return True
 
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Clear the suffix value for this component data"""
@@ -780,7 +781,7 @@ class ComponentData(_ComponentBase):
         return _parent._ctype
 
     @deprecated("Component.type() method has been replaced by the "
-                ".ctype property.", version='TBD')
+                ".ctype property.", version='5.7')
     def type(self):
         """Return the class type for this component"""
         return self.ctype
@@ -911,10 +912,6 @@ class ComponentData(_ComponentBase):
     def is_indexed(self):
         """Return true if this component is indexed"""
         return False
-
-    def is_component_type(self):
-        """Return True if this class is a Pyomo component"""
-        return True
 
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Set the suffix value for this component data"""

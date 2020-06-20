@@ -20,8 +20,8 @@ from pyomo.opt import SolverFactory
 
 
 def sipopt(instance,paramSubList,perturbList,cloneModel=True,
-					     streamSoln=False,
-					     keepfiles=False):
+            streamSoln=False,
+            keepfiles=False):
     """
     This function accepts a Pyomo ConcreteModel, a list of parameters, along
     with their corresponding perterbation list. The model is then converted
@@ -29,36 +29,36 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
     perturbed solution with updated bounds on the decision variable. 
     
     Arguments:
-        instance     : ConcreteModel: Expectation No Exceptions
+        instance     : ConcreteModel
             pyomo model object
+            Expectation : No Exceptions            
 
-        paramSubList : Param         
+        paramSubList : Param
             list of mutable parameters
-            Exception : "paramSubList argument is expecting a List of Params"	    
+            Exception : "paramSubList argument is expecting a List of Params"    
 
-        perturbList  : Param	    
+        perturbList  : Param
             list of perturbed parameter values
             Exception : "perturbList argument is expecting a List of Params"
-
             length(paramSubList) must equal length(perturbList)
             Exception : "paramSubList will not map to perturbList"  
 
 
-        cloneModel   : boolean      : default=True	    
+        cloneModel   : boolean      : default=True
             indicator to clone the model
                 -if set to False, the original model will be altered
 
-        streamSoln   : boolean      : default=False	    
+        streamSoln   : boolean      : default=False
             indicator to stream IPOPT solution
 
-        keepfiles    : boolean	    : default=False 
+        keepfiles    : boolean      : default=False 
             indicator to print intermediate file names
     
     Returns:
-        m		  : ConcreteModel
+        m : ConcreteModel
             converted model for sipopt
 
-        m.sol_state_1     : Suffix	  
+        m.sol_state_1 : Suffix
             approximated results at perturbation
 
         m.sol_state_1_z_L : Suffix        

@@ -35,7 +35,17 @@ import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
     fit_rect_dist, fit_mvn_dist, fit_kde_dist
 
-__version__ = 0.29999
+__version__ = 0.2999999
+
+if numpy_available and scipy_available:
+    from pyomo.contrib.pynumero.asl import AmplInterface
+    asl_available = AmplInterface.available()
+else:
+    asl_available=False
+
+if asl_available:
+    from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
+
 
 #=============================================
 def _object_from_string(instance, vstr):
@@ -337,7 +347,7 @@ class Estimator(object):
         
         self._second_stage_cost_exp = "SecondStageCost"
         self._numbers_list = list(range(len(data)))
-        
+
 
     def _create_parmest_model(self, data):
         """
@@ -403,7 +413,7 @@ class Estimator(object):
     
 
     def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
-               return_values=[], bootlist=None):
+               return_values=[], bootlist=None, calc_cov=False):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -411,6 +421,7 @@ class Estimator(object):
         """
         if (solver == "k_aug"):
             raise RuntimeError("k_aug no longer supported.")
+
         # (Bootstrap scenarios will use indirection through the bootlist)
         if bootlist is None:
             scen_names = ["Scenario{}".format(i) for i in self._numbers_list]
@@ -436,13 +447,35 @@ class Estimator(object):
                               model_name = "_Q_opt",
                               scenario_creator_options=scenario_creator_options)
 
-        # Dropping k_aug in this version because Pyomo will
-        # very soon give the Hessian from Ipopt.
+        # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            ef_results = EF.solve_extensive_form(tee=self.tee)
+        
+            if not calc_cov:
+                # Do not calculate the reduced hessian
+
+                solver = SolverFactory('ipopt')
+                if self.solver_options is not None:
+                    for key in sopts:
+                        solver.options[key] = sopts[key]
+
+                solve_result = solver.solve(EF.ef, tee = self.tee)
+
+            elif not asl_available:
+                raise ImportError("parmest requires ASL to calculate the covariance matrix with solver 'ipopt'")
+            else:
+                # parmest makes the fitted parameters stage 1 variables
+                ind_vars = []
+                for ndname, Var, solval in sputils.ef_nonants(EF.ef):
+                    ind_vars.append(Var)
+                # calculate the reduced hessian
+                solve_result, inv_red_hes = inv_reduced_hessian_barrier(EF.ef, 
+                    independent_variables= ind_vars,
+                    solver_options=self.solver_options,
+                    tee=self.tee)
+            
             if self.diagnostic_mode:
                 print('    Solver termination condition = ',
-                       str(ef_results.solver.termination_condition))
+                       str(solve_result.solver.termination_condition))
 
             # assume all first stage are thetas...
             thetavals = {}
@@ -454,9 +487,35 @@ class Estimator(object):
 
             objval = pyo.value(EF.ef.EF_Obj)
             
+            if calc_cov:
+                # Calculate the covariance matrix
+                
+                # Extract number of data points considered
+                n = len(self.callback_data)
+                
+                # Extract number of fitted parameters
+                l = len(thetavals)
+                
+                # Assumption: Objective value is sum of squared errors
+                sse = objval
+                
+                '''Calculate covariance assuming experimental observation errors are
+                independent and follow a Gaussian 
+                distribution with constant variance.
+                
+                The formula used in parmest was verified against equations (7-5-15) and
+                (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
+                
+                This formula is also applicable if the objective is scaled by a constant;
+                the constant cancels out. (PySP scaled by 1/n because it computes an
+                expected value.)
+                '''
+                cov = 2 * sse / (n - l) * inv_red_hes
+            
             if len(return_values) > 0:
                 var_values = []
-                for exp_i in stsolver.ef_instance.component_objects(Block, descend_into=False):
+                # DLW, June 2020: changed with mpi-sppy? (delete this comment)
+                for exp_i in EF.component_objects(Block, descend_into=False):
                     vals = {}
                     for var in return_values:
                         exp_i_var = eval('exp_i.'+ str(var))
@@ -467,9 +526,15 @@ class Estimator(object):
                             vals[var] = temp                    
                     var_values.append(vals)                    
                 var_values = pd.DataFrame(var_values)
-                return objval, thetavals, var_values
+                if calc_cov:
+                    return objval, thetavals, var_values, cov
+                else:
+                    return objval, thetavals, var_values
 
-            return objval, thetavals
+            if calc_cov:
+                return objval, thetavals, cov
+            else:
+                return objval, thetavals
         
         else:
             raise RuntimeError("Unknown solver in Q_Opt="+solver)
@@ -581,7 +646,7 @@ class Estimator(object):
             
         return samplelist
     
-    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None): 
+    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None, calc_cov=False): 
         """
         Parameter estimation using all scenarios in the data
 
@@ -593,6 +658,8 @@ class Estimator(object):
             List of Variable names used to return values from the model
         bootlist: list, optional
             List of bootstrap sample numbers, used internally when calling theta_est_bootstrap
+        calc_cov: boolean, optional
+            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver)
             
         Returns
         -------
@@ -605,13 +672,15 @@ class Estimator(object):
         Hessian: dict
             A dictionary of dictionaries for the Hessian.
             The Hessian is not returned if the solver is ef_ipopt.
+        cov: numpy.array
+            Covariance matrix of the fitted parameters (only for ef_ipopt)
         """
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
         assert isinstance(bootlist, (type(None), list))
         
         return self._Q_opt(solver=solver, return_values=return_values,
-                           bootlist=bootlist)
+                           bootlist=bootlist, calc_cov=calc_cov)
     
     
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 

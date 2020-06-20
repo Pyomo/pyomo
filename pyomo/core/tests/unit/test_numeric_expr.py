@@ -57,7 +57,7 @@ from pyomo.core.expr.current import Expr_if
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.label import *
-from pyomo.core.base.template_expr import IndexTemplate
+from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 from pyomo.repn import generate_standard_repn
@@ -2091,7 +2091,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         t = IndexTemplate(m.I)
 
         e = m.x[t+m.P[t+1]] + 3
-        self.assertEqual("sum(x(sum({I}, P(sum({I}, 1)))), 3)", str(e))
+        self.assertEqual("sum(getitem(x, sum({I}, getitem(P, sum({I}, 1)))), 3)", str(e))
 
     def test_small_expression(self):
         #
@@ -2328,7 +2328,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         t = IndexTemplate(m.I)
 
         e = m.x[t+m.P[t+1]] + 3
-        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
+        self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e))
 
     def test_associativity_rules(self):
         m = ConcreteModel()
@@ -3431,10 +3431,19 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,1,0)
         self.assertEqual(expr.polynomial_degree(), 0)
         #
+        # A nonconstant expression has degree if both arguments have the
+        # same degree, as long as the IF is fixed (even if it is not
+        # defined)
+        #
+        expr = Expr_if(m.e,m.a,0)
+        self.assertEqual(expr.polynomial_degree(), 0)
+        expr = Expr_if(m.e,5*m.b,1+m.b)
+        self.assertEqual(expr.polynomial_degree(), 1)
+        #
         # A nonconstant expression has degree None because
         # m.e is an uninitialized parameter
         #
-        expr = Expr_if(m.e,m.a,0)
+        expr = Expr_if(m.e,m.b,0)
         self.assertEqual(expr.polynomial_degree(), None)
 
 
@@ -4004,7 +4013,7 @@ class TestCloneExpression(unittest.TestCase):
 
             e = m.x[t+m.P[t+1]] + 3
             e_ = e.clone()
-            self.assertEqual("x({I} + P({I} + 1)) + 3", str(e_))
+            self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e_))
             #
             total = counter.count - start
             self.assertEqual(total, 1)
@@ -5014,7 +5023,7 @@ class Test_pickle(unittest.TestCase):
         e = m.x[t+m.P[t+1]] + 3
         s = pickle.dumps(e)
         e_ = pickle.loads(s)
-        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
+        self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e))
 
     def test_abs(self):
         M = ConcreteModel()
