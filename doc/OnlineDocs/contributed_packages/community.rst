@@ -19,17 +19,18 @@ represents a subproblem within the overall optimization problem. Identifying the
 independently can save computational work as compared with trying to solve the entire model at once. Thus, it
 can be very useful to know the communities that exist in a model.
 
-The manner in which the graph of nodes and edges is constructed from the model directly affects the Louvain community
-detection. Thus, this package provides the user with a lot of control over the construction of the graph. The various
-user-specified parameters used to construct the graph are shown below.
+The manner in which the graph of nodes and edges is constructed from the model directly affects the community
+detection. Thus, this package provides the user with a lot of control over the construction of the graph. The
+parameters of this function that are used for this graph construction and subsequent community detection
+are shown below.
 
-`detect_communities(model[, type_of_community_map, with_objective, weighted_graph, random_seed])`
+    `detect_communities(model[, type_of_community_map, with_objective, weighted_graph, random_seed])`
 
 The main graph features the user can specify are the type of community map, whether the graph is weighted or
 unweighted, and whether the objective function(s) is included in the graph generation. Below, the significance
-and reasoning behind including each of these options is explained in greater depth.
+and reasoning behind including each of these options are explained in greater depth.
 
-Type of community map
+Type of Community Map
     In this package's main function (detect_communities), the user can select 'b', 'c', or 'v' as an input for
     the 'type_of_community_map' argument, and these result in a community map based on a bipartite graph, a constraint
     node graph, or a variable node graph (respectively).
@@ -47,12 +48,12 @@ Type of community map
     to the number of constraint equations in which the two variables occur together.
 
     If the user sets `type_of_community_map='b'`, then each entry in the community map (which is a dictionary) is
-    simply all of the nodes in the community, but split into a list of constraints and a list of variables.
+    simply all of the nodes in the community but split into a list of constraints and a list of variables.
     For the model graph, a node is created for every variable and every constraint in the model. An edge is created
     between a constraint node and a variable node only if the constraint equation contains the variable. (Edges are
     not drawn between nodes of the same type in a bipartite graph.) And as for the edge weights, the edges in the
     bipartite graph are unweighted regardless of what the user specifies for the `weighted_graph` parameter. (This is
-    due to the fact that for our purposes, the number of times a variable appears in a constraint is not particularly
+    because for our purposes, the number of times a variable appears in a constraint is not particularly
     useful.)
 
 Weighted Graph/Unweighted Graph
@@ -119,6 +120,7 @@ imports to run all of the code examples are included below):
 
 Here is the output of the `detect_communities` call above:
 
+    >>> # Output:
     >>> {0: ([<pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB588>,
     >>>       <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB5F8>],
     >>>      [<pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB3C8>,
@@ -133,8 +135,9 @@ We can use `stringify_comunity_map` if we want the same output, but with the str
 
     >>> print(stringify_community_map(model=m, type_of_community_map='b'))
 
-And here we have the much easier to read output of that function call:
+And here we have the much easier-to-read output of that function call:
 
+    >>> # Output:
     >>> {0: (['c1', 'c2'], ['x1', 'x2']),
     >>>  1: (['c3', 'c4', 'c5'], ['x3', 'x4'])}
 
@@ -145,8 +148,10 @@ so.
     >>> comm = detect_communities(m, type_of_community_map='b', random_seed=seed)
     >>> left_figure, pos = visualize_model_graph(model=m, community_map=comm, type_of_graph='b')
     >>> plt.show()
-    >>> # Note that the pos argument is reused in the following function call, which means the graph
-    >>> # layouts should be identical
+    >>>
+    >>> # Note that the pos argument is returned above and used in the following function call, which ensures that
+    >>> # the graph layouts are identical
+    >>>
     >>> right_figure, _ = visualize_model_graph(model=m, type_of_graph='b', type_of_community_map='v',
     >>> random_seed=seed, pos=pos)
     >>> plt.show()
@@ -157,9 +162,9 @@ An example of two drawings for these two function calls is shown below:
   :width: 800
   :alt: Alternative text
 
-These graph drawings clearly demonstrate the communities within this model. We can see how there is only one edge
-between the two communities, and many more edges within each community. This is an ideal situation for breaking a
-model into separate communities, since there is little connectivity between the communities. Also, note that we can
+These graph drawings very clearly demonstrate the communities within this model. We can see how there is only one edge
+between the two communities and many more edges within each community. This is an ideal situation for breaking a
+model into separate communities since there is little connectivity between the communities. Also, note that we can
 provide a community map to draw the model graph, and this will be reflected in the way the nodes are colored as
 well as in the graph title (as seen in the figure on the left).
 
@@ -168,17 +173,20 @@ Let's add a more complicated model, taken from `Duran & Grossmann, 1986`_:
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
 
     >>> model = EightProcessFlowsheet()
+    >>>
     >>> left_fig, pos = visualize_model_graph(model, type_of_graph='v', type_of_community_map='c',
     >>> random_seed=seed)
     >>> plt.show()
-    >>> # Again we reuse the pos argument to create a consistent graph layout
+    >>>
+    >>> # As we did before, we will use the pos argument to create a consistent graph layout
+    >>>
     >>> middle_fig, _ = visualize_model_graph(model, type_of_graph='v', type_of_community_map='b',
     >>> random_seed=seed, pos=pos)
     >>> plt.show()
+    >>>
     >>> right_fig, _ = visualize_model_graph(model, type_of_graph='v', type_of_community_map='v',
     >>> random_seed=seed, pos=pos)
     >>> plt.show()
-
 
 An example of three drawings for these three function calls is shown below:
 
@@ -202,6 +210,7 @@ a NetworkX graph), and a dictionary that maps constraints to the variables in th
 only need the NetworkX graph of the model and the number-to-component mapping.
 
     >>> model = decode_model_1()
+    >>>
     >>> # model_graph is a NetworkX graph of the model, and number_component_map is a dictionary that maps the
     >>> # numbers used to represent the model components to the actual components
     >>> model_graph, number_component_map, constr_var_map = generate_model_graph(model, type_of_graph='c')
@@ -217,15 +226,17 @@ Now, we print the edge list and the adjacency list:
     >>> print('Edge List:')
     >>> for line in nx.generate_edgelist(string_model_graph):
     >>>     print(line)
+    >>>
     >>> print('Adjacency List:')
     >>> for line in nx.generate_adjlist(string_model_graph):
     >>>     print(line)
 
 The edge and adjacency lists are shown below; also, it is worth mentioning that in the code above, we do not
-have to create `string_map` in order to create an edge list or adjacency list, but for the sake of having an
+have to create `string_map` to create an edge list or adjacency list, but for the sake of having an
 understandable output, it is quite helpful. (Without relabeling the nodes, the output below would not have the
 strings of the components but instead would have integer values.)
 
+    >>> # Output:
     >>> Edge List:
     >>> c1 c2 {'weight': 2}
     >>> c1 c3 {'weight': 1}
