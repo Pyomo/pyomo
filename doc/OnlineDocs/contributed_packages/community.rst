@@ -85,7 +85,7 @@ Weighted Graph/Unweighted Graph
     information into an algorithm, the algorithm may be better suited to the communities detected in a weighted
     graph (or vice versa).
 
-With/Without Objective as Graph Constraint
+With/Without Objective in the Graph
     This argument determines whether the objective function(s) will be included when creating the graphical
     representation of the model and thus whether the objective function(s) will be included in the community map.
     Some models have an objective function that contains so many of the model variables that it obscures potential
