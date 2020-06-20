@@ -296,7 +296,6 @@ class TestDecomposition(unittest.TestCase):
         self.assertEqual(len(pos), correct_pos_dict_length)
 
 
-
 def _collect_test_results(model, with_string_tests=False):
     random_seed_test = 5
 
