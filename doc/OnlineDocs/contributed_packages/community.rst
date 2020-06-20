@@ -160,7 +160,7 @@ An example of two drawings for these two function calls is shown below:
 
 .. image:: communities_for_decode_1.png
   :width: 800
-  :alt: Alternative text
+  :alt: Graphical representation of the communities in the model 'decode_model_1' for slightly different function calls
 
 These graph drawings very clearly demonstrate the communities within this model. We can see how there is only one edge
 between the two communities and many more edges within each community. This is an ideal situation for breaking a
@@ -192,7 +192,7 @@ An example of three drawings for these three function calls is shown below:
 
 .. image:: communities_for_8pp.png
    :width: 800
-   :alt: Alternative text
+   :alt: Graphical representation of the communities in the model 'decode_model_1' for slightly different function calls
 
 The three graphs above are all variable graphs - which means the nodes represent variables in the model, and the edges
 represent constraint equations. The coloring differs because the three graphs rely on community maps that were
