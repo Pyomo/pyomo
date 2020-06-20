@@ -96,7 +96,9 @@ External Packages
 -----------------
 The community detection package relies on two external packages, the NetworkX package and the Louvain community
 detection package. Both of these packages can be installed at the following URLs (respectively):
+
 https://pypi.org/project/networkx/
+
 https://pypi.org/project/python-louvain/
 
 The pip install and conda install commands are included below as well:
