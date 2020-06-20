@@ -149,8 +149,8 @@ so.
     >>> left_figure, pos = visualize_model_graph(model=m, community_map=comm, type_of_graph='b')
     >>> plt.show()
     >>>
-    >>> # Note that the pos argument is returned above and used in the following function call, which ensures that
-    >>> # the graph layouts are identical
+    >>> # Note that the pos argument is returned above and used in the following function call,
+    >>> # which ensures that the graph layouts are identical
     >>>
     >>> right_figure, _ = visualize_model_graph(model=m, type_of_graph='b', type_of_community_map='v',
     >>> random_seed=seed, pos=pos)
@@ -211,8 +211,8 @@ only need the NetworkX graph of the model and the number-to-component mapping.
 
     >>> model = decode_model_1()
     >>>
-    >>> # model_graph is a NetworkX graph of the model, and number_component_map is a dictionary that maps the
-    >>> # numbers used to represent the model components to the actual components
+    >>> # model_graph is a NetworkX graph of the model, and number_component_map is a dictionary
+    >>> # that maps the numbers used to represent the model components to the actual components
     >>> model_graph, number_component_map, constr_var_map = generate_model_graph(model, type_of_graph='c')
 
 The next two lines are used to create a mapping to change the node values from numbers into strings and the
