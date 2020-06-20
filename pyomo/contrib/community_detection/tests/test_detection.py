@@ -22,7 +22,7 @@ from pyomo.common.dependencies import networkx_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Objective, Var, Integers, minimize, RangeSet
 from pyomo.contrib.community_detection.detection import detect_communities, stringify_community_map, \
-    community_louvain_available
+    visualize_model_graph, community_louvain_available
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QP_simple import QP_simple
@@ -274,6 +274,27 @@ class TestDecomposition(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "Invalid value for random_seed: 'random_seed=%s' - random_seed "
                                                     "must be a non-negative integer" % random_seed):
             detect_communities(model, random_seed=random_seed)
+
+    def test_visualize_model_graph_1(self):
+        model = m = decode_model_1()
+
+        fig, pos = visualize_model_graph(model)
+        correct_pos_dict_length = 5
+
+        self.assertTrue(isinstance(pos, dict))
+        self.assertEqual(len(pos), correct_pos_dict_length)
+
+    def test_visualize_model_graph_2(self):
+        model = m = decode_model_2()
+
+        community_map = detect_communities(model)
+
+        fig, pos = visualize_model_graph(model, community_map=community_map, type_of_graph='b')
+        correct_pos_dict_length = 13
+
+        self.assertTrue(isinstance(pos, dict))
+        self.assertEqual(len(pos), correct_pos_dict_length)
+
 
 
 def _collect_test_results(model, with_string_tests=False):
