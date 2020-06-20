@@ -4,8 +4,8 @@ Community Detection for Pyomo models
 This package separates model components (variables, constraints, and objectives) into different communities
 distinguished by the degree of connectivity between community members.
 
-Description of main function `detect_communities`
--------------------------------------------------
+Description of Package and Main Function `detect_communities`
+-------------------------------------------------------------
 
 The community detection package allows users to obtain a dictionary of the communities in a Pyomo model. The package
 takes in a model, organizes the model components into a graph of nodes and edges, then uses Louvain
