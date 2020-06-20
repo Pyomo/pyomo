@@ -90,7 +90,7 @@ class RelaxDiscreteVars(RelaxIntegerVars):
 
     @deprecated(
         "core.relax_discrete is deprecated.  Use core.relax_integer_vars",
-        version='TBD')
+        version='5.7')
     def __init__(self, **kwds):
         super(RelaxDiscreteVars, self).__init__(**kwds)
 
@@ -135,6 +135,6 @@ class FixIntegerVars(Transformation):
 class FixDiscreteVars(FixIntegerVars):
     @deprecated(
         "core.fix_discrete is deprecated.  Use core.fix_integer_vars",
-        version='TBD')
+        version='5.7')
     def __init__(self, **kwds):
         super(FixDiscreteVars, self).__init__(**kwds)
