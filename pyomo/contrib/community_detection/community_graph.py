@@ -328,13 +328,12 @@ def _event_log(model, model_graph, constraint_set, type_of_graph, with_objective
 
     if all_objectives_count == 0:
         if with_objective:
-            logger.warning("The parameter 'with_objective' was set to True but no objective(s) found in the model")
+            logger.warning("Parameter 'with_objective' is True but no objective(s) found in the model")
         else:
             logger.info("No objective(s) found in the model")
     elif active_objectives_count == 0:
         if with_objective:
-            logger.warning("The parameter 'with_objective' was set to True but no active objective(s) found in "
-                           "the model")
+            logger.warning("Parameter 'with_objective' is True but no active objective(s) found in the model")
         else:
             logger.info("No active objective(s) found in the model")
 

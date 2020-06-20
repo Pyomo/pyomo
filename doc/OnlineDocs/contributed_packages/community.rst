@@ -120,7 +120,7 @@ imports to run all of the code examples are included below):
 .. code::
 
     >>> from pyomo.contrib.community_detection.detection import detect_communities, visualize_model_graph, \
-        stringify_community_map, generate_model_graph
+            stringify_community_map, generate_model_graph
         from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
         from pyomo.core import ConcreteModel, Var, Constraint
         import matplotlib.pyplot as plt
