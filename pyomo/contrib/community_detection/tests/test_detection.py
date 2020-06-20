@@ -276,20 +276,22 @@ class TestDecomposition(unittest.TestCase):
             detect_communities(model, random_seed=random_seed)
 
     def test_visualize_model_graph_1(self):
-        model = m = decode_model_1()
+        model = decode_model_1()
+        seed_value = 5
 
-        fig, pos = visualize_model_graph(model)
+        fig, pos = visualize_model_graph(model, random_seed=seed_value)
         correct_pos_dict_length = 5
 
         self.assertTrue(isinstance(pos, dict))
         self.assertEqual(len(pos), correct_pos_dict_length)
 
     def test_visualize_model_graph_2(self):
-        model = m = decode_model_2()
+        model = decode_model_2()
+        seed_value = 5
 
         community_map = detect_communities(model)
 
-        fig, pos = visualize_model_graph(model, community_map=community_map, type_of_graph='b')
+        fig, pos = visualize_model_graph(model, community_map=community_map, type_of_graph='b', random_seed=seed_value)
         correct_pos_dict_length = 13
 
         self.assertTrue(isinstance(pos, dict))
