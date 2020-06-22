@@ -4,6 +4,7 @@ Testing for the logical expression system
 """
 from __future__ import division
 import operator
+import platform
 import sys
 from itertools import product
 
@@ -254,7 +255,10 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: 0 / m.Y2
             yield lambda: 0**m.Y2
 
-        numeric_error_msg = r"unsupported operand type\(s\) for"
+        if platform.python_implementation() == "PyPy":
+            numeric_error_msg = "operands do not support"
+        else:
+            numeric_error_msg = r"unsupported operand type\(s\) for"
         for invalid_expr_fcn in invalid_expression_generator():
             with self.assertRaisesRegex(TypeError, numeric_error_msg):
                 _ = invalid_expr_fcn()
