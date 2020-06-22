@@ -1041,6 +1041,6 @@ class Hull_Reformulation(Transformation):
 class _Deprecated_Name_Hull(Hull_Reformulation):
     @deprecated("The 'gdp.chull' name is deprecated. Please use the more apt 'gdp.hull' instead.",
                 logger='pyomo.gdp',
-                version="TBD", remove_in="TBD")
+                version="5.7")
     def __init__(self):
         super(_Deprecated_Name_Hull, self).__init__()

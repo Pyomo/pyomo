@@ -27,7 +27,7 @@ class TightenContraintFromVars(IsomorphicTransformation):
         "Use of the constraint tightener transformation is deprecated. "
         "Its functionality may be partially replicated using "
         "`pyomo.contrib.fbbt.compute_bounds_on_expr(constraint.body)`.",
-        version='TBD', remove_in='TBD')
+        version='5.7')
     def __init__(self):
         super(TightenContraintFromVars, self).__init__()
 

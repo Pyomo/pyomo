@@ -43,7 +43,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                 "Validation that the model has been completely transformed "
                 "to an algebraic model has been moved to the "
                 "check_model_algebraic function in gdp.util.",
-                version='TBD')
+                version='5.7')
     def _apply_to(self, instance, **kwds):
         assert not kwds  # no keywords expected to the transformation
         disjunct_generator = instance.component_objects(
