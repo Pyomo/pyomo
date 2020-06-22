@@ -123,6 +123,7 @@ def handle_master_mip_optimal(master_mip, solve_data, config, copy=True):
             config.logger.warning(
                 "Integer variable {} not initialized. It is set to it's lower bound when using the initial_binary initialization method".format(var.name))
             var.value = var.lb  # nlp_var.bounds[0]
+    # warm start for the nlp subproblem
     copy_var_list_values(
         master_mip.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,

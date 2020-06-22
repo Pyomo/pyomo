@@ -203,7 +203,11 @@ def solve_NLP_feas(solve_data, config):
     """
     fixed_nlp = solve_data.working_model.clone()
     add_feas_slacks(fixed_nlp, config)
+
     MindtPy = fixed_nlp.MindtPy_utils
+    if MindtPy.find_component('objective_value') is not None:
+        MindtPy.objective_value.value = 0
+
     next(fixed_nlp.component_data_objects(Objective, active=True)).deactivate()
     for constr in fixed_nlp.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
@@ -224,10 +228,18 @@ def solve_NLP_feas(solve_data, config):
             expr=MindtPy.MindtPy_feas.slack_var,
             sense=minimize)
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
-
     with SuppressInfeasibleWarning():
-        feas_soln = SolverFactory(config.nlp_solver).solve(
-            fixed_nlp, **config.nlp_solver_args)
+        try:
+            feas_soln = SolverFactory(config.nlp_solver).solve(
+                fixed_nlp, **config.nlp_solver_args)
+        except (ValueError, OverflowError) as error:
+            for nlp_var, orig_val in zip(
+                    MindtPy.variable_list,
+                    solve_data.initial_var_values):
+                if not nlp_var.fixed and not nlp_var.is_binary():
+                    nlp_var.value = orig_val
+            feas_soln = SolverFactory(config.nlp_solver).solve(
+                fixed_nlp, **config.nlp_solver_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
         copy_var_list_values(
