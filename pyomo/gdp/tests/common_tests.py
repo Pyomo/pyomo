@@ -495,7 +495,7 @@ def check_only_targets_get_transformed(self, transformation):
     self.assertIsNone(m.disjunct2[1].transformation_block)
 
 def check_targets_with_container_as_arg(self, transformation):
-    # check that we can giv a Disjunction as the argument to the transformation
+    # check that we can give a Disjunction as the argument to the transformation
     # and use targets to specify a DisjunctionData to transform
     m = models.makeTwoTermIndexedDisjunction()
     TransformationFactory('gdp.%s' % transformation).apply_to(
@@ -1375,7 +1375,8 @@ def check_mappings_between_disjunctions_and_xors(self, transformation):
     disjunctionPairs = [
         (m.disjunction, transBlock.disjunction_xor),
         (m.disjunct[1].innerdisjunction[0],
-         m.disjunct[1].component("_pyomo_gdp_%s_reformulation" % transformation).\
+         m.disjunct[1].component("_pyomo_gdp_%s_reformulation" 
+                                 % transformation).\
          component("disjunct[1].innerdisjunction_xor")[0]),
         (m.simpledisjunct.innerdisjunction,
          m.simpledisjunct.component(

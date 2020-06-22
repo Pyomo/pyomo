@@ -18,9 +18,9 @@ from pyomo.core.base.component import ActiveComponent, ComponentUID
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
-from pyomo.core.base import Transformation, TransformationFactory
+from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core import (
-    Block, Connector, Constraint, Param, Set, Suffix, Var,
+    Block, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
     Any, RangeSet, Reals, value, NonNegativeIntegers
 )
@@ -30,8 +30,6 @@ from pyomo.gdp.util import (clone_without_expression_components, target_list,
                             get_src_constraint, get_transformed_constraints,
                             get_src_disjunct, _warn_for_active_disjunction,
                             _warn_for_active_disjunct)
-from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
-
 from functools import wraps
 from six import iteritems, iterkeys
 from weakref import ref as weakref_ref
@@ -185,6 +183,7 @@ class Hull_Reformulation(Transformation):
             Expression : False,
             Param :      False,
             Set :        False,
+            SetOf :      False,
             RangeSet:    False,
             Suffix :     False,
             Disjunction: self._warn_for_active_disjunction,
@@ -235,9 +234,6 @@ class Hull_Reformulation(Transformation):
         targets = self._config.targets
         if targets is None:
             targets = ( instance, )
-            _HACK_transform_whole_instance = True
-        else:
-            _HACK_transform_whole_instance = False
         knownBlocks = {}
         for t in targets:
             # check that t is in fact a child of instance
@@ -261,17 +257,6 @@ class Hull_Reformulation(Transformation):
                     "Target '%s' was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)) )
-
-        # HACK for backwards compatibility with the older GDP transformations
-        #
-        # Until the writers are updated to find variables on things other than
-        # active blocks, we need to reclassify the Disjuncts as Blocks after
-        # transformation so that the writer will pick up all the variables that
-        # it needs (in this case, indicator_vars and also variables which are
-        # declared in a single Disjunct and only used on that Disjunct (as they
-        # will not be disaggregated)).
-        if _HACK_transform_whole_instance:
-            HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
 
     def _add_transformation_block(self, instance):
         # make a transformation block on instance where we will store
@@ -525,6 +510,15 @@ class Hull_Reformulation(Transformation):
         # create a relaxation block for this disjunct
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
+        
+        relaxationBlock.localVarReferences = Block()
+
+        # Put the disaggregated variables all on their own block so that we can
+        # isolate the name collisions and still have complete control over the
+        # names on this block. (This is for peace of mind now, but will matter
+        # in the future for adding the binaries corresponding to Boolean
+        # indicator vars.)
+        relaxationBlock.disaggregatedVars = Block()
 
         # add the map that will link back and forth between transformed
         # constraints and their originals.
@@ -577,11 +571,11 @@ class Hull_Reformulation(Transformation):
             # of variables from different blocks coming together, so we
             # get a unique name
             disaggregatedVarName = unique_component_name(
-                relaxationBlock,
+                relaxationBlock.disaggregatedVars,
                 var.getname(fully_qualified=False, name_buffer=NAME_BUFFER),
             )
-            relaxationBlock.add_component( disaggregatedVarName,
-                                           disaggregatedVar)
+            relaxationBlock.disaggregatedVars.add_component( 
+                disaggregatedVarName, disaggregatedVar)
             # mark this as local because we won't re-disaggregate if this is a
             # nested disjunction
             if local_var_set is not None:
@@ -654,11 +648,38 @@ class Hull_Reformulation(Transformation):
 
     def _transform_block_components( self, block, disjunct, var_substitute_map,
                                      zero_substitute_map):
-        # As opposed to bigm, in hull we do not need to do anything special for
-        # nested disjunctions. The indicator variables and disaggregated
-        # variables of the inner disjunction will need to be disaggregated again
-        # anyway, and nothing will get double-bigm-ed. (If an untransformed
-        # disjunction is lurking here, we will catch it below).
+        # As opposed to bigm, in hull the only special thing we need to do for
+        # nested Disjunctions is to make sure that we move up local var
+        # references and also references to the disaggregated variables so that
+        # all will be accessible after we transform this
+        # Disjunct. Mathematically, there is nothing to do: the indicator
+        # variables and disaggregated variables of the inner disjunction will
+        # need to be disaggregated again anyway, and nothing will get
+        # double-bigm-ed. (If an untransformed disjunction is lurking here, we
+        # will catch it below).
+
+        # add references to all local variables on block (including the
+        # indicator_var)
+        disjunctBlock = disjunct._transformation_block()
+        varRefBlock = disjunctBlock.localVarReferences
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            varRefBlock.add_component(unique_component_name( 
+                varRefBlock, v.getname(fully_qualified=True, 
+                                       name_buffer=NAME_BUFFER)), Reference(v))
+
+        destinationBlock = disjunctBlock.parent_block()
+        for obj in block.component_data_objects(
+                Disjunction,
+                sort=SortComponents.deterministic,
+                descend_into=(Block)):
+            if obj.algebraic_constraint is None:
+                # This could be bad if it's active since that means its
+                # untransformed, but we'll wait to yell until the next loop
+                continue
+            # get this disjunction's relaxation block.
+            transBlock = obj.algebraic_constraint().parent_block()
+
+            self._transfer_var_references(transBlock, destinationBlock)
 
         # Look through the component map of block and transform everything we
         # have a handler for. Yell if we don't know how to handle it. (Note that
@@ -680,6 +701,15 @@ class Hull_Reformulation(Transformation):
             # variables down the line.
             handler(obj, disjunct, var_substitute_map, zero_substitute_map)
 
+    def _transfer_var_references(self, fromBlock, toBlock):
+        disjunctList = toBlock.relaxedDisjuncts
+        for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
+            # move all the of the local var references
+            newblock = disjunctList[len(disjunctList)]
+            newblock.localVarReferences = Block()
+            newblock.localVarReferences.transfer_attributes_from(
+                disjunctBlock.localVarReferences)
+                    
     def _warn_for_active_disjunction( self, disjunction, disjunct,
                                       var_substitute_map, zero_substitute_map):
         _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER)
@@ -935,7 +965,8 @@ class Hull_Reformulation(Transformation):
         """
         transBlock = disaggregated_var.parent_block()
         try:
-            return transBlock._disaggregatedVarMap['srcVar'][disaggregated_var]
+            return transBlock.parent_block()._disaggregatedVarMap[
+                'srcVar'][disaggregated_var]
         except:
             logger.error("'%s' does not appear to be a disaggregated variable"
                          % disaggregated_var.name)
@@ -987,7 +1018,7 @@ class Hull_Reformulation(Transformation):
            block of some Disjunct)
         """
         # This can only go well if v is a disaggregated var
-        transBlock = v.parent_block()
+        transBlock = v.parent_block().parent_block()
         try:
             return transBlock._bigMConstraintMap[v]
         except:
@@ -1003,6 +1034,6 @@ class Hull_Reformulation(Transformation):
 class _Deprecated_Name_Hull(Hull_Reformulation):
     @deprecated("The 'gdp.chull' name is deprecated. Please use the more apt 'gdp.hull' instead.",
                 logger='pyomo.gdp',
-                version="TBD", remove_in="TBD")
+                version="5.7")
     def __init__(self):
         super(_Deprecated_Name_Hull, self).__init__()

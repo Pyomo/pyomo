@@ -9,15 +9,23 @@ scipy, scipy_available = attempt_import('scipy', 'Interior point requires scipy'
 mumps, mumps_available = attempt_import('mumps', 'Interior point requires mumps')
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest('Interior point tests require numpy and scipy')
+if scipy_available:
+    from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
+if mumps_available:
+    from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
 
 from pyomo.contrib.pynumero.asl import AmplInterface
 asl_available = AmplInterface.available()
 if not asl_available:
     raise unittest.SkipTest('Regularization tests require ASL')
-import pyomo.contrib.interior_point as ip
+
+from pyomo.contrib.interior_point.interior_point import InteriorPointSolver, InteriorPointStatus
+from pyomo.contrib.interior_point.interface import InteriorPointInterface
+
 from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
 ma27_available = MA27Interface.available()
-
+if ma27_available:
+    from pyomo.contrib.interior_point.linalg.ma27_interface import InteriorPointMA27Interface
 
 def make_model():
     m = ConcreteModel()
@@ -50,8 +58,8 @@ def make_model_2():
 class TestRegularization(unittest.TestCase):
     def _test_regularization(self, linear_solver):
         m = make_model()
-        interface = ip.InteriorPointInterface(m)
-        ip_solver = ip.InteriorPointSolver(linear_solver)
+        interface = InteriorPointInterface(m)
+        ip_solver = InteriorPointSolver(linear_solver)
         ip_solver.set_interface(interface)
 
         interface.set_barrier_parameter(1e-1)
@@ -73,41 +81,43 @@ class TestRegularization(unittest.TestCase):
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_mumps(self):
-        solver = ip.linalg.MumpsInterface()
+        solver = MumpsInterface()
         self._test_regularization(solver)
 
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_scipy(self):
-        solver = ip.linalg.ScipyInterface(compute_inertia=True)
+        solver = ScipyInterface(compute_inertia=True)
         self._test_regularization(solver)
 
     @unittest.skipIf(not ma27_available, 'MA27 is not available')
     def test_ma27(self):
-        solver = ip.linalg.InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
+        solver = InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
         self._test_regularization(solver)
 
     def _test_regularization_2(self, linear_solver):
         m = make_model_2()
-        interface = ip.InteriorPointInterface(m)
-        ip_solver = ip.InteriorPointSolver(linear_solver)
+        interface = InteriorPointInterface(m)
+        ip_solver = InteriorPointSolver(linear_solver)
 
         status = ip_solver.solve(interface)
-        self.assertEqual(status, ip.InteriorPointStatus.optimal)
+        self.assertEqual(status, InteriorPointStatus.optimal)
         interface.load_primals_into_pyomo_model()
         self.assertAlmostEqual(m.x.value, 1)
         self.assertAlmostEqual(m.y.value, pe.exp(-1))
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_mumps_2(self):
-        solver = ip.linalg.MumpsInterface()
+        solver = MumpsInterface()
         self._test_regularization_2(solver)
 
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     def test_scipy_2(self):
-        solver = ip.linalg.ScipyInterface(compute_inertia=True)
+        solver = ScipyInterface(compute_inertia=True)
         self._test_regularization_2(solver)
 
     @unittest.skipIf(not ma27_available, 'MA27 is not available')
     def test_ma27_2(self):
-        solver = ip.linalg.InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
+        solver = InteriorPointMA27Interface(icntl_options={1: 0, 2: 0})
         self._test_regularization_2(solver)
 
 

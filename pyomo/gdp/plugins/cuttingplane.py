@@ -90,12 +90,6 @@ class CuttingPlane_Transformation(Transformation):
         hullRelaxation = TransformationFactory('gdp.hull')
         relaxIntegrality = TransformationFactory('core.relax_integrality')
 
-        # HACK: for the current writers, we need to also apply gdp.reclassify so
-        # that the indicator variables stay where they are in the big M model
-        # (since that is what we are eventually going to solve after we add our
-        # cuts).
-        reclassify = TransformationFactory('gdp.reclassify')
-
         #
         # Generalte the Hull relaxation (used for the separation
         # problem to generate cutting planes
@@ -103,7 +97,6 @@ class CuttingPlane_Transformation(Transformation):
         instance_rHull = hullRelaxation.create_using(instance)
         # This relies on relaxIntegrality relaxing variables on deactivated
         # blocks, which should be fine.
-        reclassify.apply_to(instance_rHull)
         relaxIntegrality.apply_to(instance_rHull)
 
         #
@@ -111,7 +104,6 @@ class CuttingPlane_Transformation(Transformation):
         # be the final instance returned to the user)
         #
         bigMRelaxation.apply_to(instance, bigM=bigM)
-        reclassify.apply_to(instance)
 
         #
         # Generate the continuous relaxation of the BigM transformation
