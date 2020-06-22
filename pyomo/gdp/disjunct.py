@@ -249,7 +249,7 @@ class _DisjunctionData(ActiveComponentData):
                         expressions.append(_tmpe)
                         continue
                     try:
-                        isbool = _tmpe.is_boolean_type()
+                        isbool = _tmpe.is_logical_type()
                     except AttributeError:
                         isbool = False
                     if isbool:

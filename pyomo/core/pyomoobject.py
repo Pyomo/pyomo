@@ -36,6 +36,6 @@ class PyomoObject(object):
         """Return True if this numeric value is a named expression"""
         return False
 
-    def is_boolean_type(self):
+    def is_logical_type(self):
         """Return True if this class is a Pyomo Boolean value, variable, or expression."""
         return False

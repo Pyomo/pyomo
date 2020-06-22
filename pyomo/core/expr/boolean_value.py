@@ -127,7 +127,7 @@ class BooleanValue(PyomoObject):
         """Boolean values are not numeric."""
         return False
 
-    def is_boolean_type(self):
+    def is_logical_type(self):
         return True
 
     def equivalent_to(self, other):

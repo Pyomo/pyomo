@@ -963,7 +963,7 @@ class _EvaluationVisitor(ExpressionValueVisitor):
 
         if node.is_numeric_type():
             return True, value(node)
-        elif node.is_boolean_type():
+        elif node.is_logical_type():
             return True, value(node)
         else:
             return True, node
