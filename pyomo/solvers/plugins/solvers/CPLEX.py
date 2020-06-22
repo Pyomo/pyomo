@@ -520,10 +520,10 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             results.solver.root_node_processing_time = float(root_node_processing_time.group(1))
 
         tree_processing_time = re.search(
-            r'(Parallel|Sequential).*\n\s+Real time\s+=\s+(\d+\.\d+) sec', output
+            r'(?:Parallel|Sequential).*\n\s+Real time\s+=\s+(\d+\.\d+) sec', output
         )
         if tree_processing_time:
-            results.solver.tree_processing_time = float(tree_processing_time.group(2))
+            results.solver.tree_processing_time = float(tree_processing_time.group(1))
 
         for line in output.split("\n"):
             tokens = re.split('[ \t]+',line.strip())
