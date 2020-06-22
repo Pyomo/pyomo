@@ -255,10 +255,7 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: 0 / m.Y2
             yield lambda: 0**m.Y2
 
-        if platform.python_implementation() == "PyPy":
-            numeric_error_msg = "operands do not support"
-        else:
-            numeric_error_msg = r"unsupported operand type\(s\) for"
+        numeric_error_msg = "unsupported operand type\\(s\\) for"
         for invalid_expr_fcn in invalid_expression_generator():
             with self.assertRaisesRegex(TypeError, numeric_error_msg):
                 _ = invalid_expr_fcn()
