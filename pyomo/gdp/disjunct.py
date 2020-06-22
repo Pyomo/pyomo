@@ -17,8 +17,8 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
-    ModelComponentFactory, Binary, Block, Var, ConstraintList, Any,
-    LogicalConstraintList, BooleanValue)
+    BooleanVar, ModelComponentFactory, Binary, Block, Var, ConstraintList, Any,
+    LogicalConstraintList, BooleanValue, )
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
@@ -85,6 +85,8 @@ class _DisjunctData(_BlockData):
     def __init__(self, component):
         _BlockData.__init__(self, component)
         self.indicator_var = Var(within=Binary)
+        self.indicator_bool = BooleanVar()
+        self.indicator_bool.associate_binary_var(self.indicator_var)
         # pointer to transformation block if this disjunct has been
         # transformed. None indicates it hasn't been transformed.
         self._transformation_block = None
@@ -92,10 +94,12 @@ class _DisjunctData(_BlockData):
     def activate(self):
         super(_DisjunctData, self).activate()
         self.indicator_var.unfix()
+        self.indicator_bool.unfix()
 
     def deactivate(self):
         super(_DisjunctData, self).deactivate()
         self.indicator_var.fix(0)
+        self.indicator_bool.fix(False)
 
     def _deactivate_without_fixing_indicator(self):
         super(_DisjunctData, self).deactivate()
