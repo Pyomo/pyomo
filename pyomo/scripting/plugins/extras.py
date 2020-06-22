@@ -34,7 +34,9 @@ def get_packages():
 
 @deprecated(
         "Use of the pyomo install-extras is deprecated. There are known bugs, "
-        "and we do not recommend the use of this code. ",
+        "and we do not recommend the use of this code. "
+        "The current recommended course of action is to manually install "
+        "optional dependencies as needed.",
         version='TBD')
 def install_extras(args=[], quiet=False):
     #
