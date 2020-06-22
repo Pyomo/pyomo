@@ -20,9 +20,9 @@ from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core import (
-    Block, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
+    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalConstraint
+    Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalConstraint,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
@@ -180,6 +180,7 @@ class Hull_Reformulation(Transformation):
         self.handlers = {
             Constraint : self._transform_constraint,
             Var :        False,
+            BooleanVar:  False,
             Connector :  False,
             Expression : False,
             Param :      False,

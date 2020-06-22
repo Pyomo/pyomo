@@ -4,9 +4,11 @@ Testing for the logical expression system
 """
 from __future__ import division
 import operator
+import sys
 from itertools import product
 
 import pyutilib.th as unittest
+import six
 
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.sympy_tools import sympy_available
@@ -252,9 +254,18 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: 0 / m.Y2
             yield lambda: 0**m.Y2
 
+        numeric_error_msg = r"unsupported operand type\(s\) for"
+        for invalid_expr_fcn in invalid_expression_generator():
+            with self.assertRaisesRegex(TypeError, numeric_error_msg):
+                _ = invalid_expr_fcn()
+
         def invalid_unary_expression_generator():
             yield lambda: -m.Y1
             yield lambda: +m.Y1
+
+        for invalid_expr_fcn in invalid_unary_expression_generator():
+            with self.assertRaisesRegex(TypeError, "bad operand type for unary"):
+                _ = invalid_expr_fcn()
 
         def invalid_comparison_generator():
             yield lambda: m.Y1 >= 0
@@ -262,32 +273,34 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: m.Y1 > 0
             yield lambda: m.Y1 < 0
 
-        numeric_error_msg = r"unsupported operand type\(s\) for"
-        for invalid_expr_fcn in invalid_expression_generator():
-            with self.assertRaisesRegex(TypeError, numeric_error_msg):
-                _ = invalid_expr_fcn()
-
-        for invalid_expr_fcn in invalid_unary_expression_generator():
-            with self.assertRaisesRegex(TypeError, "bad operand type for unary"):
-                _ = invalid_expr_fcn()
-
-        comparison_error_msg = "not supported between instances of"
-        for invalid_expr_fcn in invalid_comparison_generator():
-            with self.assertRaisesRegex(TypeError, comparison_error_msg):
-                _ = invalid_expr_fcn()
+        # These errors differ between python versions, regrettably
+        if sys.version_info[:2] == (3, 5):  # Python 3.5
+            comparison_error_msg = "unorderable types:"
+        else:  # Python 3.6+
+            comparison_error_msg = "not supported between instances of"
+        if six.PY3:
+            for invalid_expr_fcn in invalid_comparison_generator():
+                with self.assertRaisesRegex(TypeError, comparison_error_msg):
+                    _ = invalid_expr_fcn()
+        else:  # Python 2
+            pass
+            # Note: Python 2 behavior is weird, returning native type bool:
+            # m.Y1 >= 0  -> True
+            # m.Y1 <= 0  -> False
+            # m.Y1 > 0   -> True
+            # m.Y1 < 0   -> False
 
     def test_invalid_conversion(self):
         m = ConcreteModel()
         m.Y1 = BooleanVar()
 
         with self.assertRaisesRegex(
-                TypeError, r"float\(\) argument must be a string "
-                           "or a number, not 'SimpleBooleanVar'"):
+                TypeError, "argument must be a string or a number"):
             float(m.Y1)
 
         with self.assertRaisesRegex(
-                TypeError, "int\(\) argument must be a string, "
-                           "a bytes-like object or a number, not 'SimpleBooleanVar'"):
+                TypeError, "argument must be a string"
+                           "(?:, a bytes-like object)? or a number"):
             int(m.Y1)
 
 
