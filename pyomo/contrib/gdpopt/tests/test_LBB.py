@@ -6,7 +6,7 @@ from os.path import abspath, dirname, join, normpath
 import pyutilib.th as unittest
 from pyutilib.misc import import_file
 
-from pyomo.contrib.satsolver.satsolver import _z3_available
+from pyomo.contrib.satsolver.satsolver import z3_available
 from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective, maximize
 from pyomo.gdp import Disjunction
 from pyomo.opt import TerminationCondition
@@ -136,7 +136,7 @@ class TestGDPopt_LBB(unittest.TestCase):
 
 
 @unittest.skipUnless(solver_available, "Required subsolver %s is not available" % (minlp_solver,))
-@unittest.skipUnless(_z3_available, "Z3 SAT solver is not available.")
+@unittest.skipUnless(z3_available, "Z3 SAT solver is not available.")
 class TestGDPopt_LBB_Z3(unittest.TestCase):
     """Tests for logic-based branch and bound with Z3 SAT solver integration."""
 
