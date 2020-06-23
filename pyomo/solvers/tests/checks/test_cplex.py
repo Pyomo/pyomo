@@ -371,5 +371,130 @@ CPLEX>"""
         )
         self.assertEqual(results.solver.deterministic_time, 100.00)
 
+    def test_log_file_shows_warm_start_objective_value(self):
+        log_file_text = """
+1 of 1 MIP starts provided solutions.
+MIP start 'm1' defined initial solution with objective 25210.5363.
+"""
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.warm_start_objective_value, 25210.5363)
+
+    def test_log_file_shows_root_node_processing_time(self):
+        log_file_text = """
+Presolve time = 0.14 sec. (181.11 ticks)
+
+Root node processing (before b&c):
+  Real time             =    123.45 sec. (211.39 ticks)
+Parallel b&c, 16 threads:
+  Real time             =    67.89 sec. (56.98 ticks)
+  Sync time (average)   =    0.00 sec.
+  Wait time (average)   =    0.00 sec.
+                          ------------
+Total (root+branch&cut) =    191.34 sec. (268.37 ticks)
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.root_node_processing_time, 123.45)
+
+    def test_log_file_shows_tree_processing_time_when_parallel(self):
+        log_file_text = """
+Presolve time = 0.14 sec. (181.11 ticks)
+
+Root node processing (before b&c):
+  Real time             =    123.45 sec. (211.39 ticks)
+Parallel b&c, 16 threads:
+  Real time             =    67.89 sec. (56.98 ticks)
+  Sync time (average)   =    0.00 sec.
+  Wait time (average)   =    0.00 sec.
+                          ------------
+Total (root+branch&cut) =    191.34 sec. (268.37 ticks)
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.tree_processing_time, 67.89)
+
+    def test_log_file_shows_tree_processing_time_when_sequential(self):
+        log_file_text = """
+Presolve time = 0.14 sec. (181.11 ticks)
+
+Root node processing (before b&c):
+  Real time             =    123.45 sec. (211.39 ticks)
+Sequential b&c:
+  Real time             =    67.89 sec. (56.98 ticks)
+  Sync time (average)   =    0.00 sec.
+  Wait time (average)   =    0.00 sec.
+                          ------------
+Total (root+branch&cut) =    191.34 sec. (268.37 ticks)
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.tree_processing_time, 67.89)
+
+    def test_log_file_shows_n_solutions_found_when_multiple(self):
+        log_file_text = """
+Solution pool: 15 solutions saved.
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.n_solutions_found, 15)
+
+    def test_log_file_shows_n_solutions_found_when_single(self):
+        log_file_text = """
+Solution pool: 1 solution saved.
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.n_solutions_found, 1)
+
+    def test_log_file_shows_number_of_binary_variables(self):
+        log_file_text = """
+Objective sense      : Minimize
+Variables            :     506  [Nneg: 206,  Binary: 300]
+Objective nonzeros   :      32
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.problem.number_of_binary_variables, 300)
+
+    def test_log_file_shows_number_of_binary_variables_when_integer_variables_are_present(
+        self
+    ):
+        log_file_text = """
+Variables : 7 [Nneg: 1, Binary: 4, General Integer: 2]
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.problem.number_of_binary_variables, 4)
+
+    def test_log_file_shows_number_of_continuous_variables(self):
+        log_file_text = """
+Objective sense      : Minimize
+Variables            :     506  [Nneg: 206,  Binary: 300]
+Objective nonzeros   :      32
+ """
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.problem.number_of_continuous_variables, 206)
+
+
 if __name__ == "__main__":
     unittest.main()
