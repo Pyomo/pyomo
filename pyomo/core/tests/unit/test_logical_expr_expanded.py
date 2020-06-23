@@ -255,7 +255,7 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: 0 / m.Y2
             yield lambda: 0**m.Y2
 
-        numeric_error_msg = "unsupported operand type\\(s\\) for"
+        numeric_error_msg = "(?:(?:unsupported operand type)|(?:operands do not support))"
         for invalid_expr_fcn in invalid_expression_generator():
             with self.assertRaisesRegex(TypeError, numeric_error_msg):
                 _ = invalid_expr_fcn()
@@ -275,10 +275,7 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: m.Y1 < 0
 
         # These errors differ between python versions, regrettably
-        if sys.version_info[:2] == (3, 5):  # Python 3.5
-            comparison_error_msg = "unorderable types:"
-        else:  # Python 3.6+
-            comparison_error_msg = "not supported between instances of"
+        comparison_error_msg = "(?:(?:unorderable types)|(?:not supported between instances of))"
         if six.PY3:
             for invalid_expr_fcn in invalid_comparison_generator():
                 with self.assertRaisesRegex(TypeError, comparison_error_msg):
