@@ -195,6 +195,11 @@ def main():
     kwds['timeout'] = options.request_timeout
     kwds['block'] = True
 
+    #
+    # Import plugins
+    #
+    import pyomo.environ
+    #
 
     if options.traceback:
         pyutilib.pyro.TaskWorkerServer(PyomoMIPWorker,
