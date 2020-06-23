@@ -112,11 +112,7 @@ Using these Boolean variables, we can define ``LogicalConstraint`` objects, anal
 .. doctest::
 
     >>> m.p = LogicalConstraint(expr=m.Y[1].implies(land(m.Y[2], m.Y[3])).lor(m.Y[4]))
-        >>> m.p.pprint()
-        p : Size=1, Index=None, Active=True
-            Key  : Body                          : Active
-            None : (Y[1] --> Y[2] ∧ Y[3]) ∨ Y[4] :   True
-    >>> m.p.pprint()
+    >>> m.p.pprint()  # doctest: +NORMALIZE_WHITESPACE
     p : Size=1, Index=None, Active=True
         Key  : Body                          : Active
         None : (Y[1] --> Y[2] ∧ Y[3]) ∨ Y[4] :   True
