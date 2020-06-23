@@ -7,6 +7,11 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+from pyomo.common.deprecation import deprecation_warning
+deprecation_warning(
+    'The pyomo.gdp.plugins.chull module is deprecated.  '
+    'Import the Hull reformulation objects from pyomo.gdp.plugins.hull.',
+    version='5.7')
 
 import logging
 
