@@ -13,43 +13,19 @@ import os
 import pyutilib
 import pyutilib.th as unittest
 
-from pyomo.core import (
-    Binary,
-    ConcreteModel,
-    Constraint,
-    Objective,
-    Var,
-    Integers,
-    RangeSet,
-    minimize,
-    quicksum,
-    Suffix,
-)
-from pyomo.opt import (
-    BranchDirection,
-    ProblemFormat,
-    SolverFactory,
-    SolverStatus,
-    TerminationCondition,
-    convert_problem,
-)
-from pyomo.solvers.plugins.solvers.CPLEX import (
-    CPLEXSHELL,
-    MockCPLEX,
-    _validate_file_name,
-    ORDFileSchema,
-)
+from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix
+from pyomo.opt import (BranchDirection, ProblemFormat, SolverFactory,
+                       SolverStatus, TerminationCondition, convert_problem)
+from pyomo.solvers.plugins.solvers.CPLEX import CPLEXSHELL, MockCPLEX, _validate_file_name, ORDFileSchema
 
 
 class _mock_cplex_128(object):
     def version(self):
-        return (12, 8, 0)
-
+        return (12,8,0)
 
 class _mock_cplex_126(object):
     def version(self):
-        return (12, 6, 0)
-
+        return (12,6,0)
 
 class CPLEX_utils(unittest.TestCase):
     def test_validate_file_name(self):
@@ -57,41 +33,38 @@ class CPLEX_utils(unittest.TestCase):
         _128 = _mock_cplex_128()
 
         # Check plain file
-        fname = "foo.lp"
-        self.assertEqual(fname, _validate_file_name(_126, fname, "xxx"))
-        self.assertEqual(fname, _validate_file_name(_128, fname, "xxx"))
+        fname = 'foo.lp'
+        self.assertEqual(fname, _validate_file_name(_126, fname, 'xxx'))
+        self.assertEqual(fname, _validate_file_name(_128, fname, 'xxx'))
 
         # Check spaces in the file
-        fname = "foo bar.lp"
-        with self.assertRaisesRegexp(ValueError, "Space detected in CPLEX xxx file"):
-            _validate_file_name(_126, fname, "xxx")
-        self.assertEqual('"%s"' % (fname,), _validate_file_name(_128, fname, "xxx"))
+        fname = 'foo bar.lp'
+        with self.assertRaisesRegexp(
+                ValueError, "Space detected in CPLEX xxx file"):
+            _validate_file_name(_126, fname, 'xxx')
+        self.assertEqual('"%s"' % (fname,),
+                         _validate_file_name(_128, fname, 'xxx'))
 
         # check OK path separators
-        fname = "foo%sbar.lp" % (os.path.sep,)
-        self.assertEqual(fname, _validate_file_name(_126, fname, "xxx"))
-        self.assertEqual(fname, _validate_file_name(_128, fname, "xxx"))
+        fname = 'foo%sbar.lp' % (os.path.sep,)
+        self.assertEqual(fname, _validate_file_name(_126, fname, 'xxx'))
+        self.assertEqual(fname, _validate_file_name(_128, fname, 'xxx'))
 
         # check BAD path separators
-        bad_char = "/\\".replace(os.path.sep, "")
-        fname = "foo%sbar.lp" % (bad_char,)
-        msg = "Unallowed character \(%s\) found in CPLEX xxx file" % (
-            repr(bad_char)[1:-1],
-        )
+        bad_char = '/\\'.replace(os.path.sep,'')
+        fname = 'foo%sbar.lp' % (bad_char,)
+        msg = 'Unallowed character \(%s\) found in CPLEX xxx file' % (
+            repr(bad_char)[1:-1],)
         with self.assertRaisesRegexp(ValueError, msg):
-            _validate_file_name(_126, fname, "xxx")
+            _validate_file_name(_126, fname, 'xxx')
         with self.assertRaisesRegexp(ValueError, msg):
-            _validate_file_name(_128, fname, "xxx")
+            _validate_file_name(_128, fname, 'xxx')
 
 
 class CPLEXShellWritePrioritiesFile(unittest.TestCase):
     def setUp(self):
-        from pyomo.solvers.plugins.converter.model import (
-            PyomoMIPConverter,
-        )  # register the `ProblemConverterFactory`
-        from pyomo.repn.plugins.cpxlp import (
-            ProblemWriter_cpxlp,
-        )  # register the `WriterFactory`
+        from pyomo.solvers.plugins.converter.model import PyomoMIPConverter  # register the `ProblemConverterFactory`
+        from pyomo.repn.plugins.cpxlp import ProblemWriter_cpxlp  # register the `WriterFactory`
 
         self.mock_model = self.get_mock_model()
         self.mock_cplex_shell = self.get_mock_cplex_shell(self.mock_model)
@@ -355,7 +328,9 @@ CPLEX>"""
         self.assertEqual(
             results.solver.termination_condition, TerminationCondition.infeasible
         )
-        self.assertEqual(results.solver.termination_message, "Presolve - Infeasible.")
+        self.assertEqual(
+            results.solver.termination_message, "Presolve - Infeasible."
+        )
         self.assertEqual(results.solver.return_code, 1217)
 
     def test_log_file_shows_max_time_limit_exceeded_with_feasible_solution(self):
@@ -377,9 +352,7 @@ CPLEX>"""
         )
         self.assertEqual(results.solver.deterministic_time, 100.00)
 
-    def test_log_file_shows_max_deterministic_time_limit_exceeded_with_feasible_solution(
-        self
-    ):
+    def test_log_file_shows_max_deterministic_time_limit_exceeded_with_feasible_solution(self):
         log_file_text = """
 MIP - Deterministic time limit exceeded, integer feasible:  Objective =  0.0000000000e+00
 Current MIP best bound =  0.0000000000e+00 (gap = 10.0, 10.00%)
