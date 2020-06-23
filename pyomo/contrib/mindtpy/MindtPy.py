@@ -77,7 +77,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
-        domain=In(["OA", "GBD", "ECP", "PSC"]),
+        domain=In(["OA", "GBD", "ECP", "PSC", "GOA"]),
         description="Decomposition strategy",
         doc="MINLP Decomposition strategy to be applied to the method. "
             "Currently available Outer Approximation (OA), Extended Cutting "

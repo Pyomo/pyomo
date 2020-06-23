@@ -9,6 +9,8 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
 from pyomo.core import minimize, Objective, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.opt import SolverFactory
 
 
 def MindtPy_iteration_loop(solve_data, config):
@@ -91,6 +93,42 @@ def MindtPy_iteration_loop(solve_data, config):
         #             'Not making enough progress for {} iterations. '
         #             'Switching to OA.'.format(max_nonimprove_iter))
         #         config.strategy = 'OA'
+
+    # if add_integer_cuts is True, the bound obtained in the last iteration is no reliable.
+    # we correct it after the iteration.
+    if config.add_integer_cuts:
+        config.zero_tolerance = 1E-4
+        # Solve NLP subproblem
+        # The constraint linearization happens in the handlers
+        fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
+            solve_data, config)
+        if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
+            handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
+        elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
+            handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+        else:
+            handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                    solve_data, config)
+
+        MindtPy = solve_data.mip.MindtPy_utils
+        MindtPy.MindtPy_linear_cuts.integer_cuts.deactivate()
+        MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
+        masteropt = SolverFactory(config.mip_solver)
+        # determine if persistent solver is called.
+        if isinstance(masteropt, PersistentSolver):
+            masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
+        mip_args = dict(config.mip_solver_args)
+        if config.mip_solver == 'gams':
+            mip_args['add_options'] = mip_args.get('add_options', [])
+            mip_args['add_options'].append('option optcr=0.0;')
+        master_mip_results = masteropt.solve(
+            solve_data.mip, **mip_args)
+        if main_objective.sense == minimize:
+            solve_data.LB = master_mip_results.problem.lower_bound
+            solve_data.LB_progress.append(solve_data.LB)
+        else:
+            solve_data.UB = master_mip_results.problem.upper_bound
+            solve_data.UB_progress.append(solve_data.UB)
 
 
 def algorithm_should_terminate(solve_data, config, check_cycling):

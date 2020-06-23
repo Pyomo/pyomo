@@ -3,11 +3,12 @@ from __future__ import division
 
 from math import copysign
 
-from pyomo.core import Constraint, minimize, value
+from pyomo.core import Constraint, minimize, value, TransformationFactory, Block, ConstraintList
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 from pyomo.core.expr import differentiate
+from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 
 def add_objective_linearization(solve_data, config):
@@ -184,3 +185,54 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
     #     MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
     # else:
     #     MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)
+
+
+def add_affine_cuts(nlp_result, solve_data, config):
+    m = solve_data.mip
+    config.logger.info("Adding affine cuts.")
+    counter = 0
+
+    for constr in m.MindtPy_utils.constraint_list:
+        if constr.body.polynomial_degree() in (1, 0):
+            continue
+
+        vars_in_constr = list(
+            identify_variables(constr.body))
+        if any(var.value is None for var in vars_in_constr):
+            continue  # a variable has no values
+
+        # mcpp stuff
+        try:
+            mc_eqn = mc(constr.body)
+        except MCPP_Error as e:
+            config.logger.debug(
+                "Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
+            continue  # skip to the next constraint
+        ccSlope = mc_eqn.subcc()
+        cvSlope = mc_eqn.subcv()
+        ccStart = mc_eqn.concave()
+        cvStart = mc_eqn.convex()
+        ub_int = min(constr.upper, mc_eqn.upper()
+                     ) if constr.has_ub() else mc_eqn.upper()
+        lb_int = max(constr.lower, mc_eqn.lower()
+                     ) if constr.has_lb() else mc_eqn.lower()
+
+        parent_block = constr.parent_block()
+        # Create a block on which to put outer approximation cuts.
+        aff_utils = parent_block.component('MindtPy_aff')
+        if aff_utils is None:
+            aff_utils = parent_block.MindtPy_aff = Block(
+                doc="Block holding affine constraints")
+            aff_utils.MindtPy_aff_cons = ConstraintList()
+        aff_cuts = aff_utils.MindtPy_aff_cons
+        concave_cut = sum(ccSlope[var] * (var - var.value)
+                          for var in vars_in_constr
+                          if not var.fixed) + ccStart >= lb_int
+        convex_cut = sum(cvSlope[var] * (var - var.value)
+                         for var in vars_in_constr
+                         if not var.fixed) + cvStart <= ub_int
+        aff_cuts.add(expr=concave_cut)
+        aff_cuts.add(expr=convex_cut)
+        counter += 2
+
+    config.logger.info("Added %s affine cuts" % counter)
