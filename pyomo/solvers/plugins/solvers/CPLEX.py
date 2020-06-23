@@ -623,7 +623,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_condition = TerminationCondition.noSolution
                 results.solver.termination_message = ' '.join(tokens)
             elif len(tokens) >= 9 and tokens[0] == "MIP" and tokens[1] == "start" and tokens[7] == "objective":
-                results.solver.warm_start_objective_value = float(tokens[8][:-1])  # remove trailing full stop
+                results.solver.warm_start_objective_value = float(tokens[8].rstrip('.'))
             elif len(tokens) >= 5 and tokens[0:2] == ["Solution", "pool:"] and tokens[3] in ["solution", "solutions"] and tokens[4] == "saved.":
                 results.solver.n_solutions_found = int(tokens[2])
             elif len(tokens) >= 10 and tokens[0] == "Current" and tokens[1] == "MIP" and tokens[2] == "best" and tokens[3] == "bound":
