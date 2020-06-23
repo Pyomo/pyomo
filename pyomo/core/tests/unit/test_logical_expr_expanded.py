@@ -265,7 +265,8 @@ class TestLogicalClasses(unittest.TestCase):
             yield lambda: +m.Y1
 
         for invalid_expr_fcn in invalid_unary_expression_generator():
-            with self.assertRaisesRegex(TypeError, "bad operand type for unary"):
+            with self.assertRaisesRegex(TypeError, "(?:(?:bad operand type for unary)"
+                                                   "|(?:unsupported operand type for unary))"):
                 _ = invalid_expr_fcn()
 
         def invalid_comparison_generator():
