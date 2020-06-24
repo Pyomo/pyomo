@@ -24,7 +24,7 @@ detection. Thus, this package provides the user with a lot of control over the c
 parameters of this function that are used for this graph construction and subsequent community detection
 are shown below.
 
-    `detect_communities(model[, type_of_community_map, with_objective, weighted_graph, random_seed])`
+.. autofunction:: pyomo.contrib.community_detection.detection.detect_communities
 
 The main graph features the user can specify are the type of community map, whether the graph is weighted or
 unweighted, and whether the objective function(s) is included in the graph generation. Below, the significance
