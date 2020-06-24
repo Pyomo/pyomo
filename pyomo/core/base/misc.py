@@ -179,18 +179,18 @@ def sorted_robust(arg):
 
 
 def _safe_to_str(obj):
-    if isinstance(obj, string_types):
-        # If this is a Python 2.x string, then we want to decode it to
-        # unicode so that len() counts embedded multibyte characters as
-        # a single codepoint (so the resulting tabulat alignment is
-        # correct)
-        if hasattr(obj, 'decode'):
-            return obj.decode('utf-8')
-        return obj
-    try:
-        return str(obj)
-    except:
-        return "None"
+    if not isinstance(obj, string_types):
+        try:
+            obj = str(obj)
+        except:
+            return "None"
+    # If this is a Python 2.x string, then we want to decode it to a
+    # proper unicode string so that len() counts embedded multibyte
+    # characters as a single codepoint (so the resulting tabulat
+    # alignment is correct)
+    if hasattr(obj, 'decode'):
+        return obj.decode('utf-8')
+    return obj
 
 def tabular_writer(ostream, prefix, data, header, row_generator):
     """Output data in tabular form
