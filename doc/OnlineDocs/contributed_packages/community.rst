@@ -16,7 +16,7 @@ community detection (`Blondel et al, 2008`_) to determine the communities that e
 In graph theory, a community is defined as a subset of nodes that have a greater degree of connectivity within
 themselves than they do with the rest of the nodes in the graph. In the context of Pyomo models, a community
 represents a subproblem within the overall optimization problem. Identifying these subproblems and then solving them
-independently can save computational work as compared with trying to solve the entire model at once. Thus, it
+independently can save computational work compared with trying to solve the entire model at once. Thus, it
 can be very useful to know the communities that exist in a model.
 
 The manner in which the graph of nodes and edges is constructed from the model directly affects the community
