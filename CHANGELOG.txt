@@ -3,9 +3,90 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Current Development
+Pyomo 5.7.0   19 Jun 2020
 -------------------------------------------------------------------------------
 
+- General
+  - Remove references to Python versions older than 2.7 (#1361)
+  - Fix Python 3 compatibility issue in setup.py (#1354)
+  - Updates to the FileDownloader, fix Python 3 type issue, add utility for 
+    identifying os platform, improve find_library method (#1353, #1368, #1373)
+  - Fix tokenization, update errors in the DAT parser (#1366, #1516)
+  - Fix typo in relax_integrality deprecation warning (#1385)
+  - Promote __version__ identifier to the pyomo module scope (#1390)
+  - Update to only compute is_fixed when necessary (#1402, #1415)
+  - Add ConfigEnum class (#1418)
+  - Prevent exception for transformations missing doc string (#1454)
+  - Automate wheel creation using GitHub actions (#1409)
+  - Replace uses of pyutilib.enum package (#1506)
+- Core
+  - Units support for Pyomo components and models (#1341, #1460, #1494, #1504)
+  - Integrate new Set component implementation (#1319)
+  - Add deprecation warning for Set.value_list (#1371)
+  - Fix bug when constructing empty sets with dimen>1 (#1377)
+  - Rename component.type() to component.ctype (#1376)
+  - Fixes for linear expression handling (#1403, #1405)
+  - Fix handling of deactivated blocks in relax_integer_vars transformation (#1428)
+  - Fix component_data_objects for scalar components with no len() (#1436)
+  - Ensure block rules are always called (#1438)
+  - Fix construction of scalar derived blocks (#1459)
+  - Updates to native Pyomo differentiation (#1423)
+  - Expand expression template support (#1433)
+  - Ensure sympy configuration happens (#1470)
+  - Add deprecation wrapper for old StreamBasedExpressionVisitor API (#1488)
+  - Identify squared linear sums as quadratic in generate_standard_repn (#1493)
+  - Check for consistent dimensions when slicing (#1492)
+- Solver Interfaces
+  - Updates to GAMS interface, update GAMSDirect.available to catch unexpected 
+    exceptions, add GDX interface for returning solution values, improve error 
+    reporting from GAMS, fix handling of fixed variables in LinearExpressions 
+    (#1351, #1446, #1382, #1463)
+  - CPLEXDirect performance improvements (#1416)
+  - Improve Baron warning for ResName/TimName options (#1486)
+- PySP Updates
+  - Clean up PySP sizes example (#1395)
+  - Remove use of pyutilib.enum package (#1464)
+- GDP Updates
+  - Rewrite of the Chull transformation (#1421)
+  - Fix bug in bigm transformation for nested disjunctions (#1479)
+  - Rename gdp.chull transformation to gdp.hull (#1471)
+  - Deprecate GDP reclassify transformation (#1502)
+- DAE Updates
+  - Add DAE set manipulation utilities (#1288)
+  - Add function for identifying and solving for consistent initial conditions (#1410)
+  - Fix DAE flattener for non-time-indexed blocks (#1489)
+- Network Updates
+  - Update to cast fixed values back to float (#1469)
+- Testing
+  - Update Travis badge to reflect migration from .org to .com (#1364)
+  - Add test coverage to linux/osx GitHub actions (#1359)
+  - Update Baron, Ipopt, gjh_asl_json, Xpress solvers in GitHub actions
+    (#1378, #1393, #1394, #1452)
+  - Unified GitHub actions workflow (#1426)
+  - Disable Appveyor testing (#1447)
+  - Update coverage configuration and reporting (#1451, #1455, #1457, #1462)
+  - Solver testing improvements (#1473)
+- Documentation
+  - Update RangeSet docstring (#1437)
+  - Expand developer documentation (#1472)
+  - Update README.txt for building the Sphinx documentation (#1480)
+  - Add documentation for sensitivity_toolbox (#1481)
+- Contributed Packages
+  - PyNumero updates, add CyIpopt interface, enable build through 
+    build-extensions, add HSL interface, package reorganization, add operations 
+    for block vectors/matrices, fix broken examples (#1356, #1412, #1381, #1419, 
+    #1439, #1467, #1518)
+  - Add Fourier-Motzkin elimination transformation (#1370, #1440)
+  - GDPOpt updates, fix use of numeric derivatives, preserve implicit config 
+    options (#1422, #1432,)
+  - Mindtpy updates, add lp/nlp algorithm, bug fixes, documentation, fix 
+    warmstart, add cycling check (#1391, #1476)
+  - Fix and deprecate constraint tightener transformation in the preprocessing 
+    module (#1458, #1388)
+  - FBBT updates, fix numerical issues (#1360)
+  - parmest updates, add ScenarioCreator, update data in example to match paper 
+    results, calculate covariance matrix (#1363, #1474, #1475)
+  - Add basic interior point algorithm based on PyNumero (#1450, #1505, #1495)
 
 -------------------------------------------------------------------------------
 Pyomo 5.6.9   18 Mar 2020

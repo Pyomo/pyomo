@@ -6,7 +6,7 @@ from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master,
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
-from pyomo.core import minimize, Objective
+from pyomo.core import minimize, Objective, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time
 
@@ -21,7 +21,7 @@ def MindtPy_iteration_loop(solve_data, config):
             '---MindtPy Master Iteration %s---'
             % solve_data.mip_iter)
 
-        if algorithm_should_terminate(solve_data, config):
+        if algorithm_should_terminate(solve_data, config, check_cycling=False):
             break
 
         solve_data.mip_subiter = 0
@@ -39,7 +39,7 @@ def MindtPy_iteration_loop(solve_data, config):
         else:
             raise NotImplementedError()
 
-        if algorithm_should_terminate(solve_data, config):
+        if algorithm_should_terminate(solve_data, config, check_cycling=True):
             break
 
         if config.single_tree is False:  # if we don't use lazy callback, i.e. LP_NLP
@@ -47,7 +47,7 @@ def MindtPy_iteration_loop(solve_data, config):
             # The constraint linearization happens in the handlers
             fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
                 solve_data, config)
-            if fixed_nlp_result.solver.termination_condition is tc.optimal:
+            if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
                 handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
@@ -93,7 +93,7 @@ def MindtPy_iteration_loop(solve_data, config):
         #         config.strategy = 'OA'
 
 
-def algorithm_should_terminate(solve_data, config):
+def algorithm_should_terminate(solve_data, config, check_cycling):
     """Check if the algorithm should terminate.
 
     Termination conditions based on solver options and progress.
@@ -133,6 +133,30 @@ def algorithm_should_terminate(solve_data, config):
             format(solve_data.LB, solve_data.UB))
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
         return True
+
+    # Cycling check
+    if config.cycling_check == True and solve_data.mip_iter >= 1 and check_cycling:
+        temp = []
+        for var in solve_data.mip.component_data_objects(ctype=Var):
+            if var.is_integer():
+                temp.append(int(round(var.value)))
+        solve_data.curr_int_sol = temp
+
+        if solve_data.curr_int_sol == solve_data.prev_int_sol:
+            config.logger.info(
+                'Cycling happens after {} master iterations. '
+                'This issue happens when the NLP subproblem violates constraint qualification. '
+                'Convergence to optimal solution is not guaranteed.'
+                .format(solve_data.mip_iter))
+            config.logger.info(
+                'Final bound values: LB: {}  UB: {}'.
+                format(solve_data.LB, solve_data.UB))
+            # TODO determine solve_data.LB, solve_data.UB is inf or -inf.
+            solve_data.results.solver.termination_condition = tc.feasible
+            return True
+
+        solve_data.prev_int_sol = solve_data.curr_int_sol
+
     # if not algorithm_is_making_progress(solve_data, config):
     #     config.logger.debug(
     #         'Algorithm is not making enough progress. '

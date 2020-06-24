@@ -1,6 +1,6 @@
-""" Example in Online Document.
+""" Example in the online doc.
 
-The expected optimal solution value is 3.
+The expected optimal solution value is 2.438447187191098.
 
     Problem type:    convex MINLP
             size:    1  binary variable
@@ -25,6 +25,7 @@ class OnlineDocExample(ConcreteModel):
         model = self
         model.x = Var(bounds=(1.0, 10.0), initialize=5.0)
         model.y = Var(within=Binary)
-        model.c1 = Constraint(expr=(model.x-3.0)**2 <= 50.0*(1-model.y))
-        model.c2 = Constraint(expr=model.x*log(model.x)+5.0 <= 50.0*(model.y))
+        model.c1 = Constraint(expr=(model.x-4.0)**2 -
+                              model.x <= 50.0*(1-model.y))
+        model.c2 = Constraint(expr=model.x*log(model.x) + 5 <= 50.0*(model.y))
         model.objective = Objective(expr=model.x, sense=minimize)

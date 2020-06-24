@@ -191,7 +191,7 @@ def process_setarg(arg):
 @deprecated('The set_options decorator is deprecated; create Sets from '
             'functions explicitly by passing the function to the Set '
             'constructor using the "initialize=" keyword argument.',
-            version='TBD')
+            version='5.7')
 def set_options(**kwds):
     """
     This is a decorator for set initializer functions.  This
@@ -476,7 +476,7 @@ class _SetData(_SetDataBase):
             if isinstance(value, _SetData):
                 deprecation_warning(
                     "Testing for set subsets with 'a in b' is deprecated.  "
-                    "Use 'a.issubset(b)'.", version='TBD')
+                    "Use 'a.issubset(b)'.", version='5.7')
                 return value.issubset(self)
             else:
                 return False
@@ -803,7 +803,7 @@ class _SetData(_SetDataBase):
         return (interval.start, interval.end, interval.step)
 
     @property
-    @deprecated("The 'virtual' attribute is no longer supported", version='TBD')
+    @deprecated("The 'virtual' attribute is no longer supported", version='5.7')
     def virtual(self):
         return isinstance(self, (_AnySet, SetOperator, _InfiniteRangeSetData))
 
@@ -816,7 +816,7 @@ class _SetData(_SetDataBase):
 
     @property
     @deprecated("The 'concrete' attribute is no longer supported.  "
-                "Use isdiscrete() or isfinite()", version='TBD')
+                "Use isdiscrete() or isfinite()", version='5.7')
     def concrete(self):
         return self.isfinite()
 
@@ -829,18 +829,18 @@ class _SetData(_SetDataBase):
 
     @property
     @deprecated("The 'ordered' attribute is no longer supported.  "
-                "Use isordered()", version='TBD')
+                "Use isordered()", version='5.7')
     def ordered(self):
         return self.isordered()
 
     @property
     @deprecated("'filter' is no longer a public attribute.",
-                version='TBD')
+                version='5.7')
     def filter(self):
         return None
 
     @deprecated("check_values() is deprecated: Sets only contain valid members",
-                version='TBD')
+                version='5.7')
     def check_values(self):
         """
         Verify that the values in this set are valid.
@@ -1127,9 +1127,20 @@ class _FiniteSetMixin(object):
         raise DeveloperError("Derived finite set class (%s) failed to "
                              "implement __len__" % (type(self).__name__,))
 
-    def __iter__(self):
+    def _iter_impl(self):
         raise DeveloperError("Derived finite set class (%s) failed to "
-                             "implement __iter__" % (type(self).__name__,))
+                             "implement _iter_impl" % (type(self).__name__,))
+
+    def __iter__(self):
+        """Iterate over the finite set
+
+        Note: derived classes should NOT reimplement this method, and
+        should instead overload _iter_impl.  The expression template
+        system relies on being able to replace this method for all Sets
+        during template generation.
+
+        """
+        return self._iter_impl()
 
     def __reversed__(self):
         return reversed(self.data())
@@ -1147,14 +1158,14 @@ class _FiniteSetMixin(object):
 
     @property
     @deprecated("The 'value' attribute is deprecated.  Use .data() to "
-                "retrieve the values in a finite set.", version='TBD')
+                "retrieve the values in a finite set.", version='5.7')
     def value(self):
         return set(self)
 
     @property
     @deprecated("The 'value_list' attribute is deprecated.  Use "
                 ".ordered_data() to retrieve the values from a finite set "
-                "in a deterministic order.", version='TBD')
+                "in a deterministic order.", version='5.7')
     def value_list(self):
         return list(self.ordered_data())
 
@@ -1242,7 +1253,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
             return value
         return default
 
-    def __iter__(self):
+    def _iter_impl(self):
         return iter(self._values)
 
     def __len__(self):
@@ -1274,7 +1285,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     @property
     @deprecated("'filter' is no longer a public attribute.",
-                version='TBD')
+                version='5.7')
     def filter(self):
         return self._filter
 
@@ -1518,7 +1529,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __iter__(self):
+    def _iter_impl(self):
         """
         Return an iterator for the set.
         """
@@ -1661,13 +1672,13 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
     # Note: because none of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
-    def __iter__(self):
+    def _iter_impl(self):
         """
         Return an iterator for the set.
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).__iter__()
+        return super(_SortedSetData, self)._iter_impl()
 
     def __reversed__(self):
         if not self._is_sorted:
@@ -1939,7 +1950,7 @@ class Set(IndexedComponent):
 
 
     @deprecated("check_values() is deprecated: Sets only contain valid members",
-                version='TBD')
+                version='5.7')
     def check_values(self):
         """
         Verify that the values in this set are valid.
@@ -2252,7 +2263,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
     def __len__(self):
         return len(self._ref)
 
-    def __iter__(self):
+    def _iter_impl(self):
         return iter(self._ref)
 
     def __str__(self):
@@ -2411,7 +2422,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
                 i += 1
                 n = start + i*step
 
-    def __iter__(self):
+    def _iter_impl(self):
         # If there is only a single underlying range, then we will
         # iterate over it
         nIters = len(self._ranges) - 1
@@ -2916,7 +2927,7 @@ class SetOperator(_SetData, Set):
             deprecation_warning(
                 "Providing construction data to SetOperator objects is "
                 "deprecated.  This data is ignored and in a future version "
-                "will not be allowed", version='TBD')
+                "will not be allowed", version='5.7')
             fail = len(data) > 1 or None not in data
             if not fail:
                 _data = data[None]
@@ -3032,7 +3043,7 @@ class SetOperator(_SetData, Set):
     @property
     @deprecated("SetProduct.set_tuple is deprecated.  "
                 "Use SetProduct.subsets() to get the operator arguments.",
-                version='TBD')
+                version='5.7')
     def set_tuple(self):
         # Despite its name, in the old SetProduct, set_tuple held a list
         return list(self.subsets())
@@ -3119,7 +3130,7 @@ class SetUnion_InfiniteSet(SetUnion):
 class SetUnion_FiniteSet(_FiniteSetMixin, SetUnion_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0 = self._sets[0]
         return itertools.chain(
             set0,
@@ -3250,7 +3261,7 @@ class SetIntersection_InfiniteSet(SetIntersection):
 class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0, set1 = self._sets
         if not set0.isordered():
             if set1.isordered():
@@ -3355,7 +3366,7 @@ class SetDifference_InfiniteSet(SetDifference):
 class SetDifference_FiniteSet(_FiniteSetMixin, SetDifference_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0, set1 = self._sets
         return (_ for _ in set0 if _ not in set1)
 
@@ -3459,7 +3470,7 @@ class SetSymmetricDifference_FiniteSet(_FiniteSetMixin,
                                         SetSymmetricDifference_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         set0, set1 = self._sets
         return itertools.chain(
             (_ for _ in set0 if _ not in set1),
@@ -3732,7 +3743,7 @@ class SetProduct_InfiniteSet(SetProduct):
 class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
     __slots__ = tuple()
 
-    def __iter__(self):
+    def _iter_impl(self):
         _iter = itertools.product(*self._sets)
         # Note: if all the member sets are simple 1-d sets, then there
         # is no need to call flatten_product.
@@ -3845,7 +3856,7 @@ class _AnyWithNoneSet(_AnySet):
     # the class because we will always create a global instance for
     # backwards compatability with the Book.
     @deprecated("The AnyWithNone set is deprecated.  "
-                "Use Any, which includes None", version='TBD')
+                "Use Any, which includes None", version='5.7')
     def get(self, val, default=None):
         return super(_AnyWithNoneSet, self).get(val, default)
 
@@ -3866,7 +3877,7 @@ class _EmptySet(_FiniteSetMixin, _SetData, Set):
     def __len__(self):
         return 0
 
-    def __iter__(self):
+    def _iter_impl(self):
         return iter(tuple())
 
     @property
@@ -4097,14 +4108,14 @@ BooleanSet = Boolean.__class__
 
 class RealInterval(RealSet):
     @deprecated("RealInterval has been deprecated.  Please use "
-                "RangeSet(lower, upper, 0)", version='TBD')
+                "RangeSet(lower, upper, 0)", version='5.7')
     def __new__(cls, **kwds):
         kwds.setdefault('class_name', 'RealInterval')
         return super(RealInterval, cls).__new__(RealSet, **kwds)
 
 class IntegerInterval(IntegerSet):
     @deprecated("IntegerInterval has been deprecated.  Please use "
-                "RangeSet(lower, upper, 1)", version='TBD')
+                "RangeSet(lower, upper, 1)", version='5.7')
     def __new__(cls, **kwds):
         kwds.setdefault('class_name', 'IntegerInterval')
         return super(IntegerInterval, cls).__new__(IntegerSet, **kwds)

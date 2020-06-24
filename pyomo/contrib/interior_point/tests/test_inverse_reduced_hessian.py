@@ -2,13 +2,17 @@ import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.opt import check_optimal_termination
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
 
 np, numpy_available = attempt_import('numpy', 'inverse_reduced_hessian numpy',
                                      minimum_version='1.13.0')
 scipy, scipy_available = attempt_import('scipy', 'inverse_reduced_hessian requires scipy')
-from pyomo.contrib.pynumero.asl import AmplInterface
-asl_available = AmplInterface.available()
+
+if numpy_available:
+    from pyomo.contrib.pynumero.asl import AmplInterface
+    asl_available = AmplInterface.available()
+else:
+    asl_available=False
+
 if not (numpy_available and scipy_available and asl_available):
     raise unittest.SkipTest('inverse_reduced_hessian tests require numpy, scipy, and asl')
 from pyomo.common.dependencies import(pandas as pd, pandas_available)
@@ -23,6 +27,7 @@ try:
 except:
     numdiff_available = False
 
+from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
                  
 class TestInverseReducedHessian(unittest.TestCase):
     # the original test

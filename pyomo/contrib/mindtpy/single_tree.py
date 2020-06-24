@@ -124,19 +124,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                        master_mip.MindtPy_utils.variable_list,
                                        solve_data.working_model.MindtPy_utils.variable_list,
                                        config)
-        # update the bound
-        if main_objective.sense == minimize:
-            solve_data.LB = max(
-                self.get_objective_value(),
-                # self.get_best_objective_value(),
-                solve_data.LB)
-            solve_data.LB_progress.append(solve_data.LB)
-        else:
-            solve_data.UB = min(
-                self.get_objective_value(),
-                # self.get_best_objective_value(),
-                solve_data.UB)
-            solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
             % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
@@ -241,7 +228,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
 
         # add oa cuts
-        if fixed_nlp_result.solver.termination_condition is tc.optimal:
+        if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
             self.handle_lazy_NLP_subproblem_optimal(
                 fixed_nlp, solve_data, config, opt)
         elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
@@ -250,3 +237,4 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         else:
             self.handle_lazy_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                               solve_data, config)
+
