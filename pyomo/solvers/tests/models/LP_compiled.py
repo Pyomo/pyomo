@@ -38,6 +38,7 @@ class LP_compiled(_BaseTestModel):
     description = "LP_compiled"
     capabilities = set(['linear'])
     test_pickling = False
+    size = (13, 22, None)
 
     def __init__(self):
         _BaseTestModel.__init__(self)

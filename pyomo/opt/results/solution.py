@@ -18,7 +18,7 @@ except:
 from six import iterkeys, advance_iterator, itervalues, iteritems
 from six.moves import xrange
 from pyutilib.misc import Bunch
-from pyutilib.enum import Enum
+import enum
 from pyutilib.math import as_number
 from pyomo.opt.results.container import *
 
@@ -28,20 +28,27 @@ default_print_options = Bunch(schema=False,
                               ignore_time=False,
                               ignore_defaults=False)
 
-SolutionStatus = Enum(
-  'bestSoFar',
-  'error',
-  'feasible',
-  'globallyOptimal',
-  'infeasible',
-  'locallyOptimal',
-  'optimal',
-  'other',
-  'stoppedByLimit',
-  'unbounded',
-  'unknown',
-  'unsure',
-)
+class SolutionStatus(str, enum.Enum):
+    bestSoFar='bestSoFar'
+    error='error'
+    feasible='feasible'
+    globallyOptimal='globallyOptimal'
+    infeasible='infeasible'
+    locallyOptimal='locallyOptimal'
+    optimal='optimal'
+    other='other'
+    stoppedByLimit='stoppedByLimit'
+    unbounded='unbounded'
+    unknown='unknown'
+    unsure='unsure'
+
+    # Overloading __str__ is needed to match the behavior of the old
+    # pyutilib.enum class (removed June 2020). There are spots in the
+    # code base that expect the string representation for items in the
+    # enum to not include the class name. New uses of enum shouldn't
+    # need to do this.
+    def __str__(self):
+        return self.value
 
 
 try:

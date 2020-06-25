@@ -10,62 +10,76 @@
 
 __all__ = ['SolverInformation', 'SolverStatus', 'TerminationCondition', 'check_optimal_termination', 'assert_optimal_termination']
 
-from pyutilib.enum import Enum
+import enum
 from pyomo.opt.results.container import MapContainer, ScalarType
 
 
 #
 # A coarse summary of how the solver terminated.
 #
-SolverStatus = Enum(
-    'ok',                   # Normal termination
-    'warning',              # Termination with unusual condition
-    'error',                # Terminated internally with error
-    'aborted',              # Terminated due to external conditions
-                            #   (e.g. interrupts)
-    'unknown'               # An unitialized value
-    )
+class SolverStatus(str, enum.Enum):
+    ok='ok'                        # Normal termination
+    warning='warning'              # Termination with unusual condition
+    error='error'                  # Terminated internally with error
+    aborted='aborted'              # Terminated due to external conditions
+                                   #   (e.g. interrupts)
+    unknown='unknown'              # An unitialized value
+
+    # Overloading __str__ is needed to match the behavior of the old
+    # pyutilib.enum class (removed June 2020). There are spots in the
+    # code base that expect the string representation for items in the
+    # enum to not include the class name. New uses of enum shouldn't
+    # need to do this.
+    def __str__(self):
+        return self.value
 
 #
 # A description of how the solver terminated
 #
-TerminationCondition = Enum(
+class TerminationCondition(str, enum.Enum):
     # UNKNOWN
-    'unknown',                 # An unitialized value
+    unknown='unknown'                               # An unitialized value
     # OK
-    'maxTimeLimit',            # Exceeded maximum time limited allowed by user
-                               #    but having return a feasible solution
-    'maxIterations',           # Exceeded maximum number of iterations allowed
-                               #    by user (e.g., simplex iterations)
-    'minFunctionValue',        # Found solution smaller than specified function
-                               #    value
-    'minStepLength',           # Step length is smaller than specified limit
-    'globallyOptimal',         # Found a globally optimal solution
-    'locallyOptimal',          # Found a locally optimal solution
-    'feasible',                # Found a solution that is feasible
-    'optimal',                 # Found an optimal solution
-    'maxEvaluations',          # Exceeded maximum number of problem evaluations
-                               #    (e.g., branch and bound nodes)
-    'other',                   # Other, uncategorized normal termination
+    maxTimeLimit='maxTimeLimit'                     # Exceeded maximum time limited allowed by user
+                                                    #    but having return a feasible solution
+    maxIterations='maxIterations'                   # Exceeded maximum number of iterations allowed
+                                                    #    by user (e.g., simplex iterations)
+    minFunctionValue='minFunctionValue'             # Found solution smaller than specified function
+                                                    #    value
+    minStepLength='minStepLength'                   # Step length is smaller than specified limit
+    globallyOptimal='globallyOptimal'               # Found a globally optimal solution
+    locallyOptimal='locallyOptimal'                 # Found a locally optimal solution
+    feasible='feasible'                             # Found a solution that is feasible
+    optimal='optimal'                               # Found an optimal solution
+    maxEvaluations='maxEvaluations'                 # Exceeded maximum number of problem evaluations
+                                                    #    (e.g., branch and bound nodes)
+    other='other'                                   # Other, uncategorized normal termination
     # WARNING
-    'unbounded',               # Demonstrated that problem is unbounded
-    'infeasible',              # Demonstrated that the problem is infeasible
-    'infeasibleOrUnbounded',   # Problem is either infeasible or unbounded
-    'invalidProblem',          # The problem setup or characteristics are not
-                               #    valid for the solver
-    'intermediateNonInteger',  # A non-integer solution has been returned
-    'noSolution',              # No feasible solution found but infeasibility
-                               #    not proven
+    unbounded='unbounded'                           # Demonstrated that problem is unbounded
+    infeasible='infeasible'                         # Demonstrated that the problem is infeasible
+    infeasibleOrUnbounded='infeasibleOrUnbounded'   # Problem is either infeasible or unbounded
+    invalidProblem='invalidProblem'                 # The problem setup or characteristics are not
+                                                    #    valid for the solver
+    intermediateNonInteger='intermediateNonInteger' # A non-integer solution has been returned
+    noSolution='noSolution'                         # No feasible solution found but infeasibility
+                                                    #    not proven
     # ERROR
-    'solverFailure',           # Solver failed to terminate correctly
-    'internalSolverError',     # Internal solver error
-    'error',                   # Other errors
+    solverFailure='solverFailure'                   # Solver failed to terminate correctly
+    internalSolverError='internalSolverError'       # Internal solver error
+    error='error'                                   # Other errors
     # ABORTED
-    'userInterrupt',           # Interrupt signal generated by user
-    'resourceInterrupt',       # Interrupt signal in resources used by
-                               #    optimizer
-    'licensingProblems'        # Problem accessing solver license
-    )
+    userInterrupt='userInterrupt'                   # Interrupt signal generated by user
+    resourceInterrupt='resourceInterrupt'           # Interrupt signal in resources used by
+                                                    #    optimizer
+    licensingProblems='licensingProblems'           # Problem accessing solver license
+
+    # Overloading __str__ is needed to match the behavior of the old
+    # pyutilib.enum class (removed June 2020). There are spots in the
+    # code base that expect the string representation for items in the
+    # enum to not include the class name. New uses of enum shouldn't
+    # need to do this.
+    def __str__(self):
+        return self.value
 
 
 def check_optimal_termination(results):

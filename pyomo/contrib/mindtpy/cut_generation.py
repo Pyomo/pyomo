@@ -3,9 +3,12 @@ from __future__ import division
 
 from math import copysign
 
-from pyomo.core import Constraint, minimize, value
+from pyomo.core import Constraint, minimize, value, TransformationFactory, Block, ConstraintList
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
+from pyomo.core.expr.taylor_series import taylor_series_expansion
+from pyomo.core.expr import differentiate
+from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 
 def add_objective_linearization(solve_data, config):
@@ -34,8 +37,7 @@ def add_objective_linearization(solve_data, config):
 
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
-                linearize_violated=True,
-                linearize_inactive=False):
+                linearize_violated=True):
     """Linearizes nonlinear constraints.
 
     For nonconvex problems, turn on 'config.add_slack'. Slack variables will
@@ -52,8 +54,6 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
         # Equality constraint (makes the problem nonconvex)
         if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
             sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-            rhs = ((0 if constr.upper is None else constr.upper)
-                   + (0 if constr.lower is None else constr.lower))
             rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
             if config.add_slack:
                 slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
@@ -68,7 +68,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             if constr.has_ub() \
                 and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.uslack() < 0) \
-                    or (linearize_inactive and constr.uslack() > 0):
+                    or (config.linearize_inactive and constr.uslack() > 0):
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
@@ -82,7 +82,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             if constr.has_lb() \
                 and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.lslack() < 0) \
-                    or (linearize_inactive and constr.lslack() > 0):
+                    or (config.linearize_inactive and constr.lslack() > 0):
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
@@ -136,6 +136,7 @@ def add_ecp_cuts(target_model, solve_data, config,
                       + (slack_var if config.add_slack else 0)
                       >= constr.lower)
             )
+
 # def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
 #     """More general case for outer approximation
 
@@ -228,3 +229,54 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
     #     MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
     # else:
     #     MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)
+
+
+def add_affine_cuts(nlp_result, solve_data, config):
+    m = solve_data.mip
+    config.logger.info("Adding affine cuts.")
+    counter = 0
+
+    for constr in m.MindtPy_utils.constraint_list:
+        if constr.body.polynomial_degree() in (1, 0):
+            continue
+
+        vars_in_constr = list(
+            identify_variables(constr.body))
+        if any(var.value is None for var in vars_in_constr):
+            continue  # a variable has no values
+
+        # mcpp stuff
+        try:
+            mc_eqn = mc(constr.body)
+        except MCPP_Error as e:
+            config.logger.debug(
+                "Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
+            continue  # skip to the next constraint
+        ccSlope = mc_eqn.subcc()
+        cvSlope = mc_eqn.subcv()
+        ccStart = mc_eqn.concave()
+        cvStart = mc_eqn.convex()
+        ub_int = min(constr.upper, mc_eqn.upper()
+                     ) if constr.has_ub() else mc_eqn.upper()
+        lb_int = max(constr.lower, mc_eqn.lower()
+                     ) if constr.has_lb() else mc_eqn.lower()
+
+        parent_block = constr.parent_block()
+        # Create a block on which to put outer approximation cuts.
+        aff_utils = parent_block.component('MindtPy_aff')
+        if aff_utils is None:
+            aff_utils = parent_block.MindtPy_aff = Block(
+                doc="Block holding affine constraints")
+            aff_utils.MindtPy_aff_cons = ConstraintList()
+        aff_cuts = aff_utils.MindtPy_aff_cons
+        concave_cut = sum(ccSlope[var] * (var - var.value)
+                          for var in vars_in_constr
+                          if not var.fixed) + ccStart >= lb_int
+        convex_cut = sum(cvSlope[var] * (var - var.value)
+                         for var in vars_in_constr
+                         if not var.fixed) + cvStart <= ub_int
+        aff_cuts.add(expr=concave_cut)
+        aff_cuts.add(expr=convex_cut)
+        counter += 2
+
+    config.logger.info("Added %s affine cuts" % counter)
