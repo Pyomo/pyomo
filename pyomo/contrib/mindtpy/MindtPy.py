@@ -288,6 +288,8 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
+
+            # Process objective in case that it is nonlinear move it to constraints
             process_objective(solve_data, config)
 
             # Save model initial values.

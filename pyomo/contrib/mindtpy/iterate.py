@@ -1,6 +1,9 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts,
+                                                  add_int_cut)
+
 from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master,
                                              handle_master_mip_optimal, handle_master_mip_other_conditions)
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
@@ -26,7 +29,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
         solve_data.mip_subiter = 0
         # solve MILP master problem
-        if config.strategy == 'OA':
+        if config.strategy == 'OA' or config.strategy == 'ECP':
             master_mip, master_mip_results = solve_OA_master(
                 solve_data, config)
             if master_mip_results.solver.termination_condition is tc.optimal:
@@ -42,7 +45,7 @@ def MindtPy_iteration_loop(solve_data, config):
         if algorithm_should_terminate(solve_data, config):
             break
 
-        if config.single_tree is False:  # if we don't use lazy callback, i.e. LP_NLP
+        if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
             fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
@@ -56,6 +59,9 @@ def MindtPy_iteration_loop(solve_data, config):
                                                         solve_data, config)
             # Call the NLP post-solve callback
             config.call_after_subproblem_solve(fixed_nlp, solve_data)
+
+        if config.strategy == 'ECP':
+            add_ecp_cuts(solve_data.mip, solve_data, config)
 
         # if config.strategy == 'PSC':
         #     # If the hybrid algorithm is not making progress, switch to OA.
@@ -101,6 +107,7 @@ def algorithm_should_terminate(solve_data, config):
     condition, i.e. optimal, maxIterations, maxTimeLimit
 
     """
+
     # Check bound convergence
     if solve_data.LB + config.bound_tolerance >= solve_data.UB:
         config.logger.info(
@@ -132,6 +139,25 @@ def algorithm_should_terminate(solve_data, config):
             'Final bound values: LB: {}  UB: {}'.
             format(solve_data.LB, solve_data.UB))
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
+        return True
+
+    if config.strategy == 'ECP':
+        MindtPy = solve_data.working_model.MindtPy_utils
+        nonlinear_constraints = [c for c in MindtPy.constraint_list if
+                                 c.body.polynomial_degree() not in (1, 0)]
+        for nlc in nonlinear_constraints:
+            if nlc.has_lb():
+                if nlc.lslack() < -config.ECP_tolerance:
+                    return False
+            if nlc.has_ub():
+                if nlc.uslack() < -config.ECP_tolerance:
+                    return False
+        config.logger.info(
+            'MindtPy exiting on nonlinear constraints satisfaction. '
+            'LB: {}\n'.format(
+                solve_data.LB))
+        solve_data.best_solution_found = solve_data.working_model.clone()
+        solve_data.results.solver.termination_condition = tc.optimal
         return True
     # if not algorithm_is_making_progress(solve_data, config):
     #     config.logger.debug(

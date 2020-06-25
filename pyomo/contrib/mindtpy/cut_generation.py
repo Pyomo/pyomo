@@ -93,7 +93,49 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                           >= constr.lower)
                 )
 
+def add_ecp_cuts(target_model, solve_data, config,
+                linearize_active=True,
+                linearize_violated=True,
+                linearize_inactive=False):
+    """Linearizes nonlinear constraints.
 
+    For nonconvex problems, turn on 'config.add_slack'. Slack variables will
+    always be used for nonlinear equality constraints.
+    """
+    for constr in target_model.MindtPy_utils.constraint_list:
+        if constr.body.polynomial_degree() in (0, 1):
+            continue
+
+        constr_vars = list(identify_variables(constr.body))
+        jacs = solve_data.jacobians
+
+        if constr.has_ub() \
+            and (linearize_active and abs(constr.uslack()) < config.ECP_tolerance) \
+                or (linearize_violated and constr.uslack() < 0) \
+                or (linearize_inactive and constr.uslack() > 0):
+            if config.add_slack:
+                slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+
+            target_model.MindtPy_utils.MindtPy_linear_cuts.ecp_cuts.add(
+                expr=(sum(value(jacs[constr][var])*(var - var.value)
+                          for var in constr_vars) + value(constr.body)
+                      - (slack_var if config.add_slack else 0)
+                      <= constr.upper)
+            )
+
+        if constr.has_lb() \
+            and (linearize_active and abs(constr.lslack()) < config.ECP_tolerance) \
+                or (linearize_violated and constr.lslack() < 0) \
+                or (linearize_inactive and constr.lslack() > 0):
+            if config.add_slack:
+                slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+
+            target_model.MindtPy_utils.MindtPy_linear_cuts.ecp_cuts.add(
+                expr=(sum(value(jacs[constr][var])*(var - var.value)
+                          for var in constr_vars) + value(constr.body)
+                      + (slack_var if config.add_slack else 0)
+                      >= constr.lower)
+            )
 # def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
 #     """More general case for outer approximation
 
