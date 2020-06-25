@@ -948,7 +948,7 @@ def exactly(n, *args):
 
     Require exactly n arguments to be True, to make the expression True
 
-    Usage: Exactly(2, m.Y1, m.Y2, m.Y3, ...)
+    Usage: exactly(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
     result = ExactlyExpression([n, ] + list(_flattened(args)))
@@ -960,7 +960,7 @@ def atmost(n, *args):
 
     Require at most n arguments to be True, to make the expression True
 
-    Usage: AtMost(2, m.Y1, m.Y2, m.Y3, ...)
+    Usage: atmost(2, m.Y1, m.Y2, m.Y3, ...)
 
     """
     result = AtMostExpression([n, ] + list(_flattened(args)))
@@ -1188,7 +1188,7 @@ class ExactlyExpression(NaryBooleanExpression):
     The first argument N is expected to be a numeric non-negative integer.
     Subsequent arguments are expected to be Boolean.
 
-    Usage: Exactly(1, True, False, False) --> True
+    Usage: exactly(1, True, False, False) --> True
 
     """
     __slots__ = ()
@@ -1202,7 +1202,7 @@ class ExactlyExpression(NaryBooleanExpression):
         return ExactlyExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return "Exactly(%s: [%s])" % (values[0], ", ".join(values[1:]))
+        return "exactly(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
     def _apply_operation(self, result):
         return sum(result[1:]) == result[0]
@@ -1215,7 +1215,7 @@ class AtMostExpression(NaryBooleanExpression):
     The first argument N is expected to be a numeric non-negative integer.
     Subsequent arguments are expected to be Boolean.
 
-    Usage: AtMost(1, True, False, False) --> True
+    Usage: atmost(1, True, False, False) --> True
 
     """
     __slots__ = ()
@@ -1229,7 +1229,7 @@ class AtMostExpression(NaryBooleanExpression):
         return AtMostExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
-        return "AtMost(%s: [%s])" % (values[0], ", ".join(values[1:]))
+        return "atmost(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
     def _apply_operation(self, result):
         return sum(result[1:]) <= result[0]

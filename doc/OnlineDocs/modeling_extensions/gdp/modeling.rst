@@ -12,7 +12,7 @@ Modeling in Pyomo.GDP
     from pyomo.environ import (
         ConcreteModel, RangeSet, BooleanVar, LogicalConstraint,
         TransformationFactory, atleast, SolverFactory, Objective,
-        Constraint, Var, land
+        Constraint, Var, land, Reference
     )
     from pyomo.gdp import Disjunct, Disjunction
     from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
@@ -102,11 +102,6 @@ The ``BooleanVar`` object in Pyomo represents Boolean variables, analogous to ``
           3 :  None : False :  True
           4 :  None : False :  True
 
-.. note::
-
-    For historical reasons, the ``indicator_var`` variable automatically added to disjuncts in Pyomo.GDP has type ``binary`` rather than ``Boolean``.
-    This may be corrected in the future.
-
 Using these Boolean variables, we can define ``LogicalConstraint`` objects, analogous to algebraic ``Constraint`` objects.
 
 .. doctest::
@@ -125,31 +120,31 @@ Pyomo.GDP logical expression system supported operators and their usage are list
 +--------------+------------------------+-----------------------------------+--------------------------------+
 | Operator     | Operator               | Method                            | Function                       |
 +==============+========================+===================================+================================+
-| Conjunction  |                        | :code:`Y[1].land(Y[2])`           | :code:`And(Y[1],Y[2])`         |
+| Conjunction  |                        | :code:`Y[1].land(Y[2])`           | :code:`land(Y[1],Y[2])`        |
 +--------------+------------------------+-----------------------------------+--------------------------------+
-| Disjunction  |                        | :code:`Y[1].lor(Y[2])`            | :code:`Or(Y[1],Y[2])`          |
+| Disjunction  |                        | :code:`Y[1].lor(Y[2])`            | :code:`lor(Y[1],Y[2])`         |
 +--------------+------------------------+-----------------------------------+--------------------------------+
-| Negation     | :code:`~Y[1]`          |                                   | :code:`Not(Y[1])`              |
+| Negation     | :code:`~Y[1]`          |                                   | :code:`lnot(Y[1])`             |
 +--------------+------------------------+-----------------------------------+--------------------------------+
 | Exclusive OR |                        | :code:`Y[1].xor(Y[2])`            | :code:`xor(Y[1], Y[2])`        |
 +--------------+------------------------+-----------------------------------+--------------------------------+
 | Implication  |                        | :code:`Y[1].implies(Y[2])`        | :code:`implies(Y[1], Y[2])`    |
 +--------------+------------------------+-----------------------------------+--------------------------------+
-| Equivalence  |                        | :code:`Y[1].equivalent_to(Y[2])`  | :code:`Equivalent(Y[1], Y[2])` |
+| Equivalence  |                        | :code:`Y[1].equivalent_to(Y[2])`  | :code:`equivalent(Y[1], Y[2])` |
 +--------------+------------------------+-----------------------------------+--------------------------------+
 
-In addition, the following constraint-programming-inspired operators are provided: ``Exactly``, ``AtMost``, and ``atleast``.
+In addition, the following constraint-programming-inspired operators are provided: ``exactly``, ``atmost``, and ``atleast``.
 These predicates enforce, respectively, that exactly, at most, or at least N of their ``BooleanVar`` arguments are ``True``.
 
 Usage:
 
 - :code:`atleast(3, Y[1], Y[2], Y[3])`
-- :code:`AtMost(3, Y)`
-- :code:`Exactly(3, Y)`
+- :code:`atmost(3, Y)`
+- :code:`exactly(3, Y)`
 
 .. note::
 
-    We omit support for infix operators, e.g. :code:`Y[1] >> Y[2]` for implication, due to concerns about non-intuitive Python operator precedence.
+    We omit support for most infix operators, e.g. :code:`Y[1] >> Y[2]`, due to concerns about non-intuitive Python operator precedence.
     That is :code:`Y[1] | Y[2] >> Y[3]` would translate to :math:`Y_1 \lor (Y_2 \Rightarrow Y_3)` rather than :math:`(Y_1 \lor Y_2) \Rightarrow Y_3`
 
 .. doctest::
@@ -201,8 +196,12 @@ Integration with Disjunctions
 -----------------------------
 
 The logical expression system is designed to augment the previously introduced ``Disjunct`` and ``Disjunction`` components, the only original logical modeling types in Pyomo.GDP.
-Mathematically, the disjunct indicator variable is Boolean; however, for historical reasons, it was originally implemented in Pyomo.GDP as a binary variable.
-To maintain backwards-compatibility, we introduce the ability to now associate a Boolean variable to each disjunct and involve them in logical propositions.
+Note that for historical reasons, an indicator variable ``indicator_var`` was originally implemented in Pyomo.GDP as a binary variable.
+Mathematically, the disjunct indicator variable is Boolean.
+We now automatically add an indicator Boolean, named ``indicator_bool``, to a newly created disjunct and associate it with the pre-existing ``indicator_var`` for backwards-compatibility.
+This new ``indicator_bool`` can participate in logical propositions.
+
+For convenience, we can also alias these ``BooleanVar`` objects using a ``Reference``.
 
 Here, we demonstrate this capability with a toy example:
 
@@ -220,7 +219,6 @@ Here, we demonstrate this capability with a toy example:
     >>> m = ConcreteModel()
     >>> m.s = RangeSet(4)
     >>> m.ds = RangeSet(2)
-    >>> m.Y = BooleanVar(m.s)
     >>> m.d = Disjunct(m.s)
     >>> m.djn = Disjunction(m.ds)
     >>> m.djn[1] = [m.d[1], m.d[2]]
@@ -232,9 +230,10 @@ Here, we demonstrate this capability with a toy example:
     >>> m.d[4].c = Constraint(expr=m.x == 2.5)
     >>> m.o = Objective(expr=m.x)
 
-    >>> # Associate Boolean vars with auto-generated disjunct binaries
-    >>> for i in m.s:
-    ...     m.Y[i].associate_binary_var(m.d[i].indicator_var)
+    >>> # Create an alias to the auto-generated Disjunct Booleans
+    >>> # For example m.d[1].indicator_bool is the indicator BooleanVar associated
+    >>> # with the first disjunct, Y_1.
+    >>> m.Y = Reference(m.d[:].indicator_bool)
 
     >>> # Add the logical proposition
     >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[4]))
@@ -283,8 +282,8 @@ Composition of standard operators
 
 .. code::
 
-    m.p = LogicalConstraint(expr=Or(m.Y[1], m.Y[2]).implies(
-        And(m.Y[3], ~m.Y[4], m.Y[5].lor(m.Y[6])))
+    m.p = LogicalConstraint(expr=lor(m.Y[1], m.Y[2]).implies(
+        land(m.Y[3], ~m.Y[4], m.Y[5].lor(m.Y[6])))
     )
 
 Expressions within CP-type operators
@@ -309,13 +308,13 @@ Nested CP-style operators
 -------------------------
 
 .. math::
-    \text{atleast}(2, Y_1, \text{Exactly}(2, Y_2, Y_3, Y_4), Y_5, Y_6)
+    \text{atleast}(2, Y_1, \text{exactly}(2, Y_2, Y_3, Y_4), Y_5, Y_6)
 
 Here, we again need to add augmented variables:
 
 .. math::
     \text{atleast}(2, Y_1, Y_A, Y_5, Y_6)\\
-    Y_A \Leftrightarrow \text{Exactly}(2, Y_2, Y_3, Y_4)
+    Y_A \Leftrightarrow \text{exactly}(2, Y_2, Y_3, Y_4)
 
 However, we also need to further interpret the second statement as a disjunction:
 
@@ -324,10 +323,10 @@ However, we also need to further interpret the second statement as a disjunction
 
     \begin{gather*}
     \text{atleast}(2, Y_1, Y_A, Y_5, Y_6)\\
-    \left[\begin{gathered}Y_A\\\text{Exactly}(2, Y_2, Y_3, Y_4)\end{gathered}\right]
+    \left[\begin{gathered}Y_A\\\text{exactly}(2, Y_2, Y_3, Y_4)\end{gathered}\right]
     \vee
     \left[\begin{gathered}\neg Y_A\\
-    \left[\begin{gathered}Y_B\\\text{atleast}(3, Y_2, Y_3, Y_4)\end{gathered}\right] \vee \left[\begin{gathered}Y_C\\\text{AtMost}(1, Y_2, Y_3, Y_4)\end{gathered}\right]
+    \left[\begin{gathered}Y_B\\\text{atleast}(3, Y_2, Y_3, Y_4)\end{gathered}\right] \vee \left[\begin{gathered}Y_C\\\text{atmost}(1, Y_2, Y_3, Y_4)\end{gathered}\right]
     \end{gathered}\right]
     \end{gather*}
 
@@ -338,16 +337,16 @@ or equivalently,
 
     \begin{gather*}
     \text{atleast}(2, Y_1, Y_A, Y_5, Y_6)\\
-    \text{Exactly}(1, Y_A, Y_B, Y_C)\\
-    \left[\begin{gathered}Y_A\\\text{Exactly}(2, Y_2, Y_3, Y_4)\end{gathered}\right]
+    \text{exactly}(1, Y_A, Y_B, Y_C)\\
+    \left[\begin{gathered}Y_A\\\text{exactly}(2, Y_2, Y_3, Y_4)\end{gathered}\right]
     \vee
-    \left[\begin{gathered}Y_B\\\text{atleast}(3, Y_2, Y_3, Y_4)\end{gathered}\right] \vee \left[\begin{gathered}Y_C\\\text{AtMost}(1, Y_2, Y_3, Y_4)\end{gathered}\right]
+    \left[\begin{gathered}Y_B\\\text{atleast}(3, Y_2, Y_3, Y_4)\end{gathered}\right] \vee \left[\begin{gathered}Y_C\\\text{atmost}(1, Y_2, Y_3, Y_4)\end{gathered}\right]
     \end{gather*}
 
 .. code::
 
     m.p = LogicalConstraint(
-        expr=atleast(2, m.Y[1], Exactly(2, m.Y[2], m.Y[3], m.Y[4]), m.Y[5], m.Y[6]))
+        expr=atleast(2, m.Y[1], exactly(2, m.Y[2], m.Y[3], m.Y[4]), m.Y[5], m.Y[6]))
 
 In the ``logical_to_linear`` transformation, we automatically convert these special disjunctions to linear form using a Big M reformulation.
 

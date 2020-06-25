@@ -133,7 +133,7 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
 
     Note: the atoms AtMostExpression, AtLeastExpression, and ExactlyExpression
     require special treatment if they are not the root node, or if their children are not atoms,
-    e.g. AtMost(2, Y1, Y1 | Y2, Y2, Y3)
+    e.g. atmost(2, Y1, Y1 | Y2, Y2, Y3)
 
     As a result, the model may need to be augmented with
     additional boolean indicator variables and logical propositions.

@@ -29,7 +29,6 @@ The GDP standard form from the :ref:`index page <gdp-main-page>` is repeated bel
 
 Original support in Pyomo.GDP focused on the disjuncts and disjunctions, allowing the modelers to group relational expressions in disjuncts, with disjunctions describing logical-OR relationships between the groupings.
 As a result, we implemented the ``Disjunct`` and ``Disjunction`` objects before ``BooleanVar`` and the rest of the logical expression system.
-The automatically-generated ``disjunct.indicator_var`` therefore currently has type ``binary`` rather than ``Boolean``, though this may be corrected in the future.
 Accordingly, we also describe the disjuncts and disjunctions first below.
 
 Disjuncts

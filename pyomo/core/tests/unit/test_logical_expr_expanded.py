@@ -220,8 +220,8 @@ class TestLogicalClasses(unittest.TestCase):
         self.assertEqual(str(implies(m.Y1, m.Y2)), "Y1 --> Y2")
         self.assertEqual(str(xor(m.Y1, m.Y2)), "Y1 ⊻ Y2")
         self.assertEqual(str(atleast(1, m.Y1, m.Y2)), "atleast(1: [Y1, Y2])")
-        self.assertEqual(str(atmost(1, m.Y1, m.Y2)), "AtMost(1: [Y1, Y2])")
-        self.assertEqual(str(exactly(1, m.Y1, m.Y2)), "Exactly(1: [Y1, Y2])")
+        self.assertEqual(str(atmost(1, m.Y1, m.Y2)), "atmost(1: [Y1, Y2])")
+        self.assertEqual(str(exactly(1, m.Y1, m.Y2)), "exactly(1: [Y1, Y2])")
 
         # Precedence check
         self.assertEquals(str(m.Y1.implies(m.Y2).lor(m.Y3)), "(Y1 --> Y2) ∨ Y3")
