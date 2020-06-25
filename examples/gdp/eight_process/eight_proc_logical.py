@@ -26,10 +26,12 @@ from __future__ import division
 
 from six import iteritems
 
-from pyomo.core.expr.logical_expr import land
-from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
-                           Objective, Param, RangeSet, Var, exp, minimize, BooleanVar, LogicalConstraint)
-from pyomo.gdp import Disjunction
+from pyomo.core.expr.logical_expr import land, lor
+from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
+from pyomo.environ import (
+    ConcreteModel, Constraint, ConstraintList, NonNegativeReals,
+    Objective, Param, RangeSet, Reference, Var, exp, minimize, BooleanVar, LogicalConstraint, )
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
 
 
@@ -40,6 +42,17 @@ def build_eight_process_flowsheet():
     """Set declarations"""
     m.streams = RangeSet(2, 25, doc="process streams")
     m.units = RangeSet(1, 8, doc="process units")
+
+    no_unit_zero_flows = {
+        1: (2, 3),
+        2: (4, 5),
+        3: (9, ),
+        4: (12, 14),
+        5: (15, ),
+        6: (19, 20),
+        7: (21, 22),
+        8: (10, 17, 18),
+    }
 
     """Parameter and initial point declarations"""
     # FIXED COST INVESTMENT COEFF FOR PROCESS UNITS
@@ -67,90 +80,38 @@ def build_eight_process_flowsheet():
     # FLOWRATES OF PROCESS STREAMS
     m.flow = Var(m.streams, domain=NonNegativeReals, initialize=initX,
                  bounds=(0, 10))
-    m.use_unit = BooleanVar(m.units)
     # OBJECTIVE FUNCTION CONSTANT TERM
     CONSTANT = m.constant = Param(initialize=122.0)
 
     """Constraint definitions"""
     # INPUT-OUTPUT RELATIONS FOR process units 1 through 8
-    m.use_unit_1or2 = Disjunction(
-        expr=[
-            # use unit 1 disjunct
-            [m.use_unit[1], ~m.use_unit[2],
-             m.yCF[1] == m.CF[1],
-             exp(m.flow[3]) - 1 == m.flow[2],
-             m.flow[4] == 0,
-             m.flow[5] == 0],
-            # use unit 2 disjunct
-            [m.use_unit[2], ~m.use_unit[1],
-             m.yCF[2] == m.CF[2],
-             exp(m.flow[5] / 1.2) - 1 == m.flow[4],
-             m.flow[2] == 0,
-             m.flow[3] == 0]
-        ])
-    m.use_unit_3ornot = Disjunction(
-        expr=[
-            # Use unit 3 disjunct
-            [m.use_unit[3],
-             m.yCF[3] == m.CF[3],
-             1.5 * m.flow[9] + m.flow[10] == m.flow[8]],
-            # No unit 3 disjunct
-            [~m.use_unit[3],
-             m.flow[9] == 0,
-             m.flow[10] == m.flow[8]]
-        ])
-    m.use_unit_4or5ornot = Disjunction(
-        expr=[
-            # Use unit 4 disjunct
-            [m.use_unit[4], ~m.use_unit[5],
-             m.yCF[4] == m.CF[4],
-             1.25 * (m.flow[12] + m.flow[14]) == m.flow[13],
-             m.flow[15] == 0],
-            # Use unit 5 disjunct
-            [m.use_unit[5], ~m.use_unit[4],
-             m.yCF[5] == m.CF[5],
-             m.flow[15] == 2 * m.flow[16],
-             m.flow[12] == 0,
-             m.flow[14] == 0],
-            # No unit 4 or 5 disjunct
-            [land(~m.use_unit[4], ~m.use_unit[5]),
-             m.flow[15] == 0,
-             m.flow[12] == 0,
-             m.flow[14] == 0]
-        ])
-    m.use_unit_6or7ornot = Disjunction(
-        expr=[
-            # use unit 6 disjunct
-            [m.use_unit[6], ~m.use_unit[7],
-             m.yCF[6] == m.CF[6],
-             exp(m.flow[20] / 1.5) - 1 == m.flow[19],
-             m.flow[21] == 0,
-             m.flow[22] == 0],
-            # use unit 7 disjunct
-            [m.use_unit[7], ~m.use_unit[6],
-             m.yCF[7] == m.CF[7],
-             exp(m.flow[22]) - 1 == m.flow[21],
-             m.flow[19] == 0,
-             m.flow[20] == 0],
-            # No unit 6 or 7 disjunct
-            [land(~m.use_unit[6], ~m.use_unit[7]),
-             m.flow[21] == 0,
-             m.flow[22] == 0,
-             m.flow[19] == 0,
-             m.flow[20] == 0]
-        ])
-    m.use_unit_8ornot = Disjunction(
-        expr=[
-            # use unit 8 disjunct
-            [m.use_unit[8],
-             m.yCF[8] == m.CF[8],
-             exp(m.flow[18]) - 1 == m.flow[10] + m.flow[17]],
-            # no unit 8 disjunct
-            [~m.use_unit[8],
-             m.flow[10] == 0,
-             m.flow[17] == 0,
-             m.flow[18] == 0]
-        ])
+    @m.Disjunct(m.units)
+    def use_unit(disj, unit):
+        disj.impose_fixed_cost = Constraint(expr=m.yCF[unit] == m.CF[unit])
+        disj.io_relation = ConstraintList(doc="Input-Output relationship")
+
+    @m.Disjunct(m.units)
+    def no_unit(disj, unit):
+        disj.no_flow = ConstraintList()
+        for stream in no_unit_zero_flows[unit]:
+            disj.no_flow.add(expr=m.flow[stream] == 0)
+
+    @m.Disjunction(m.units)
+    def use_unit_or_not(m, unit):
+        return [m.use_unit[unit], m.no_unit[unit]]
+
+    # Note: this could be done in an automated manner by indexed construction.
+    # Below is just for illustration
+    m.use_unit[1].io_relation.add(expr=exp(m.flow[3]) - 1 == m.flow[2])
+    m.use_unit[2].io_relation.add(expr=exp(m.flow[5] / 1.2) - 1 == m.flow[4])
+    m.use_unit[3].io_relation.add(expr=1.5 * m.flow[9] + m.flow[10] == m.flow[8])
+    m.use_unit[4].io_relation.add(expr=1.25 * (m.flow[12] + m.flow[14]) == m.flow[13])
+    m.use_unit[5].io_relation.add(expr=m.flow[15] == 2 * m.flow[16])
+    m.use_unit[6].io_relation.add(expr=exp(m.flow[20] / 1.5) - 1 == m.flow[19])
+    m.use_unit[7].io_relation.add(expr=exp(m.flow[22]) - 1 == m.flow[21])
+    m.use_unit[8].io_relation.add(expr=exp(m.flow[18]) - 1 == m.flow[10] + m.flow[17])
+
+    m.no_unit[3].bypass = Constraint(expr=m.flow[10] == m.flow[8])
 
     # Mass balance equations
     m.massbal1 = Constraint(expr=m.flow[13] == m.flow[19] + m.flow[21])
@@ -169,11 +130,16 @@ def build_eight_process_flowsheet():
     m.specs3 = Constraint(expr=m.flow[12] <= 5 * m.flow[14])
     m.specs4 = Constraint(expr=m.flow[12] >= 2 * m.flow[14])
 
+    m.Y = Reference(m.use_unit[:].indicator_bool)
+
     # logical propositions
+    m.use1or2 = LogicalConstraint(expr=m.Y[1].xor(m.Y[2]))
     m.use1or2implies345 = LogicalConstraint(
-        expr=(m.use_unit[1] | m.use_unit[2]).implies(m.use_unit[3] | m.use_unit[4] | m.use_unit[5]))
-    m.use4implies6or7 = LogicalConstraint(expr=m.use_unit[4].implies(m.use_unit[6] | m.use_unit[7]))
-    m.use3implies8 = LogicalConstraint(expr=m.use_unit[3] >> m.use_unit[8])
+        expr=lor(m.Y[1], m.Y[2]).implies(lor(m.Y[3], m.Y[4], m.Y[5])))
+    m.use4implies6or7 = LogicalConstraint(expr=m.Y[4].implies(lor(m.Y[6], m.Y[7])))
+    m.use3implies8 = LogicalConstraint(expr=m.Y[3].implies(m.Y[8]))
+    m.use6or7implies4 = LogicalConstraint(expr=lor(m.Y[6], m.Y[7]).implies(m.Y[4]))
+    m.use6or7 = LogicalConstraint(expr=m.Y[6].xor(m.Y[7]))
 
     """Profit (objective) function definition"""
     m.profit = Objective(expr=sum(
@@ -199,4 +165,6 @@ if __name__ == "__main__":
     from pyomo.environ import TransformationFactory
     TransformationFactory('core.logical_to_linear').apply_to(m)
     SolverFactory('gdpopt').solve(m, tee=True)
-    m.display()
+    update_boolean_vars_from_binary(m)
+    m.Y.display()
+    m.flow.display()
