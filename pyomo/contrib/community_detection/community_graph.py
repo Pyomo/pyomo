@@ -1,12 +1,9 @@
 """Model Graph Generator Code"""
-from logging import getLogger
 
-from itertools import combinations
 from pyomo.common.dependencies import networkx as nx
 from pyomo.core import Constraint, Objective, Var, ComponentMap, SortComponents
 from pyomo.core.expr.current import identify_variables
-
-logger = getLogger('pyomo.contrib.community_detection')
+from pyomo.contrib.community_detection.event_log import _event_log
 
 
 def generate_model_graph(model, type_of_graph, with_objective=True, weighted_graph=True):
@@ -128,87 +125,24 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
 
     # If we reach this point of the code, then we will now begin constructing the collapsed version of the bipartite
     # model graph (the specific manner depends on whether the type of graph is 'c' or 'v')
-    if weighted_graph:
-        edge_weight_dict = dict()
-    else:
-        edge_set = set()
 
     collapsed_model_graph = nx.Graph()  # Initialize NetworkX graph for the collapsed version of bipartite_model_graph
 
+    # TODO: Make the next few lines (up until the logger function) cleaner/smarter (maybe use difference of sets?)
+
     if type_of_graph == 'c':  # Constraint node graph - collapse the bipartite graph into a constraint node graph
-
-        for node in bipartite_model_graph.nodes():
-
-            # If the node represents a variable
-            if node not in constraint_variable_map:
-                connected_constraints = []  # Initialize list of constraints that share this variable
-
-                # Loop through the variable node's edges to find constraints that contain the variable
-                for edge in bipartite_model_graph.edges(node):
-                    # The first node in the edge tuple will always be the node that is used as the
-                    # argument in 'bipartite_model_graph.edges(node)'
-                    # Thus, the relevant node is the second one in the tuple 'edge[1]'
-                    connected_constraints.append(edge[1])
-
-                # Create all possible two-node combinations from connected_constraints; in other words, create a list
-                # of all the edges that need to be created between constraints based on connected_constraints
-                edges_between_constraints = list(combinations(sorted(connected_constraints), 2))
-
-                # Update edge_weight_dict or edge_set based on the determined edges between nodes
-                if weighted_graph:
-                    new_edge_weights = {edge: edge_weight_dict.get(edge, 0) + 1 for edge in edges_between_constraints}
-                    edge_weight_dict.update(new_edge_weights)
-                else:
-                    edge_set.update(edges_between_constraints)
-
-            # If the node is not a variable, then it is a constraint and we want it as
-            # a node in our constraint node graph
-            else:
-                collapsed_model_graph.add_node(node)
+        constraint_nodes = [constraint_node for constraint_node in constraint_variable_map]
+        if weighted_graph:
+            collapsed_model_graph = nx.bipartite.weighted_projected_graph(bipartite_model_graph, constraint_nodes)
+        else:
+            collapsed_model_graph = nx.bipartite.projected_graph(bipartite_model_graph, constraint_nodes)
 
     elif type_of_graph == 'v':  # Variable node graph - collapse the bipartite graph into a variable node graph
-
-        for node in bipartite_model_graph.nodes():
-
-            # If the node represents a constraint (or objective)
-            if node in constraint_variable_map:
-
-                # Create list of variables in the constraint equation
-                connected_variables = constraint_variable_map[node]
-
-                # Create all possible two-node combinations from connected_variables; in other words, create a list
-                # of all the edges that need to be created between variables based on connected_variables
-                edges_between_variables = list(combinations(sorted(connected_variables), 2))
-
-                # Update edge_weight_dict or edge_set based on the determined edges_between_nodes
-                if weighted_graph:
-                    new_edge_weights = {edge: edge_weight_dict.get(edge, 0) + 1 for edge in edges_between_variables}
-                    edge_weight_dict.update(new_edge_weights)
-                else:
-                    edge_set.update(edges_between_variables)
-
-            # If the node is not a constraint/objective, then it is a variable and we want it as
-            # a node in our variable node graph
-            else:
-                collapsed_model_graph.add_node(node)
-
-    # Now, using edge_weight_dict or edge_set (based on if the user wants a weighted graph or an unweighted graph,
-    # respectively), the NetworkX graph (collapsed_model_graph) will be updated with all of the edges determined above
-    if weighted_graph:
-
-        # Add edges to collapsed_model_graph (the order in which edges are added can affect community detection, so
-        # sorting prevents any unpredictable changes)
-        collapsed_model_graph.add_edges_from(sorted(edge_weight_dict))
-
-        # Iterate through the edges in edge_weight_dict and add them to collapsed_model_graph
-        for edge in edge_weight_dict:
-            node_one, node_two = edge[0], edge[1]
-            collapsed_model_graph[node_one][node_two]['weight'] = edge_weight_dict[edge]
-
-    else:
-        # Add edges to collapsed_model_graph (the order in which edges are added can affect community detection, so
-        # sorting prevents any unpredictable changes)
-        collapsed_model_graph.add_edges_from(sorted(edge_set))
+        variable_nodes = [number for number in number_component_map if number not in constraint_variable_map]
+        if weighted_graph:
+            collapsed_model_graph = nx.bipartite.weighted_projected_graph(bipartite_model_graph, variable_nodes)
+        else:
+            collapsed_model_graph = nx.bipartite.projected_graph(bipartite_model_graph, variable_nodes)
 
     # Log important information with the following logger function
     _event_log(model, collapsed_model_graph, set(constraint_variable_map), type_of_graph, with_objective)
@@ -218,126 +152,4 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     return collapsed_model_graph, number_component_map, constraint_variable_map
 
 
-def _event_log(model, model_graph, constraint_set, type_of_graph, with_objective):
-    """
-    Logs information about the results of the code in generate_model_graph
 
-    This function takes in the same Pyomo model as generate_model_graph and the model_graph generated by
-    generate_model_graph (which is a NetworkX graph of nodes and edges based on the Pyomo model). Then, some relevant
-    information about the model and model_graph is determined and logged using the logger.
-
-    This function is designed to be called by generate_model_graph.
-
-    Parameters
-    ----------
-    model: Block
-         the Pyomo model or block to be used for community detection
-    model_graph: NetworkX graph
-        a NetworkX graph with nodes and edges based on the given Pyomo optimization model
-    constraint_set: set
-        a set of the numbers that correspond to all of the constraints in the given model
-    type_of_graph: str
-        a string that specifies the type of graph that is created from the model
-        'c' creates a graph based on constraint nodes,
-        'v' creates a graph based on variable nodes,
-        'b' creates a graph based on constraint and variable nodes (bipartite graph).
-    with_objective: bool
-        a Boolean argument that specifies whether or not the objective function is included in the graph
-
-    Returns
-    -------
-    This function returns nothing; it simply logs information that is relevant to the user.
-    """
-
-    # Collect some information that will be useful for the logger
-    all_variables_count = len(list(model.component_data_objects(ctype=Var, descend_into=True)))
-
-    active_constraints_count = len(list(model.component_data_objects(ctype=Constraint, active=True, descend_into=True)))
-    all_constraints_count = len(list(model.component_data_objects(ctype=Constraint, descend_into=True)))
-
-    active_objectives_count = len(list(model.component_data_objects(ctype=Objective, active=True, descend_into=True)))
-    all_objectives_count = len(list(model.component_data_objects(ctype=Objective, descend_into=True)))
-
-    number_of_nodes, number_of_edges = model_graph.number_of_nodes(), model_graph.number_of_edges()
-
-    # Log this information as info
-    logger.info("%s variables found in the model" % all_variables_count)
-
-    logger.info("%s constraints found in the model" % all_constraints_count)
-    logger.info("%s active constraints found in the model" % active_constraints_count)
-
-    logger.info("%s objective(s) found in the model" % all_objectives_count)
-    logger.info("%s active objective(s) found in the model" % active_objectives_count)
-
-    logger.info("%s nodes found in the graph created from the model" % number_of_nodes)
-    logger.info("%s edges found in the graph created from the model" % number_of_edges)
-
-    # Log information on connectivity and density
-    if number_of_nodes > 0:
-        if nx.is_connected(model_graph):
-            logger.info("The graph created from the model is connected.")
-            graph_is_connected = True
-        else:
-            logger.info("The graph created from the model is disconnected.")
-            graph_is_connected = False
-
-        if type_of_graph == 'b':
-            if graph_is_connected:
-                top_nodes, bottom_nodes = nx.bipartite.sets(model_graph)
-                if len(top_nodes) == 0:
-                    top_nodes, bottom_nodes = bottom_nodes, top_nodes
-                if list(top_nodes)[0] in constraint_set:
-                    constraint_nodes = top_nodes
-                    variable_nodes = bottom_nodes
-                else:
-                    constraint_nodes = bottom_nodes
-                    variable_nodes = top_nodes
-            else:
-                constraint_nodes = {node for node in model_graph.nodes() if node in constraint_set}
-                variable_nodes = set(model_graph) - constraint_nodes
-
-            constraint_density = round(nx.bipartite.density(model_graph, constraint_nodes), 2)
-            variable_density = round(nx.bipartite.density(model_graph, variable_nodes), 2)
-
-            if constraint_density == variable_density == 1.0:  # If the graph is complete, both will equal 1
-                logger.warning("The bipartite graph constructed from the model is complete (graph density equals 1)")
-            else:
-                logger.info(
-                    "For the bipartite graph constructed from the model, the density for constraint nodes is %s" %
-                    constraint_density)
-                logger.info(
-                    "For the bipartite graph constructed from the model, the density for variable nodes is %s" %
-                    variable_density)
-
-        else:
-            graph_density = round(nx.density(model_graph), 2)
-
-            if graph_density == 1.0:
-                logger.warning("The graph constructed from the model is complete (graph density equals 1)")
-            else:
-                logger.info("The graph constructed from the model has a density of %s" % graph_density)
-
-    # Given one of the conditionals below, we will log this information as a warning
-    if all_variables_count == 0:
-        logger.warning("No variables found in the model")
-
-    if all_constraints_count == 0:
-        logger.warning("No constraints found in the model")
-    elif active_constraints_count == 0:
-        logger.warning("No active constraints found in the model")
-
-    if all_objectives_count == 0:
-        if with_objective:
-            logger.warning("Parameter 'with_objective' is True but no objective(s) found in the model")
-        else:
-            logger.info("No objective(s) found in the model")
-    elif active_objectives_count == 0:
-        if with_objective:
-            logger.warning("Parameter 'with_objective' is True but no active objective(s) found in the model")
-        else:
-            logger.info("No active objective(s) found in the model")
-
-    if number_of_nodes == 0:
-        logger.warning("No nodes were created for the graph (based on the model and the given parameters)")
-    if number_of_edges == 0:
-        logger.warning("No edges were created for the graph (based on the model and the given parameters)")

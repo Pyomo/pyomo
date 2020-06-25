@@ -4,8 +4,8 @@ Community Detection for Pyomo models
 This package separates model components (variables, constraints, and objectives) into different communities
 distinguished by the degree of connectivity between community members.
 
-Description of Package and Main Function `detect_communities`
--------------------------------------------------------------
+Description of Package and Main Function ``detect_communities``
+---------------------------------------------------------------
 
 The community detection package allows users to obtain a dictionary of the communities in a Pyomo model. The package
 takes in a model, organizes the model components into a graph of nodes and edges, then uses Louvain
@@ -72,6 +72,9 @@ With/Without Objective in the Graph
 
 External Packages
 -----------------
+* NetworkX
+* Python-Louvain
+
 The community detection package relies on two external packages, the NetworkX package and the Louvain community
 detection package. Both of these packages can be installed at the following URLs (respectively):
 
@@ -79,13 +82,12 @@ https://pypi.org/project/networkx/
 
 https://pypi.org/project/python-louvain/
 
-The pip install and conda install commands are included below as well:
+The pip install and conda install commands are included below as well::
 
-
->>> pip install networkx
->>> pip install python-louvain
->>> conda install -c anaconda networkx
->>> conda install -c conda-forge python-louvain
+    pip install networkx
+    pip install python-louvain
+    conda install -c anaconda networkx
+    conda install -c conda-forge python-louvain
 
 Usage Examples
 --------------
@@ -117,29 +119,21 @@ imports to run all of the code examples are included below):
     >>> model = m = decode_model_1()
     >>>
     >>> print(detect_communities(model, type_of_community_map='b'))
-
-Here is the output of the `detect_communities` call above:
-
-    >>> # Output:
-    >>> {0: ([<pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB588>,
-    >>>       <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB5F8>],
-    >>>      [<pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB3C8>,
-    >>>       <pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB438>]),
-    >>>  1: ([<pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB668>,
-    >>>       <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB6D8>,
-    >>>       <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB748>],
-    >>>      [<pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB4A8>,
-    >>>       <pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB518>])}
+    {0: ([<pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB588>,
+          <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB5F8>],
+         [<pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB3C8>,
+          <pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB438>]),
+     1: ([<pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB668>,
+          <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB6D8>,
+          <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB748>],
+         [<pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB4A8>,
+          <pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB518>])}
 
 We can use `stringify_comunity_map` if we want the same output, but with the strings of the community members:
 
     >>> print(stringify_community_map(model=m, type_of_community_map='b'))
-
-And here we have the much easier-to-read output of that function call:
-
-    >>> # Output:
-    >>> {0: (['c1', 'c2'], ['x1', 'x2']),
-    >>>  1: (['c3', 'c4', 'c5'], ['x3', 'x4'])}
+    {0: (['c1', 'c2'], ['x1', 'x2']),
+     1: (['c3', 'c4', 'c5'], ['x3', 'x4'])}
 
 Now, if we want a visualization of the communities within the Pyomo model, we can use `visualize_model_graph` to do
 so.
@@ -156,11 +150,11 @@ so.
     >>> random_seed=seed, pos=pos)
     >>> plt.show()
 
-An example of two drawings for these two function calls is shown below:
-
 .. image:: communities_for_decode_1.png
   :width: 800
   :alt: Graphical representation of the communities in the model 'decode_model_1' for slightly different function calls
+
+An example of two drawings for these two function calls is shown below:
 
 These graph drawings very clearly demonstrate the communities within this model. We can see how there is only one edge
 between the two communities and many more edges within each community. This is an ideal situation for breaking a
@@ -172,13 +166,15 @@ Let's add a more complicated model, taken from `Duran & Grossmann, 1986`_:
 
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
 
+.. doctest::
+
     >>> model = EightProcessFlowsheet()
     >>>
     >>> left_fig, pos = visualize_model_graph(model, type_of_graph='v', type_of_community_map='c',
     >>> random_seed=seed)
     >>> plt.show()
-    >>>
-    >>> # As we did before, we will use the pos argument to create a consistent graph layout
+
+    As we did before, we will use the pos argument to create a consistent graph layout
     >>>
     >>> middle_fig, _ = visualize_model_graph(model, type_of_graph='v', type_of_community_map='b',
     >>> random_seed=seed, pos=pos)
@@ -188,11 +184,11 @@ Let's add a more complicated model, taken from `Duran & Grossmann, 1986`_:
     >>> random_seed=seed, pos=pos)
     >>> plt.show()
 
-An example of three drawings for these three function calls is shown below:
-
 .. image:: communities_for_8pp.png
    :width: 800
    :alt: Graphical representation of the communities in the model 'decode_model_1' for slightly different function calls
+
+An example of three drawings for these three function calls is shown below:
 
 The three graphs above are all variable graphs - which means the nodes represent variables in the model, and the edges
 represent constraint equations. The coloring differs because the three graphs rely on community maps that were
@@ -204,7 +200,7 @@ For our final example, we will use `generate_model_graph` - this function can be
 graph for a Pyomo model. Here, we will create a NetworkX graph from the model in our first example and
 then create the edge and adjacency list for the graph.
 
-`generate_mode_graph` returns a NetworkX graph of the given model, a dictionary that maps the numbers used to
+`generate_model_graph` returns a NetworkX graph of the given model, a dictionary that maps the numbers used to
 represent the model components to the actual components (because Pyomo components cannot be directly added to
 a NetworkX graph), and a dictionary that maps constraints to the variables in them. For this example, we will
 only need the NetworkX graph of the model and the number-to-component mapping.
@@ -230,37 +226,45 @@ Now, we print the edge list and the adjacency list:
     >>> print('Adjacency List:')
     >>> for line in nx.generate_adjlist(string_model_graph):
     >>>     print(line)
+    Edge List:
+    c1 c2 {'weight': 2}
+    c1 c3 {'weight': 1}
+    c2 c3 {'weight': 1}
+    c3 c4 {'weight': 2}
+    c3 c5 {'weight': 2}
+    c4 c5 {'weight': 2}
+    Adjacency List:
+    c1 c2 c3
+    c2 c3
+    c3 c4 c5
+    c4 c5
+    c5
 
+MOVED - Modify below paragraph now that the output is formatted differently
 The edge and adjacency lists are shown below; also, it is worth mentioning that in the code above, we do not
 have to create `string_map` to create an edge list or adjacency list, but for the sake of having an
 understandable output, it is quite helpful. (Without relabeling the nodes, the output below would not have the
 strings of the components but instead would have integer values.)
 
-    >>> # Output:
-    >>> Edge List:
-    >>> c1 c2 {'weight': 2}
-    >>> c1 c3 {'weight': 1}
-    >>> c2 c3 {'weight': 1}
-    >>> c3 c4 {'weight': 2}
-    >>> c3 c5 {'weight': 2}
-    >>> c4 c5 {'weight': 2}
-    >>> Adjacency List:
-    >>> c1 c2 c3
-    >>> c2 c3
-    >>> c3 c4 c5
-    >>> c4 c5
-    >>> c5
 
-Main Function List
-------------------
-`detect_communities`
+Functions in this Package
+-------------------------
+.. automodule:: pyomo.contrib.community_detection.detection
+    :members:
+
+.. automodule:: pyomo.contrib.community_detection.community_graph
+    :members:
+
+``detect_communities``
     This function takes in a Pyomo optimization model and organizes the variables and constraints into a graph of nodes
     and edges. Then, by using Louvain community detection on the graph, a dictionary (community_map) is created, which
     maps (arbitrary) community keys to the detected communities within the model.
-`generate_model_graph`
+
+``generate_model_graph``
     This function takes in a Pyomo optimization model, then creates a graphical representation of the model with
     specific features of the graph determined by the user (see Parameters below).
-`visualize_model_graph`
+
+``visualize_model_graph``
     This function takes in a Pyomo model and its community map - if no community map is given, a community map is
     created with the detect_communities function. A NetworkX graph of the model is created with the function
     generate_model_graph, using the parameters specified by the user. The model and some of the given parameters
@@ -268,7 +272,8 @@ Main Function List
     community map is used to color the nodes according to their communities, and if no community map is given,
     then the model and some of the given parameters (type_of_community_map, with_objective, weighted_graph) are
     used in the function detect_communities to create a community map.
-`stringify_community_map`
+
+``stringify_community_map``
     This function takes in a community map of Pyomo components and returns the same community map but with the strings
     of the Pyomo components. Alternatively, this function can take in a model and return a community map
     (using the function detect_communities) of the strings of Pyomo components in the communities.
