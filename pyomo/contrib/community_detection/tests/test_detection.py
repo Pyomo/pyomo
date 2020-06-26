@@ -22,7 +22,7 @@ from pyomo.common.dependencies import networkx_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Objective, Var, Integers, minimize, RangeSet
 from pyomo.contrib.community_detection.detection import detect_communities, stringify_community_map, \
-    visualize_model_graph, community_louvain_available
+    visualize_model_graph, community_louvain_available, matplotlib_available
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QP_simple import QP_simple
@@ -276,6 +276,7 @@ class TestDecomposition(unittest.TestCase):
                                                     "must be a non-negative integer" % random_seed):
             detect_communities(model, random_seed=random_seed)
 
+    @unittest.skipUnless(matplotlib_available, "matplotlib is not available.")
     def test_visualize_model_graph_1(self):
         model = decode_model_1()
         seed_value = 5
@@ -286,6 +287,7 @@ class TestDecomposition(unittest.TestCase):
         self.assertTrue(isinstance(pos, dict))
         self.assertEqual(len(pos), correct_pos_dict_length)
 
+    @unittest.skipUnless(matplotlib_available, "matplotlib is not available.")
     def test_visualize_model_graph_2(self):
         model = decode_model_2()
         seed_value = 5

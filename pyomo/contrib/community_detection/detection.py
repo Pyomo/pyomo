@@ -14,15 +14,18 @@ from pyomo.core import ConcreteModel, ComponentMap
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
 from pyomo.common.dependencies import networkx as nx
 
-import matplotlib.pyplot as plt
-from matplotlib import cm
-
 logger = getLogger('pyomo.contrib.community_detection')
 
 # Attempt import of louvain community detection package
 community_louvain, community_louvain_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
+# Attempt import of matplotlib
+matplotlib, matplotlib_available = attempt_import('matplotlib', error_message="Could not import 'matplotlib'")
+
+if matplotlib_available:
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
 
 # TODO: Consider adding an option to include inactive constraints/objectives in the community detection
 
