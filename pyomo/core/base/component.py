@@ -471,7 +471,7 @@ class Component(_ComponentBase):
         return self._ctype
 
     @deprecated("Component.type() method has been replaced by the "
-                ".ctype property.", version='TBD')
+                ".ctype property.", version='5.7')
     def type(self):
         """Return the class type for this component"""
         return self.ctype
@@ -781,7 +781,7 @@ class ComponentData(_ComponentBase):
         return _parent._ctype
 
     @deprecated("Component.type() method has been replaced by the "
-                ".ctype property.", version='TBD')
+                ".ctype property.", version='5.7')
     def type(self):
         """Return the class type for this component"""
         return self.ctype

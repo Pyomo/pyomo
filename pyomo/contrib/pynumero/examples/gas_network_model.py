@@ -32,14 +32,14 @@ def create_model(demand_factor=1.0):
         start_locations = dict(zip(ll, ls))
         return start_locations[l]
 
-    model.lstartloc = pyo.Param(model.LINK, initialize=rule_startloc)
+    model.lstartloc = pyo.Param(model.LINK, initialize=rule_startloc, within=pyo.Any)
 
     def rule_endloc(m, l):
         ll = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12']
         ls = ['n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10', 'n11', 'n12', 'n13']
         end_locations = dict(zip(ll, ls))
         return end_locations[l]
-    model.lendloc = pyo.Param(model.LINK, initialize=rule_endloc)
+    model.lendloc = pyo.Param(model.LINK, initialize=rule_endloc, within=pyo.Any)
 
     model.ldiam = pyo.Param(model.LINK, initialize=920.0, mutable=True)
 
@@ -53,7 +53,7 @@ def create_model(demand_factor=1.0):
         if l == 'l1' or l == 'l12':
             return 'p'
         return 'a'
-    model.ltype = pyo.Param(model.LINK, initialize=rule_ltype)
+    model.ltype = pyo.Param(model.LINK, initialize=rule_ltype, within=pyo.Any)
 
     def link_a_init_rule(m):
         return (l for l in m.LINK if m.ltype[l] == "a")
@@ -84,14 +84,14 @@ def create_model(demand_factor=1.0):
 
     # supply
     model.SUP = pyo.Set(initialize=[1])
-    model.sloc = pyo.Param(model.SUP, initialize='n1')
+    model.sloc = pyo.Param(model.SUP, initialize='n1', within=pyo.Any)
     model.smin = pyo.Param(model.SUP, within=pyo.NonNegativeReals, initialize=0.000, mutable=True)
     model.smax = pyo.Param(model.SUP, within=pyo.NonNegativeReals, initialize=30, mutable=True)
     model.scost = pyo.Param(model.SUP, within=pyo.NonNegativeReals)
 
     # demand
     model.DEM = pyo.Set(initialize=[1])
-    model.dloc = pyo.Param(model.DEM, initialize='n13')
+    model.dloc = pyo.Param(model.DEM, initialize='n13', within=pyo.Any)
     model.d = pyo.Param(model.DEM, within=pyo.PositiveReals, initialize=10, mutable=True)
 
     # physical data

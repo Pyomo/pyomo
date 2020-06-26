@@ -12,6 +12,7 @@ __all__ = ['parse_data_commands']
 
 import bisect
 import sys
+import logging
 import os
 import os.path
 import ply.lex as lex
@@ -22,7 +23,7 @@ from six.moves import xrange
 from pyutilib.misc import flatten_list, import_file
 
 from pyomo.common import config
-from pyomo.common.fileutils import this_file_dir
+from pyomo.common.fileutils import this_file_dir, this_file
 
 _re_number = r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?'
 
@@ -461,6 +462,7 @@ tabmodule = 'parse_table_datacmds'
 
 dat_lexer = None
 dat_yaccer = None
+dat_yaccer_tabfile = None
 
 #
 # The function that performs the parsing
@@ -469,13 +471,36 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
 
     global dat_lexer
     global dat_yaccer
+    global dat_yaccer_tabfile
 
     if outputdir is None:
         # Try and write this into the module source...
         outputdir = os.path.dirname(getfile( currentframe() ))
+        _tabfile = os.path.join(outputdir, tabmodule+".py")
         # Ideally, we would pollute a per-user configuration directory
         # first -- something like ~/.pyomo.
         if not os.access(outputdir, os.W_OK):
+            _file = this_file()
+            logger = logging.getLogger('pyomo.dataportal')
+
+            if os.path.exists(_tabfile) and \
+               os.path.getmtime(_file) >= os.path.getmtime(_tabfile):
+                logger.warning(
+                    "Potentially outdated DAT Parse Table found in source "
+                    "tree (%s), but you do not have write access to that "
+                    "directory, so we cannot update it.  Please notify "
+                    "you system administrator to remove that file"
+                    % (_tabfile,))
+            if os.path.exists(_tabfile+'c') and \
+               os.path.getmtime(_file) >= os.path.getmtime(_tabfile+'c'):
+                logger.warning(
+                    "Potentially outdated DAT Parse Table found in source "
+                    "tree (%s), but you do not have write access to that "
+                    "directory, so we cannot update it.  Please notify "
+                    "you system administrator to remove that file"
+                    % (_tabfile+'c',))
+
+            # Switch the directory for the tabmodule to the current directory
             outputdir = os.getcwd()
 
     # if the lexer/yaccer haven't been initialized, do so.
@@ -484,17 +509,26 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
         # Always remove the parser.out file, which is generated to
         # create debugging
         #
-        if os.path.exists("parser.out"):        #pragma:nocover
-            os.remove("parser.out")
-        if debug > 0:                           #pragma:nocover
+        _parser_out = os.path.join(outputdir, "parser.out")
+        if os.path.exists(_parser_out):
+            os.remove(_parser_out)
+
+        _tabfile = dat_yaccer_tabfile = os.path.join(outputdir, tabmodule+".py")
+        if debug > 0 or \
+           ( os.path.exists(_tabfile) and
+             os.path.getmtime(__file__) >= os.path.getmtime(_tabfile) ):
             #
             # Remove the parsetab.py* files.  These apparently need to
             # be removed to ensure the creation of a parser.out file.
             #
-            if os.path.exists(tabmodule+".py"):
-                os.remove(tabmodule+".py")
-            if os.path.exists(tabmodule+".pyc"):
-                os.remove(tabmodule+".pyc")
+            if os.path.exists(_tabfile):
+                os.remove(_tabfile)
+            if os.path.exists(_tabfile+"c"):
+                os.remove(_tabfile+"c")
+
+            for _mod in list(sys.modules.keys()):
+                if _mod == tabmodule or _mod.endswith('.'+tabmodule):
+                    del sys.modules[_mod]
 
         dat_lexer = lex.lex()
         #
