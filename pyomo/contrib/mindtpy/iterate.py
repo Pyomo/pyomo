@@ -173,7 +173,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
 
     # Cycling check
-    if config.cycling_check == True and solve_data.mip_iter >= 1 and check_cycling:
+    if config.cycling_check and solve_data.mip_iter >= 1 and check_cycling:
         temp = []
         for var in solve_data.mip.component_data_objects(ctype=Var):
             if var.is_integer():
