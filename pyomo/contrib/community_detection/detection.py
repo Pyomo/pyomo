@@ -26,7 +26,8 @@ community_louvain, community_louvain_available = attempt_import(
 
 # TODO: Consider adding an option to include inactive constraints/objectives in the community detection
 
-def detect_communities(model, type_of_community_map='c', with_objective=True, weighted_graph=True, random_seed=None):
+def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
+                       random_seed=None):
     """
     Detects communities in a Pyomo optimization model
 
@@ -39,17 +40,17 @@ def detect_communities(model, type_of_community_map='c', with_objective=True, we
     model: Block
          a Pyomo model or block to be used for community detection
     type_of_community_map: str, optional
-        a string that specifies the type of community map to be returned, the default is 'c'.
-        'c' returns a dictionary (community_map) with communities based on constraint nodes,
-        'v' returns a dictionary (community_map) with communities based on variable nodes,
-        'b' returns a dictionary (community_map) with communities based on constraint and variable nodes (bipartite
+        a string that specifies the type of community map to be returned, the default is 'constraint'.
+        'constraint' returns a dictionary (community_map) with communities based on constraint nodes,
+        'variable' returns a dictionary (community_map) with communities based on variable nodes,
+        'bipartite' returns a dictionary (community_map) with communities based on constraint and variable nodes (bipartite
         graph)
     with_objective: bool, optional
         a Boolean argument that specifies whether or not the objective function is
         included in the model graph (and thus in the community map); the default is True
     weighted_graph: bool, optional
         a Boolean argument that specifies whether the community map is created based on a weighted model graph or an
-        unweighted model graph; the default is True (type_of_community_map='b' creates an unweighted model graph
+        unweighted model graph; the default is True (type_of_community_map='bipartite' creates an unweighted model graph
         regardless of this parameter)
     random_seed: int, optional
         an integer that is used as the random seed for the (heuristic) Louvain community detection
@@ -65,9 +66,9 @@ def detect_communities(model, type_of_community_map='c', with_objective=True, we
     assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
                                              "ConcreteModel" % model
 
-    assert type_of_community_map in ('b', 'c', 'v'), "Invalid value for type_of_community_map: " \
-                                                     "'type_of_community_map=%s' - Valid values: 'b', 'c', 'v'" \
-                                                     % type_of_community_map
+    assert type_of_community_map in ('bipartite', 'constraint', 'variable'), "Invalid value for type_of_community_map: " \
+                                                                     "'type_of_community_map=%s' - Valid values: 'bipartite', 'constraint', 'variable'" \
+                                                                     % type_of_community_map
 
     assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
                                          "must be a Boolean" % with_objective
@@ -108,7 +109,7 @@ def detect_communities(model, type_of_community_map='c', with_objective=True, we
     # through the use of number_component_map, resulting in a dictionary where the values are two-list tuples that
     # contain Pyomo modeling components
 
-    if type_of_community_map == 'b':
+    if type_of_community_map == 'bipartite':
         # If the community map was created for a bipartite graph, then for a given community, we simply want to
         # separate the nodes into their two groups; thus, we create a list of constraints and a list of variables
 
@@ -122,7 +123,7 @@ def detect_communities(model, type_of_community_map='c', with_objective=True, we
                     variable_node_list.append(number_component_map[numbered_node])
             community_map[community_key] = (constraint_node_list, variable_node_list)
 
-    elif type_of_community_map == 'c':
+    elif type_of_community_map == 'constraint':
         # If the community map was created for a constraint node graph, then for a given community, we want to create a
         # new list that contains all of the variables contained in the constraint equations of that community
 
@@ -134,7 +135,7 @@ def detect_communities(model, type_of_community_map='c', with_objective=True, we
             constraint_list = [number_component_map[constraint] for constraint in constraint_list]
             community_map[community_key] = (constraint_list, variable_list)
 
-    elif type_of_community_map == 'v':
+    elif type_of_community_map == 'variable':
         # If the community map was created for a variable node graph, then for a given community, we want to create a
         # new list that contains all of the constraints that the variables of that community appear in
 
@@ -165,7 +166,8 @@ def detect_communities(model, type_of_community_map='c', with_objective=True, we
     return community_map
 
 
-def visualize_model_graph(model, community_map=None, type_of_graph='c', with_objective=True, weighted_graph=True,
+def visualize_model_graph(model, community_map=None, type_of_graph='constraint', with_objective=True,
+                          weighted_graph=True,
                           random_seed=None, type_of_community_map=None, pos=None):
     """
     This function draws a graph of the communities for a Pyomo model.
@@ -187,17 +189,17 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
         The first list should contain the constraints in the given community and the second list should contain the
         variables in the given community.
     type_of_graph: str, optional
-        a string that specifies the types of nodes drawn on the model graph, the default is 'c'.
-        'c' draws a graph with constraint nodes,
-        'v' draws a graph with variable nodes,
-        'b' draws a graph with both constraint and variable nodes (bipartite graph).
+        a string that specifies the types of nodes drawn on the model graph, the default is 'constraint'.
+        'constraint' draws a graph with constraint nodes,
+        'variable' draws a graph with variable nodes,
+        'bipartite' draws a graph with both constraint and variable nodes (bipartite graph).
     with_objective: bool, optional
         a Boolean argument that specifies whether or not the objective function is included in the graph; the
         default is True
     weighted_graph: bool, optional
         (this argument is only used if no community_map is provided)
         a Boolean argument that specifies whether a community map is created based on a weighted graph or an
-        unweighted graph; the default is True (type_of_community_map='b' creates an unweighted graph
+        unweighted graph; the default is True (type_of_community_map='bipartite' creates an unweighted graph
         regardless of this parameter)
     random_seed: int, optional
         (this argument is only used if no community_map is provided)
@@ -206,9 +208,9 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
         (this argument is only used if no community_map is provided)
         this is used in the function detect_communities to create a community map; the default value is whatever value
         is given to 'type_of_graph'.
-        'c' creates a community map based on constraint nodes,
-        'v' creates a community map based on variable nodes,
-        'b' creates a community map based on constraint and variable nodes (bipartite graph)
+        'constraint' creates a community map based on constraint nodes,
+        'variable' creates a community map based on variable nodes,
+        'bipartite' creates a community map based on constraint and variable nodes (bipartite graph)
     pos: dict, optional
         a dictionary that maps node keys to their positions on the illustration
 
@@ -226,8 +228,9 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
     assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
                                              "ConcreteModel" % model
 
-    assert type_of_graph in ('b', 'c', 'v'), "Invalid graph type specified: 'type_of_graph=%s' - Valid " \
-                                             "values: 'b', 'c', 'v'" % type_of_graph
+    assert type_of_graph in (
+    'bipartite', 'constraint', 'variable'), "Invalid graph type specified: 'type_of_graph=%s' - Valid " \
+                                            "values: 'bipartite', 'constraint', 'variable'" % type_of_graph
 
     assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
                                          "must be a Boolean" % with_objective
@@ -238,8 +241,8 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
     assert random_seed is None or (type(random_seed) == int and random_seed >= 0), \
         "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed
 
-    assert type_of_community_map is None or type_of_community_map in ('b', 'c', 'v'), \
-        "Invalid value for type_of_community_map: 'type_of_community_map=%s' - Valid values: 'b', 'c', 'v'" \
+    assert type_of_community_map is None or type_of_community_map in ('bipartite', 'constraint', 'variable'), \
+        "Invalid value for type_of_community_map: 'type_of_community_map=%s' - Valid values: 'bipartite', 'constraint', 'variable'" \
         % type_of_community_map
 
     # No assert statement for pos; the NetworkX function can handle issues with pos
@@ -302,7 +305,7 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
     # Based on type_of_graph, which specifies what Pyomo modeling components are to be drawn as nodes in the graph
     # illustration, we will now get the node list and the color list, which describes how to color nodes
     # according to their communities (which is based on community_map)
-    if type_of_graph == 'b':
+    if type_of_graph == 'bipartite':
         list_of_node_lists = [list_of_nodes for list_tuple in community_map.values() for list_of_nodes in
                               list_tuple]
 
@@ -333,10 +336,10 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
         if pos is None:  # The case where the user has not provided their own layout
             pos = nx.bipartite_layout(model_graph, top_nodes)
 
-    else:  # This covers the case that type_of_community_map is 'c' or 'v'
+    else:  # This covers the case that type_of_community_map is 'constraint' or 'variable'
 
         # Constraints are in the first list of the tuples in community map and variables are in the second list
-        position = 0 if type_of_graph == 'c' else 1
+        position = 0 if type_of_graph == 'constraint' else 1
         list_of_node_lists = list(i[position] for i in community_map.values())
 
         # list_of_node_lists is (as it implies) a list of lists, so we will use the list comprehension
@@ -367,7 +370,7 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
     nx.draw_networkx_edges(model_graph, pos, alpha=0.5)
 
     # Make the title
-    node_name_map = {'b': 'Bipartite', 'c': 'Constraint', 'v': 'Variable'}
+    node_name_map = {'bipartite': 'Bipartite', 'constraint': 'Constraint', 'variable': 'Variable'}
     graph_type = node_name_map[type_of_graph]
     if user_provided_community_map:
         plot_title = "%s graph - colored using user-provided community map" % graph_type
@@ -380,7 +383,7 @@ def visualize_model_graph(model, community_map=None, type_of_graph='c', with_obj
     return fig, pos
 
 
-def stringify_community_map(model=None, community_map=None, type_of_community_map='c', with_objective=True,
+def stringify_community_map(model=None, community_map=None, type_of_community_map='constraint', with_objective=True,
                             weighted_graph=True, random_seed=None):
     """
     This function takes in a community map of Pyomo components and returns the same community map but with the strings
@@ -395,10 +398,10 @@ def stringify_community_map(model=None, community_map=None, type_of_community_ma
         a dictionary with values that contain Pyomo components which will be converted to their strings
     type_of_community_map: str, optional
         (this argument is only used if no community_map is provided)
-        a string that specifies the type of community map to be returned, the default is 'c'.
-        'c' returns a dictionary (community_map) with communities based on constraint nodes,
-        'v' returns a dictionary (community_map) with communities based on variable nodes,
-        'b' returns a dictionary (community_map) with communities based on constraint and variable nodes (bipartite
+        a string that specifies the type of community map to be returned, the default is 'constraint'.
+        'constraint' returns a dictionary (community_map) with communities based on constraint nodes,
+        'variable' returns a dictionary (community_map) with communities based on variable nodes,
+        'bipartite' returns a dictionary (community_map) with communities based on constraint and variable nodes (bipartite
         graph)
     with_objective: bool, optional
         (this argument is only used if no community_map is provided)
@@ -407,7 +410,7 @@ def stringify_community_map(model=None, community_map=None, type_of_community_ma
     weighted_graph: bool, optional
         (this argument is only used if no community_map is provided)
         a Boolean argument that specifies whether the community map is created based on a weighted model graph or an
-        unweighted model graph; the default is True (type_of_community_map='b' creates an unweighted model graph
+        unweighted model graph; the default is True (type_of_community_map='bipartite' creates an unweighted model graph
         regardless of this parameter)
     random_seed: int, optional
         (this argument is only used if no community_map is provided)
@@ -428,9 +431,9 @@ def stringify_community_map(model=None, community_map=None, type_of_community_ma
                                                               "an instance of ConcreteModel or None " \
                                                               "if a community map is given" % model
 
-    assert type_of_community_map in ('b', 'c', 'v'), "Invalid value for type_of_community_map: " \
-                                                     "'type_of_community_map=%s' - Valid values: 'b', 'c', 'v'" \
-                                                     % type_of_community_map
+    assert type_of_community_map in ('bipartite', 'constraint', 'variable'), "Invalid value for type_of_community_map: " \
+                                                                             "'type_of_community_map=%s' - Valid values: 'bipartite', 'constraint', 'variable'" \
+                                                                             % type_of_community_map
 
     assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
                                          "must be a Boolean" % with_objective

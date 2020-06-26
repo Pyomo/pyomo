@@ -31,23 +31,23 @@ unweighted, and whether the objective function(s) is included in the graph gener
 and reasoning behind including each of these options are explained in greater depth.
 
 Type of Community Map
-    In this package's main function (detect_communities), the user can select 'b', 'c', or 'v' as an input for
+    In this package's main function (detect_communities), the user can select 'bipartite', 'constraint', or 'variable' as an input for
     the 'type_of_community_map' argument, and these result in a community map based on a bipartite graph, a constraint
     node graph, or a variable node graph (respectively).
 
-    If the user sets `type_of_community_map='c'`, then each entry in the community map (which is a dictionary) contains
+    If the user sets `type_of_community_map='constraint'`, then each entry in the community map (which is a dictionary) contains
     a list of all the constraints in the community as well as all the variables contained in those constraints.
     For the model graph, a node is created for every active constraint in the model, an edge between two
     constraint nodes is created only if those two constraint equations share a variable, and the
     weight of each edge is equal to the number of variables the two constraint equations have in common.
 
-    If the user sets `type_of_community_map='v'`, then each entry in the community map (which is a dictionary) contains
+    If the user sets `type_of_community_map='variable'`, then each entry in the community map (which is a dictionary) contains
     a list of all the variables in the community as well as all the constraints that contain those variables.
     For the model graph, a node is created for every variable in the model, an edge between two variable nodes is
     created only if those two variables occur in the same constraint equation, and the weight of each edge is equal
     to the number of constraint equations in which the two variables occur together.
 
-    If the user sets `type_of_community_map='b'`, then each entry in the community map (which is a dictionary) is
+    If the user sets `type_of_community_map='bipartite'`, then each entry in the community map (which is a dictionary) is
     simply all of the nodes in the community but split into a list of constraints and a list of variables.
     For the model graph, a node is created for every variable and every constraint in the model. An edge is created
     between a constraint node and a variable node only if the constraint equation contains the variable. (Edges are
@@ -118,7 +118,7 @@ imports to run all of the code examples are included below):
     >>>     return model
     >>> model = m = decode_model_1()
     >>>
-    >>> print(detect_communities(model, type_of_community_map='b'))
+    >>> print(detect_communities(model, type_of_community_map='bipartite'))
     {0: ([<pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB588>,
           <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB5F8>],
          [<pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB3C8>,
@@ -131,7 +131,7 @@ imports to run all of the code examples are included below):
 
 We can use `stringify_comunity_map` if we want the same output, but with the strings of the community members:
 
-    >>> print(stringify_community_map(model=m, type_of_community_map='b'))
+    >>> print(stringify_community_map(model=m, type_of_community_map='bipartite'))
     {0: (['c1', 'c2'], ['x1', 'x2']),
      1: (['c3', 'c4', 'c5'], ['x3', 'x4'])}
 
@@ -139,14 +139,14 @@ Now, if we want a visualization of the communities within the Pyomo model, we ca
 so.
 
     >>> seed = 5
-    >>> comm = detect_communities(m, type_of_community_map='b', random_seed=seed)
-    >>> left_figure, pos = visualize_model_graph(model=m, community_map=comm, type_of_graph='b')
+    >>> comm = detect_communities(m, type_of_community_map='bipartite', random_seed=seed)
+    >>> left_figure, pos = visualize_model_graph(model=m, community_map=comm, type_of_graph='bipartite')
     >>> plt.show()
     >>>
     >>> # Note that the pos argument is returned above and used in the following function call,
     >>> # which ensures that the graph layouts are identical
     >>>
-    >>> right_figure, _ = visualize_model_graph(model=m, type_of_graph='b', type_of_community_map='v',
+    >>> right_figure, _ = visualize_model_graph(model=m, type_of_graph='bipartite', type_of_community_map='variable',
     >>> random_seed=seed, pos=pos)
     >>> plt.show()
 
@@ -170,17 +170,17 @@ Let's add a more complicated model, taken from `Duran & Grossmann, 1986`_:
 
     >>> model = EightProcessFlowsheet()
     >>>
-    >>> left_fig, pos = visualize_model_graph(model, type_of_graph='v', type_of_community_map='c',
+    >>> left_fig, pos = visualize_model_graph(model, type_of_graph='variable', type_of_community_map='constraint',
     >>> random_seed=seed)
     >>> plt.show()
 
     As we did before, we will use the pos argument to create a consistent graph layout
     >>>
-    >>> middle_fig, _ = visualize_model_graph(model, type_of_graph='v', type_of_community_map='b',
+    >>> middle_fig, _ = visualize_model_graph(model, type_of_graph='variable', type_of_community_map='bipartite',
     >>> random_seed=seed, pos=pos)
     >>> plt.show()
     >>>
-    >>> right_fig, _ = visualize_model_graph(model, type_of_graph='v', type_of_community_map='v',
+    >>> right_fig, _ = visualize_model_graph(model, type_of_graph='variable', type_of_community_map='variable',
     >>> random_seed=seed, pos=pos)
     >>> plt.show()
 
@@ -193,7 +193,7 @@ An example of three drawings for these three function calls is shown below:
 The three graphs above are all variable graphs - which means the nodes represent variables in the model, and the edges
 represent constraint equations. The coloring differs because the three graphs rely on community maps that were
 created based on a constraint node graph, a bipartite graph, and a variable node graph (from left to right). For
-example, the community map that was generated from a constraint node graph (`type_of_community_map='c'`) resulted
+example, the community map that was generated from a constraint node graph (`type_of_community_map='constraint'`) resulted
 in three communities (as seen by the purple, yellow, and blue nodes).
 
 For our final example, we will use `generate_model_graph` - this function can be used to create a NetworkX
@@ -209,7 +209,7 @@ only need the NetworkX graph of the model and the number-to-component mapping.
     >>>
     >>> # model_graph is a NetworkX graph of the model, and number_component_map is a dictionary
     >>> # that maps the numbers used to represent the model components to the actual components
-    >>> model_graph, number_component_map, constr_var_map = generate_model_graph(model, type_of_graph='c')
+    >>> model_graph, number_component_map, constr_var_map = generate_model_graph(model, type_of_graph='constraint')
 
 The next two lines are used to create a mapping to change the node values from numbers into strings and the
 second line uses this mapping to create string_model_graph, which has the relabeled nodes.

@@ -22,15 +22,15 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
          a Pyomo model or block to be used for community detection
     type_of_graph: str
         a string that specifies the type of graph that is created from the model
-        'c' creates a graph based on constraint nodes,
-        'v' creates a graph based on variable nodes,
-        'b' creates a graph based on constraint and variable nodes (bipartite graph).
+        'constraint' creates a graph based on constraint nodes,
+        'variable' creates a graph based on variable nodes,
+        'bipartite' creates a graph based on constraint and variable nodes (bipartite graph).
     with_objective: bool, optional
         a Boolean argument that specifies whether or not the objective function is included in the graph; the
         default is True
     weighted_graph: bool, optional
         a Boolean argument that specifies whether a weighted or unweighted graph is to be created from the Pyomo
-        model; the default is True (type_of_graph='b' creates an unweighted graph regardless of this parameter)
+        model; the default is True (type_of_graph='bipartite' creates an unweighted graph regardless of this parameter)
 
     Returns
     -------
@@ -43,7 +43,7 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     """
 
     # Start off by making a bipartite graph (regardless of the value of type_of_graph), then if
-    # type_of_graph = 'v' or 'c', we will "collapse" this bipartite graph into a variable node or constraint node graph
+    # type_of_graph = 'variable' or 'constraint', we will "collapse" this bipartite graph into a variable node or constraint node graph
 
     # Initialize the data structure needed to keep track of edges in the graph (this graph will be made
     # without edge weights, because edge weights are not useful for this bipartite graph)
@@ -115,7 +115,7 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     # sorting prevents any unpredictable changes)
     bipartite_model_graph.add_edges_from(sorted(edge_set))
 
-    if type_of_graph == 'b':  # This is the case where the user wants a bipartite graph, which we made above
+    if type_of_graph == 'bipartite':  # This is the case where the user wants a bipartite graph, which we made above
         # Log important information with the following logger function
         _event_log(model, bipartite_model_graph, set(constraint_variable_map), type_of_graph, with_objective)
 
@@ -127,7 +127,7 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     # model graph (based on the specific value of type_of_graph)
 
     constraint_nodes = set(constraint_variable_map)
-    if type_of_graph == 'c':
+    if type_of_graph == 'constraint':
         graph_nodes = constraint_nodes
     else:
         variable_nodes = set(number_component_map) - constraint_nodes
@@ -144,6 +144,3 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     # Return the projected NetworkX graph, the dictionary of node numbers mapped to their respective Pyomo
     # components, and the map of constraints to the variables they contain
     return projected_model_graph, number_component_map, constraint_variable_map
-
-
-
