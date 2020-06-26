@@ -191,7 +191,7 @@ def process_setarg(arg):
 @deprecated('The set_options decorator is deprecated; create Sets from '
             'functions explicitly by passing the function to the Set '
             'constructor using the "initialize=" keyword argument.',
-            version='TBD')
+            version='5.7')
 def set_options(**kwds):
     """
     This is a decorator for set initializer functions.  This
@@ -476,7 +476,7 @@ class _SetData(_SetDataBase):
             if isinstance(value, _SetData):
                 deprecation_warning(
                     "Testing for set subsets with 'a in b' is deprecated.  "
-                    "Use 'a.issubset(b)'.", version='TBD')
+                    "Use 'a.issubset(b)'.", version='5.7')
                 return value.issubset(self)
             else:
                 return False
@@ -803,7 +803,7 @@ class _SetData(_SetDataBase):
         return (interval.start, interval.end, interval.step)
 
     @property
-    @deprecated("The 'virtual' attribute is no longer supported", version='TBD')
+    @deprecated("The 'virtual' attribute is no longer supported", version='5.7')
     def virtual(self):
         return isinstance(self, (_AnySet, SetOperator, _InfiniteRangeSetData))
 
@@ -816,7 +816,7 @@ class _SetData(_SetDataBase):
 
     @property
     @deprecated("The 'concrete' attribute is no longer supported.  "
-                "Use isdiscrete() or isfinite()", version='TBD')
+                "Use isdiscrete() or isfinite()", version='5.7')
     def concrete(self):
         return self.isfinite()
 
@@ -829,18 +829,18 @@ class _SetData(_SetDataBase):
 
     @property
     @deprecated("The 'ordered' attribute is no longer supported.  "
-                "Use isordered()", version='TBD')
+                "Use isordered()", version='5.7')
     def ordered(self):
         return self.isordered()
 
     @property
     @deprecated("'filter' is no longer a public attribute.",
-                version='TBD')
+                version='5.7')
     def filter(self):
         return None
 
     @deprecated("check_values() is deprecated: Sets only contain valid members",
-                version='TBD')
+                version='5.7')
     def check_values(self):
         """
         Verify that the values in this set are valid.
@@ -1158,14 +1158,14 @@ class _FiniteSetMixin(object):
 
     @property
     @deprecated("The 'value' attribute is deprecated.  Use .data() to "
-                "retrieve the values in a finite set.", version='TBD')
+                "retrieve the values in a finite set.", version='5.7')
     def value(self):
         return set(self)
 
     @property
     @deprecated("The 'value_list' attribute is deprecated.  Use "
                 ".ordered_data() to retrieve the values from a finite set "
-                "in a deterministic order.", version='TBD')
+                "in a deterministic order.", version='5.7')
     def value_list(self):
         return list(self.ordered_data())
 
@@ -1285,7 +1285,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     @property
     @deprecated("'filter' is no longer a public attribute.",
-                version='TBD')
+                version='5.7')
     def filter(self):
         return self._filter
 
@@ -1950,7 +1950,7 @@ class Set(IndexedComponent):
 
 
     @deprecated("check_values() is deprecated: Sets only contain valid members",
-                version='TBD')
+                version='5.7')
     def check_values(self):
         """
         Verify that the values in this set are valid.
@@ -2927,7 +2927,7 @@ class SetOperator(_SetData, Set):
             deprecation_warning(
                 "Providing construction data to SetOperator objects is "
                 "deprecated.  This data is ignored and in a future version "
-                "will not be allowed", version='TBD')
+                "will not be allowed", version='5.7')
             fail = len(data) > 1 or None not in data
             if not fail:
                 _data = data[None]
@@ -3043,7 +3043,7 @@ class SetOperator(_SetData, Set):
     @property
     @deprecated("SetProduct.set_tuple is deprecated.  "
                 "Use SetProduct.subsets() to get the operator arguments.",
-                version='TBD')
+                version='5.7')
     def set_tuple(self):
         # Despite its name, in the old SetProduct, set_tuple held a list
         return list(self.subsets())
@@ -3856,7 +3856,7 @@ class _AnyWithNoneSet(_AnySet):
     # the class because we will always create a global instance for
     # backwards compatability with the Book.
     @deprecated("The AnyWithNone set is deprecated.  "
-                "Use Any, which includes None", version='TBD')
+                "Use Any, which includes None", version='5.7')
     def get(self, val, default=None):
         return super(_AnyWithNoneSet, self).get(val, default)
 
@@ -4108,14 +4108,14 @@ BooleanSet = Boolean.__class__
 
 class RealInterval(RealSet):
     @deprecated("RealInterval has been deprecated.  Please use "
-                "RangeSet(lower, upper, 0)", version='TBD')
+                "RangeSet(lower, upper, 0)", version='5.7')
     def __new__(cls, **kwds):
         kwds.setdefault('class_name', 'RealInterval')
         return super(RealInterval, cls).__new__(RealSet, **kwds)
 
 class IntegerInterval(IntegerSet):
     @deprecated("IntegerInterval has been deprecated.  Please use "
-                "RangeSet(lower, upper, 1)", version='TBD')
+                "RangeSet(lower, upper, 1)", version='5.7')
     def __new__(cls, **kwds):
         kwds.setdefault('class_name', 'IntegerInterval')
         return super(IntegerInterval, cls).__new__(IntegerSet, **kwds)

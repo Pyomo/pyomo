@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockMatrix, BlockVector
+from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
 from scipy.sparse import identity
 from scipy.sparse.linalg import spsolve
 import numpy as np
@@ -56,12 +56,15 @@ def compute_init_lam(nlp, x=None, lam_max=1e3):
     df = nlp.evaluate_grad_objective()
 
     # create KKT system
-    kkt = BlockSymMatrix(2)
-    kkt[0, 0] = identity(nx)
-    kkt[1, 0] = jac
+    kkt = BlockMatrix(2,2)
+    kkt.set_block(0, 0, identity(nx))
+    kkt.set_block(1, 0, jac)
+    kkt.set_block(0, 1, jac.transpose())
 
     zeros = np.zeros(nc)
-    rhs = BlockVector([-df, zeros])
+    rhs = BlockVector(2)
+    rhs.set_block(0, -df)
+    rhs.set_block(1, zeros)
 
     flat_kkt = kkt.tocoo().tocsc()
     flat_rhs = rhs.flatten()
@@ -84,13 +87,14 @@ nlp.set_duals(y)
 J = nlp.extract_submatrix_jacobian(pyomo_variables=[m.x1, m.x2, m.x3], pyomo_constraints=[m.const1, m.const2])
 H = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[m.x1, m.x2, m.x3], pyomo_variables_cols=[m.x1, m.x2, m.x3])
 
-M = BlockSymMatrix(2)
-M[0, 0] = H
-M[1, 0] = J
+M = BlockMatrix(2,2)
+M.set_block(0, 0, H)
+M.set_block(1, 0, J)
+M.set_block(0, 1, J.transpose())
 
 Np = BlockMatrix(2, 1)
-Np[0, 0] = nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[m.x1, m.x2, m.x3], pyomo_variables_cols=[m.eta1, m.eta2])
-Np[1, 0] = nlp.extract_submatrix_jacobian(pyomo_variables=[m.eta1, m.eta2], pyomo_constraints=[m.const1, m.const2])
+Np.set_block(0, 0, nlp.extract_submatrix_hessian_lag(pyomo_variables_rows=[m.x1, m.x2, m.x3], pyomo_variables_cols=[m.eta1, m.eta2]))
+Np.set_block(1, 0, nlp.extract_submatrix_jacobian(pyomo_variables=[m.eta1, m.eta2], pyomo_constraints=[m.const1, m.const2]))
 
 ds = spsolve(M.tocsc(), -Np.tocsc())
 
