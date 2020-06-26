@@ -34,7 +34,7 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
 
     Returns
     -------
-    bipartite_model_graph/collapsed_model_graph: NetworkX graph
+    bipartite_model_graph/projected_model_graph: nx.Graph
         a NetworkX graph with nodes and edges based on the given Pyomo optimization model
     number_component_map: dict
         a dictionary that (deterministically) maps a number to a component in the model
@@ -123,33 +123,27 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
         # components, and the map of constraints to the variables they contain
         return bipartite_model_graph, number_component_map, constraint_variable_map
 
-    # If we reach this point of the code, then we will now begin constructing the collapsed version of the bipartite
-    # model graph (the specific manner depends on whether the type of graph is 'c' or 'v')
+    # At this point of the code, we will create the projected version of the bipartite
+    # model graph (based on the specific value of type_of_graph)
 
-    collapsed_model_graph = nx.Graph()  # Initialize NetworkX graph for the collapsed version of bipartite_model_graph
+    constraint_nodes = set(constraint_variable_map)
+    if type_of_graph == 'c':
+        graph_nodes = constraint_nodes
+    else:
+        variable_nodes = set(number_component_map) - constraint_nodes
+        graph_nodes = variable_nodes
 
-    # TODO: Make the next few lines (up until the logger function) cleaner/smarter (maybe use difference of sets?)
-
-    if type_of_graph == 'c':  # Constraint node graph - collapse the bipartite graph into a constraint node graph
-        constraint_nodes = [constraint_node for constraint_node in constraint_variable_map]
-        if weighted_graph:
-            collapsed_model_graph = nx.bipartite.weighted_projected_graph(bipartite_model_graph, constraint_nodes)
-        else:
-            collapsed_model_graph = nx.bipartite.projected_graph(bipartite_model_graph, constraint_nodes)
-
-    elif type_of_graph == 'v':  # Variable node graph - collapse the bipartite graph into a variable node graph
-        variable_nodes = [number for number in number_component_map if number not in constraint_variable_map]
-        if weighted_graph:
-            collapsed_model_graph = nx.bipartite.weighted_projected_graph(bipartite_model_graph, variable_nodes)
-        else:
-            collapsed_model_graph = nx.bipartite.projected_graph(bipartite_model_graph, variable_nodes)
+    if weighted_graph:
+        projected_model_graph = nx.bipartite.weighted_projected_graph(bipartite_model_graph, graph_nodes)
+    else:
+        projected_model_graph = nx.bipartite.projected_graph(bipartite_model_graph, graph_nodes)
 
     # Log important information with the following logger function
-    _event_log(model, collapsed_model_graph, set(constraint_variable_map), type_of_graph, with_objective)
+    _event_log(model, projected_model_graph, set(constraint_variable_map), type_of_graph, with_objective)
 
-    # Return the collapsed NetworkX graph, the dictionary of node numbers mapped to their respective Pyomo
+    # Return the projected NetworkX graph, the dictionary of node numbers mapped to their respective Pyomo
     # components, and the map of constraints to the variables they contain
-    return collapsed_model_graph, number_component_map, constraint_variable_map
+    return projected_model_graph, number_component_map, constraint_variable_map
 
 
 
