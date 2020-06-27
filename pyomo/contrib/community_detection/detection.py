@@ -43,7 +43,7 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
     Parameters
     ----------
     model: Block
-         a Pyomo model or block to be used for community detection
+        a Pyomo model or block to be used for community detection
     type_of_community_map: str, optional
         a string that specifies the type of community map to be returned, the default is 'constraint'.
         'constraint' returns a dictionary (community_map) with communities based on constraint nodes,
@@ -187,7 +187,7 @@ def visualize_model_graph(model, community_map=None, type_of_graph='constraint',
     Parameters
     ----------
     model: Block
-         a Pyomo model or block to be used for community detection
+        a Pyomo model or block to be used for community detection
     community_map: dict, optional
         a dictionary that maps an integer key (which corresponds to a community number) to a tuple of two lists.
         The first list should contain the constraints in the given community and the second list should contain the

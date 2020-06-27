@@ -19,7 +19,7 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     Parameters
     ----------
     model: Block
-         a Pyomo model or block to be used for community detection
+        a Pyomo model or block to be used for community detection
     type_of_graph: str
         a string that specifies the type of graph that is created from the model
         'constraint' creates a graph based on constraint nodes,
