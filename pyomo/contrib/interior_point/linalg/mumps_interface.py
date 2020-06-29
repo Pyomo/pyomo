@@ -51,7 +51,11 @@ class MumpsInterface(LinearSolverInterface):
 
         try:
             self._mumps.do_symbolic_factorization(matrix)
-            self._prev_allocation = self.get_infog(16)
+            self._prev_allocation = max(self.get_infog(16),
+                                        self.get_icntl(23))
+            # INFOG(16) is the Mumps estimate for memory usage; ICNTL(23)
+            # is the override used in increase_memory_allocation. Both are
+            # already rounded to MB, so neither should every be negative.
         except RuntimeError as err:
             if raise_on_error:
                 raise err
@@ -97,7 +101,7 @@ class MumpsInterface(LinearSolverInterface):
         if self._prev_allocation == 0:
             new_allocation = 1
         else:
-            new_allocation = factor*self._prev_allocation
+            new_allocation = int(factor*self._prev_allocation)
         # Here I set the memory allocation directly instead of increasing
         # the "percent-increase-from-predicted" parameter ICNTL(14)
         self.set_icntl(23, new_allocation)
@@ -135,6 +139,7 @@ class MumpsInterface(LinearSolverInterface):
             return info
 
     def set_icntl(self, key, value):
+        value = int(value)
         if key == 13:
             if value <= 0:
                 raise ValueError(

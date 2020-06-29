@@ -94,3 +94,6 @@ def main_console_script():
         return ans.errorcode
     except AttributeError:
         return ans
+
+if __name__ == '__main__':
+    sys.exit(main_console_script())
