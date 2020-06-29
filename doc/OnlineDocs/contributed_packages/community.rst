@@ -164,7 +164,7 @@ so. Let's take a look at how this can be done in the following example:
 
     An example of the two separate graphs created for these two function calls is shown below:
 .. image:: communities_decode_1.png
-  :width: 800
+  :width: 100%
   :alt: Graphical representation of the communities in the model 'decode_model_1' for two different function calls
 
 These graph drawings very clearly demonstrate the communities within this model. We can see how there is only one edge
@@ -199,7 +199,7 @@ Let's try a more complicated model, taken from `Duran & Grossmann, 1986`_:
     We can see an example for the three separate graphs created by these three function calls
     (drawn with 'plt.show()') below:
 .. image:: communities_8pp.png
-   :width: 800
+   :width: 100%
    :alt: Graphical representation of the communities in the model 'decode_model_1' for slightly different function calls
 
 The three graphs above are all variable graphs - which means the nodes represent variables in the model, and the edges
