@@ -377,17 +377,27 @@ def visualize_model_graph(model, community_map=None, type_of_graph='constraint',
     nx.draw_networkx_nodes(model_graph, pos, nodelist=node_list, node_size=40, cmap=color_map, node_color=color_list)
     nx.draw_networkx_edges(model_graph, pos, alpha=0.5)
 
-    # Make the title
-    node_name_map = {'bipartite': 'Bipartite', 'constraint': 'Constraint', 'variable': 'Variable'}
-    graph_type = node_name_map[type_of_graph]
+    # Make the main title
+    graph_type = type_of_graph.capitalize()
     if user_provided_community_map:
-        plot_title = "%s graph - colored using user-provided community map" % graph_type
+        main_graph_title = "%s graph - colored using user-provided community map" % graph_type
     else:
-        community_map_type = node_name_map[type_of_community_map]
-        plot_title = "%s graph - colored using %s community map" % (graph_type, community_map_type)
-    plt.title(plot_title)
+        community_map_type = type_of_community_map.capitalize()
+        main_graph_title = "%s graph - colored using %s community map" % (graph_type, community_map_type)
 
-    # Return the figure and the position dictionary used for the graph layout
+    main_font_size = 14
+    plt.suptitle(main_graph_title, fontsize=main_font_size)
+
+    # Define a dict that will be used for the graph subtitle
+    subtitle_naming_dict = {'bipartite': 'Nodes are variables and constraints & Edges are variables in a constraint',
+                            'constraint': 'Nodes are constraints & Edges are common variables',
+                            'variable': 'Nodes are variables & Edges are shared constraints'}
+
+    # Make the subtitle
+    subtitle_font_size = 11
+    plt.title(subtitle_naming_dict[type_of_graph], fontsize=subtitle_font_size)
+
+    # Return the figure and pos, the position dictionary used for the graph layout
     return fig, pos
 
 
