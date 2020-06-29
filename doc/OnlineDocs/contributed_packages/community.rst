@@ -21,7 +21,7 @@ can be very useful to know the communities that exist in a model.
 
 The manner in which the graph of nodes and edges is constructed from the model directly affects the community
 detection. Thus, this package provides the user with a lot of control over the construction of the graph. The
-function we use for this community detection is shown below.
+function we use for this community detection is shown below:
 
 .. autofunction:: pyomo.contrib.community_detection.detection.detect_communities
 
@@ -163,7 +163,7 @@ so. Let's take a look at how this can be done in the following example:
     >>> plt.show()
 
     An example of the two separate graphs created for these two function calls is shown below:
-.. image:: communities_for_decode_1.png
+.. image:: communities_decode_1.png
   :width: 800
   :alt: Graphical representation of the communities in the model 'decode_model_1' for two different function calls
 
@@ -198,7 +198,7 @@ Let's try a more complicated model, taken from `Duran & Grossmann, 1986`_:
 
     We can see an example for the three separate graphs created by these three function calls
     (drawn with 'plt.show()') below:
-.. image:: communities_for_8pp.png
+.. image:: communities_8pp.png
    :width: 800
    :alt: Graphical representation of the communities in the model 'decode_model_1' for slightly different function calls
 
@@ -256,7 +256,7 @@ For this example, we will only need the NetworkX graph of the model and the numb
     c4 c5
     c5
 
-It is worth mentioning that in the code above, we do not have to create ``string_map`` to create an edge list
+It's worth mentioning that in the code above, we do not have to create ``string_map`` to create an edge list
 or adjacency list, but for the sake of having an easily understandable output, it is quite helpful. (Without
 relabeling the nodes, the output below would not have the strings of the components but instead would have
 integer values.) This code will hopefully make it easier for a user to do the same.
