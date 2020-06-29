@@ -31,7 +31,6 @@ def create_model():
     m.const2 = Constraint(expr=m.eta2*m.x1+m.x2-m.x3-1 ==0)
     m.cost = Objective(expr=m.x1**2+m.x2**2+m.x3**2)
     
-    
     return m 
 
 
@@ -51,6 +50,7 @@ if __name__=='__main__':
     print("\teta2 =",m.eta2())
     
     print("Solution with the original parameter values:")
+    print("\tObjective =",value(m.cost))
     print("\tx1 =",m.x1())
     print("\tx2 =",m.x2())
     print("\tx3 =",m.x3())
@@ -60,6 +60,7 @@ if __name__=='__main__':
     print("\teta2 =",m_sipopt.perturbed_eta2())
     
     print("(Approximate) solution with the new parameter values:")
+    print("\tObjective =",value(m_sipopt.cost))
     print("\tx1 =",m_sipopt.x1())
     print("\tx2 =",m_sipopt.x2())
     print("\tx3 =",m_sipopt.x3())
