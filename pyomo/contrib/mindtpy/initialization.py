@@ -16,6 +16,8 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
 from pyomo.contrib.mindtpy.util import var_bound_add
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts,
+                                                  add_int_cut)
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -53,23 +55,29 @@ def MindtPy_initialize_master(solve_data, config):
             config.init_strategy = 'rNLP'
         else:
             config.init_strategy = 'max_binary'
+            # TODO add logger info for chosen initla_strategy
+
+    config.logger.info(
+        '{} is the initial strategy being used.'
+        '\n'.format(
+            config.init_strategy))
     # Do the initialization
-    elif config.init_strategy == 'rNLP':
+    if config.init_strategy == 'rNLP':
         init_rNLP(solve_data, config)
     elif config.init_strategy == 'max_binary':
         init_max_binaries(solve_data, config)
-        # if config.strategy == 'ECP':
-        #     add_ecp_cut(solve_data, config)
-        # else:
-    if config.strategy != 'ECP':
-        fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
-        if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
-            handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
-        elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-            handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
-        else:
-            handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                    solve_data, config)
+        if config.strategy == 'ECP':
+            add_ecp_cuts(solve_data.mip, solve_data, config)
+    elif config.init_strategy == 'initial_binary':
+        if config.strategy != 'ECP':
+            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
+            if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
+                handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
+            elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
+                handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+            else:
+                handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                        solve_data, config)
 
 
 def init_rNLP(solve_data, config):

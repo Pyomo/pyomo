@@ -118,7 +118,10 @@ def MindtPy_iteration_loop(solve_data, config):
 
         MindtPy = solve_data.mip.MindtPy_utils
         MindtPy.MindtPy_linear_cuts.integer_cuts.deactivate()
-        MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
+        if config.strategy == 'OA':
+            MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
+        #elif config.strategy == 'ECP':
+        #    MindtPy.MindtPy_linear_cuts.ecp_cuts.activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.
         if isinstance(masteropt, PersistentSolver):
@@ -184,14 +187,32 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         nonlinear_constraints = [c for c in MindtPy.constraint_list if
                                  c.body.polynomial_degree() not in (1, 0)]
         for nlc in nonlinear_constraints:
+            try:
+                my_lslack = nlc.lslack()
+            except OverflowError:
+                my_lslack = 1e10
+            try:
+                my_uslack = nlc.uslack()
+            except OverflowError:
+                my_uslack = 1e10
             if nlc.has_lb():
                 if nlc.lslack() < -config.ECP_tolerance:
+                    config.logger.info(
+                        'MindtPy-ECP continuing as {} has not met the '
+                        'nonlinear constraints satisfaction.'
+                        '\n'.format(
+                            nlc))
                     return False
             if nlc.has_ub():
                 if nlc.uslack() < -config.ECP_tolerance:
+                    config.logger.info(
+                        'MindtPy-ECP continuing as {} has not met the '
+                        'nonlinear constraints satisfaction.'
+                        '\n'.format(
+                            nlc))
                     return False
         config.logger.info(
-            'MindtPy exiting on nonlinear constraints satisfaction. '
+            'MindtPy-ECP exiting on nonlinear constraints satisfaction. '
             'LB: {}\n'.format(
                 solve_data.LB))
         solve_data.best_solution_found = solve_data.working_model.clone()

@@ -322,7 +322,7 @@ class MindtPySolver(object):
             setup_results_object(solve_data, config)
 
             # Process objective in case that it is nonlinear move it to constraints
-            process_objective(solve_data, config)
+            process_objective(solve_data, config, use_mcpp=False)
 
             # Save model initial values.
             solve_data.initial_var_values = list(
