@@ -213,10 +213,12 @@ jobs:
                 echo "IDAES Ipopt not available on OSX"
                 exit 0
             elif test "${{matrix.TARGET}}" == linux; then
-                curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
                     > $IPOPT_TAR
             else
-                curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-solvers-windows-64.tar.gz \
                     $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
             fi
         fi
@@ -309,7 +311,7 @@ jobs:
             mkdir -p "$INSTALL_DIR"
             INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
             URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
-            curl --retry 8 -L $URL > $INSTALLER
+            curl --max-time 150 --retry 8 -L $URL > $INSTALLER
             cd $INSTALL_DIR
             unzip -q $INSTALLER
             cd gjh_asl_json-master/Thirdparty
@@ -398,9 +400,10 @@ jobs:
         coverage xml -i
         i=0
         set +e
+        CURLOPTS="--max-time 30 --retry 0"
         while : ; do
-            curl -L https://codecov.io/bash -o codecov.sh \
-                && bash codecov.sh -Z -X gcov -f coverage.xml
+            curl $CURLOPTS -L https://codecov.io/bash -o codecov.sh \
+                && bash codecov.sh -U "$CURLOPTS" -Z -X gcov -f coverage.xml
             if test $? == 0; then
                 break
             elif test $i -ge 5; then
