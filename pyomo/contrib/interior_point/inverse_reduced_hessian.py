@@ -8,7 +8,7 @@ np, numpy_available = attempt_import('numpy', 'Interior point requires numpy', m
 
 
 # Todo: This function currently used IPOPT for the initial solve - should accept solver
-def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e-6, tee=False):
+def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e-6, solver_options=None, tee=False):
     """
     This function computes the inverse of the reduced Hessian of a problem at the
     solution. This function first solves the problem with Ipopt and then generates
@@ -32,6 +32,8 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     bound_tolerance : float
        The tolerance to use when checking if the variables are too close to their bound.
        If they are too close, then the routine will exit without a reduced hessian.
+    solver_options: dictionary
+        Additional solver options to consider.
     tee : bool
        This flag is sent to the tee option of the solver. If true, then the solver
        log is output to the console.
@@ -54,9 +56,16 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
 
     # create the ipopt solver
     solver = pyo.SolverFactory('ipopt')
+    
+    # copy additional solver options
+    if solver_options is not None:
+        for key in solver_options:
+            solver.options[key] = solver_options[key]
+
     # set options to prevent bounds relaxation (and 0 slacks)
     solver.options['bound_relax_factor']=0
     solver.options['honor_original_bounds']='no'
+
     # solve the problem
     status = solver.solve(m, tee=tee)
     if not check_optimal_termination(status):

@@ -11,11 +11,23 @@
 
 __all__ = ['ActionManagerError', 'ActionHandle', 'AsynchronousActionManager', 'ActionStatus', 'FailedActionHandle', 'solve_all_instances']
 
-from pyutilib.enum import Enum
-
+import enum
 from six import itervalues
 
-ActionStatus = Enum('done', 'error', 'queued', 'executing', 'unknown')
+class ActionStatus(str, enum.Enum):
+    done='done'
+    error='error'
+    queued='queued'
+    executing='executing'
+    unknown='unknown'
+
+    # Overloading __str__ is needed to match the behavior of the old
+    # pyutilib.enum class (removed June 2020). There are spots in the
+    # code base that expect the string representation for items in the
+    # enum to not include the class name. New uses of enum shouldn't
+    # need to do this.
+    def __str__(self):
+        return self.value
 
 def solve_all_instances(solver_manager, solver, instances, **kwds):
     """

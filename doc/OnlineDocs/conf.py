@@ -197,3 +197,18 @@ texinfo_documents = [
 
 #autodoc_member_order = 'bysource'
 #autodoc_member_order = 'groupwise'
+
+# -- Check which conditional dependencies are available ------------------
+# Used for skipping certain doctests
+
+doctest_global_setup = '''
+
+import pyomo.opt
+
+# Not using SolverFactory to check solver availability because
+# as of June 2020 there is no way to supress warnings when 
+# solvers are not available
+ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
+sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
+baron_available = bool(pyomo.opt.check_available_solvers('baron'))
+'''

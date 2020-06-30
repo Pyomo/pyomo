@@ -48,7 +48,6 @@ packages = [
 'pyutilib.component.executables',
 'pyutilib.component.loader',
 'pyutilib.dev',
-'pyutilib.enum',
 'pyutilib.excel',
 'pyutilib.math',
 'pyutilib.misc',

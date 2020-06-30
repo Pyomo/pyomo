@@ -140,11 +140,13 @@ class InteriorPointSolver(object):
 
         self.linear_solver_logger = self.linear_solver.getLogger()
         self.linear_solve_context = LinearSolveContext(self.logger,
-                                                       self.linear_solver_logger,
-                                                       self.linear_solver_log_filename)
+                                        self.linear_solver_logger,
+                                        self.linear_solver_log_filename)
 
     def update_barrier_parameter(self):
-        self._barrier_parameter = max(self._minimum_barrier_parameter, min(0.5 * self._barrier_parameter, self._barrier_parameter ** 1.5))
+        self._barrier_parameter = max(self._minimum_barrier_parameter, 
+                                    min(0.5 * self._barrier_parameter, 
+                                        self._barrier_parameter ** 1.5))
 
     def set_linear_solver(self, linear_solver):
         """This method exists to hopefully make it easy to try the same IP
@@ -272,7 +274,9 @@ class InteriorPointSolver(object):
                 break
             timer.start('convergence check')
             primal_inf, dual_inf, complimentarity_inf = \
-                    self.check_convergence(barrier=self._barrier_parameter, timer=timer)
+                    self.check_convergence(
+                            barrier=self._barrier_parameter, 
+                            timer=timer)
             timer.stop('convergence check')
             if max(primal_inf, dual_inf, complimentarity_inf) \
                     <= 0.1 * self._barrier_parameter:
@@ -334,47 +338,70 @@ class InteriorPointSolver(object):
                                self.interface.n_ineq_constraints())
         reg_iter = 0
         with self.factorization_context as fact_con:
-            status, num_realloc = try_factorization_and_reallocation(kkt=kkt,
-                                                                     linear_solver=self.linear_solver,
-                                                                     reallocation_factor=self.reallocation_factor,
-                                                                     max_iter=self.max_reallocation_iterations,
-                                                                     timer=timer)
-            if status not in {LinearSolverStatus.successful, LinearSolverStatus.singular}:
-                raise RuntimeError('Could not factorize KKT system; linear solver status: ' + str(status))
+            status, num_realloc = try_factorization_and_reallocation(
+                    kkt=kkt,
+                    linear_solver=self.linear_solver,
+                    reallocation_factor=self.reallocation_factor,
+                    max_iter=self.max_reallocation_iterations,
+                    timer=timer)
+            if status not in {LinearSolverStatus.successful, 
+                              LinearSolverStatus.singular}:
+                raise RuntimeError(
+                    'Could not factorize KKT system; linear solver status: ' 
+                    + str(status))
 
             if status == LinearSolverStatus.successful:
                 neg_eig = self.linear_solver.get_inertia()[1]
             else:
                 neg_eig = None
-            fact_con.log_info(_iter=self._iter, reg_iter=reg_iter, num_realloc=num_realloc,
-                              coef=0, neg_eig=neg_eig, status=status)
+            fact_con.log_info(
+                    _iter=self._iter, 
+                    reg_iter=reg_iter, 
+                    num_realloc=num_realloc,
+                    coef=0, 
+                    neg_eig=neg_eig, 
+                    status=status)
             reg_iter += 1
 
             if status == LinearSolverStatus.singular:
-                kkt = self.interface.regularize_equality_gradient(kkt=kkt,
-                                                                  coef=self.base_eq_reg_coef * self._barrier_parameter**0.25,
-                                                                  copy_kkt=False)
+                constraint_reg_coef = (self.base_eq_reg_coef * 
+                                       self._barrier_parameter**0.25)
+                kkt = self.interface.regularize_equality_gradient(
+                        kkt=kkt,
+                        coef=constraint_reg_coef,
+                        copy_kkt=False)
 
             total_hess_reg_coef = self.hess_reg_coef
             last_hess_reg_coef = 0
 
-            while neg_eig != desired_n_neg_evals or status == LinearSolverStatus.singular:
-                kkt = self.interface.regularize_hessian(kkt=kkt,
-                                                        coef=total_hess_reg_coef - last_hess_reg_coef,
-                                                        copy_kkt=False)
-                status, num_realloc = try_factorization_and_reallocation(kkt=kkt,
-                                                                         linear_solver=self.linear_solver,
-                                                                         reallocation_factor=self.reallocation_factor,
-                                                                         max_iter=self.max_reallocation_iterations,
-                                                                         timer=timer)
+            while (neg_eig != desired_n_neg_evals or 
+                    status == LinearSolverStatus.singular):
+                kkt = self.interface.regularize_hessian(
+                        kkt=kkt,
+                        coef=total_hess_reg_coef - last_hess_reg_coef,
+                        copy_kkt=False)
+                status, num_realloc = try_factorization_and_reallocation(
+                        kkt=kkt,
+                        linear_solver=self.linear_solver,
+                        reallocation_factor=self.reallocation_factor,
+                        max_iter=self.max_reallocation_iterations,
+                        timer=timer)
                 if status != LinearSolverStatus.successful:
-                    raise RuntimeError('Could not factorize KKT system; linear solver status: ' + str(status))
+                    raise RuntimeError(
+                    'Could not factorize KKT system; linear solver status: ' 
+                    + str(status))
                 neg_eig = self.linear_solver.get_inertia()[1]
-                fact_con.log_info(_iter=self._iter, reg_iter=reg_iter, num_realloc=num_realloc,
-                                  coef=total_hess_reg_coef, neg_eig=neg_eig, status=status)
+                fact_con.log_info(
+                        _iter=self._iter, 
+                        reg_iter=reg_iter, 
+                        num_realloc=num_realloc,
+                        coef=total_hess_reg_coef, 
+                        neg_eig=neg_eig, 
+                        status=status)
                 reg_iter += 1
                 if reg_iter > self.max_reg_iter:
-                    raise RuntimeError('Exceeded maximum number of regularization iterations.')
+                    raise RuntimeError(
+                    'Exceeded maximum number of regularization iterations.')
                 last_hess_reg_coef = total_hess_reg_coef
                 total_hess_reg_coef *= self.reg_factor_increase
 
@@ -408,7 +435,8 @@ class InteriorPointSolver(object):
         interface = self.interface
         slacks = interface.get_slacks()
         timer.start('grad obj')
-        grad_obj = interface.get_obj_factor() * interface.evaluate_grad_objective()
+        grad_obj = interface.get_obj_factor() * \
+                interface.evaluate_grad_objective()
         timer.stop('grad obj')
         timer.start('jac eq')
         jac_eq = interface.evaluate_jacobian_eq()
@@ -505,10 +533,12 @@ class InteriorPointSolver(object):
         return primal_inf, dual_inf, complimentarity_inf
 
     def fraction_to_the_boundary(self):
-        return fraction_to_the_boundary(self.interface, 1 - self._barrier_parameter)
+        return fraction_to_the_boundary(self.interface, 
+                                        1 - self._barrier_parameter)
 
 
-def try_factorization_and_reallocation(kkt, linear_solver, reallocation_factor, max_iter, timer=None):
+def try_factorization_and_reallocation(kkt, linear_solver, reallocation_factor,
+        max_iter, timer=None):
     if timer is None:
         timer = HierarchicalTimer()
 
@@ -516,15 +546,22 @@ def try_factorization_and_reallocation(kkt, linear_solver, reallocation_factor, 
     for count in range(max_iter):
         timer.start('symbolic')
         """
-        Performance could be improved significantly by only performing symbolic factorization once. 
-        However, we first have to make sure the nonzero structure (and ordering of row and column arrays) 
-        of the KKT matrix never changes. We have not had time to test this thoroughly, yet. 
+        Performance could be improved significantly by only performing 
+        symbolic factorization once.
+
+        However, we first have to make sure the nonzero structure 
+        (and ordering of row and column arrays) of the KKT matrix never 
+        changes. We have not had time to test this thoroughly, yet. 
         """
-        res = linear_solver.do_symbolic_factorization(matrix=kkt, raise_on_error=False)
+        res = linear_solver.do_symbolic_factorization(
+                matrix=kkt, 
+                raise_on_error=False)
         timer.stop('symbolic')
         if res.status == LinearSolverStatus.successful:
             timer.start('numeric')
-            res = linear_solver.do_numeric_factorization(matrix=kkt, raise_on_error=False)
+            res = linear_solver.do_numeric_factorization(
+                    matrix=kkt, 
+                    raise_on_error=False)
             timer.stop('numeric')
         status = res.status
         if status == LinearSolverStatus.not_enough_memory:
@@ -639,10 +676,12 @@ def fraction_to_the_boundary(interface, tau):
 def process_init(x, lb, ub):
     if np.any((ub - lb) < 0):
         raise ValueError(
-            'Lower bounds for variables/inequalities should not be larger than upper bounds.')
+            'Lower bounds for variables/inequalities should not be larger '
+            'than upper bounds.')
     if np.any((ub - lb) == 0):
         raise ValueError(
-            'Variables and inequalities should not have equal lower and upper bounds.')
+            'Variables and inequalities should not have equal lower and upper '
+            'bounds.')
 
     lb_mask = build_bounds_mask(lb)
     ub_mask = build_bounds_mask(ub)
