@@ -393,16 +393,26 @@ jobs:
     - name: Process code coverage report
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
+        CURL_HOME: ${{env.GITHUB_WORKSPACE}}
       run: |
+        # Set up CURL options (for the codecov uploader)
+        CURLRC="$(cat <<EOF
+           retry = 0
+           max-time = 30
+        EOF
+        )"
+        echo "$CURLRC" > ${CURL_HOME}/.curlrc
+        echo "$CURLRC" > ${CURL_HOME}/_curlrc
+        #
+        # Process the report
         coverage combine
         coverage report -i
         coverage xml -i
         i=0
         set +e
-        CURLOPTS="--max-time 30 --retry 0"
         while : ; do
-            curl $CURLOPTS -L https://codecov.io/bash -o codecov.sh \
-                && bash codecov.sh -U "$CURLOPTS" -Z -X gcov -f coverage.xml
+            curl -L https://codecov.io/bash -o codecov.sh \
+                && bash codecov.sh -Z -X gcov -f coverage.xml
             if test $? == 0; then
                 break
             elif test $i -ge 5; then
