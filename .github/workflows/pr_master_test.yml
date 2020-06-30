@@ -394,9 +394,9 @@ jobs:
     - name: Process code coverage report
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
-        CURL_HOME: ${{env.GITHUB_WORKSPACE}}
       run: |
         # Set up CURL options (for the codecov uploader)
+        export CURL_HOME="${GITHUB_WORKSPACE}"
         CURLRC="$(cat <<EOF
            retry = 0
            max-time = 30
