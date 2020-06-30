@@ -397,9 +397,10 @@ jobs:
         coverage report -i
         coverage xml -i
         i=0
+        set +e
         while : ; do
-            curl --retry 8 -L https://codecov.io/bash -o codecov.sh
-            bash codecov.sh -Z -X gcov -f coverage.xml
+            curl --retry 8 -L https://codecov.io/bash -o codecov.sh \
+                && bash codecov.sh -Z -X gcov -f coverage.xml
             if test $? == 0; then
                 break
             elif test $i -ge 4; then
