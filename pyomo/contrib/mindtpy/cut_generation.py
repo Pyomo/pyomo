@@ -6,6 +6,8 @@ from math import copysign
 from pyomo.core import Constraint, minimize, value
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
+from pyomo.core.expr.taylor_series import taylor_series_expansion
+from pyomo.core.expr import differentiate
 
 
 def add_objective_linearization(solve_data, config):
@@ -34,8 +36,7 @@ def add_objective_linearization(solve_data, config):
 
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
-                linearize_violated=True,
-                linearize_inactive=False):
+                linearize_violated=True):
     """Linearizes nonlinear constraints.
 
     For nonconvex problems, turn on 'config.add_slack'. Slack variables will
@@ -52,8 +53,6 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
         # Equality constraint (makes the problem nonconvex)
         if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
             sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-            rhs = ((0 if constr.upper is None else constr.upper)
-                   + (0 if constr.lower is None else constr.lower))
             rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
             if config.add_slack:
                 slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
@@ -68,7 +67,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             if constr.has_ub() \
                 and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.uslack() < 0) \
-                    or (linearize_inactive and constr.uslack() > 0):
+                    or (config.linearize_inactive and constr.uslack() > 0):
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
@@ -82,7 +81,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             if constr.has_lb() \
                 and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.lslack() < 0) \
-                    or (linearize_inactive and constr.lslack() > 0):
+                    or (config.linearize_inactive and constr.lslack() > 0):
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
@@ -92,7 +91,6 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                           + (slack_var if config.add_slack else 0)
                           >= constr.lower)
                 )
-
 
 # def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):
 #     """More general case for outer approximation
