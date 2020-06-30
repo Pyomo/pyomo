@@ -17,6 +17,12 @@ Modeling in Pyomo.GDP
     from pyomo.gdp import Disjunct, Disjunction
     from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 
+    # This is to make unicode comparison work in python 2.7.
+    import sys
+    if sys.version[0] == '2':
+        reload(sys)
+        sys.setdefaultencoding("utf-8")
+
 Disjunctions
 ============
 
