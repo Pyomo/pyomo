@@ -46,7 +46,7 @@ if __name__=='__main__':
                         streamSoln=True)
     
     print("\nOriginal parameter values:")
-    print("\teta1 =",m.eta1())
+    print("\teta1 =",round(m.eta1(),3))
     print("\teta2 =",m.eta2())
     
     print("Initial point:")
@@ -56,7 +56,7 @@ if __name__=='__main__':
     print("\tx3 =",m.x3())
     
     print("Solution with the original parameter values:")
-    print("\tObjective =",value(m_sipopt.cost))
+    print("\tObjective =",round(m_sipopt.cost(),3))
     print("\tx1 =",m_sipopt.x1())
     print("\tx2 =",m_sipopt.x2())
     print("\tx3 =",m_sipopt.x3())
@@ -66,7 +66,12 @@ if __name__=='__main__':
     print("\teta2 =",m_sipopt.perturbed_eta2())
     
     print("(Approximate) solution with the new parameter values:")
-    # print("\tObjective =",value(m_sipopt.cost))
+    x1 = m_sipopt.sens_sol_state_1[m_sipopt.x1]
+    x2 = m_sipopt.sens_sol_state_1[m_sipopt.x2]
+    x3 = m_sipopt.sens_sol_state_1[m_sipopt.x3]
+    print("\tObjective =",x1**2 + x2**2 + x3**2)
     print("\tx1 =",m_sipopt.sens_sol_state_1[m_sipopt.x1])
     print("\tx2 =",m_sipopt.sens_sol_state_1[m_sipopt.x2])
     print("\tx3 =",m_sipopt.sens_sol_state_1[m_sipopt.x3])
+    
+

@@ -84,14 +84,30 @@ We can now inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
     >>> print("eta2 =",m.eta2())
     eta2 = 1.0
     
-    Solution with the original parameter values:
-    >>> print("x1 =",m.x1())
+    Initial point (not feasible):
+    >>> print("Objective =",round(m.cost(),3))
+    Objective = 0.045
+    
+    >>> print("x1 =",round(m.x1(),3))
     x1 = 0.15
     
-    >>> print("x2 =",m.x2())
+    >>> print("x2 =",round(m.x2(),3))
     x2 = 0.15
     
-    >>> print("x3 =",m.x3())
+    >>> print("x3 =",round(m.x3(),3))
+    x3 = 0.0
+    
+    Solution with the original parameter values:
+    >>> print("Objective =",round(m_sipopt.cost(),3))
+    Objective = 0.5
+    
+    >>> print("x1 =",round(m_sipopt.x1(),3))
+    x1 = 0.5
+    
+    >>> print("x2 =",round(m_sipopt.x2(),3))
+    x2 = 0.5
+    
+    >>> print("x3 =",round(m_sipopt.x3(),3))
     x3 = 0.0
 
 Likewise, we can inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`:
@@ -107,14 +123,21 @@ Likewise, we can inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\h
     eta2 = 1.0
     
     (Approximate) solution with the new parameter values:
-    >>> print("x1 =",m_sipopt.x1())
-    x1 = 0.5000000037913185
+    >>> x1 = m_sipopt.sens_sol_state_1[m_sipopt.x1]
+    >>> x2 = m_sipopt.sens_sol_state_1[m_sipopt.x2]
+    >>> x3 = m_sipopt.sens_sol_state_1[m_sipopt.x3]
+    >>> print("Objective =",round(x1**2 + x2**2 + x3**2,3))
+    Objective = 0.556
     
-    >>> print("x2 =",m_sipopt.x2())
-    x2 = 0.4999999939338906
+    >>> print("x1 =",round(x1,3))
+    x1 = 0.333
     
-    >>> print("x3 =",m_sipopt.x3())
-    x3 = 0.0
+    >>> print("x2 =",round(x2,3))
+    x2 = 0.667
+    
+    >>> print("x3 =",round(x3,3))
+    x3 = -0.0
+    
 
 Installing sIPOPT
 -----------------
