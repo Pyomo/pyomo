@@ -1039,6 +1039,10 @@ class ComponentUID(object):
             if context is not None:
                 raise ValueError("Context is not allowed when initializing a "
                                  "ComponentUID object from a string type")
+            if wildcard_set is not None:
+                raise ValueError(
+                    "Wildcard set is not allowed when initializing a "
+                    "ComponentUID object from a string type")
             self._cids = tuple(self.parse_cuid(component))
         else:
             self._cids = tuple(self._generate_cuid(component,
