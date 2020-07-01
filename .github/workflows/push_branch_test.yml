@@ -412,7 +412,7 @@ jobs:
         # Always attempt to update the codecov script, but fall back on
         # the previously cached script if it fails
         CODECOV="${GITHUB_WORKSPACE}/cache/download/codecov.sh"
-        for i in `seq 5`; do
+        for i in `seq 3`; do
             echo "Downloading current codecov script (attempt ${i})"
             curl -L https://codecov.io/bash -o $CODECOV
             if test $? == 0; then
