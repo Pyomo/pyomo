@@ -1031,7 +1031,8 @@ class ComponentUID(object):
     tKeys = '#$'
     tDict = {} # ...initialized below
 
-    def __init__(self, component, cuid_buffer=None, context=None):
+    def __init__(self, component, cuid_buffer=None, context=None,
+            wildcard_set=None):
         # A CUID can be initialized from either a reference component or
         # the string representation.
         if isinstance(component, string_types):
@@ -1042,7 +1043,8 @@ class ComponentUID(object):
         else:
             self._cids = tuple(self._generate_cuid(component,
                                                    cuid_buffer=cuid_buffer,
-                                                   context=context))
+                                                   context=context,
+                                                   wildcard_set=wildcard_set))
 
     def __str__(self):
         """
@@ -1152,17 +1154,28 @@ class ComponentUID(object):
         except AttributeError:
             return self._cids.__ne__(other)
 
-    def _partial_cuid_from_index(self, idx):
+    def _partial_cuid_from_index(self, idx, wildcard_location=None):
         """
         TODO
         """
         tDict = ComponentUID.tDict
         if idx.__class__ is tuple:
-            return ( idx, ''.join(tDict.get(type(x), '?') for x in idx) )
+            if wildcard_location is not None:
+                # Replace index with '' and type with * in the location
+                # of the wildcard set
+                idx = (idx[0:wildcard_location] + ('',) +
+                        idx[wildcard_location+1:])
+            return ( idx, ''.join(tDict.get(type(x), '?')
+                if i != wildcard_location else '*' for i, x in enumerate(idx)) )
         else:
+            if wildcard_location == 0:
+                # This is the convention if the component is indexed only by
+                # the wildcard set
+                return ( ('',), '*' )
             return ( (idx,), tDict.get(type(idx), '?') )
 
-    def _generate_cuid(self, component, cuid_buffer=None, context=None):
+    def _generate_cuid(self, component, cuid_buffer=None, context=None,
+            wildcard_set=None):
         """
         TODO
         """
@@ -1189,9 +1202,16 @@ class ComponentUID(object):
                             self._partial_cuid_from_index(idx)
                 yield (c.local_name,) + cuid_buffer[id(component)]
             else:
+                # c is indexed
+                # Find wildcard index of c, if it exists
+                wildcard_location = None
+                if wildcard_set is not None:
+                    wildcard_location = get_location_of_coordinate_set(c.index_set(), 
+                            wildcard_set)
                 for idx, obj in iteritems(c):
                     if obj is component:
-                        yield (c.local_name,) + self._partial_cuid_from_index(idx)
+                        yield (c.local_name,) + self._partial_cuid_from_index(idx,
+                                wildcard_location=wildcard_location)
                         break
             component = component.parent_block()
 
@@ -1378,3 +1398,42 @@ ComponentUID.tDict.update( (ComponentUID.tKeys[i], v)
                            for i,v in enumerate(ComponentUID.tList) )
 ComponentUID.tDict.update( (v, ComponentUID.tKeys[i])
                            for i,v in enumerate(ComponentUID.tList) )
+
+def get_location_of_coordinate_set(setprod, subset):
+    """For a SetProduct and some 1-dimensional coordinate set of that
+    SetProduct, returns the location of an index of the coordinate
+    set within the index of the setproduct.
+
+    Args:
+        setprod : SetProduct containing the subset of interest
+        subset : 1-dimensional set whose location will be found in the
+                 SetProduct
+    
+    Returns:
+        Integer location of the subset within the SetProduct
+    """
+    if subset.dimen != 1:
+        raise ValueError(
+            'Cannot get the location of %s because it is multi-demensional'
+            %(subset.name))
+
+    loc = None
+    i = 0 
+    found = False
+    if hasattr(setprod, 'subsets'):
+        subsets = setprod.subsets()
+    else:
+        subsets = [setprod]
+
+    for _set in subsets:
+        if _set is subset:
+            if found:
+                raise ValueError(
+                    'Cannot get the location of %s because it appears '
+                    'multiple times' % _set)
+            found = True
+            loc = i
+            i += 1
+        else:
+            i += _set.dimen
+    return loc
