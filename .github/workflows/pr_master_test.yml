@@ -94,7 +94,7 @@ jobs:
       id: download-cache
       with:
         path: cache/download
-        key: download-v3-${{runner.os}}
+        key: download-v4-${{runner.os}}
 
     - name: Configure curl
       run: |
