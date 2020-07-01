@@ -57,8 +57,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
     def add_lazy_oa_cuts(self, target_model, dual_values, solve_data, config, opt,
                          linearize_active=True,
-                         linearize_violated=True,
-                         linearize_inactive=False):
+                         linearize_violated=True):
         """Add oa_cuts through Cplex inherent function self.add()"""
 
         for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
@@ -72,8 +71,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             # Equality constraint (makes the problem nonconvex)
             if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
                 sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-                rhs = ((0 if constr.upper is None else constr.upper)
-                       + (0 if constr.lower is None else constr.lower))
                 rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
 
                 # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
@@ -88,7 +85,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 if constr.has_ub() \
                     and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                         or (linearize_violated and constr.uslack() < 0) \
-                        or (linearize_inactive and constr.uslack() > 0):
+                        or (config.linearize_inactive and constr.uslack() > 0):
 
                     pyomo_expr = sum(
                         value(jacs[constr][var])*(var - var.value) for var in constr_vars) + value(constr.body)
@@ -100,7 +97,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 if constr.has_lb() \
                     and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                         or (linearize_violated and constr.lslack() < 0) \
-                        or (linearize_inactive and constr.lslack() > 0):
+                        or (config.linearize_inactive and constr.lslack() > 0):
                     pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
                         opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) + value(constr.body)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant
@@ -237,4 +234,3 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         else:
             self.handle_lazy_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                               solve_data, config)
-
