@@ -409,11 +409,25 @@ jobs:
         coverage combine
         coverage report -i
         coverage xml -i
-        i=0
         set +e
+        # Always attempt to update the codecov script, but fall back on
+        # the previously cached script if it fails
+        CODECOV="${GITHUB_WORKSPACE}/cache/download/codecov.sh
+        for i in `seq 5`; do
+            echo "Downloading current codecov script (attempt $i)"
+            curl -L https://codecov.io/bash -o $CODECOV
+            if test $? == 0; then
+                break
+            fi
+            DELAY=$(( RANDOM % 30 + 30))
+            echo "Pausing $DELAY seconds before re-attempting download"
+            sleep $DELAY
+        done
+        i=0
         while : ; do
-            curl -L https://codecov.io/bash -o codecov.sh \
-                && bash codecov.sh -Z -X gcov -f coverage.xml
+            ((i+=1))
+            echo "Uploading coverage to codecov (attempt $i)"
+            bash $CODECOV -Z -X gcov -X s3 -f coverage.xml
             if test $? == 0; then
                 break
             elif test $i -ge 5; then
