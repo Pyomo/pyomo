@@ -96,6 +96,17 @@ jobs:
         path: cache/download
         key: download-v3-${{runner.os}}
 
+    - name: Configure curl
+      run: |
+        CURLRC="$(cat <<EOF
+           retry = 0
+           max-time = 30
+        EOF
+        )"
+        echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
+        echo "$CURLRC" > ${GITHUB_WORKSPACE}/_curlrc
+        echo "::set-env name=CURL_HOME::$GITHUB_WORKSPACE"
+
     - name: Update OSX
       if: matrix.TARGET == 'osx'
       run: |
@@ -395,17 +406,6 @@ jobs:
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
       run: |
-        # Set up CURL options (for the codecov uploader)
-        export CURL_HOME="${GITHUB_WORKSPACE}"
-        CURLRC="$(cat <<EOF
-           retry = 0
-           max-time = 30
-        EOF
-        )"
-        echo "$CURLRC" > ${CURL_HOME}/.curlrc
-        echo "$CURLRC" > ${CURL_HOME}/_curlrc
-        #
-        # Process the report
         coverage combine
         coverage report -i
         coverage xml -i
