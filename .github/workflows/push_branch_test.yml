@@ -426,7 +426,7 @@ jobs:
         while : ; do
             ((i+=1))
             echo "Uploading coverage to codecov (attempt ${i})"
-            bash $CODECOV -v -Z -X gcov -X s3 -f coverage.xml
+            bash $CODECOV -Z -X gcov -X s3 -f coverage.xml
             if test $? == 0; then
                 break
             elif test $i -ge 5; then
