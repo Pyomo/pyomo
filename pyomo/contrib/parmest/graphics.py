@@ -25,7 +25,7 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from matplotlib.lines import Line2D
-except ImportError, RuntimeError:
+except (ImportError, RuntimeError):
     imports_available = False
 
 
