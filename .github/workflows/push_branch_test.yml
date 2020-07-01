@@ -27,7 +27,6 @@ jobs:
         os: [ubuntu-latest]
         python: [3.8]
         mpi: [0]
-        doctest: [1]
         include:
         - os: ubuntu-latest
           TARGET: linux
@@ -47,7 +46,7 @@ jobs:
         - os: ubuntu-latest
           python: 3.7
           mpi: 3
-          doctest: 0
+          skip_doctest: 1
           TARGET: linux
           PYENV: conda
           PACKAGES: mpi4py
@@ -404,7 +403,7 @@ jobs:
             pyomo `pwd`/pyomo-model-libraries
 
     - name: Run documentation tests
-      if: matrix.doctest != 0
+      if: matrix.skip_doctest == 0
       run: |
         make -C doc/OnlineDocs doctest -d
 
