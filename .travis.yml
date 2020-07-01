@@ -109,7 +109,7 @@ after_success:
   - |
     i=0
     while : ; do
-        i=$[$i+1]
+        ((i+=1))
         echo "Uploading coverage to codecov (attempt $i)"
         ${DOC} codecov --env TAG -X gcov -X s3
         if test $? == 0; then
