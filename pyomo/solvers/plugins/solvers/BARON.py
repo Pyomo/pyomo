@@ -246,6 +246,11 @@ class BARONSHELL(SystemCallSolver):
             else:
                 solver_options[key] = self.options[key]
 
+        for suffix in self._suffixes:
+            if re.match(suffix, 'dual') or re.match(suffix, 'rc'):
+                solver_options['WantDual'] = 1
+                break
+
         if 'solver_options' in kwds:
             raise ValueError("Baron solver options should be set "
                              "using the options object on this "

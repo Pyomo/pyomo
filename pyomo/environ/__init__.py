@@ -105,6 +105,7 @@ from pyomo.dataportal import DataPortal
 from pyomo.core import *
 from pyomo.opt import (
     SolverFactory, SolverManagerFactory, UnknownSolver,
-    TerminationCondition, SolverStatus,
+    TerminationCondition, SolverStatus, check_optimal_termination,
+    assert_optimal_termination
     )
 from pyomo.core.base.units_container import units

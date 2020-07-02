@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-# Unit Tests for pyomo.base.misc
-#
 
 import re
 import os
@@ -181,6 +179,7 @@ class TestComponent(unittest.TestCase):
         m.b.v = Var()
         m.c = Block()
         self.assertRaises(RuntimeError, m.b.v.getname, fully_qualified=True, relative_to=m.c)
+
 
 if __name__ == "__main__":
     unittest.main()

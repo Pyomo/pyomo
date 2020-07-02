@@ -80,8 +80,13 @@ class parmest_object_Tester_RB(unittest.TestCase):
         def SSE(model, data):  
             expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
             return expr
+
+        solver_options = {
+                'tol': 1e-8,
+                }
         
-        self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
+        self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE,
+                solver_options=solver_options)
 
     def test_theta_est(self):
         objval, thetavals = self.pest.theta_est()

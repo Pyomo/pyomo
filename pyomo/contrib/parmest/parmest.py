@@ -479,8 +479,8 @@ class Estimator(object):
 
                 solver = SolverFactory('ipopt')
                 if self.solver_options is not None:
-                    for key in sopts:
-                        solver.options[key] = sopts[key]
+                    for key in self.solver_options:
+                        solver.options[key] = self.solver_options[key]
 
                 if need_gap:
                     solve_result = solver.solve(self.ef_instance, tee = self.tee, load_solutions=False)

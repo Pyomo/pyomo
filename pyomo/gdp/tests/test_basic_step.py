@@ -1,6 +1,10 @@
 """Tests for applying basic steps."""
 import pyutilib.th as unittest
+from pyomo.core import Constraint, Var, SortComponents
 from pyomo.gdp.basic_step import apply_basic_step
+from pyomo.repn import generate_standard_repn
+import pyomo.gdp.tests.models as models
+import pyomo.gdp.tests.common_tests as ct
 
 from pyutilib.misc import import_file
 
@@ -59,6 +63,70 @@ class TestBasicStep(unittest.TestCase):
         self.assertFalse(m.mccormick_1.active)
         self.assertFalse(m.mccormick_2.active)
 
+    def check_constraint_body(self, m, constraint, constant):
+        self.assertIsNone(constraint.lower)
+        self.assertEqual(constraint.upper, 0)
+        repn = generate_standard_repn(constraint.body)
+        self.assertEqual(repn.constant, constant)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, m.a, -1)
+        ct.check_linear_coef(self, repn, m.x, 1)
+
+    def check_after_improper_basic_step(self, m):
+        for disj in m.basic_step.disjuncts.values():
+            self.assertEqual(len(disj.improper_constraints), 1)
+            cons = disj.improper_constraints[1]
+            self.check_constraint_body(m, cons, -1)
+
+    def test_improper_basic_step_simpleConstraint(self):
+        m = models.makeTwoTermDisj()
+        m.simple = Constraint(expr=m.x <= m.a + 1)
+
+        m.basic_step = apply_basic_step([m.disjunction, m.simple])
+        self.check_after_improper_basic_step(m)
+
+        self.assertFalse(m.simple.active)
+        self.assertFalse(m.disjunction.active)
+
+    def test_improper_basic_step_constraintData(self):
+        m = models.makeTwoTermDisj()
+        @m.Constraint([1, 2])
+        def indexed(m, i):
+            return m.x <= m.a + i
+
+        m.basic_step = apply_basic_step([m.disjunction, m.indexed[1]])
+        self.check_after_improper_basic_step(m)
+        
+        self.assertFalse(m.indexed[1].active)
+        self.assertTrue(m.indexed[2].active)
+        self.assertFalse(m.disjunction.active)
+
+    def test_improper_basic_step_indexedConstraint(self):
+        m = models.makeTwoTermDisj()
+        @m.Constraint([1, 2])
+        def indexed(m, i):
+            return m.x <= m.a + i
+
+        m.basic_step = apply_basic_step([m.disjunction, m.indexed])
+        for disj in m.basic_step.disjuncts.values():
+            self.assertEqual(len(disj.improper_constraints), 2)
+            cons = disj.improper_constraints[1]
+            self.check_constraint_body(m, cons, -1)
+
+            cons = disj.improper_constraints[2]
+            self.check_constraint_body(m, cons, -2)
+
+    def test_indicator_var_references(self):
+        m = models.makeTwoTermDisj()
+        m.simple = Constraint(expr=m.x <= m.a + 1)
+
+        m.basic_step = apply_basic_step([m.disjunction, m.simple])
+
+        refs = [v for v in m.basic_step.component_data_objects(
+            Var, sort=SortComponents.deterministic)]
+        self.assertEqual(len(refs), 2)
+        self.assertIs(refs[0][None], m.d[0].indicator_var)
+        self.assertIs(refs[1][None], m.d[1].indicator_var)
 
 if __name__ == '__main__':
     unittest.main()

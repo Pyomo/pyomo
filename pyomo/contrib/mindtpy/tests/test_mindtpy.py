@@ -69,6 +69,34 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
+    def test_OA_8PP_L2_norm(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with Outer Approximation(max_binary)')
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                feasibility_norm='L2')
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_OA_8PP_sympy(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with Outer Approximation(max_binary)')
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                differentiate_mode='sympy')
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""
     #     with SolverFactory('mindtpy') as opt:
@@ -214,6 +242,20 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0]
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), 2.438447, places=2)
+
+    def test_OA_OnlineDocExample_L_infinity_norm(self):
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print('\n Solving Online Doc Example with Outer Approximation')
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                feasibility_norm="L_infinity"
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
