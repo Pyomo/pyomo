@@ -135,7 +135,7 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         raise ValueError('Model has multiple active objectives.')
     else:
         main_obj = active_objectives[0]
-    solve_data.results.problem.sense = main_obj.sense
+    solve_data.results.problem.sense = ProblemSense.minimize if main_obj.sense == 1 else ProblemSense.maximize
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear
@@ -161,11 +161,9 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         if main_obj.sense == minimize:
             util_blk.objective_constr = Constraint(
                 expr=util_blk.objective_value >= main_obj.expr)
-            solve_data.results.problem.sense = ProblemSense.minimize
         else:
             util_blk.objective_constr = Constraint(
                 expr=util_blk.objective_value <= main_obj.expr)
-            solve_data.results.problem.sense = ProblemSense.maximize
         # Deactivate the original objective and add this new one.
         main_obj.deactivate()
         util_blk.objective = Objective(
@@ -206,18 +204,10 @@ def copy_var_list_values(from_list, to_list, config,
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
             if ignore_integrality \
-                and ('is not in domain Binary' in err_msg
-                     or 'is not in domain Integers' in err_msg):
+                    and v_to.is_integer():  # not v_to.is_continuous()
                 v_to.value = value(v_from, exception=False)
-            elif 'is not in domain Binary' in err_msg and (
-                    fabs(var_val - 1) <= config.integer_tolerance or
-                    fabs(var_val) <= config.integer_tolerance):
+            elif v_to.is_integer() and (fabs(var_val - rounded_val) <= config.integer_tolerance):  # not v_to.is_continuous()
                 v_to.set_value(rounded_val)
-            # TODO What about PositiveIntegers etc?
-            elif 'is not in domain Integers' in err_msg and (
-                    fabs(var_val - rounded_val) <= config.integer_tolerance):
-                v_to.set_value(rounded_val)
-            # Value is zero, but shows up as slightly less than zero.
             elif 'is not in domain NonNegativeReals' in err_msg and (
                     fabs(var_val) <= config.zero_tolerance):
                 v_to.set_value(0)

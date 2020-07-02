@@ -87,7 +87,7 @@ def get_inconsistent_initial_conditions(model, time, tol=1e-8, t0=None,
     return list(inconsistent)
 
 
-def solve_consistent_initial_conditions(model, time, solver):
+def solve_consistent_initial_conditions(model, time, solver, tee=False):
     """
     Solves a model with all Constraints and Blocks deactivated except
     at the initial value of the Set time. Reactivates Constraints and
@@ -97,7 +97,7 @@ def solve_consistent_initial_conditions(model, time, solver):
         model: Model that will be solved
         time: Set whose initial conditions will remain active for solve
         solver: Something that implements a solve method that accepts
-                a model as an argument
+                a model and tee keyword as arguments
 
     Returns:
         The object returned by the solver's solve method
@@ -123,7 +123,7 @@ def solve_consistent_initial_conditions(model, time, solver):
     timelist = list(time)[1:]
     deactivated_dict = deactivate_model_at(model, time, timelist)
 
-    result = solver.solve(model)
+    result = solver.solve(model, tee=tee)
 
     for t in timelist:
         for comp in deactivated_dict[t]:
