@@ -45,7 +45,7 @@ Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while 
     >>> m.cost = Objective(expr=m.x1**2+m.x2**2+m.x3**2)
         
 
-The solution of this optimization problem is :math:`x_1^* = 0.15`, :math:`x_2^* = 0.15`, and :math:`x_3^* = 0.0`. But what if we change the parameter values to :math:`\hat{p}_1 = 4.0` and :math:`\hat{p}_2 = 1.0`? Is there a quick way to approximate the new solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`? Yes! This is the main functionality of sIPOPT.
+The solution of this optimization problem is :math:`x_1^* = 0.5`, :math:`x_2^* = 0.5`, and :math:`x_3^* = 0.0`. But what if we change the parameter values to :math:`\hat{p}_1 = 4.0` and :math:`\hat{p}_2 = 1.0`? Is there a quick way to approximate the new solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`? Yes! This is the main functionality of sIPOPT.
 
 Next we define the perturbed parameter values :math:`\hat{p}_1` and :math:`\hat{p}_2`:
 
@@ -72,7 +72,7 @@ And finally we call sIPOPT:
 
 The first argument is the Pyomo model. The second argument is a list of the original parameters. The third argument is a list of the perturbed parameters. sIPOPT requires these two lists are the same length. The ```...``` represents extra lines of output that were cut from this page for brevity.
 
-We can now inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
+First, we can inspect the initial point:
 
 .. doctest::
     :skipif: not sipopt_available
@@ -96,6 +96,11 @@ We can now inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
     
     >>> print("x3 =",round(m.x3(),3))
     x3 = 0.0
+
+Next, we inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
+
+.. doctest::
+    :skipif: not sipopt_available
     
     Solution with the original parameter values:
     >>> print("Objective =",round(m_sipopt.cost(),3))
@@ -110,7 +115,7 @@ We can now inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
     >>> print("x3 =",round(m_sipopt.x3(),3))
     x3 = 0.0
 
-Likewise, we can inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`:
+Finally, we inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`:
 
 .. doctest::
     :skipif: not sipopt_available    
