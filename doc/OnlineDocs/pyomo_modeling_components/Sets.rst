@@ -356,22 +356,10 @@ One may want to have a constraint that holds
    >>> for i in model.I, k in model.K, v in model.V[k] # doctest: +SKIP
 
 There are many ways to accomplish this, but one good way is to create a
-set of tuples composed of all of ``model.k, model.V[k]`` pairs.  This
+set of tuples composed of all ``model.k, model.V[k]`` pairs.  This
 can be done as follows:
 
 .. literalinclude:: ../script_spy_files/Spy4Sets_Define_constraint_tuples.spy
-   :language: python
-
-So then if there was a constraint defining rule such as
-
-.. doctest::
-
-   >>> def MyC_rule(model, i, k, v): # doctest: +SKIP
-   >>>    return ...                 # doctest: +SKIP
-
-Then a constraint could be declared using
-
-.. literalinclude:: ../script_spy_files/Spy4Sets_Define_another_constraint.spy
    :language: python
 
 Here is the first few lines of a model that illustrates this:
