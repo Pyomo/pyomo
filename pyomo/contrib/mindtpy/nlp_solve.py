@@ -2,7 +2,7 @@
 from __future__ import division
 
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_int_cut)
+                                                  add_int_cut, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
@@ -120,6 +120,11 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
         add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+    elif config.strategy == "GOA":
+        copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
+                             solve_data.mip.MindtPy_utils.variable_list,
+                             config)
+        add_affine_cuts(solve_data, config)
     elif config.strategy == 'PSC':
         add_psc_cut(solve_data, config)
     elif config.strategy == 'GBD':
@@ -171,6 +176,16 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config)
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+    elif config.strategy == "GOA":
+        config.logger.info('Solving feasibility problem')
+        if config.initial_feas:
+            # add_feas_slacks(fixed_nlp, solve_data)
+            # config.initial_feas = False
+            feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
+            copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
+                                 solve_data.mip.MindtPy_utils.variable_list,
+                                 config)
+            add_affine_cuts(solve_data, config)
     # Add an integer cut to exclude this discrete option
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_integer_cuts:
@@ -231,7 +246,7 @@ def solve_NLP_feas(solve_data, config):
     with SuppressInfeasibleWarning():
         try:
             feas_soln = SolverFactory(config.nlp_solver).solve(
-                fixed_nlp, **config.nlp_solver_args)
+                fixed_nlp, **config.nlp_solver_args)  # , tee=True)
         except (ValueError, OverflowError) as error:
             for nlp_var, orig_val in zip(
                     MindtPy.variable_list,

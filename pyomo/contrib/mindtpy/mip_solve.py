@@ -8,12 +8,9 @@ from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination, solve_NLP_feas)
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_int_cut)
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
 from math import copysign
 from pyomo.environ import *
@@ -63,8 +60,9 @@ def solve_OA_master(solve_data, config):
             expr=main_objective.expr,
             sense=main_objective.sense)
     # Deactivate extraneous IMPORT/EXPORT suffixes
-    getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
-    getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
+    if config.nlp_solver == 'ipopt':
+        getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
 
     masteropt = SolverFactory(config.mip_solver)
     # determine if persistent solver is called.
@@ -144,9 +142,7 @@ def handle_master_mip_optimal(master_mip, solve_data, config, copy=True):
 
 
 def handle_master_mip_other_conditions(master_mip, master_mip_results, solve_data, config):
-    if master_mip_results.solver.termination_condition is tc.infeasible:
-        handle_master_mip_infeasible(master_mip, solve_data, config)
-    elif master_mip_results.solver.termination_condition is tc.unbounded:
+    if master_mip_results.solver.termination_condition is tc.unbounded:
         handle_master_mip_unbounded(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
         handle_master_mip_max_timelimit(master_mip, solve_data, config)
@@ -197,6 +193,12 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
         solve_data.LB_progress.append(solve_data.LB)
     else:
         solve_data.UB_progress.append(solve_data.UB)
+    config.logger.info(
+        'MindtPy exiting due to MILP master problem infeasibility.')
+    if solve_data.mip_iter == 0:
+        solve_data.results.solver.termination_condition = tc.infeasible
+    else:
+        solve_data.results.solver.termination_condition = tc.feasible
 
 
 def handle_master_mip_max_timelimit(master_mip, solve_data, config):

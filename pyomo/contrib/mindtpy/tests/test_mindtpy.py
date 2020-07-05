@@ -225,7 +225,7 @@ class TestMindtPy(unittest.TestCase):
                                 add_integer_cuts=True
                                 )
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample(self):

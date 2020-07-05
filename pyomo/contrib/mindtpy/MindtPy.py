@@ -118,7 +118,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
-        domain=In(["ipopt", "gams"]),
+        domain=In(["ipopt", "gams", "baron"]),
         description="NLP subsolver name",
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
             "subproblems."
@@ -261,6 +261,11 @@ class MindtPySolver(object):
         description="Add OA cuts for inactive constraints.",
         domain=bool
     ))
+    CONFIG.declare("use_mcpp", ConfigValue(
+        default=False,
+        description="use mcpp for to set bound for variable 'objective_value' introduced when the objective function is nonlinear.",
+        domain=bool
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -288,7 +293,7 @@ class MindtPySolver(object):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
 
-        # configration confirmation
+        # configuration confirmation
         if config.single_tree:
             config.iteration_limit = 1
             config.add_slack = False
@@ -299,6 +304,12 @@ class MindtPySolver(object):
         # if the slacks fix to zero, just don't add them
         if config.max_slack == 0.0:
             config.add_slack = False
+
+        if config.strategy == "GOA":
+            config.add_integer_cuts = True
+            config.add_slack = True
+            config.use_mcpp = True
+            config.integer_to_binary = True
 
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
@@ -320,7 +331,7 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            process_objective(solve_data, config, use_mcpp=False)
+            process_objective(solve_data, config, use_mcpp=config.use_mcpp)
 
             # Save model initial values.
             solve_data.initial_var_values = list(
@@ -400,12 +411,13 @@ class MindtPySolver(object):
             # iteration or not
             solve_data.solution_improved = False
 
-            if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
-                solve_data.working_model.ipopt_zL_out = Suffix(
-                    direction=Suffix.IMPORT)
-            if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
-                solve_data.working_model.ipopt_zU_out = Suffix(
-                    direction=Suffix.IMPORT)
+            if config.nlp_solver == 'ipopt':
+                if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
+                    solve_data.working_model.ipopt_zL_out = Suffix(
+                        direction=Suffix.IMPORT)
+                if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
+                    solve_data.working_model.ipopt_zU_out = Suffix(
+                        direction=Suffix.IMPORT)
 
             # Initialize the master problem
             with time_code(solve_data.timing, 'initialization'):

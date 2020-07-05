@@ -187,7 +187,7 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
     #     MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)
 
 
-def add_affine_cuts(nlp_result, solve_data, config):
+def add_affine_cuts(solve_data, config):
     m = solve_data.mip
     config.logger.info("Adding affine cuts.")
     counter = 0
@@ -208,10 +208,23 @@ def add_affine_cuts(nlp_result, solve_data, config):
             config.logger.debug(
                 "Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
             continue  # skip to the next constraint
+        # TODO: check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
         ccSlope = mc_eqn.subcc()
         cvSlope = mc_eqn.subcv()
         ccStart = mc_eqn.concave()
         cvStart = mc_eqn.convex()
+
+        valid = True
+        for var in vars_in_constr:
+            if not var.fixed:
+                if ccSlope[var] == float('nan') or ccSlope[var] == float('inf') or cvSlope[var] == float('nan') or cvSlope[var] == float('inf'):
+                    valid = False
+                    break
+        if ccStart == float('nan') or ccStart == float('inf') or cvStart == float('nan') or cvStart == float('inf'):
+            valid = False
+        if valid is False:
+            continue
+
         ub_int = min(constr.upper, mc_eqn.upper()
                      ) if constr.has_ub() else mc_eqn.upper()
         lb_int = max(constr.lower, mc_eqn.lower()
@@ -219,6 +232,7 @@ def add_affine_cuts(nlp_result, solve_data, config):
 
         parent_block = constr.parent_block()
         # Create a block on which to put outer approximation cuts.
+        # TODO: create it at the beginning.
         aff_utils = parent_block.component('MindtPy_aff')
         if aff_utils is None:
             aff_utils = parent_block.MindtPy_aff = Block(

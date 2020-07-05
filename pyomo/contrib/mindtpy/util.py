@@ -1,8 +1,9 @@
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
-
 import logging
 from math import fabs, floor, log
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
+                                                  add_int_cut, add_affine_cuts)
 
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Suffix, Var, minimize, value)
@@ -89,20 +90,44 @@ def calc_jacobians(solve_data, config):
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))
 
 
+# def add_feas_slacks(m, config):
+#     MindtPy = m.MindtPy_utils
+#     # generate new constraints
+#     for i, constr in enumerate(MindtPy.constraint_list, 1):
+#         if constr.body.polynomial_degree() not in [0, 1]:
+#             rhs = constr.upper if constr.has_ub() else constr.lower
+#             if config.feasibility_norm in {'L1', 'L2'}:
+#                 c = MindtPy.MindtPy_feas.feas_constraints.add(
+#                     constr.body - rhs
+#                     <= MindtPy.MindtPy_feas.slack_var[i])
+#             else:
+#                 c = MindtPy.MindtPy_feas.feas_constraints.add(
+#                     constr.body - rhs
+#                     <= MindtPy.MindtPy_feas.slack_var)
+
 def add_feas_slacks(m, config):
     MindtPy = m.MindtPy_utils
     # generate new constraints
     for i, constr in enumerate(MindtPy.constraint_list, 1):
         if constr.body.polynomial_degree() not in [0, 1]:
-            rhs = constr.upper if constr.has_ub() else constr.lower
-            if config.feasibility_norm in {'L1', 'L2'}:
-                c = MindtPy.MindtPy_feas.feas_constraints.add(
-                    constr.body - rhs
-                    <= MindtPy.MindtPy_feas.slack_var[i])
-            else:
-                c = MindtPy.MindtPy_feas.feas_constraints.add(
-                    constr.body - rhs
-                    <= MindtPy.MindtPy_feas.slack_var)
+            if constr.has_ub():
+                if config.feasibility_norm in {'L1', 'L2'}:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.upper
+                        <= MindtPy.MindtPy_feas.slack_var[i])
+                else:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.upper
+                        <= MindtPy.MindtPy_feas.slack_var)
+            if constr.has_lb():
+                if config.feasibility_norm in {'L1', 'L2'}:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.lower
+                        >= -MindtPy.MindtPy_feas.slack_var[i])
+                else:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.lower
+                        >= -MindtPy.MindtPy_feas.slack_var)
 
 
 def var_bound_add(solve_data, config):

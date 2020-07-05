@@ -3,7 +3,7 @@ from __future__ import division
 
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values
 from pyomo.contrib.mindtpy.cut_generation import (
-    add_oa_cuts, add_objective_linearization,
+    add_oa_cuts, add_affine_cuts, add_objective_linearization,
 )
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
@@ -61,7 +61,7 @@ def MindtPy_initialize_master(solve_data, config):
         # if config.strategy == 'ECP':
         #     add_ecp_cut(solve_data, config)
         # else:
-
+    elif config.init_strategy == 'initial_binary':
         fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
         if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
             handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
@@ -70,6 +70,8 @@ def MindtPy_initialize_master(solve_data, config):
         else:
             handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                     solve_data, config)
+    # if MindtPy.find_component('objective_value') is not None:
+    #     MindtPy.objective_value.value = 0
 
 
 def init_rNLP(solve_data, config):
@@ -97,11 +99,14 @@ def init_rNLP(solve_data, config):
             'NLP %s: OBJ: %s  LB: %s  UB: %s'
             % (solve_data.nlp_iter, value(main_objective.expr),
                solve_data.LB, solve_data.UB))
-        if config.strategy == 'OA':
+        if config.strategy in {'OA', 'GOA'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
-            add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+            if config.strategy == 'OA':
+                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+            elif config.strategy == 'GOA':
+                add_affine_cuts(solve_data, config)
             # TODO check if value of the binary or integer varibles is 0/1 or integer value.
             for var in solve_data.mip.component_data_objects(ctype=Var):
                 if var.is_integer():
