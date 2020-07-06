@@ -60,7 +60,7 @@ And finally we call sIPOPT:
     :skipif: not sipopt_available
 
     >>> m_sipopt = sipopt(m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], streamSoln=True)
-    Ipopt 3.13.2: run_sens=yes
+    Ipopt ...: run_sens=yes
     ...
     ******************************************************************************
     This program contains Ipopt, a library for large-scale nonlinear optimization.

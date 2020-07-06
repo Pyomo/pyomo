@@ -47,6 +47,7 @@ jobs:
         - os: ubuntu-latest
           python: 3.7
           mpi: 3
+          skip_doctest: 1
           TARGET: linux
           PYENV: conda
           PACKAGES: mpi4py
@@ -401,6 +402,11 @@ jobs:
         mpirun -np ${{matrix.mpi}} --oversubscribe nosetests -v \
             --eval-attr="mpi and (not fragile)" \
             pyomo `pwd`/pyomo-model-libraries
+
+    - name: Run documentation tests
+      if: matrix.skip_doctest == 0
+      run: |
+        make -C doc/OnlineDocs doctest -d
 
     - name: Process code coverage report
       env:
