@@ -25,6 +25,14 @@ sys.path.insert(0, os.path.abspath('../../../pyutilib'))
 # top-level pyomo source directory
 sys.path.insert(0, os.path.abspath('../..'))
 
+# -- Rebuild SPY files ----------------------------------------------------
+sys.path.insert(0, os.path.abspath('tests'))
+try:
+    print("Regenerating SPY files...")
+    from strip_examples import generate_spy_files
+    generate_spy_files(os.path.abspath('tests'))
+finally:
+    sys.path.pop(0)
 
 # -- General configuration ------------------------------------------------
 
