@@ -224,7 +224,7 @@ For example, if the set ``model.M`` is declared to be within the virtual
 set ``NegativeIntegers`` then an attempt to add anything other than a
 negative integer will result in an error. Here is the declaration:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Predefined_set_example.spy
+.. literalinclude:: ../tests/scripting/Spy4Sets_Predefined_set_example.spy
    :language: python
 
 .. _Isinglecomm.py:
@@ -245,7 +245,7 @@ some of the options and issues, we will consider problems involving
 networks. In many network applications, it is useful to declare a set of
 nodes, such as
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_nodes.spy
+.. literalinclude:: ../tests/scripting/Spy4Sets_Declare_nodes.spy
    :language: python
 
 and then a set of arcs can be created with reference to the nodes.
@@ -274,7 +274,7 @@ where
 In the simplest case, the arcs can just be the cross product of the
 nodes, which is accomplished by the definition
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_arcs_crossproduct.spy
+.. literalinclude:: ../tests/scripting/Spy4Sets_Declare_arcs_crossproduct.spy
    :language: python
 
 that creates a set with two dimensional members.  For applications where
@@ -287,12 +287,12 @@ for those arcs.  Such a scheme is not very elegant or robust.
 For many network flow applications, it might be better to declare the
 arcs using
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_arcs_within.spy
+.. literalinclude:: ../tests/scripting/Spy4Sets_Declare_arcs_within.spy
    :language: python
 
 or
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_arcs_dimen.spy
+.. literalinclude:: ../tests/scripting/Spy4Sets_Declare_arcs_dimen.spy
    :language: python
 
 where the difference is that the first version will provide error
@@ -303,7 +303,7 @@ written in the simple example, it sums over the entire set of nodes for
 each node. One way to remedy this is to sum only over the members of the
 set ``model.arcs`` as in
 
-.. literalinclude:: ../script_spy_files/FlowBalance_rule.py
+.. literalinclude:: ../tests/scripting/FlowBalance_rule.py
    :language: python
 
 This will be OK unless the number of nodes becomes very large for a
@@ -317,7 +317,7 @@ going to the node at hand and another set giving the nodes on out-going
 arcs. If these sets are called ``model.NodesIn`` and ``model.NodesOut``
 respectively, then the flow balance rule can be re-written as
 
-.. literalinclude:: ../script_spy_files/FlowBalance_rule2.py
+.. literalinclude:: ../tests/scripting/FlowBalance_rule2.py
    :language: python
 
 The data for ``NodesIn`` and ``NodesOut`` could be added to the input
@@ -328,19 +328,19 @@ For all but the largest networks, rather than reading ``Arcs``,
 to read only ``Arcs`` from a data file and declare ``model.NodesIn``
 with an ``initialize`` option specifying the creation as follows:
 
-.. literalinclude:: ../script_spy_files/NodesIn_init.py
+.. literalinclude:: ../tests/scripting/NodesIn_init.py
    :language: python
 
 with a similar definition for ``model.NodesOut``.  This code creates a
 list of sets for ``NodesIn``, one set of nodes for each node. The full
 model is:
 
-.. literalinclude:: ../script_spy_files/Isinglecomm.py
+.. literalinclude:: ../tests/scripting/Isinglecomm.py
    :language: python
 
 for this model, a toy data file would be:
 
-.. literalinclude:: ../script_spy_files/Isinglecomm.dat
+.. literalinclude:: ../tests/scripting/Isinglecomm.dat
    :language: python
 
 This can be done somewhat more efficiently, and perhaps more clearly,
@@ -359,7 +359,7 @@ There are many ways to accomplish this, but one good way is to create a
 set of tuples composed of all of ``model.k, model.V[k]`` pairs.  This
 can be done as follows:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Define_constraint_tuples.spy
+.. literalinclude:: ../tests/scripting/Spy4Sets_Define_constraint_tuples.spy
    :language: python
 
 So then if there was a constraint defining rule such as
@@ -371,10 +371,10 @@ So then if there was a constraint defining rule such as
 
 Then a constraint could be declared using
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Define_another_constraint.spy
+.. literalinclude:: ../tests/scripting/Spy4Sets_Define_another_constraint.spy
    :language: python
 
 Here is the first few lines of a model that illustrates this:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_constraints_example.spy
+.. literalinclude:: ../tests/scripting/Spy4Sets_Declare_constraints_example.spy
    :language: python

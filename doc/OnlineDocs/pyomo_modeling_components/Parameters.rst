@@ -10,7 +10,7 @@ example, the following code snippet declares sets ``model.A``,
 ``model.B`` and then a parameter array ``model.P`` that is indexed by
 ``model.A``:
 
-.. literalinclude:: ../script_spy_files/spy4Parameters_ABPSets.spy
+.. literalinclude:: ../tests/scripting/spy4Parameters_ABPSets.spy
    :language: python
 
 In addition to sets that serve as indexes, the ``Param`` function takes
@@ -31,14 +31,14 @@ ways to create a parameter that is a square matrix with 9, 16, 25 on the
 main diagonal zeros elsewhere, here are two ways to do it. First using a
 Python object to initialize:
 
-.. literalinclude:: ../script_spy_files/spy4Parameters_Param_python.spy
+.. literalinclude:: ../tests/scripting/spy4Parameters_Param_python.spy
    :language: python
 
 And now using an initialization function that is automatically called
 once for each index tuple (remember that we are assuming that
 ``model.A`` contains 1,2,3)
 
-.. literalinclude:: ../script_spy_files/spy4Parameters_Param_def.spy
+.. literalinclude:: ../tests/scripting/spy4Parameters_Param_def.spy
    :language: python
 
 In this example, the index set contained integers, but index sets need
@@ -56,5 +56,5 @@ that, the model instantation would be terminated and an error message
 issued. The function used to validate should be written so as to return
 ``True`` if the data is valid and ``False`` otherwise.
 
-.. literalinclude:: ../script_spy_files/spy4Parameters_Valuecheck_validation.spy
+.. literalinclude:: ../tests/scripting/spy4Parameters_Valuecheck_validation.spy
    :language: python

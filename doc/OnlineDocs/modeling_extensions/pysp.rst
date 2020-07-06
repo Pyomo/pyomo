@@ -69,7 +69,7 @@ know all the data. The Pyomo model for this problem shown here is in the
 file ``ReferenceModel.py`` in the sub-directory
 ``examples/pysp/farmer/models`` that is distributed with Pyomo.
 
-.. literalinclude:: ../script_spy_files/pysp/farmer/models/ReferenceModel.py
+.. literalinclude:: ../tests/scripting/pysp/farmer/models/ReferenceModel.py
    :language: python
 
 Example Data
@@ -80,7 +80,7 @@ sub-directory examples/pysp/farmer/scenariodata that is distributed with
 Pyomo. These data are given for illustration. The file
 ReferenceModel.dat is not required by PySP.
 
-.. literalinclude:: ../script_spy_files/pysp/farmer/scenariodata/AverageScenario.dat
+.. literalinclude:: ../tests/scripting/pysp/farmer/scenariodata/AverageScenario.dat
    :language: python
 
 Any of these data could be modeled as uncertain, but we will consider
@@ -105,7 +105,7 @@ constructs in a file named ``ScenarioStructure.dat``; for the farmer
 problem, this file can be found in the pyomo sub-directory
 ``examples/pysp/farmer/scenariodata`` that is distributed with Pyomo.
 
-.. literalinclude:: ../script_spy_files/pysp/farmer/scenariodata/ScenarioStructure.dat
+.. literalinclude:: ../tests/scripting/pysp/farmer/scenariodata/ScenarioStructure.dat
    :language: python
 
 This data file is verbose and somewhat redundant, but in most
@@ -638,7 +638,7 @@ These will be discussed in further detail in the remaining sections. The
 following code snippet demonstrates how to import these annotations and
 declare them on a model.
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Import&declare_annotations.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Import&declare_annotations.spy
    :language: python
 
 Populating these annotations with entries is optional, and simply
@@ -696,7 +696,7 @@ that indexed ``Constraint`` or on that ``Block`` (that have not been
 deactivated) should be considered. As an example, we consider the
 following partially declared concrete Pyomo model:
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Partially_declared_concretemodel.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Partially_declared_concretemodel.spy
    :language: python
 
 Here the local Python variables ``p`` and ``q`` serve as placeholders
@@ -708,30 +708,30 @@ data:
 
 - Implicit form
 
-  .. literalinclude:: ../script_spy_files/spy4pysp_Model_implicit_form.spy
+  .. literalinclude:: ../tests/scripting/spy4pysp_Model_implicit_form.spy
      :language: python
 
 - Implicit form for ``Block`` (model) assignment
 
-  .. literalinclude:: ../script_spy_files/spy4pysp_Model_implicit_block.spy
+  .. literalinclude:: ../tests/scripting/spy4pysp_Model_implicit_block.spy
      :language: python
 
 - Explicit form for singleton constraint with implicit form for indexed
   constraint and sub-block
 
-  .. literalinclude:: ../script_spy_files/spy4pysp_Explicit_singletonconstraint_implicit_indexedconstraint&subblock.spy
+  .. literalinclude:: ../tests/scripting/spy4pysp_Explicit_singletonconstraint_implicit_indexedconstraint&subblock.spy
      :language: python
 
 - Explicit form for singleton constraints at the model and sub-block
   level with implicit form for indexed constraint
 
-  .. literalinclude:: ../script_spy_files/spy4pysp_Explicit_singletonconstraint&subblock_implicit_indexedconstraint.spy
+  .. literalinclude:: ../tests/scripting/spy4pysp_Explicit_singletonconstraint&subblock_implicit_indexedconstraint.spy
      :language: python
 
 - Fully explicit form for singleton constraints as well as all indices
   of indexed constraint
 
-  .. literalinclude:: ../script_spy_files/spy4pysp_Explicit_singletonconstraint_explicit_indexedconstraint.spy
+  .. literalinclude:: ../tests/scripting/spy4pysp_Explicit_singletonconstraint_explicit_indexedconstraint.spy
      :language: python
 
 Note that the equivalence of the first three bullet forms to the last
@@ -777,7 +777,7 @@ constructed with data. As an example, the last bullet form from the
 previous section could be written in the following way to allow
 execution with either an ``AbstractModel`` or a ``ConcreteModel``:
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Annotation_Abstractmodel.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Annotation_Abstractmodel.spy
    :language: python
 
 Note that the use of ``m`` rather than ``model`` in the
@@ -805,7 +805,7 @@ the keywords ``lb`` or ``ub`` set to ``False`` to signify that one of
 the bounds is not stochastic. The following code snippet shows example
 declarations with this annotation for various constraint types.
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Stochastic_constraint_bounds.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Stochastic_constraint_bounds.spy
    :language: python
 
 Note that simply declaring the **PySP_StochasticRHSAnnotation**
@@ -831,7 +831,7 @@ calling the ``declare`` method with the ``variables`` keyword set to an
 explicit list of variable objects. The following code snippet shows
 example declarations with this annotation for various constraint types.
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Stochastic_constraint_matrix.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Stochastic_constraint_matrix.spy
    :language: python
 
 As is the case with the **PySP_StochasticRHSAnnotation** annotation
@@ -858,7 +858,7 @@ not contain any constant terms or these constant terms do not change
 across scenarios, this behavior can be disabled by setting the keyword
 ``include_constant`` to ``False`` in a call to the ``declare`` method.
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Stochastic_objective_elements.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Stochastic_objective_elements.spy
    :language: python
 
 Similar to the previous annotation type, simply declaring the
@@ -880,7 +880,7 @@ with explicit stage assignments for every constraint in the model. The
 as the first argument and a positive integer as the second argument (1
 signifies the first time stage). Example:
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Annotating_constraint_stages.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Annotating_constraint_stages.spy
    :language: python
 
 .. _Edge-Cases:
@@ -903,7 +903,7 @@ expression. Consider the following reference Pyomo model that has
 stochastic cost coefficients for both a first-stage and a second-stage
 variable in the second-stage cost expression:
 
-.. literalinclude:: ../script_spy_files/spy4pysp_1&2stage_in_2stage_expression.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_1&2stage_in_2stage_expression.spy
    :language: python
 
 The code snippet below re-expresses this model using an objective
@@ -915,7 +915,7 @@ constraint named ``ComputeSecondStageCost``. Additionally, the
 **PySP_StochasticObjectiveAnnotation** annotation type is replaced with
 the **PySP_StochasticMatrixAnnotation** annotation type.
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Reexpressed_model_using_new_variable.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Reexpressed_model_using_new_variable.spy
    :language: python
 
 - *Stochastic Constant Terms*
@@ -934,7 +934,7 @@ annotation type. Otherwise, this would lead to an incorrect
 representation of the stochastic program in SMPS format. As an example,
 consider the following:
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Constraint_in_PySP_StochasticRHSAnnotation.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Constraint_in_PySP_StochasticRHSAnnotation.spy
    :language: python
 
 Note that in the expression for constraint ``c``, there is a fixed
@@ -987,7 +987,7 @@ a subset of scenarios (depending on the value of ``q``) either directly
 due to a 0 coefficient in a product expressions or indirectly due to
 user-defined logic that is based off of the values of stochastic data.
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Variable_excluded_in_subsetscenerios.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Variable_excluded_in_subsetscenerios.spy
    :language: python
 
 The SMPS conversion routines will attempt some limited checking to help
@@ -1001,14 +1001,14 @@ One way to deal with the 0 coefficient issue, which works for both cases
 discussed in the example above, is to create a *zero* ``Expression``
 object. E.g.,
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Create_zero_expression_object.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Create_zero_expression_object.spy
    :language: python
 
 This component can be used to add variables to a linear expression so
 that the resulting expression retains a reference to them. This behavior
 can be verified by examining the output from the following example:
 
-.. literalinclude:: ../script_spy_files/spy4pysp_Retain_variable_reference_expression.spy
+.. literalinclude:: ../tests/scripting/spy4pysp_Retain_variable_reference_expression.spy
    :language: python
 
 Generating SMPS Input Files

@@ -16,7 +16,7 @@ We repeat the abstract model already given:
 
 One way to implement this in Pyomo is as shown as follows:
 
-.. literalinclude:: ../script_spy_files/abstract1.spy
+.. literalinclude:: ../tests/scripting/abstract1.spy
    :language: python
 
 .. note::
@@ -49,7 +49,7 @@ is not required. Almost any name could be used, but we will use the name
 `model` most of the time in this book. In this example, we are declaring
 that it will be an abstract model.
 
-.. literalinclude:: ../script_spy_files/abstract1_Declare_abstract_model.spy
+.. literalinclude:: ../tests/scripting/abstract1_Declare_abstract_model.spy
    :language: python
 
 We declare the parameters :math:`m` and :math:`n` using the Pyomo
@@ -60,7 +60,7 @@ option were not given, then Pyomo would not object to any type of data
 being assigned to these parameters. As it is, assignment of a value that
 is not a non-negative integer will result in an error.
 
-.. literalinclude:: ../script_spy_files/abstract1_Declare_param_within.spy
+.. literalinclude:: ../tests/scripting/abstract1_Declare_param_within.spy
    :language: python
 
 Although not required, it is convenient to define index sets. In this
@@ -68,14 +68,14 @@ example we use the ``RangeSet`` function to declare that the sets will
 be a sequence of integers starting at 1 and ending at a value specified
 by the the parameters ``model.m`` and ``model.n``.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_indexsets.spy
+.. literalinclude:: ../tests/scripting/abstract1_Define_indexsets.spy
    :language: python
 
 The coefficient and right-hand-side data are defined as indexed
 parameters. When sets are given as arguments to the ``Param`` function,
 they indicate that the set will index the parameter.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_indexed_parameters.spy
+.. literalinclude:: ../tests/scripting/abstract1_Define_indexed_parameters.spy
    :language: python
 
 .. note::
@@ -94,7 +94,7 @@ solver when data is provided and the model is solved. Specification of
 the ``NonNegativeReals`` domain implements the requirement that the
 variables be greater than or equal to zero.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_variable.spy
+.. literalinclude:: ../tests/scripting/abstract1_Define_variable.spy
    :language: python
 
 In abstract models, Pyomo expressions are usually provided to objective
@@ -115,7 +115,7 @@ example, when ``summation`` is passed the arguments ``model.c, model.x``
 it returns an internal representation of the expression
 :math:`\sum_{j=1}^{n}c_{j} x_{j}`.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_objective_expression.spy
+.. literalinclude:: ../tests/scripting/abstract1_Define_objective_expression.spy
    :language: python
 
 To declare an objective function, the Pyomo function called
@@ -125,7 +125,7 @@ minimization. For maximization, the ``sense=maximize`` argument must be
 used. The name that is declared, which is ``OBJ`` in this case, appears
 in some reports and can be almost any name.
 
-.. literalinclude:: ../script_spy_files/abstract1_Declare_objective_function.spy
+.. literalinclude:: ../tests/scripting/abstract1_Declare_objective_function.spy
    :language: python
 
 Declaration of constraints is similar. A function is declared to deliver
@@ -139,7 +139,7 @@ function that declares the constraint expression. Technically, we could
 have used anything for this argument, but that might be confusing. Using
 an ``i`` for an :math:`i` seems sensible in this situation.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_constraints_expression.spy
+.. literalinclude:: ../tests/scripting/abstract1_Define_constraints_expression.spy
    :language: python
 
 .. note::
@@ -158,7 +158,7 @@ indexed by the set ``model.I`` will be created and for each member of
 ``model.I``, the function ``ax_constraint_rule`` will be called and it
 will be passed the model object as well as the member of ``model.I``
 
-.. literalinclude:: ../script_spy_files/abstract1_Declare_constraints.spy
+.. literalinclude:: ../tests/scripting/abstract1_Declare_constraints.spy
    :language: python
 
 In the object oriented view of all of this, we would say that ``model``
@@ -172,7 +172,7 @@ set ``model.J``.
 In order to use this model, data must be given for the values of the
 parameters. Here is one file that provides data.
 
-.. literalinclude:: ../script_spy_files/abstract1.dat
+.. literalinclude:: ../tests/scripting/abstract1.dat
    :language: none
 
 There are multiple formats that can be used to provide data to a Pyomo
@@ -236,18 +236,18 @@ the same model. To start with an illustration of general indexes,
 consider a slightly different Pyomo implementation of the model we just
 presented.
 
-.. literalinclude:: ../script_spy_files/abstract2.py
+.. literalinclude:: ../tests/scripting/abstract2.py
    :language: python
 
 To get the same instantiated model, the following data file can be used.
 
-.. literalinclude:: ../script_spy_files/abstract2a.dat
+.. literalinclude:: ../tests/scripting/abstract2a.dat
    :language: none
 
 However, this model can also be fed different data for problems of the
 same general form using meaningful indexes.
 
-.. literalinclude:: ../script_spy_files/abstract2.dat
+.. literalinclude:: ../tests/scripting/abstract2.dat
    :language: none
 
 A Simple Concrete Pyomo Model
@@ -272,7 +272,7 @@ We repeat the concrete model already given:
 
 This is implemented as a concrete model as follows:
 
-.. literalinclude:: ../script_spy_files/concrete1.py
+.. literalinclude:: ../tests/scripting/concrete1.py
    :language: none
 
 Although rule functions can also be used to specify constraints and

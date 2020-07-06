@@ -70,7 +70,7 @@ determined by the following traits:
 The following code snippet shows examples of declaring a Suffix
 component on a Pyomo model:
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Declare_suffix_component.spy
+.. literalinclude:: ../tests/scripting/spy4suffixes_Declare_suffix_component.spy
    :language: python
 
 Declaring a Suffix with a non-local direction on a model is not
@@ -125,7 +125,7 @@ number of methods whose default semantics are more convenient for
 working with indexed modeling components.  The easiest way to highlight
 this functionality is through the use of an example.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Use_suffix_component_class_methods.spy
+.. literalinclude:: ../tests/scripting/spy4suffixes_Use_suffix_component_class_methods.spy
    :language: python
 
 In this example we have a concrete Pyomo model with two different types
@@ -133,7 +133,7 @@ of variable components (indexed and non-indexed) as well as a Suffix
 declaration (foo). The next code snippet shows examples of adding
 entries to the suffix foo.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Add_entries_to_suffix_declaration.spy
+.. literalinclude:: ../tests/scripting/spy4suffixes_Add_entries_to_suffix_declaration.spy
    :language: python
 
 In this example we highlight the fact that the ``__setitem__`` and
@@ -148,7 +148,7 @@ value of ``False`` results in the same behavior as ``__setitem__``.
 Other operations like accessing or removing entries in our mapping can
 performed as if the built-in ``dict`` class is in use.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Print_value.spy
+.. literalinclude:: ../tests/scripting/spy4suffixes_Print_value.spy
    :language: python
 
 The non-dict method ``clear_value`` can be used in place of
@@ -156,7 +156,7 @@ The non-dict method ``clear_value`` can be used in place of
 behavior as ``setValue`` for indexed components and does not raise a
 KeyError when the argument does not exist as a key in the mapping.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Clear_value.spy
+.. literalinclude:: ../tests/scripting/spy4suffixes_Clear_value.spy
    :language: python
 
 A summary non-dict Suffix methods is provided here:
@@ -207,7 +207,7 @@ interfaces, is constraint dual multipliers. Requesting that duals be
 imported into suffix data can be accomplished by declaring a Suffix
 component on the model.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Import_suffix_information.spy
+.. literalinclude:: ../tests/scripting/spy4suffixes_Import_suffix_information.spy
    :language: python
 
 The existence of an active suffix with the name dual that has an import
@@ -218,7 +218,7 @@ problem instance (using a python script or Pyomo callback functions in
 conjunction with the ``pyomo`` command), one can access the dual values
 associated with constraints using the dual Suffix component.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Print_dual_value.spy
+.. literalinclude:: ../tests/scripting/spy4suffixes_Print_dual_value.spy
    :language: python
 
 Alternatively, the ``pyomo`` option ``--solver-suffixes`` can be used to
@@ -237,7 +237,7 @@ component values with it. The following example shows how one can
 declare a special ordered set of type 1 using AMPL-style suffix notation
 in conjunction with Pyomo's NL file interface.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Export_suffix_data.spy
+.. literalinclude:: ../tests/scripting/spy4suffixes_Export_suffix_data.spy
    :language: python
 
 Most AMPL-compatible solvers will recognize the suffix names ``sosno``
@@ -261,7 +261,7 @@ primal (variable values) and dual (suffixes) solution information. This
 dual suffix information can be both imported and exported using a single
 Suffix component with an IMPORT_EXPORT direction.
 
-.. literalinclude:: ../script_spy_files/ipopt_warmstart.py
+.. literalinclude:: ../tests/scripting/ipopt_warmstart.py
    :language: python
 
 The difference in performance can be seen by examining Ipopt's iteration
@@ -307,11 +307,11 @@ initialization. Suffix rules are expected to return an iterable of
 (component, value) tuples, where the ``expand=True`` semantics are
 applied for indexed components.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Suffix_initialization_rule_keyword.spy
+.. literalinclude:: ../tests/scripting/spy4suffixes_Suffix_initialization_rule_keyword.spy
    :language: python
 
 The next example shows an abstract model where suffixes are attached
 only to the variables:
 
-.. literalinclude:: ../script_spy_files/AbstractSuffixes.py
+.. literalinclude:: ../tests/scripting/AbstractSuffixes.py
    :language: python

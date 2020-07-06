@@ -37,7 +37,7 @@ Declaration
 The following condensed code snippet illustrates a ``Disjunct`` and a
 ``Disjunction``:
 
-.. literalinclude:: ../script_spy_files/spy4Disjunctions_Disjunct_and_disjunction.spy
+.. literalinclude:: ../tests/scripting/spy4Disjunctions_Disjunct_and_disjunction.spy
    :language: python
 
 Model.d is an indexed ``Disjunct`` that is indexed over an implicit set
