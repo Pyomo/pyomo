@@ -30,6 +30,12 @@ single_tree, single_tree_available = attempt_import(
 
 
 def solve_OA_master(solve_data, config):
+    """
+    starting documentation
+    :param solve_data:
+    :param config:
+    :return:
+    """
     solve_data.mip_iter += 1
     MindtPy = solve_data.mip.MindtPy_utils
     config.logger.info(
