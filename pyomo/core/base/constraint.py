@@ -950,7 +950,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
     @property
     def upper(self):
         """Access the upper bound of a constraint expression."""
-        if len(self._data) == 0:
+        if not self._data:
             raise ValueError(
                 "Accessing the upper bound of SimpleConstraint "
                 "'%s' before the Constraint has been assigned "
@@ -961,7 +961,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
     @property
     def equality(self):
         """A boolean indicating whether this is an equality constraint."""
-        if len(self._data) == 0:
+        if not self._data:
             raise ValueError(
                 "Accessing the equality flag of SimpleConstraint "
                 "'%s' before the Constraint has been assigned "
@@ -972,7 +972,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
     @property
     def strict_lower(self):
         """A boolean indicating whether this constraint has a strict lower bound."""
-        if len(self._data) == 0:
+        if not self._data:
             raise ValueError(
                 "Accessing the strict_lower flag of SimpleConstraint "
                 "'%s' before the Constraint has been assigned "
@@ -983,7 +983,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
     @property
     def strict_upper(self):
         """A boolean indicating whether this constraint has a strict upper bound."""
-        if len(self._data) == 0:
+        if not self._data:
             raise ValueError(
                 "Accessing the strict_upper flag of SimpleConstraint "
                 "'%s' before the Constraint has been assigned "
@@ -994,7 +994,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
-        if len(self._data) == 0:
+        if not self._data:
             self._data[None] = self
         return super(SimpleConstraint, self).set_value(expr)
 
