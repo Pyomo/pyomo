@@ -3,10 +3,10 @@ Parameters
 
 .. currentmodule:: pyomo.environ
 .. doctest::
-    :hide:
+   :hide:
 
-    >>> import pyomo.environ as pyo
-    >>> model = pyo.ConcreteModel()
+   >>> import pyomo.environ as pyo
+   >>> model = pyo.ConcreteModel()
 
 The word "parameters" is used in many settings. When discussing a Pyomo
 model, we use the word to refer to data that must be provided in order
@@ -18,11 +18,11 @@ example, the following code snippet declares sets ``model.A`` and
 ``model.B``, and then a parameter ``model.P`` that is indexed by
 ``model.A`` and ``model.B``:
 
-.. doctest::
+.. testcode::
 
-    >>> model.A = pyo.RangeSet(1,3)
-    >>> model.B = pyo.Set()
-    >>> model.P = pyo.Param(model.A, model.B)
+   model.A = pyo.RangeSet(1,3)
+   model.B = pyo.Set()
+   model.P = pyo.Param(model.A, model.B)
 
 In addition to sets that serve as indexes, :class:`Param` takes
 the following options:
@@ -45,26 +45,26 @@ ways to create a parameter that represents a square matrix with 9, 16, 25 on the
 main diagonal and zeros elsewhere, here are two ways to do it. First using a
 Python object to initialize:
 
-.. doctest::
+.. testcode::
 
-    >>> v={}
-    >>> v[1,1] = 9
-    >>> v[2,2] = 16
-    >>> v[3,3] = 25
-    >>> model.S1 = pyo.Param(model.A, model.A, initialize=v, default=0)
+   v={}
+   v[1,1] = 9
+   v[2,2] = 16
+   v[3,3] = 25
+   model.S1 = pyo.Param(model.A, model.A, initialize=v, default=0)
 
 And now using an initialization function that is automatically called
 once for each index tuple (remember that we are assuming that
 ``model.A`` contains ``{1, 2, 3}``)
 
-.. doctest::
+.. testcode::
 
-    >>> def s_init(model, i, j):
-    ...    if i == j:
-    ...        return i*i
-    ...    else:
-    ...        return 0.0
-    >>> model.S2 = pyo.Param(model.A, model.A, initialize=s_init)
+   def s_init(model, i, j):
+       if i == j:
+           return i*i
+       else:
+           return 0.0
+   model.S2 = pyo.Param(model.A, model.A, initialize=s_init)
 
 In this example, the index set contained integers, but index sets need
 not be numeric. It is very common to use strings.
@@ -82,13 +82,21 @@ that, the model instantation will be terminated and an error message
 issued. The validation function should be written so as to return
 ``True`` if the data is valid and ``False`` otherwise.
 
-.. doctest::
+.. testcode::
 
-    >>> t_data = {1: 10, 2: 3, 3: 20}
-    >>> def t_validate(model, v, i):
-    ...    return v > 3.14159
-    >>> model.T = pyo.Param(model.A, validate=t_validate, initialize=t_data)
-    Traceback (most recent call last):
-      ...
-    ValueError: Invalid parameter value: T[2] = '3', value type=<class 'int'>.
-    	Value failed parameter validation rule
+   t_data = {1: 10, 2: 3, 3: 20}
+
+   def t_validate(model, v, i):
+       return v > 3.14159
+
+   model.T = pyo.Param(model.A, validate=t_validate, initialize=t_data)
+
+This example will prodice the following error, indicating that the value
+provided for ``T[2]`` failed validation:
+
+.. testoutput::
+
+   Traceback (most recent call last):
+     ...
+   ValueError: Invalid parameter value: T[2] = '3', value type=<class 'int'>.
+       Value failed parameter validation rule
