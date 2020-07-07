@@ -21,6 +21,12 @@ and postpones creation of its members:
 
     >>> model.A = pyo.Set()
 
+.. doctest::
+   :hide:
+
+    >>> # Add some data to the Set
+    >>> model.A.update([1,2,3])
+
 The :class:`Set` class takes optional arguments such as:
 
 - ``doc`` = String describing the set
@@ -259,6 +265,11 @@ nodes, such as
 
     >>> model.Nodes = pyo.Set()
 
+.. doctest::
+   :hide:
+
+    >>> model.Nodes.update(['a','b','c'])
+
 and then a set of arcs can be created with reference to the nodes.
 
 Consider the following simple version of minimum cost flow problem:
@@ -306,7 +317,7 @@ arcs using
 
 .. doctest::
 
-    >>> model.Arcs = pyo.Set(within=model.Nodes*model.Nodes)
+    >>> model.Arcs = pyo.Set(dimen=2)
 
 or
 
@@ -317,7 +328,7 @@ or
 
 .. doctest::
 
-    >>> model.Arcs = pyo.Set(dimen=2)
+    >>> model.Arcs = pyo.Set(within=model.Nodes*model.Nodes)
 
 where the difference is that the first version will provide error
 checking as data is assigned to the set elements. This would enable
@@ -335,6 +346,15 @@ set ``model.arcs`` as in
     ...         - m.Demand[node] \
     ...         - sum(m.Flow[node, j] for j in m.Nodes if (j,node) in m.Arcs) \
     ...         == 0
+
+.. doctest::
+   :hide:
+
+    >>> model.Demand = pyo.Param(model.Nodes, default=1)
+    >>> model.Supply = pyo.Param(model.Nodes, default=2)
+    >>> model.Flow = pyo.Var(model.Nodes, model.Nodes)
+    >>> model.Arcs.update([('a','b'),('b','c'),('c','a')])
+    >>> model._flow_bal_1 = pyo.Constraint(model.Nodes, rule=FlowBalance_rule)
 
 This will be OK unless the number of nodes becomes very large for a
 sparse network, then the time to generate this constraint might become
@@ -371,6 +391,12 @@ with an ``initialize`` option specifying the creation as follows:
     ...         if j == node:
     ...             yield i
     >>> model.NodesIn = pyo.Set(model.Nodes, initialize=NodesIn_init)
+
+.. doctest::
+   :hide:
+
+    >>> model.NodesOut = pyo.Set(model.Nodes)
+    >>> model._flow_bal_2 = pyo.Constraint(model.Nodes, rule=FlowBalance_rule)
 
 with a similar definition for ``model.NodesOut``.  This code creates a
 list of sets for ``NodesIn``, one set of nodes for each node. The full
