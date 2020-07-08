@@ -626,12 +626,12 @@ algorithms to employ efficient methods for solving a stochastic
 program. In order to use the SMPS conversion tool, at least one of the
 following annotations must be declared on the reference Pyomo model:
 
-- **PySP_StochasticRHSAnnotation**: indicates the existence of
+- **StochasticConstraintBoundsAnnotation**: indicates the existence of
   stochastic constraint right-hand-sides (or bounds) in second-stage
   constraints
-- **PySP_StochasticMatrixAnnotation**: indicates the existence of
+- **StochasticConstraintBodyAnnotation**: indicates the existence of
   stochastic variable coefficients in second-stage constraints
-- **PySP_StochasticObjectiveAnnotation**: indicates the existence
+- **StochasticObjectiveAnnotation**: indicates the existence
   stochastic cost coefficients in the second-stage cost function
 
 These will be discussed in further detail in the remaining sections. The
@@ -674,7 +674,7 @@ stochastic data. This constraint would be incorrectly identified as
 first-stage by the method above, even though the existence of stochastic
 data necessarily implies it is second-stage. To deal with cases such as
 this, an additional annotation is made available that is named
-**PySP_ConstraintStageAnnotation**.  This annotation will be discussed
+**ConstraintStageAnnotation**.  This annotation will be discussed
 further in a later section.
 
 It is often the case that relatively few coefficients on a stochastic
@@ -809,7 +809,7 @@ and the others. In the empty case, PySP will use exactly the set of
 second-stage constraints it is aware of. This set will either be
 determined through inspection of the constraint expressions or through
 the user-provided constraint-stage classifications declared using the
-**PySP_ConstraintStageAnnotation** annotation type.  In the case where
+**ConstraintStageAnnotation** annotation type.  In the case where
 the stochastic annotation is not empty, PySP will verify that all
 constraints declared within it belong to the set of second-stage
 constraints it is aware of. If this verification fails, an error will be
@@ -854,7 +854,7 @@ function.
 
 If stochastic elements appear on the right-hand-side of constraints (or
 as constants in the body of constraint expressions), these locations
-should be declared using the **PySP_StochasticRHSAnnotation** annotation
+should be declared using the **StochasticConstraintBoundsAnnotation** annotation
 type. When components are declared with this annotation, there are no
 additional required arguments for the ``declare`` method. However, to
 allow for more flexibility when dealing with double-sided inequality
@@ -891,7 +891,7 @@ declarations with this annotation for various constraint types.
            pass
    model.C_annotate = pyo.BuildAction(model.C_index, rule=C_annotate_rule)
    
-Note that simply declaring the **PySP_StochasticRHSAnnotation**
+Note that simply declaring the **StochasticConstraintBoundsAnnotation**
 annotation type and leaving it empty will alert the SMPS conversion
 routines that all constraints identified as second-stage should be
 treated as having stochastic right-hand-side data. Calling the
@@ -903,7 +903,7 @@ annotation.
 
 If coefficients of variables change in the second-stage constraint
 matrix, these locations should be declared using the
-**PySP_StochasticMatrixAnnotation** annotation type. When components are
+**StochasticConstraintBodyAnnotation** annotation type. When components are
 declared with this annotation, there are no additional required
 arguments for the ``declare`` method. Calling the ``declare`` method
 with the single component argument signifies that all variables
@@ -944,8 +944,8 @@ example declarations with this annotation for various constraint types.
    model.stoch_matrix.declare(model.r, variables=[model.x])
 
 
-As is the case with the **PySP_StochasticRHSAnnotation** annotation
-type, simply declaring the **PySP_StochasticMatrixAnnotation**
+As is the case with the **StochasticConstraintBoundsAnnotation** annotation
+type, simply declaring the **StochasticConstraintBodyAnnotation**
 annotation type and leaving it empty will alert the SMPS conversion
 routines that all constraints identified as second-stage should be
 considered, and, additionally, that all variables encountered in these
@@ -958,9 +958,9 @@ is declared within the annotation.
 
 If the cost coefficients of any variables are stochastic in the
 second-stage cost expression, this should be noted using the
-**PySP_StochasticObjectiveAnnotation** annotation type. This annotation
+**StochasticObjectiveAnnotation** annotation type. This annotation
 uses the same semantics for the ``declare`` method as the
-**PySP_StochasticMatrixAnnotation** annotation type, but with one
+**StochasticConstraintBodyAnnotation** annotation type, but with one
 additional consideration regarding any constants in the objective
 expression.  Constants in the objective are treated as stochastic and
 automatically handled by the SMPS code. If the objective expression does
@@ -982,7 +982,7 @@ across scenarios, this behavior can be disabled by setting the keyword
    model.stoch_objective.declare(model.TotalCost, variables=[model.x, model.y])
 
 Similar to the previous annotation type, simply declaring the
-**PySP_StochasticObjectiveAnnotation** annotation type and leaving it
+**StochasticObjectiveAnnotation** annotation type and leaving it
 empty will alert the SMPS conversion routines that all variables
 appearing in the single active model objective expression should be
 considered to have stochastic coefficients.
@@ -993,7 +993,7 @@ Annotating the model with constraint stages is sometimes necessary to
 identify to the SMPS routines that certain constraints belong in the
 second time-stage even though they lack references to any second-stage
 variables. Annotation of constraint stages is achieved using the
-**PySP_ConstraintStageAnnotation** annotation type. If this annotation
+**ConstraintStageAnnotation** annotation type. If this annotation
 is added to the model, it is assumed that it will be fully populated
 with explicit stage assignments for every constraint in the model. The
 ``declare`` method should be called giving a ``Constraint`` or ``Block``
@@ -1005,7 +1005,7 @@ signifies the first time stage). Example:
    model.IDX = pyo.RangeSet(5)
 
    # declare the annotation
-   model.constraint_stage = annotations.PySP_ConstraintStageAnnotation()
+   model.constraint_stage = annotations.ConstraintStageAnnotation()
    
    # all constraints on this Block are first-stage
    model.B = pyo.Block()
@@ -1069,8 +1069,8 @@ second-stage variable ``SecondStageCostVar`` that represents the
 second-stage cost. This is enforced by restricting the variable to be
 equal to the second-stage cost expression using an additional equality
 constraint named ``ComputeSecondStageCost``. Additionally, the
-**PySP_StochasticObjectiveAnnotation** annotation type is replaced with
-the **PySP_StochasticMatrixAnnotation** annotation type.
+**StochasticObjectiveAnnotation** annotation type is replaced with
+the **StochasticConstraintBodyAnnotation** annotation type.
 
 .. testcode::
 
@@ -1095,7 +1095,7 @@ very naturally fall out of objective and constraint expressions.
 
 If a constant terms falls out of a constraint expression and this term
 changes across scenarios, it is critical that this is accounted for by
-including the constraint in the **PySP_StochasticRHSAnnotation**
+including the constraint in the **StochasticConstraintBoundsAnnotation**
 annotation type. Otherwise, this would lead to an incorrect
 representation of the stochastic program in SMPS format. As an example,
 consider the following:
@@ -1117,7 +1117,7 @@ left-hand-side of the inequality. When an expression is written this
 way, it can be easy to forget that the value of this parameter will be
 pushed to the bound of the constraint when it is converted into linear
 canonical form. Remember to declare these constraints within the
-**PySP_StochasticRHSAnnotation** annotation type.
+**StochasticConstraintBoundsAnnotation** annotation type.
 
 A constant term appearing in the objective expression presents a similar
 issue. Whether or not this term is stochastic, it must be dealt with
@@ -1127,7 +1127,7 @@ implicitly adding a new second-stage variable to the problem in the
 final output file that uses the constant term as its coefficient in the
 objective and that is fixed to a value of 1.0 using a trivial equality
 constraint. The default behavior when declaring the
-**PySP_StochasticObjectiveAnnotation** annotation type will be to assume
+**StochasticObjectiveAnnotation** annotation type will be to assume
 this constant term in the objective is stochastic. This helps ensure
 that the relative scenario costs reported by algorithms using the SMPS
 files will match that of the PySP model for a given solution. When
@@ -1141,7 +1141,7 @@ moved to the constraint matrix.
 
 Although not directly supported, stochastic variable bounds can be
 expressed using explicit constraints along with the
-**PySP_StochasticRHSAnnotation** annotation type to achieve the same
+**StochasticConstraintBoundsAnnotation** annotation type to achieve the same
 effect.
 
 - *Problems Caused by Zero Coefficients*
