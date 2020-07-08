@@ -4,10 +4,10 @@ from pyomo.core.expr.taylor_series import taylor_series_expansion
 try:
     import xpress
     p = xpress.problem()
+    del p
     xpress_available = True
 except:
     xpress_available = False
-
 
 class TestXpressPersistent(unittest.TestCase):
     @unittest.skipIf(not xpress_available, "xpress is not available")

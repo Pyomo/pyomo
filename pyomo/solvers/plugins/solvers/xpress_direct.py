@@ -42,6 +42,11 @@ def _is_convertable(conv_type,x):
         return False
     return True
 
+def _print_message(xp_prob, _, msg, *args):
+    if msg is not None:
+        sys.stdout.write(msg+'\n')
+        sys.stdout.flush()
+
 @SolverFactory.register('xpress_direct', doc='Direct python interface to XPRESS')
 class XpressDirect(DirectSolver):
 
@@ -118,10 +123,6 @@ class XpressDirect(DirectSolver):
         # setting a log file in xpress disables all output
         # this callback prints all messages to stdout
         if self._tee:
-            def _print_message(xp_prob, _, msg, *args):
-                if msg is not None:
-                    sys.stdout.write(msg+'\n')
-                    sys.stdout.flush()
             self._solver_model.addcbmessage(_print_message, None, 0)
 
         # set xpress options
