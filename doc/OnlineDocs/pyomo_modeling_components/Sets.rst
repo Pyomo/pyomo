@@ -29,8 +29,8 @@ and postpones creation of its members:
 
 The :class:`Set` class takes optional arguments such as:
 
-- ``doc`` = String describing the set
 - ``dimen`` = Dimension of the members of the set
+- ``doc`` = String describing the set
 - ``filter`` = A Boolean function used during construction to indicate if a
   potential new member should be assigned to the set
 - ``initialize`` = An iterable containing the initial members of the Set, or

@@ -31,13 +31,13 @@ the following options:
 - ``doc`` = A string describing the parameter.
 - ``initialize`` = A function (or Python object) that returns data used to
   initialize the parameter values.
+- ``mutable`` = Boolean value indicating if the Param values are allowed
+  to change after the Param is initialized.
 - ``validate`` = A callback function that takes the model, proposed
   value, and indices of the proposed value; returning ``True`` if the value
   is valid.  Returning ``False`` will generate an exception.
 - ``within`` = Set used for validation; it specifies the domain of 
   valid parameter values.
-- ``mutable`` = Boolean value indicating if the Param values are allowed
-  to change after the Param is initialized.
 
 These options perform in the same way as they do for :class:`Set`. For
 example, given ``model.A`` with values ``{1, 2, 3}``, then there are many
