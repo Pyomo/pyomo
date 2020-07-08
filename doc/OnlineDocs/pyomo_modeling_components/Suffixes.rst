@@ -505,8 +505,8 @@ only to the variables:
    >>> # instantiate the model
    >>> inst = model.create_instance()
    >>> for i in inst.I:
-   ...     print(i, inst.foo[inst.x[i]])
-   1 3.0
-   2 6.0
-   3 9.0
-   4 12.0
+   ...     print((i, inst.foo[inst.x[i]]))
+   (1, 3.0)
+   (2, 6.0)
+   (3, 9.0)
+   (4, 12.0)
