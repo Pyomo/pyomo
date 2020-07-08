@@ -31,6 +31,8 @@ try:
     print("Regenerating SPY files...")
     from strip_examples import generate_spy_files
     generate_spy_files(os.path.abspath('tests'))
+    generate_spy_files(os.path.abspath(os.path.join(
+        'library_reference','kernel','examples')))
 finally:
     sys.path.pop(0)
 
