@@ -59,13 +59,13 @@ class MindtPySolver(object):
         default=1E-5,
         domain=PositiveFloat,
         description="Bound tolerance",
-        doc="Relative tolerance for bound feasibility checks"
+        doc="Relative tolerance for bound feasibility checks."
     ))
     CONFIG.declare("iteration_limit", ConfigValue(
         default=30,
         domain=PositiveInt,
         description="Iteration limit",
-        doc="Number of maximum iterations in the decomposition methods"
+        doc="Number of maximum iterations in the decomposition methods."
     ))
     CONFIG.declare("time_limit", ConfigValue(
         default=600,
@@ -82,7 +82,7 @@ class MindtPySolver(object):
         doc="MINLP Decomposition strategy to be applied to the method. "
             "Currently available Outer Approximation (OA), Extended Cutting "
             "Plane (ECP), Partial Surrogate Cuts (PSC), and Generalized "
-            "Benders Decomposition (GBD)"
+            "Benders Decomposition (GBD)."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
         default="rNLP",
@@ -91,14 +91,14 @@ class MindtPySolver(object):
         doc="Initialization strategy used by any method. Currently the "
             "continuous relaxation of the MINLP (rNLP), solve a maximal "
             "covering problem (max_binary), and fix the initial value for "
-            "the integer variables (initial_binary)"
+            "the integer variables (initial_binary)."
     ))
     CONFIG.declare("max_slack", ConfigValue(
         default=1000.0,
         domain=PositiveFloat,
         description="Maximum slack variable",
         doc="Maximum slack variable value allowed for the Outer Approximation "
-            "cuts"
+            "cuts."
     ))
     CONFIG.declare("OA_penalty_factor", ConfigValue(
         default=1000.0,
@@ -106,7 +106,7 @@ class MindtPySolver(object):
         description="Outer Approximation slack penalty factor",
         doc="In the objective function of the Outer Approximation method, the "
             "slack variables corresponding to all the constraints get "
-            "multiplied by this number and added to the objective"
+            "multiplied by this number and added to the objective."
     ))
     CONFIG.declare("ECP_tolerance", ConfigValue(
         default=1E-4,
@@ -114,34 +114,34 @@ class MindtPySolver(object):
         description="ECP tolerance",
         doc="Feasibility tolerance used to determine the stopping criterion in"
             "the ECP method. As long as nonlinear constraint are violated for "
-            "more than this tolerance, the method will keep iterating"
+            "more than this tolerance, the method will keep iterating."
     ))
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
-        domain=In(["ipopt"]),
+        domain=In(["ipopt", "gams"]),
         description="NLP subsolver name",
         doc="Which NLP subsolver is going to be used for solving the nonlinear"
-            "subproblems"
+            "subproblems."
     ))
     CONFIG.declare("nlp_solver_args", ConfigBlock(
         implicit=True,
         description="NLP subsolver options",
         doc="Which NLP subsolver options to be passed to the solver while "
-            "solving the nonlinear subproblems"
+            "solving the nonlinear subproblems."
     ))
     CONFIG.declare("mip_solver", ConfigValue(
-        default="gurobi",
+        default="glpk",
         domain=In(["gurobi", "cplex", "cbc", "glpk", "gams",
                    "gurobi_persistent", "cplex_persistent"]),
         description="MIP subsolver name",
         doc="Which MIP subsolver is going to be used for solving the mixed-"
-            "integer master problems"
+            "integer master problems."
     ))
     CONFIG.declare("mip_solver_args", ConfigBlock(
         implicit=True,
         description="MIP subsolver options",
         doc="Which MIP subsolver options to be passed to the solver while "
-            "solving the mixed-integer master problems"
+            "solving the mixed-integer master problems."
     ))
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing(),
@@ -191,7 +191,7 @@ class MindtPySolver(object):
         description="Tolerance on variable bounds."
     ))
     CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-10,
+        default=1E-8,
         description="Tolerance on variable equal to zero."
     ))
     CONFIG.declare("initial_feas", ConfigValue(
@@ -206,11 +206,11 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("integer_to_binary", ConfigValue(
         default=False,
-        description="Convert integer variables to binaries (for integer cuts)",
+        description="Convert integer variables to binaries (for integer cuts).",
         domain=bool
     ))
     CONFIG.declare("add_integer_cuts", ConfigValue(
-        default=True,
+        default=False,
         description="Add integer cuts (no-good cuts) to binary variables to disallow same integer solution again."
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
@@ -228,7 +228,37 @@ class MindtPySolver(object):
     CONFIG.declare("add_slack", ConfigValue(
         default=False,
         description="whether add slack variable here."
-                    "slack variables here are used to deal with nonconvex MINLP",
+                    "slack variables here are used to deal with nonconvex MINLP.",
+        domain=bool
+    ))
+    CONFIG.declare("continuous_var_bound", ConfigValue(
+        default=1e10,
+        description="default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
+    CONFIG.declare("integer_var_bound", ConfigValue(
+        default=1e9,
+        description="default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
+    CONFIG.declare("cycling_check", ConfigValue(
+        default=True,
+        description="check if OA algorithm is stalled in a cycle and terminate.",
+        domain=bool
+    ))
+    CONFIG.declare("feasibility_norm", ConfigValue(
+        default="L_infinity",
+        domain=In(["L1", "L2", "L_infinity"]),
+        description="different forms of objective function in feasibility subproblem."
+    ))
+    CONFIG.declare("differentiate_mode", ConfigValue(
+        default="reverse_symbolic",
+        domain=In(["reverse_symbolic", "sympy"]),
+        description="differentiate mode to calculate jacobian."
+    ))
+    CONFIG.declare("linearize_inactive", ConfigValue(
+        default=False,
+        description="Add OA cuts for inactive constraints.",
         domain=bool
     ))
 
@@ -273,6 +303,8 @@ class MindtPySolver(object):
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()
+        solve_data.curr_int_sol = []
+        solve_data.prev_int_sol = []
 
         solve_data.original_model = model
         solve_data.working_model = model.clone()
@@ -288,7 +320,7 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            process_objective(solve_data, config)
+            process_objective(solve_data, config, use_mcpp=False)
 
             # Save model initial values.
             solve_data.initial_var_values = list(
@@ -348,32 +380,21 @@ class MindtPySolver(object):
             # Set of MIP iterations for which cuts were generated in ECP
             lin.mip_iters = Set(dimen=1)
 
-            nonlinear_constraints = [c for c in MindtPy.constraint_list if
-                                     c.body.polynomial_degree() not in (1, 0)]
-            lin.nl_constraint_set = RangeSet(
-                len(nonlinear_constraints),
-                doc="Integer index set over the nonlinear constraints")
-            feas.constraint_set = RangeSet(
-                len(MindtPy.constraint_list),
-                doc="integer index set over the constraints")
-
-            # # Mapping Constraint -> integer index
-            # MindtPy.feas_map = {}
-            # # Mapping integer index -> Constraint
-            # MindtPy.feas_inverse_map = {}
-            # # Generate the two maps. These maps may be helpful for later
-            # # interpreting indices on the slack variables or generated cuts.
-            # for c, n in zip(MindtPy.constraint_list, feas.constraint_set):
-            #     MindtPy.feas_map[c] = n
-            #     MindtPy.feas_inverse_map[n] = c
+            if config.feasibility_norm == 'L1' or config.feasibility_norm == 'L2':
+                feas.nl_constraint_set = Set(initialize=[i for i, constr in enumerate(MindtPy.constraint_list, 1) if
+                                                         constr.body.polynomial_degree() not in (1, 0)],
+                                             doc="Integer index set over the nonlinear constraints."
+                                             "The set corresponds to the index of nonlinear constraint in constraint_set")
+                # Create slack variables for feasibility problem
+                feas.slack_var = Var(feas.nl_constraint_set,
+                                     domain=NonNegativeReals, initialize=1)
+            else:
+                feas.slack_var = Var(domain=NonNegativeReals, initialize=1)
 
             # Create slack variables for OA cuts
             if config.add_slack:
                 lin.slack_vars = VarList(
                     bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
-            # Create slack variables for feasibility problem
-            feas.slack_var = Var(feas.constraint_set,
-                                 domain=NonNegativeReals, initialize=1)
 
             # Flag indicating whether the solution improved in the past
             # iteration or not
@@ -415,6 +436,10 @@ class MindtPySolver(object):
         solve_data.results.solver.wallclock_time = solve_data.timing.total
 
         solve_data.results.solver.iterations = solve_data.mip_iter
+
+        if config.single_tree:
+            solve_data.results.solver.num_nodes = solve_data.nlp_iter - \
+                (1 if config.init_strategy == 'rNLP' else 0)
 
         return solve_data.results
 

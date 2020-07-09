@@ -8,18 +8,24 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+imports_available = True
 try:
     import numpy as np
     import pandas as pd
     from scipy import stats
     import itertools
     from scipy.interpolate import griddata
+except ImportError:
+    imports_available = False
+
+try:
+    # matplotlib.pyplot can generate a runtime error on OSX when not
+    # installed as a Framework (as is the case in the CI systems)
     import seaborn as sns
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from matplotlib.lines import Line2D
-    imports_available = True
-except ImportError:
+except (ImportError, RuntimeError):
     imports_available = False
 
 

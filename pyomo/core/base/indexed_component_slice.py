@@ -310,6 +310,10 @@ class _slice_generator(object):
         self.ellipsis = ellipsis
         self.iter_over_index = iter_over_index
 
+        self.tuplize_unflattened_index = (
+            self.component._implicit_subsets is None
+            or len(self.component._implicit_subsets) == 1 )
+
         self.explicit_index_count = len(fixed) + len(sliced)
         if iter_over_index:
             self.component_iter = component.index_set().__iter__()
@@ -322,6 +326,11 @@ class _slice_generator(object):
         return self.__next__()
 
     def __next__(self):
+        # We have to defer this import to here to resolve circular
+        # imports.  Ideally, we would move normalize_index to another
+        # module to resolve this.
+        from .indexed_component import normalize_index
+
         while 1:
             # Note: running off the end of the underlying iterator will
             # generate a StopIteration exception that will propagate up
@@ -329,7 +338,12 @@ class _slice_generator(object):
             index = advance_iterator(self.component_iter)
 
             # We want a tuple of indices, so convert scalars to tuples
-            _idx = index if type(index) is tuple else (index,)
+            if normalize_index.flatten:
+                _idx = index if type(index) is tuple else (index,)
+            elif self.tuplize_unflattened_index:
+                _idx = (index,)
+            else:
+                _idx = index
 
             # Verify the number of indices: if there is a wildcard
             # slice, then there must be enough indices to at least match

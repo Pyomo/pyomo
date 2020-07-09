@@ -238,13 +238,23 @@ class BARONSHELL(SystemCallSolver):
         for key in self.options:
             lower_key = key.lower()
             if lower_key == 'resname':
-                logger.warning('The ResName option is set to %s'
-                               % self._soln_file)
+                logger.warning(
+                    'Ignoring user-specified option "%s=%s".  This '
+                    'option is set to %s, and can be overridden using '
+                    'the "solnfile" argument to the solve() method.'
+                    % (key, self.options[key], self._soln_file))
             elif lower_key == 'timname':
-                logger.warning('The TimName option is set to %s'
-                               % self._tim_file)
+                logger.warning(
+                    'Ignoring user-specified option "%s=%s".  This '
+                    'option is set to %s.'
+                    % (key, self.options[key], self._tim_file))
             else:
                 solver_options[key] = self.options[key]
+
+        for suffix in self._suffixes:
+            if re.match(suffix, 'dual') or re.match(suffix, 'rc'):
+                solver_options['WantDual'] = 1
+                break
 
         if 'solver_options' in kwds:
             raise ValueError("Baron solver options should be set "

@@ -15,6 +15,7 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
+from pyomo.contrib.mindtpy.util import var_bound_add
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -22,6 +23,10 @@ def MindtPy_initialize_master(solve_data, config):
     This includes generating the initial cuts require to build the master
     problem.
     """
+    # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded master problem.
+    if config.single_tree:
+        var_bound_add(solve_data, config)
+
     m = solve_data.mip = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
     m.dual.deactivate()
@@ -58,7 +63,7 @@ def MindtPy_initialize_master(solve_data, config):
         # else:
 
         fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
-        if fixed_nlp_result.solver.termination_condition is tc.optimal:
+        if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
             handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
         elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
             handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
@@ -79,7 +84,7 @@ def init_rNLP(solve_data, config):
         results = SolverFactory(config.nlp_solver).solve(
             m, **config.nlp_solver_args)
     subprob_terminate_cond = results.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal:
+    if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
         main_objective = next(m.component_data_objects(Objective, active=True))
         nlp_solution_values = list(v.value for v in MindtPy.variable_list)
         dual_values = list(m.dual[c] for c in MindtPy.constraint_list)
@@ -144,7 +149,11 @@ def init_max_binaries(solve_data, config):
     opt = SolverFactory(config.mip_solver)
     if isinstance(opt, PersistentSolver):
         opt.set_instance(m)
-    results = opt.solve(m, options=config.mip_solver_args)
+    mip_args = dict(config.mip_solver_args)
+    if config.mip_solver == 'gams':
+        mip_args['add_options'] = mip_args.get('add_options', [])
+        mip_args['add_options'].append('option optcr=0.0;')
+    results = opt.solve(m, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:

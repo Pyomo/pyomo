@@ -35,13 +35,6 @@ def solve_NLP_subproblem(solve_data, config):
     # Set up NLP
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
 
-    # restore original variable values
-    for nlp_var, orig_val in zip(
-            MindtPy.variable_list,
-            solve_data.initial_var_values):
-        if not nlp_var.fixed and not nlp_var.is_binary():
-            nlp_var.value = orig_val
-
     MindtPy.MindtPy_linear_cuts.deactivate()
     fixed_nlp.tmp_duals = ComponentMap()
     # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
@@ -53,18 +46,28 @@ def solve_NLP_subproblem(solve_data, config):
     # | g(x) <= b  | -1    | g(x1) > b    | g(x1) - b            |
     # | g(x) >= b  | +1    | g(x1) >= b   | 0                    |
     # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
-
+    evaluation_error = False
     for c in fixed_nlp.component_data_objects(ctype=Constraint, active=True,
                                               descend_into=True):
         # We prefer to include the upper bound as the right hand side since we are
         # considering c by default a (hopefully) convex function, which would make
         # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
         # if we don't have to
-        rhs = c.upper if c. has_ub() else c.lower
+        rhs = c.upper if c.has_ub() else c.lower
         c_geq = -1 if c.has_ub() else 1
         # c_leq = 1 if c.has_ub else -1
-        fixed_nlp.tmp_duals[c] = c_geq * max(
-            0, c_geq*(rhs - value(c.body)))
+        try:
+            fixed_nlp.tmp_duals[c] = c_geq * max(
+                0, c_geq*(rhs - value(c.body)))
+        except (ValueError, OverflowError) as error:
+            fixed_nlp.tmp_duals[c] = None
+            evaluation_error = True
+    if evaluation_error:
+        for nlp_var, orig_val in zip(
+                MindtPy.variable_list,
+                solve_data.initial_var_values):
+            if not nlp_var.fixed and not nlp_var.is_binary():
+                nlp_var.value = orig_val
         # fixed_nlp.tmp_duals[c] = c_leq * max(
         #     0, c_leq*(value(c.body) - rhs))
         # TODO: change logic to c_leq based on benchmarking
@@ -199,7 +202,7 @@ def solve_NLP_feas(solve_data, config):
     Returns: Result values and dual values
     """
     fixed_nlp = solve_data.working_model.clone()
-    add_feas_slacks(fixed_nlp)
+    add_feas_slacks(fixed_nlp, config)
     MindtPy = fixed_nlp.MindtPy_utils
     next(fixed_nlp.component_data_objects(Objective, active=True)).deactivate()
     for constr in fixed_nlp.component_data_objects(
@@ -208,16 +211,25 @@ def solve_NLP_feas(solve_data, config):
             constr.deactivate()
 
     MindtPy.MindtPy_feas.activate()
-    MindtPy.MindtPy_feas_obj = Objective(
-        expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]),
-        sense=minimize)
+    if config.feasibility_norm == 'L1':
+        MindtPy.MindtPy_feas_obj = Objective(
+            expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]),
+            sense=minimize)
+    elif config.feasibility_norm == 'L2':
+        MindtPy.MindtPy_feas_obj = Objective(
+            expr=sum(s*s for s in MindtPy.MindtPy_feas.slack_var[...]),
+            sense=minimize)
+    else:
+        MindtPy.MindtPy_feas_obj = Objective(
+            expr=MindtPy.MindtPy_feas.slack_var,
+            sense=minimize)
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
 
     with SuppressInfeasibleWarning():
         feas_soln = SolverFactory(config.nlp_solver).solve(
             fixed_nlp, **config.nlp_solver_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal:
+    if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
         copy_var_list_values(
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,

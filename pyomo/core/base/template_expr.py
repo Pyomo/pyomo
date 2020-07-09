@@ -16,4 +16,4 @@ from pyomo.common.deprecation import deprecation_warning
 deprecation_warning(
     'The pyomo.core.base.template_expr module is deprecated.  '
     'Import expression template objects from pyomo.core.expr.template_expr.',
-    version='TBD')
+    version='5.7')

@@ -1,6 +1,6 @@
 .. _datarecsection:
 
-Data Reconciliation using parmest
+Data Reconciliation 
 =================================
 
 The method :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`

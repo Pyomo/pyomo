@@ -46,6 +46,7 @@ jobs:
         - os: ubuntu-latest
           python: 3.7
           mpi: 3
+          skip_doctest: 1
           TARGET: linux
           PYENV: conda
           PACKAGES: mpi4py
@@ -93,7 +94,18 @@ jobs:
       id: download-cache
       with:
         path: cache/download
-        key: download-v3-${{runner.os}}
+        key: download-v4-${{runner.os}}
+
+    - name: Configure curl
+      run: |
+        CURLRC="$(cat <<EOF
+           retry = 0
+           max-time = 30
+        EOF
+        )"
+        echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
+        echo "$CURLRC" > ${GITHUB_WORKSPACE}/_curlrc
+        echo "::set-env name=CURL_HOME::$GITHUB_WORKSPACE"
 
     - name: Update OSX
       if: matrix.TARGET == 'osx'
@@ -212,10 +224,12 @@ jobs:
                 echo "IDAES Ipopt not available on OSX"
                 exit 0
             elif test "${{matrix.TARGET}}" == linux; then
-                curl --retry 8 -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
                     > $IPOPT_TAR
             else
-                curl --retry 8 -L $URL/idaes-solvers-windows-64.tar.gz \
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-solvers-windows-64.tar.gz \
                     $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
             fi
         fi
@@ -308,7 +322,7 @@ jobs:
             mkdir -p "$INSTALL_DIR"
             INSTALLER="$INSTALL_DIR/gjh_asl_json.zip"
             URL="https://codeload.github.com/ghackebeil/gjh_asl_json/zip/master"
-            curl --retry 8 -L $URL > $INSTALLER
+            curl --max-time 150 --retry 8 -L $URL > $INSTALLER
             cd $INSTALL_DIR
             unzip -q $INSTALLER
             cd gjh_asl_json-master/Thirdparty
@@ -388,6 +402,11 @@ jobs:
             --eval-attr="mpi and (not fragile)" \
             pyomo `pwd`/pyomo-model-libraries
 
+    - name: Run documentation tests
+      if: matrix.skip_doctest == 0
+      run: |
+        make -C doc/OnlineDocs doctest -d
+
     - name: Process code coverage report
       env:
         CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
@@ -395,13 +414,28 @@ jobs:
         coverage combine
         coverage report -i
         coverage xml -i
-        i=0
-        while : ; do
-            curl --retry 8 -L https://codecov.io/bash -o codecov.sh
-            bash codecov.sh -Z -X gcov -f coverage.xml
+        set +e
+        # Always attempt to update the codecov script, but fall back on
+        # the previously cached script if it fails
+        CODECOV="${GITHUB_WORKSPACE}/cache/download/codecov.sh"
+        for i in `seq 3`; do
+            echo "Downloading current codecov script (attempt ${i})"
+            curl -L https://codecov.io/bash -o $CODECOV
             if test $? == 0; then
                 break
-            elif test $i -ge 4; then
+            fi
+            DELAY=$(( RANDOM % 30 + 30))
+            echo "Pausing $DELAY seconds before re-attempting download"
+            sleep $DELAY
+        done
+        i=0
+        while : ; do
+            ((i+=1))
+            echo "Uploading coverage to codecov (attempt ${i})"
+            bash $CODECOV -Z -X gcov -X s3 -f coverage.xml
+            if test $? == 0; then
+                break
+            elif test $i -ge 5; then
                 exit 1
             fi
             DELAY=$(( RANDOM % 30 + 30))
