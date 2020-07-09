@@ -87,46 +87,16 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
-    def test_ECP_Proposal_with_int_cuts(self):
-        """Test the extended cutting plane decomposition algorithm."""
-        with SolverFactory('mindtpy') as opt:
-            model = ProposalModel()
-            print('\n Solving Proposal problem with extended cutting plane(integer cuts)')
-            results = opt.solve(model, strategy='ECP',
-                                mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0],
-                                add_integer_cuts=True,
-                                integer_to_binary=True  # if we use lazy callback, we cannot set integer_to_binary True
-                                )
-
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
-            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
-
     def test_ECP_ConstraintQualificationExample(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print('\n Solving Constraint Qualification Example with extended cutting plane')
             results = opt.solve(model, strategy='ECP',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0]
+                                nlp_solver=required_solvers[0], bound_tolerance = 1e-5
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
-            self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
-
-    def test_ECP_ConstraintQualificationExample_integer_cut(self):
-        with SolverFactory('mindtpy') as opt:
-            model = ConstraintQualificationExample()
-            print(
-                '\n Solving Constraint Qualification Example with extended cutting plane(integer cut)')
-            results = opt.solve(model, strategy='ECP',
-                                mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0],
-                                add_integer_cuts=True
-                                )
-            self.assertIn(results.solver.termination_condition,
-                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_ECP_OnlineDocExample(self):
@@ -135,10 +105,10 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving Online Doc Example with extended cutting plane')
             results = opt.solve(model, strategy='ECP',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0]
+                                nlp_solver=required_solvers[0], bound_tolerance=1e-3
                                 )
-            self.assertIn(results.solver.termination_condition,
-                          [TerminationCondition.optimal, TerminationCondition.feasible])
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(
                 value(model.objective.expr), 2.438447, places=2)
 
@@ -148,11 +118,11 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving Online Doc Example with extended cutting plane')
             results = opt.solve(model, strategy='ECP',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0],
+                                nlp_solver=required_solvers[0], bound_tolerance=1e-3,
                                 feasibility_norm="L_infinity"
                                 )
-            self.assertIn(results.solver.termination_condition,
-                          [TerminationCondition.optimal, TerminationCondition.feasible])
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(
                 value(model.objective.expr), 2.438447, places=2)
 
@@ -243,6 +213,7 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
+
 
 if __name__ == "__main__":
     unittest.main()

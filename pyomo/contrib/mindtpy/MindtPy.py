@@ -67,6 +67,12 @@ class MindtPySolver(object):
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods."
     ))
+    CONFIG.declare("stalling_limit", ConfigValue(
+        default=10,
+        domain=PositiveInt,
+        description="Stalling limit",
+        doc="Stalling limit for progress in the decomposition methods."
+    ))
     CONFIG.declare("time_limit", ConfigValue(
         default=600,
         domain=PositiveInt,
@@ -109,7 +115,7 @@ class MindtPySolver(object):
             "multiplied by this number and added to the objective."
     ))
     CONFIG.declare("ecp_tolerance", ConfigValue(
-        default=1E-5,
+        default=None,
         domain=PositiveFloat,
         description="ECP tolerance",
         doc="Feasibility tolerance used to determine the stopping criterion in"
