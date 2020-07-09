@@ -214,15 +214,19 @@ def add_affine_cuts(solve_data, config):
         ccStart = mc_eqn.concave()
         cvStart = mc_eqn.convex()
 
-        valid = True
+        concave_cut_valid = True
+        convex_cut_valid = True
         for var in vars_in_constr:
             if not var.fixed:
-                if ccSlope[var] == float('nan') or ccSlope[var] == float('inf') or cvSlope[var] == float('nan') or cvSlope[var] == float('inf'):
-                    valid = False
-                    break
-        if ccStart == float('nan') or ccStart == float('inf') or cvStart == float('nan') or cvStart == float('inf'):
-            valid = False
-        if valid is False:
+                if ccSlope[var] == float('nan') or ccSlope[var] == float('inf'):
+                    concave_cut_valid = False
+                if cvSlope[var] == float('nan') or cvSlope[var] == float('inf'):
+                    convex_cut_valid = False
+        if ccStart == float('nan') or ccStart == float('inf'):
+            concave_cut_valid = False
+        if cvStart == float('nan') or cvStart == float('inf'):
+            convex_cut_valid = False
+        if (concave_cut_valid or convex_cut_valid) is False:
             continue
 
         ub_int = min(constr.upper, mc_eqn.upper()
@@ -239,14 +243,17 @@ def add_affine_cuts(solve_data, config):
                 doc="Block holding affine constraints")
             aff_utils.MindtPy_aff_cons = ConstraintList()
         aff_cuts = aff_utils.MindtPy_aff_cons
-        concave_cut = sum(ccSlope[var] * (var - var.value)
-                          for var in vars_in_constr
-                          if not var.fixed) + ccStart >= lb_int
-        convex_cut = sum(cvSlope[var] * (var - var.value)
-                         for var in vars_in_constr
-                         if not var.fixed) + cvStart <= ub_int
-        aff_cuts.add(expr=concave_cut)
-        aff_cuts.add(expr=convex_cut)
-        counter += 2
+        if concave_cut_valid:
+            concave_cut = sum(ccSlope[var] * (var - var.value)
+                              for var in vars_in_constr
+                              if not var.fixed) + ccStart >= lb_int
+            aff_cuts.add(expr=concave_cut)
+            counter += 1
+        if convex_cut_valid:
+            convex_cut = sum(cvSlope[var] * (var - var.value)
+                             for var in vars_in_constr
+                             if not var.fixed) + cvStart <= ub_int
+            aff_cuts.add(expr=convex_cut)
+            counter += 1
 
     config.logger.info("Added %s affine cuts" % counter)

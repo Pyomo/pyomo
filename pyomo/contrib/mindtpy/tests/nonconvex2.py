@@ -1,3 +1,14 @@
+"""Problem B in paper "Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs"
+
+Ref:
+Kesavan P, Allgor R J, Gatzke E P, et al. Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs[J]. Mathematical Programming, 2004, 100(3): 517-535.
+
+Problem type:   nonconvex MINLP
+        size:   8  binary variable
+                3  continuous variables
+                7  constraints
+
+"""
 from pyomo.environ import *
 
 

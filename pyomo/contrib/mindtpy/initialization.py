@@ -70,8 +70,6 @@ def MindtPy_initialize_master(solve_data, config):
         else:
             handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                     solve_data, config)
-    # if MindtPy.find_component('objective_value') is not None:
-    #     MindtPy.objective_value.value = 0
 
 
 def init_rNLP(solve_data, config):

@@ -9,7 +9,6 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
 from pyomo.core import minimize, Objective, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time
-# from pyomo.contrib.mindtpy.util import bound_fix
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 
@@ -25,7 +24,7 @@ def MindtPy_iteration_loop(solve_data, config):
             % solve_data.mip_iter)
 
         if algorithm_should_terminate(solve_data, config, check_cycling=False):
-            cuts_add_last_iteration = True
+            last_iter_cuts = True
             break
 
         solve_data.mip_subiter = 0
@@ -37,7 +36,7 @@ def MindtPy_iteration_loop(solve_data, config):
                 handle_master_mip_optimal(master_mip, solve_data, config)
             elif master_mip_results.solver.termination_condition is tc.infeasible:
                 handle_master_mip_infeasible(master_mip, solve_data, config)
-                cuts_add_last_iteration = True
+                last_iter_cuts = True
                 break
             else:
                 handle_master_mip_other_conditions(master_mip, master_mip_results,
@@ -48,7 +47,7 @@ def MindtPy_iteration_loop(solve_data, config):
             raise NotImplementedError()
 
         if algorithm_should_terminate(solve_data, config, check_cycling=True):
-            cuts_add_last_iteration = False
+            last_iter_cuts = False
             break
 
         if config.single_tree is False:  # if we don't use lazy callback, i.e. LP_NLP
@@ -104,7 +103,7 @@ def MindtPy_iteration_loop(solve_data, config):
     # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
     if config.add_nogood_cuts:
-        bound_fix(solve_data, config, cuts_add_last_iteration)
+        bound_fix(solve_data, config, last_iter_cuts)
 
 
 def algorithm_should_terminate(solve_data, config, check_cycling):
@@ -179,11 +178,11 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     return False
 
 
-def bound_fix(solve_data, config, cuts_add_last_iteration):
+def bound_fix(solve_data, config, last_iter_cuts):
     config.zero_tolerance = 1E-4
     # Solve NLP subproblem
     # The constraint linearization happens in the handlers
-    if cuts_add_last_iteration is False:
+    if last_iter_cuts is False:
         fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
             solve_data, config)
         if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:

@@ -1,4 +1,4 @@
-"""Tests for the MINDT solver plugin."""
+"""Tests for the MindtPy solver plugin."""
 from math import fabs
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
@@ -22,7 +22,7 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('baron', 'cplex')
+required_solvers = ('ipopt', 'cplex')
 # required_solvers = ('gams', 'gams')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
@@ -37,7 +37,7 @@ else:
                  "Symbolic differentiation is not available")
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
-    '''
+
     def test_GOA_8PP(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -83,7 +83,6 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
-    '''
 
     def test_GOA_8PP_sympy(self):
         """Test the global outer approximation decomposition algorithm."""
@@ -99,7 +98,7 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
-    '''
+
     def test_GOA_MINLP_simple(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -286,7 +285,6 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(
                 value(model.objective.expr), -17, places=2)
-    '''
 
 
 if __name__ == "__main__":
