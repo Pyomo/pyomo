@@ -145,11 +145,11 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 #             - slack_var <= 0)
 
 
-def add_int_cut(var_values, solve_data, config, feasible=False):
-    if not config.add_integer_cuts:
+def add_nogood_cuts(var_values, solve_data, config, feasible=False):
+    if not config.add_nogood_cuts:
         return
 
-    config.logger.info("Adding integer cuts")
+    config.logger.info("Adding nogood cuts")
 
     m = solve_data.mip
     MindtPy = m.MindtPy_utils

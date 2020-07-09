@@ -209,7 +209,7 @@ class MindtPySolver(object):
         description="Convert integer variables to binaries (for integer cuts).",
         domain=bool
     ))
-    CONFIG.declare("add_integer_cuts", ConfigValue(
+    CONFIG.declare("add_nogood_cuts", ConfigValue(
         default=False,
         description="Add integer cuts (no-good cuts) to binary variables to disallow same integer solution again."
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
@@ -263,7 +263,7 @@ class MindtPySolver(object):
     ))
     CONFIG.declare("use_mcpp", ConfigValue(
         default=False,
-        description="use mcpp for to set bound for variable 'objective_value' introduced when the objective function is nonlinear.",
+        description="use package MC++ to set a bound for variable 'objective_value', which is introduced when the original problem's objective function is nonlinear.",
         domain=bool
     ))
 
@@ -297,7 +297,7 @@ class MindtPySolver(object):
         if config.single_tree:
             config.iteration_limit = 1
             config.add_slack = False
-            config.add_integer_cuts = False
+            config.add_nogood_cuts = False
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
                 "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
@@ -306,7 +306,7 @@ class MindtPySolver(object):
             config.add_slack = False
 
         if config.strategy == "GOA":
-            config.add_integer_cuts = True
+            config.add_nogood_cuts = True
             config.add_slack = True
             config.use_mcpp = True
             config.integer_to_binary = True

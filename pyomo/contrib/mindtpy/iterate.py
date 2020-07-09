@@ -101,9 +101,9 @@ def MindtPy_iteration_loop(solve_data, config):
         #             'Switching to OA.'.format(max_nonimprove_iter))
         #         config.strategy = 'OA'
 
-    # if add_integer_cuts is True, the bound obtained in the last iteration is no reliable.
+    # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_integer_cuts:
+    if config.add_nogood_cuts:
         bound_fix(solve_data, config, cuts_add_last_iteration)
 
 

@@ -22,7 +22,7 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('ipopt', 'cplex')
+required_solvers = ('baron', 'cplex')
 # required_solvers = ('gams', 'gams')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
@@ -37,7 +37,7 @@ else:
                  "Symbolic differentiation is not available")
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
-
+    '''
     def test_GOA_8PP(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -47,27 +47,27 @@ class TestMindtPy(unittest.TestCase):
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_integer_cuts=True,
+                                add_nogood_cuts=True,
                                 bound_tolerance=1E-5)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    # def test_GOA_8PP_init_max_binary(self):
-    #     """Test the outer approximation decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
-    #         print('\n Solving 8PP problem with Outer Approximation(max_binary)')
-    #         results = opt.solve(model, strategy='GOA',
-    #                             init_strategy='max_binary',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver=required_solvers[0],
-    #                             add_integer_cuts=True, tee=True)
+    def test_GOA_8PP_init_max_binary(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with Outer Approximation(max_binary)')
+            results = opt.solve(model, strategy='GOA',
+                                init_strategy='max_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_nogood_cuts=True)
 
-    #         self.assertIs(results.solver.termination_condition,
-    #                       TerminationCondition.optimal)
-    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_L2_norm(self):
         """Test the global outer approximation decomposition algorithm."""
@@ -78,11 +78,12 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 feasibility_norm='L2',
-                                add_integer_cuts=True)
+                                add_nogood_cuts=True)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+    '''
 
     def test_GOA_8PP_sympy(self):
         """Test the global outer approximation decomposition algorithm."""
@@ -93,12 +94,12 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 differentiate_mode='sympy',
-                                add_integer_cuts=True)
+                                add_nogood_cuts=True)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
-
+    '''
     def test_GOA_MINLP_simple(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -108,7 +109,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 obj_bound=10,
-                                add_integer_cuts=True)
+                                add_nogood_cuts=True)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -124,7 +125,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 obj_bound=10,
-                                add_integer_cuts=True)
+                                add_nogood_cuts=True)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -139,7 +140,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 obj_bound=10,
-                                add_integer_cuts=True,
+                                add_nogood_cuts=True,
                                 use_mcpp=True)
 
             self.assertIs(results.solver.termination_condition,
@@ -154,7 +155,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_integer_cuts=True,
+                                add_nogood_cuts=True,
                                 integer_to_binary=True)
 
             self.assertIs(results.solver.termination_condition,
@@ -169,7 +170,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_integer_cuts=True,
+                                add_nogood_cuts=True,
                                 integer_to_binary=True  # if we use lazy callback, we cannot set integer_to_binary True
                                 )
 
@@ -185,7 +186,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_integer_cuts=True,
+                                add_nogood_cuts=True,
                                 )
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -199,7 +200,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_integer_cuts=True
+                                add_nogood_cuts=True
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -212,7 +213,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_integer_cuts=True
+                                add_nogood_cuts=True
                                 )
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -227,7 +228,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 feasibility_norm="L_infinity",
-                                add_integer_cuts=True,
+                                add_nogood_cuts=True,
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -285,6 +286,7 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(
                 value(model.objective.expr), -17, places=2)
+    '''
 
 
 if __name__ == "__main__":

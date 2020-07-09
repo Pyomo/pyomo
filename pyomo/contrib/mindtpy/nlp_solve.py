@@ -2,7 +2,7 @@
 from __future__ import division
 
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_int_cut, add_affine_cuts)
+                                                  add_nogood_cuts, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
@@ -135,8 +135,8 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
     # may be activated as needed in certain situations or for certain
     # values of option flags.
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
-    if config.add_integer_cuts:
-        add_int_cut(var_values, solve_data, config, feasible=True)
+    if config.add_nogood_cuts:
+        add_nogood_cuts(var_values, solve_data, config, feasible=True)
 
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
@@ -188,9 +188,9 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
             add_affine_cuts(solve_data, config)
     # Add an integer cut to exclude this discrete option
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
-    if config.add_integer_cuts:
+    if config.add_nogood_cuts:
         # excludes current discrete option
-        add_int_cut(var_values, solve_data, config)
+        add_nogood_cuts(var_values, solve_data, config)
 
 
 def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
@@ -202,9 +202,9 @@ def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
             'NLP subproblem failed to converge within iteration limit.')
         var_values = list(
             v.value for v in fixed_nlp.MindtPy_utils.variable_list)
-        if config.add_integer_cuts:
+        if config.add_nogood_cuts:
             # excludes current discrete option
-            add_int_cut(var_values, solve_data, config)
+            add_nogood_cuts(var_values, solve_data, config)
     else:
         raise ValueError(
             'MindtPy unable to handle NLP subproblem termination '
