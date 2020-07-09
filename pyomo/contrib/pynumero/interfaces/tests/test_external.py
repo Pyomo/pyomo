@@ -17,7 +17,6 @@ from pyomo.core.base.external import (PythonCallbackFunction,
                                       AMPLExternalFunction)
 from pyomo.opt import check_available_solvers
 
-
 class TestAMPLExternalFunction(unittest.TestCase):
     def assertListsAlmostEqual(self, first, second, places=7, msg=None):
         self.assertEqual(len(first), len(second))
@@ -36,6 +35,7 @@ class TestAMPLExternalFunction(unittest.TestCase):
         model.o = Objective(expr=model.z_func(model.x))
         nlp = PyomoNLP(model)
         self.assertAlmostEqual(nlp.evaluate_objective(), 2, 7)
+        assert "AMPLFUNC" not in os.environ
 
 
 if __name__ == "__main__":
