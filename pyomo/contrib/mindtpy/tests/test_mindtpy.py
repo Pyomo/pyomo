@@ -137,8 +137,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0],
-                                obj_bound=10)
+                                nlp_solver=required_solvers[0])
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -152,8 +151,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0],
-                                obj_bound=10)
+                                nlp_solver=required_solvers[0])
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -166,8 +164,7 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving MINLP3_simple problem with Outer Approximation')
             results = opt.solve(model, strategy='OA', init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0],
-                                obj_bound=10)
+                                nlp_solver=required_solvers[0])
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -337,7 +334,6 @@ class TestMindtPy(unittest.TestCase):
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                obj_bound=10,
                                 add_slack=True)
 
             self.assertIs(results.solver.termination_condition,
