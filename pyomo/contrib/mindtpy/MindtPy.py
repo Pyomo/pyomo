@@ -56,7 +56,7 @@ class MindtPySolver(object):
 
     CONFIG = ConfigBlock("MindtPy")
     CONFIG.declare("bound_tolerance", ConfigValue(
-        default=1E-5,
+        default=1E-6,
         domain=PositiveFloat,
         description="Bound tolerance",
         doc="Relative tolerance for bound feasibility checks."
@@ -85,7 +85,7 @@ class MindtPySolver(object):
             "Benders Decomposition (GBD)."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
-        default="rNLP",
+        default=None,
         domain=In(["rNLP", "initial_binary", "max_binary"]),
         description="Initialization strategy",
         doc="Initialization strategy used by any method. Currently the "
@@ -108,8 +108,8 @@ class MindtPySolver(object):
             "slack variables corresponding to all the constraints get "
             "multiplied by this number and added to the objective."
     ))
-    CONFIG.declare("ECP_tolerance", ConfigValue(
-        default=1E-4,
+    CONFIG.declare("ecp_tolerance", ConfigValue(
+        default=1E-5,
         domain=PositiveFloat,
         description="ECP tolerance",
         doc="Feasibility tolerance used to determine the stopping criterion in"
@@ -288,7 +288,7 @@ class MindtPySolver(object):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
 
-        # configration confirmation
+        # configuration confirmation
         if config.single_tree:
             config.iteration_limit = 1
             config.add_slack = False
@@ -299,6 +299,10 @@ class MindtPySolver(object):
         # if the slacks fix to zero, just don't add them
         if config.max_slack == 0.0:
             config.add_slack = False
+
+        # if ecp tolerance is not provided use bound tolerance
+        if config.ecp_tolerance is None:
+            config.ecp_tolerance = config.bound_tolerance
 
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
