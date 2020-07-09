@@ -238,7 +238,6 @@ class TestMindtPy(unittest.TestCase):
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                obj_bound=10,
                                 add_slack=True)
 
             self.assertIs(results.solver.termination_condition,
