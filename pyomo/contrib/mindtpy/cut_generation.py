@@ -110,6 +110,13 @@ def add_ecp_cuts(target_model, solve_data, config,
         constr_vars = list(identify_variables(constr.body))
         jacs = solve_data.jacobians
 
+        if constr.has_lb() and constr.has_ub():
+            config.logger.warning(
+                'constraint {} has both a lower '
+                'and upper bound.'
+                '\n'.format(
+                    constr))
+            break
         if constr.has_ub():
             try:
                 upper_slack = constr.uslack()
