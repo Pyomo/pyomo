@@ -222,7 +222,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         Statistical distribution used to define a confidence region, 
         options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, and 
         'Rect' for rectangular.
-		Confidence interval is a 2D slice, using linear interpolation at theta*.
+        Confidence interval is a 2D slice, using linear interpolation at theta*.
     axis_limits: dict, optional
         Axis limits in the format {variable: [min, max]}
     title: string, optional
