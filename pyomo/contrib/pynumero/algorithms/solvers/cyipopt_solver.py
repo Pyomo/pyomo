@@ -26,6 +26,7 @@ except ImportError:
                       ' https://github.com/matthias-k/cyipopt.git')
 import numpy as np
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.core.base import Suffix
 import six
 import sys
 import os
@@ -61,6 +62,14 @@ class CyIpoptProblemInterface(object):
     @abc.abstractmethod
     def g_ub(self):
         """Return the upper bounds on the constraints as a numpy ndarray
+        """
+        pass
+
+    @abc.abstractmethod
+    def scaling_factors(self):
+        """Return the values for scaling factors as a tuple
+        (objective_scaling, x_scaling, g_scaling). Return None
+        if the scaling factors are to be ignored
         """
         pass
 
@@ -132,7 +141,7 @@ class CyIpoptProblemInterface(object):
         """
         # TODO: Document the arguments
         pass
-    
+
 
 class CyIpoptNLP(CyIpoptProblemInterface):
     def __init__(self, nlp):
@@ -192,6 +201,9 @@ class CyIpoptNLP(CyIpoptProblemInterface):
     def g_ub(self):
         return self._nlp.constraints_ub()
     
+    def scaling_factors(self):
+        return None, None, None
+
     def objective(self, x):
         self._set_primals_if_necessary(x)
         return self._nlp.evaluate_objective()
@@ -216,7 +228,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         row = np.compress(self._hess_lower_mask, self._hess_lag.row)
         col = np.compress(self._hess_lower_mask, self._hess_lag.col)
         return row, col
-
 
     def hessian(self, x, y, obj_factor):
         self._set_primals_if_necessary(x)
@@ -304,6 +315,19 @@ class CyIpoptSolver(object):
                                        cu=gu
         )
 
+        # check if we need scaling
+        obj_scaling, x_scaling, g_scaling = self._problem.scaling_factors()
+        if obj_scaling is not None or x_scaling is not None or g_scaling is not None:
+            # need to set scaling factors
+            if obj_scaling is None:
+                obj_scaling = 1.0
+            if x_scaling is None:
+                x_scaling = np.ones(nx)
+            if g_scaling is None:
+                g_scaling = np.ones(ng)
+            
+            cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
+
         # add options
         for k, v in self._options.items():
             cyipopt_solver.addOption(k, v)
@@ -316,3 +340,46 @@ class CyIpoptSolver(object):
             os.dup2(newstdout, 1)
 
         return x, info
+
+class CyIpoptPyomoNLP(CyIpoptNLP):
+    def __init__(self, pyomo_nlp):
+        """This class provides a CyIpoptProblemInterface for use
+        with the CyIpoptSolver class that can take in a PyNumero
+        PyomoNLP interface. This class provides some extended
+        functionality over the CyIpoptNLP interface
+        """
+        super(CyIpoptPyomoNLP,self).__init__(pyomo_nlp)
+    
+    def scaling_factors(self):
+        # check if the Pyomo model in the PyomoNLP has
+        # scaling factors as a suffix
+        nlp = self._nlp
+        pyomo_model = nlp.pyomo_model()
+        scaling_suffix = pyomo_model.component('scaling_factor')
+        if scaling_suffix is None or type(scaling_suffix) is not Suffix:
+            return None, None, None
+
+        # we have the scaling suffix - initialize scaling factors
+        # and fill in any that are specified
+        obj_scaling = 1.0
+        x_scaling = np.ones(nlp.n_primals())
+        g_scaling = np.ones(nlp.n_constraints())
+        
+        obj = nlp.get_pyomo_objective()
+        if obj in scaling_suffix:
+            obj_scaling = scaling_suffix[obj]
+
+        for i,v in enumerate(nlp.get_pyomo_variables()):
+            if v in scaling_suffix:
+                x_scaling[i] = scaling_suffix[v]
+
+        for i,c in enumerate(nlp.get_pyomo_constraints()):
+            if c in scaling_suffix:
+                g_scaling[i] = scaling_suffix[c]
+
+        return obj_scaling, x_scaling, g_scaling
+
+            
+
+
+            

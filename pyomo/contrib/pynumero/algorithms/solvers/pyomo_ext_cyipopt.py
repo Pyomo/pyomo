@@ -281,7 +281,10 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
     def g_ub(self):
         return self._gU.copy()
-    
+
+    def scaling_factors(self):
+        return None, None, None
+
     def objective(self, primals):
         self._set_primals_if_necessary(primals)
         return self._pyomo_nlp.evaluate_objective()

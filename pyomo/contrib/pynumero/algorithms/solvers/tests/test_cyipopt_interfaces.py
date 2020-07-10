@@ -29,12 +29,12 @@ try:
 except ImportError:
     raise unittest.SkipTest("Pynumero needs cyipopt to run CyIpoptSolver tests")
 
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptNLP
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptNLP, CyIpoptPyomoNLP
 
 
 def create_model1():
     m = pyo.ConcreteModel()
-    m.x = pyo.Var([1, 2, 3], initialize=4.0)
+    m.x = pyo.Var([1,2,3], initialize=4.0)
     m.d = pyo.Constraint(expr=m.x[1] + m.x[2] ** 2 <= 18.0)
     m.c = pyo.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
     m.o = pyo.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
@@ -42,13 +42,123 @@ def create_model1():
     m.x[2].setlb(0.0)
     return m
 
-class TestCyIpoptNLP(unittest.TestCase):
+class TestCyIpoptNLPAndCyIpoptPyomoNLP(unittest.TestCase):
 
-    def test_model1(self):
+    def test_model1_CyIpoptNLP(self):
         model = create_model1()
         nlp = PyomoNLP(model)
         cynlp = CyIpoptNLP(nlp)
+        self._check_model1(nlp, cynlp)
 
+    def test_model1_CyIpoptPyomoNLP(self):
+        model = create_model1()
+        nlp = PyomoNLP(model)
+        cynlp = CyIpoptPyomoNLP(nlp)
+        self._check_model1(nlp, cynlp)
+
+    def test_model1_CyIpoptPyomoNLP_scaling(self):
+        m = create_model1()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.scaling_factor[m.o] = 1e-6 # scale the objective
+        m.scaling_factor[m.c] = 2.0  # scale the equality constraint
+        m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
+        m.scaling_factor[m.x[1]] = 4.0  # scale one of the x variables
+
+        cynlp = CyIpoptPyomoNLP(PyomoNLP(m))
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling == 1e-6)
+        self.assertTrue(len(x_scaling) == 3)
+        # vars are in order x[2], x[3], x[1]
+        self.assertTrue(x_scaling[0] == 1.0)
+        self.assertTrue(x_scaling[1] == 1.0)
+        self.assertTrue(x_scaling[2] == 4.0)
+        self.assertTrue(len(g_scaling) == 2)
+        # assuming the order is d then c
+        self.assertTrue(g_scaling[0] == 3.0)
+        self.assertTrue(g_scaling[1] == 2.0)
+
+        # test missing obj
+        m = create_model1()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        #m.scaling_factor[m.o] = 1e-6 # scale the objective
+        m.scaling_factor[m.c] = 2.0  # scale the equality constraint
+        m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
+        m.scaling_factor[m.x[1]] = 4.0  # scale the x variable
+
+        cynlp = CyIpoptPyomoNLP(PyomoNLP(m))
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling == 1.0)
+        self.assertTrue(len(x_scaling) == 3)
+        # vars are in order x[2], x[3], x[1]
+        self.assertTrue(x_scaling[0] == 1.0)
+        self.assertTrue(x_scaling[1] == 1.0)
+        self.assertTrue(x_scaling[2] == 4.0)
+        self.assertTrue(len(g_scaling) == 2)
+        # assuming the order is d then c
+        self.assertTrue(g_scaling[0] == 3.0)
+        self.assertTrue(g_scaling[1] == 2.0)
+
+        # test missing var
+        m = create_model1()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.scaling_factor[m.o] = 1e-6 # scale the objective
+        m.scaling_factor[m.c] = 2.0  # scale the equality constraint
+        m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
+        #m.scaling_factor[m.x] = 4.0  # scale the x variable
+
+        cynlp = CyIpoptPyomoNLP(PyomoNLP(m))
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling == 1e-6)
+        self.assertTrue(len(x_scaling) == 3)
+        # vars are in order x[2], x[3], x[1]
+        self.assertTrue(x_scaling[0] == 1.0)
+        self.assertTrue(x_scaling[1] == 1.0)
+        self.assertTrue(x_scaling[2] == 1.0)
+        self.assertTrue(len(g_scaling) == 2)
+        # assuming the order is d then c
+        self.assertTrue(g_scaling[0] == 3.0)
+        self.assertTrue(g_scaling[1] == 2.0)
+
+        # test missing c
+        m = create_model1()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.scaling_factor[m.o] = 1e-6 # scale the objective
+        #m.scaling_factor[m.c] = 2.0  # scale the equality constraint
+        m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
+        m.scaling_factor[m.x[1]] = 4.0  # scale the x variable
+
+        cynlp = CyIpoptPyomoNLP(PyomoNLP(m))
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling == 1e-6)
+        self.assertTrue(len(x_scaling) == 3)
+        # vars are in order x[2], x[3], x[1]
+        self.assertTrue(x_scaling[0] == 1.0)
+        self.assertTrue(x_scaling[1] == 1.0)
+        self.assertTrue(x_scaling[2] == 4.0)
+        self.assertTrue(len(g_scaling) == 2)
+        # assuming the order is d then c
+        self.assertTrue(g_scaling[0] == 3.0)
+        self.assertTrue(g_scaling[1] == 1.0)
+
+        # test missing all
+        m = create_model1()
+        #m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        #m.scaling_factor[m.o] = 1e-6 # scale the objective
+        #m.scaling_factor[m.c] = 2.0  # scale the equality constraint
+        #m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
+        #m.scaling_factor[m.x] = 4.0  # scale the x variable
+
+        cynlp = CyIpoptPyomoNLP(PyomoNLP(m))
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling is None)
+        self.assertTrue(x_scaling is None)
+        self.assertTrue(g_scaling is None)
+        
+    def _check_model1(self, nlp, cynlp):
         # test x_init
         expected_xinit = np.asarray([4.0, 4.0, 4.0], dtype=np.float64)
         xinit = cynlp.x_init()
