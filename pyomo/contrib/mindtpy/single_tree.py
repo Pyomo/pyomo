@@ -109,7 +109,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
     def add_lazy_affine_cuts(self, solve_data, config, opt):
         m = solve_data.mip
-        config.logger.info("Adding affine cuts.")
+        config.logger.info("Adding affine cuts")
         counter = 0
 
         for constr in m.MindtPy_utils.constraint_list:

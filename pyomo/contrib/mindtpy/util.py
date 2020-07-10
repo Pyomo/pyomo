@@ -62,7 +62,7 @@ def model_is_valid(solve_data, config):
             mipopt.solve(solve_data.original_model, **config.mip_solver_args)
             return False
 
-    if not hasattr(m, 'dual'):  # Set up dual value reporting
+    if not hasattr(m, 'dual') and config.use_dual:  # Set up dual value reporting
         m.dual = Suffix(direction=Suffix.IMPORT)
 
     # TODO if any continuous variables are multipled with binary ones, need

@@ -266,6 +266,11 @@ class MindtPySolver(object):
         description="use package MC++ to set a bound for variable 'objective_value', which is introduced when the original problem's objective function is nonlinear.",
         domain=bool
     ))
+    CONFIG.declare("use_dual", ConfigValue(
+        default=True,
+        description="use dual solution from the nlp solver to add OA cuts for equality constraints.",
+        domain=bool
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.

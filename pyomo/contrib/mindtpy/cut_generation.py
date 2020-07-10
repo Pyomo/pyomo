@@ -189,7 +189,7 @@ def add_nogood_cuts(var_values, solve_data, config, feasible=False):
 
 def add_affine_cuts(solve_data, config):
     m = solve_data.mip
-    config.logger.info("Adding affine cuts.")
+    config.logger.info("Adding affine cuts")
     counter = 0
 
     for constr in m.MindtPy_utils.constraint_list:
