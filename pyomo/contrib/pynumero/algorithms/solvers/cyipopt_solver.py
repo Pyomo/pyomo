@@ -26,7 +26,6 @@ except ImportError:
                       ' https://github.com/matthias-k/cyipopt.git')
 import numpy as np
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.core.base import Suffix
 import six
 import sys
 import os

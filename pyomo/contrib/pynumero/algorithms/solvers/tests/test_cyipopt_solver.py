@@ -10,8 +10,6 @@
 
 import pyutilib.th as unittest
 import pyomo.environ as pyo
-from pyutilib.misc import setup_redirect, reset_redirect
-from six import StringIO
 import os
 
 from pyomo.contrib.pynumero.dependencies import (

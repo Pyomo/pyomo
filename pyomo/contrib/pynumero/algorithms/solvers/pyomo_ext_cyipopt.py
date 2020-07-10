@@ -82,7 +82,8 @@ class ExternalInputOutputModel(object):
     # ToDo: Hessians not yet handled
 
 class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
-    def __init__(self, pyomo_model, ex_input_output_model, inputs, outputs, outputs_eqn_scaling=None):
+    def __init__(self, pyomo_model, ex_input_output_model, inputs, outputs,
+                 outputs_eqn_scaling=None):
         """
         Create an instance of this class to pass as a problem to CyIpopt.
 
@@ -198,13 +199,12 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         self._gU = np.concatenate((pyomo_nlp_con_ub, ex_con_ub))
 
         # create the scaling parameters if they are provided
-        have_scaling = False
         self._obj_scaling = self._pyomo_nlp.get_obj_scaling()
         self._primals_scaling = self._pyomo_nlp.get_primals_scaling()
         pyomo_constraints_scaling = self._pyomo_nlp.get_constraints_scaling()
         self._constraints_scaling = None
         # check if we need constraint scaling, and if so, add in the
-        # outpts_eqn_scaling
+        # outputs_eqn_scaling
         if pyomo_constraints_scaling is not None or outputs_eqn_scaling is not None:
             if pyomo_constraints_scaling is None:
                 pyomo_constraints_scaling = np.ones(self._pyomo_nlp.n_primals(), dtype=np.float64)
