@@ -116,12 +116,12 @@ def add_ecp_cuts(target_model, solve_data, config,
                 'and upper bound.'
                 '\n'.format(
                     constr))
-            break
+            continue
         if constr.has_ub():
             try:
                 upper_slack = constr.uslack()
             except (ValueError, OverflowError):
-                config.logger.info(
+                config.logger.warning(
                     'constraint {} has caused either a '
                     'ValueError or OverflowError.'
                     '\n'.format(
@@ -144,7 +144,7 @@ def add_ecp_cuts(target_model, solve_data, config,
             try:
                 lower_slack = constr.lslack()
             except (ValueError, OverflowError):
-                config.logger.info(
+                config.logger.warning(
                     'constraint {} has caused either a '
                     'ValueError or OverflowError.'
                     '\n'.format(

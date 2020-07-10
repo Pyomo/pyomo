@@ -33,6 +33,63 @@ else:
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
+    def test_ECP_8PP(self):
+        """Test the extended cutting plane decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with extended cutting plane')
+            results = opt.solve(model, strategy='ECP',
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                bound_tolerance=1E-5)
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_ECP_8PP_init_max_binary(self):
+        """Test the extended cutting plane decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with extended cutting plane(max_binary)')
+            results = opt.solve(model, strategy='ECP',
+                                init_strategy='max_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0], obj_bound = 5500)
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_ECP_8PP_L2_norm(self):
+        """Test the extended cutting plane decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with extended cutting plane(max_binary)')
+            results = opt.solve(model, strategy='ECP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0], obj_bound = 5500,
+                                feasibility_norm='L2')
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_ECP_8PP_sympy(self):
+        """Test the extended cutting plane decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with extended cutting plane(max_binary)')
+            results = opt.solve(model, strategy='ECP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0], obj_bound = 5500,
+                                differentiate_mode='sympy')
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
     def test_ECP_MINLP_simple(self):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:

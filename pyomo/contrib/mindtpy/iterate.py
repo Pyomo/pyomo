@@ -190,16 +190,23 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
 
     # Check if algorithm is stalling
-    if len(solve_data.LB_progress) >= 10:
-        if abs(solve_data.LB_progress[-1] - solve_data.LB_progress[-10]) <= config.zero_tolerance:
+    if len(solve_data.LB_progress) >= config.stalling_limit:
+        if abs(solve_data.LB_progress[-1] - solve_data.LB_progress[-config.stalling_limit]) <= config.zero_tolerance:
             config.logger.info(
                 'Algorithm is not making enough progress. '
                 'Exiting iteration loop.')
             config.logger.info(
                 'Final bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))
-            solve_data.best_solution_found = solve_data.working_model.clone()
-            solve_data.results.solver.termination_condition = tc.feasible
+            if solve_data.best_solution_found is not None:
+                solve_data.results.solver.termination_condition = tc.feasible
+            else:
+                solve_data.best_solution_found = solve_data.working_model.clone()
+                config.logger.warning(
+                    'Algorithm did not find a feasible solution. '
+                    'Returning best bound solution. Consider increasing stalling_limit or bound_tolerance.')
+                solve_data.results.solver.termination_condition = tc.noSolution
+
             return True
 
     if config.strategy == 'ECP':
