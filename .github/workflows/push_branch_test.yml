@@ -37,6 +37,11 @@ jobs:
           TARGET: osx
           PYENV: pip
 
+        - os: macos-latest
+          python: 3.7
+          TARGET: osx
+          PYENV: pip
+
         - os: windows-latest
           python: 3.5
           TARGET: win
@@ -134,7 +139,7 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python }}
 
