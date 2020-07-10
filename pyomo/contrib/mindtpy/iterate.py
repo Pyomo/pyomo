@@ -179,6 +179,8 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
 
 
 def bound_fix(solve_data, config, last_iter_cuts):
+    config.logger.info(
+        'Solve the master problem without the last nogood cut to fix the bound.')
     config.zero_tolerance = 1E-4
     # Solve NLP subproblem
     # The constraint linearization happens in the handlers
@@ -206,7 +208,6 @@ def bound_fix(solve_data, config, last_iter_cuts):
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.0;')
-    # solve_data.mip.pprint()
     master_mip_results = masteropt.solve(
         solve_data.mip, **mip_args)
     main_objective = next(
@@ -219,7 +220,9 @@ def bound_fix(solve_data, config, last_iter_cuts):
         solve_data.UB = min(
             [master_mip_results.problem.upper_bound] + solve_data.UB_progress[:-1])
         solve_data.UB_progress.append(solve_data.UB)
-
+    config.logger.info(
+        'Fixed bound values: LB: {}  UB: {}'.
+        format(solve_data.LB, solve_data.UB))
     # Check bound convergence
     if solve_data.LB + config.bound_tolerance >= solve_data.UB:
         solve_data.results.solver.termination_condition = tc.optimal

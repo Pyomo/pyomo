@@ -29,7 +29,8 @@ def MindtPy_initialize_master(solve_data, config):
 
     m = solve_data.mip = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
-    m.dual.deactivate()
+    if config.use_dual:
+        m.dual.deactivate()
 
     if config.strategy == 'OA':
         calc_jacobians(solve_data, config)  # preload jacobians
@@ -87,7 +88,8 @@ def init_rNLP(solve_data, config):
     if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
         main_objective = next(m.component_data_objects(Objective, active=True))
         nlp_solution_values = list(v.value for v in MindtPy.variable_list)
-        dual_values = list(m.dual[c] for c in MindtPy.constraint_list)
+        dual_values = list(
+            m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut
         if main_objective.sense == minimize:
             solve_data.LB = value(main_objective.expr)
@@ -129,7 +131,8 @@ def init_max_binaries(solve_data, config):
 
     """
     m = solve_data.working_model.clone()
-    m.dual.deactivate()
+    if config.use_dual:
+        m.dual.deactivate()
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1
     config.logger.info(

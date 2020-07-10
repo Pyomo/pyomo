@@ -88,11 +88,14 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
         fixed_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    for c in fixed_nlp.tmp_duals:
-        if fixed_nlp.dual.get(c, None) is None:
-            fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
-    dual_values = list(fixed_nlp.dual[c]
-                       for c in fixed_nlp.MindtPy_utils.constraint_list)
+    if config.use_dual:
+        for c in fixed_nlp.tmp_duals:
+            if fixed_nlp.dual.get(c, None) is None:
+                fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
+        dual_values = list(fixed_nlp.dual[c]
+                           for c in fixed_nlp.MindtPy_utils.constraint_list)
+    else:
+        dual_values = None
 
     main_objective = next(
         fixed_nlp.component_data_objects(Objective, active=True))
@@ -149,13 +152,16 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
     # TODO try something else? Reinitialize with different initial
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
-    for c in fixed_nlp.component_data_objects(ctype=Constraint):
-        rhs = c.upper if c. has_ub() else c.lower
-        c_geq = -1 if c.has_ub() else 1
-        fixed_nlp.dual[c] = (c_geq
-                             * max(0, c_geq * (rhs - value(c.body))))
-    dual_values = list(fixed_nlp.dual[c]
-                       for c in fixed_nlp.MindtPy_utils.constraint_list)
+    if config.use_dual:
+        for c in fixed_nlp.component_data_objects(ctype=Constraint):
+            rhs = c.upper if c. has_ub() else c.lower
+            c_geq = -1 if c.has_ub() else 1
+            fixed_nlp.dual[c] = (c_geq
+                                 * max(0, c_geq * (rhs - value(c.body))))
+        dual_values = list(fixed_nlp.dual[c]
+                           for c in fixed_nlp.MindtPy_utils.constraint_list)
+    else:
+        dual_values = None
 
     # if config.strategy == 'PSC' or config.strategy == 'GBD':
     #     for var in fixed_nlp.component_data_objects(ctype=Var, descend_into=True):

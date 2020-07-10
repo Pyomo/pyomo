@@ -213,12 +213,15 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
     def handle_lazy_NLP_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """Copies result to mip(explaination see below), updates bound, adds OA and integer cut,
-        stores best solution if new one is best"""
-        for c in fixed_nlp.tmp_duals:
-            if fixed_nlp.dual.get(c, None) is None:
-                fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
-        dual_values = list(fixed_nlp.dual[c]
-                           for c in fixed_nlp.MindtPy_utils.constraint_list)
+        stores best solution if new one is best """
+        if config.use_dual:
+            for c in fixed_nlp.tmp_duals:
+                if fixed_nlp.dual.get(c, None) is None:
+                    fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
+            dual_values = list(fixed_nlp.dual[c]
+                               for c in fixed_nlp.MindtPy_utils.constraint_list)
+        else:
+            dual_values = None
 
         main_objective = next(
             fixed_nlp.component_data_objects(Objective, active=True))
@@ -260,14 +263,17 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info('NLP subproblem was locally infeasible.')
-        for c in fixed_nlp.component_data_objects(ctype=Constraint):
-            rhs = ((0 if c.upper is None else c.upper)
-                   + (0 if c.lower is None else c.lower))
-            sign_adjust = 1 if value(c.upper) is None else -1
-            fixed_nlp.dual[c] = (sign_adjust
-                                 * max(0, sign_adjust * (rhs - value(c.body))))
-        dual_values = list(fixed_nlp.dual[c]
-                           for c in fixed_nlp.MindtPy_utils.constraint_list)
+        if config.use_dual:
+            for c in fixed_nlp.component_data_objects(ctype=Constraint):
+                rhs = ((0 if c.upper is None else c.upper)
+                       + (0 if c.lower is None else c.lower))
+                sign_adjust = 1 if value(c.upper) is None else -1
+                fixed_nlp.dual[c] = (sign_adjust
+                                     * max(0, sign_adjust * (rhs - value(c.body))))
+            dual_values = list(fixed_nlp.dual[c]
+                               for c in fixed_nlp.MindtPy_utils.constraint_list)
+        else:
+            dual_values = None
 
         config.logger.info('Solving feasibility problem')
         if config.initial_feas:

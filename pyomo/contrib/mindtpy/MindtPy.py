@@ -315,6 +315,10 @@ class MindtPySolver(object):
             config.add_slack = True
             config.use_mcpp = True
             config.integer_to_binary = True
+            config.use_dual = False
+
+        if config.nlp_solver == "baron":
+            config.use_dual = False
 
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()

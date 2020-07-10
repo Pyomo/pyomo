@@ -23,7 +23,6 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 
 required_solvers = ('ipopt', 'cplex')
-# required_solvers = ('gams', 'gams')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -50,8 +49,8 @@ class TestMindtPy(unittest.TestCase):
                                 add_nogood_cuts=True,
                                 bound_tolerance=1E-5)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_init_max_binary(self):
@@ -65,8 +64,8 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 add_nogood_cuts=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_L2_norm(self):
@@ -80,8 +79,8 @@ class TestMindtPy(unittest.TestCase):
                                 feasibility_norm='L2',
                                 add_nogood_cuts=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_sympy(self):
@@ -95,8 +94,8 @@ class TestMindtPy(unittest.TestCase):
                                 differentiate_mode='sympy',
                                 add_nogood_cuts=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_MINLP_simple(self):
@@ -201,8 +200,8 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 add_nogood_cuts=True
                                 )
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_GOA_OnlineDocExample(self):
