@@ -55,7 +55,11 @@ def f(root, file):
     OUTPUT.close()
 
 
-for root, dirs, files in os.walk(sys.argv[1]):
-    for file in files:
-        f(root, file)
+def generate_spy_files(root_dir):
+    for root, dirs, files in os.walk(root_dir):
+        for file in files:
+            f(root, file)
 
+
+if __name__ == '__main__':
+    generate_spy_files(sys.argv[1])

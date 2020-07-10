@@ -202,7 +202,7 @@ def solve_NLP_feas(solve_data, config):
     Returns: Result values and dual values
     """
     fixed_nlp = solve_data.working_model.clone()
-    add_feas_slacks(fixed_nlp)
+    add_feas_slacks(fixed_nlp, config)
     MindtPy = fixed_nlp.MindtPy_utils
     next(fixed_nlp.component_data_objects(Objective, active=True)).deactivate()
     for constr in fixed_nlp.component_data_objects(
@@ -211,9 +211,18 @@ def solve_NLP_feas(solve_data, config):
             constr.deactivate()
 
     MindtPy.MindtPy_feas.activate()
-    MindtPy.MindtPy_feas_obj = Objective(
-        expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]),
-        sense=minimize)
+    if config.feasibility_norm == 'L1':
+        MindtPy.MindtPy_feas_obj = Objective(
+            expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]),
+            sense=minimize)
+    elif config.feasibility_norm == 'L2':
+        MindtPy.MindtPy_feas_obj = Objective(
+            expr=sum(s*s for s in MindtPy.MindtPy_feas.slack_var[...]),
+            sense=minimize)
+    else:
+        MindtPy.MindtPy_feas_obj = Objective(
+            expr=MindtPy.MindtPy_feas.slack_var,
+            sense=minimize)
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
 
     with SuppressInfeasibleWarning():
