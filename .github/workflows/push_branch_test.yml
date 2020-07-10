@@ -37,11 +37,6 @@ jobs:
           TARGET: osx
           PYENV: pip
 
-        - os: macos-latest
-          python: 3.7
-          TARGET: osx
-          PYENV: pip
-
         - os: windows-latest
           python: 3.5
           TARGET: win
