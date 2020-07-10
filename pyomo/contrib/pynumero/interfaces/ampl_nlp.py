@@ -424,6 +424,26 @@ class AslNLP(ExtendedNLP):
     def get_duals_ineq(self):
         return self._duals_ineq.copy()
 
+    # overloaded from NLP
+    def get_obj_scaling(self):
+        return None
+
+    # overloaded from NLP
+    def get_primals_scaling(self):
+        return None
+
+    # overloaded from NLP
+    def get_constraints_scaling(self):
+        return None
+
+    # overloaded from ExtendedNLP
+    def get_eq_constraints_scaling(self):
+        return None
+
+    # overloaded from ExtendedNLP
+    def get_ineq_constraints_scaling(self):
+        None
+
     def _evaluate_objective_and_cache_if_necessary(self):
         if not self._objective_is_cached:
             self._cached_objective = self._asl.eval_f(self._primals)

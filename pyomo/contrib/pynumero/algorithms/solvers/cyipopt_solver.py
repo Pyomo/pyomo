@@ -202,7 +202,10 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         return self._nlp.constraints_ub()
     
     def scaling_factors(self):
-        return None, None, None
+        obj_scaling = self._nlp.get_obj_scaling()
+        x_scaling = self._nlp.get_primals_scaling()
+        g_scaling = self._nlp.get_constraints_scaling()
+        return obj_scaling, x_scaling, g_scaling
 
     def objective(self, x):
         self._set_primals_if_necessary(x)
@@ -253,6 +256,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
     ):
         pass
 
+
 def redirect_stdout():
     sys.stdout.flush() # <--- important when redirecting to files
 
@@ -275,8 +279,8 @@ def redirect_stdout():
     sys.stdout = os.fdopen(newstdout, 'w')
     return newstdout
 
-class CyIpoptSolver(object):
 
+class CyIpoptSolver(object):
     def __init__(self, problem_interface, options=None):
         """Create an instance of the CyIpoptSolver. You must
         provide a problem_interface that corresponds to 
@@ -325,7 +329,7 @@ class CyIpoptSolver(object):
                 x_scaling = np.ones(nx)
             if g_scaling is None:
                 g_scaling = np.ones(ng)
-            
+
             cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
@@ -340,46 +344,3 @@ class CyIpoptSolver(object):
             os.dup2(newstdout, 1)
 
         return x, info
-
-class CyIpoptPyomoNLP(CyIpoptNLP):
-    def __init__(self, pyomo_nlp):
-        """This class provides a CyIpoptProblemInterface for use
-        with the CyIpoptSolver class that can take in a PyNumero
-        PyomoNLP interface. This class provides some extended
-        functionality over the CyIpoptNLP interface
-        """
-        super(CyIpoptPyomoNLP,self).__init__(pyomo_nlp)
-    
-    def scaling_factors(self):
-        # check if the Pyomo model in the PyomoNLP has
-        # scaling factors as a suffix
-        nlp = self._nlp
-        pyomo_model = nlp.pyomo_model()
-        scaling_suffix = pyomo_model.component('scaling_factor')
-        if scaling_suffix is None or type(scaling_suffix) is not Suffix:
-            return None, None, None
-
-        # we have the scaling suffix - initialize scaling factors
-        # and fill in any that are specified
-        obj_scaling = 1.0
-        x_scaling = np.ones(nlp.n_primals())
-        g_scaling = np.ones(nlp.n_constraints())
-        
-        obj = nlp.get_pyomo_objective()
-        if obj in scaling_suffix:
-            obj_scaling = scaling_suffix[obj]
-
-        for i,v in enumerate(nlp.get_pyomo_variables()):
-            if v in scaling_suffix:
-                x_scaling[i] = scaling_suffix[v]
-
-        for i,c in enumerate(nlp.get_pyomo_constraints()):
-            if c in scaling_suffix:
-                g_scaling[i] = scaling_suffix[c]
-
-        return obj_scaling, x_scaling, g_scaling
-
-            
-
-
-            
