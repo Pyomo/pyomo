@@ -51,6 +51,7 @@ class PyomoNLP(AslNLP):
                 raise NotImplementedError('The ASL interface and PyomoNLP in PyNumero currently only support single objective'
                                           ' problems. Deactivate any extra objectives you may have, or add a dummy objective'
                                           ' (f(x)=0) if you have a square problem.')
+            self._objective = objectives[0]
 
             # write the nl file for the Pyomo model and get the symbolMap
             fname, symbolMap = pyomo.opt.WriterFactory('nl')(pyomo_model, nl_file, lambda x:True, {})
@@ -81,6 +82,13 @@ class PyomoNLP(AslNLP):
         Return optimization model
         """
         return self._pyomo_model
+
+    def get_pyomo_objective(self):
+        """
+        Return an instance of the active objective function on the Pyomo model.
+        (there can be only one)
+        """
+        return self._objective
 
     def get_pyomo_variables(self):
         """
