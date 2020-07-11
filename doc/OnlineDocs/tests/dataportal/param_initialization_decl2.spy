@@ -1,1 +1,0 @@
-model.b = Param([1,2,3], initialize={1:1, 2:2, 3:3})

@@ -1,9 +1,49 @@
 Simple Models
 =============
 
+A Simple Concrete Pyomo Model
+*****************************
+
+It is possible to get the same flexible behavior from models
+declared to be abstract and models declared to be concrete in Pyomo;
+however, we will focus on a straightforward concrete example here where
+the data is hard-wired into the model file. Python programmers will
+quickly realize that the data could have come from other sources.
+
+Given the following model from the previous section:
+
+.. math::
+   :nowrap:
+
+    \begin{array}{ll}
+     \min       & 2 x_1 + 3 x_2\\
+     \mathrm{s.t.} & 3 x_1 + 4 x_2 \geq 1\\
+                & x_1, x_2 \geq 0
+     \end{array}
+
+This can be implemented as a concrete model as follows:
+
+.. testcode::
+
+   import pyomo.environ as pyo
+
+   model = pyo.ConcreteModel()
+
+   model.x = pyo.Var([1,2], domain=pyo.NonNegativeReals)
+
+   model.OBJ = pyo.Objective(expr = 2*model.x[1] + 3*model.x[2])
+
+   model.Constraint1 = pyo.Constraint(expr = 3*model.x[1] + 4*model.x[2] >= 1)
+
+Although rule functions can also be used to specify constraints and
+objectives, in this example we use the ``expr`` option that is available
+only in concrete models. This option gives a direct specification of the
+expression.
+
+
 A Simple Abstract Pyomo Model
 *****************************
-We repeat the abstract model already given:
+We repeat the abstract model from the previous section:
 
 .. math::
    :nowrap:
@@ -16,13 +56,48 @@ We repeat the abstract model already given:
 
 One way to implement this in Pyomo is as shown as follows:
 
-.. literalinclude:: ../script_spy_files/abstract1.spy
-   :language: python
+.. testcode::
+
+   from __future__ import division
+   import pyomo.environ as pyo
+
+   model = pyo.AbstractModel()
+
+   model.m = pyo.Param(within=pyo.NonNegativeIntegers)
+   model.n = pyo.Param(within=pyo.NonNegativeIntegers)
+
+   model.I = pyo.RangeSet(1, model.m)
+   model.J = pyo.RangeSet(1, model.n)
+
+   model.a = pyo.Param(model.I, model.J)
+   model.b = pyo.Param(model.I)
+   model.c = pyo.Param(model.J)
+
+   # the next line declares a variable indexed by the set J
+   model.x = pyo.Var(model.J, domain=pyo.NonNegativeReals)
+
+   def obj_expression(m):
+       return pyo.summation(m.c, m.x)
+
+   model.OBJ = pyo.Objective(rule=obj_expression)
+
+   def ax_constraint_rule(m, i):
+       # return the expression for the constraint for i
+       return sum(m.a[i,j] * m.x[j] for j in m.J) >= m.b[i]
+
+   # the next line creates one constraint for each member of the set model.I
+   model.AxbConstraint = pyo.Constraint(model.I, rule=ax_constraint_rule)
+
+.. doctest::
+   :hide:
+
+   >>> # Create an instance to verify that the rules fire correctly
+   >>> inst = model.create_instance('tests/scripting/abstract1.dat')
 
 .. note::
 
    Python is interpreted one line at a time.  A line continuation
-   character, backslash, is used for Python statements that need to span
+   character, ``\`` (backslash), is used for Python statements that need to span
    multiple lines.  In Python, indentation has meaning and must be
    consistent. For example, lines inside a function definition must be
    indented and the end of the indentation is used by Python to signal
@@ -32,60 +107,68 @@ We will now examine the lines in this example.  The first import line is
 used to ensure that ``int`` or ``long`` division arguments are converted
 to floating point values before division is performed.
 
->>> from __future__ import division
+.. testcode::
+
+   from __future__ import division
 
 In Python versions before 3.0, division returns the floor of the
 mathematical result of division if arguments are ``int`` or ``long``.
 This import line avoids unexpected behavior when developing mathematical
-models with integer values.
+models with integer values in Python 2.x (and is not necessary in Python
+3.x).
 
 The next import line that is required in every Pyomo model. Its purpose
 is to make the symbols used by Pyomo known to Python.
 
->>> from pyomo.environ import *
+.. testcode::
 
-The declaration of a model is also required. The use of the name `model`
+   import pyomo.environ as pyo
+
+The declaration of a model is also required. The use of the name ``model``
 is not required. Almost any name could be used, but we will use the name
-`model` most of the time in this book. In this example, we are declaring
+``model`` in most of our examples. In this example, we are declaring
 that it will be an abstract model.
 
-.. literalinclude:: ../script_spy_files/abstract1_Declare_abstract_model.spy
-   :language: python
+.. testcode::
+
+   model = pyo.AbstractModel()
 
 We declare the parameters :math:`m` and :math:`n` using the Pyomo
-``Param`` function. This function can take a variety of arguments; this
+:class:`Param` component. This component can take a variety of arguments; this
 example illustrates use of the ``within`` option that is used by Pyomo
 to validate the data value that is assigned to the parameter. If this
 option were not given, then Pyomo would not object to any type of data
 being assigned to these parameters. As it is, assignment of a value that
 is not a non-negative integer will result in an error.
 
-.. literalinclude:: ../script_spy_files/abstract1_Declare_param_within.spy
-   :language: python
+.. testcode::
+
+   model.m = pyo.Param(within=pyo.NonNegativeIntegers)
+   model.n = pyo.Param(within=pyo.NonNegativeIntegers)
 
 Although not required, it is convenient to define index sets. In this
-example we use the ``RangeSet`` function to declare that the sets will
+example we use the :class:`RangeSet` component to declare that the sets will
 be a sequence of integers starting at 1 and ending at a value specified
 by the the parameters ``model.m`` and ``model.n``.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_indexsets.spy
-   :language: python
+.. testcode::
+
+   model.I = pyo.RangeSet(1, model.m)
+   model.J = pyo.RangeSet(1, model.n)
 
 The coefficient and right-hand-side data are defined as indexed
-parameters. When sets are given as arguments to the ``Param`` function,
+parameters. When sets are given as arguments to the :class:`Param` component,
 they indicate that the set will index the parameter.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_indexed_parameters.spy
-   :language: python
+.. testcode::
 
-.. note::
-
-   In Python, and therefore in Pyomo, any text after pound sign is
-   considered to be a comment.
+   model.a = pyo.Param(model.I, model.J)
+   model.b = pyo.Param(model.I)
+   model.c = pyo.Param(model.J)
 
 The next line that is interpreted by Python as part of the model
-declares the variable :math:`x`. The first argument to the ``Var``
-function is a set, so it is defined as an index set for the variable. In
+declares the variable :math:`x`. The first argument to the :class:`Var`
+component is a set, so it is defined as an index set for the variable. In
 this case the variable has only one index set, but multiple sets could
 be used as was the case for the declaration of the parameter
 ``model.a``. The second argument specifies a domain for the
@@ -94,41 +177,51 @@ solver when data is provided and the model is solved. Specification of
 the ``NonNegativeReals`` domain implements the requirement that the
 variables be greater than or equal to zero.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_variable.spy
-   :language: python
+.. testcode::
+
+   # the next line declares a variable indexed by the set J
+   model.x = pyo.Var(model.J, domain=pyo.NonNegativeReals)
+
+.. note::
+
+   In Python, and therefore in Pyomo, any text after pound sign is
+   considered to be a comment.
 
 In abstract models, Pyomo expressions are usually provided to objective
-function and constraint declarations via a function defined with a
+and constraint declarations via a function defined with a
 Python ``def`` statement. The ``def`` statement establishes a name for a
 function along with its arguments. When Pyomo uses a function to get
-objective function or constraint expressions, it always passes in the
+objective or constraint expressions, it always passes in the
 model (i.e., itself) as the the first argument so the model is always
 the first formal argument when declaring such functions in Pyomo.
 Additional arguments, if needed, follow. Since summation is an extremely
 common part of optimization models, Pyomo provides a flexible function
-to accommodate it. When given two arguments, the ``summation`` function
+to accommodate it. When given two arguments, the :func:`summation()` function
 returns an expression for the sum of the product of the two arguments
 over their indexes. This only works, of course, if the two arguments
 have the same indexes. If it is given only one argument it returns an
 expression for the sum over all indexes of that argument. So in this
-example, when ``summation`` is passed the arguments ``model.c, model.x``
+example, when :func:`summation` is passed the arguments ``m.c, m.x``
 it returns an internal representation of the expression
 :math:`\sum_{j=1}^{n}c_{j} x_{j}`.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_objective_expression.spy
-   :language: python
+.. testcode::
 
-To declare an objective function, the Pyomo function called
-``Objective`` is used. The ``rule`` argument gives the name of a
-function that returns the expression to be used. The default *sense* is
-minimization. For maximization, the ``sense=maximize`` argument must be
+   def obj_expression(m):
+       return pyo.summation(m.c, m.x)
+
+To declare an objective function, the Pyomo component called
+:class:`Objective` is used. The ``rule`` argument gives the name of a
+function that returns the objective expression. The default *sense* is
+minimization. For maximization, the ``sense=pyo.maximize`` argument must be
 used. The name that is declared, which is ``OBJ`` in this case, appears
 in some reports and can be almost any name.
 
-.. literalinclude:: ../script_spy_files/abstract1_Declare_objective_function.spy
-   :language: python
+.. testcode::
 
-Declaration of constraints is similar. A function is declared to deliver
+   model.OBJ = pyo.Objective(rule=obj_expression)
+
+Declaration of constraints is similar. A function is declared to generate
 the constraint expression. In this case, there can be multiple
 constraints of the same form because we index the constraints by
 :math:`i` in the expression :math:`\sum_{j=1}^n a_{ij} x_j \geq b_i
@@ -139,41 +232,53 @@ function that declares the constraint expression. Technically, we could
 have used anything for this argument, but that might be confusing. Using
 an ``i`` for an :math:`i` seems sensible in this situation.
 
-.. literalinclude:: ../script_spy_files/abstract1_Define_constraints_expression.spy
-   :language: python
+.. testcode::
+
+   def ax_constraint_rule(m, i):
+       # return the expression for the constraint for i
+       return sum(m.a[i,j] * m.x[j] for j in m.J) >= m.b[i]
 
 .. note::
 
-   In Python, indexes are in square brackets and function arguments are in parentheses.
+   In Python, indexes are in square brackets and function arguments are
+   in parentheses.
 
 In order to declare constraints that use this expression, we use the
-Pyomo ``Constraint`` function that takes a variety of arguments. In this
+Pyomo :class:`Constraint` component that takes a variety of arguments. In this
 case, our model specifies that we can have more than one constraint of
 the same form and we have created a set, ``model.I``, over which these
 constraints can be indexed so that is the first argument to the
-constraint declaration function. The next argument gives the rule that
+constraint declaration. The next argument gives the rule that
 will be used to generate expressions for the constraints. Taken as a
 whole, this constraint declaration says that a list of constraints
 indexed by the set ``model.I`` will be created and for each member of
 ``model.I``, the function ``ax_constraint_rule`` will be called and it
 will be passed the model object as well as the member of ``model.I``
 
-.. literalinclude:: ../script_spy_files/abstract1_Declare_constraints.spy
-   :language: python
+.. testcode::
+
+   # the next line creates one constraint for each member of the set model.I
+   model.AxbConstraint = pyo.Constraint(model.I, rule=ax_constraint_rule)
 
 In the object oriented view of all of this, we would say that ``model``
-object is a class instance of the ``AbstractModel`` class, and
-``model.J`` is a ``Set`` object that is contained by this model.  Many
+object is a class instance of the :class:`AbstractModel` class, and
+``model.J`` is a :class:`Set` object that is contained by this model.  Many
 modeling components in Pyomo can be optionally specified as *indexed*
 *components*: collections of components that are referenced using one or
 more values.  In this example, the parameter ``model.c`` is indexed with
 set ``model.J``.
 
 In order to use this model, data must be given for the values of the
-parameters. Here is one file that provides data.
+parameters. Here is one file that provides data (in AMPL "``.dat``" format).
 
-.. literalinclude:: ../script_spy_files/abstract1.dat
-   :language: none
+.. doctest::
+   :hide:
+
+   >>> # Create an instance to verify that the rules fire correctly
+   >>> inst = model.create_instance('tests/scripting/abstract1.dat')
+
+.. literalinclude:: ../tests/scripting/abstract1.dat
+   :language: text
 
 There are multiple formats that can be used to provide data to a Pyomo
 model, but the AMPL format works well for our purposes because it
@@ -236,49 +341,20 @@ the same model. To start with an illustration of general indexes,
 consider a slightly different Pyomo implementation of the model we just
 presented.
 
-.. literalinclude:: ../script_spy_files/abstract2.py
+.. literalinclude:: ../tests/scripting/abstract2.py
    :language: python
 
 To get the same instantiated model, the following data file can be used.
 
-.. literalinclude:: ../script_spy_files/abstract2a.dat
+.. literalinclude:: ../tests/scripting/abstract2a.dat
    :language: none
 
 However, this model can also be fed different data for problems of the
 same general form using meaningful indexes.
 
-.. literalinclude:: ../script_spy_files/abstract2.dat
+.. literalinclude:: ../tests/scripting/abstract2.dat
    :language: none
 
-A Simple Concrete Pyomo Model
-*****************************
-
-It is possible to get nearly the same flexible behavior from models
-declared to be abstract and models declared to be concrete in Pyomo;
-however, we will focus on a straightforward concrete example here where
-the data is hard-wired into the model file. Python programmers will
-quickly realize that the data could have come from other sources.
-
-We repeat the concrete model already given:
-
-.. math::
-   :nowrap:
-
-    \begin{array}{ll}
-     \min       & 2 x_1 + 3 x_2\\
-     \mathrm{s.t.} & 3 x_1 + 4 x_2 \geq 1\\
-                & x_1, x_2 \geq 0
-     \end{array}
-
-This is implemented as a concrete model as follows:
-
-.. literalinclude:: ../script_spy_files/concrete1.py
-   :language: none
-
-Although rule functions can also be used to specify constraints and
-objectives, in this example we use the ``expr`` option that is available
-only in concrete models. This option gives a direct specification of the
-expression.
 
 Solving the Simple Examples
 ***************************
