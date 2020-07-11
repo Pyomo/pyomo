@@ -20,6 +20,7 @@ from scipy.sparse import coo_matrix
 import numpy as np
 import six
 import os
+import sys
 import ctypes
 
 
@@ -77,9 +78,10 @@ class PyomoNLP(AslNLP):
                     os.environ['AMPLFUNC'] += "\n" + os.environ['PYOMO_AMPLFUNC']
                 else:
                     os.environ['AMPLFUNC'] = os.environ['PYOMO_AMPLFUNC']
-                if os.name in ['nt', 'dos']:
-                    ctypes.cdll.msvcrt._wputenv_s(
-                        u"AMPLFUNC", six.text_type(os.environ["AMPLFUNC"]))
+                if os.name in ['nt', 'dos'] and sys.version_info[0] > 2:
+                    ctypes.cdll.msvcrt._wputenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
+                elif os.name in ['nt', 'dos']:
+                    ctypes.cdll.msvcrt._putenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
 
             # now call the AslNLP with the newly created nl_file
             try:
@@ -89,13 +91,16 @@ class PyomoNLP(AslNLP):
                 if 'PYOMO_AMPLFUNC' in os.environ:
                     if _old_amplfunc is not None:
                         os.environ['AMPLFUNC'] = _old_amplfunc
-                        if os.name in ['nt', 'dos']:
-                            ctypes.cdll.msvcrt._wputenv_s(
-                                u"AMPLFUNC", six.text_type(os.environ["AMPLFUNC"]))
+                        if os.name in ['nt', 'dos'] and sys.version_info[0] > 2:
+                            ctypes.cdll.msvcrt._wputenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
+                        elif os.name in ['nt', 'dos']:
+                            ctypes.cdll.msvcrt._putenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
                     else:
                         del os.environ['AMPLFUNC']
-                        if os.name in ['nt', 'dos']:
+                        if os.name in ['nt', 'dos'] and sys.version_info[0] > 2:
                             ctypes.cdll.msvcrt._wputenv_s(u"AMPLFUNC", u"")
+                        elif os.name in ['nt', 'dos']:
+                            ctypes.cdll.msvcrt._putenv_s("AMPLFUNC", "")
 
             # keep pyomo model in cache
             self._pyomo_model = pyomo_model
