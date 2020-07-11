@@ -78,7 +78,8 @@ class PyomoNLP(AslNLP):
                 else:
                     os.environ['AMPLFUNC'] = os.environ['PYOMO_AMPLFUNC']
                 if os.name in ['nt', 'dos']:
-                    ctypes.cdll.msvcrt._wputenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
+                    ctypes.cdll.msvcrt._wputenv_s(
+                        u"AMPLFUNC", six.text_type(os.environ["AMPLFUNC"]))
 
             # now call the AslNLP with the newly created nl_file
             try:
@@ -89,11 +90,12 @@ class PyomoNLP(AslNLP):
                     if _old_amplfunc is not None:
                         os.environ['AMPLFUNC'] = _old_amplfunc
                         if os.name in ['nt', 'dos']:
-                            ctypes.cdll.msvcrt._wputenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
+                            ctypes.cdll.msvcrt._wputenv_s(
+                                u"AMPLFUNC", six.text_type(os.environ["AMPLFUNC"]))
                     else:
                         del os.environ['AMPLFUNC']
                         if os.name in ['nt', 'dos']:
-                            ctypes.cdll.msvcrt._wputenv_s("AMPLFUNC", "")
+                            ctypes.cdll.msvcrt._wputenv_s(u"AMPLFUNC", u"")
 
             # keep pyomo model in cache
             self._pyomo_model = pyomo_model

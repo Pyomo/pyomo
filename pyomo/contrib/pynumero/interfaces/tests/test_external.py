@@ -10,12 +10,19 @@
 #
 import os
 import pyutilib.th as unittest
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available, scipy_available)
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+from pyomo.contrib.pynumero.asl import AmplInterface
+if not AmplInterface.available():
+    raise unittest.SkipTest(
+        "Pynumero needs the ASL extension to run NLP tests")
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.common.getGSL import find_GSL
 from pyomo.environ import *
 from pyomo.core.base.external import (PythonCallbackFunction,
                                       AMPLExternalFunction)
-from pyomo.opt import check_available_solvers
 
 class TestAMPLExternalFunction(unittest.TestCase):
     def assertListsAlmostEqual(self, first, second, places=7, msg=None):
