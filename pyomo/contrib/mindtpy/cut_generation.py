@@ -12,10 +12,17 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 
 def add_objective_linearization(solve_data, config):
-    """Adds initial linearized objective in case it is nonlinear.
+    """
+    If objective is nonlinear, adds a linearized objective. This function should be used to initialize the ECP method.
 
-    This should be done for initializing the ECP method.
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
 
+    Returns a model with a linear objective
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
@@ -24,6 +31,7 @@ def add_objective_linearization(solve_data, config):
            if obj is MindtPy.MindtPy_objective_expr)
     MindtPy.MindtPy_linear_cuts.mip_iters.add(solve_data.mip_iter)
     sign_adjust = 1 if MindtPy.obj.sense == minimize else -1
+
     # generate new constraints
     # TODO some kind of special handling if the dual is phenomenally small?
     for obj in gen:
@@ -38,10 +46,29 @@ def add_objective_linearization(solve_data, config):
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True):
-    """Linearizes nonlinear constraints.
+    """
+    Linearizes nonlinear constraints
 
     For nonconvex problems, turn on 'config.add_slack'. Slack variables will
     always be used for nonlinear equality constraints.
+
+    Parameters
+    ----------
+    target_model:
+        this is the MIP/MILP model for the OA algorithm; we want to add the OA cuts to 'target_model'
+    dual_values:
+        contains the value of the duals for each constraint
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+    linearize_active: bool, optional
+        this parameter acts as a Boolean flag that signals whether the linearized constraint is active
+    linearize_violated: bool, optional
+        this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
+        linearized constraint has been violated
+
+    Returns the model with the OA cuts
     """
     for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
                                     dual_values):
@@ -146,6 +173,21 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 
 
 def add_int_cut(var_values, solve_data, config, feasible=False):
+    """
+    Adds integer cuts to the model
+
+    Parameters
+    ----------
+    var_values:
+        values of all the fixed variables
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+    feasible: bool, optional
+
+    Returns the model with integer cuts
+    """
     if not config.add_integer_cuts:
         return
 
@@ -169,7 +211,7 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
             raise ValueError('Binary {} = {} is not 0 or 1'.format(
                 v.name, value(v)))
 
-    if not binary_vars:  # if no binary variables, skip.
+    if not binary_vars:  # if no binary variables, skip
         return
 
     int_cut = (sum(1 - v for v in binary_vars
@@ -188,6 +230,17 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
 
 
 def add_affine_cuts(nlp_result, solve_data, config):
+    """
+    Add affine cuts using MCPP
+
+    nlp_result:
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    Returns the model with affine cuts
+    """
     m = solve_data.mip
     config.logger.info("Adding affine cuts.")
     counter = 0
