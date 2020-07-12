@@ -188,7 +188,7 @@ An example of this usage may be found below for the expression:
 
     >>> @m.LogicalConstraint(m.I)
     ... def p(m, i):
-    ...     return m.Y[i+1].implies(m.Y[i]) if i < n else True
+    ...     return m.Y[i+1].implies(m.Y[i]) if i < n else Constraint.Skip
 
     >>> m.p.pprint()
     p : Size=4, Index=I, Active=True

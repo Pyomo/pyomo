@@ -17,6 +17,7 @@ from weakref import ref as weakref_ref
 
 import pyutilib.math
 from pyomo.common.timing import ConstructionTimer
+from pyomo.core.base import Constraint
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
@@ -395,11 +396,22 @@ class LogicalConstraint(ActiveIndexedComponent):
                 (_get_indexed_component_data_name(self, index),))
 
         if expr is True:
-            return None
+            raise ValueError(
+                "LogicalConstraint '%s' is always True."
+                % (_get_indexed_component_data_name(self, index),))
         if expr is False:
             raise ValueError(
-                "LogicalConstraint '%s' is always False"
+                "LogicalConstraint '%s' is always False."
                 % (_get_indexed_component_data_name(self, index),))
+
+        if _expr_type is tuple and len(expr) == 1:
+            if (expr == Constraint.Skip) or \
+               (expr == Constraint.Feasible):
+                return None
+            if expr == Constraint.Infeasible:
+                raise ValueError(
+                    "LogicalConstraint '%s' cannot be passed 'Infeasible' as a value."
+                    % (_get_indexed_component_data_name(self, index),))
 
         return expr
 

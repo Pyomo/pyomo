@@ -82,8 +82,9 @@ class TestAtomicTransformations(unittest.TestCase):
 
     def test_constant_True(self):
         m = ConcreteModel()
-        m.p = LogicalConstraint(expr=True)
-        TransformationFactory('core.logical_to_linear').apply_to(m)
+        with self.assertRaisesRegex(ValueError, "LogicalConstraint 'p' is always True."):
+            m.p = LogicalConstraint(expr=True)
+            TransformationFactory('core.logical_to_linear').apply_to(m)
         self.assertIsNone(m.component('logic_to_linear'))
 
     def test_nothing_to_do(self):
