@@ -97,6 +97,7 @@ def build_model():
     # Connect the disjuncts indicator variables using logical expressions
     m.logical_blocks = Block(range(1, m.T_max+1))
 
+    # Enforce absence of existing long-term contract
     m.logical_blocks[1].not_y_1_0 = LogicalConstraint(expr=~m.Y[1, '0'], doc="no pre-existing long-term contract")
 
     # Long-term contract implies '0'-disjunct in following timesteps
@@ -187,12 +188,7 @@ def pprint_result(model):
 
 if __name__ == "__main__":
     m = build_model()
-
-    # m.pprint('model.log')
     TransformationFactory('core.logical_to_linear').apply_to(m)
     m_trafo = TransformationFactory('gdp.hull').create_using(m)
-    # m_trafo = TransformationFactory('gdp.bigm').create_using(m, bigM=5000)
-    # res = SolverFactory('gams').solve(m_trafo, solver='cbc', tee=True)
     res = SolverFactory('glpk').solve(m_trafo, tee=True)
-    # m_trafo.pprint('model_trafo.log')
     pprint_result(m_trafo)

@@ -246,7 +246,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
 
 @ModelComponentFactory.register("Logical decision variables.")
 class BooleanVar(IndexedComponent):
-    """A numeric variable, which may be defined over an index.
+    """A logical variable, which may be defined over an index.
 
     Args:
         initialize (float or function, optional): The initial value for
@@ -546,7 +546,7 @@ class IndexedBooleanVar(BooleanVar):
     free=unfix
     
 
-@ModelComponentFactory.register("List of decision variables.")
+@ModelComponentFactory.register("List of logical decision variables.")
 class BooleanVarList(IndexedBooleanVar):
     """
     Variable-length indexed variable objects used to construct Pyomo models.
