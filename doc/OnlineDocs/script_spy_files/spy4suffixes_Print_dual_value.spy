@@ -1,2 +1,0 @@
-SolverFactory('glpk').solve(model)
-print(model.dual[model.con]) # -> 1.0

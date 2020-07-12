@@ -1,2 +1,0 @@
-model.A = Set()
-model.B = Param(model.A)

@@ -23,11 +23,3 @@ is somewhat orthogonal to the functionality provided by
    stochsolverapi.rst
    Abstractrapper.rst
    rap.rst
-   bibliography.rst
-
-Indices and Tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

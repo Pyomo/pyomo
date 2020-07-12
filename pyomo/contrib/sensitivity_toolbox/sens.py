@@ -19,53 +19,54 @@ from pyomo.opt import SolverFactory
 
 
 
-def sipopt(instance,paramSubList,perturbList,cloneModel=True,
-            streamSoln=False,
-            keepfiles=False):
-    """
-    This function accepts a Pyomo ConcreteModel, a list of parameters, along
+def sipopt(instance, paramSubList, perturbList,
+           cloneModel=True, streamSoln=False, keepfiles=False):
+    """This function accepts a Pyomo ConcreteModel, a list of parameters, along
     with their corresponding perterbation list. The model is then converted
     into the design structure required to call sipopt to get an approximation
     perturbed solution with updated bounds on the decision variable. 
     
-    Arguments:
-        instance     : ConcreteModel
-            pyomo model object
-            Expectation : No Exceptions            
+    Parameters
+    ----------
+    instance: ConcreteModel
+        pyomo model object
 
-        paramSubList : Param
-            list of mutable parameters
-            Exception : "paramSubList argument is expecting a List of Params"    
+    paramSubList: list
+        list of mutable parameters
 
-        perturbList  : Param
-            list of perturbed parameter values
-            Exception : "perturbList argument is expecting a List of Params"
-            length(paramSubList) must equal length(perturbList)
-            Exception : "paramSubList will not map to perturbList"  
+    perturbList: list
+        list of perturbed parameter values
 
+    cloneModel: bool, optional
+        indicator to clone the model. If set to False, the original
+        model will be altered
 
-        cloneModel   : boolean      : default=True
-            indicator to clone the model
-                -if set to False, the original model will be altered
+    streamSoln: bool, optional
+        indicator to stream IPOPT solution
 
-        streamSoln   : boolean      : default=False
-            indicator to stream IPOPT solution
-
-        keepfiles    : boolean      : default=False 
-            indicator to print intermediate file names
+    keepfiles: bool, optional
+        preserve solver interface files
     
-    Returns:
-        m : ConcreteModel
-            converted model for sipopt
+    Returns
+    -------
+    model: ConcreteModel
+        The model modified for use with sipopt.  The returned model has
+        three :class:`Suffix` members defined:
 
-        m.sol_state_1 : Suffix
-            approximated results at perturbation
+        - ``model.sol_state_1``: the approximated results at the
+          perturbation point
+        - ``model.sol_state_1_z_L``: the updated lower bound
+        - ``model.sol_state_1_z_U``: the updated upper bound
 
-        m.sol_state_1_z_L : Suffix        
-            updated lower bound
+    Raises
+    ------
+    ValueError
+        perturbList argument is expecting a List of Params
+    ValueError
+        length(paramSubList) must equal length(perturbList)
+    ValueError
+        paramSubList will not map to perturbList
 
-        m.sol_state_1_z_U : Suffix        
-            updated upper bound
     """
 
     #Verify User Inputs    
