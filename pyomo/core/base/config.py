@@ -1,4 +1,3 @@
-import appdirs
 import os
 import json
 
