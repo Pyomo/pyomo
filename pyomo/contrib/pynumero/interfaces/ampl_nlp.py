@@ -428,21 +428,27 @@ class AslNLP(ExtendedNLP):
     def get_obj_scaling(self):
         return None
 
-    # overloaded from NLP
+    # overloaded from NLP - derived classes may implement
     def get_primals_scaling(self):
         return None
 
-    # overloaded from NLP
+    # overloaded from NLP - derived classes may implement
     def get_constraints_scaling(self):
         return None
 
     # overloaded from ExtendedNLP
     def get_eq_constraints_scaling(self):
+        constraints_scaling = self.get_constraints_scaling()
+        if constraints_scaling is not None:
+            return np.compress(self._con_full_eq_mask, constraints_scaling)
         return None
 
     # overloaded from ExtendedNLP
     def get_ineq_constraints_scaling(self):
-        None
+        constraints_scaling = self.get_constraints_scaling()
+        if constraints_scaling is not None:
+            return np.compress(self._con_full_ineq_mask, constraints_scaling)
+        return None
 
     def _evaluate_objective_and_cache_if_necessary(self):
         if not self._objective_is_cached:
