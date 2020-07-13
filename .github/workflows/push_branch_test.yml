@@ -37,6 +37,11 @@ jobs:
           TARGET: osx
           PYENV: pip
 
+        - os: macos-latest
+          python: 3.8
+          TARGET: osx
+          PYENV: pip
+
         - os: windows-latest
           python: 3.5
           TARGET: win
@@ -163,7 +168,6 @@ jobs:
 
     - name: Install Python Packages (pip)
       if: matrix.PYENV == 'pip'
-      shell: bash
       run: |
         python -m pip install --cache-dir cache/pip --upgrade pip
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
