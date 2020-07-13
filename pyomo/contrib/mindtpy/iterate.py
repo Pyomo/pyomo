@@ -24,9 +24,8 @@ def MindtPy_iteration_loop(solve_data, config):
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-
     """
     working_model = solve_data.working_model
     main_objective = next(
@@ -147,7 +146,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
 def algorithm_should_terminate(solve_data, config, check_cycling):
     """
-    Checks if the algorithm should terminate.
+    Checks if the algorithm should terminate at the given point
 
     This function determines whether the algorithm should terminate based on the solver options and progress.
     (Sets the solve_data.results.solver.termination_condition to the appropriate condition, i.e. optimal,
@@ -157,10 +156,14 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-    check_cycling: check for a special case that causes a binary variable to loop through the same values
+    check_cycling: bool
+        check for a special case that causes a binary variable to loop through the same values
 
+    Returns
+    -------
+    Returns True if the algorithm should terminate else returns False
     """
     # Check bound convergence
     if solve_data.LB + config.bound_tolerance >= solve_data.UB:

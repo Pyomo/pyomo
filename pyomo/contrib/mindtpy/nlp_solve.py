@@ -24,10 +24,15 @@ def solve_NLP_subproblem(solve_data, config):
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
 
-    Returns the fixed-NLP model and the solver results
+    Returns
+    -------
+    fixed_nlp: Pyomo model
+        fixed NLP from the model
+    results: Pyomo results object
+        result from solving the fixed NLP
     """
 
     fixed_nlp = solve_data.working_model.clone()
@@ -96,11 +101,12 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
 
     Parameters
     ----------
+    fixed_nlp: Pyomo model
+        fixed NLP from the model
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-
     """
     copy_var_list_values(
         fixed_nlp.MindtPy_utils.variable_list,
@@ -159,13 +165,13 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
     Solves feasibility problem and adds cut according to the specified strategy
 
     This function handles the result of the latest iteration of solving the NLP subproblem given an infeasible
-    solution, and copies the solution of the feasibility problem to the working model.
+    solution and copies the solution of the feasibility problem to the working model.
 
     Parameters
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
     """
     # TODO try something else? Reinitialize with different initial
@@ -210,14 +216,16 @@ def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
     """
     Handles the result of the latest iteration of solving the NLP subproblem given a solution that is neither optimal
     nor infeasible.
+    TODO: What does the function do (does it just update the bounds?)
 
     Parameters
     ----------
+    termination_condition: Pyomo TerminationCondition
+        the termination condition of the NLP subproblem
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-
     """
     if termination_condition is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial value?
@@ -238,27 +246,31 @@ def solve_NLP_feas(solve_data, config):
     """
     Handles the result of the latest iteration of solving the NLP subproblem given a feasible, non-optimal solution;
     solves the feasibility NLP and copies result to working model
+    TODO: What does the function do (does it just update the bounds?)
 
     Parameters
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
 
     Returns
     -------
-    Returns the result values and dual values
+    feas_nlp: Pyomo model
+        feasibility NLP from the model
+    feas_soln: Pyomo results object
+        result from solving the feasibility NLP
     """
-    fixed_nlp = solve_data.working_model.clone()
-    add_feas_slacks(fixed_nlp, config)
+    feas_nlp = solve_data.working_model.clone()
+    add_feas_slacks(feas_nlp, config)
 
-    MindtPy = fixed_nlp.MindtPy_utils
+    MindtPy = feas_nlp.MindtPy_utils
     if MindtPy.find_component('objective_value') is not None:
         MindtPy.objective_value.value = 0
 
-    next(fixed_nlp.component_data_objects(Objective, active=True)).deactivate()
-    for constr in fixed_nlp.component_data_objects(
+    next(feas_nlp.component_data_objects(Objective, active=True)).deactivate()
+    for constr in feas_nlp.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         if constr.body.polynomial_degree() not in [0, 1]:
             constr.deactivate()
@@ -276,11 +288,11 @@ def solve_NLP_feas(solve_data, config):
         MindtPy.MindtPy_feas_obj = Objective(
             expr=MindtPy.MindtPy_feas.slack_var,
             sense=minimize)
-    TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
+    TransformationFactory('core.fix_integer_vars').apply_to(feas_nlp)
     with SuppressInfeasibleWarning():
         try:
             feas_soln = SolverFactory(config.nlp_solver).solve(
-                fixed_nlp, **config.nlp_solver_args)
+                feas_nlp, **config.nlp_solver_args)
         except (ValueError, OverflowError) as error:
             for nlp_var, orig_val in zip(
                     MindtPy.variable_list,
@@ -288,7 +300,7 @@ def solve_NLP_feas(solve_data, config):
                 if not nlp_var.fixed and not nlp_var.is_binary():
                     nlp_var.value = orig_val
             feas_soln = SolverFactory(config.nlp_solver).solve(
-                fixed_nlp, **config.nlp_solver_args)
+                feas_nlp, **config.nlp_solver_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
         copy_var_list_values(
@@ -316,4 +328,4 @@ def solve_NLP_feas(solve_data, config):
         raise ValueError(
             'Problem is not feasible, check NLP solver')
 
-    return fixed_nlp, feas_soln
+    return feas_nlp, feas_soln

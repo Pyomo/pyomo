@@ -20,19 +20,17 @@ from pyomo.contrib.mindtpy.util import var_bound_add
 
 def MindtPy_initialize_master(solve_data, config):
     """
-    Initializes the decomposition algorithm.
+    Initializes the decomposition algorithm and creates the master MIP/MILP problem.
 
     This function initializes the decomposition problem, which includes generating the initial cuts required to
-    build the master MIP/MILP.
+    build the master MIP/MILP
 
     Parameters
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-
-    Returns the master MIP/MILP
     """
     # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded master problem.
     if config.single_tree:
@@ -85,17 +83,15 @@ def MindtPy_initialize_master(solve_data, config):
 
 def init_rNLP(solve_data, config):
     """
-    Initialize the problem by solving the relaxed NLP (fixed binary variables)
+    Initialize the problem by solving the relaxed NLP (fixed binary variables) and then store the optimal variable
+    values obtained from solving the rNLP
 
     Parameters
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-
-    Returns the optimal variable values obtained from solving the rNLP
-
     """
     solve_data.nlp_iter += 1
     m = solve_data.working_model.clone()
@@ -143,7 +139,7 @@ def init_rNLP(solve_data, config):
 
 def init_max_binaries(solve_data, config):
     """
-    Initializes model by turning on as many binary variables as possible
+    Modifies model by maximizing the number of activated binary variables
 
     Note - The user would usually want to call _solve_NLP_subproblem after an
     invocation of this function.
@@ -152,11 +148,8 @@ def init_max_binaries(solve_data, config):
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-
-    Returns the model with as many activated binary variables as possible
-
     """
     m = solve_data.working_model.clone()
     m.dual.deactivate()

@@ -13,16 +13,15 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 def add_objective_linearization(solve_data, config):
     """
-    If objective is nonlinear, adds a linearized objective. This function should be used to initialize the ECP method.
+    If objective is nonlinear, then this function adds a linearized objective. This function should be used to
+    initialize the ECP method.
 
     Parameters
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-
-    Returns a model with a linear objective
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
@@ -47,7 +46,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True):
     """
-    Linearizes nonlinear constraints
+    Linearizes nonlinear constraints; modifies the model to include the OA cuts
 
     For nonconvex problems, turn on 'config.add_slack'. Slack variables will
     always be used for nonlinear equality constraints.
@@ -60,15 +59,13 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
         contains the value of the duals for each constraint
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
     linearize_active: bool, optional
         this parameter acts as a Boolean flag that signals whether the linearized constraint is active
     linearize_violated: bool, optional
         this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
         linearized constraint has been violated
-
-    Returns the model with the OA cuts
     """
     for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
                                     dual_values):
@@ -174,19 +171,17 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 
 def add_int_cut(var_values, solve_data, config, feasible=False):
     """
-    Adds integer cuts to the model
+    Modifies the model by adding integer cuts (if needed)
 
     Parameters
     ----------
-    var_values:
+    var_values: TODO: Fill this in
         values of all the fixed variables
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-    feasible: bool, optional
-
-    Returns the model with integer cuts
+    feasible: bool, optional TODO: Should this be removed? It is not used
     """
     if not config.add_integer_cuts:
         return
@@ -231,15 +226,13 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
 
 def add_affine_cuts(nlp_result, solve_data, config):
     """
-    Add affine cuts using MCPP
+    Modifies the model by adding affine cuts using MCPP
 
-    nlp_result:
+    nlp_result: TODO: Fill this in
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
-
-    Returns the model with affine cuts
     """
     m = solve_data.mip
     config.logger.info("Adding affine cuts.")

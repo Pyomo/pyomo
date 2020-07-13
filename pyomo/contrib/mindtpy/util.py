@@ -27,7 +27,7 @@ class MindtPySolveData(object):
 
 def model_is_valid(solve_data, config):
     """
-    Validates that the model is solveable by MindtPy.
+    Determines whether the model is solveable by MindtPy.
 
     This function returns True if the given model is solveable by MindtPy (and performs some preprocessing such
     as moving the objective to the constraints).
@@ -42,7 +42,6 @@ def model_is_valid(solve_data, config):
     Returns
     -------
     Boolean value (True if model is solveable in MindtPy else False)
-
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
@@ -83,7 +82,7 @@ def model_is_valid(solve_data, config):
 
 def calc_jacobians(solve_data, config):
     """
-    Generates a map of jacobians
+    Generates a map of jacobians for the variables in the model
 
     Parameters
     ----------
@@ -94,7 +93,7 @@ def calc_jacobians(solve_data, config):
 
     Returns
     -------
-    solve_data is returned with a ComponentMap that contains the model variables mapped to their Jacobians
+    solve_data is returned with a ComponentMap that contains the model variables mapped to their jacobians
     """
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
@@ -116,12 +115,14 @@ def calc_jacobians(solve_data, config):
 
 def add_feas_slacks(m, config):
     """
-    Adds feasibility variable (given an infeasible problem)
+    Adds feasibility slack variables (given an infeasible problem)
+    TODO: Is the above description correct?
 
     Parameters
     ----------
-    m:
-    config: MindtPy configurations
+    m: model
+        Pyomo model
+    config: ConfigBlock
         contains the specific configurations for the algorithm
     """
     MindtPy = m.MindtPy_utils
@@ -142,13 +143,13 @@ def add_feas_slacks(m, config):
 def var_bound_add(solve_data, config):
     """
     This function will add bound for variables in nonlinear constraints if they are not bounded. (This is to avoid
-    an unbound master problem in the LP/NLP algorithm.)
+    an unbounded master problem in the LP/NLP algorithm.)
 
     Parameters
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
-    config: MindtPy configurations
+    config: ConfigBlock
         contains the specific configurations for the algorithm
 
     Returns
