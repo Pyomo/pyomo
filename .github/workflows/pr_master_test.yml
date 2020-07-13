@@ -113,7 +113,7 @@ jobs:
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/cache/os
         export HOMEBREW_CACHE=${GITHUB_WORKSPACE}/cache/os
-        brew update
+        # brew update
         # Notes:
         #  - install glpk
         #  - pyodbc needs: gcc pkg-config unixodbc freetds
