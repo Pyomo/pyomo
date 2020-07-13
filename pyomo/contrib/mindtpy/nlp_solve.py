@@ -14,14 +14,18 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 
 
 def solve_NLP_subproblem(solve_data, config):
-    """ Solves fixed NLP with fixed working model binaries
+    """
+    Solves the fixed NLP (with fixed binaries)
 
-    Sets up local working model `fixed_nlp`
-    Fixes binaries
-    Sets continuous variables to initial var values
-    Precomputes dual values
-    Deactivates trivial constraints
-    Solves NLP model
+    This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their intial var values,
+    precomputes dual values, deactivates trivial constraints, and then solves NLP model.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
 
     Returns the fixed-NLP model and the solver results
     """
@@ -81,9 +85,23 @@ def solve_NLP_subproblem(solve_data, config):
     return fixed_nlp, results
 
 
+# The next few functions deal with handling the solution we get from the above NLP solver function
+
+
 def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
-    """Copies result to working model, updates bound, adds OA and integer cut,
-    stores best solution if new one is best"""
+    """
+    This function copies the result of the NLP solver function ('solve_NLP_subproblem') to the working model, updates
+    the bounds, adds OA and integer cuts, and then stores the new solution if it is the new best solution. This
+    function handles the result of the latest iteration of solving the NLP subproblem given an optimal solution.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    """
     copy_var_list_values(
         fixed_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
@@ -137,9 +155,18 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
 
 
 def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
-    """Solve feasibility problem, add cut according to strategy.
+    """
+    Solves feasibility problem and adds cut according to the specified strategy
 
-    The solution of the feasibility problem is copied to the working model.
+    This function handles the result of the latest iteration of solving the NLP subproblem given an infeasible
+    solution, and copies the solution of the feasibility problem to the working model.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
     """
     # TODO try something else? Reinitialize with different initial
     # value?
@@ -180,7 +207,18 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
 
 def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
                                             solve_data, config):
-    """Case that fix-NLP is neither optimal nor infeasible (i.e. max_iterations)"""
+    """
+    Handles the result of the latest iteration of solving the NLP subproblem given a solution that is neither optimal
+    nor infeasible.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    """
     if termination_condition is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial value?
         config.logger.info(
@@ -197,9 +235,20 @@ def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
 
 
 def solve_NLP_feas(solve_data, config):
-    """Solves feasibility NLP and copies result to working model
+    """
+    Handles the result of the latest iteration of solving the NLP subproblem given a feasible, non-optimal solution;
+    solves the feasibility NLP and copies result to working model
 
-    Returns: Result values and dual values
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    Returns
+    -------
+    Returns the result values and dual values
     """
     fixed_nlp = solve_data.working_model.clone()
     add_feas_slacks(fixed_nlp, config)

@@ -14,6 +14,20 @@ from pyomo.opt import SolverFactory
 
 
 def MindtPy_iteration_loop(solve_data, config):
+    """
+    Main loop for MindtPy Algorithms
+
+    This is the outermost function for the algorithms in this package; this function controls the progression of
+    solving the model.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    """
     working_model = solve_data.working_model
     main_objective = next(
         working_model.component_data_objects(Objective, active=True))
@@ -132,11 +146,20 @@ def MindtPy_iteration_loop(solve_data, config):
 
 
 def algorithm_should_terminate(solve_data, config, check_cycling):
-    """Check if the algorithm should terminate.
+    """
+    Checks if the algorithm should terminate.
 
-    Termination conditions based on solver options and progress.
-    Sets the solve_data.results.solver.termination_condition to the appropriate
-    condition, i.e. optimal, maxIterations, maxTimeLimit
+    This function determines whether the algorithm should terminate based on the solver options and progress.
+    (Sets the solve_data.results.solver.termination_condition to the appropriate condition, i.e. optimal,
+    maxIterations, maxTimeLimit)
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+    check_cycling: check for a special case that causes a binary variable to loop through the same values
 
     """
     # Check bound convergence

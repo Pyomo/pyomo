@@ -19,9 +19,20 @@ from pyomo.contrib.mindtpy.util import var_bound_add
 
 
 def MindtPy_initialize_master(solve_data, config):
-    """Initialize the decomposition algorithm.
-    This includes generating the initial cuts require to build the master
-    problem.
+    """
+    Initializes the decomposition algorithm.
+
+    This function initializes the decomposition problem, which includes generating the initial cuts required to
+    build the master MIP/MILP.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    Returns the master MIP/MILP
     """
     # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded master problem.
     if config.single_tree:
@@ -73,7 +84,19 @@ def MindtPy_initialize_master(solve_data, config):
 
 
 def init_rNLP(solve_data, config):
-    """Initialize by solving the rNLP (relaxed binary variables)."""
+    """
+    Initialize the problem by solving the relaxed NLP (fixed binary variables)
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    Returns the optimal variable values obtained from solving the rNLP
+
+    """
     solve_data.nlp_iter += 1
     m = solve_data.working_model.clone()
     config.logger.info(
@@ -102,7 +125,7 @@ def init_rNLP(solve_data, config):
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
-            # TODO check if value of the binary or integer varibles is 0/1 or integer value.
+            # TODO check if value of the binary or integer variables is 0/1 or integer value.
             for var in solve_data.mip.component_data_objects(ctype=Var):
                 if var.is_integer():
                     var.value = int(round(var.value))
@@ -119,10 +142,20 @@ def init_rNLP(solve_data, config):
 
 
 def init_max_binaries(solve_data, config):
-    """Initialize by turning on as many binary variables as possible.
+    """
+    Initializes model by turning on as many binary variables as possible
 
-    The user would usually want to call _solve_NLP_subproblem after an
+    Note - The user would usually want to call _solve_NLP_subproblem after an
     invocation of this function.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    Returns the model with as many activated binary variables as possible
 
     """
     m = solve_data.working_model.clone()

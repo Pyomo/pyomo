@@ -26,10 +26,22 @@ class MindtPySolveData(object):
 
 
 def model_is_valid(solve_data, config):
-    """Validate that the model is solveable by MindtPy.
+    """
+    Validates that the model is solveable by MindtPy.
 
-    Also preforms some preprocessing such as moving the objective to the
-    constraints.
+    This function returns True if the given model is solveable by MindtPy (and performs some preprocessing such
+    as moving the objective to the constraints).
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    Returns
+    -------
+    Boolean value (True if model is solveable in MindtPy else False)
 
     """
     m = solve_data.working_model
@@ -64,13 +76,26 @@ def model_is_valid(solve_data, config):
     if not hasattr(m, 'dual'):  # Set up dual value reporting
         m.dual = Suffix(direction=Suffix.IMPORT)
 
-    # TODO if any continuous variables are multipled with binary ones, need
-    # to do some kind of transformation (Glover?) or throw an error message
+    # TODO if any continuous variables are multiplied with binary ones,
+    #  need to do some kind of transformation (Glover?) or throw an error message
     return True
 
 
 def calc_jacobians(solve_data, config):
-    """Generate a map of jacobians."""
+    """
+    Generates a map of jacobians
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    Returns
+    -------
+    solve_data is returned with a ComponentMap that contains the model variables mapped to their Jacobians
+    """
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
     solve_data.jacobians = ComponentMap()
@@ -90,6 +115,15 @@ def calc_jacobians(solve_data, config):
 
 
 def add_feas_slacks(m, config):
+    """
+    Adds feasibility variable (given an infeasible problem)
+
+    Parameters
+    ----------
+    m:
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+    """
     MindtPy = m.MindtPy_utils
     # generate new constraints
     for i, constr in enumerate(MindtPy.constraint_list, 1):
@@ -106,8 +140,20 @@ def add_feas_slacks(m, config):
 
 
 def var_bound_add(solve_data, config):
-    """This function will add bound for variables in nonlinear constraints if they are not bounded.
-       This is to avoid an unbound master problem in the LP/NLP algorithm.
+    """
+    This function will add bound for variables in nonlinear constraints if they are not bounded. (This is to avoid
+    an unbound master problem in the LP/NLP algorithm.)
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    Returns
+    -------
+    Returns the model with bounds for variables in unbounded nonlinear constraints
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
