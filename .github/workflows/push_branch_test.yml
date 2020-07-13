@@ -137,11 +137,17 @@ jobs:
             install libopenblas-dev gfortran liblapack-dev glpk-utils
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
+    - name: DEBUGGING
+      run: python -c 'import sys;print(sys.executable)'
+
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python }}
+      run: |
+        python -c 'import sys;print(sys.executable)'
+        env | sort
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
@@ -149,6 +155,13 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
+
+    - name: DEBUGGING 2
+      run: python -c 'import sys;print(sys.executable)'
+
+    - name: DEBUGGING 3
+      shell: bash
+      run: python -c 'import sys;print(sys.executable)'
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -169,6 +182,7 @@ jobs:
     - name: Install Python Packages (pip)
       if: matrix.PYENV == 'pip'
       run: |
+        python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         pip install --cache-dir cache/pip ${PYTHON_BASE_PKGS} \

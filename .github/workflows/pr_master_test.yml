@@ -134,7 +134,6 @@ jobs:
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: DEBUGGING
-      shell: bash
       run: python -c 'import sys;print(sys.executable)'
 
     - name: Set up Python ${{ matrix.python }}
@@ -153,11 +152,11 @@ jobs:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
 
-    - name: DEBUGGING
-      shell: bash
+    - name: DEBUGGING 2
       run: python -c 'import sys;print(sys.executable)'
 
-    - name: DEBUGGING
+    - name: DEBUGGING 3
+      shell: bash
       run: python -c 'import sys;print(sys.executable)'
 
     # GitHub actions is very fragile when it comes to setting up various
