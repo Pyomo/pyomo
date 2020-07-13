@@ -592,12 +592,10 @@ use the AbstractModel or ConcreteModel class instead.""")
         self.solutions = ModelSolutions(self)
         self.config.preprocessor = 'pyomo.model.simple_preprocessor'
 
-    def compute_statistics(self, recompute=True, active=True):
+    def compute_statistics(self, active=True):
         """
         Compute model statistics
         """
-        if not recompute and len(self.statistics) > 0:
-            return
         self.statistics.number_of_variables = 0
         self.statistics.number_of_constraints = 0
         self.statistics.number_of_objectives = 0
