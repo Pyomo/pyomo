@@ -51,6 +51,7 @@ class PyomoNLP(AslNLP):
                 raise NotImplementedError('The ASL interface and PyomoNLP in PyNumero currently only support single objective'
                                           ' problems. Deactivate any extra objectives you may have, or add a dummy objective'
                                           ' (f(x)=0) if you have a square problem.')
+            self._objective = objectives[0]
 
             # write the nl file for the Pyomo model and get the symbolMap
             fname, symbolMap = pyomo.opt.WriterFactory('nl')(pyomo_model, nl_file, lambda x:True, {})
@@ -81,6 +82,13 @@ class PyomoNLP(AslNLP):
         Return optimization model
         """
         return self._pyomo_model
+
+    def get_pyomo_objective(self):
+        """
+        Return an instance of the active objective function on the Pyomo model.
+        (there can be only one)
+        """
+        return self._objective
 
     def get_pyomo_variables(self):
         """
@@ -157,6 +165,37 @@ class PyomoNLP(AslNLP):
                 con_id = self._condata_to_idx[c]
                 con_indices.append(con_id)
         return con_indices
+
+    # overloaded from NLP
+    def get_obj_scaling(self):
+        obj = self.get_pyomo_objective()
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is aml.Suffix and \
+           obj in scaling_suffix:
+            return scaling_suffix[obj]
+        return None
+
+    # overloaded from NLP
+    def get_primals_scaling(self):
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+            primals_scaling = np.ones(self.n_primals())
+            for i,v in enumerate(self.get_pyomo_variables()):
+                if v in scaling_suffix:
+                    primals_scaling[i] = scaling_suffix[v]
+            return primals_scaling
+        return None
+
+    # overloaded from NLP
+    def get_constraints_scaling(self):
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+            constraints_scaling = np.ones(self.n_constraints())
+            for i,c in enumerate(self.get_pyomo_constraints()):
+                if c in scaling_suffix:
+                    constraints_scaling[i] = scaling_suffix[c]
+            return constraints_scaling
+        return None
 
     def extract_subvector_grad_objective(self, pyomo_variables):
         """Compute the gradient of the objective and return the entries
