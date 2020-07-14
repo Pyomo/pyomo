@@ -87,17 +87,17 @@ First, we can inspect the initial point:
 
     >>> print("eta2 =",m.eta2())
     eta2 = 1.0
-    
+
     Initial point (not feasible):
     >>> print("Objective =",round(m.cost(),3))
     Objective = 0.045
-    
+
     >>> print("x1 =",round(m.x1(),3))
     x1 = 0.15
-    
+
     >>> print("x2 =",round(m.x2(),3))
     x2 = 0.15
-    
+
     >>> print("x3 =",round(m.x3(),3))
     x3 = 0.0
 
@@ -105,17 +105,17 @@ Next, we inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
 .. doctest::
     :skipif: not sipopt_available
-    
+
     Solution with the original parameter values:
     >>> print("Objective =",round(m_sipopt.cost(),3))
     Objective = 0.5
-    
+
     >>> print("x1 =",round(m_sipopt.x1(),3))
     x1 = 0.5
-    
+
     >>> print("x2 =",round(m_sipopt.x2(),3))
     x2 = 0.5
-    
+
     >>> print("x3 =",round(m_sipopt.x3(),3))
     x3 = 0.0
 
@@ -127,23 +127,23 @@ Finally, we inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}
 
     >>> print("eta2 =",m_sipopt.perturbed_eta2())
     eta2 = 1.0
-    
+
     (Approximate) solution with the new parameter values:
     >>> x1 = m_sipopt.sens_sol_state_1[m_sipopt.x1]
     >>> x2 = m_sipopt.sens_sol_state_1[m_sipopt.x2]
     >>> x3 = m_sipopt.sens_sol_state_1[m_sipopt.x3]
     >>> print("Objective =",round(x1**2 + x2**2 + x3**2,3))
     Objective = 0.556
-    
+
     >>> print("x1 =",round(x1,3))
     x1 = 0.333
-    
+
     >>> print("x2 =",round(x2,3))
     x2 = 0.667
-    
+
     >>> print("x3 =",round(x3,3))
     x3 = -0.0
-    
+
 
 Installing sIPOPT
 -----------------
