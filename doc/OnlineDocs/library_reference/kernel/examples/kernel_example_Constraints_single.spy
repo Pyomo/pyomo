@@ -1,2 +1,0 @@
-m.c = pmo.constraint(
-    sum(m.vd.values()) <= 9)

@@ -37,25 +37,39 @@ Declaration
 The following condensed code snippet illustrates a ``Disjunct`` and a
 ``Disjunction``:
 
-.. literalinclude:: ../script_spy_files/spy4Disjunctions_Disjunct_and_disjunction.spy
-   :language: python
+.. doctest::
+    :hide:
 
-Model.d is an indexed ``Disjunct`` that is indexed over an implicit set
-with members 0 and 1. Since it is an indexed thing, each member is
-initialized using a call to a rule, passing in the index value (just
-like any other pyomo component). However, just defining disjuncts is not
-sufficient to define disjunctions, as pyomo has no way of knowing which
-disjuncts should be bundled into which disjunctions. To define a
-disjunction, you use a ``Disjunction`` component. The disjunction takes
-either a rule or an expression that returns a list of disjuncts over
-which it should form the disjunction. This is what ``_c`` function in
-the example returns.
+    >>> import pyomo.environ as pyo
+    >>> model = pyo.ConcreteModel()
+    >>> model.x = pyo.Var()
+
+.. doctest::
+
+    >>> from pyomo.gdp import Disjunct, Disjunction
+    >>> model.d1 = Disjunct()
+    >>> model.d1.c = pyo.Constraint(expr= model.x == 0)
+    >>> model.d2 = Disjunct()
+    >>> model.d2.c = pyo.Constraint(expr= model.x == 5)
+
+``model`` has two disjuncts, ``model.d1`` and ``model.d2``.  However,
+just defining disjuncts is not sufficient to define disjunctions, as
+Pyomo has no way of knowing which disjuncts should be bundled into which
+disjunctions. To define a disjunction, you use a ``Disjunction``
+component. The disjunction takes either a rule or an expression that
+returns a list of disjuncts over which it should form the
+disjunction:
+
+.. doctest::
+
+   >>> model.c = Disjunction(expr=[model.d1, model.d2])
 
 .. note::
 
+   Like ``Block``, ``Disjunct`` can be indexed and defined by rules.
    There is no requirement that disjuncts be indexed and also no
-   requirement that they be defined using a shared rule. It was done in
-   this case to create a condensed example.
+   requirement that ``Disjuncts`` within a ``Disjunction`` be defined
+   using a common rule.
 
 Transformation
 --------------
@@ -104,22 +118,20 @@ The following models all work and are equivalent:
    
    Option 1: maximal verbosity, abstract-like
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.gdp import *
-   >>> model = ConcreteModel()
+   >>> model = pyo.ConcreteModel()
 
-   >>> model.x = Var()
-   >>> model.y = Var()
+   >>> model.x = pyo.Var()
+   >>> model.y = pyo.Var()
 
    >>> # Two conditions
    >>> def _d(disjunct, flag):
    ...    model = disjunct.model()
    ...    if flag:
    ...       # x == 0
-   ...       disjunct.c = Constraint(expr=model.x == 0)
+   ...       disjunct.c = pyo.Constraint(expr=model.x == 0)
    ...    else:
    ...       # y == 0
-   ...       disjunct.c = Constraint(expr=model.y == 0)
+   ...       disjunct.c = pyo.Constraint(expr=model.y == 0)
    >>> model.d = Disjunct([0,1], rule=_d)
  
    >>> # Define the disjunction
@@ -129,30 +141,26 @@ The following models all work and are equivalent:
 
    Option 2: Maximal verbosity, concrete-like:
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.gdp import *
-   >>> model = ConcreteModel()
+   >>> model = pyo.ConcreteModel()
  
-   >>> model.x = Var()
-   >>> model.y = Var()
+   >>> model.x = pyo.Var()
+   >>> model.y = pyo.Var()
  
    >>> model.fix_x = Disjunct()
-   >>> model.fix_x.c = Constraint(expr=model.x == 0)
+   >>> model.fix_x.c = pyo.Constraint(expr=model.x == 0)
  
    >>> model.fix_y = Disjunct()
-   >>> model.fix_y.c = Constraint(expr=model.y == 0)
+   >>> model.fix_y.c = pyo.Constraint(expr=model.y == 0)
  
    >>> model.c = Disjunction(expr=[model.fix_x, model.fix_y])
  
    Option 3: Implicit disjuncts (disjunction rule returns a list of
    expressions or a list of lists of expressions)
  
-   >>> from pyomo.environ import *
-   >>> from pyomo.gdp import *
-   >>> model = ConcreteModel()
+   >>> model = pyo.ConcreteModel()
  
-   >>> model.x = Var()
-   >>> model.y = Var()
+   >>> model.x = pyo.Var()
+   >>> model.y = pyo.Var()
 
    >>> model.c = Disjunction(expr=[model.x == 0, model.y == 0])
 
