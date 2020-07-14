@@ -231,6 +231,45 @@ class NLP(object):
         pass
 
     @abc.abstractmethod
+    def get_obj_scaling(self):
+        """ Return the desired scaling factor to use for the
+        for the objective function. None indicates no scaling.
+        This indicates potential scaling for the model, but the
+        evaluation methods should return *unscaled* values
+
+        Returns
+        -------
+        float or None
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_primals_scaling(self):
+        """ Return the desired scaling factors to use for the
+        for the primals. None indicates no scaling.
+        This indicates potential scaling for the model, but the
+        evaluation methods should return *unscaled* values
+
+        Returns
+        -------
+        array-like or None
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_constraints_scaling(self):
+        """ Return the desired scaling factors to use for the
+        for the constraints. None indicates no scaling.
+        This indicates potential scaling for the model, but the
+        evaluation methods should return *unscaled* values
+
+        Returns
+        -------
+        array-like or None
+        """
+        pass
+
+    @abc.abstractmethod
     def evaluate_objective(self):
         """Returns value of objective function evaluated at the 
         values given for the primal variables in set_primals
@@ -446,6 +485,32 @@ class ExtendedNLP(NLP):
         """Get a copy of the values of the dual variables of the inequality
         constraints as provided in set_duals_eq. These are the values
         that will be used in calls to the evaluation methods.
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_eq_constraints_scaling(self):
+        """ Return the desired scaling factors to use for the
+        for the equality constraints. None indicates no scaling.
+        This indicates potential scaling for the model, but the
+        evaluation methods should return *unscaled* values
+
+        Returns
+        -------
+        array-like or None
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_ineq_constraints_scaling(self):
+        """ Return the desired scaling factors to use for the
+        for the inequality constraints. None indicates no scaling.
+        This indicates potential scaling for the model, but the
+        evaluation methods should return *unscaled* values
+
+        Returns
+        -------
+        array-like or None
         """
         pass
 
