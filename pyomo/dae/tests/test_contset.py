@@ -372,6 +372,4 @@ class TestIO(unittest.TestCase):
         self.assertEqual(len(self.instance.B), 2)
 
 if __name__ == "__main__":
-    test = TestContinuousSet()
-    test.test_find()
-#    unittest.main()
+    unittest.main()
