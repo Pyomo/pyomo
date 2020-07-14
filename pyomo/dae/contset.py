@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import bisect
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import *
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -247,3 +248,48 @@ class ContinuousSet(SortedSimpleSet):
         self._fe = sorted(self)
         timer.report()
 
+    def find(self, p, tol=1e-8):
+        """
+        Finds a point p in the set, within some tolerance.
+        """
+        # TODO:
+        # - Should this fail/return None if p is not in self within tolerance?
+        # - If not, what is the point of a tolerance rather than just finding
+        #   the closest point?
+        # - If so, this tolerance must be sufficiently small that any point
+        #   may have at most one member of the set within a radius of tolerance.
+        #   Where should this be set?
+        # - Should there be a binary_search_with_tolerance utility function
+        #   somewhere so this can be reproduced outside of ContinuousSet
+        i = bisect.bisect_right(self, p, lo=1, hi=len(self)+1)
+        # i is the index at which p should be inserted if it is to be
+        # right of any equal components
+        if i == 1:
+            # p is less than every entry of the set
+            return self[i]
+
+        # p_le <= p
+        p_le = self[i-1]
+        delta_left = p - p_le
+        if delta_left < tol:
+            # p is close enough to the point on its left
+            return p_le
+
+        try:
+            # p_g > p
+            p_g = self[i]
+        except IndexError:
+            # p is greater than every entry of the set
+            return p_le
+
+        delta_right = p_g - p
+        if delta_right < tol:
+            # p is close enough to the point on its right
+            return p_g
+
+        if delta_right <= delta_left:
+            # If p is exactly in between two points, return the point on the
+            # right. This is completely arbitrary.
+            return p_g
+        else:
+            return p_le
