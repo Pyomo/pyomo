@@ -65,9 +65,6 @@ jobs:
 
     - name: Configure job parameters
       run: |
-        env
-        echo "${{ job.name }}"
-        echo "${{ job }}"
         echo "::set-env name=GHA_JOBNAME::"`echo "${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}" | sed -r 's|/|_|g'`
 
     # Ideally we would cache the conda downloads; however, each cache is
@@ -450,9 +447,10 @@ jobs:
             if test $? == 0; then
                 echo "PASS" > ${GITHUB_WORKSPACE}/codecov.result
                 break
-            elif test $i -ge 5; then
+            elif test $i -ge 2; then
+                # Do not fail the build just because the codecov upload fails
                 echo "FAIL" > ${GITHUB_WORKSPACE}/codecov.result
-                exit 1
+                break
             fi
             DELAY=$(( RANDOM % 30 + 30))
             echo "Pausing $DELAY seconds before re-attempting upload"
@@ -462,21 +460,29 @@ jobs:
     - name: Record build artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: ${{env.GHA_JOBNAME}}
+        name: ${{github.job_id}}_${{env.GHA_JOBNAME}}
         path: |
           codecov.result
           TEST-pyomo.xml
 
-  summary:
-    name: Build summary
+  post:
+    name: post-build
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v2
         with:
           path: artifacts
 
-      - name: Check codecov status
+      - name: Check codecov upload success
         run: |
-          find artifacts
+          FAIL=`grep FAIL artifacts/*/codecov.result | wc -l`
+          ALL=`ls -1 artifacts/*/codecov.result | wc -l`
+          # Fail is more than 1/9 codecov uploads fail
+          echo "$FAIL of $ALL codecov uploads failed"
+          if test $(( $FAIL * 9 )) -gt $ALL; then
+              echo "More than 1/9 codecov uploads failed:"
+              grep FAIL artifacts/*/codecov.result
+              exit 1
+          fi
