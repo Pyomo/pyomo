@@ -483,8 +483,10 @@ jobs:
           ALL=`ls -1 artifacts/*/codecov.result | wc -l`
           # Fail is more than 1/9 codecov uploads fail
           echo "$FAIL of $ALL codecov uploads failed"
-          if test $(( $FAIL * 9 )) -gt $ALL; then
-              echo "More than 1/9 codecov uploads failed:"
-              grep FAIL artifacts/*/codecov.result
-              exit 1
+          if test $FAIL -gt 0; then
+              grep FAIL artifacts/*/codecov.result | sed 's/^/    /'
+              if test $(( $FAIL * 9 )) -gt $ALL; then
+                  echo "More than 1/9 codecov uploads failed:"
+                  exit 1
+              fi
           fi
