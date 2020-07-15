@@ -19,7 +19,7 @@ env:
   CACHE_VER: v1
 
 jobs:
-  pyomo-tests:
+  build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.NAME }}
     runs-on: ${{ matrix.os }}
     strategy:
