@@ -16,6 +16,7 @@ import pyutilib.th as unittest
 from pyomo.common import DeveloperError
 import pyomo.core.base._pyomo
 from pyomo.core.base.block import generate_cuid_names
+from pyomo.core.base.component import get_location_of_coordinate_set
 from pyomo.environ import *
 
 
@@ -603,6 +604,34 @@ class TestComponentUID(unittest.TestCase):
         assert len(z_list) == len(id_set)
         for var in z_list:
             assert id(var) in id_set
+
+
+class TestGetLocationOfCoordinateSet(unittest.TestCase):
+
+    def test_get_location(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1,2,3])
+        m.s2 = Set(initialize=[('a',1), ('b',2)])
+        m.s3 = Set(initialize=[('a',1,0), ('b',2,1)])
+        m.v1 = Var(m.s1)
+        m.v2 = Var(m.s1, m.s2)
+        m.v121 = Var(m.s1, m.s2, m.s1)
+        m.v3 = Var(m.s3, m.s1, m.s2)
+    
+        self.assertEqual(
+                get_location_of_coordinate_set(m.v1.index_set(), m.s1),
+                0)
+        self.assertEqual(
+                get_location_of_coordinate_set(m.v2.index_set(), m.s1),
+                0)
+        self.assertEqual(
+                get_location_of_coordinate_set(m.v3.index_set(), m.s1),
+                3)
+    
+        with self.assertRaises(ValueError):
+            get_location_of_coordinate_set(m.v1.index_set(), m.s2)
+        with self.assertRaises(ValueError):
+            get_location_of_coordinate_set(m.v121.index_set(), m.s1)
 
 
 class TestEnviron(unittest.TestCase):
