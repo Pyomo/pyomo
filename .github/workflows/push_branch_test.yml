@@ -461,7 +461,7 @@ jobs:
     - name: Record build artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: ${{github.job_id}}_${{env.GHA_JOBNAME}}
+        name: ${{github.job}}_${{env.GHA_JOBNAME}}
         path: |
           codecov.result
           TEST-pyomo.xml
