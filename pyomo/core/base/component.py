@@ -1045,6 +1045,10 @@ class ComponentUID(object):
                     "ComponentUID object from a string type")
             self._cids = tuple(self.parse_cuid(component))
         else:
+            if cuid_buffer is not None and wildcard_set is not None:
+                raise ValueError(
+                    "cuid_buffer and wildcard_set may not be specified "
+                    "simultaneously")
             self._cids = tuple(self._generate_cuid(component,
                                                    cuid_buffer=cuid_buffer,
                                                    context=context,
