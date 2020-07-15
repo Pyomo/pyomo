@@ -10,9 +10,6 @@ from pyomo.core.base.component import ComponentUID
 from pyomo.core.base import Constraint, _ConstraintData
 from pyomo.common.deprecation import deprecation_warning
 
-import logging
-logger = logging.getLogger('pyomo.core')
-
 def target_list(x):
     deprecation_msg = ("In future releases ComponentUID targets will no longer "
                        "be supported. Specify targets as a Constraint or list "
