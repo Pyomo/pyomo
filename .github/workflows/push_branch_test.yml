@@ -63,6 +63,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Configure job parameters
+      run: |
+        env
+        echo "${{ jobs.build.name }}"
+        echo "::set-env name=GHA_JOBNAME::"`echo "${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}" | sed -r 's|/|_|g'`
+
     # Ideally we would cache the conda downloads; however, each cache is
     # over 850MB, and with 5 python versions, that would consume 4.2 of
     # the 5 GB GitHub allows.
@@ -455,7 +461,7 @@ jobs:
     - name: Record build artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: build_${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
+        name: build_${{env.GHA_JOBNAME}}
         path: |
           codecov.result
           TEST-pyomo.xml
