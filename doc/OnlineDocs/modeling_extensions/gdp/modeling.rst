@@ -201,6 +201,11 @@ An example of this usage may be found below for the expression:
 Integration with Disjunctions
 -----------------------------
 
+.. note::
+
+    This section is subject to change between this date and August 2020.
+    The current plan is to provide a deprecation path changing ``indicator_var`` from binary ``Var`` to ``BooleanVar``.
+
 The logical expression system is designed to augment the previously introduced ``Disjunct`` and ``Disjunction`` components, the only original logical modeling types in Pyomo.GDP.
 Note that for historical reasons, an indicator variable ``indicator_var`` was originally implemented in Pyomo.GDP as a binary variable.
 Mathematically, the disjunct indicator variable is Boolean.
@@ -221,6 +226,7 @@ Here, we demonstrate this capability with a toy example:
     &Y_1 \Rightarrow Y_4
 
 .. doctest::
+    :skipif: not glpk_available
 
     >>> m = ConcreteModel()
     >>> m.s = RangeSet(4)
@@ -236,10 +242,10 @@ Here, we demonstrate this capability with a toy example:
     >>> m.d[4].c = Constraint(expr=m.x == 2.5)
     >>> m.o = Objective(expr=m.x)
 
-    >>> # Create an alias to the auto-generated Disjunct Booleans
-    >>> # For example m.d[1].indicator_bool is the indicator BooleanVar associated
-    >>> # with the first disjunct, Y_1.
-    >>> m.Y = Reference(m.d[:].indicator_bool)
+    >>> # Create Boolean variables associated with the disjuncts.
+    >>> m.Y = BooleanVar(m.s)
+    >>> for idx in m.Y:
+    ...    m.Y[idx].associate_binary_var(m.d[idx].indicator_var)
 
     >>> # Add the logical proposition
     >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[4]))
@@ -260,7 +266,7 @@ Here, we demonstrate this capability with a toy example:
 
     >>> # Solve the reformulated model and update the Boolean variables
     >>> # based on the algebraic model results
-    >>> run_data = SolverFactory('cbc').solve(m)
+    >>> run_data = SolverFactory('glpk').solve(m)
     >>> update_boolean_vars_from_binary(m)
     >>> m.Y.display()
     Y : Size=4, Index=s
