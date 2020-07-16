@@ -19,7 +19,7 @@ env:
   CACHE_VER: v1
 
 jobs:
-  pyomo-tests:
+  build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.NAME }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -62,6 +62,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Configure job parameters
+      run: |
+        JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}"
+        echo "::set-env name=GHA_JOBNAME::"`echo "$JOB" | sed 's|/|_|g'`
 
     # Ideally we would cache the conda downloads; however, each cache is
     # over 850MB, and with 5 python versions, that would consume 4.2 of
@@ -406,6 +411,7 @@ jobs:
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
         mpirun -np ${{matrix.mpi}} --oversubscribe $NOSETESTS -v \
+            --with-xunit --xunit-file=TEST-pyomo-mpi.xml \
             --eval-attr="mpi and (not fragile)" \
             pyomo `pwd`/pyomo-model-libraries
 
@@ -441,11 +447,48 @@ jobs:
             echo "Uploading coverage to codecov (attempt ${i})"
             bash $CODECOV -Z -X gcov -X s3 -f coverage.xml
             if test $? == 0; then
+                echo "PASS" > ${GITHUB_WORKSPACE}/codecov.result
                 break
-            elif test $i -ge 5; then
-                exit 1
+            elif test $i -ge 2; then
+                # Do not fail the build just because the codecov upload fails
+                echo "FAIL" > ${GITHUB_WORKSPACE}/codecov.result
+                break
             fi
             DELAY=$(( RANDOM % 30 + 30))
             echo "Pausing $DELAY seconds before re-attempting upload"
             sleep $DELAY
         done
+
+    - name: Record build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{github.job}}_${{env.GHA_JOBNAME}}
+        path: |
+          codecov.result
+        # In general, do not record test results as artifacts to
+        #   manage total artifact storage
+        # TEST-*.xml
+
+  post:
+    name: post-build
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+
+      - name: Check codecov upload success
+        run: |
+          FAIL=`grep FAIL artifacts/*/codecov.result | wc -l`
+          ALL=`ls -1 artifacts/*/codecov.result | wc -l`
+          # Fail is more than 1/9 codecov uploads fail
+          echo "$FAIL of $ALL codecov uploads failed"
+          if test $FAIL -gt 0; then
+              grep FAIL artifacts/*/codecov.result | sed 's/^/    /'
+              if test $(( $FAIL * 9 )) -gt $ALL; then
+                  echo "More than 1/9 codecov uploads failed:"
+                  exit 1
+              fi
+          fi
