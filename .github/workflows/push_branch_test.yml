@@ -465,7 +465,9 @@ jobs:
         name: ${{github.job}}_${{env.GHA_JOBNAME}}
         path: |
           codecov.result
-          TEST-*.xml
+        # In general, do not record test results as artifacts to
+        #   manage total artifact storage
+        # TEST-*.xml
 
   post:
     name: post-build
