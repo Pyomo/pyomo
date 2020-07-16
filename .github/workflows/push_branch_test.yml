@@ -411,6 +411,7 @@ jobs:
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
         mpirun -np ${{matrix.mpi}} --oversubscribe $NOSETESTS -v \
+            --with-xunit --xunit-file=TEST-pyomo-mpi.xml \
             --eval-attr="mpi and (not fragile)" \
             pyomo `pwd`/pyomo-model-libraries
 
@@ -464,7 +465,7 @@ jobs:
         name: ${{github.job}}_${{env.GHA_JOBNAME}}
         path: |
           codecov.result
-          TEST-pyomo.xml
+          TEST-*.xml
 
   post:
     name: post-build
