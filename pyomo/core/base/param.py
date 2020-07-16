@@ -967,8 +967,8 @@ This has resulted in the conversion of the source to dense form.
                  )
     
     def get_units(self):
-    """Return the units expression for this parameter"""
-    return self._units
+        """Return the units expression for this parameter"""
+        return self._units
 
 
 class SimpleParam(_ParamData, Param):
