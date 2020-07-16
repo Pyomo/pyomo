@@ -121,6 +121,9 @@ Next, we inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
 Finally, we inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`:
 
+.. doctest::
+    :skipif: not sipopt_available
+
     New parameter values:
     >>> print("eta1 =",m_sipopt.perturbed_eta1())
     eta1 = 4.0
