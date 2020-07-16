@@ -965,6 +965,10 @@ This has resulted in the conversion of the source to dense form.
                  ("Value",),
                  dataGen,
                  )
+    
+    def get_units(self):
+    """Return the units expression for this parameter"""
+    return self._units
 
 
 class SimpleParam(_ParamData, Param):
@@ -1020,10 +1024,6 @@ class SimpleParam(_ParamData, Param):
         can change later.
         """
         return self._constructed and not self._mutable
-
-    def get_units(self):
-        """Return the units expression for this parameter"""
-        return self._units
     
 class IndexedParam(Param):
 
