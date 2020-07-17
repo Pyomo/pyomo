@@ -10,6 +10,8 @@
 
 import ctypes
 import os
+import six
+
 from six import iteritems
 
 class _MsvcrtInterface(object):
@@ -56,6 +58,20 @@ class _MsvcrtInterface(object):
         self.wgetenv.restype = ctypes.c_wchar_p
 
         return self._loaded
+
+def _as_bytes(val):
+    """Helper function to coerce a string to a bytes() object"""
+    if isinstance(val, six.binary_type):
+        return val
+    else:
+        return val.encode('utf-8')
+
+def _as_unicode(val):
+    """Helper function to coerce a string to a unicode() object"""
+    if isinstance(val, six.text_type):
+        return val
+    else:
+        return val.decode()
 
 class TemporaryEnv(object):
     msvcrt = _MsvcrtInterface()
@@ -113,7 +129,7 @@ class TemporaryEnv(object):
             # Restore MSVCRT
             for key, val in iteritems(self.original_state):
                 if val[1] is None:
-                    if isinstance(k, six.text_type): 
+                    if isinstance(key, six.text_type):
                         self.msvcrt.wputenv_s(key, u'')
                     else:
                         self.msvcrt.putenv_s(key, b'')
