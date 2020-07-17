@@ -19,6 +19,10 @@ import pyutilib
 from scipy.sparse import coo_matrix
 import numpy as np
 import six
+import os
+import sys
+import ctypes
+
 
 __all__ = ['PyomoNLP']
 
@@ -38,7 +42,7 @@ class PyomoNLP(AslNLP):
             # get the temp file names for the nl file
             nl_file = pyutilib.services.TempfileManager.create_tempfile(suffix='pynumero.nl')
 
-            
+
             # The current AmplInterface code only supports a single objective function
             # Therefore, we throw an error if there is not one (and only one) active
             # objective function. This is better than adding a dummy objective that the
@@ -55,7 +59,7 @@ class PyomoNLP(AslNLP):
 
             # write the nl file for the Pyomo model and get the symbolMap
             fname, symbolMap = pyomo.opt.WriterFactory('nl')(pyomo_model, nl_file, lambda x:True, {})
-            
+
             # create component maps from vardata to idx and condata to idx
             self._vardata_to_idx = vdidx = pyomo.core.kernel.component_map.ComponentMap()
             self._condata_to_idx = cdidx = pyomo.core.kernel.component_map.ComponentMap()
@@ -67,8 +71,37 @@ class PyomoNLP(AslNLP):
                 elif name[0] == 'c':
                     cdidx[obj()] = int(name[1:])
 
+            # The NL writer advertises the external function libraries
+            # through the PYOMO_AMPLFUNC environment variable.
+            if 'PYOMO_AMPLFUNC' in os.environ:
+                _old_amplfunc = os.environ.get('AMPLFUNC', None)
+                if _old_amplfunc is not None:
+                    os.environ['AMPLFUNC'] += "\n" + os.environ['PYOMO_AMPLFUNC']
+                else:
+                    os.environ['AMPLFUNC'] = os.environ['PYOMO_AMPLFUNC']
+                if os.name in ['nt', 'dos'] and sys.version_info[0] > 2:
+                    ctypes.cdll.msvcrt._wputenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
+                elif os.name in ['nt', 'dos']:
+                    ctypes.cdll.msvcrt._putenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
+
             # now call the AslNLP with the newly created nl_file
-            super(PyomoNLP, self).__init__(nl_file)
+            try:
+                super(PyomoNLP, self).__init__(nl_file)
+            finally:
+                # Restore the AMPLFUNC environment variable
+                if 'PYOMO_AMPLFUNC' in os.environ:
+                    if _old_amplfunc is not None:
+                        os.environ['AMPLFUNC'] = _old_amplfunc
+                        if os.name in ['nt', 'dos'] and sys.version_info[0] > 2:
+                            ctypes.cdll.msvcrt._wputenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
+                        elif os.name in ['nt', 'dos']:
+                            ctypes.cdll.msvcrt._putenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
+                    else:
+                        del os.environ['AMPLFUNC']
+                        if os.name in ['nt', 'dos'] and sys.version_info[0] > 2:
+                            ctypes.cdll.msvcrt._wputenv_s(u"AMPLFUNC", u"")
+                        elif os.name in ['nt', 'dos']:
+                            ctypes.cdll.msvcrt._putenv_s("AMPLFUNC", "")
 
             # keep pyomo model in cache
             self._pyomo_model = pyomo_model
@@ -253,7 +286,7 @@ class PyomoNLP(AslNLP):
 
     def extract_submatrix_hessian_lag(self, pyomo_variables_rows, pyomo_variables_cols):
         """
-        Return the submatrix of the hessian of the lagrangian that 
+        Return the submatrix of the hessian of the lagrangian that
         corresponds to the list of Pyomo variables provided
 
         Parameters
@@ -283,5 +316,3 @@ class PyomoNLP(AslNLP):
             submatrix_jcols[i] = submatrix_map[v]
 
         return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(primal_indices_rows), len(primal_indices_cols)))
-    
-
