@@ -15,6 +15,8 @@ import six
 from six import iteritems
 
 class _MsvcrtInterface(object):
+    """Helper class to amnage the interface with the MSVCRT runtime"""
+
     def __init__(self):
         self._loaded = None
         self.putenv_s = _MsvcrtInterface.noop_put
@@ -79,23 +81,49 @@ class TemporaryEnv(object):
     def __init__(self, **kwds):
         """A context manager for managing environment variables
 
+        This class provides a simplified interface for consistently
+        setting and restoring environment variables, with special
+        handling to ensure consistency on Windows platforms.
+
         `os.environ` reflects the current python environment variables,
         and will be passed to subprocesses.  However, it does not
         reflect the MSVCRT environment on Windows platforms.  This can
-        be problemmatic, as DLLs loaded through the CTYPES interface
+        be problemmatic as DLLs loaded through the CTYPES interface
         will see the MSVCRT environment and not os.environ.  This class
         provides a way to manage environment variables and pass changes
         to both os.environ and the MSVCRT runtime.
 
-        It implements a context manager API, so that clients can
-        temporarily change and then subsequently restore the
+        This class implements a context manager API, so that clients can
+        temporarily change - and then subsequently restore - the
         environment.
+
+        .. testcode::
+           :hide:
+
+           import os
+           from pyomo.common.env import TemporaryEnv
+           orig_env_val = os.environ.get('TEMP_ENV_VAR', None)
 
         .. doctest::
 
-           >>> with TemporaryEnv(TEMP_ENV_VAR='temp_value'):
+           >>> os.environ['TEMP_ENV_VAR'] = 'original value'
+           >>> print(os.environ['TEMP_ENV_VAR'])
+           original value
+
+           >>> with TemporaryEnv(TEMP_ENV_VAR='temporary value'):
            ...    print(os.envion['TEMP_ENV_VAR'])
-           temp_value
+           temporary value
+
+           >>> print(os.environ['TEMP_ENV_VAR'])
+           original value
+
+        .. testcode::
+           :hide:
+
+           if orig_env_val is None:
+               del os.environ['TEMP_ENV_VAR']
+           else:
+               os.environ['TEMP_ENV_VAR'] = orig_env_val
 
         """
         self.original_state = {}
@@ -109,6 +137,14 @@ class TemporaryEnv(object):
         self.restore()
 
     def restore(self):
+        """Restore the environment to the original state
+
+        This restores all environment variables modified through this
+        object to the state they were in before this instance made any
+        changes.  Note that any changes made directly to os.environ
+        outside this instance will not be detected / undone.
+
+        """
         # It is possible that os.environ and the MSVCRT did not start
         # off in sync; e.g., if someone had set a value in os.environ
         # directly.  We will be especially careful and restore the
@@ -141,9 +177,11 @@ class TemporaryEnv(object):
         self.original_state = {}
 
     def __getitem__(self, key):
+        """Retun the current environment variable value from os.environ"""
         return os.environ[key]
 
     def __contains__(self, key):
+        """Retun true if the key is in os.environ"""
         return key in os.environ
 
     def __setitem__(self, key, val):
