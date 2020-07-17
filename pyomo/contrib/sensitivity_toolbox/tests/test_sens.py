@@ -355,8 +355,8 @@ class TestSensitivityToolbox(unittest.TestCase):
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_parameter_example(self):
     
-        from pyomo.contrib.sensitivity_toolbox.examples.parameter import example
-        d = example(print_flag = False)
+        from pyomo.contrib.sensitivity_toolbox.examples.parameter import run_example
+        d = run_example()
         
         d_correct = {'eta1':4.5, 'eta2':1.0, 'x1_init':0.15, 'x2_init':0.15, 'x3_init':0.0,
             'cost_sln':0.5, 'x1_sln':0.5, 'x2_sln':0.5, 'x3_sln':0.0, 'eta1_pert':4.0,

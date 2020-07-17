@@ -13,7 +13,7 @@
 # Original implmentation by Hans Pirany is in pyomo/examples/pyomo/suffixes
 #
 
-
+from __future__ import print_function
 from pyomo.environ import * 
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt
 
@@ -35,14 +35,14 @@ def create_model():
     
     return m 
 
-def example(print_flag=True):
+def run_example(print_flag=True):
     '''
     Execute the example
     
     Arguments:
         print_flag: Toggle on/off printing
     
-    Returns
+    Returns:
         sln_dict: Dictionary containing solution (used for automated testing)
     
     '''
@@ -118,4 +118,4 @@ def example(print_flag=True):
 
 
 if __name__=='__main__':
-    d = example()
+    d = run_example()
