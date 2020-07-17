@@ -44,6 +44,12 @@ jobs:
           PYENV: conda
           PACKAGES: glpk
 
+        - os: windows-latest
+          python: 2.7
+          TARGET: win
+          PYENV: conda
+          PACKAGES: glpk
+
         - os: ubuntu-latest
           python: 3.7
           mpi: 3
