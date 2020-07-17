@@ -11,17 +11,18 @@
 This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
 """
-import pyomo
-import pyomo.environ as aml
-from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
-import pyutilib
 
-from scipy.sparse import coo_matrix
+import os
 import numpy as np
 import six
-import os
-import sys
-import ctypes
+
+from scipy.sparse import coo_matrix
+
+import pyutilib
+import pyomo
+import pyomo.environ as aml
+from pyomo.common.env import TemporaryEnv
+from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 
 
 __all__ = ['PyomoNLP']
@@ -41,7 +42,6 @@ class PyomoNLP(AslNLP):
         try:
             # get the temp file names for the nl file
             nl_file = pyutilib.services.TempfileManager.create_tempfile(suffix='pynumero.nl')
-
 
             # The current AmplInterface code only supports a single objective function
             # Therefore, we throw an error if there is not one (and only one) active
@@ -72,36 +72,15 @@ class PyomoNLP(AslNLP):
                     cdidx[obj()] = int(name[1:])
 
             # The NL writer advertises the external function libraries
-            # through the PYOMO_AMPLFUNC environment variable.
-            if 'PYOMO_AMPLFUNC' in os.environ:
-                _old_amplfunc = os.environ.get('AMPLFUNC', None)
-                if _old_amplfunc is not None:
-                    os.environ['AMPLFUNC'] += "\n" + os.environ['PYOMO_AMPLFUNC']
-                else:
-                    os.environ['AMPLFUNC'] = os.environ['PYOMO_AMPLFUNC']
-                if os.name in ['nt', 'dos'] and sys.version_info[0] > 2:
-                    ctypes.cdll.msvcrt._wputenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
-                elif os.name in ['nt', 'dos']:
-                    ctypes.cdll.msvcrt._putenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
-
-            # now call the AslNLP with the newly created nl_file
-            try:
+            # through the PYOMO_AMPLFUNC environment variable; merge it
+            # with any preexisting AMPLFUNC definitions
+            amplfunc = "\n".join(
+                val for val in (
+                    os.environ.get('AMPLFUNC', ''),
+                    os.environ.get('PYOMO_AMPLFUNC', ''),
+                ) if val)
+            with TemporaryEnv(AMPLFUNC=amplfunc):
                 super(PyomoNLP, self).__init__(nl_file)
-            finally:
-                # Restore the AMPLFUNC environment variable
-                if 'PYOMO_AMPLFUNC' in os.environ:
-                    if _old_amplfunc is not None:
-                        os.environ['AMPLFUNC'] = _old_amplfunc
-                        if os.name in ['nt', 'dos'] and sys.version_info[0] > 2:
-                            ctypes.cdll.msvcrt._wputenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
-                        elif os.name in ['nt', 'dos']:
-                            ctypes.cdll.msvcrt._putenv_s("AMPLFUNC", os.environ["AMPLFUNC"])
-                    else:
-                        del os.environ['AMPLFUNC']
-                        if os.name in ['nt', 'dos'] and sys.version_info[0] > 2:
-                            ctypes.cdll.msvcrt._wputenv_s(u"AMPLFUNC", u"")
-                        elif os.name in ['nt', 'dos']:
-                            ctypes.cdll.msvcrt._putenv_s("AMPLFUNC", "")
 
             # keep pyomo model in cache
             self._pyomo_model = pyomo_model
