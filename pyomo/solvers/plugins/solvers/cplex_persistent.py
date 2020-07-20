@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.numvalue import value, native_numeric_types
+from pyomo.core.expr.numvalue import value
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
@@ -148,14 +148,16 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         ## set-up add var
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._cplex_vtype_from_var(var)
-        if var.has_lb():
-            lb = value(var.lb)
+        if var.is_fixed():
+            lb = var.value
+            ub = var.value
         else:
             lb = -self._cplex.infinity
-        if var.has_ub():
-            ub = value(var.ub)
-        else:
             ub = self._cplex.infinity
+            if var.has_lb():
+                lb = value(var.lb)
+            if var.has_ub():
+                ub = value(var.ub)
 
         ## do column addition
         self._solver_model.variables.add(obj=[obj], lb=[lb], ub=[ub], types=[vtype], names=[varname],
