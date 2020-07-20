@@ -99,16 +99,8 @@ class XpressPersistent(PersistentSolver, XpressDirect):
             raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
         xpress_var = self._pyomo_var_to_solver_var_map[var]
         qctype = self._xpress_chgcoltype_from_var(var)
-        if var.is_fixed():
-            lb = var.value
-            ub = var.value
-        else:
-            lb = -self._xpress.infinity
-            ub = self._xpress.infinity
-            if var.has_lb():
-                lb = value(var.lb)
-            if var.has_ub():
-                ub = value(var.ub)
+        lb, ub = self._xpress_lb_ub_from_var(var)
+
         self._solver_model.chgbounds([xpress_var, xpress_var], ['L', 'U'], [lb, ub])
         self._solver_model.chgcoltype([xpress_var], [qctype])
 
@@ -132,17 +124,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         ## set-up add var
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vartype = self._xpress_chgcoltype_from_var(var)
-        if var.has_lb():
-            lb = value(var.lb)
-        else:
-            lb = -self._xpress.infinity
-        if var.has_ub():
-            ub = value(var.ub)
-        else:
-            ub = self._xpress.infinity
-        if var.is_fixed():
-            lb = value(var.value)
-            ub = value(var.value)
+        lb, ub = self._xpress_lb_ub_from_var(var)
 
         self._solver_model.addcols(objx=[obj], mstart=[0,len(solver_coeff_list)], 
                                     mrwind=constraints, dmatval=coefficients, 

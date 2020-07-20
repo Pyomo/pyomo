@@ -115,16 +115,8 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
         gurobipy_var = self._pyomo_var_to_solver_var_map[var]
         vtype = self._gurobi_vtype_from_var(var)
-        if var.is_fixed():
-            lb = var.value
-            ub = var.value
-        else:
-            lb = -self._gurobipy.GRB.INFINITY
-            ub = self._gurobipy.GRB.INFINITY
-            if var.has_lb():
-                lb = value(var.lb)
-            if var.has_ub():
-                ub = value(var.ub)
+        lb, ub = self._gurobi_lb_ub_from_var(var)
+
         gurobipy_var.setAttr('lb', lb)
         gurobipy_var.setAttr('ub', ub)
         gurobipy_var.setAttr('vtype', vtype)
@@ -676,17 +668,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         ## set-up add var
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vtype = self._gurobi_vtype_from_var(var)
-        if var.has_lb():
-            lb = value(var.lb)
-        else:
-            lb = -self._gurobipy.GRB.INFINITY
-        if var.has_ub():
-            ub = value(var.ub)
-        else:
-            ub = self._gurobipy.GRB.INFINITY
-        if var.is_fixed():
-            lb = value(var.value)
-            ub = value(var.value)
+        lb, ub = self._gurobi_lb_ub_from_var(var)
 
         gurobipy_var = self._solver_model.addVar(obj=obj_coef, lb=lb, ub=ub, vtype=vtype, name=varname, 
                             column=self._gurobipy.Column(coeffs=coefficients, constrs=constraints) )
