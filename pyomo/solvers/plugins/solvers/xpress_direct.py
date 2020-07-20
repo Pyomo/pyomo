@@ -201,7 +201,7 @@ class XpressDirect(DirectSolver):
 
         return xpress_expr, referenced_vars
 
-    def _xpress_lb_ub_from_var(var):
+    def _xpress_lb_ub_from_var(self, var):
         if var.is_fixed():
             val = var.value
             return val, val

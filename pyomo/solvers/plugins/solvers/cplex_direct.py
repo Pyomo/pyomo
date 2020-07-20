@@ -294,7 +294,7 @@ class CPLEXDirect(DirectSolver):
 
         return cplex_expr, referenced_vars
 
-    def _cplex_lb_ub_from_var(var):
+    def _cplex_lb_ub_from_var(self, var):
         if var.is_fixed():
             val = var.value
             return val, val

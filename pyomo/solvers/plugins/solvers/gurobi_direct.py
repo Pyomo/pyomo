@@ -202,7 +202,7 @@ class GurobiDirect(DirectSolver):
 
         return gurobi_expr, referenced_vars
 
-    def _gurobi_lb_ub_from_var(var):
+    def _gurobi_lb_ub_from_var(self, var):
         if var.is_fixed():
             val = var.value
             return val, val
