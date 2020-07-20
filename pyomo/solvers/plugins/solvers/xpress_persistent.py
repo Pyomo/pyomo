@@ -130,9 +130,6 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         coefficients: the coefficient to put on var in the associated constraint
         """
 
-        obj, solver_coeff_list, solver_constr_list = \
-                self._add_and_collect_column_data(var, obj_coef, constraints, coefficients)
-
         ## set-up add var
         varname = self._symbol_map.getSymbol(var, self._labeler)
         vartype = self._xpress_chgcoltype_from_var(var)
@@ -149,7 +146,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
             ub = value(var.value)
 
         self._solver_model.addcols(objx=[obj], mstart=[0,len(solver_coeff_list)], 
-                                    mrwind=solver_constr_list, dmatval=solver_coeff_list, 
+                                    mrwind=constraints, dmatval=coefficients, 
                                     bdl=[lb], bdu=[ub], names=[varname], 
                                     types=[vartype])
 

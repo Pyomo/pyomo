@@ -668,14 +668,10 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         Parameters
         ----------
         var: Var (scalar Var or single _VarData)
-        obj_coef: float, pyo.Param
-
-        constraints: list of scalar Constraints of single _ConstraintDatas  
-        coefficients: the coefficient to put on var in the associated constraint
+        obj_coef: float
+        constraints: list of solver constraints
+        coefficients: list of coefficients to put on var in the associated constraint
         """
-
-        obj, solver_coeff_list, solver_constr_list = \
-                self._add_and_collect_column_data(var, obj_coef, constraints, coefficients)
 
         ## set-up add var
         varname = self._symbol_map.getSymbol(var, self._labeler)
@@ -692,8 +688,8 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             lb = value(var.value)
             ub = value(var.value)
 
-        gurobipy_var = self._solver_model.addVar(obj=obj, lb=lb, ub=ub, vtype=vtype, name=varname, 
-                            column=self._gurobipy.Column(coeffs=solver_coeff_list, constrs=solver_constr_list) )
+        gurobipy_var = self._solver_model.addVar(obj=obj_coef, lb=lb, ub=ub, vtype=vtype, name=varname, 
+                            column=self._gurobipy.Column(coeffs=coefficients, constrs=constraints) )
 
         self._pyomo_var_to_solver_var_map[var] = gurobipy_var 
         self._solver_var_to_pyomo_var_map[gurobipy_var] = var

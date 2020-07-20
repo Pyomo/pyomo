@@ -136,14 +136,10 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         Parameters
         ----------
         var: Var (scalar Var or single _VarData)
-        obj_coef: float, pyo.Param
-
-        constraints: list of scalar Constraints of single _ConstraintDatas  
-        coefficients: the coefficient to put on var in the associated constraint
+        obj_coef: float
+        constraints: list of solver constraints
+        coefficients: list of coefficients to put on var in the associated constraint
         """
-
-        obj, solver_coeff_list, solver_constr_list = \
-                self._add_and_collect_column_data(var, obj_coef, constraints, coefficients)
 
         ## set-up add var
         varname = self._symbol_map.getSymbol(var, self._labeler)
@@ -160,8 +156,8 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
                 ub = value(var.ub)
 
         ## do column addition
-        self._solver_model.variables.add(obj=[obj], lb=[lb], ub=[ub], types=[vtype], names=[varname],
-                            columns=[self._cplex.SparsePair(ind=solver_constr_list, val=solver_coeff_list)])
+        self._solver_model.variables.add(obj=[obj_coef], lb=[lb], ub=[ub], types=[vtype], names=[varname],
+                            columns=[self._cplex.SparsePair(ind=constraints, val=coefficients)])
 
         self._pyomo_var_to_solver_var_map[var] = varname
         self._solver_var_to_pyomo_var_map[varname] = var

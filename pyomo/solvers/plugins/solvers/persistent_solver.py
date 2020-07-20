@@ -195,12 +195,14 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         var: Var (scalar Var or single _VarData)
         obj_coef: float, pyo.Param
-
         constraints: list of scalar Constraints of single _ConstraintDatas  
-        coefficients: the coefficient to put on var in the associated constraint
+        coefficients: list of the coefficient to put on var in the associated constraint
+
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_column.')
+        obj_coef, constraints, coefficients = self._add_and_collect_column_data(
+                obj_coef, constraints, coefficients)
         self._add_column(var, obj_coef, constraints, coefficients)
 
     """ This method should be implemented by subclasses."""
