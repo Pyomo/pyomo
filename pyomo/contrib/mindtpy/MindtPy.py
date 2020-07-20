@@ -288,7 +288,7 @@ class MindtPySolver(object):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
 
-        # configration confirmation
+        # configuration confirmation
         if config.single_tree:
             config.iteration_limit = 1
             config.add_slack = False
