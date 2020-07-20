@@ -1,2 +1,0 @@
-val = M.x()
-assert(isclose(val, math.pi/2.0))

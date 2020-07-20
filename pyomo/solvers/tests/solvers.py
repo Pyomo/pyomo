@@ -323,7 +323,7 @@ def test_solver_cases(*args):
 
         _test_solver_cases['xpress', 'python'] = initialize(
             name='xpress',
-            io='mps',
+            io='python',
             capabilities=_xpress_capabilities,
             import_suffixes=['dual','rc','slack'],
             options={'bargapstop':1e-9,})

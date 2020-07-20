@@ -156,9 +156,11 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             should be modified.
         attr: str
             The attribute to be modified. Options are:
+
                 CBasis
                 DStart
                 Lazy
+
         val: any
             See gurobi documentation for acceptable values.
         """
@@ -184,12 +186,14 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             should be modified.
         attr: str
             The attribute to be modified. Options are:
+
                 Start
                 VarHintVal
                 VarHintPri
                 BranchPriority
                 VBasis
                 PStart
+
         val: any
             See gurobi documentation for acceptable values.
         """
@@ -209,14 +213,16 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         self._needs_updated = True
 
     def get_model_attr(self, attr):
-        """
-        Get the value of an attribute on the Gurobi model.
+        """Get the value of an attribute on the Gurobi model.
 
         Parameters
         ----------
         attr: str
-            The attribute to get. See Gurobi documentation for descriptions of the attributes.
+            The attribute to get. See Gurobi documentation for
+            descriptions of the attributes.
+
             Options are:
+
                 NumVars
                 NumConstrs
                 NumSOS
@@ -306,6 +312,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                 IntVio
                 IntVioIndex
                 IntVioSum
+
         """
         if self._needs_updated:
             self._update()
@@ -322,6 +329,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             should be retrieved.
         attr: str
             The attribute to get. Options are:
+
                 LB
                 UB
                 Obj
@@ -363,6 +371,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             should be retrieved.
         attr: str
             The attribute to get. Options are:
+
                 Sense
                 RHS
                 ConstrName
@@ -391,6 +400,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             should be retrieved.
         attr: str
             The attribute to get. Options are:
+
                 IISSOS
         """
         if self._needs_updated:
@@ -408,6 +418,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             should be retrieved.
         attr: str
             The attribute to get. Options are:
+
                 QCSense
                 QCRHS
                 QCName
@@ -454,61 +465,77 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         return f
 
     def set_callback(self, func=None):
-        """
-        Specify a callback for gurobi to use.
+        r"""Specify a callback for gurobi to use.
 
         Parameters
         ----------
         func: function
-            The function to call. The function should have three arguments. The first will be the pyomo model being
-            solved. The second will be the GurobiPersistent instance. The third will be an enum member of
-            gurobipy.GRB.Callback. This will indicate where in the branch and bound algorithm gurobi is at. For
-            example, suppose we want to solve
+            The function to call. The function should have three
+            arguments. The first will be the pyomo model being
+            solved. The second will be the GurobiPersistent
+            instance. The third will be an enum member of
+            gurobipy.GRB.Callback. This will indicate where in the
+            branch and bound algorithm gurobi is at. For example,
+            suppose we want to solve
 
-            min 2*x + y
-            s.t.
-                y >= (x-2)**2
-                0 <= x <= 4
-                y >= 0
-                y integer
+            .. math::
+               :nowrap:
+
+               \begin{array}{ll}
+               \min          & 2x + y           \\
+               \mathrm{s.t.} & y \geq (x-2)^2   \\
+                             & 0 \leq x \leq 4  \\
+                             & y \geq 0         \\
+                             & y \in \mathbb{Z}
+               \end{array}
 
             as an MILP using exteneded cutting planes in callbacks.
 
-            >>>
-            >> from gurobipy import GRB
-            >> import pyomo.environ as pe
-            >> from pyomo.core.expr.taylor_series import taylor_series_expansion
-            >>
-            >> m = pe.ConcreteModel()
-            >> m.x = pe.Var(bounds=(0, 4))
-            >> m.y = pe.Var(within=pe.Integers, bounds=(0, None))
-            >> m.obj = pe.Objective(expr=2*m.x + m.y)
-            >> m.cons = pe.ConstraintList()  # for the cutting planes
-            >>
-            >> def _add_cut(xval):
-            >>     # a function to generate the cut
-            >>     m.x.value = xval
-            >>     return m.cons.add(m.y >= taylor_series_expansion((m.x - 2)**2))
-            >>
-            >> _add_cut(0)  # start with 2 cuts at the bounds of x
-            >> _add_cut(4)  # this is an arbitrary choice
-            >>
-            >> opt = pe.SolverFactory('gurobi_persistent')
-            >> opt.set_instance(m)
-            >> opt.set_gurobi_param('PreCrush', 1)
-            >> opt.set_gurobi_param('LazyConstraints', 1)
-            >>
-            >> def my_callback(cb_m, cb_opt, cb_where):
-            >>     if cb_where == GRB.Callback.MIPSOL:
-            >>         cb_opt.cbGetSolution(vars=[m.x, m.y])
-            >>         if m.y.value < (m.x.value - 2)**2 - 1e-6:
-            >>             cb_opt.cbLazy(_add_cut(m.x.value))
-            >>
-            >> opt.set_callback(my_callback)
-            >> opt.solve()
-            >> assert abs(m.x.value - 1) <= 1e-6
-            >> assert abs(m.y.value - 1) <= 1e-6
+            .. testcode::
+               :skipif: not gurobipy_available
 
+               from gurobipy import GRB
+               import pyomo.environ as pe
+               from pyomo.core.expr.taylor_series import taylor_series_expansion
+
+               m = pe.ConcreteModel()
+               m.x = pe.Var(bounds=(0, 4))
+               m.y = pe.Var(within=pe.Integers, bounds=(0, None))
+               m.obj = pe.Objective(expr=2*m.x + m.y)
+               m.cons = pe.ConstraintList()  # for the cutting planes
+
+               def _add_cut(xval):
+                   # a function to generate the cut
+                   m.x.value = xval
+                   return m.cons.add(m.y >= taylor_series_expansion((m.x - 2)**2))
+
+               _add_cut(0)  # start with 2 cuts at the bounds of x
+               _add_cut(4)  # this is an arbitrary choice
+
+               opt = pe.SolverFactory('gurobi_persistent')
+               opt.set_instance(m)
+               opt.set_gurobi_param('PreCrush', 1)
+               opt.set_gurobi_param('LazyConstraints', 1)
+
+               def my_callback(cb_m, cb_opt, cb_where):
+                   if cb_where == GRB.Callback.MIPSOL:
+                       cb_opt.cbGetSolution(vars=[m.x, m.y])
+                       if m.y.value < (m.x.value - 2)**2 - 1e-6:
+                           cb_opt.cbLazy(_add_cut(m.x.value))
+
+               opt.set_callback(my_callback)
+               opt.solve()
+
+            .. testoutput::
+               :hide:
+
+               ...
+
+            .. doctest::
+               :skipif: not gurobipy_available
+
+               >>> assert abs(m.x.value - 1) <= 1e-6
+               >>> assert abs(m.y.value - 1) <= 1e-6
         """
         if func is not None:
             self._callback_func = func

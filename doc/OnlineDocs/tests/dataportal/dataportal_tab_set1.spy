@@ -1,5 +1,0 @@
-model = AbstractModel()
-model.A = Set()
-data = DataPortal()
-data.load(filename='A.tab', set=model.A)
-instance = model.create_instance(data)
