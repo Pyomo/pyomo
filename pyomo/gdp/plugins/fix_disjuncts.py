@@ -16,9 +16,9 @@ logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 
 @TransformationFactory.register(
     'gdp.fix_disjuncts',
-    doc="Fix disjuncts to their current logical values.")
+    doc="Fix disjuncts to their current Boolean values.")
 class GDP_Disjunct_Fixer(Transformation):
-    """Fix disjuncts to their current logical values.
+    """Fix disjuncts to their current Boolean values.
 
     This reclassifies all disjuncts in the passed model instance as ctype Block and deactivates the
     constraints and disjunctions within inactive disjuncts.

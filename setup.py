@@ -129,7 +129,6 @@ def run_setup():
       python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
       install_requires=[
           'PyUtilib>=6.0.1.dev0',
-          'appdirs',
           'enum34;python_version<"3.4"',
           'ply',
           'six>=1.4',
