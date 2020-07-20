@@ -84,16 +84,15 @@ def calc_jacobians(solve_data, config):
     """
     Generates a map of jacobians for the variables in the model
 
+    This function generates a map of jacobians corresponding to the variables in the model and adds this
+    ComponentMap to solve_data
+
     Parameters
     ----------
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: MindtPy configurations
         contains the specific configurations for the algorithm
-
-    Returns
-    -------
-    solve_data is returned with a ComponentMap that contains the model variables mapped to their jacobians
     """
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
@@ -115,8 +114,7 @@ def calc_jacobians(solve_data, config):
 
 def add_feas_slacks(m, config):
     """
-    Adds feasibility slack variables (given an infeasible problem)
-    TODO: Is the above description correct?
+    Adds feasibility slack variables according to config.feasibility_norm (given an infeasible problem)
 
     Parameters
     ----------
@@ -142,8 +140,9 @@ def add_feas_slacks(m, config):
 
 def var_bound_add(solve_data, config):
     """
-    This function will add bound for variables in nonlinear constraints if they are not bounded. (This is to avoid
-    an unbounded master problem in the LP/NLP algorithm.)
+    This function will add bounds for variables in nonlinear constraints if they are not bounded. (This is to avoid
+    an unbounded master problem in the LP/NLP algorithm.) Thus, the model will be updated to include bounds for the
+    unbounded variables in nonlinear constraints.
 
     Parameters
     ----------
@@ -152,9 +151,6 @@ def var_bound_add(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
 
-    Returns
-    -------
-    Returns the model with bounds for variables in unbounded nonlinear constraints
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils

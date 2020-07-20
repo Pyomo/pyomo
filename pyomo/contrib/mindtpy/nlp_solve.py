@@ -216,7 +216,6 @@ def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
     """
     Handles the result of the latest iteration of solving the NLP subproblem given a solution that is neither optimal
     nor infeasible.
-    TODO: What does the function do (does it just update the bounds?)
 
     Parameters
     ----------
@@ -244,9 +243,7 @@ def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
 
 def solve_NLP_feas(solve_data, config):
     """
-    Handles the result of the latest iteration of solving the NLP subproblem given a feasible, non-optimal solution;
-    solves the feasibility NLP and copies result to working model
-    TODO: What does the function do (does it just update the bounds?)
+    Solves a feasibility NLP if the fixed_nlp problem is infeasible
 
     Parameters
     ----------
@@ -325,7 +322,6 @@ def solve_NLP_feas(solve_data, config):
             0, c_geq * (rhs - value(c.body)))
 
     if value(MindtPy.MindtPy_feas_obj.expr) == 0:
-        raise ValueError(
-            'Problem is not feasible, check NLP solver')
+        raise ValueError("Feasibility NLP problem is not feasible, check NLP solver output")
 
     return feas_nlp, feas_soln

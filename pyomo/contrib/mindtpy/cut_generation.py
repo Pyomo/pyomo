@@ -171,17 +171,18 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 
 def add_int_cut(var_values, solve_data, config, feasible=False):
     """
-    Modifies the model by adding integer cuts (if needed)
+    Adds integer cuts; modifies the model to include integer cuts
 
     Parameters
     ----------
-    var_values: TODO: Fill this in
-        values of all the fixed variables
+    var_values: list
+        values of the current variables, used to generate the cut
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm
-    feasible: bool, optional TODO: Should this be removed? It is not used
+    feasible: bool, optional
+        boolean indicating if integer combination yields a feasible or infeasible NLP
     """
     if not config.add_integer_cuts:
         return
@@ -226,7 +227,7 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
 
 def add_affine_cuts(nlp_result, solve_data, config):
     """
-    Modifies the model by adding affine cuts using MCPP
+    Adds affine cuts using MCPP; modifies the model to include affine cuts
 
     nlp_result: TODO: Fill this in
     solve_data: MindtPy Data Container

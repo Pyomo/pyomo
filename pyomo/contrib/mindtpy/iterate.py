@@ -163,7 +163,8 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
 
     Returns
     -------
-    Returns True if the algorithm should terminate else returns False
+    boolean
+        True if the algorithm should terminate else returns False
     """
     # Check bound convergence
     if solve_data.LB + config.bound_tolerance >= solve_data.UB:

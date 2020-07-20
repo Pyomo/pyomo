@@ -305,7 +305,7 @@ def handle_master_mip_unbounded(master_mip, solve_data, config):
     ----------
     master_mip: Pyomo model
         the MIP master problem
-    solve_data: MindtPy Data Container (TODO: This is not used in this function, should it be removed?)
+    solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm

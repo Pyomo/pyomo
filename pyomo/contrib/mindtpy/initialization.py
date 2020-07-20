@@ -121,7 +121,6 @@ def init_rNLP(solve_data, config):
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
-            # TODO check if value of the binary or integer variables is 0/1 or integer value.
             for var in solve_data.mip.component_data_objects(ctype=Var):
                 if var.is_integer():
                     var.value = int(round(var.value))
@@ -141,7 +140,7 @@ def init_max_binaries(solve_data, config):
     """
     Modifies model by maximizing the number of activated binary variables
 
-    Note - The user would usually want to call _solve_NLP_subproblem after an
+    Note - The user would usually want to call solve_NLP_subproblem after an
     invocation of this function.
 
     Parameters
