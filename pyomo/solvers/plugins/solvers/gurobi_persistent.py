@@ -657,13 +657,13 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         return self._solver_model.cbUseSolution()
 
     def _add_column(self, var, obj_coef, constraints, coefficients):
-        """Add a column to the solver's and Pyomo model
+        """Add a column to the solver's model
 
         This will add the Pyomo variable var to the solver's
         model, and put the coefficients on the associated 
         constraints in the solver model. If the obj_coef is
         not zero, it will add obj_coef*var to the objective 
-        of both the Pyomo and solver's model.
+        of the solver's model.
 
         Parameters
         ----------

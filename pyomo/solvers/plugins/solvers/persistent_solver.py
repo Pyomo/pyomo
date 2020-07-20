@@ -211,7 +211,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
     def _add_and_collect_column_data(self, var, obj_coef, constraints, coefficients):
         """
-        Set the objective pyomo objective function and constraints, and update
+        Update the objective Pyomo objective function and constraints, and update
         the _vars_referenced_by Maps
 
         Returns the column and objective coefficient data to pass to the solver

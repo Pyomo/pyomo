@@ -113,21 +113,20 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         self._solver_model.chgcoltype([xpress_var], [qctype])
 
     def _add_column(self, var, obj_coef, constraints, coefficients):
-        """Add a column to the solver's and Pyomo model
+        """Add a column to the solver's model
 
         This will add the Pyomo variable var to the solver's
         model, and put the coefficients on the associated 
         constraints in the solver model. If the obj_coef is
         not zero, it will add obj_coef*var to the objective 
-        of both the Pyomo and solver's model.
+        of the solver's model.
 
         Parameters
         ----------
         var: Var (scalar Var or single _VarData)
-        obj_coef: float, pyo.Param
-
-        constraints: list of scalar Constraints of single _ConstraintDatas  
-        coefficients: the coefficient to put on var in the associated constraint
+        obj_coef: float
+        constraints: list of solver constraints
+        coefficients: list of coefficients to put on var in the associated constraint
         """
 
         ## set-up add var
