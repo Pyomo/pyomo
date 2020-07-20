@@ -1,4 +1,0 @@
-M = ConcreteModel()
-M.x = Var()
-val = value(M.x, exception=False)
-assert(val is None)

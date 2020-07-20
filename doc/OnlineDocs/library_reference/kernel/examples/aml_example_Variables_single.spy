@@ -1,3 +1,0 @@
-m.v = aml.Var(initialize=1.0,
-              bounds=(1,4))
-

@@ -82,7 +82,8 @@ class ExternalInputOutputModel(object):
     # ToDo: Hessians not yet handled
 
 class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
-    def __init__(self, pyomo_model, ex_input_output_model, inputs, outputs):
+    def __init__(self, pyomo_model, ex_input_output_model, inputs, outputs,
+                 outputs_eqn_scaling=None):
         """
         Create an instance of this class to pass as a problem to CyIpopt.
 
@@ -105,6 +106,11 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
           The Pyomo model needs to have variables to represent the outputs from the
           external model. This is the list of those output variables in the order
           that corresponds to the numpy array returned from the evaluate_outputs call.
+
+        outputs_eqn_scaling : list or array-like or None
+          This sets the value of scaling parameters for the additional
+          output equations that are generated. No scaling is done if this
+          is set to None.
         """
         self._pyomo_model = pyomo_model
         self._ex_io_model = ex_input_output_model
@@ -191,6 +197,23 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         pyomo_nlp_con_ub = self._pyomo_nlp.constraints_ub()
         ex_con_ub = np.zeros(len(self._outputs), dtype=np.float64)
         self._gU = np.concatenate((pyomo_nlp_con_ub, ex_con_ub))
+
+        # create the scaling parameters if they are provided
+        self._obj_scaling = self._pyomo_nlp.get_obj_scaling()
+        self._primals_scaling = self._pyomo_nlp.get_primals_scaling()
+        pyomo_constraints_scaling = self._pyomo_nlp.get_constraints_scaling()
+        self._constraints_scaling = None
+        # check if we need constraint scaling, and if so, add in the
+        # outputs_eqn_scaling
+        if pyomo_constraints_scaling is not None or outputs_eqn_scaling is not None:
+            if pyomo_constraints_scaling is None:
+                pyomo_constraints_scaling = np.ones(self._pyomo_nlp.n_primals(), dtype=np.float64)
+            if outputs_eqn_scaling is None:
+                outputs_eqn_scaling = np.ones(len(self._outputs), dtype=np.float64)
+            if type(outputs_eqn_scaling) is list:
+                outputs_eqn_scaling = np.asarray(outputs_eqn_scaling, dtype=np.float64)
+            self._constraints_scaling = np.concatenate((pyomo_constraints_scaling,
+                                                       outputs_eqn_scaling))
 
         ### setup the jacobian structures
         self._jac_pyomo = self._pyomo_nlp.evaluate_jacobian()
@@ -281,7 +304,10 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
     def g_ub(self):
         return self._gU.copy()
-    
+
+    def scaling_factors(self):
+        return self._obj_scaling, self._primals_scaling, self._constraints_scaling
+
     def objective(self, primals):
         self._set_primals_if_necessary(primals)
         return self._pyomo_nlp.evaluate_objective()
