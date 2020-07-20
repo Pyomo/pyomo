@@ -183,7 +183,7 @@ class CommunityMap(object):
         self.weighted_graph = weighted_graph
         self.random_seed = random_seed
 
-    def __str__(self):
+    def __repr__(self):
         return str(self.community_map)
 
     def draw_graph(self, type_of_graph='constraint', with_objective=True, weighted_graph=True, random_seed=None, pos=None):
