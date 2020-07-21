@@ -76,7 +76,7 @@ def create_base_cutting_stock(demand, W):
 
     return cs, ks, initial_patterns
 
-def solve_cutting_stock(demand, W, solver):
+def solve_cutting_stock(demand, W, solver, iterations=30):
 
     cs, ks, patterns = create_base_cutting_stock(demand, W)
 
@@ -89,7 +89,7 @@ def solve_cutting_stock(demand, W, solver):
     cs_s.set_instance(cs)
     ks_s.set_instance(ks)
 
-    while True:
+    for _ in range(iterations):
 
         cs_s.solve()
 
