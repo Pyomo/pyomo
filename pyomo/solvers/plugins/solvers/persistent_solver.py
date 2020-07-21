@@ -202,11 +202,14 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_column.')
-        elif id(self._pyomo_model) != id(model):
+        if id(self._pyomo_model) != id(model):
             raise RuntimeError('The pyomo model which the column is being added to '
                                 'must be the same as the pyomo model attached to this '
                                 'PersistentSolver instance; i.e., the same pyomo model '
                                 'used in set_instance.')
+        if var in self._pyomo_var_to_solver_var_map:
+            raise RuntimeError('The pyomo var must not have been already added to '
+                                'the solver model')
         obj_coef, constraints, coefficients = self._add_and_collect_column_data(
                 var, obj_coef, constraints, coefficients)
         self._add_column(var, obj_coef, constraints, coefficients)

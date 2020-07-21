@@ -309,3 +309,23 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.solve()
         self.assertAlmostEqual(m.x.value, 1)
         self.assertAlmostEqual(m.y.value, 1)
+
+    @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
+    def test_add_column(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(within=pe.NonNegativeReals)
+        m.c = pe.Constraint(expr=(0, m.x, 1))
+        m.obj = pe.Objective(expr=-m.x)
+
+        opt = pe.SolverFactory('gurobi_persistent')
+        opt.set_instance(m)
+        opt.solve()
+        self.assertAlmostEqual(m.x.value, 1)
+
+        m.y = pe.Var(within=pe.NonNegativeReals)
+
+        opt.add_column(m, m.y, -2, [m.c], [1])
+        opt.solve()
+
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)

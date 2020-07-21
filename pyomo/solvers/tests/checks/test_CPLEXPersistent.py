@@ -33,3 +33,22 @@ class TestQuadraticObjective(unittest.TestCase):
         opt.solve()
         self.assertAlmostEqual(model.X.value, 0, places=3)
         self.assertAlmostEqual(model.Y.value, 2, places=3)
+
+    def test_add_column(self):
+        m = ConcreteModel()
+        m.x = Var(within=NonNegativeReals)
+        m.c = Constraint(expr=(0, m.x, 1))
+        m.obj = Objective(expr=-m.x)
+
+        opt = SolverFactory('cplex_persistent')
+        opt.set_instance(m)
+        opt.solve()
+        self.assertAlmostEqual(m.x.value, 1)
+
+        m.y = Var(within=NonNegativeReals)
+
+        opt.add_column(m, m.y, -2, [m.c], [1])
+        opt.solve()
+
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)

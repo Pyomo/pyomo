@@ -197,3 +197,43 @@ class TestXpressPersistent(unittest.TestCase):
         opt.add_var(m.x)
         opt.remove_var(m.x)
         self.assertEqual(opt.get_xpress_attribute('cols'), 1)
+
+    @unittest.skipIf(not xpress_available, "xpress is not available")
+    def test_add_column(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(within=pe.NonNegativeReals)
+        m.c = pe.Constraint(expr=(0, m.x, 1))
+        m.obj = pe.Objective(expr=-m.x)
+
+        opt = pe.SolverFactory('xpress_persistent')
+        opt.set_instance(m)
+        opt.solve()
+        self.assertAlmostEqual(m.x.value, 1)
+
+        m.y = pe.Var(within=pe.NonNegativeReals)
+
+        opt.add_column(m, m.y, -2, [m.c], [1])
+        opt.solve()
+
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+
+    @unittest.skipIf(not xpress_available, "xpress is not available")
+    def test_add_column_exceptions(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.c = pe.Constraint(expr=(0, m.x, 1))
+        m.obj = pe.Objective(expr=-m.x)
+
+        opt = pe.SolverFactory('xpress_persistent')
+        self.assertRaises(RuntimeError, opt.add_column, m, m.x, 0, [m.c], [1])
+
+        opt.set_instance(m)
+
+        m2 = pe.ConcreteModel()
+        m2.y = pe.Var()
+        self.assertRaises(RuntimeError, opt.add_column, m2, m2.y, 0, [], [])
+
+        m.y = pe.Var()
+        opt.add_var(m.y)
+        self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1])
