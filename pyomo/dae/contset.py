@@ -248,7 +248,7 @@ class ContinuousSet(SortedSimpleSet):
         self._fe = sorted(self)
         timer.report()
 
-    def find(self, p, tol=1e-8):
+    def find(self, p, tol=None):
         """
         Finds a point p in the set, within some tolerance.
         """
@@ -274,30 +274,30 @@ class ContinuousSet(SortedSimpleSet):
         # right of any equal components
         if i == 1:
             # p is less than every entry of the set
-            return self[i]
+            return i
 
         # p_le <= p
         p_le = self[i-1]
         delta_left = p - p_le
         if delta_left < tol:
             # p is close enough to the point on its left
-            return p_le
+            return i-1
 
         try:
             # p_g > p
             p_g = self[i]
         except IndexError:
             # p is greater than every entry of the set
-            return p_le
+            return i-1
 
         delta_right = p_g - p
         if delta_right < tol:
             # p is close enough to the point on its right
-            return p_g
+            return i
 
         if delta_right <= delta_left:
             # If p is exactly in between two points, return the point on the
             # right. This is completely arbitrary.
-            return p_g
+            return i
         else:
-            return p_le
+            return i-1
