@@ -95,7 +95,7 @@ def solve_cutting_stock(demand, W, solver):
 
         duals = { width : cs.dual[cs.demand[width]] for width in demand }
 
-        ks.obj.expr = pyo.summation(duals,ks.widths)
+        ks.obj.expr = sum(duals[width]*ks.widths[width] for width in demand)
 
         ks_s.set_objective(ks.obj)
 
