@@ -261,6 +261,14 @@ class ContinuousSet(SortedSimpleSet):
         #   Where should this be set?
         # - Should there be a binary_search_with_tolerance utility function
         #   somewhere so this can be reproduced outside of ContinuousSet
+        # 
+        # - find closest. if within tolerance, return. Else return None
+        # - if tolerance is None, effectively infinite
+        # - include tie-break logic
+        # - return index
+        # - name: find_nearest_index
+        # - document that this will only be strictly unique with small enough tolerance
+        #   ^ user's responsibility
         i = bisect.bisect_right(self, p, lo=1, hi=len(self)+1)
         # i is the index at which p should be inserted if it is to be
         # right of any equal components
