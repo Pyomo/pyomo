@@ -60,7 +60,7 @@ def create_base_cutting_stock(demand, W):
     for i, (width, quantity) in enumerate(demand.items()):
         cs.demand[width] = initial_patterns[i+1][width]*cs.pattern[i+1] >= quantity
 
-    cs.obj = pyo.Objective(expr=sum(cs.pattern.values()), sense=pyo.minimize)
+    cs.obj = pyo.Objective(expr=pyo.quicksum(cs.pattern.values()), sense=pyo.minimize)
 
     cs.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
@@ -69,7 +69,7 @@ def create_base_cutting_stock(demand, W):
 
     ks.widths = pyo.Var(demand.keys(), within=pyo.NonNegativeIntegers)
 
-    ks.knapsack = pyo.Constraint(expr=sum(width*ks.widths[width] for width in demand) <= W)
+    ks.knapsack = pyo.Constraint(expr=pyo.quicksum(width*ks.widths[width] for width in demand) <= W)
 
     # blank objective, set by the dual values of cs
     ks.obj = pyo.Objective(expr=0, sense=pyo.maximize)
@@ -95,7 +95,7 @@ def solve_cutting_stock(demand, W, solver):
 
         duals = { width : cs.dual[cs.demand[width]] for width in demand }
 
-        ks.obj.expr = sum(duals[width]*ks.widths[width] for width in demand)
+        ks.obj.expr = pyo.summation(duals,ks.widths)
 
         ks_s.set_objective(ks.obj)
 
