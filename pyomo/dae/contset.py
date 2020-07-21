@@ -248,9 +248,15 @@ class ContinuousSet(SortedSimpleSet):
         self._fe = sorted(self)
         timer.report()
 
-    def find(self, p, tol=None):
+    def find_nearest_index(self, p, tol=None):
         """
-        Finds a point p in the set, within some tolerance.
+        Finds the index corresponding to the closest point in the set
+        to some value. Arbitrarily, a tie goes to the larger index. 
+        If a tolerance is specified, the index will only be returned
+        if the distance between the value and the closest point is
+        less than that tolerance. If the tolerance is at most half the
+        minimum spacing between points in the set, the "closest-point-
+        within-tolerance" will be unique.
         """
         # TODO:
         # - Should this fail/return None if p is not in self within tolerance?
