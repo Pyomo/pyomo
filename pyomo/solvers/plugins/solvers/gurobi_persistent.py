@@ -675,7 +675,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         self._pyomo_var_to_solver_var_map[var] = gurobipy_var 
         self._solver_var_to_pyomo_var_map[gurobipy_var] = var
-        self._referenced_variables[var] = len(solver_coeff_list)
+        self._referenced_variables[var] = len(coefficients)
 
     def reset(self):
         self._solver_model.reset()

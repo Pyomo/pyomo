@@ -182,7 +182,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         #else:
         self._add_sos_constraint(con)
 
-    def add_column(self, var, obj_coef, constraints, coefficients):
+    def add_column(self, model, var, obj_coef, constraints, coefficients):
         """Add a column to the solver's and Pyomo model
 
         This will add the Pyomo variable var to the solver's
@@ -193,6 +193,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         Parameters
         ----------
+        model: pyomo ConcreteModel to which the column will be added
         var: Var (scalar Var or single _VarData)
         obj_coef: float, pyo.Param
         constraints: list of scalar Constraints of single _ConstraintDatas  
@@ -201,8 +202,13 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_column.')
+        elif id(self._pyomo_model) != id(model):
+            raise RuntimeError('The pyomo model which the column is being added to '
+                                'must be the same as the pyomo model attached to this '
+                                'PersistentSolver instance; i.e., the same pyomo model '
+                                'used in set_instance.')
         obj_coef, constraints, coefficients = self._add_and_collect_column_data(
-                obj_coef, constraints, coefficients)
+                var, obj_coef, constraints, coefficients)
         self._add_column(var, obj_coef, constraints, coefficients)
 
     """ This method should be implemented by subclasses."""
@@ -220,7 +226,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         if obj_coef.__class__ in native_numeric_types and obj_coef == 0.:
             pass ## nothing to do
         else:
-            self._objective += obj_coef*var
+            self._objective.expr += obj_coef*var
             self._vars_referenced_by_obj.add(var)
             obj_coef = _convert_to_const(obj_coef)
 
@@ -236,7 +242,7 @@ class PersistentSolver(DirectOrPersistentSolver):
             coeff_list.append(cval)
             constr_list.append(self._pyomo_con_to_solver_con_map[c])
 
-        return obj_coef, coeff_list, constr_list
+        return obj_coef, constr_list, coeff_list
 
     """ This method should be implemented by subclasses."""
     def _remove_constraint(self, solver_con):

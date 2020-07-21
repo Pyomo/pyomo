@@ -146,4 +146,4 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         self._solver_var_to_pyomo_var_map[varname] = var
         self._pyomo_var_to_ndx_map[var] = self._ndx_count
         self._ndx_count += 1
-        self._referenced_variables[var] = len(solver_coeff_list)
+        self._referenced_variables[var] = len(coefficients)

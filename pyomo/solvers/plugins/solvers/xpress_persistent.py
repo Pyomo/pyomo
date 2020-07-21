@@ -126,7 +126,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         vartype = self._xpress_chgcoltype_from_var(var)
         lb, ub = self._xpress_lb_ub_from_var(var)
 
-        self._solver_model.addcols(objx=[obj], mstart=[0,len(solver_coeff_list)], 
+        self._solver_model.addcols(objx=[obj_coef], mstart=[0,len(coefficients)],
                                     mrwind=constraints, dmatval=coefficients, 
                                     bdl=[lb], bdu=[ub], names=[varname], 
                                     types=[vartype])
@@ -136,7 +136,7 @@ class XpressPersistent(PersistentSolver, XpressDirect):
 
         self._pyomo_var_to_solver_var_map[var] = xpress_var
         self._solver_var_to_pyomo_var_map[xpress_var] = var
-        self._referenced_variables[var] = len(solver_coeff_list)
+        self._referenced_variables[var] = len(coefficients)
 
     def get_xpress_attribute(self, *args):
         """
