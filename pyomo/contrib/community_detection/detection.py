@@ -184,7 +184,23 @@ class CommunityMap(object):
         self.random_seed = random_seed
 
     def __repr__(self):
-        return str(self.community_map)
+        return str(self.stringify())
+
+    def __iter__(self):
+        for key in self.community_map:
+            yield key
+
+    def __getitem__(self, item):
+        return self.community_map[item]
+
+    def keys(self):
+        return self.community_map.keys()
+
+    def values(self):
+        return self.community_map.values()
+
+    def items(self):
+        return self.community_map.items()
 
     def draw_graph(self, type_of_graph='constraint', with_objective=True, weighted_graph=True, random_seed=None, pos=None):
         """
