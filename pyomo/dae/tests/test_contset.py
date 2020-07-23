@@ -208,17 +208,17 @@ class TestContinuousSet(unittest.TestCase):
         # Undiscretized
         i = m.time.find_nearest_index(1)
         self.assertEqual(i, 1)
-        i = m.time.find_nearest_index(1, tol=0.5)
+        i = m.time.find_nearest_index(1, tolerance=0.5)
         self.assertEqual(i, None)
 
-        i = m.time.find_nearest_index(-0.01, tol=0.1)
+        i = m.time.find_nearest_index(-0.01, tolerance=0.1)
         self.assertEqual(i, 1)
-        i = m.time.find_nearest_index(-0.01, tol=0.001)
+        i = m.time.find_nearest_index(-0.01, tolerance=0.001)
         self.assertEqual(i, None)
 
-        i = m.time.find_nearest_index(6, tol=2)
+        i = m.time.find_nearest_index(6, tolerance=2)
         self.assertEqual(i, 2)
-        i = m.time.find_nearest_index(6, tol=1)
+        i = m.time.find_nearest_index(6, tolerance=1)
         self.assertEqual(i, 2)
 
         i = m.time.find_nearest_index(2.5)
@@ -236,35 +236,35 @@ class TestContinuousSet(unittest.TestCase):
         m.time = ContinuousSet(initialize=init_list)
 
         # "Discretized"
-        i = m.time.find_nearest_index(1.01, tol=0.1)
+        i = m.time.find_nearest_index(1.01, tolerance=0.1)
         self.assertEqual(i, 4)
-        i = m.time.find_nearest_index(1.01, tol=0.001)
+        i = m.time.find_nearest_index(1.01, tolerance=0.001)
         self.assertEqual(i, None)
 
         i = m.time.find_nearest_index(3.5)
         self.assertEqual(i, 12)
-        i = m.time.find_nearest_index(3.5, tol=0.1)
+        i = m.time.find_nearest_index(3.5, tolerance=0.1)
         self.assertEqual(i, None)
 
         i = m.time.find_nearest_index(-1)
         self.assertEqual(i, 1)
-        i = m.time.find_nearest_index(-1, tol=1)
+        i = m.time.find_nearest_index(-1, tolerance=1)
         self.assertEqual(i, 1)
 
         i = m.time.find_nearest_index(5.5)
         self.assertEqual(i, 16)
-        i = m.time.find_nearest_index(5.5, tol=0.49)
+        i = m.time.find_nearest_index(5.5, tolerance=0.49)
         self.assertEqual(i, None)
 
-        i = m.time.find_nearest_index(2.64, tol=1e-8)
+        i = m.time.find_nearest_index(2.64, tolerance=1e-8)
         self.assertEqual(i, 9)
-        i = m.time.find_nearest_index(2.64, tol=0)
+        i = m.time.find_nearest_index(2.64, tolerance=0)
         self.assertEqual(i, 9)
 
-        i = m.time.find_nearest_index(5, tol=0)
+        i = m.time.find_nearest_index(5, tolerance=0)
         self.assertEqual(i, 16)
 
-        i = m.time.find_nearest_index(0, tol=0)
+        i = m.time.find_nearest_index(0, tolerance=0)
         self.assertEqual(i, 1)
 
 
