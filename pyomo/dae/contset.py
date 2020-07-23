@@ -253,11 +253,10 @@ class ContinuousSet(SortedSimpleSet):
         :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>`.
 
         If a tolerance is specified, the index will only be returned
-        if the distance between the value and the closest point is
-        less than or equal to that tolerance. 
-
-        If the tolerance is at most half the minimum spacing between points in
-        the set, the "closest-point-within-tolerance" will be unique.
+        if the distance between the target and the closest point is
+        less than or equal to that tolerance. If the tolerance is less
+        than half the minimum spacing between points in the set, the
+        "closest-point-within-tolerance" will be unique.
 
         Parameters
         ----------
