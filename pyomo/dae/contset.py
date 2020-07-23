@@ -287,11 +287,12 @@ class ContinuousSet(SortedSimpleSet):
         # i is the index at which p should be inserted if it is to be
         # right of any equal components. 
 
-        if i == lo or i == hi:
-            # p is either less than or greater than or equal to every
-            # entry of the set
+        if i == lo:
             nearest_index = i
-            delta = abs(p - self[i])
+            delta = self[nearest_index] - p
+        elif i == hi:
+            nearest_index = i-1
+            delta = p - self[nearest_index]
         else:
             # p_le <= p < p_g
             # delta_left = p - p_le
@@ -305,6 +306,9 @@ class ContinuousSet(SortedSimpleSet):
             delta = min(neighbors)
             nearest_index = neighbors[delta]
 
-        if delta < tol:
+        if tol is None:
+            # Infinite tolerance
+            return nearest_index
+        if delta <= tol:
             return nearest_index
         return None
