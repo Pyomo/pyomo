@@ -275,35 +275,36 @@ class ContinuousSet(SortedSimpleSet):
         # - name: find_nearest_index
         # - document that this will only be strictly unique with small enough tolerance
         #   ^ user's responsibility
-        i = bisect.bisect_right(self, p, lo=1, hi=len(self)+1)
+        #
+        # implementation:
+        # - find delta on both sides; delta = min (delta_l, delta_r)
+        # - find the closest point
+        # - return it if it is within tolerance
+
+        lo = 1
+        hi = len(self) + 1
+        i = bisect.bisect_right(self, p, lo=lo, hi=hi)
         # i is the index at which p should be inserted if it is to be
-        # right of any equal components
-        if i == 1:
-            # p is less than every entry of the set
-            return i
+        # right of any equal components. 
 
-        # p_le <= p
-        p_le = self[i-1]
-        delta_left = p - p_le
-        if delta_left < tol:
-            # p is close enough to the point on its left
-            return i-1
-
-        try:
-            # p_g > p
-            p_g = self[i]
-        except IndexError:
-            # p is greater than every entry of the set
-            return i-1
-
-        delta_right = p_g - p
-        if delta_right < tol:
-            # p is close enough to the point on its right
-            return i
-
-        if delta_right <= delta_left:
-            # If p is exactly in between two points, return the point on the
-            # right. This is completely arbitrary.
-            return i
+        if i == lo or i == hi:
+            # p is either less than or greater than or equal to every
+            # entry of the set
+            nearest_index = i
         else:
-            return i-1
+            # p_le <= p < p_g
+            p_le = self[i-1]
+            p_g = self[i]
+            delta_left = p - p_le
+            delta_right = p_g - p
+
+            if delta_left < delta_right:
+                nearest_index = delta_left
+            else:
+                # Tie goes to the right
+                nearest_index = delta_right
+
+        p_nearest = self[nearest_index]
+        if delta < tol:
+            return nearest_index
+        return None
