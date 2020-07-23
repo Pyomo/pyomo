@@ -254,9 +254,10 @@ class ContinuousSet(SortedSimpleSet):
         to some value. Arbitrarily, a tie goes to the larger index. 
         If a tolerance is specified, the index will only be returned
         if the distance between the value and the closest point is
-        less than that tolerance. If the tolerance is at most half the
-        minimum spacing between points in the set, the "closest-point-
-        within-tolerance" will be unique.
+        less than or equal to that tolerance. 
+
+        If the tolerance is at most half the minimum spacing between points in
+        the set, the "closest-point-within-tolerance" will be unique.
         """
         # TODO:
         # - Should this fail/return None if p is not in self within tolerance?
@@ -288,9 +289,11 @@ class ContinuousSet(SortedSimpleSet):
         # right of any equal components. 
 
         if i == lo:
+            # p is less than every point in the set
             nearest_index = i
             delta = self[nearest_index] - p
         elif i == hi:
+            # p is greater than or equal to every point in the set
             nearest_index = i-1
             delta = p - self[nearest_index]
         else:
@@ -301,14 +304,13 @@ class ContinuousSet(SortedSimpleSet):
             #     delta_left: i-1,
             #     delta_right: i,
             #     }
+            # If delta_left == delta_right, delta_right will be kept as it is 
+            # added last. In this way, a tie goes to the right index.
             neighbors = dict((abs(p-self[j]), j) for j in [i-1, i])
-            # Arbitrarily, tie goes to the rightmost point
             delta = min(neighbors)
             nearest_index = neighbors[delta]
 
-        if tol is None:
-            # Infinite tolerance
-            return nearest_index
-        if delta <= tol:
-            return nearest_index
-        return None
+        if tol is not None:
+            if delta > tol:
+                return None
+        return nearest_index
