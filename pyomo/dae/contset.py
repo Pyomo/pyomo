@@ -248,7 +248,7 @@ class ContinuousSet(SortedSimpleSet):
         self._fe = sorted(self)
         timer.report()
 
-    def find_nearest_index(self, point, tolerance=None):
+    def find_nearest_index(self, target, tolerance=None):
         """ Returns the index of the nearest point in the 
         :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>`.
 
@@ -261,7 +261,7 @@ class ContinuousSet(SortedSimpleSet):
 
         Parameters
         ----------
-        point : `float`
+        target : `float`
         tolerance : `float` or `None`
 
         Returns
@@ -270,29 +270,29 @@ class ContinuousSet(SortedSimpleSet):
         """
         lo = 1
         hi = len(self) + 1
-        i = bisect.bisect_right(self, point, lo=lo, hi=hi)
-        # i is the index at which p should be inserted if it is to be
+        i = bisect.bisect_right(self, target, lo=lo, hi=hi)
+        # i is the index at which target should be inserted if it is to be
         # right of any equal components. 
 
         if i == lo:
-            # point is less than every entry of the set
+            # target is less than every entry of the set
             nearest_index = i
-            delta = self[nearest_index] - point
+            delta = self[nearest_index] - target
         elif i == hi:
-            # point is greater than or equal to every entry of the set
+            # target is greater than or equal to every entry of the set
             nearest_index = i-1
-            delta = point - self[nearest_index]
+            delta = target - self[nearest_index]
         else:
-            # p_le <= point < p_g
-            # delta_left = point - p_le
-            # delta_right = p_g - point
+            # p_le <= target < p_g
+            # delta_left = target - p_le
+            # delta_right = p_g - target
             # neighbors = {
             #     delta_left: i-1,
             #     delta_right: i,
             #     }
             # If delta_left == delta_right, delta_right will be kept as it is 
             # added last. In this way, a tie goes to the right index.
-            neighbors = dict((abs(point - self[j]), j) for j in [i-1, i])
+            neighbors = dict((abs(target - self[j]), j) for j in [i-1, i])
             delta = min(neighbors)
             nearest_index = neighbors[delta]
 
