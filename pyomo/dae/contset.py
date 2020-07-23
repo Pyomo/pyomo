@@ -290,7 +290,7 @@ class ContinuousSet(SortedSimpleSet):
             #     delta_right: i,
             #     }
             # If delta_left == delta_right, delta_right will be kept as it is 
-            # added last. In this way, a tie goes to the right index.
+            # added last. In this way, a tie goes to the index on the right.
             neighbors = dict((abs(target - self[j]), j) for j in [i-1, i])
             delta = min(neighbors)
             nearest_index = neighbors[delta]
