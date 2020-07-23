@@ -97,10 +97,27 @@ def add_ecp_cuts(target_model, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True,
                 linearize_inactive=False):
-    """Linearizes nonlinear constraints. Adds the cuts for the ECP method.
+    """
+    Linearizes nonlinear constraints. Adds the cuts for the ECP method.
 
     For nonconvex problems, turn on 'config.add_slack'. Slack variables will
     always be used for nonlinear equality constraints.
+
+    Parameters
+    ----------
+    target_model:
+        this is the MIP/MILP model for the OA algorithm; we want to add the OA cuts to 'target_model'
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    linearize_active: bool, optional
+        this parameter acts as a Boolean flag that signals whether the linearized constraint is active
+    linearize_violated: bool, optional
+        this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
+        linearized constraint has been violated
+    linearize_inactive: bool, optional
+        this parameter acts as a Boolean flag that signals whether the linearized constraint is inactive
     """
     for constr in target_model.MindtPy_utils.constraint_list:
 

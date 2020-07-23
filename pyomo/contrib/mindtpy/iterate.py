@@ -20,6 +20,11 @@ def MindtPy_iteration_loop(solve_data, config):
     working_model = solve_data.working_model
     main_objective = next(
         working_model.component_data_objects(Objective, active=True))
+    # For ECP to know whether to know which bound to copy over (primal or dual)
+    if main_objective.sense == minimize:
+        min_flag = True
+    else:
+        min_flag = False
     while solve_data.mip_iter < config.iteration_limit:
 
         config.logger.info(
@@ -41,7 +46,7 @@ def MindtPy_iteration_loop(solve_data, config):
         else:
             raise NotImplementedError()
 
-        if algorithm_should_terminate(solve_data, config, check_cycling=True):
+        if algorithm_should_terminate(solve_data, config, min_flag, check_cycling=True):
             break
 
         if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
@@ -59,7 +64,7 @@ def MindtPy_iteration_loop(solve_data, config):
             # Call the NLP post-solve callback
             config.call_after_subproblem_solve(fixed_nlp, solve_data)
 
-        if algorithm_should_terminate(solve_data, config, check_cycling=False):
+        if algorithm_should_terminate(solve_data, config, min_flag, check_cycling=False):
             break
 
         if config.strategy == 'ECP':
@@ -147,7 +152,7 @@ def MindtPy_iteration_loop(solve_data, config):
             solve_data.UB_progress.append(solve_data.UB)
 
 
-def algorithm_should_terminate(solve_data, config, check_cycling):
+def algorithm_should_terminate(solve_data, config, min_flag, check_cycling):
     """Check if the algorithm should terminate.
 
     Termination conditions based on solver options and progress.
@@ -240,10 +245,16 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                         '\n'.format(
                             nlc))
                     return False
+        if min_flag:
+            solve_data.UB = solve_data.LB
+        else:
+            solve_data.LB = solve_data.UB
+        #solve_data.UB = solve_data.LB
         config.logger.info(
             'MindtPy-ECP exiting on nonlinear constraints satisfaction. '
-            'LB: {}\n'.format(
-                solve_data.LB))
+            'LB: {} UB: {}\n'.format(
+                solve_data.LB, solve_data.UB))
+
         solve_data.best_solution_found = solve_data.working_model.clone()
         solve_data.results.solver.termination_condition = tc.optimal
         return True
