@@ -1,6 +1,0 @@
-m.sos1 = aml.SOSConstraint(
-    var=m.vl,
-    level=1)
-m.sos2 = aml.SOSConstraint(
-    var=m.vd,
-    level=2)

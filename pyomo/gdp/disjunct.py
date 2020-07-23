@@ -10,6 +10,8 @@
 
 import logging
 import sys
+import types
+
 from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
@@ -17,8 +19,8 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
-    ModelComponentFactory, Binary, Block, Var, ConstraintList, Any
-)
+    BooleanVar, ModelComponentFactory, Binary, Block, Var, ConstraintList, Any,
+    LogicalConstraintList, BooleanValue, value)
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
@@ -237,6 +239,20 @@ class _DisjunctionData(ActiveComponentData):
                 except AttributeError:
                     isexpr = False
                 if not isexpr or not _tmpe.is_relational():
+                    try:
+                        isvar = _tmpe.is_variable_type()
+                    except AttributeError:
+                        isvar = False
+                    if isvar and _tmpe.is_relational():
+                        expressions.append(_tmpe)
+                        continue
+                    try:
+                        isbool = _tmpe.is_logical_type()
+                    except AttributeError:
+                        isbool = False
+                    if isbool:
+                        expressions.append(_tmpe)
+                        continue
                     msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
                     raise ValueError(
                         "Unexpected term for Disjunction %s.\n"
@@ -260,8 +276,12 @@ class _DisjunctionData(ActiveComponentData):
                 comp._autodisjuncts.construct()
             disjunct = comp._autodisjuncts[len(comp._autodisjuncts)]
             disjunct.constraint = c = ConstraintList()
+            disjunct.propositions = p = LogicalConstraintList()
             for e in expressions:
-                c.add(e)
+                if isinstance(e, BooleanValue):
+                    p.add(e)
+                else:
+                    c.add(e)
             self.disjuncts.append(disjunct)
 
 
@@ -387,7 +407,7 @@ class Disjunction(ActiveIndexedComponent):
                            err))
                     raise
                 if expr is None:
-                    _name = "%s[%s]" % (self.name, str(idx))
+                    _name = "%s[%s]" % (self.name, str(ndx))
                     raise ValueError( _rule_returned_none_error % (_name,) )
                 if expr is Disjunction.Skip:
                     continue

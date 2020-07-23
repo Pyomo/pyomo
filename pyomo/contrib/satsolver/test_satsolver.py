@@ -3,7 +3,7 @@ from os.path import abspath, dirname, join, normpath
 import pyutilib.th as unittest
 from pyutilib.misc import import_file
 
-from pyomo.contrib.satsolver.satsolver import satisfiable, _z3_available
+from pyomo.contrib.satsolver.satsolver import satisfiable, z3_available
 from pyomo.core.base.set_types import PositiveIntegers, NonNegativeReals, Binary
 from pyomo.environ import (
     ConcreteModel, Var, Constraint, Objective, sin, cos, tan, asin, acos, atan, sqrt, log,
@@ -14,7 +14,7 @@ currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 
 
-@unittest.skipUnless(_z3_available, "Z3 SAT solver is not available.")
+@unittest.skipUnless(z3_available, "Z3 SAT solver is not available.")
 class SatSolverTests(unittest.TestCase):
 
     def test_simple_sat_model(self):
