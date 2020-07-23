@@ -205,6 +205,7 @@ class TestContinuousSet(unittest.TestCase):
         m = ConcreteModel()
         m.time = ContinuousSet(bounds=(0, 5))
 
+        # Undiscretized
         i = m.time.find_nearest_index(1)
         self.assertEqual(i, 1)
         i = m.time.find_nearest_index(1, tol=0.5)
@@ -222,6 +223,38 @@ class TestContinuousSet(unittest.TestCase):
 
         i = m.time.find_nearest_index(2.5)
         self.assertEqual(i, 2)
+
+        m.del_component(m.time)
+        init_list = []
+        for i in range(5):
+            i0 = float(i)
+            i1 = round((i+0.15)*1e4)/1e4
+            i2 = round((i+0.64)*1e4)/1e4
+            # Round to get rid of numerical error due to float addition
+            init_list.extend([i, i1, i2])
+        init_list.append(5.0)
+        m.time = ContinuousSet(initialize=init_list)
+
+        # "Discretized"
+        i = m.time.find_nearest_index(1.01, tol=0.1)
+        self.assertEqual(i, 4)
+        i = m.time.find_nearest_index(1.01, tol=0.001)
+        self.assertEqual(i, None)
+
+        i = m.time.find_nearest_index(3.5)
+        self.assertEqual(i, 12)
+        i = m.time.find_nearest_index(3.5, tol=0.1)
+        self.assertEqual(i, None)
+
+        i = m.time.find_nearest_index(-1)
+        self.assertEqual(i, 1)
+        i = m.time.find_nearest_index(-1, tol=1)
+        self.assertEqual(i, None)
+
+        i = m.time.find_nearest_index(5.5)
+        self.assertEqual(i, 16)
+        i = m.time.find_nearest_index(5.5, tol=0.49)
+        self.assertEqual(i, None)
 
 
 #    def test_find(self):
