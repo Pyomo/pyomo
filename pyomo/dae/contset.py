@@ -291,20 +291,20 @@ class ContinuousSet(SortedSimpleSet):
             # p is either less than or greater than or equal to every
             # entry of the set
             nearest_index = i
+            delta = abs(p - self[i])
         else:
             # p_le <= p < p_g
-            p_le = self[i-1]
-            p_g = self[i]
-            delta_left = p - p_le
-            delta_right = p_g - p
+            # delta_left = p - p_le
+            # delta_right = p_g - p
+            # neighbors = {
+            #     delta_left: i-1,
+            #     delta_right: i,
+            #     }
+            neighbors = dict((abs(p-self[j]), j) for j in [i-1, i])
+            # Arbitrarily, tie goes to the rightmost point
+            delta = min(neighbors)
+            nearest_index = neighbors[delta]
 
-            if delta_left < delta_right:
-                nearest_index = delta_left
-            else:
-                # Tie goes to the right
-                nearest_index = delta_right
-
-        p_nearest = self[nearest_index]
         if delta < tol:
             return nearest_index
         return None
