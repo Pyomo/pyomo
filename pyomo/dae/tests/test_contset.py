@@ -219,7 +219,7 @@ class TestContinuousSet(unittest.TestCase):
         i = m.time.find_nearest_index(6, tol=2)
         self.assertEqual(i, 2)
         i = m.time.find_nearest_index(6, tol=1)
-        self.assertEqual(i, None)
+        self.assertEqual(i, 2)
 
         i = m.time.find_nearest_index(2.5)
         self.assertEqual(i, 2)
@@ -249,12 +249,17 @@ class TestContinuousSet(unittest.TestCase):
         i = m.time.find_nearest_index(-1)
         self.assertEqual(i, 1)
         i = m.time.find_nearest_index(-1, tol=1)
-        self.assertEqual(i, None)
+        self.assertEqual(i, 1)
 
         i = m.time.find_nearest_index(5.5)
         self.assertEqual(i, 16)
         i = m.time.find_nearest_index(5.5, tol=0.49)
         self.assertEqual(i, None)
+
+        i = m.time.find_nearest_index(2.64, tol=1e-8)
+        self.assertEqual(i, 9)
+        i = m.time.find_nearest_index(2.64, tol=0)
+        self.assertEqual(i, 9)
 
 
 class TestIO(unittest.TestCase):
