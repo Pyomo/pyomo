@@ -248,69 +248,55 @@ class ContinuousSet(SortedSimpleSet):
         self._fe = sorted(self)
         timer.report()
 
-    def find_nearest_index(self, p, tol=None):
-        """
-        Finds the index corresponding to the closest point in the set
-        to some value. Arbitrarily, a tie goes to the larger index. 
+    def find_nearest_index(self, point, tolerance=None):
+        """ Returns the index of the nearest point in the 
+        :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>`.
+
         If a tolerance is specified, the index will only be returned
         if the distance between the value and the closest point is
         less than or equal to that tolerance. 
 
         If the tolerance is at most half the minimum spacing between points in
         the set, the "closest-point-within-tolerance" will be unique.
-        """
-        # TODO:
-        # - Should this fail/return None if p is not in self within tolerance?
-        # - If not, what is the point of a tolerance rather than just finding
-        #   the closest point?
-        # - If so, this tolerance must be sufficiently small that any point
-        #   may have at most one member of the set within a radius of tolerance.
-        #   Where should this be set?
-        # - Should there be a binary_search_with_tolerance utility function
-        #   somewhere so this can be reproduced outside of ContinuousSet
-        # 
-        # - find closest. if within tolerance, return. Else return None
-        # - if tolerance is None, effectively infinite
-        # - include tie-break logic
-        # - return index
-        # - name: find_nearest_index
-        # - document that this will only be strictly unique with small enough tolerance
-        #   ^ user's responsibility
-        #
-        # implementation:
-        # - find delta on both sides; delta = min (delta_l, delta_r)
-        # - find the closest point
-        # - return it if it is within tolerance
 
+        Parameters
+        ----------
+        point : `float`
+        tolerance : `float` or `None`
+
+        Returns
+        -------
+        `float` or `None` 
+        """
         lo = 1
         hi = len(self) + 1
-        i = bisect.bisect_right(self, p, lo=lo, hi=hi)
+        i = bisect.bisect_right(self, point, lo=lo, hi=hi)
         # i is the index at which p should be inserted if it is to be
         # right of any equal components. 
 
         if i == lo:
-            # p is less than every point in the set
+            # point is less than every entry of the set
             nearest_index = i
-            delta = self[nearest_index] - p
+            delta = self[nearest_index] - point
         elif i == hi:
-            # p is greater than or equal to every point in the set
+            # point is greater than or equal to every entry of the set
             nearest_index = i-1
-            delta = p - self[nearest_index]
+            delta = point - self[nearest_index]
         else:
-            # p_le <= p < p_g
-            # delta_left = p - p_le
-            # delta_right = p_g - p
+            # p_le <= point < p_g
+            # delta_left = point - p_le
+            # delta_right = p_g - point
             # neighbors = {
             #     delta_left: i-1,
             #     delta_right: i,
             #     }
             # If delta_left == delta_right, delta_right will be kept as it is 
             # added last. In this way, a tie goes to the right index.
-            neighbors = dict((abs(p-self[j]), j) for j in [i-1, i])
+            neighbors = dict((abs(point - self[j]), j) for j in [i-1, i])
             delta = min(neighbors)
             nearest_index = neighbors[delta]
 
-        if tol is not None:
-            if delta > tol:
+        if tolerance is not None:
+            if delta > tolerance:
                 return None
         return nearest_index
