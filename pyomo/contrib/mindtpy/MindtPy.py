@@ -40,6 +40,7 @@ from pyomo.core import (
     VarList, TransformationFactory)
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
+from pyomo.contrib.fbbt.fbbt import fbbt
 
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
@@ -271,6 +272,11 @@ class MindtPySolver(object):
         description="use dual solution from the nlp solver to add OA cuts for equality constraints.",
         domain=bool
     ))
+    CONFIG.declare("use_fbbt", ConfigValue(
+        default=False,
+        description="use fbbt to tighten the feasible region of the problem",
+        domain=bool
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -316,6 +322,7 @@ class MindtPySolver(object):
             config.use_mcpp = True
             config.integer_to_binary = True
             config.use_dual = False
+            config.fbbt = True
 
         if config.nlp_solver == "baron":
             config.use_dual = False
@@ -325,6 +332,11 @@ class MindtPySolver(object):
         solve_data.timing = Container()
         solve_data.curr_int_sol = []
         solve_data.prev_int_sol = []
+
+        if config.use_fbbt:
+            fbbt(model)
+            config.logger.info(
+                "Use the fbbt to tighten the bounds of variables")
 
         solve_data.original_model = model
         solve_data.working_model = model.clone()
