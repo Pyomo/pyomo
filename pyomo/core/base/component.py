@@ -1427,7 +1427,7 @@ def get_location_of_coordinate_set(setprod, subset):
     """
     if subset.dimen != 1:
         raise ValueError(
-            'Cannot get the location of %s because it is multi-demensional'
+            'Cannot get the location of %s because it is multi-dimensional'
             %(subset.name))
 
     loc = None
