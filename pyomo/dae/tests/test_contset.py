@@ -201,80 +201,103 @@ class TestContinuousSet(unittest.TestCase):
         self.assertEqual(m.t, [1,1.5,2,2.5,3])
         self.assertEqual(m.t._fe, [1,2,3])
 
-    def test_find(self):
+    def test_find_nearest_index(self):
         m = ConcreteModel()
         m.time = ContinuousSet(bounds=(0, 5))
 
-        # Test "undiscretized":
+        i = m.time.find_nearest_index(1)
+        self.assertEqual(i, 1)
+        i = m.time.find_nearest_index(1, tol=0.5)
+        self.assertEqual(i, None)
 
-        t = m.time.find(1)
-        self.assertEqual(t, 0)
+        i = m.time.find_nearest_index(-0.01, tol=0.1)
+        self.assertEqual(i, 1)
+        i = m.time.find_nearest_index(-0.01, tol=0.001)
+        self.assertEqual(i, None)
 
-        t = m.time.find(-1)
-        self.assertEqual(t, 0)
+        i = m.time.find_nearest_index(6, tol=2)
+        self.assertEqual(i, 2)
+        i = m.time.find_nearest_index(6, tol=1)
+        self.assertEqual(i, None)
 
-        t = m.time.find(0)
-        self.assertEqual(t, 0)
+        i = m.time.find_nearest_index(2.5)
+        self.assertEqual(i, 2)
 
-        t = m.time.find(4)
-        self.assertEqual(t, 5)
 
-        t = m.time.find(5)
-        self.assertEqual(t, 5)
-
-        t = m.time.find(6)
-        self.assertEqual(t, 5)
-
-        t = m.time.find(2.5)
-        self.assertEqual(t, 5)
-
-        t = m.time.find(2.5, tol=2.5)
-        self.assertEqual(t, 5)
-
-        t = m.time.find(2.5, tol=3)
-        # With a large enough tolerance, a halfway-between-point
-        # can be misrecognized
-        self.assertEqual(t, 0)
-
-        t = m.time.find(2.7, tol=3)
-        self.assertEqual(t, 0)
-
-        # Test "discretized":
-
-        m.del_component(m.time)
-        init_list = []
-        for i in range(5):
-            i0 = float(i)
-            i1 = round((i+0.15)*1e4)/1e4
-            i2 = round((i+0.64)*1e4)/1e4
-            # Round to get rid of numerical error due to float addition
-            init_list.extend([i, i1, i2])
-        init_list.append(5.0)
-        m.time = ContinuousSet(initialize=init_list)
-
-        t = m.time.find(5.5)
-        self.assertEqual(t, 5.0)
-
-        t = m.time.find(4.9)
-        self.assertEqual(t, 5.0)
-
-        t = m.time.find(4.8)
-        self.assertEqual(t, 4.64)
-
-        t = m.time.find(4.15)
-        self.assertEqual(t, 4.15)
-
-        t = m.time.find(2.5)
-        self.assertEqual(t, 2.64)
-
-        t = m.time.find(-0.1)
-        self.assertEqual(t, 0.0)
-
-        t = m.time.find(0.14, tol=0.5)
-        self.assertEqual(t, 0.0)
-
-        t = m.time.find(0.14, tol=0.05)
-        self.assertEqual(t, 0.15)
+#    def test_find(self):
+#        m = ConcreteModel()
+#        m.time = ContinuousSet(bounds=(0, 5))
+#
+#        # Test "undiscretized":
+#
+#        t = m.time.find(1)
+#        self.assertEqual(t, 0)
+#
+#        t = m.time.find(-1)
+#        self.assertEqual(t, 0)
+#
+#        t = m.time.find(0)
+#        self.assertEqual(t, 0)
+#
+#        t = m.time.find(4)
+#        self.assertEqual(t, 5)
+#
+#        t = m.time.find(5)
+#        self.assertEqual(t, 5)
+#
+#        t = m.time.find(6)
+#        self.assertEqual(t, 5)
+#
+#        t = m.time.find(2.5)
+#        self.assertEqual(t, 5)
+#
+#        t = m.time.find(2.5, tol=2.5)
+#        self.assertEqual(t, 5)
+#
+#        t = m.time.find(2.5, tol=3)
+#        # With a large enough tolerance, a halfway-between-point
+#        # can be misrecognized
+#        self.assertEqual(t, 0)
+#
+#        t = m.time.find(2.7, tol=3)
+#        self.assertEqual(t, 0)
+#
+#        # Test "discretized":
+#
+#        m.del_component(m.time)
+#        init_list = []
+#        for i in range(5):
+#            i0 = float(i)
+#            i1 = round((i+0.15)*1e4)/1e4
+#            i2 = round((i+0.64)*1e4)/1e4
+#            # Round to get rid of numerical error due to float addition
+#            init_list.extend([i, i1, i2])
+#        init_list.append(5.0)
+#        m.time = ContinuousSet(initialize=init_list)
+#
+#        t = m.time.find(5.5)
+#        self.assertEqual(t, 5.0)
+#
+#        t = m.time.find(4.9)
+#        self.assertEqual(t, 5.0)
+#
+#        t = m.time.find(4.8)
+#        self.assertEqual(t, 4.64)
+#
+#        t = m.time.find(4.15)
+#        self.assertEqual(t, 4.15)
+#
+#        t = m.time.find(2.5)
+#        self.assertEqual(t, 2.64)
+#
+#        t = m.time.find(-0.1)
+#        self.assertEqual(t, 0.0)
+#
+#        t = m.time.find(0.14, tol=0.5)
+#        self.assertEqual(t, 0.0)
+#
+#        t = m.time.find(0.14, tol=0.05)
+#        self.assertEqual(t, 0.15)
 
 
 class TestIO(unittest.TestCase):
