@@ -271,6 +271,17 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
+    def test_maximize_obj(self):
+        """Test the extended cutting plane decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            model.obj.sense = maximize
+            print('\n test maximize case to improve code coverage')
+            opt.solve(model, strategy='ECP',
+                      mip_solver=required_solvers[1],
+                      nlp_solver=required_solvers[0]
+                      )
+            self.assertAlmostEqual(value(model.obj.expr), 14.83, places=1)
 
 if __name__ == "__main__":
     unittest.main()

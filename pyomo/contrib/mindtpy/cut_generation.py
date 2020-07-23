@@ -119,8 +119,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 
 def add_ecp_cuts(target_model, solve_data, config,
                 linearize_active=True,
-                linearize_violated=True,
-                linearize_inactive=False):
+                linearize_violated=True):
     """
     Linearizes nonlinear constraints. Adds the cuts for the ECP method.
 
@@ -140,8 +139,6 @@ def add_ecp_cuts(target_model, solve_data, config,
     linearize_violated: bool, optional
         this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
         linearized constraint has been violated
-    linearize_inactive: bool, optional
-        this parameter acts as a Boolean flag that signals whether the linearized constraint is inactive
     """
     for constr in target_model.MindtPy_utils.constraint_list:
 
@@ -170,7 +167,7 @@ def add_ecp_cuts(target_model, solve_data, config,
                 continue
             if (linearize_active and abs(upper_slack) < config.ecp_tolerance) \
                 or (linearize_violated and upper_slack < 0) \
-                or (linearize_inactive and upper_slack > 0):
+                or (config.linearize_inactive and upper_slack > 0):
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 
@@ -193,7 +190,7 @@ def add_ecp_cuts(target_model, solve_data, config,
                 continue
             if (linearize_active and abs(lower_slack) < config.ecp_tolerance) \
                 or (linearize_violated and lower_slack < 0) \
-                or (linearize_inactive and lower_slack > 0):
+                or (config.linearize_inactive and lower_slack > 0):
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
 

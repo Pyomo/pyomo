@@ -33,11 +33,6 @@ def MindtPy_iteration_loop(solve_data, config):
     working_model = solve_data.working_model
     main_objective = next(
         working_model.component_data_objects(Objective, active=True))
-    # For ECP to know whether to know which bound to copy over (primal or dual)
-    if main_objective.sense == minimize:
-        min_flag = True
-    else:
-        min_flag = False
     while solve_data.mip_iter < config.iteration_limit:
 
         config.logger.info(
@@ -59,7 +54,7 @@ def MindtPy_iteration_loop(solve_data, config):
         else:
             raise NotImplementedError()
 
-        if algorithm_should_terminate(solve_data, config, min_flag, check_cycling=True):
+        if algorithm_should_terminate(solve_data, config, check_cycling=True):
             break
 
         if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
@@ -77,7 +72,7 @@ def MindtPy_iteration_loop(solve_data, config):
             # Call the NLP post-solve callback
             config.call_after_subproblem_solve(fixed_nlp, solve_data)
 
-        if algorithm_should_terminate(solve_data, config, min_flag, check_cycling=False):
+        if algorithm_should_terminate(solve_data, config, check_cycling=False):
             break
 
         if config.strategy == 'ECP':
@@ -165,7 +160,7 @@ def MindtPy_iteration_loop(solve_data, config):
             solve_data.UB_progress.append(solve_data.UB)
 
 
-def algorithm_should_terminate(solve_data, config, min_flag, check_cycling):
+def algorithm_should_terminate(solve_data, config, check_cycling):
 
     """
     Checks if the algorithm should terminate at the given point
@@ -273,7 +268,8 @@ def algorithm_should_terminate(solve_data, config, min_flag, check_cycling):
                         '\n'.format(
                             nlc))
                     return False
-        if min_flag:
+        # For ECP to know whether to know which bound to copy over (primal or dual)
+        if solve_data.objective_sense == 1:
             solve_data.UB = solve_data.LB
         else:
             solve_data.LB = solve_data.UB
