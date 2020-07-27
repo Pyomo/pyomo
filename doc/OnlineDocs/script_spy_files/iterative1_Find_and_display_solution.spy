@@ -1,3 +1,0 @@
-    results = opt.solve(instance)
-    print ("\n===== iteration",i)
-    instance.display()

@@ -1,2 +1,0 @@
-# the next line declares a variable indexed by the set J
-model.x = Var(model.J, domain=NonNegativeReals)

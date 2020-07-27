@@ -11,6 +11,7 @@
 
 # Documentation builds
 doc/OnlineDocs/_build
+doc/OnlineDocs/**/*.spy
 
 # Running pyomo / tests / solvers occasionally leaves extra files
 *.out

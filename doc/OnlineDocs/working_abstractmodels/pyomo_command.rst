@@ -90,7 +90,7 @@ When there seem to be troubles expressing the model, it is often useful
 to embed print commands in the model in places that will yield helpful
 information.  Consider the following snippet:
 
-.. literalinclude:: ../script_spy_files/spy4PyomoCommand_Troubleshooting_printed_command.spy
+.. literalinclude:: ../tests/scripting/spy4PyomoCommand_Troubleshooting_printed_command.spy
    :language: python
 
 The effect will be to output every member of the set ``model.I`` at the

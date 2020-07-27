@@ -871,10 +871,10 @@ class Test_constraint(unittest.TestCase):
         y = variable()
         z = variable()
         with self.assertRaises(ValueError):
-            constraint(logical_expr.RangedExpression((x,y,1),(False,False)))
+            constraint(logical_expr.RangedExpression((x, y, 1), (False, False)))
 
         with self.assertRaises(ValueError):
-            constraint(logical_expr.RangedExpression((0,y,z),(False,False)))
+            constraint(logical_expr.RangedExpression((0, y, z), (False, False)))
 
     def test_expr_construct_equality(self):
         x = variable(value=1)
@@ -920,34 +920,34 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (x < 0)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.inequality(body=x,upper=0,strict=True)
+            c.expr = logical_expr.inequality(body=x, upper=0, strict=True)
         c.expr = (x <= 0)
-        c.expr = logical_expr.inequality(body=x,upper=0,strict=False)
+        c.expr = logical_expr.inequality(body=x, upper=0, strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x > 0)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.inequality(body=x,lower=0,strict=True)
+            c.expr = logical_expr.inequality(body=x, lower=0, strict=True)
         c.expr = (x >= 0)
-        c.expr = logical_expr.inequality(body=x,lower=0,strict=False)
+        c.expr = logical_expr.inequality(body=x, lower=0, strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x < y)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.inequality(body=x,upper=y,strict=True)
+            c.expr = logical_expr.inequality(body=x, upper=y, strict=True)
         c.expr = (x <= y)
-        c.expr = logical_expr.inequality(body=x,upper=y,strict=False)
+        c.expr = logical_expr.inequality(body=x, upper=y, strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x > y)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.inequality(body=x,lower=y,strict=True)
+            c.expr = logical_expr.inequality(body=x, lower=y, strict=True)
         c.expr = (x >= y)
-        c.expr = logical_expr.inequality(body=x,lower=y,strict=False)
+        c.expr = logical_expr.inequality(body=x, lower=y, strict=False)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.RangedExpression((0,x,1),(True,True))
+            c.expr = logical_expr.RangedExpression((0, x, 1), (True, True))
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.RangedExpression((0,x,1),(False,True))
+            c.expr = logical_expr.RangedExpression((0, x, 1), (False, True))
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.RangedExpression((0,x,1),(True,False))
-        c.expr = logical_expr.RangedExpression((0,x,1),(False,False))
+            c.expr = logical_expr.RangedExpression((0, x, 1), (True, False))
+        c.expr = logical_expr.RangedExpression((0, x, 1), (False, False))
 
     def test_expr_construct_inf_equality(self):
         x = variable()
