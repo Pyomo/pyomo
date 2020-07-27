@@ -172,7 +172,7 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
     #         elif var.has_lb() and abs(value(var) - var.lb) < config.bound_tolerance:
     #             fixed_nlp.ipopt_zU_out[var] = -1
 
-    if config.strategy == 'OA':
+    if config.strategy in {'OA', 'GOA'}:
         config.logger.info('Solving feasibility problem')
         if config.initial_feas:
             # add_feas_slacks(fixed_nlp, solve_data)
@@ -181,17 +181,10 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
             copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config)
-            add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
-    elif config.strategy == "GOA":
-        config.logger.info('Solving feasibility problem')
-        if config.initial_feas:
-            # add_feas_slacks(fixed_nlp, solve_data)
-            # config.initial_feas = False
-            feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
-            copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
-                                 solve_data.mip.MindtPy_utils.variable_list,
-                                 config)
-            add_affine_cuts(solve_data, config)
+            if config.strategy == "OA":
+                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+            elif config.strategy == "GOA":
+                add_affine_cuts(solve_data, config)
     # Add an integer cut to exclude this discrete option
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_nogood_cuts:

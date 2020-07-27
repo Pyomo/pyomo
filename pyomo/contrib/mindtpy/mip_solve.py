@@ -81,12 +81,15 @@ def solve_OA_master(solve_data, config):
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
         masteropt.options['timelimit'] = config.time_limit
+        if config.threads > 0:
+            masteropt.options["threads"] = config.threads
     mip_args = dict(config.mip_solver_args)
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.0;')
     master_mip_results = masteropt.solve(
         solve_data.mip, **mip_args)  # , tee=True)
+    # print(master_mip_results)
 
     if master_mip_results.solver.termination_condition is tc.optimal:
         if config.single_tree:

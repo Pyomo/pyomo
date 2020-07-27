@@ -23,7 +23,7 @@ from __future__ import division
 import logging
 
 from pyomo.common.config import (
-    ConfigBlock, ConfigValue, In, PositiveFloat, PositiveInt
+    ConfigBlock, ConfigValue, In, PositiveFloat, PositiveInt, NonNegativeInt
 )
 from pyomo.contrib.gdpopt.util import (
     _DoNothing, copy_var_list_values,
@@ -277,6 +277,12 @@ class MindtPySolver(object):
         description="use fbbt to tighten the feasible region of the problem",
         domain=bool
     ))
+    CONFIG.declare("threads", ConfigValue(
+        default=0,
+        domain=NonNegativeInt,
+        description="Threads",
+        doc="Threads used by milp solver and nlp solver."
+    ))
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -322,7 +328,7 @@ class MindtPySolver(object):
             config.use_mcpp = True
             config.integer_to_binary = True
             config.use_dual = False
-            config.fbbt = True
+            config.use_fbbt = True
 
         if config.nlp_solver == "baron":
             config.use_dual = False

@@ -268,12 +268,13 @@ def add_affine_cuts(solve_data, config):
             config.logger.debug(
                 "Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
             continue  # skip to the next constraint
-        # TODO: check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
+
         ccSlope = mc_eqn.subcc()
         cvSlope = mc_eqn.subcv()
         ccStart = mc_eqn.concave()
         cvStart = mc_eqn.convex()
 
+        # check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
         concave_cut_valid = True
         convex_cut_valid = True
         for var in vars_in_constr:
@@ -282,6 +283,11 @@ def add_affine_cuts(solve_data, config):
                     concave_cut_valid = False
                 if cvSlope[var] == float('nan') or cvSlope[var] == float('inf'):
                     convex_cut_valid = False
+        # check if the value of ccSlope and cvSlope all equals zero. if so, we skip this.
+        if not any(list(ccSlope.values())):
+            concave_cut_valid = False
+        if not any(list(cvSlope.values())):
+            convex_cut_valid = False
         if ccStart == float('nan') or ccStart == float('inf'):
             concave_cut_valid = False
         if cvStart == float('nan') or cvStart == float('inf'):
