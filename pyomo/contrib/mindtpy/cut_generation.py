@@ -12,10 +12,16 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 
 def add_objective_linearization(solve_data, config):
-    """Adds initial linearized objective in case it is nonlinear.
+    """
+    If objective is nonlinear, then this function adds a linearized objective. This function should be used to
+    initialize the ECP method.
 
-    This should be done for initializing the ECP method.
-
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
@@ -24,6 +30,7 @@ def add_objective_linearization(solve_data, config):
            if obj is MindtPy.MindtPy_objective_expr)
     MindtPy.MindtPy_linear_cuts.mip_iters.add(solve_data.mip_iter)
     sign_adjust = 1 if MindtPy.obj.sense == minimize else -1
+
     # generate new constraints
     # TODO some kind of special handling if the dual is phenomenally small?
     for obj in gen:
@@ -39,10 +46,27 @@ def add_objective_linearization(solve_data, config):
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True):
-    """Linearizes nonlinear constraints.
+    """
+    Linearizes nonlinear constraints; modifies the model to include the OA cuts
 
     For nonconvex problems, turn on 'config.add_slack'. Slack variables will
     always be used for nonlinear equality constraints.
+
+    Parameters
+    ----------
+    target_model:
+        this is the MIP/MILP model for the OA algorithm; we want to add the OA cuts to 'target_model'
+    dual_values:
+        contains the value of the duals for each constraint
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    linearize_active: bool, optional
+        this parameter acts as a Boolean flag that signals whether the linearized constraint is active
+    linearize_violated: bool, optional
+        this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
+        linearized constraint has been violated
     """
     for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
                                     dual_values):
@@ -206,6 +230,20 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 
 
 def add_nogood_cuts(var_values, solve_data, config, feasible=False):
+    """
+    Adds integer cuts; modifies the model to include integer cuts
+
+    Parameters
+    ----------
+    var_values: list
+        values of the current variables, used to generate the cut
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    feasible: bool, optional
+        boolean indicating if integer combination yields a feasible or infeasible NLP
+    """
     if not config.add_nogood_cuts:
         return
 
@@ -229,7 +267,7 @@ def add_nogood_cuts(var_values, solve_data, config, feasible=False):
             raise ValueError('Binary {} = {} is not 0 or 1'.format(
                 v.name, value(v)))
 
-    if not binary_vars:  # if no binary variables, skip.
+    if not binary_vars:  # if no binary variables, skip
         return
 
     int_cut = (sum(1 - v for v in binary_vars
@@ -248,6 +286,15 @@ def add_nogood_cuts(var_values, solve_data, config, feasible=False):
 
 
 def add_affine_cuts(solve_data, config):
+    """
+    Adds affine cuts using MCPP; modifies the model to include affine cuts
+
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
+
     m = solve_data.mip
     config.logger.info("Adding affine cuts")
     counter = 0

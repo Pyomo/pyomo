@@ -27,6 +27,23 @@ single_tree, single_tree_available = attempt_import(
 
 
 def solve_OA_master(solve_data, config):
+    """
+    This function solves the MIP master problem for the OA algorithm
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+
+    Returns
+    -------
+    solve_data.mip: Pyomo model
+        the MIP stored in solve_data
+    master_mip_results: Pyomo results object
+        result from solving the master MIP
+    """
     solve_data.mip_iter += 1
     MindtPy = solve_data.mip.MindtPy_utils
     config.logger.info(
@@ -112,15 +129,30 @@ def solve_OA_master(solve_data, config):
     return solve_data.mip, master_mip_results
 
 
-def handle_master_mip_optimal(master_mip, solve_data, config, copy=True):
-    """Copy the result to working model and update upper or lower bound"""
+# The following functions deal with handling the solution we get from the above MIP solver function
+
+
+def handle_master_mip_optimal(master_mip, solve_data, config):
+    """
+    This function copies the result from 'solve_OA_master' to the working model and updates the upper/lower bound. This
+    function is called after an optimal solution is found for the master problem.
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     # proceed. Just need integer values
     MindtPy = master_mip.MindtPy_utils
     main_objective = next(
         master_mip.component_data_objects(Objective, active=True))
     # check if the value of binary variable is valid
     for var in MindtPy.variable_list:
-        if var.value == None and var.is_integer():
+        if var.value is None and var.is_integer():
             config.logger.warning(
                 "Integer variable {} not initialized. It is set to it's lower bound when using the initial_binary initialization method".format(var.name))
             var.value = var.lb  # nlp_var.bounds[0]
@@ -145,7 +177,24 @@ def handle_master_mip_optimal(master_mip, solve_data, config, copy=True):
 
 
 def handle_master_mip_other_conditions(master_mip, master_mip_results, solve_data, config):
-    if master_mip_results.solver.termination_condition is tc.unbounded:
+    """
+    This function handles the result of the latest iteration of solving the MIP problem (given any of a few
+    edge conditions, such as if the solution is neither infeasible nor optimal).
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    master_mip_results: Pyomo results object
+        result from solving the MIP problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
+    if master_mip_results.solver.termination_condition is tc.infeasible:
+        handle_master_mip_infeasible(master_mip, solve_data, config)
+    elif master_mip_results.solver.termination_condition is tc.unbounded:
         handle_master_mip_unbounded(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
         handle_master_mip_max_timelimit(master_mip, solve_data, config)
@@ -181,6 +230,18 @@ def handle_master_mip_other_conditions(master_mip, master_mip_results, solve_dat
 
 
 def handle_master_mip_infeasible(master_mip, solve_data, config):
+    """
+    This function handles the result of the latest iteration of solving the MIP problem given an infeasible solution.
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     config.logger.info(
         'MILP master problem is infeasible. '
         'Problem may have no more feasible '
@@ -205,6 +266,19 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
 
 
 def handle_master_mip_max_timelimit(master_mip, solve_data, config):
+    """
+    This function handles the result of the latest iteration of solving the MIP problem given that solving the
+    MIP takes too long.
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     # TODO check that status is actually ok and everything is feasible
     MindtPy = master_mip.MindtPy_utils
     config.logger.info(
@@ -230,6 +304,19 @@ def handle_master_mip_max_timelimit(master_mip, solve_data, config):
 
 
 def handle_master_mip_unbounded(master_mip, solve_data, config):
+    """
+    This function handles the result of the latest iteration of solving the MIP problem given an unbounded solution
+    due to the relaxation.
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
     # This occurs when the objective is nonlinear. The nonlinear objective is moved
     # to the constraints, and deactivated for the linear master problem.
