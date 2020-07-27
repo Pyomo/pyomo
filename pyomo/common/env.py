@@ -14,84 +14,311 @@ import six
 
 from six import iteritems
 
-class _MsvcrtInterface(object):
-    """Helper class to amnage the interface with the MSVCRT runtime"""
+def _as_bytes(val):
+    """Helper function to coerce a string to a bytes() object"""
+    if isinstance(val, six.binary_type):
+        return val
+    elif val is not None:
 
-    def __init__(self):
-        self._loaded = None
-        self.putenv_s = _MsvcrtInterface.noop_put
-        self.wputenv_s = _MsvcrtInterface.noop_put
-        self.getenv = _MsvcrtInterface.noop_get
-        self.wgetenv = _MsvcrtInterface.noop_get
+        return val.encode('utf-8')
 
-    @staticmethod
-    def noop_get(key):
-        return None
 
-    @staticmethod
-    def noop_put(key, val):
-        return 0
+def _as_unicode(val):
+    """Helper function to coerce a string to a unicode() object"""
+    if isinstance(val, six.text_type):
+        return val
+    elif val is not None:
+        return val.decode()
+
+
+class _EnvironInterface(object):
+    def __init__(self, dll):
+        self.dll = dll
+        self._original_state = {}
+
+        # Transfer over the current os.environ
+        for key, val in iteritems(os.environ):
+            if val != self[key]:
+                self[key] = val
+
+        # If we can get a dictionary of the current environment (not
+        # always possible), then remove any keys that are not in
+        # os.environ
+        origEnv = self.dll.get_env_dict()
+        if origEnv is not None:
+            for key in origEnv:
+                if key not in os.environ:
+                    del self[key]
+
+    def restore(self):
+        for key, val in iteritems(self._original_state):
+            if not val:
+                if self[key] is not None:
+                    del self[key]
+            else:
+                self[key] = val
+        self._original_state = {}
+
+    def __getitem__(self, key):
+        if isinstance(key, six.text_type):
+            return self.dll.wgetenv(key)
+        else:
+            return self.dll.getenv(key)
+
+    def __setitem__(self, key, val):
+        if key not in self._original_state:
+            self._original_state[key] = self[key]
+
+        if isinstance(key, six.text_type):
+            if isinstance(val, six.text_type):
+                self.dll.wputenv_s(key, val)
+            else:
+                self.dll.wputenv_s(key, _as_unicode(val))
+        elif isinstance(val, six.text_type):
+            self.dll.wputenv_s(_as_unicode(key), val)
+        else:
+            self.dll.putenv_s(key, val)
+
+    def __delitem__(self, key):
+        if key not in self._original_state:
+            self._original_state[key] = self[key]
+
+        if isinstance(key, six.text_type):
+            self.dll.wputenv_s(key, u'')
+        else:
+            self.dll.putenv_s(key, b'')
+
+
+class _OSEnviron(object):
+    _libname = 'os.environ'
+
+    def available(self):
+        return True
+
+    def get_env_dict(self):
+        return dict(os.environ)
+
+    def getenv(self, key):
+        if six.PY2:
+            return _as_bytes(os.environ.get(key, None))
+        else:
+            return os.environb.get(key, None)
+
+    def wgetenv(self, key):
+        if six.PY2:
+            return _as_unicode(os.environ.get(key, None))
+        else:
+            return os.environ.get(key, None)
+
+    def putenv_s(self, key, val):
+        # Win32 convention deletes environ entries when the string is empty
+        if not val:
+            del os.environ[key]
+            return
+
+        if six.PY2:
+            os.environ[key] = val
+        else:
+            os.environb[key] = val
+
+    def wputenv_s(self, key, val):
+        # Win32 convention deletes environ entries when the string is empty
+        if not val:
+            del os.environ[key]
+            return
+
+        if six.PY2:
+            os.environ[key] = val
+        else:
+            os.environ[key] = val
+
+class _MsvcrtDLL(object):
+    """Helper class to manage the interface with the MSVCRT runtime"""
+
+    def __init__(self, name):
+        self._libname = name
+        if name is None:
+            self._loaded = False
+        else:
+            self._loaded = None
+        self.dll = None
 
     def available(self):
         if self._loaded is not None:
             return self._loaded
 
         try:
-            msvcrt = ctypes.cdll.msvcrt
+            self.dll = ctypes.CDLL(self._libname)
             self._loaded = True
         except OSError:
             self._loaded = False
             return self._loaded
 
-        self.putenv_s = ctypes.cdll.msvcrt._putenv_s
+        self.putenv_s = self.dll._putenv_s
         self.putenv_s.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         self.putenv_s.restype = ctypes.c_int
 
-        self.wputenv_s = ctypes.cdll.msvcrt._wputenv_s
+        self.wputenv_s = self.dll._wputenv_s
         self.wputenv_s.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p]
         self.wputenv_s.restype = ctypes.c_int
 
-        self.getenv = ctypes.cdll.msvcrt.getenv
+        self.getenv = self.dll.getenv
         self.getenv.argtypes = [ctypes.c_char_p]
         self.getenv.restype = ctypes.c_char_p
 
-        self.wgetenv = ctypes.cdll.msvcrt._wgetenv
+        self.wgetenv = self.dll._wgetenv
         self.wgetenv.argtypes = [ctypes.c_wchar_p]
         self.wgetenv.restype = ctypes.c_wchar_p
 
         return self._loaded
 
-def _as_bytes(val):
-    """Helper function to coerce a string to a bytes() object"""
-    if isinstance(val, six.binary_type):
-        return val
-    else:
-        return val.encode('utf-8')
+    def get_env_dict(self):
+        if not self.available():
+            return None
 
-def _as_unicode(val):
-    """Helper function to coerce a string to a unicode() object"""
-    if isinstance(val, six.text_type):
-        return val
-    else:
-        return val.decode()
+        try:
+            envp = ctypes.POINTER(ctypes.c_wchar_p).in_dll(
+                self.dll, '_wenviron')
+            if not envp.contents:
+                envp = None
+        except ValueError:
+            envp = None
+        if envp is None:
+            try:
+                envp = ctypes.POINTER(ctypes.c_char_p).in_dll(
+                    self.dll, '_environ')
+                if not envp.contents:
+                    return None
+            except ValueError:
+                return None
 
-class TemporaryEnv(object):
-    msvcrt = _MsvcrtInterface()
+        ans = {}
+        for line in envp:
+            if not line:
+                break
+            key, val = line.split('=', 1)
+            ans[key] = val
+        return ans
+
+
+class _Win32DLL(object):
+    """Helper class to manage the interface with the Win32 runtime"""
+
+    def __init__(self, name):
+        self._libname = name
+        if name is None:
+            self._loaded = False
+        else:
+            self._loaded = None
+        self.dll = None
+
+    def available(self):
+        if self._loaded is not None:
+            return self._loaded
+
+        try:
+            self.dll = ctypes.CDLL(self._libname)
+            self._loaded = True
+        except OSError:
+            self._loaded = False
+            return self._loaded
+
+        self.putenv_s = self.dll.SetEnvironmentVariableA
+        self.putenv_s.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        self.putenv_s.restype = ctypes.c_bool
+
+        self.wputenv_s = self.dll.SetEnvironmentVariableW
+        self.wputenv_s.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p]
+        self.wputenv_s.restype = ctypes.c_bool
+
+        self._getenv_dll = self.dll.GetEnvironmentVariableA
+        self._getenv_dll.argtypes = [
+            ctypes.c_char_p, ctypes.c_char_p, ctypes.wintypes.DWORD]
+        self._getenv_dll.restype = ctypes.wintypes.DWORD
+
+        self._wgetenv_dll = self.dll.GetEnvironmentVariableW
+        self._wgetenv_dll.argtypes = [
+            ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.wintypes.DWORD]
+        self._wgetenv_dll.restype = ctypes.wintypes.DWORD
+
+        self._envstr = self.dll.GetEnvironmentStringsW
+        self._envstr.argtypes = []
+        self._envstr.restype = ctypes.POINTER(ctypes.c_wchar)
+        self._free_envstr = self.dll.FreeEnvironmentStringsW
+        self._free_envstr.argtypes = [ctypes.POINTER(ctypes.c_wchar)]
+        self._free_envstr.restype = ctypes.c_bool
+
+        return self._loaded
+
+    def getenv(self, key):
+        size = self._getenv_dll(key, None, 0)
+        if not size:
+            return None
+        buf = ctypes.create_string_buffer(b'\0' * size)
+        self._getenv_dll(key, buf, size)
+        return buf.value
+
+    def wgetenv(self, key):
+        size = self._wgetenv_dll(key, None, 0)
+        if not size:
+            return None
+        buf = ctypes.create_unicode_buffer(u'\0' * size)
+        self._wgetenv_dll(key, buf, size)
+        return buf.value
+
+    def get_env_dict(self):
+        ans = {}
+        _str_buf = self._envstr()
+        i = 0
+        while _str_buf[i] != u'\0':
+            _str = ''
+            while _str_buf[i] != u'\0':
+                _str += _str_buf[i]
+                i += 1
+            key, val = _str.split('=', 1)
+            ans[key] = val
+            i += 1 # Skip the NULL
+        self._free_envstr(_str_buf)
+        return ans
+
+
+class CtypesEnviron(object):
+    # Windows has a number of C Runtime Libraries, each of which can
+    # hold its own independent copy of the system environment
+    #
+    # Note that this order is important: kernel32 appears to track
+    # os.envion (and it is possible that it could be omitted).  It is
+    # important to deal with it before the msvcrt libraries.
+    DLLs = [
+        _Win32DLL('kernel32'),
+        _MsvcrtDLL(ctypes.util.find_msvcrt()),
+        _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
+        _MsvcrtDLL('msvcrt'),
+        _MsvcrtDLL('msvcr120'),
+        _MsvcrtDLL('msvcr110'),
+        _MsvcrtDLL('msvcr100'),
+        _MsvcrtDLL('msvcr90'),
+        _MsvcrtDLL('msvcr80'),
+        _MsvcrtDLL('msvcr71'),
+        _MsvcrtDLL('msvcr70'),
+    ]
 
     def __init__(self, **kwds):
         """A context manager for managing environment variables
 
         This class provides a simplified interface for consistently
         setting and restoring environment variables, with special
-        handling to ensure consistency on Windows platforms.
+        handling to ensure consistency with the C Runtime Library
+        environment on Windows platforms.
 
         `os.environ` reflects the current python environment variables,
         and will be passed to subprocesses.  However, it does not
-        reflect the MSVCRT environment on Windows platforms.  This can
-        be problemmatic as DLLs loaded through the CTYPES interface
-        will see the MSVCRT environment and not os.environ.  This class
-        provides a way to manage environment variables and pass changes
-        to both os.environ and the MSVCRT runtime.
+        reflect the C Runtime Library (MSVCRT) environment on Windows
+        platforms.  This can be problemmatic as DLLs loaded through the
+        CTYPES interface will see the MSVCRT environment and not
+        os.environ.  This class provides a way to manage environment
+        variables and pass changes to both os.environ and the MSVCRT
+        runtime.
 
         This class implements a context manager API, so that clients can
         temporarily change - and then subsequently restore - the
@@ -110,7 +337,7 @@ class TemporaryEnv(object):
            >>> print(os.environ['TEMP_ENV_VAR'])
            original value
 
-           >>> with TemporaryEnv(TEMP_ENV_VAR='temporary value'):
+           >>> with CtypesEnviron(TEMP_ENV_VAR='temporary value'):
            ...    print(os.envion['TEMP_ENV_VAR'])
            temporary value
 
@@ -126,7 +353,12 @@ class TemporaryEnv(object):
                os.environ['TEMP_ENV_VAR'] = orig_env_val
 
         """
-        self.original_state = {}
+        self.interfaces = [
+            _EnvironInterface(_OSEnviron()),
+        ]
+        self.interfaces.extend(_EnvironInterface(dll)
+                               for dll in self.DLLs if dll.available())
+        # Set the incoming env strings on all interfaces...
         for k, v in iteritems(kwds):
             self[k] = v
 
@@ -147,34 +379,10 @@ class TemporaryEnv(object):
         """
         # It is possible that os.environ and the MSVCRT did not start
         # off in sync; e.g., if someone had set a value in os.environ
-        # directly.  We will be especially careful and restore the
-        # twoenvironments to their original state (even if it was not
-        # synchronized)
-
-        # Restore os.environ
-        for key, val in iteritems(self.original_state):
-            if val[0] is None:
-                try:
-                    del os.environ[key]
-                except KeyError:
-                    pass
-            else:
-                os.environ[key] = val[0]
-
-        if self.msvcrt.available():
-            # Restore MSVCRT
-            for key, val in iteritems(self.original_state):
-                if val[1] is None:
-                    if isinstance(key, six.text_type):
-                        self.msvcrt.wputenv_s(key, u'')
-                    else:
-                        self.msvcrt.putenv_s(key, b'')
-                elif isinstance(val[1], six.text_type):
-                    self.msvcrt.wputenv_s(_as_unicode(key), val[1])
-                else:
-                    self.msvcrt.putenv_s(_as_bytes(key), val[1])
-
-        self.original_state = {}
+        # directly.  We will be especially careful and restore each
+        # environ back to its original state.
+        for lib in reversed(self.interfaces):
+            lib.restore()
 
     def __getitem__(self, key):
         """Retun the current environment variable value from os.environ"""
@@ -185,45 +393,9 @@ class TemporaryEnv(object):
         return key in os.environ
 
     def __setitem__(self, key, val):
-        if not self.msvcrt.available():
-            _msvcrt_orig = None
-        else:
-            # interfacing with the MSVCRT can be tricky, especially
-            # under Python 3.x: it is critical that all arguments
-            # "match"; that is, either everything is Unicode through the
-            # "w" interfaces or everything is a char* through the
-            # "non-w" interface.
-            if isinstance(key, six.text_type) or isinstance(val, six.text_type):
-                _key = _as_unicode(key)
-                _val = _as_unicode(val)
-                _msvcrt_orig = self.msvcrt.wgetenv(_key)
-                self.msvcrt.wputenv_s(_key, _val)
-            else:
-                _key = _as_bytes(key)
-                _val = _as_bytes(val)
-                _msvcrt_orig = self.msvcrt.getenv(_key)
-                self.msvcrt.putenv_s(_key, _val)
-
-        if key not in self.original_state:
-            self.original_state[key] = (
-                os.environ.get(key, None), _msvcrt_orig
-            )
-
-        os.environ[key] = val
+        for lib in self.interfaces:
+            lib[key] = val
 
     def __delitem__(self, key):
-        if key not in self.original_state:
-            # cause the original state to be recorded
-            self[key] = ''
-
-        try:
-            del os.environ[key]
-        except KeyError:
-            return
-
-        if self.msvcrt.available():
-            if isinstance(key, six.text_type):
-                self.msvcrt.wputenv_s(key, u'')
-            else:
-                self.msvcrt.putenv_s(key, b'')
-
+        for lib in self.interfaces:
+            del lib[key]

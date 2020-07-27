@@ -21,7 +21,7 @@ from scipy.sparse import coo_matrix
 import pyutilib
 import pyomo
 import pyomo.environ as aml
-from pyomo.common.env import TemporaryEnv
+from pyomo.common.env import CtypesEnviron
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 
 
@@ -79,7 +79,7 @@ class PyomoNLP(AslNLP):
                     os.environ.get('AMPLFUNC', ''),
                     os.environ.get('PYOMO_AMPLFUNC', ''),
                 ) if val)
-            with TemporaryEnv(AMPLFUNC=amplfunc):
+            with CtypesEnviron(AMPLFUNC=amplfunc):
                 super(PyomoNLP, self).__init__(nl_file)
 
             # keep pyomo model in cache
