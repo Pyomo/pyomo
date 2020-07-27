@@ -10,7 +10,7 @@
 
 import os
 import pyutilib.th as unittest
-from pyomo.environ import ConcreteModel, Var, Objective, Constraint,  value
+import pyomo.environ as pyo
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available, scipy_sparse as spa, scipy_available
@@ -72,20 +72,20 @@ class TestExternalInputOutputModel(unittest.TestCase):
         self.assertTrue(np.array_equal(jac.todense(), expected_jac))
 
     def test_pyomo_external_model(self):
-        m =  ConcreteModel()
-        m.Pin =  Var(initialize=100, bounds=(0,None))
-        m.c1 =  Var(initialize=1.0, bounds=(0,None))
-        m.c2 =  Var(initialize=1.0, bounds=(0,None))
-        m.F =  Var(initialize=10, bounds=(0,None))
+        m =  pyo.ConcreteModel()
+        m.Pin =  pyo.Var(initialize=100, bounds=(0,None))
+        m.c1 =  pyo.Var(initialize=1.0, bounds=(0,None))
+        m.c2 =  pyo.Var(initialize=1.0, bounds=(0,None))
+        m.F =  pyo.Var(initialize=10, bounds=(0,None))
 
-        m.P1 =  Var()
-        m.P2 =  Var()
+        m.P1 =  pyo.Var()
+        m.P2 =  pyo.Var()
 
-        m.F_con =  Constraint(expr = m.F == 10)
-        m.Pin_con =  Constraint(expr = m.Pin == 100)
+        m.F_con =  pyo.Constraint(expr = m.F == 10)
+        m.Pin_con =  pyo.Constraint(expr = m.Pin == 100)
 
         # simple parameter estimation test
-        m.obj =  Objective(expr= (m.P1 - 90)**2 + (m.P2 - 40)**2)
+        m.obj =  pyo.Objective(expr= (m.P1 - 90)**2 + (m.P2 - 40)**2)
 
         cyipopt_problem = \
             PyomoExternalCyIpoptProblem(m,
@@ -95,17 +95,17 @@ class TestExternalInputOutputModel(unittest.TestCase):
                                         )
 
         # check that the dummy variable is initialized
-        expected_dummy_var_value =  value(m.Pin) +  value(m.c1) +  value(m.c2) +  value(m.F) \
+        expected_dummy_var_value =  pyo.value(m.Pin) +  pyo.value(m.c1) +  pyo.value(m.c2) +  pyo.value(m.F) \
             + 0 + 0
             # +  value(m.P1) +  value(m.P2) # not initialized - therefore should use zero
-        self.assertAlmostEqual( value(m._dummy_variable_CyIpoptPyomoExNLP), expected_dummy_var_value)
+        self.assertAlmostEqual( pyo.value(m._dummy_variable_CyIpoptPyomoExNLP), expected_dummy_var_value)
 
         # solve the problem
         solver = CyIpoptSolver(cyipopt_problem, {'hessian_approximation':'limited-memory'})
         x, info = solver.solve(tee=False)
         cyipopt_problem.load_x_into_pyomo(x)
-        self.assertAlmostEqual( value(m.c1), 0.1, places=5)
-        self.assertAlmostEqual( value(m.c2), 0.5, places=5)
+        self.assertAlmostEqual( pyo.value(m.c1), 0.1, places=5)
+        self.assertAlmostEqual( pyo.value(m.c2), 0.5, places=5)
 
     def test_pyomo_external_model_scaling(self):
         m = pyo.ConcreteModel()
@@ -249,20 +249,20 @@ class TestExternalInputOutputModel(unittest.TestCase):
         self.assertIn('c scaling vector[    5]= 1.1000000000000000e+01', solver_trace)
 
     def test_pyomo_external_model_dummy_var_initialization(self):
-        m =  ConcreteModel()
-        m.Pin =  Var(initialize=100, bounds=(0,None))
-        m.c1 =  Var(initialize=1.0, bounds=(0,None))
-        m.c2 =  Var(initialize=1.0, bounds=(0,None))
-        m.F =  Var(initialize=10, bounds=(0,None))
+        m =  pyo.ConcreteModel()
+        m.Pin =  pyo.Var(initialize=100, bounds=(0,None))
+        m.c1 =  pyo.Var(initialize=1.0, bounds=(0,None))
+        m.c2 =  pyo.Var(initialize=1.0, bounds=(0,None))
+        m.F =  pyo.Var(initialize=10, bounds=(0,None))
 
-        m.P1 =  Var(initialize=75.0)
-        m.P2 =  Var(initialize=50.0)
+        m.P1 =  pyo.Var(initialize=75.0)
+        m.P2 =  pyo.Var(initialize=50.0)
 
-        m.F_con =  Constraint(expr = m.F == 10)
-        m.Pin_con =  Constraint(expr = m.Pin == 100)
+        m.F_con =  pyo.Constraint(expr = m.F == 10)
+        m.Pin_con =  pyo.Constraint(expr = m.Pin == 100)
 
         # simple parameter estimation test
-        m.obj =  Objective(expr= (m.P1 - 90)**2 + (m.P2 - 40)**2)
+        m.obj =  pyo.Objective(expr= (m.P1 - 90)**2 + (m.P2 - 40)**2)
 
         cyipopt_problem = \
             PyomoExternalCyIpoptProblem(m,
@@ -272,17 +272,17 @@ class TestExternalInputOutputModel(unittest.TestCase):
                                         )
 
         # check that the dummy variable is initialized
-        expected_dummy_var_value =  value(m.Pin) +  value(m.c1) +  value(m.c2) +  value(m.F) \
-            +  value(m.P1) +  value(m.P2)
-        self.assertAlmostEqual( value(m._dummy_variable_CyIpoptPyomoExNLP), expected_dummy_var_value)
+        expected_dummy_var_value =  pyo.value(m.Pin) +  pyo.value(m.c1) +  pyo.value(m.c2) +  pyo.value(m.F) \
+            +  pyo.value(m.P1) +  pyo.value(m.P2)
+        self.assertAlmostEqual( pyo.value(m._dummy_variable_CyIpoptPyomoExNLP), expected_dummy_var_value)
         # check that the dummy constraint is satisfied
-        self.assertAlmostEqual( value(m._dummy_constraint_CyIpoptPyomoExNLP.body), value(m._dummy_constraint_CyIpoptPyomoExNLP.lower))
-        self.assertAlmostEqual( value(m._dummy_constraint_CyIpoptPyomoExNLP.body), value(m._dummy_constraint_CyIpoptPyomoExNLP.upper))
+        self.assertAlmostEqual( pyo.value(m._dummy_constraint_CyIpoptPyomoExNLP.body), pyo.value(m._dummy_constraint_CyIpoptPyomoExNLP.lower))
+        self.assertAlmostEqual( pyo.value(m._dummy_constraint_CyIpoptPyomoExNLP.body), pyo.value(m._dummy_constraint_CyIpoptPyomoExNLP.upper))
 
         # solve the problem
         solver = CyIpoptSolver(cyipopt_problem, {'hessian_approximation':'limited-memory'})
         x, info = solver.solve(tee=False)
         cyipopt_problem.load_x_into_pyomo(x)
-        self.assertAlmostEqual( value(m.c1), 0.1, places=5)
-        self.assertAlmostEqual( value(m.c2), 0.5, places=5)
+        self.assertAlmostEqual( pyo.value(m.c1), 0.1, places=5)
+        self.assertAlmostEqual( pyo.value(m.c2), 0.5, places=5)
 
