@@ -12,7 +12,7 @@ This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
 """
 import pyomo
-from pyomo.environ import Objective
+from pyomo.environ import Objective, Suffix
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 from pyutilib.services import TempfileManager
 
@@ -170,7 +170,7 @@ class PyomoNLP(AslNLP):
     def get_obj_scaling(self):
         obj = self.get_pyomo_objective()
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix and \
+        if scaling_suffix and scaling_suffix.ctype is Suffix and \
            obj in scaling_suffix:
             return scaling_suffix[obj]
         return None
@@ -178,7 +178,7 @@ class PyomoNLP(AslNLP):
     # overloaded from NLP
     def get_primals_scaling(self):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+        if scaling_suffix and scaling_suffix.ctype is Suffix:
             primals_scaling = np.ones(self.n_primals())
             for i,v in enumerate(self.get_pyomo_variables()):
                 if v in scaling_suffix:
@@ -189,7 +189,7 @@ class PyomoNLP(AslNLP):
     # overloaded from NLP
     def get_constraints_scaling(self):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+        if scaling_suffix and scaling_suffix.ctype is Suffix:
             constraints_scaling = np.ones(self.n_constraints())
             for i,c in enumerate(self.get_pyomo_constraints()):
                 if c in scaling_suffix:
