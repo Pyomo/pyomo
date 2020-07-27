@@ -117,7 +117,8 @@ class _OSEnviron(object):
     def putenv_s(self, key, val):
         # Win32 convention deletes environ entries when the string is empty
         if not val:
-            del os.environ[key]
+            if key in os.environ:
+                del os.environ[key]
             return
 
         if six.PY2:
@@ -128,7 +129,8 @@ class _OSEnviron(object):
     def wputenv_s(self, key, val):
         # Win32 convention deletes environ entries when the string is empty
         if not val:
-            del os.environ[key]
+            if key in os.environ:
+                del os.environ[key]
             return
 
         if six.PY2:
