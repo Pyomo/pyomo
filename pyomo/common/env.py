@@ -19,7 +19,6 @@ def _as_bytes(val):
     if isinstance(val, six.binary_type):
         return val
     elif val is not None:
-
         return val.encode('utf-8')
 
 
@@ -106,13 +105,19 @@ class _OSEnviron(object):
         if six.PY2:
             return _as_bytes(os.environ.get(key, None))
         else:
-            return os.environb.get(key, None)
+            # environb is not always present and depends on how the
+            # interpreter was compiled.  Fall back on casting environ if
+            # it is not available.
+            try:
+                return os.environb.get(key, None)
+            except AttributeError:
+                return _as_bytes(os.environ.get(_as_unicode(key),None))
 
     def wgetenv(self, key):
-        if six.PY2:
-            return _as_unicode(os.environ.get(key, None))
-        else:
-            return os.environ.get(key, None)
+        # PY2 doesn't distinguish, and PY3's environ is nominally
+        # unicode.  We will coerce the result to unicode to guarantee
+        # the result type.
+        return _as_unicode(os.environ.get(key, None))
 
     def putenv_s(self, key, val):
         # Win32 convention deletes environ entries when the string is empty
@@ -247,12 +252,14 @@ class _Win32DLL(object):
             ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.wintypes.DWORD]
         self._wgetenv_dll.restype = ctypes.wintypes.DWORD
 
+        # We (arbitrarily) choose to return the unicode environ
         self._envstr = self.dll.GetEnvironmentStringsW
         self._envstr.argtypes = []
         self._envstr.restype = ctypes.POINTER(ctypes.c_wchar)
         self._free_envstr = self.dll.FreeEnvironmentStringsW
         self._free_envstr.argtypes = [ctypes.POINTER(ctypes.c_wchar)]
         self._free_envstr.restype = ctypes.c_bool
+        self._null = u'\0'
 
         return self._loaded
 
@@ -276,9 +283,9 @@ class _Win32DLL(object):
         ans = {}
         _str_buf = self._envstr()
         i = 0
-        while _str_buf[i] != u'\0':
+        while _str_buf[i] != self._null:
             _str = ''
-            while _str_buf[i] != u'\0':
+            while _str_buf[i] != self._null:
                 _str += _str_buf[i]
                 i += 1
             key, val = _str.split('=', 1)
