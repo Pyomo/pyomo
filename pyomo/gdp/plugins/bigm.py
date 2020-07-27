@@ -14,20 +14,21 @@ import logging
 
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
-    Block, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
+    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value,
-    RangeSet, NonNegativeIntegers)
+    RangeSet, NonNegativeIntegers, LogicalConstraint, )
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (target_list, is_child_of, get_src_disjunction,
-                            get_src_constraint, get_transformed_constraints,
-                            _get_constraint_transBlock, get_src_disjunct,
-                            _warn_for_active_disjunction,
-                            _warn_for_active_disjunct)
+from pyomo.gdp.util import (
+    _warn_for_active_logical_constraint, target_list, is_child_of, get_src_disjunction,
+    get_src_constraint, get_transformed_constraints,
+    _get_constraint_transBlock, get_src_disjunct,
+    _warn_for_active_disjunction,
+    _warn_for_active_disjunct, )
 from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
@@ -147,6 +148,7 @@ class BigM_Transformation(Transformation):
                                 # disjunct, it should be declared with no bounds
                                 # and the bounds should be set in constraints on
                                 # the Disjunct.
+            BooleanVar:  False,
             Connector:   False,
             Expression:  False,
             Suffix:      False,
@@ -157,6 +159,7 @@ class BigM_Transformation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
+            LogicalConstraint: self._warn_for_active_logical_statement,
             ExternalFunction: False,
         }
 
@@ -268,7 +271,7 @@ class BigM_Transformation(Transformation):
                     else:
                         warning_msg += "\t%s\n" % component
                 logger.warn(warning_msg)
-            
+
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts
         # on
@@ -466,8 +469,8 @@ class BigM_Transformation(Transformation):
         disjunctBlock = disjunct._transformation_block()
         varRefBlock = disjunctBlock.localVarReferences
         for v in block.component_objects(Var, descend_into=Block, active=None):
-            varRefBlock.add_component(unique_component_name( 
-                varRefBlock, v.getname(fully_qualified=True, 
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=True,
                                        name_buffer=NAME_BUFFER)), Reference(v))
 
         # Now need to find any transformed disjunctions that might be here
@@ -543,6 +546,10 @@ class BigM_Transformation(Transformation):
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
                                   arg_list, suffix_list):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER)
+
+    def _warn_for_active_logical_statement(
+            self, logical_statment, disjunct, infodict, bigMargs, suffix_list):
+        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
 
     def _transform_block_on_disjunct(self, block, disjunct, bigMargs, arg_list,
                                      suffix_list):

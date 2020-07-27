@@ -64,6 +64,14 @@ class CyIpoptProblemInterface(object):
         pass
 
     @abc.abstractmethod
+    def scaling_factors(self):
+        """Return the values for scaling factors as a tuple
+        (objective_scaling, x_scaling, g_scaling). Return None
+        if the scaling factors are to be ignored
+        """
+        pass
+
+    @abc.abstractmethod
     def objective(self, x):
         """Return the value of the objective
         function evaluated at x
@@ -131,7 +139,7 @@ class CyIpoptProblemInterface(object):
         """
         # TODO: Document the arguments
         pass
-    
+
 
 class CyIpoptNLP(CyIpoptProblemInterface):
     def __init__(self, nlp):
@@ -191,6 +199,12 @@ class CyIpoptNLP(CyIpoptProblemInterface):
     def g_ub(self):
         return self._nlp.constraints_ub()
     
+    def scaling_factors(self):
+        obj_scaling = self._nlp.get_obj_scaling()
+        x_scaling = self._nlp.get_primals_scaling()
+        g_scaling = self._nlp.get_constraints_scaling()
+        return obj_scaling, x_scaling, g_scaling
+
     def objective(self, x):
         self._set_primals_if_necessary(x)
         return self._nlp.evaluate_objective()
@@ -216,7 +230,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         col = np.compress(self._hess_lower_mask, self._hess_lag.col)
         return row, col
 
-
     def hessian(self, x, y, obj_factor):
         self._set_primals_if_necessary(x)
         self._set_duals_if_necessary(y)
@@ -241,6 +254,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
     ):
         pass
 
+
 def redirect_stdout():
     sys.stdout.flush() # <--- important when redirecting to files
 
@@ -263,8 +277,8 @@ def redirect_stdout():
     sys.stdout = os.fdopen(newstdout, 'w')
     return newstdout
 
-class CyIpoptSolver(object):
 
+class CyIpoptSolver(object):
     def __init__(self, problem_interface, options=None):
         """Create an instance of the CyIpoptSolver. You must
         provide a problem_interface that corresponds to 
@@ -302,6 +316,19 @@ class CyIpoptSolver(object):
                                        cl=gl,
                                        cu=gu
         )
+
+        # check if we need scaling
+        obj_scaling, x_scaling, g_scaling = self._problem.scaling_factors()
+        if obj_scaling is not None or x_scaling is not None or g_scaling is not None:
+            # need to set scaling factors
+            if obj_scaling is None:
+                obj_scaling = 1.0
+            if x_scaling is None:
+                x_scaling = np.ones(nx)
+            if g_scaling is None:
+                g_scaling = np.ones(ng)
+
+            cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
         for k, v in self._options.items():

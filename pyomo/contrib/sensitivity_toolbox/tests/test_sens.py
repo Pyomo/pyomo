@@ -351,6 +351,22 @@ class TestSensitivityToolbox(unittest.TestCase):
                        len(list(identify_variables(
                                 m_sipopt._sipopt_data.constList[2].body))) == 2)
 
+    # Test example `parameter.py`
+    @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
+    def test_parameter_example(self):
+    
+        from pyomo.contrib.sensitivity_toolbox.examples.parameter import run_example
+        d = run_example()
+        
+        d_correct = {'eta1':4.5, 'eta2':1.0, 'x1_init':0.15, 'x2_init':0.15, 'x3_init':0.0,
+            'cost_sln':0.5, 'x1_sln':0.5, 'x2_sln':0.5, 'x3_sln':0.0, 'eta1_pert':4.0,
+            'eta2_pert':1.0, 'x1_pert':0.3333333,'x2_pert':0.6666667,'x3_pert':0.0,
+            'cost_pert':0.55555556}
+        
+        for k in d_correct.keys():
+            # Check each element of the 'correct' dictionary against the returned 
+            # dictionary to 3 decimal places
+            self.assertAlmostEqual(d[k],d_correct[k],3)
 
 if __name__=="__main__":
     unittest.main()

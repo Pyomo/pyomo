@@ -20,7 +20,7 @@ possible to build up expressions. The following example illustrates
 this, along with a reference to global Python data in the form of a
 Python variable called ``switch``:
 
-.. literalinclude:: ../script_spy_files/spy4Expressions_Buildup_expression_switch.spy
+.. literalinclude:: ../tests/scripting/spy4Expressions_Buildup_expression_switch.spy
    :language: python
 
 In this example, the constraint that is generated depends on the value
@@ -33,7 +33,7 @@ otherwise, the ``model.d`` term is not present.
    Because model elements result in expressions, not values, the
    following does not work as expected in an abstract model!
 
-   .. literalinclude:: ../script_spy_files/spy4Expressions_Abstract_wrong_usage.spy
+   .. literalinclude:: ../tests/scripting/spy4Expressions_Abstract_wrong_usage.spy
       :language: python
 
    The trouble is that ``model.d >= 2`` results in an expression, not
@@ -58,7 +58,7 @@ as described in the paper [Vielma_et_al]_.
 
 There are two basic forms for the declaration of the constraint:
 
-.. literalinclude:: ../script_spy_files/spy4Expressions_Declare_piecewise_constraints.spy
+.. literalinclude:: ../tests/scripting/spy4Expressions_Declare_piecewise_constraints.spy
    :language: python
 
 where ``pwconst`` can be replaced by a name appropriate for the
@@ -124,7 +124,7 @@ Keywords:
   indexing set is used or when all indices use an identical piecewise
   function). Examples:
 
-  .. literalinclude:: ../script_spy_files/spy4Expressions_f_rule_Function_examples.spy
+  .. literalinclude:: ../tests/scripting/spy4Expressions_f_rule_Function_examples.spy
      :language: python
 
 * **force_pw=True/False**
@@ -163,7 +163,7 @@ Keywords:
 Here is an example of an assignment to a Python dictionary variable that
 has keywords for a picewise constraint:
 
-.. literalinclude:: ../script_spy_files/spy4Expressions_Keyword_assignment_example.spy
+.. literalinclude:: ../tests/scripting/spy4Expressions_Keyword_assignment_example.spy
    :language: python
 
 Here is a simple example based on the example given earlier in
@@ -175,7 +175,7 @@ whimsically just to make the example. The important thing to note is
 that variables that are going to appear as the independent variable in a
 piecewise constraint must have bounds.
 
-.. literalinclude:: ../script_spy_files/abstract2piece.py
+.. literalinclude:: ../tests/scripting/abstract2piece.py
    :language: python
 
 A more advanced example is provided in abstract2piecebuild.py in
@@ -193,13 +193,13 @@ variable x times the index. Later in the model file, just to illustrate
 how to do it, the expression is changed but just for the first index to
 be x squared.
 
-.. literalinclude:: ../script_spy_files/spy4Expressions_Expression_objects_illustration.spy
+.. literalinclude:: ../tests/scripting/spy4Expressions_Expression_objects_illustration.spy
    :language: python
 
 An alternative is to create Python functions that, potentially,
 manipulate model objects. E.g., if you define a function
 
-.. literalinclude:: ../script_spy_files/spy4Expressions_Define_python_function.spy
+.. literalinclude:: ../tests/scripting/spy4Expressions_Define_python_function.spy
    :language: python
 
 You can call this function with or without Pyomo modeling components as
@@ -211,7 +211,7 @@ expression is used to generate another expression (e.g., f(model.x, 3) +
 5), the initial expression is always cloned so that the new generated
 expression is independent of the old. For example:
 
-.. literalinclude:: ../script_spy_files/spy4Expressions_Generate_new_expression.spy
+.. literalinclude:: ../tests/scripting/spy4Expressions_Generate_new_expression.spy
    :language: python
 
 If you want to create an expression that is shared between other

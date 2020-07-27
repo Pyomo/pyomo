@@ -592,17 +592,15 @@ use the AbstractModel or ConcreteModel class instead.""")
         """
         Compute model statistics
         """
-        if len(self.statistics) > 0:
-            return
         self.statistics.number_of_variables = 0
         self.statistics.number_of_constraints = 0
         self.statistics.number_of_objectives = 0
         for block in self.block_data_objects(active=active):
-            for data in self.component_map(Var, active=active).itervalues():
+            for data in block.component_map(Var, active=active).itervalues():
                 self.statistics.number_of_variables += len(data)
-            for data in self.component_map(Objective, active=active).itervalues():
+            for data in block.component_map(Objective, active=active).itervalues():
                 self.statistics.number_of_objectives += len(data)
-            for data in self.component_map(Constraint, active=active).itervalues():
+            for data in block.component_map(Constraint, active=active).itervalues():
                 self.statistics.number_of_constraints += len(data)
 
     def nvariables(self):

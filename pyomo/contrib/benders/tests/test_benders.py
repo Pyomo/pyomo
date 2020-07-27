@@ -30,7 +30,7 @@ cplex_opt =  SolverFactory('cplex_direct')
 cplex_available = cplex_opt.available(exception_flag=False)
 
 
-@unittest.category('mpi', 'nightly')
+@unittest.category('mpi')
 class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not mpi4py_available, 'mpi4py is not available.')
     @unittest.skipIf(not numpy_available, 'numpy is not available.')

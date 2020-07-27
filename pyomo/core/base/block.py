@@ -1270,22 +1270,37 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return None
 
     def component_map(self, ctype=None, active=None, sort=False):
-        """
-        Returns a PseudoMap of the components in this block.
+        """Returns a PseudoMap of the components in this block.
 
-            ctype
-                None            - All components
-                ComponentType   - A single ComponentType
-                Iterable        - Iterate to generate ComponentTypes
+        Parameters
+        ----------
+        ctype:  None or type or iterable
+            Specifies the component types (`ctypes`) to include in the
+            resulting PseudoMap
 
-            active is None, True, False
-                None  - All
-                True  - Active
-                False - Inactive
+                =============   ===================
+                None            All components
+                type            A single component type
+                iterable        All component types in the iterable
+                =============   ===================
 
-            sort is True, False
-                True - Maps to Block.alphabetizeComponentAndIndex
-                False - Maps to Block.declarationOrder
+        active: None or bool
+            Filter components by the active flag
+
+                =====  ===============================
+                None   Return all components
+                True   Return only active components
+                False  Return only inactive components
+                =====  ===============================
+
+        sort: bool
+            Iterate over the components in a sorted otder
+
+                =====  ================================================
+                True   Iterate using Block.alphabetizeComponentAndIndex
+                False  Iterate using Block.declarationOrder
+                =====  ================================================
+
         """
         return PseudoMap(self, ctype, active, sort)
 
