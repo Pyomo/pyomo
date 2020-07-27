@@ -31,7 +31,9 @@ def _as_unicode(val):
         return val.decode()
 
 
-class _EnvironInterface(object):
+class _RestorableEnvironInterface(object):
+    """Interface to track environment changes and restore state"""
+
     def __init__(self, dll):
         self.dll = dll
         self._original_state = {}
@@ -90,6 +92,8 @@ class _EnvironInterface(object):
 
 
 class _OSEnviron(object):
+    """Helper class to proxy a "DLL-like" interface to os.environ"""
+
     _libname = 'os.environ'
 
     def available(self):
@@ -291,7 +295,7 @@ class CtypesEnviron(object):
     # important to deal with it before the msvcrt libraries.
     DLLs = [
         _Win32DLL('kernel32'),
-        _MsvcrtDLL(ctypes.util.find_msvcrt()),
+        _MsvcrtDLL(getattr(ctypes.util,'find_msvcrt',lambda: None)()),
         _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
         _MsvcrtDLL('msvcrt'),
         _MsvcrtDLL('msvcr120'),
@@ -354,9 +358,9 @@ class CtypesEnviron(object):
 
         """
         self.interfaces = [
-            _EnvironInterface(_OSEnviron()),
+            _RestorableEnvironInterface(_OSEnviron()),
         ]
-        self.interfaces.extend(_EnvironInterface(dll)
+        self.interfaces.extend(_RestorableEnvironInterface(dll)
                                for dll in self.DLLs if dll.available())
         # Set the incoming env strings on all interfaces...
         for k, v in iteritems(kwds):
