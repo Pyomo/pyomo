@@ -335,7 +335,7 @@ class CtypesEnviron(object):
     DLLs = [
         _Win32DLL('kernel32'),
         # _MsvcrtDLL(getattr(ctypes.util,'find_msvcrt',lambda: None)()),
-        # _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
+        _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
         # _MsvcrtDLL('msvcrt'),
         # _MsvcrtDLL('msvcr120'),
         # _MsvcrtDLL('msvcr110'),
