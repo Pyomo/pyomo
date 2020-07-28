@@ -45,6 +45,7 @@ class _RestorableEnvironInterface(object):
             if val != self[key]:
                 self[key] = val
 
+        raise RuntimeError("HERE")
         # If we can get a dictionary of the current environment (not
         # always possible), then remove any keys that are not in
         # os.environ
