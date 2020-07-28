@@ -288,9 +288,17 @@ class _Win32DLL(object):
         return buf.value or None
 
     def get_env_dict(self):
-        _null = {u'\0', b'\0'}
         ans = {}
         _str_buf = self._envstr()
+        # I am sure there is an easier way to parse this.
+        # GetEnvironmentStringsW returns a single const char* that
+        # points to a block of memory that contains the environment
+        # strings.  Each environment string is NULL terminated, and an
+        # empty string (effectively two consecutive NULLs) indicates the
+        # end of the block.  The following jult parses that data
+        # character by character to reconstitute the original
+        # environment strings.
+        _null = {u'\0', b'\0'}
         i = 0
         while _str_buf[i] not in _null:
             _str = ''
