@@ -260,7 +260,7 @@ class _Win32DLL(object):
         self._free_envstr = self.dll.FreeEnvironmentStringsW
         self._free_envstr.argtypes = [ctypes.POINTER(ctypes.c_wchar)]
         self._free_envstr.restype = ctypes.c_bool
-        self._null = u'\0'
+        self._null = {u'\0', b'\0'}
 
         return self._loaded
 
@@ -284,9 +284,9 @@ class _Win32DLL(object):
         ans = {}
         _str_buf = self._envstr()
         i = 0
-        while _str_buf[i] != self._null:
+        while _str_buf[i] not in self._null:
             _str = ''
-            while _str_buf[i] != self._null:
+            while _str_buf[i] not in self._null:
                 _str += _str_buf[i]
                 i += 1
             key, val = _str.split('=', 1)
