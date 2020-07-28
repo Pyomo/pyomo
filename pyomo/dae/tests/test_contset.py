@@ -221,8 +221,9 @@ class TestContinuousSet(unittest.TestCase):
         i = m.time.find_nearest_index(6, tolerance=1)
         self.assertEqual(i, 2)
 
+        # This test relies on the behavior for tiebreaks
         i = m.time.find_nearest_index(2.5)
-        self.assertEqual(i, 2)
+        self.assertEqual(i, 1)
 
         m.del_component(m.time)
         init_list = []
@@ -266,6 +267,14 @@ class TestContinuousSet(unittest.TestCase):
 
         i = m.time.find_nearest_index(0, tolerance=0)
         self.assertEqual(i, 1)
+
+        # This test fails. I get:
+        # delta_left == 2.075-2.0 == 0.07500000000000018
+        # delta_right == 2.15-2.075 == 0.07499999999999973
+        # Index 8 is returned (time[8] == 2.15), even though
+        # "tie"-break logic suggests index 7 should be.
+        #i = m.time.find_nearest_index(2.075)
+        #self.assertEqual(i, 7)
 
 
 class TestIO(unittest.TestCase):
