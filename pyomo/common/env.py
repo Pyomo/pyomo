@@ -45,15 +45,17 @@ class _RestorableEnvironInterface(object):
             if val != self[key]:
                 self[key] = val
 
-        raise RuntimeError("HERE")
         # If we can get a dictionary of the current environment (not
         # always possible), then remove any keys that are not in
         # os.environ
         origEnv = self.dll.get_env_dict()
         if origEnv is not None:
             for key in origEnv:
+                print(key)
                 if key not in os.environ:
+                    print("DEL", key)
                     del self[key]
+        raise RuntimeError("HERE")
 
     def restore(self):
         for key, val in iteritems(self._original_state):
