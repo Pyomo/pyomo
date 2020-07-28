@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import ctypes
+import ctypes.wintypes
 import os
 import six
 
