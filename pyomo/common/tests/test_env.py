@@ -17,6 +17,74 @@ class TestCtypesEnviron(unittest.TestCase):
     def test_aaa(self):
         pass
 
+    def test_aab(self):
+        orig_env = CtypesEnviron()
+
+    def test_aac(self):
+        orig_env = CtypesEnviron()
+        orig_env_has_1 = 'TEST_ENV_1' in orig_env
+        orig_env_has_2 = 'TEST_ENV_2' in orig_env
+
+        # Ensure that TEST_ENV_1 is not in the environment
+        if 'TEST_ENV_1' in orig_env:
+            del orig_env['TEST_ENV_1']
+        orig_env['TEST_ENV_2'] = "test value: 2"
+
+    def test_aad1(self):
+        orig_env = CtypesEnviron()
+        orig_env_has_1 = 'TEST_ENV_1' in orig_env
+        orig_env_has_2 = 'TEST_ENV_2' in orig_env
+
+        # Ensure that TEST_ENV_1 is not in the environment
+        if 'TEST_ENV_1' in orig_env:
+            del orig_env['TEST_ENV_1']
+        orig_env['TEST_ENV_2'] = "test value: 2"
+
+        self.assertIsNone(os.environ.get('TEST_ENV_1', None))
+        self.assertEqual(os.environ['TEST_ENV_2'], "test value: 2")
+        for interface in orig_env.interfaces:
+            self.assertIsNone(interface.dll.wgetenv(u'TEST_ENV_1'))
+            self.assertIsNone(interface.dll.getenv(b'TEST_ENV_1'))
+            self.assertEqual(
+                interface.dll.wgetenv(u'TEST_ENV_2'), u"test value: 2")
+            self.assertEqual(
+                interface.dll.getenv(b'TEST_ENV_2'), b"test value: 2")
+
+    def test_aad2(self):
+        orig_env = CtypesEnviron()
+        orig_env_has_1 = 'TEST_ENV_1' in orig_env
+        orig_env_has_2 = 'TEST_ENV_2' in orig_env
+
+        # Ensure that TEST_ENV_1 is not in the environment
+        if 'TEST_ENV_1' in orig_env:
+            del orig_env['TEST_ENV_1']
+        orig_env['TEST_ENV_2'] = "test value: 2"
+
+        self.assertIsNone(os.environ.get('TEST_ENV_1', None))
+        self.assertEqual(os.environ['TEST_ENV_2'], "test value: 2")
+        for interface in orig_env.interfaces:
+            self.assertIsNone(interface.dll.wgetenv(u'TEST_ENV_1'))
+            self.assertIsNone(interface.dll.getenv(b'TEST_ENV_1'))
+            self.assertEqual(
+                interface.dll.wgetenv(u'TEST_ENV_2'), u"test value: 2")
+            self.assertEqual(
+                interface.dll.getenv(b'TEST_ENV_2'), b"test value: 2")
+
+        self.assertIsNone(os.environ.get('TEST_ENV_1', None))
+        self.assertEqual(os.environ['TEST_ENV_2'], "test value: 2")
+        for interface in orig_env.interfaces:
+            self.assertIsNone(interface.dll.wgetenv(u'TEST_ENV_1'))
+            self.assertIsNone(interface.dll.getenv(b'TEST_ENV_1'))
+            self.assertEqual(
+                interface.dll.wgetenv(u'TEST_ENV_2'), u"test value: 2")
+            self.assertEqual(
+                interface.dll.getenv(b'TEST_ENV_2'), b"test value: 2")
+
+        orig_env.restore()
+        self.assertEqual(orig_env_has_1, 'TEST_ENV_1' in os.environ)
+        self.assertEqual(orig_env_has_2, 'TEST_ENV_2' in os.environ)
+
+    
     def test_temp_env_str(self):
         orig_env = CtypesEnviron()
         orig_env_has_1 = 'TEST_ENV_1' in orig_env
