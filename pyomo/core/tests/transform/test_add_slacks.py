@@ -218,7 +218,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m, 
-            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+            targets=[m.rule1, m.rule3])
         
         self.checkNonTargetCons(m2)
 
@@ -297,6 +297,28 @@ class TestAddSlacks(unittest.TestCase):
             m,
             targets=[m.rule1, m.x]
             )
+
+    def test_deprecation_warning_for_cuid_targets(self):
+        m = self.makeModel()
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.core'):
+            TransformationFactory('core.add_slack_variables').apply_to(
+                m,
+                targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+        self.assertRegexpMatches(out.getvalue(), 
+                                 "DEPRECATED: In future releases ComponentUID "
+                                 "targets will no longer be\nsupported in the "
+                                 "core.add_slack_variables transformation. "
+                                 "Specify\ntargets as a Constraint or list of "
+                                 "Constraints.*")
+        # make sure that it still worked though
+        self.checkNonTargetCons(m)
+        self.checkRule1(m)
+        self.checkRule3(m)
+        self.assertFalse(m.obj.active)
+        self.checkTargetsObj(m)
+        transBlock = m.component("_core_add_slack_variables")
+        self.checkTargetSlackVars(transBlock)
 
     def test_transformed_constraints_sumexpression_body(self):
         m = self.makeModel()

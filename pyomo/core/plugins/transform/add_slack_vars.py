@@ -11,11 +11,15 @@ from pyomo.core.base import Constraint, _ConstraintData
 from pyomo.common.deprecation import deprecation_warning
 
 def target_list(x):
-    deprecation_msg = ("In future releases ComponentUID targets will no longer "
-                       "be supported. Specify targets as a Constraint or list "
-                       "of Constraints.")
+    deprecation_msg = ("In future releases ComponentUID targets will no "
+                      "longer be supported in the core.add_slack_variables "
+                      "transformation. Specify targets as a Constraint or "
+                      "list of Constraints.")
     if isinstance(x, ComponentUID):
-        deprecation_warning(deprecation_msg)
+        if deprecation_msg:
+            deprecation_warning(deprecation_msg)
+            # only emit the message once
+            deprecation_msg = None
         # [ESJ 07/15/2020] We have to just pass it through because we need the
         # instance in order to be able to do anything about it...
         return [ x ]
@@ -25,7 +29,9 @@ def target_list(x):
         ans = []
         for i in x:
             if isinstance(i, ComponentUID):
-                deprecation_warning(deprecation_msg)
+                if deprecation_msg:
+                    deprecation_warning(deprecation_msg)
+                    deprecation_msg = None
                 # same as above...
                 ans.append(i)
             elif isinstance(i, (Constraint, _ConstraintData)):
