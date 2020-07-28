@@ -320,17 +320,17 @@ class CtypesEnviron(object):
     # os.envion (and it is possible that it could be omitted).  It is
     # important to deal with it before the msvcrt libraries.
     DLLs = [
-        #_Win32DLL('kernel32'),
-        _MsvcrtDLL(getattr(ctypes.util,'find_msvcrt',lambda: None)()),
-        _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
-        _MsvcrtDLL('msvcrt'),
-        _MsvcrtDLL('msvcr120'),
-        _MsvcrtDLL('msvcr110'),
-        _MsvcrtDLL('msvcr100'),
-        _MsvcrtDLL('msvcr90'),
-        _MsvcrtDLL('msvcr80'),
-        _MsvcrtDLL('msvcr71'),
-        _MsvcrtDLL('msvcr70'),
+        # _Win32DLL('kernel32'),
+        # _MsvcrtDLL(getattr(ctypes.util,'find_msvcrt',lambda: None)()),
+        # _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
+        # _MsvcrtDLL('msvcrt'),
+        # _MsvcrtDLL('msvcr120'),
+        # _MsvcrtDLL('msvcr110'),
+        # _MsvcrtDLL('msvcr100'),
+        # _MsvcrtDLL('msvcr90'),
+        # _MsvcrtDLL('msvcr80'),
+        # _MsvcrtDLL('msvcr71'),
+        # _MsvcrtDLL('msvcr70'),
     ]
 
     def __init__(self, **kwds):
