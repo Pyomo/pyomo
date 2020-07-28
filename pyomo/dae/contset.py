@@ -255,7 +255,7 @@ class ContinuousSet(SortedSimpleSet):
         If a tolerance is specified, the index will only be returned
         if the distance between the target and the closest point is
         less than or equal to that tolerance. If there is a tie for
-        closest point, the index on the right is returned.
+        closest point, the index on the left is returned.
 
         Parameters
         ----------
@@ -284,15 +284,9 @@ class ContinuousSet(SortedSimpleSet):
             # p_le <= target < p_g
             # delta_left = target - p_le
             # delta_right = p_g - target
-            # neighbors = {
-            #     delta_left: i-1,
-            #     delta_right: i,
-            #     }
-            # If delta_left == delta_right, delta_right will be kept as it is 
-            # added last. In this way, a tie goes to the index on the right.
-            neighbors = dict((abs(target - self[j]), j) for j in [i-1, i])
-            delta = min(neighbors)
-            nearest_index = neighbors[delta]
+            # delta = min(delta_left, delta_right)
+            # Tie goes to the index on the left.
+            delta, nearest_index = min((abs(target - self[j]), j) for j in [i-1, i])
 
         if tolerance is not None:
             if delta > tolerance:
