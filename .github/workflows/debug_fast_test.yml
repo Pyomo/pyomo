@@ -228,51 +228,6 @@ jobs:
         cd $IPOPT_DIR
         tar -xzi < $IPOPT_TAR
 
-    - name: Install GAMS
-      # We install using Powershell because the GAMS installer hangs
-      # when launched from bash on Windows
-      shell: pwsh
-      run: |
-        $GAMS_DIR="${env:TPL_DIR}/gams"
-        echo "::add-path::$GAMS_DIR"
-        echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
-        echo "::set-env name=DYLD_LIBRARY_PATH::${env:DYLD_LIBRARY_PATH}:$GAMS_DIR"
-        $INSTALLER="${env:DOWNLOAD_DIR}/gams_install.exe"
-        $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
-        if ( "${{matrix.TARGET}}" -eq "win" ) {
-            $URL = "$URL/windows/windows_x64_64.exe"
-        } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
-            $URL = "$URL/macosx/osx_x64_64_sfx.exe"
-        } else {
-            $URL = "$URL/linux/linux_x64_64_sfx.exe"
-        }
-        if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
-            echo "...downloading GAMS"
-            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
-        }
-        echo "...installing GAMS"
-        if ( "${{matrix.TARGET}}" -eq "win" ) {
-            Start-Process -FilePath "$INSTALLER" -ArgumentList `
-                "/SP- /NORESTART /VERYSILENT /DIR=$GAMS_DIR /NOICONS" `
-                -Wait
-        } else {
-            chmod 777 $INSTALLER
-            Start-Process -FilePath "$INSTALLER" -ArgumentList `
-                "-q -d $GAMS_DIR" -Wait
-            mv $GAMS_DIR/*/* $GAMS_DIR/.
-        }
-
-    - name: Install GAMS Python bindings
-      run: |
-        GAMS_DIR="$TPL_DIR/gams"
-        py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
-            ;print(v if v != "_27" else "")')
-        if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
-            echo "Installing GAMS Python bindings"
-            pushd $GAMS_DIR/apifiles/Python/api$py_ver
-            $PYTHON_EXE setup.py install
-            popd
-        fi
 
     - name: Install BARON
       shell: pwsh
@@ -361,17 +316,6 @@ jobs:
         echo 'import coverage; coverage.process_startup()' \
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
-    - name: Download and install extensions
-      run: |
-        echo ""
-        echo "Pyomo download-extensions"
-        echo ""
-        pyomo download-extensions
-        echo ""
-        echo "Pyomo build-extensions"
-        echo ""
-        pyomo build-extensions --parallel 2
-
     - name: Report pyomo plugin information
       run: |
         pyomo help --solvers || exit 1
@@ -394,11 +338,6 @@ jobs:
             --with-xunit --xunit-file=TEST-pyomo-mpi.xml \
             --eval-attr="mpi and (not fragile)" \
             pyomo `pwd`/pyomo-model-libraries
-
-    - name: Run documentation tests
-      if: matrix.skip_doctest == 0
-      run: |
-        make -C doc/OnlineDocs doctest -d
 
     - name: Process code coverage report
       env:
