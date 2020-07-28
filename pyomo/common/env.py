@@ -260,7 +260,6 @@ class _Win32DLL(object):
         self._free_envstr = self.dll.FreeEnvironmentStringsW
         self._free_envstr.argtypes = [ctypes.POINTER(ctypes.c_wchar)]
         self._free_envstr.restype = ctypes.c_bool
-        self._null = {u'\0', b'\0'}
 
         return self._loaded
 
@@ -281,17 +280,22 @@ class _Win32DLL(object):
         return buf.value
 
     def get_env_dict(self):
+        _null = {u'\0', b'\0'}
         ans = {}
         _str_buf = self._envstr()
         i = 0
-        while _str_buf[i] not in self._null:
+        while _str_buf[i] not in _null:
             _str = ''
-            while _str_buf[i] not in self._null:
+            while _str_buf[i] not in _null:
                 _str += _str_buf[i]
-                i += 1
+                i += len(_str_buf[i])
+                if i > 32767: # max var length
+                    raise ValueError(
+                        "Error processing Win32 GetEnvironmentStringsW: "
+                        "exceeded max environment block size (32767)")
             key, val = _str.split('=', 1)
             ans[key] = val
-            i += 1 # Skip the NULL
+            i += len(_str_buf[i]) # Skip the NULL
         self._free_envstr(_str_buf)
         return ans
 
