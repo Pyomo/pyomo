@@ -277,7 +277,7 @@ class _Win32DLL(object):
             return None
         buf = ctypes.create_string_buffer(b'\0' * size)
         self._getenv_dll(key, buf, size)
-        return buf.value
+        return buf.value or None
 
     def wgetenv(self, key):
         size = self._wgetenv_dll(key, None, 0)
@@ -285,7 +285,7 @@ class _Win32DLL(object):
             return None
         buf = ctypes.create_unicode_buffer(u'\0' * size)
         self._wgetenv_dll(key, buf, size)
-        return buf.value
+        return buf.value or None
 
     def get_env_dict(self):
         _null = {u'\0', b'\0'}
