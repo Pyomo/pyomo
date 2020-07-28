@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import ctypes
-import ctypes.wintypes
 import os
 import six
 
@@ -243,15 +242,16 @@ class _Win32DLL(object):
         self.wputenv_s.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p]
         self.wputenv_s.restype = ctypes.c_bool
 
+        # Note DWORD == c_ulong
         self._getenv_dll = self.dll.GetEnvironmentVariableA
         self._getenv_dll.argtypes = [
-            ctypes.c_char_p, ctypes.c_char_p, ctypes.wintypes.DWORD]
-        self._getenv_dll.restype = ctypes.wintypes.DWORD
+            ctypes.c_char_p, ctypes.c_char_p, ctypes.c_ulong]
+        self._getenv_dll.restype = ctypes.c_ulong
 
         self._wgetenv_dll = self.dll.GetEnvironmentVariableW
         self._wgetenv_dll.argtypes = [
-            ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.wintypes.DWORD]
-        self._wgetenv_dll.restype = ctypes.wintypes.DWORD
+            ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_ulong]
+        self._wgetenv_dll.restype = ctypes.c_ulong
 
         # We (arbitrarily) choose to return the unicode environ
         self._envstr = self.dll.GetEnvironmentStringsW
