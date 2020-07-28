@@ -328,7 +328,7 @@ class CtypesEnviron(object):
     # os.envion (and it is possible that it could be omitted).  It is
     # important to deal with it before the msvcrt libraries.
     DLLs = [
-        # _Win32DLL('kernel32'),
+        _Win32DLL('kernel32'),
         # _MsvcrtDLL(getattr(ctypes.util,'find_msvcrt',lambda: None)()),
         # _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
         # _MsvcrtDLL('msvcrt'),
