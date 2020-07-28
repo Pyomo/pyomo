@@ -339,7 +339,7 @@ class CtypesEnviron(object):
         _MsvcrtDLL('msvcrt'),
         _MsvcrtDLL('msvcr120'),
         _MsvcrtDLL('msvcr110'),
-        # _MsvcrtDLL('msvcr100'),
+         _MsvcrtDLL('msvcr100'),
         # _MsvcrtDLL('msvcr90'),
         _MsvcrtDLL('msvcr80'),
         _MsvcrtDLL('msvcr71'),
