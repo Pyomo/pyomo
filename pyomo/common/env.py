@@ -36,6 +36,7 @@ class _RestorableEnvironInterface(object):
     """Interface to track environment changes and restore state"""
 
     def __init__(self, dll):
+        assert dll.available()
         self.dll = dll
         self._original_state = {}
 
@@ -211,6 +212,10 @@ class _MsvcrtDLL(object):
             if not line:
                 break
             size += len(line)
+            if len(line) == 0:
+                raise ValueError(
+                    "Error processing MSVCRT _environ: "
+                    "0-length string encountered")
             if size > 32767:
                 raise ValueError(
                     "Error processing MSVCRT _environ: "
