@@ -20,6 +20,7 @@ def _as_bytes(val):
         return val
     elif val is not None:
         return val.encode('utf-8')
+    return None
 
 
 def _as_unicode(val):
@@ -28,6 +29,7 @@ def _as_unicode(val):
         return val
     elif val is not None:
         return val.decode()
+    return None
 
 
 class _RestorableEnvironInterface(object):
@@ -38,7 +40,7 @@ class _RestorableEnvironInterface(object):
         self._original_state = {}
 
         # Transfer over the current os.environ
-        for key, val in iteritems(os.environ):
+        for key, val in list(iteritems(os.environ)):
             if val != self[key]:
                 self[key] = val
 
@@ -204,9 +206,15 @@ class _MsvcrtDLL(object):
                 return None
 
         ans = {}
+        size = 0
         for line in envp:
             if not line:
                 break
+            size += len(line)
+            if size > 32767:
+                raise ValueError(
+                    "Error processing MSVCRT _environ: "
+                    "exceeded max environment block size (32767)")
             key, val = line.split('=', 1)
             ans[key] = val
         return ans
@@ -289,6 +297,10 @@ class _Win32DLL(object):
             while _str_buf[i] not in _null:
                 _str += _str_buf[i]
                 i += len(_str_buf[i])
+                if len(_str_buf[i]) == 0:
+                    raise ValueError(
+                        "Error processing Win32 GetEnvironmentStringsW: "
+                        "0-length character encountered")
                 if i > 32767: # max var length
                     raise ValueError(
                         "Error processing Win32 GetEnvironmentStringsW: "
