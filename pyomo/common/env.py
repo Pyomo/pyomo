@@ -10,7 +10,6 @@
 
 import ctypes
 import multiprocessing
-import multiprocessing.pool
 import os
 import six
 
@@ -34,19 +33,14 @@ def _as_unicode(val):
     return None
 
 
-def _ctypes_cdll(name, dry_run):
+def _attempt_ctypes_cdll(name):
     try:
-        dll = ctypes.CDLL(self._libname)
-        success = True
+        dll = ctypes.CDLL(name)
+        return True
     except OSError:
-        dll = None
-        success = False
-    if dry_run:
-        return status
-    else:
-        return status, dll
+        return False
 
-def _load_dll(name, timeout=0.1):
+def _load_dll(name, timeout=1):
     """Load a DLL with a timeout
 
     On some platforms and some DLLs (notably Windows GitHub Actions with
@@ -65,16 +59,26 @@ def _load_dll(name, timeout=0.1):
     """
     if not ctypes.util.find_library(name):
         return False, None
-    pool = multiprocessing.pool.Pool(1)
-    job = pool.apply_async(_ctypes_cdll, (name, True))
+    if _load_dll.pool is None:
+        _load_dll.pool = multiprocessing.Pool(1)
+    job = _load_dll.pool.apply_async(_attempt_ctypes_cdll, (name,))
     try:
         result = job.get(timeout)
     except multiprocessing.TimeoutError:
         result = False
+        # If there was a timeout, then the subprocess is likely hung and
+        # cannot be reused.  Terminate it here (subsequent calls will
+        # create a new Pool)
+        _load_dll.pool.terminate()
+        _load_dll.pool = None
     if result:
-        return result, _ctypes_cdll(name, False)
+        return result, ctypes.CDLL(name)
     else:
         return result, None
+
+# For efficiency, cache the multiprocessing Pool between calls to _load_dll
+_load_dll.pool = None
+
 
 class _RestorableEnvironInterface(object):
     """Interface to track environment changes and restore state"""
@@ -451,6 +455,12 @@ class CtypesEnviron(object):
         ]
         self.interfaces.extend(_RestorableEnvironInterface(dll)
                                for dll in self.DLLs if dll.available())
+        # If this is the first time a CtypesEnviron was created, the
+        # calls to dll.activate() may have spawned a multiprocessing
+        # pool, which we should clean up.
+        if _load_dll.pool is not None:
+             _load_dll.pool.terminate()
+             _load_dll.pool = None
         # Set the incoming env strings on all interfaces...
         for k, v in iteritems(kwds):
             self[k] = v
