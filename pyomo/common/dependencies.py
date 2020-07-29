@@ -332,5 +332,5 @@ pympler, pympler_available = attempt_import(
 numpy, numpy_available = attempt_import('numpy', alt_names=['np'])
 scipy, scipy_available = attempt_import('scipy', callback=_finalize_scipy)
 networkx, networkx_available = attempt_import('networkx', alt_names=['nx'])
-pandas, pandas_available = attempt_import('pandas')
+pandas, pandas_available = attempt_import('pandas', alt_names=['pd'])
 dill, dill_available = attempt_import('dill')
