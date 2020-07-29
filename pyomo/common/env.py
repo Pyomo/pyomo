@@ -402,9 +402,11 @@ class CtypesEnviron(object):
                os.environ['TEMP_ENV_VAR'] = orig_env_val
 
         """
+        print("MSCVR:", getattr(ctypes.util,'find_msvcrt',lambda: None)())
         self.interfaces = [
             _RestorableEnvironInterface(_OSEnviron()),
         ]
+        raise RuntimeError("CtypesEnviron.__init__")
         self.interfaces.extend(_RestorableEnvironInterface(dll)
                                for dll in self.DLLs if dll.available())
         # Set the incoming env strings on all interfaces...
