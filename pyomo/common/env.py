@@ -42,6 +42,8 @@ class _RestorableEnvironInterface(object):
         self._original_state = {}
 
         print("HERE: 2")
+        if dll._libname == 'msvcr90':
+            raise RuntimeError('pre copy env')
         # Transfer over the current os.environ
         for key, val in list(iteritems(os.environ)):
             if val != self[key]:
@@ -52,8 +54,6 @@ class _RestorableEnvironInterface(object):
         # always possible), then remove any keys that are not in
         # os.environ
         origEnv = self.dll.get_env_dict()
-        if dll._libname == 'msvcr90':
-            raise RuntimeError('post get_env_dict')
         if origEnv is not None:
             for key in origEnv:
                 print("key:", key)
