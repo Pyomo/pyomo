@@ -47,8 +47,6 @@ class _RestorableEnvironInterface(object):
             if val != self[key]:
                 self[key] = val
 
-        if dll._libname == 'msvcr90':
-            raise RuntimeError('aborting')
         print("HERE: 3")
         # If we can get a dictionary of the current environment (not
         # always possible), then remove any keys that are not in
@@ -56,7 +54,11 @@ class _RestorableEnvironInterface(object):
         origEnv = self.dll.get_env_dict()
         if origEnv is not None:
             for key in origEnv:
+            print("key:", key)
                 if key not in os.environ:
+                    print("DEL key:", key)
+                    if dll._libname == 'msvcr90':
+                        raise RuntimeError('aborting')
                     del self[key]
 
     def restore(self):
