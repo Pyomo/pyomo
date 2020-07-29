@@ -406,7 +406,6 @@ class CtypesEnviron(object):
         self.interfaces = [
             _RestorableEnvironInterface(_OSEnviron()),
         ]
-        raise RuntimeError('OS ok')
         self.interfaces.extend(_RestorableEnvironInterface(dll)
                                for dll in self.DLLs if dll.available())
         # Set the incoming env strings on all interfaces...
