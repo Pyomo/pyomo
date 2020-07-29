@@ -51,11 +51,8 @@ class _RestorableEnvironInterface(object):
         origEnv = self.dll.get_env_dict()
         if origEnv is not None:
             for key in origEnv:
-                print(key)
                 if key not in os.environ:
-                    print("DEL", key)
                     del self[key]
-        raise RuntimeError("HERE")
 
     def restore(self):
         for key, val in iteritems(self._original_state):
@@ -407,6 +404,7 @@ class CtypesEnviron(object):
         # Set the incoming env strings on all interfaces...
         for k, v in iteritems(kwds):
             self[k] = v
+        raise RuntimeError()
 
     def __enter__(self):
         return self
