@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 
 import ctypes
+import multiprocessing
+import multiprocessing.pool
 import os
 import six
 
@@ -32,31 +34,68 @@ def _as_unicode(val):
     return None
 
 
+def _ctypes_cdll(name, dry_run):
+    try:
+        dll = ctypes.CDLL(self._libname)
+        success = True
+    except OSError:
+        dll = None
+        success = False
+    if dry_run:
+        return status
+    else:
+        return status, dll
+
+def _load_dll(name, timeout=0.1):
+    """Load a DLL with a timeout
+
+    On some platforms and some DLLs (notably Windows GitHub Actions with
+    Python 3.5, 3.6, and 3.7 and msvcr90.dll) we have observed behavior
+    where the ctypes.CDLL() call hangs indefinitely.  This uses
+    multiprocessing to attempt the import i a subprocess (with a
+    timeout) and then only calls the import in the main process if the
+    subprocess succeeded.
+
+    Performance note: CtypesEnviron only ever attempts to load a DLL
+    once (the DLL reference is then held in a class attribute), and this
+    interface only spawns the subprocess if ctypes.util.find_library
+    actually locates the target library.  This will have a measurable
+    impact on Windows (where the DLLs exist), but not on other platforms.
+
+    """
+    if not ctypes.util.find_library(name):
+        return False, None
+    pool = multiprocessing.pool.Pool(1)
+    job = pool.apply_async(_ctypes_cdll, (name, True))
+    try:
+        result = job.get(timeout)
+    except multiprocessing.TimeoutError:
+        result = False
+    if result:
+        return result, _ctypes_cdll(name, False)
+    else:
+        return result, None
+
 class _RestorableEnvironInterface(object):
     """Interface to track environment changes and restore state"""
 
     def __init__(self, dll):
-        print("HERE: 1")
         assert dll.available()
         self.dll = dll
         self._original_state = {}
 
-        print("HERE: 2")
         # Transfer over the current os.environ
         for key, val in list(iteritems(os.environ)):
             if val != self[key]:
                 self[key] = val
 
-        print("HERE: 3")
         # If we can get a dictionary of the current environment (not
         # always possible), then remove any keys that are not in
         # os.environ
         origEnv = self.dll.get_env_dict()
         if origEnv is not None:
             for key in origEnv:
-                print("key:", key)
                 if key not in os.environ:
-                    print("DEL key:", key)
                     del self[key]
 
     def restore(self):
@@ -166,13 +205,15 @@ class _MsvcrtDLL(object):
         if self._loaded is not None:
             return self._loaded
 
-        try:
-            self.dll = ctypes.CDLL(self._libname)
-            self._loaded = True
-        except OSError:
-            self._loaded = False
+        self._loaded,  self.dll = _load_dll(self._libname)
+        if not self._loaded:
             return self._loaded
-        raise RuntimeError('post-load')
+        # try:
+        #     self.dll = ctypes.CDLL(self._libname)
+        #     self._loaded = True
+        # except OSError:
+        #     self._loaded = False
+        #     return self._loaded
 
         self.putenv_s = self.dll._putenv_s
         self.putenv_s.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
@@ -246,12 +287,15 @@ class _Win32DLL(object):
         if self._loaded is not None:
             return self._loaded
 
-        try:
-            self.dll = ctypes.CDLL(self._libname)
-            self._loaded = True
-        except OSError:
-            self._loaded = False
+        self._loaded,  self.dll = _load_dll(self._libname)
+        if not self._loaded:
             return self._loaded
+        # try:
+        #     self.dll = ctypes.CDLL(self._libname)
+        #     self._loaded = True
+        # except OSError:
+        #     self._loaded = False
+        #     return self._loaded
 
         self.putenv_s = self.dll.SetEnvironmentVariableA
         self.putenv_s.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
@@ -339,17 +383,17 @@ class CtypesEnviron(object):
     # os.envion (and it is possible that it could be omitted).  It is
     # important to deal with it before the msvcrt libraries.
     DLLs = [
-        # _Win32DLL('kernel32'),
-        # _MsvcrtDLL(getattr(ctypes.util,'find_msvcrt',lambda: None)()),
-        # _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
-        # _MsvcrtDLL('msvcrt'),
-        # _MsvcrtDLL('msvcr120'),
-        # _MsvcrtDLL('msvcr110'),
-        # _MsvcrtDLL('msvcr100'),
+        _Win32DLL('kernel32'),
+        _MsvcrtDLL(getattr(ctypes.util,'find_msvcrt',lambda: None)()),
+        _MsvcrtDLL('api-ms-win-crt-environment-l1-1-0'),
+        _MsvcrtDLL('msvcrt'),
+        _MsvcrtDLL('msvcr120'),
+        _MsvcrtDLL('msvcr110'),
+        _MsvcrtDLL('msvcr100'),
         _MsvcrtDLL('msvcr90'),
-        # _MsvcrtDLL('msvcr80'),
-        # _MsvcrtDLL('msvcr71'),
-        # _MsvcrtDLL('msvcr70'),
+        _MsvcrtDLL('msvcr80'),
+        _MsvcrtDLL('msvcr71'),
+        _MsvcrtDLL('msvcr70'),
     ]
 
     def __init__(self, **kwds):
@@ -402,12 +446,9 @@ class CtypesEnviron(object):
                os.environ['TEMP_ENV_VAR'] = orig_env_val
 
         """
-        print("MSCVR:", ctypes.util.find_msvcrt())
-        print("MSCVR:", getattr(ctypes.util,'find_msvcrt',lambda: None)())
         self.interfaces = [
             _RestorableEnvironInterface(_OSEnviron()),
         ]
-        raise RuntimeError("CtypesEnviron.__init__")
         self.interfaces.extend(_RestorableEnvironInterface(dll)
                                for dll in self.DLLs if dll.available())
         # Set the incoming env strings on all interfaces...
