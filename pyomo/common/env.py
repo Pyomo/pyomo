@@ -402,6 +402,7 @@ class CtypesEnviron(object):
                os.environ['TEMP_ENV_VAR'] = orig_env_val
 
         """
+        print("MSCVR:", ctypes.util.find_msvcrt())
         print("MSCVR:", getattr(ctypes.util,'find_msvcrt',lambda: None)())
         self.interfaces = [
             _RestorableEnvironInterface(_OSEnviron()),
