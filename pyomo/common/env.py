@@ -166,13 +166,13 @@ class _MsvcrtDLL(object):
         if self._loaded is not None:
             return self._loaded
 
-        raise RuntimeError('pre-load')
         try:
             self.dll = ctypes.CDLL(self._libname)
             self._loaded = True
         except OSError:
             self._loaded = False
             return self._loaded
+        raise RuntimeError('post-load')
 
         self.putenv_s = self.dll._putenv_s
         self.putenv_s.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
