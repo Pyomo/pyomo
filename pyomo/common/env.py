@@ -54,12 +54,12 @@ class _RestorableEnvironInterface(object):
         origEnv = self.dll.get_env_dict()
         if origEnv is not None:
             for key in origEnv:
-            print("key:", key)
+                print("key:", key)
                 if key not in os.environ:
                     print("DEL key:", key)
+                    if dll._libname == 'msvcr90':
+                        raise RuntimeError('aborting')
                     del self[key]
-        if dll._libname == 'msvcr90':
-            raise RuntimeError('aborting')
 
     def restore(self):
         for key, val in iteritems(self._original_state):
