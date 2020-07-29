@@ -36,15 +36,20 @@ class _RestorableEnvironInterface(object):
     """Interface to track environment changes and restore state"""
 
     def __init__(self, dll):
+        print("HERE: 1")
         assert dll.available()
         self.dll = dll
         self._original_state = {}
 
+        print("HERE: 2")
         # Transfer over the current os.environ
         for key, val in list(iteritems(os.environ)):
             if val != self[key]:
                 self[key] = val
 
+        if dll._libname == 'msvcr90':
+            raise RuntimeError('aborting')
+        print("HERE: 3")
         # If we can get a dictionary of the current environment (not
         # always possible), then remove any keys that are not in
         # os.environ
