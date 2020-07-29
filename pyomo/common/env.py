@@ -42,11 +42,11 @@ class _RestorableEnvironInterface(object):
         self._original_state = {}
 
         print("HERE: 2")
+        if dll._libname == 'msvcr90':
+            raise RuntimeError('here 2')
         # Transfer over the current os.environ
         for key, val in list(iteritems(os.environ)):
             if val != self[key]:
-                if dll._libname == 'msvcr90':
-                    raise RuntimeError('pre set env')
                 self[key] = val
 
         print("HERE: 3")
