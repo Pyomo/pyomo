@@ -152,6 +152,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_var.')
+        if id(self._pyomo_model) != id(var.model()):
+            raise RuntimeError('The pyomo var must be attached to the solver model')
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
@@ -207,9 +209,14 @@ class PersistentSolver(DirectOrPersistentSolver):
                                 'must be the same as the pyomo model attached to this '
                                 'PersistentSolver instance; i.e., the same pyomo model '
                                 'used in set_instance.')
+        if id(self._pyomo_model) != id(var.model()):
+            raise RuntimeError('The pyomo var must be attached to the solver model')
         if var in self._pyomo_var_to_solver_var_map:
             raise RuntimeError('The pyomo var must not have been already added to '
                                 'the solver model')
+        if len(constraints) != len(coefficients):
+            raise RuntimeError('The list of constraints and the list of coefficents '
+                               'be of equal length')
         obj_coef, constraints, coefficients = self._add_and_collect_column_data(
                 var, obj_coef, constraints, coefficients)
         self._add_column(var, obj_coef, constraints, coefficients)
