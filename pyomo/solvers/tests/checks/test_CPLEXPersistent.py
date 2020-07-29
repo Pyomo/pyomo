@@ -47,8 +47,8 @@ class TestQuadraticObjective(unittest.TestCase):
 
         m.y = Var(within=NonNegativeReals)
 
-        opt.add_column(m, m.y, -2, [m.c], [1])
+        opt.add_column(m, m.y, -3, [m.c], [2])
         opt.solve()
 
         self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 1)
+        self.assertAlmostEqual(m.y.value, 0.5)

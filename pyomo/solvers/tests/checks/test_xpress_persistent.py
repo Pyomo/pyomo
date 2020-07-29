@@ -212,11 +212,11 @@ class TestXpressPersistent(unittest.TestCase):
 
         m.y = pe.Var(within=pe.NonNegativeReals)
 
-        opt.add_column(m, m.y, -2, [m.c], [1])
+        opt.add_column(m, m.y, -3, [m.c], [2])
         opt.solve()
 
         self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 1)
+        self.assertAlmostEqual(m.y.value, 0.5)
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_column_exceptions(self):
