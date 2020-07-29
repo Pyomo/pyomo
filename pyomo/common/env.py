@@ -42,8 +42,6 @@ class _RestorableEnvironInterface(object):
         self._original_state = {}
 
         print("HERE: 2")
-        if dll._libname == 'msvcr90':
-            raise RuntimeError('here 2')
         # Transfer over the current os.environ
         for key, val in list(iteritems(os.environ)):
             if val != self[key]:
@@ -168,6 +166,7 @@ class _MsvcrtDLL(object):
         if self._loaded is not None:
             return self._loaded
 
+        raise RuntimeError('pre-load')
         try:
             self.dll = ctypes.CDLL(self._libname)
             self._loaded = True
