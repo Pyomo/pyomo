@@ -14,11 +14,6 @@ import pyutilib.th as unittest
 from pyomo.common.env import CtypesEnviron
 
 class TestCtypesEnviron(unittest.TestCase):
-    def test_aaa(self):
-        pass
-
-    def test_aab(self):
-        orig_env = CtypesEnviron()
     
     def test_temp_env_str(self):
         orig_env = CtypesEnviron()

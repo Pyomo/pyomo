@@ -40,13 +40,14 @@ def _attempt_ctypes_cdll(name):
     except OSError:
         return False
 
+
 def _load_dll(name, timeout=1):
     """Load a DLL with a timeout
 
     On some platforms and some DLLs (notably Windows GitHub Actions with
-    Python 3.5, 3.6, and 3.7 and msvcr90.dll) we have observed behavior
-    where the ctypes.CDLL() call hangs indefinitely.  This uses
-    multiprocessing to attempt the import i a subprocess (with a
+    Python 3.5, 3.6, and 3.7 and the msvcr90.dll) we have observed
+    behavior where the ctypes.CDLL() call hangs indefinitely.  This uses
+    multiprocessing to attempt the import in a subprocess (with a
     timeout) and then only calls the import in the main process if the
     subprocess succeeded.
 
@@ -194,6 +195,7 @@ class _OSEnviron(object):
         else:
             os.environ[key] = val
 
+
 class _MsvcrtDLL(object):
     """Helper class to manage the interface with the MSVCRT runtime"""
 
@@ -212,12 +214,6 @@ class _MsvcrtDLL(object):
         self._loaded,  self.dll = _load_dll(self._libname)
         if not self._loaded:
             return self._loaded
-        # try:
-        #     self.dll = ctypes.CDLL(self._libname)
-        #     self._loaded = True
-        # except OSError:
-        #     self._loaded = False
-        #     return self._loaded
 
         self.putenv_s = self.dll._putenv_s
         self.putenv_s.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
@@ -294,12 +290,6 @@ class _Win32DLL(object):
         self._loaded,  self.dll = _load_dll(self._libname)
         if not self._loaded:
             return self._loaded
-        # try:
-        #     self.dll = ctypes.CDLL(self._libname)
-        #     self._loaded = True
-        # except OSError:
-        #     self._loaded = False
-        #     return self._loaded
 
         self.putenv_s = self.dll.SetEnvironmentVariableA
         self.putenv_s.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
@@ -483,7 +473,11 @@ class CtypesEnviron(object):
         # It is possible that os.environ and the MSVCRT did not start
         # off in sync; e.g., if someone had set a value in os.environ
         # directly.  We will be especially careful and restore each
-        # environ back to its original state.
+        # environ back to its original state.  Note that there are cases
+        # where some of the libs refer to the same DLL space, so we will
+        # restore them in the opposite order that we set them, so that
+        # cases where multiple libs point to the same environment things
+        # are all restored correctly.
         for lib in reversed(self.interfaces):
             lib.restore()
 
