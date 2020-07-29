@@ -48,12 +48,12 @@ class _RestorableEnvironInterface(object):
                 self[key] = val
 
         print("HERE: 3")
-        if dll._libname == 'msvcr90':
-            raise RuntimeError('pre get_env_dict')
         # If we can get a dictionary of the current environment (not
         # always possible), then remove any keys that are not in
         # os.environ
         origEnv = self.dll.get_env_dict()
+        if dll._libname == 'msvcr90':
+            raise RuntimeError('post get_env_dict')
         if origEnv is not None:
             for key in origEnv:
                 print("key:", key)
