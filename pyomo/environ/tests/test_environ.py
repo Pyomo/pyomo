@@ -11,20 +11,107 @@
 # Unit Tests for pyomo.base.misc
 #
 
+import re
 import sys
+import subprocess
+
+from collections import namedtuple
+from six import iteritems, itervalues
+
 import pyutilib.th as unittest
-from pyutilib.subprocess import run_command
+
+class ImportData(object):
+    def __init__(self):
+        self.tpl = {}
+        self.pyomo = {}
+        self.pyutilib = {}
+
+    def update(self, other):
+        self.tpl.update(other.tpl)
+        self.pyomo.update(other.pyomo)
+        self.pyutilib.update(other.pyutilib)
+
+def collect_import_time(module):
+        output = subprocess.check_output(
+            [sys.executable, '-X', 'importtime', '-c', 'import %s' % (module,)],
+            stderr=subprocess.STDOUT)
+        # Note: test only runs in PY3
+        output = output.decode()
+        line_re = re.compile(r'.*:\s*(\d+) \|\s*(\d+) \| ( *)([^ ]+)')
+        data = []
+        for line in output.splitlines():
+            g = line_re.match(line)
+            if not g:
+                continue
+            _self = int(g.group(1))
+            _cumul = int(g.group(2))
+            _level = len(g.group(3)) // 2
+            _module = g.group(4)
+            #print("%6d %8d %2d %s" % (_self, _cumul, _level, _module))
+            while len(data) < _level+1:
+                data.append(ImportData())
+            if len(data) > _level+1:
+                assert len(data) == _level+2
+                if _module.startswith('pyomo'):
+                    data[_level].update(data.pop())
+                    data[_level].pyomo[_module] = _self
+                elif _module.startswith('pyutilib'):
+                    data[_level].update(data.pop())
+                    data[_level].pyutilib[_module] = _self
+                else:
+                    data.pop()
+                    if _level > 0:
+                        data[_level].tpl[_module] = _cumul
+            elif _module.startswith('pyomo'):
+                data[_level].pyomo[_module] = _self
+            elif _module.startswith('pyutilib'):
+                data[_level].pyutilib[_module] = _self
+            elif _level > 0:
+                data[_level].tpl[_module] = _self
+        assert len(data) == 1
+        return data[0]
+
 
 class TestPyomoEnviron(unittest.TestCase):
 
     def test_not_auto_imported(self):
-        rc, output = run_command([
+        rc = subprocess.call([
                 sys.executable, '-c', 
                 'import pyomo.core, sys; '
                 'sys.exit( 1 if "pyomo.environ" in sys.modules else 0 )'])
         if rc:
             self.fail("Importing pyomo.core automatically imports "
                       "pyomo.environ and it should not.")
+
+
+    @unittest.skipIf(sys.version_info[:2] < (3,7),
+                     "Import timing introduced in python 3.7")
+    def test_tpl_import_time(self):
+        data = collect_import_time('pyomo.environ')
+        pyomo_time = sum(itervalues(data.pyomo))
+        pyutilib_time = sum(itervalues(data.pyutilib))
+        tpl_time = sum(itervalues(data.tpl))
+        total = float(pyomo_time + pyutilib_time + tpl_time)
+        print("TPLS:")
+        print("\n".join("   %s: %s" % i for i in sorted(data.tpl.items())))
+        tpl = {}
+        for k, v in iteritems(data.tpl):
+            _mod = k.split('.')[0]
+            tpl[_mod] = tpl.get(_mod,0) + v
+        tpl_by_time = sorted(tpl.items(), key=lambda x: x[1])
+        print("TPLS (by package time):")
+        print("\n".join("   %s: %s" % i for i in tpl_by_time))
+        print("Pyomo: %s (%0.2f)" % (pyomo_time, pyomo_time / total))
+        print("Pyutilib: %s (%0.2f)" % (pyutilib_time, pyutilib_time / total))
+        print("TPL: %s (%0.2f)" % (tpl_time, tpl_time / total))
+        # Arbitrarily choose a threshold 10% more than the expected
+        # value (at time of writing, TPL imports were 52-57% of the
+        # import time on a development machine)
+        self.assertLess(tpl_time / total, 0.65)
+        # Spot-check the (known) two worst offenders
+        self.assertEqual(tpl_by_time[-1][0], 'numpy')
+        self.assertEqual(tpl_by_time[-2][0], 'Pyro4')
+
 
 if __name__ == "__main__":
     unittest.main()
