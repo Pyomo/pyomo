@@ -95,6 +95,9 @@ class TestPyomoEnviron(unittest.TestCase):
         pyutilib_time = sum(itervalues(data.pyutilib))
         tpl_time = sum(itervalues(data.tpl))
         total = float(pyomo_time + pyutilib_time + tpl_time)
+        print("Pyomo (by module time):")
+        print("\n".join("   %s: %s" % i for i in sorted(
+            data.pyomo.items(), key=lambda x: x[1])))
         print("TPLS:")
         print("\n".join("   %s: %s" % i for i in sorted(data.tpl.items())))
         tpl = {}
@@ -103,10 +106,13 @@ class TestPyomoEnviron(unittest.TestCase):
             tpl[_mod] = tpl.get(_mod,0) + v
         tpl_by_time = sorted(tpl.items(), key=lambda x: x[1])
         print("TPLS (by package time):")
-        print("\n".join("   %s: %s" % i for i in tpl_by_time))
-        print("Pyomo: %s (%0.2f)" % (pyomo_time, pyomo_time / total))
-        print("Pyutilib: %s (%0.2f)" % (pyutilib_time, pyutilib_time / total))
-        print("TPL: %s (%0.2f)" % (tpl_time, tpl_time / total))
+        print("\n".join("   %12s: %6d (%4.1f%%)" % (
+            m, t, 100*t/total) for m, t in tpl_by_time))
+        print("Pyomo:    %6d (%4.1f%%)" % (
+            pyomo_time, 100 * pyomo_time / total))
+        print("Pyutilib: %6d (%4.1f%%)" % (
+            pyutilib_time, 100 * pyutilib_time / total))
+        print("TPL:      %6d (%4.1f%%)" % (tpl_time, 100 * tpl_time / total))
         # Arbitrarily choose a threshold 10% more than the expected
         # value (at time of writing, TPL imports were 52-57% of the
         # import time on a development machine)
@@ -122,5 +128,6 @@ class TestPyomoEnviron(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    # Running this file as a script will print out the package timing
+    # information from test_tpl_import_time()
     unittest.main()
-
