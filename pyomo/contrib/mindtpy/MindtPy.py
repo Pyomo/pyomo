@@ -62,13 +62,13 @@ class MindtPySolver(object):
         doc="Relative tolerance for bound feasibility checks."
     ))
     CONFIG.declare("iteration_limit", ConfigValue(
-        default=30,
+        default=50,
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods."
     ))
     CONFIG.declare("stalling_limit", ConfigValue(
-        default=10,
+        default=15,
         domain=PositiveInt,
         description="Stalling limit",
         doc="Stalling limit for progress in the decomposition methods."
@@ -115,7 +115,7 @@ class MindtPySolver(object):
             "multiplied by this number and added to the objective."
     ))
     CONFIG.declare("ecp_tolerance", ConfigValue(
-        default=None,
+        default=1E-4,
         domain=PositiveFloat,
         description="ECP tolerance",
         doc="Feasibility tolerance used to determine the stopping criterion in"
