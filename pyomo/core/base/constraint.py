@@ -852,6 +852,15 @@ class Constraint(ActiveIndexedComponent):
         finally:
             timer.report()
 
+    def _getitem_when_not_present(self, idx):
+        if self.rule is None:
+            raise KeyError(idx)
+        con = self._setitem_when_not_present(
+            idx, self.rule(self.parent_block(), idx))
+        if con is None:
+            raise KeyError(idx)
+        return con
+
     def _pprint(self):
         """
         Return data that will be printed for this component.
