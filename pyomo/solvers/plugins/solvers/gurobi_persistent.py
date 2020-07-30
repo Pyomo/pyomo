@@ -115,16 +115,8 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
         gurobipy_var = self._pyomo_var_to_solver_var_map[var]
         vtype = self._gurobi_vtype_from_var(var)
-        if var.is_fixed():
-            lb = var.value
-            ub = var.value
-        else:
-            lb = -self._gurobipy.GRB.INFINITY
-            ub = self._gurobipy.GRB.INFINITY
-            if var.has_lb():
-                lb = value(var.lb)
-            if var.has_ub():
-                ub = value(var.ub)
+        lb, ub = self._gurobi_lb_ub_from_var(var)
+
         gurobipy_var.setAttr('lb', lb)
         gurobipy_var.setAttr('ub', ub)
         gurobipy_var.setAttr('vtype', vtype)
@@ -655,6 +647,35 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
     def cbUseSolution(self):
         return self._solver_model.cbUseSolution()
+
+    def _add_column(self, var, obj_coef, constraints, coefficients):
+        """Add a column to the solver's model
+
+        This will add the Pyomo variable var to the solver's
+        model, and put the coefficients on the associated 
+        constraints in the solver model. If the obj_coef is
+        not zero, it will add obj_coef*var to the objective 
+        of the solver's model.
+
+        Parameters
+        ----------
+        var: Var (scalar Var or single _VarData)
+        obj_coef: float
+        constraints: list of solver constraints
+        coefficients: list of coefficients to put on var in the associated constraint
+        """
+
+        ## set-up add var
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vtype = self._gurobi_vtype_from_var(var)
+        lb, ub = self._gurobi_lb_ub_from_var(var)
+
+        gurobipy_var = self._solver_model.addVar(obj=obj_coef, lb=lb, ub=ub, vtype=vtype, name=varname, 
+                            column=self._gurobipy.Column(coeffs=coefficients, constrs=constraints) )
+
+        self._pyomo_var_to_solver_var_map[var] = gurobipy_var 
+        self._solver_var_to_pyomo_var_map[gurobipy_var] = var
+        self._referenced_variables[var] = len(coefficients)
 
     def reset(self):
         self._solver_model.reset()
