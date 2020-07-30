@@ -20,6 +20,9 @@ from six import iteritems, itervalues
 
 import pyutilib.th as unittest
 
+from pyomo.common.dependencies import numpy_available, attempt_import
+pyro4, pyro4_available = attempt_import('Pyro4')
+
 class ImportData(object):
     def __init__(self):
         self.tpl = {}
@@ -109,8 +112,13 @@ class TestPyomoEnviron(unittest.TestCase):
         # import time on a development machine)
         self.assertLess(tpl_time / total, 0.65)
         # Spot-check the (known) two worst offenders
-        self.assertEqual(tpl_by_time[-1][0], 'numpy')
-        self.assertEqual(tpl_by_time[-2][0], 'Pyro4')
+        if numpy_available and pyro4_available:
+            self.assertEqual(tpl_by_time[-1][0], 'numpy')
+            self.assertEqual(tpl_by_time[-2][0], 'Pyro4')
+        elif numpy_available:
+            self.assertEqual(tpl_by_time[-1][0], 'numpy')
+        elif pyro4_available:
+            self.assertEqual(tpl_by_time[-1][0], 'Pyro4')
 
 
 if __name__ == "__main__":
