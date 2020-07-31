@@ -117,14 +117,13 @@ class TestPyomoEnviron(unittest.TestCase):
         # value (at time of writing, TPL imports were 52-57% of the
         # import time on a development machine)
         self.assertLess(tpl_time / total, 0.65)
-        # Spot-check the (known) two worst offenders
-        if numpy_available and pyro4_available:
-            self.assertEqual(tpl_by_time[-1][0], 'numpy')
-            self.assertEqual(tpl_by_time[-2][0], 'Pyro4')
-        elif numpy_available:
-            self.assertEqual(tpl_by_time[-1][0], 'numpy')
-        elif pyro4_available:
-            self.assertEqual(tpl_by_time[-1][0], 'Pyro4')
+        # Spot-check the (known) worst offenders
+        ref = {'six'}
+        if numpy_available:
+            ref.add('numpy')
+        if pyro4_available:
+            ref.add('Pyro4')
+        self.assertEqual(ref, set(_[0] for _ in tpl_by_time[-len(ref):]))
 
 
 if __name__ == "__main__":
