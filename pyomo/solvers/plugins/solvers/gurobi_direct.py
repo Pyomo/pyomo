@@ -202,9 +202,10 @@ class GurobiDirect(DirectSolver):
 
         return gurobi_expr, referenced_vars
 
-    def _add_var(self, var):
-        varname = self._symbol_map.getSymbol(var, self._labeler)
-        vtype = self._gurobi_vtype_from_var(var)
+    def _gurobi_lb_ub_from_var(self, var):
+        if var.is_fixed():
+            val = var.value
+            return val, val
         if var.has_lb():
             lb = value(var.lb)
         else:
@@ -213,9 +214,12 @@ class GurobiDirect(DirectSolver):
             ub = value(var.ub)
         else:
             ub = self._gurobipy.GRB.INFINITY
-        if var.is_fixed():
-            lb = value(var.value)
-            ub = value(var.value)
+        return lb, ub
+
+    def _add_var(self, var):
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vtype = self._gurobi_vtype_from_var(var)
+        lb, ub = self._gurobi_lb_ub_from_var(var)
 
         gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
 

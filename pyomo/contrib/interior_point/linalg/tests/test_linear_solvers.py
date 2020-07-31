@@ -8,9 +8,15 @@ if not np_available or not scipy_available:
 import numpy as np
 from scipy.sparse import coo_matrix, tril
 from pyomo.contrib import interior_point as ip
+from pyomo.contrib.interior_point.linalg.results import LinearSolverStatus
+if scipy_available:
+    from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
+if mumps_available:
+    from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
 from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
 ma27_available = MA27Interface.available()
-
+if ma27_available:
+    from pyomo.contrib.interior_point.linalg.ma27_interface import InteriorPointMA27Interface
 
 def get_base_matrix(use_tril):
     if use_tril:
@@ -66,9 +72,9 @@ class TestLinearSolvers(unittest.TestCase):
         zero_mat = mat.copy()
         zero_mat.data.fill(0)
         stat = solver.do_symbolic_factorization(zero_mat)
-        self.assertEqual(stat.status, ip.linalg.LinearSolverStatus.successful)
+        self.assertEqual(stat.status, LinearSolverStatus.successful)
         stat = solver.do_numeric_factorization(mat)
-        self.assertEqual(stat.status, ip.linalg.LinearSolverStatus.successful)
+        self.assertEqual(stat.status, LinearSolverStatus.successful)
         x_true = np.array([1, 2, 3], dtype=np.double)
         rhs = mat * x_true
         x = solver.do_back_solve(rhs)
@@ -78,18 +84,19 @@ class TestLinearSolvers(unittest.TestCase):
         x = solver.do_back_solve(rhs)
         self.assertTrue(np.allclose(x, x_true))
 
+    @unittest.skipIf(not scipy_available, 'scipy is needed for interior point scipy tests')
     def test_scipy(self):
-        solver = ip.linalg.ScipyInterface()
+        solver = ScipyInterface()
         self._test_linear_solvers(solver)
 
     @unittest.skipIf(not mumps_available, 'mumps is needed for interior point mumps tests')
     def test_mumps(self):
-        solver = ip.linalg.MumpsInterface()
+        solver = MumpsInterface()
         self._test_linear_solvers(solver)
 
     @unittest.skipIf(not ma27_available, 'MA27 is needed for interior point MA27 tests')
     def test_ma27(self):
-        solver = ip.linalg.InteriorPointMA27Interface()
+        solver = InteriorPointMA27Interface()
         self._test_linear_solvers(solver)
 
 
@@ -105,16 +112,17 @@ class TestWrongNonzeroOrdering(unittest.TestCase):
         x = solver.do_back_solve(rhs)
         self.assertTrue(np.allclose(x, x_true))
 
+    @unittest.skipIf(not scipy_available, 'scipy is needed for interior point scipy tests')
     def test_scipy(self):
-        solver = ip.linalg.ScipyInterface()
+        solver = ScipyInterface()
         self._test_solvers(solver, use_tril=False)
 
     @unittest.skipIf(not mumps_available, 'mumps is needed for interior point mumps tests')
     def test_mumps(self):
-        solver = ip.linalg.MumpsInterface()
+        solver = MumpsInterface()
         self._test_solvers(solver, use_tril=True)
 
     @unittest.skipIf(not ma27_available, 'MA27 is needed for interior point MA27 tests')
     def test_ma27(self):
-        solver = ip.linalg.InteriorPointMA27Interface()
+        solver = InteriorPointMA27Interface()
         self._test_solvers(solver, use_tril=True)

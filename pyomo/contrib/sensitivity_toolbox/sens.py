@@ -19,53 +19,54 @@ from pyomo.opt import SolverFactory
 
 
 
-def sipopt(instance,paramSubList,perturbList,cloneModel=True,
-					     streamSoln=False,
-					     keepfiles=False):
-    """
-    This function accepts a Pyomo ConcreteModel, a list of parameters, along
+def sipopt(instance, paramSubList, perturbList,
+           cloneModel=True, streamSoln=False, keepfiles=False):
+    """This function accepts a Pyomo ConcreteModel, a list of parameters, along
     with their corresponding perterbation list. The model is then converted
     into the design structure required to call sipopt to get an approximation
     perturbed solution with updated bounds on the decision variable. 
     
-    Arguments:
-        instance     : ConcreteModel: Expectation No Exceptions
-            pyomo model object
+    Parameters
+    ----------
+    instance: ConcreteModel
+        pyomo model object
 
-        paramSubList : Param         
-            list of mutable parameters
-            Exception : "paramSubList argument is expecting a List of Params"	    
+    paramSubList: list
+        list of mutable parameters
 
-        perturbList  : Param	    
-            list of perturbed parameter values
-            Exception : "perturbList argument is expecting a List of Params"
+    perturbList: list
+        list of perturbed parameter values
 
-            length(paramSubList) must equal length(perturbList)
-            Exception : "paramSubList will not map to perturbList"  
+    cloneModel: bool, optional
+        indicator to clone the model. If set to False, the original
+        model will be altered
 
+    streamSoln: bool, optional
+        indicator to stream IPOPT solution
 
-        cloneModel   : boolean      : default=True	    
-            indicator to clone the model
-                -if set to False, the original model will be altered
-
-        streamSoln   : boolean      : default=False	    
-            indicator to stream IPOPT solution
-
-        keepfiles    : boolean	    : default=False 
-            indicator to print intermediate file names
+    keepfiles: bool, optional
+        preserve solver interface files
     
-    Returns:
-        m		  : ConcreteModel
-            converted model for sipopt
+    Returns
+    -------
+    model: ConcreteModel
+        The model modified for use with sipopt.  The returned model has
+        three :class:`Suffix` members defined:
 
-        m.sol_state_1     : Suffix	  
-            approximated results at perturbation
+        - ``model.sol_state_1``: the approximated results at the
+          perturbation point
+        - ``model.sol_state_1_z_L``: the updated lower bound
+        - ``model.sol_state_1_z_U``: the updated upper bound
 
-        m.sol_state_1_z_L : Suffix        
-            updated lower bound
+    Raises
+    ------
+    ValueError
+        perturbList argument is expecting a List of Params
+    ValueError
+        length(paramSubList) must equal length(perturbList)
+    ValueError
+        paramSubList will not map to perturbList
 
-        m.sol_state_1_z_U : Suffix        
-            updated upper bound
     """
 
     #Verify User Inputs    
@@ -152,49 +153,31 @@ def sipopt(instance,paramSubList,perturbList,cloneModel=True,
                     substitute=variableSubMap,
                     remove_named_expressions=True).dfs_postorder_stack(cc.expr))
         else:
-            try:
-                b.constList.add(expr=ExpresssionReplacementVisitor(
+            if cc.lower is None or cc.upper is None:
+                b.constList.add(expr=ExpressionReplacementVisitor(
                     substitute=variableSubMap,
                     remove_named_expressions=True).dfs_postorder_stack(cc.expr))
-            except:
-                # Params in either the upper or lower bounds of a ranged 
-                # inequaltiy will result in an invalid expression (you cannot 
-                # have variables in the bounds of a constraint).  If we hit that
-                # problem, we will break up the ranged inequality into separate
-                # constraints
+            else:
+                # Constraint must be a ranged inequality, break into separate constraints
 
-                # Note that the test for lower / upper == None is probably not
-                # necessary, as the only way we should get here (especially if
-                # we are more careful about the exception that we catch) is if
-                # this is a ranged inequality and we are attempting to insert a
-                # variable into either the lower or upper bound.
-                if cc.lower is not None:
-                    b.constList.add(expr=ExpressionReplacementVisitor(
-                        substitute=variableSubMap,
-                        remove_named_expressions=True).dfs_postorder_stack(
-                            cc.lower) <= ExpressionReplacementVisitor(
-                                substitute=variableSubMap,
-                                remove_named_expressions=
-                                  True).dfs_postorder_stack(cc.body)
-                                )
-                #if cc.lower is not None:
-                #    b.constList.add(expr=0<=ExpressionReplacementVisitor(
-                #        substitute=variableSubMap,
-                #        remove_named_expressions=True).dfs_postorder_stack(
-                #            cc.lower) - ExpressionReplacementVisitor(
-                #                substitute=variableSubMap,
-                #                remove_named_expressions=
-                #                  True).dfs_postorder_stack(cc.body)
-                #                )
-                if cc.upper is not None:
-                    b.constList.add(expr=ExpressionReplacementVisitor(
-                        substitute=variableSubMap,
-                        remove_named_expressions=True).dfs_postorder_stack(
-                            cc.upper) >= ExpressionReplacementVisitor(
-                                substitute=variableSubMap,
-                                remove_named_expressions=
-                                  True).dfs_postorder_stack(cc.body)
-                                )
+                # Add constraint for lower bound
+                b.constList.add(expr=ExpressionReplacementVisitor(
+                    substitute=variableSubMap,
+                    remove_named_expressions=True).dfs_postorder_stack(
+                        cc.lower) <= ExpressionReplacementVisitor(
+                            substitute=variableSubMap,
+                            remove_named_expressions=
+                            True).dfs_postorder_stack(cc.body)
+                    )
+                # Add constraint for upper bound
+                b.constList.add(expr=ExpressionReplacementVisitor(
+                    substitute=variableSubMap,
+                    remove_named_expressions=True).dfs_postorder_stack(
+                        cc.upper) >= ExpressionReplacementVisitor(
+                            substitute=variableSubMap,
+                            remove_named_expressions=
+                            True).dfs_postorder_stack(cc.body)
+                    )
         cc.deactivate()
 
     #paramData to varData constraint list

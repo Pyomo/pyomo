@@ -1,4 +1,4 @@
-.. rapperAPI_:
+.. _rapperAPI:
 
 rapper API
 ===============

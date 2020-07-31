@@ -24,6 +24,14 @@ else:
     PYOMO_CONFIG_DIR = os.path.abspath(
         os.path.join(os.environ.get('HOME', ''), '.pyomo'))
 
+# Note that alternative platform-independent implementation of the above
+# could be to use:
+#
+#   PYOMO_CONFIG_DIR = os.path.abspath(appdirs.user_data_dir('pyomo'))
+#
+# But would require re-adding the hard dependency on appdirs.  For now
+# (13 Jul 20), the above appears to be sufficiently robust.
+
 USER_OPTION = 0
 ADVANCED_OPTION = 1
 DEVELOPER_OPTION = 2

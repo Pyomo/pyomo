@@ -187,14 +187,36 @@ class TwoTermDisj(unittest.TestCase):
             (0,1,1,3),
             (0,1,1,4)
         ]
+        facet2_extreme_pts = [
+            (0,1,1,3),
+            (0,1,2,3),
+            (1,0,3,1),
+            (1,0,4,1)
+        ]
         
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-        self.assertEqual(len(cuts), 1)
+        # ESJ: In the FME version, we expect both facets... Or we at least don't
+        # not.
+        self.assertEqual(len(cuts), 2)
         cut = cuts[0]
         cut_expr = cut.body
         lower = cut.lower
         upper = cut.upper
         for pt in facet_extreme_pts:
+            m.d[0].indicator_var.fix(pt[0])
+            m.d[1].indicator_var.fix(pt[1])
+            m.x.fix(pt[2])
+            m.y.fix(pt[3])
+            if lower is not None:
+                self.assertEqual(value(lower), value(cut_expr))
+            if upper is not None:
+                self.assertEqual(value(upper), value(cut_expr))
+
+        cut = cuts[1]
+        cut_expr = cut.body
+        lower = cut.lower
+        upper = cut.upper
+        for pt in facet2_extreme_pts:
             m.d[0].indicator_var.fix(pt[0])
             m.d[1].indicator_var.fix(pt[1])
             m.x.fix(pt[2])
@@ -271,7 +293,6 @@ class Grossmann_TestCases(unittest.TestCase):
         ]
 
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-        self.assertEqual(len(cuts), 1)
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower
@@ -290,14 +311,21 @@ class Grossmann_TestCases(unittest.TestCase):
         m = models.grossmann_oneDisj()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-        self.assertEqual(len(cuts), 1)
-
-        # similar to the two boxes example, this could have been either, but it
-        # turns out to be this one.
+        # ESJ: Again, for FME, we don't mind getting both the possible facets,
+        # as long as they are beautiful.
+        self.assertEqual(len(cuts), 2)
+        # similar to the two boxes example, this is on the line where two facets
+        # intersect
         facet_extreme_points = [
             (1,0,2,10),
             (1,0,2,7),
             (0,1,10,0),
+            (0,1,10,3)
+        ]
+        facet2_extreme_points = [
+            (1,0,2,10),
+            (1,0,0,10),
+            (0,1,8,3),
             (0,1,10,3)
         ]
 
@@ -371,11 +399,12 @@ class Grossmann_TestCases(unittest.TestCase):
             (1,0,1,0,2,8),
             (0,1,0,1,9,2),
             (0,1,0,1,9,3),
-            (0,1,0,1,11,2),
-            (0,1,0,1,11,3)
+            (0,1,0,1,10,2),
+            (0,1,0,1,10,3)
         ]
 
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        cuts.pprint()
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower

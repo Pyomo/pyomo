@@ -16,23 +16,23 @@ import textwrap
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
-    Block, Connector, Constraint, Param, Set, Suffix, Var,
+    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value,
-    RangeSet, NonNegativeIntegers)
+    RangeSet, NonNegativeIntegers, LogicalConstraint, )
 from pyomo.core.base.external import ExternalFunction
-from pyomo.core.base import Transformation, TransformationFactory
+from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (target_list, is_child_of, get_src_disjunction,
-                            get_src_constraint, get_transformed_constraints,
-                            _get_constraint_transBlock, get_src_disjunct,
-                            _warn_for_active_disjunction,
-                            _warn_for_active_disjunct)
-from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
+from pyomo.gdp.util import (
+    _warn_for_active_logical_constraint, target_list, is_child_of, get_src_disjunction,
+    get_src_constraint, get_transformed_constraints,
+    _get_constraint_transBlock, get_src_disjunct,
+    _warn_for_active_disjunction,
+    _warn_for_active_disjunct, )
 from pyomo.repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
@@ -154,15 +154,18 @@ class BigM_Transformation(Transformation):
                                 # disjunct, it should be declared with no bounds
                                 # and the bounds should be set in constraints on
                                 # the Disjunct.
+            BooleanVar:  False,
             Connector:   False,
             Expression:  False,
             Suffix:      False,
             Param:       False,
             Set:         False,
+            SetOf:       False,
             RangeSet:    False,
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
+            LogicalConstraint: self._warn_for_active_logical_statement,
             ExternalFunction: False,
         }
 
@@ -233,9 +236,6 @@ class BigM_Transformation(Transformation):
         targets = config.targets
         if targets is None:
             targets = (instance, )
-            _HACK_transform_whole_instance = True
-        else:
-            _HACK_transform_whole_instance = False
         # We need to check that all the targets are in fact on instance. As we
         # do this, we will use the set below to cache components we know to be
         # in the tree rooted at instance.
@@ -278,15 +278,6 @@ class BigM_Transformation(Transformation):
                     else:
                         warning_msg += "\t%s\n" % component
                 logger.warn(warning_msg)
-
-        # HACK for backwards compatibility with the older GDP transformations
-        #
-        # Until the writers are updated to find variables on things
-        # other than active blocks, we need to reclassify the Disjuncts
-        # as Blocks after transformation so that the writer will pick up
-        # all the variables that it needs (in this case, indicator_vars).
-        if _HACK_transform_whole_instance:
-            HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
 
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts
@@ -457,6 +448,7 @@ class BigM_Transformation(Transformation):
         # want it to move with the disjunct transformation blocks in the case of
         # nested constraints, to make it easier to query.
         relaxationBlock.bigm_src = {}
+        relaxationBlock.localVarReferences = Block()
         obj._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._srcDisjunct = weakref_ref(obj)
 
@@ -476,10 +468,22 @@ class BigM_Transformation(Transformation):
 
     def _transform_block_components(self, block, disjunct, bigM, arg_list,
                                     suffix_list):
-        # We first need to find any transformed disjunctions that might be here
+        # Find all the variables declared here (including the indicator_var) and
+        # add a reference on the transformation block so these will be
+        # accessible when the Disjunct is deactivated. We don't descend into
+        # Disjuncts because we'll just reference the references which are
+        # already on their transformation blocks.
+        disjunctBlock = disjunct._transformation_block()
+        varRefBlock = disjunctBlock.localVarReferences
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=True,
+                                       name_buffer=NAME_BUFFER)), Reference(v))
+
+        # Now need to find any transformed disjunctions that might be here
         # because we need to move their transformation blocks up onto the parent
         # block before we transform anything else on this block
-        destinationBlock = disjunct._transformation_block().parent_block()
+        destinationBlock = disjunctBlock.parent_block()
         for obj in block.component_data_objects(
                 Disjunction,
                 sort=SortComponents.deterministic,
@@ -549,6 +553,10 @@ class BigM_Transformation(Transformation):
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
                                   arg_list, suffix_list):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER)
+
+    def _warn_for_active_logical_statement(
+            self, logical_statment, disjunct, infodict, bigMargs, suffix_list):
+        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
 
     def _transform_block_on_disjunct(self, block, disjunct, bigMargs, arg_list,
                                      suffix_list):

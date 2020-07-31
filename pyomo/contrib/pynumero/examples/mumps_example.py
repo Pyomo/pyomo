@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 from scipy.linalg import hilbert
-from pyomo.contrib.pynumero.linalg.mumps_solver import MumpsCentralizedAssembledLinearSolver
+from pyomo.contrib.pynumero.linalg.mumps_interface import MumpsCentralizedAssembledLinearSolver
 
 # create the matrix and the right hand sides
 N = 1000

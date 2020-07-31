@@ -32,6 +32,15 @@ import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
     fit_rect_dist, fit_mvn_dist, fit_kde_dist
 
+if numpy_available and scipy_available:
+    from pyomo.contrib.pynumero.asl import AmplInterface
+    asl_available = AmplInterface.available()
+else:
+    asl_available=False
+
+if asl_available:
+    from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
+
 __version__ = 0.1
 
 #=============================================
@@ -349,7 +358,7 @@ class Estimator(object):
         
         self._second_stage_cost_exp = "SecondStageCost"
         self._numbers_list = list(range(len(data)))
-        
+
 
     def _create_parmest_model(self, data):
         """
@@ -415,7 +424,7 @@ class Estimator(object):
     
 
     def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
-               return_values=[], bootlist=None):
+               return_values=[], bootlist=None, calc_cov=False):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -426,6 +435,7 @@ class Estimator(object):
         construct the tree just once and reuse it, then remember to
         remove thetavals from it when none is desired.
         """
+        
         assert(solver != "k_aug" or ThetaVals == None)
         # Create a tree with dummy scenarios (callback will supply when needed).
         # Which names to use (i.e., numbers) depends on if it is for bootstrap.
@@ -453,14 +463,62 @@ class Estimator(object):
         stsolver = st.StochSolver(fsfile = "pyomo.contrib.parmest.parmest",
                                   fsfct = "_pysp_instance_creation_callback",
                                   tree_model = tree_model)
-        
+                
+        # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            ef_sol = stsolver.solve_ef('ipopt',
-                                       sopts=self.solver_options,
-                                       tee=self.tee)
+        
+            # Generate the extensive form of the stochastic program using pysp
+            self.ef_instance = stsolver.make_ef()
+
+            # need_gap is a holdover from solve_ef in rapper.py. Would we ever want
+            # need_gap = True with parmest?
+            need_gap = False
+            
+            assert not (need_gap and self.calc_cov), "Calculating both the gap and reduced hessian (covariance) is not currently supported."
+
+            if not calc_cov:
+                # Do not calculate the reduced hessian
+
+                solver = SolverFactory('ipopt')
+                if self.solver_options is not None:
+                    for key in self.solver_options:
+                        solver.options[key] = self.solver_options[key]
+
+                if need_gap:
+                    solve_result = solver.solve(self.ef_instance, tee = self.tee, load_solutions=False)
+                    if len(solve_result.solution) > 0:
+                        absgap = solve_result.solution(0).gap
+                    else:
+                        absgap = None
+                    self.ef_instance.solutions.load_from(solve_result)
+                else:
+                    solve_result = solver.solve(self.ef_instance, tee = self.tee)
+
+            elif not asl_available:
+                raise ImportError("parmest requires ASL to calculate the covariance matrix with solver 'ipopt'")
+            else:
+                # parmest makes the fitted parameters stage 1 variables
+                # thus we need to convert from var names (string) to 
+                # Pyomo vars
+                ind_vars = []
+                for v in self.theta_names:
+
+                    #ind_vars.append(eval('ef.'+v))
+                    ind_vars.append(self.ef_instance.MASTER_BLEND_VAR_RootNode[v])
+        
+                # calculate the reduced hessian
+                solve_result, inv_red_hes = inv_reduced_hessian_barrier(self.ef_instance, 
+                    independent_variables= ind_vars,
+                    solver_options=self.solver_options,
+                    tee=self.tee)
+            
+            # Extract solution from pysp
+            stsolver.scenario_tree.pullScenarioSolutionsFromInstances()
+            stsolver.scenario_tree.snapshotSolutionFromScenarios() # update nodes
+                                
             if self.diagnostic_mode:
                 print('    Solver termination condition = ',
-                       str(ef_sol.solver.termination_condition))
+                       str(solve_result.solver.termination_condition))
 
             # assume all first stage are thetas...
             thetavals = {}
@@ -468,6 +526,31 @@ class Estimator(object):
                  thetavals[name] = solval
 
             objval = stsolver.root_E_obj()
+            
+            if calc_cov:
+                # Calculate the covariance matrix
+                
+                # Extract number of data points considered
+                n = len(self.callback_data)
+                
+                # Extract number of fitted parameters
+                l = len(thetavals)
+                
+                # Assumption: Objective value is sum of squared errors
+                sse = objval
+                
+                '''Calculate covariance assuming experimental observation errors are
+                independent and follow a Gaussian 
+                distribution with constant variance.
+                
+                The formula used in parmest was verified against equations (7-5-15) and
+                (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
+                
+                This formula is also applicable if the objective is scaled by a constant;
+                the constant cancels out. (PySP scaled by 1/n because it computes an
+                expected value.)
+                '''
+                cov = 2 * sse / (n - l) * inv_red_hes
             
             if len(return_values) > 0:
                 var_values = []
@@ -482,10 +565,17 @@ class Estimator(object):
                             vals[var] = temp                    
                     var_values.append(vals)                    
                 var_values = pd.DataFrame(var_values)
-                return objval, thetavals, var_values
+                if calc_cov:
+                    return objval, thetavals, var_values, cov
+                else:
+                    return objval, thetavals, var_values
 
-            return objval, thetavals
+            if calc_cov:
+                return objval, thetavals, cov
+            else:
+                return objval, thetavals
         
+        # Solve with sipopt and k_aug
         elif solver == "k_aug":
             # Just hope for the best with respect to degrees of freedom.
 
@@ -672,7 +762,7 @@ class Estimator(object):
             
         return samplelist
     
-    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None): 
+    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None, calc_cov=False): 
         """
         Parameter estimation using all scenarios in the data
 
@@ -684,6 +774,8 @@ class Estimator(object):
             List of Variable names used to return values from the model
         bootlist: list, optional
             List of bootstrap sample numbers, used internally when calling theta_est_bootstrap
+        calc_cov: boolean, optional
+            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver)
             
         Returns
         -------
@@ -696,13 +788,15 @@ class Estimator(object):
         Hessian: dict
             A dictionary of dictionaries for the Hessian.
             The Hessian is not returned if the solver is ef_ipopt.
+        cov: numpy.array
+            Covariance matrix of the fitted parameters (only for ef_ipopt)
         """
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
         assert isinstance(bootlist, (type(None), list))
         
         return self._Q_opt(solver=solver, return_values=return_values,
-                           bootlist=bootlist)
+                           bootlist=bootlist, calc_cov=calc_cov)
     
     
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 

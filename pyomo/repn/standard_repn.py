@@ -734,16 +734,29 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
             elif compute_values and len(res.linear) == 0:
                 return Results(constant=multiplier*res.constant**exponent)
             #
-            # If there is one linear term, then we compute the quadratic expression for it.
+            # If the base is linear, then we compute the quadratic expression for it.
             #
-            elif len(res.linear) == 1:
-                key, coef = res.linear.popitem()
-                var = idMap[key]
+            else:
                 ans = Results()
-                if not (res.constant.__class__ in native_numeric_types and res.constant == 0):
+                has_constant = (res.constant.__class__
+                                not in native_numeric_types
+                                or res.constant != 0)
+                if has_constant:
                     ans.constant = multiplier*res.constant*res.constant
-                    ans.linear[key] = 2*multiplier*coef*res.constant
-                ans.quadratic[key,key] = multiplier*coef*coef
+
+                # this is reversed since we want to pop off the end for efficiency
+                # and the quadratic terms have a convention that the indexing tuple
+                # of key1, key2 is such that key1 <= key2
+                keys = sorted(res.linear.keys(), reverse=True)
+                while len(keys) > 0:
+                    key1 = keys.pop()
+                    coef1 = res.linear[key1]
+                    if has_constant:
+                        ans.linear[key1] = 2*multiplier*coef1*res.constant
+                    ans.quadratic[key1,key1] = multiplier*coef1*coef1
+                    for key2 in keys:
+                        coef2 = res.linear[key2]
+                        ans.quadratic[key1,key2] = 2*multiplier*coef1*coef2
                 return ans
 
     #

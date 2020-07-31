@@ -10,9 +10,18 @@
 
 from __future__ import division
 
+import inspect
 import logging
+import six
 from copy import deepcopy
 from collections import deque
+
+if six.PY2:
+    getargspec = inspect.getargspec
+else:
+    # For our needs, getfullargspec is a drop-in replacement for
+    # getargspec (which was removed in Python 3.x)
+    getargspec = inspect.getfullargspec
 
 logger = logging.getLogger('pyomo.core')
 
@@ -22,11 +31,18 @@ from pyutilib.math.util import isclose
 from .symbol_map import SymbolMap
 from . import expr_common as common
 from .expr_errors import TemplateExpressionError
+from pyomo.common.deprecation import deprecation_warning
+
+from pyomo.core.expr.boolean_value import (
+    BooleanValue,)
+
+
 from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
     native_numeric_types,
-    value,
-)
+    value,)
+
+
 # NOTE: This module also has dependencies on numeric_expr; however, to
 # avoid circular dependencies, we will NOT import them here.  Instead,
 # until we can resolve the circular dependencies, they will be injected
@@ -159,6 +175,26 @@ class StreamBasedExpressionVisitor(object):
                 setattr(self, field, None)
         if kwds:
             raise RuntimeError("Unrecognized keyword arguments: %s" % (kwds,))
+
+        # Handle deprecated APIs
+        _fcns = (('beforeChild',2), ('acceptChildResult',3), ('afterChild',2))
+        for name, nargs in _fcns:
+            fcn = getattr(self, name)
+            if fcn is None:
+                continue
+            _args = getargspec(fcn)
+            _self_arg = 1 if inspect.ismethod(fcn) else 0
+            if len(_args.args) == nargs + _self_arg and _args.varargs is None:
+                deprecation_warning(
+                    "Note that the API for the StreamBasedExpressionVisitor "
+                    "has changed to include the child index for the %s() "
+                    "method.  Please update your walker callbacks." % (name,))
+                def wrap(fcn, nargs):
+                    def wrapper(*args):
+                        return fcn(*args[:nargs])
+                    return wrapper
+                setattr(self, name, wrap(fcn, nargs))
+
 
     def walk_expression(self, expr):
         """Walk an expression, calling registered callbacks.
@@ -926,6 +962,8 @@ class _EvaluationVisitor(ExpressionValueVisitor):
             return False, None
 
         if node.is_numeric_type():
+            return True, value(node)
+        elif node.is_logical_type():
             return True, value(node)
         else:
             return True, node

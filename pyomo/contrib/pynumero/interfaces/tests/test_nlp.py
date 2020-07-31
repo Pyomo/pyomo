@@ -68,6 +68,15 @@ def create_pyomo_model1():
         m.dual.set_value(m.c[i], i)
 
     m.obj = pyo.Objective(expr=sum(i*j*m.x[i]*m.x[j] for i in m.S for j in m.S))
+
+    # add scaling parameters for testing
+    m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+    m.scaling_factor[m.obj] = 5
+    for i in m.S:
+        m.scaling_factor[m.x[i]] = 2*float(i)
+    for i in m.S:
+        m.scaling_factor[m.c[i]] = 3*float(i)
+
     return m
 
 def create_pyomo_model2():
@@ -361,6 +370,12 @@ class TestAslNLP(unittest.TestCase):
     def test_nlp_interface(self):
         anlp = AslNLP(self.filename)
         execute_extended_nlp_interface(self, anlp)
+        # AslNLP does not check suffixes for scaling parameters
+        self.assertIsNone(anlp.get_obj_scaling())
+        self.assertIsNone(anlp.get_primals_scaling())
+        self.assertIsNone(anlp.get_constraints_scaling())
+        self.assertIsNone(anlp.get_eq_constraints_scaling())
+        self.assertIsNone(anlp.get_ineq_constraints_scaling())
         
 class TestAmplNLP(unittest.TestCase):
     @classmethod
@@ -453,6 +468,25 @@ class TestPyomoNLP(unittest.TestCase):
         nlp = PyomoNLP(self.pm)
         execute_extended_nlp_interface(self, nlp)
         self.assertTrue(nlp.pyomo_model() is self.pm)
+
+        self.assertEqual(float(nlp.get_obj_scaling()), 5.0)
+
+        xs = nlp.get_primals_scaling()
+        expected_xs = np.asarray([2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0])
+        self.assertTrue(np.array_equal(xs, expected_xs))
+
+        cs = nlp.get_constraints_scaling()
+        expected_cs = np.asarray([ 3.0,  6.0,  9.0, 12.0, 15.0, 18.0, 21.0, 24.0, 27.0 ])
+        self.assertTrue(np.array_equal(cs, expected_cs))
+
+        eqcs = nlp.get_eq_constraints_scaling()
+        expected_eqcs = np.asarray([ 6.0, 18.0 ])
+        self.assertTrue(np.array_equal(eqcs, expected_eqcs))
+
+        ineqcs = nlp.get_ineq_constraints_scaling()
+        expected_ineqcs = np.asarray([ 3.0,  9.0, 12.0, 15.0, 21.0, 24.0, 27.0 ])
+        self.assertTrue(np.array_equal(ineqcs, expected_ineqcs))
+
 
     def test_indices_methods(self):
         nlp = PyomoNLP(self.pm)

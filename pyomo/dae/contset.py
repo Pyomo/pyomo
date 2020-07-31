@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import bisect
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import *
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -247,3 +248,47 @@ class ContinuousSet(SortedSimpleSet):
         self._fe = sorted(self)
         timer.report()
 
+    def find_nearest_index(self, target, tolerance=None):
+        """ Returns the index of the nearest point in the 
+        :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>`.
+
+        If a tolerance is specified, the index will only be returned
+        if the distance between the target and the closest point is
+        less than or equal to that tolerance. If there is a tie for
+        closest point, the index on the left is returned.
+
+        Parameters
+        ----------
+        target : `float`
+        tolerance : `float` or `None`
+
+        Returns
+        -------
+        `float` or `None` 
+        """
+        lo = 1
+        hi = len(self) + 1
+        i = bisect.bisect_right(self, target, lo=lo, hi=hi)
+        # i is the index at which target should be inserted if it is to be
+        # right of any equal components. 
+
+        if i == lo:
+            # target is less than every entry of the set
+            nearest_index = i
+            delta = self[nearest_index] - target
+        elif i == hi:
+            # target is greater than or equal to every entry of the set
+            nearest_index = i-1
+            delta = target - self[nearest_index]
+        else:
+            # p_le <= target < p_g
+            # delta_left = target - p_le
+            # delta_right = p_g - target
+            # delta = min(delta_left, delta_right)
+            # Tie goes to the index on the left.
+            delta, nearest_index = min((abs(target - self[j]), j) for j in [i-1, i])
+
+        if tolerance is not None:
+            if delta > tolerance:
+                return None
+        return nearest_index

@@ -1,3 +1,0 @@
-m.suffixes = pmo.suffix_dict()
-m.suffixes['dual'] = pmo.suffix(
-    direction=pmo.suffix.IMPORT)

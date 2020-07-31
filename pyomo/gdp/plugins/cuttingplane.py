@@ -143,25 +143,15 @@ class CuttingPlane_Transformation(Transformation):
         hullRelaxation = TransformationFactory('gdp.hull')
         relaxIntegrality = TransformationFactory('core.relax_integer_vars')
 
-        # HACK: for the current writers, we need to also apply gdp.reclassify so
-        # that the indicator variables stay where they are in the big M model
-        # (since that is what we are eventually going to solve after we add our
-        # cuts).
-        reclassify = TransformationFactory('gdp.reclassify')
-
         #
         # Generate the Hull relaxation (used for the separation
         # problem to generate cutting planes)
         #
-        instance_rHull = hullRelaxation.create_using(instance,
-                                                     targets=instance)
-        # collect a list of disaggregated variables. We have to do this before
-        # reclassify because we rely on Disjuncts still having a different
-        # ctype.
+        instance_rHull = hullRelaxation.create_using(instance)
+        # collect a list of disaggregated variables.
         (disaggregated_vars, 
          disaggregation_constraints) = self._get_disaggregated_vars(
              instance_rHull)
-        reclassify.apply_to(instance_rHull)
         relaxIntegrality.apply_to(instance_rHull,
                                   transform_deactivated_blocks=True)
 
@@ -251,9 +241,6 @@ class CuttingPlane_Transformation(Transformation):
                 transBlockName)
 
     def _get_disaggregated_vars(self, hull):
-        # This function MUST be called *before* reclassify for this to work
-        # (else we don't pick up any Disjuncts in the component_data_objects
-        # call below.)
         disaggregatedVars = []
         disaggregationConstraints = ComponentSet()
         hull_xform = TransformationFactory('gdp.hull')
@@ -263,7 +250,8 @@ class CuttingPlane_Transformation(Transformation):
             for disjunct in disjunction.disjuncts:
                 if disjunct.transformation_block is not None:
                     transBlock = disjunct.transformation_block()
-                    for v in transBlock.component_data_objects(Var):
+                    for v in transBlock.disaggregatedVars.\
+                        component_data_objects(Var):
                         disaggregatedVars.append(v)
                         disaggregationConstraints.add(
                             hull_xform.get_disaggregation_constraint(

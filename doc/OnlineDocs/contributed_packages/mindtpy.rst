@@ -33,7 +33,7 @@ An example which includes the modeling approach may be found below.
   >>> model.x = Var(bounds=(1.0,10.0),initialize=5.0)
   >>> model.y = Var(within=Binary)
 
-  >>> model.c1 = Constraint(expr=(model.x-3.0)**2 <= 50.0*(1-model.y))
+  >>> model.c1 = Constraint(expr=(model.x-4.0)**2 - model.x <= 50.0*(1-model.y))
   >>> model.c2 = Constraint(expr=model.x*log(model.x)+5.0 <= 50.0*(model.y))
 
   >>> model.objective = Objective(expr=model.x, sense=minimize)
@@ -67,11 +67,13 @@ The LP/NLP algorithm in MindtPy is implemeted based on the LazyCallback function
 .. _Quesada & Grossmann: https://www.sciencedirect.com/science/article/abs/pii/0098135492800288
 
 
-.. Note::
+.. note::
 
-The single tree implementation currently only works with CPLEX.
-To use LazyCallback function of CPLEX from Pyomo, the `CPLEX Python API`_ is required.
-This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be installed on your computer.
+   The single tree implementation currently only works with CPLEX.  To
+   use LazyCallback function of CPLEX from Pyomo, the `CPLEX Python
+   API`_ is required.  This means both IBM ILOG CPLEX Optimization
+   Studio and the CPLEX-Python modules should be installed on your
+   computer.
 
 
 .. _CPLEX Python API: https://www.ibm.com/support/knowledgecenter/SSSA5P_12.7.1/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html
@@ -87,7 +89,7 @@ A usage example for single tree is as follows:
   >>> model.x = pyo.Var(bounds=(1.0, 10.0), initialize=5.0)
   >>> model.y = pyo.Var(within=Binary)
 
-  >>> model.c1 = pyo.Constraint(expr=(model.x-3.0)**2 <= 50.0*(1-model.y))
+  >>> model.c1 = Constraint(expr=(model.x-4.0)**2 - model.x <= 50.0*(1-model.y))
   >>> model.c2 = pyo.Constraint(expr=model.x*log(model.x)+5.0 <= 50.0*(model.y))
   
   >>> model.objective = pyo.Objective(expr=model.x, sense=pyo.minimize)

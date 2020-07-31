@@ -41,6 +41,12 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
+if numpy_available:
+    from pyomo.contrib.pynumero.asl import AmplInterface
+    asl_available = AmplInterface.available()
+else:
+    asl_available=False
+
 testdir = os.path.dirname(os.path.abspath(__file__))
 
 class Object_from_string_Tester(unittest.TestCase):
@@ -78,8 +84,13 @@ class parmest_object_Tester_RB(unittest.TestCase):
         def SSE(model, data):  
             expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
             return expr
+
+        solver_options = {
+                'tol': 1e-8,
+                }
         
-        self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
+        self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE,
+                solver_options=solver_options)
 
     def test_theta_est(self):
         objval, thetavals = self.pest.theta_est()
@@ -203,6 +214,61 @@ class parmest_object_Tester_RB(unittest.TestCase):
         # this will fail if k_aug is not installed
         objval, thetavals, Hessian = self.pest.theta_est(solver="k_aug")
         self.assertAlmostEqual(objval, 4.4675, places=2)
+        
+
+'''
+The test cases above were developed with a transcription mistake in the dataset.
+This test works with the correct dataset.
+'''
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+class parmest_object_Tester_RB_match_paper(unittest.TestCase):
+    
+    def setUp(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
+           
+        data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
+                                  [4,16.0],[5,15.6],[7,19.8]], columns=['hour', 'y'])
+        
+        theta_names = ['asymptote', 'rate_constant']
+        
+        def SSE(model, data):  
+            expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+            return expr
+        
+        self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
+    
+    def test_theta_est(self):
+        objval, thetavals = self.pest.theta_est(calc_cov=False)
+        
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 0.5311 from the paper
+    
+    @unittest.skipIf(not asl_available, "Cannot test covariance matrix: required ASL dependency is missing")
+    def test_theta_est_cov(self):
+        objval, thetavals, cov = self.pest.theta_est(calc_cov=True)
+        
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 0.5311 from the paper
+        
+        # Covariance matrix
+        self.assertAlmostEqual(cov[0,0], 6.30579403, places=2) # 6.22864 from paper
+        self.assertAlmostEqual(cov[0,1], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,0], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,1], 0.04193591, places=2) # 0.04124 from paper
+        
+        ''' Why does the covariance matrix from parmest not match the paper? Parmest is
+        calculating the exact reduced Hessian. The paper (Rooney and Bielger, 2001) likely
+        employed the first order approximation common for nonlinear regression. The paper
+        values were verified with Scipy, which uses the same first order approximation.
+        The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
+        "Nonlinear Parameter Estimation", Y. Bard, 1974.
+        '''
+        
+    
         
 
 @unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
