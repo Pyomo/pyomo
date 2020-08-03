@@ -123,7 +123,7 @@ class TestPyomoEnviron(unittest.TestCase):
         ref = {'tempfile', 'logging', 'ctypes', 'ssl', 'argparse',
                'textwrap', 'inspect', 'xml', 'platform'}
         # Non-standard-library TPLs that Pyomo will load unconditionally
-        #ref.add('six')
+        ref.add('six')
         ref.add('ply')
         if numpy_available:
             ref.add('numpy')
