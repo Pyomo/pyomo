@@ -19,7 +19,8 @@ import six
 from scipy.sparse import coo_matrix
 
 import pyomo
-from pyomo.environ import Objective, Suffix, CtypesEnviron
+from pyomo.common.env import CtypesEnviron
+from pyomo.environ import Objective, Suffix
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 from pyutilib.services import TempfileManager
 
