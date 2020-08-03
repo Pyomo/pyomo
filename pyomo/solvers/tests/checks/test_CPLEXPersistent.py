@@ -10,7 +10,8 @@
 
 import pyutilib.th as unittest
 
-from pyomo.core import ConcreteModel, Var, Objective, Constraint
+from pyomo.core import (ConcreteModel, Var, Objective,
+                        Constraint, NonNegativeReals)
 from pyomo.opt import SolverFactory
 
 try:
