@@ -4,6 +4,11 @@ on:
   push:
     branches-ignore:
       - master
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Hash (Optional)
+        required: false
 
 defaults:
   run:
