@@ -9,7 +9,8 @@
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
-import pyomo.environ as pyo
+
+from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Param, RangeSet, minimize, exp, Suffix
 import os
 
 from pyomo.contrib.pynumero.dependencies import (
@@ -35,21 +36,21 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
 )
 
 def create_model1():
-    m = pyo.ConcreteModel()
-    m.x = pyo.Var([1, 2, 3], initialize=4.0)
-    m.c = pyo.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
-    m.d = pyo.Constraint(expr=m.x[2] ** 2 + m.x[1] <= 18.0)
-    m.o = pyo.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
+    m =  ConcreteModel()
+    m.x =  Var([1, 2, 3], initialize=4.0)
+    m.c =  Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
+    m.d =  Constraint(expr=m.x[2] ** 2 + m.x[1] <= 18.0)
+    m.o =  Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
     m.x[1].setlb(0.0)
     m.x[2].setlb(0.0)
 
     return m
 
 def create_model2():
-    m = pyo.ConcreteModel()
-    m.x = pyo.Var([1, 2], initialize=4.0)
-    m.d = pyo.Constraint(expr=m.x[1] + m.x[2] <= 5)
-    m.o = pyo.Objective(expr=m.x[1] ** 2 + 4 * m.x[2] ** 2 - 8 * m.x[1] - 16 * m.x[2])
+    m =  ConcreteModel()
+    m.x =  Var([1, 2], initialize=4.0)
+    m.d =  Constraint(expr=m.x[1] + m.x[2] <= 5)
+    m.o =  Objective(expr=m.x[1] ** 2 + 4 * m.x[2] ** 2 - 8 * m.x[1] - 16 * m.x[2])
     m.x[1].setub(3.0)
     m.x[1].setlb(0.0)
     m.x[2].setlb(0.0)
@@ -61,19 +62,19 @@ def create_model3(G, A, b, c):
     nx = G.shape[0]
     nl = A.shape[0]
 
-    model = pyo.ConcreteModel()
+    model =  ConcreteModel()
     model.var_ids = range(nx)
     model.con_ids = range(nl)
 
-    model.x = pyo.Var(model.var_ids, initialize=0.0)
-    model.hessian_f = pyo.Param(model.var_ids, model.var_ids, mutable=True, rule=lambda m, i, j: G[i, j])
-    model.jacobian_c = pyo.Param(model.con_ids, model.var_ids, mutable=True, rule=lambda m, i, j: A[i, j])
-    model.rhs = pyo.Param(model.con_ids, mutable=True, rule=lambda m, i: b[i])
-    model.grad_f = pyo.Param(model.var_ids, mutable=True, rule=lambda m, i: c[i])
+    model.x =  Var(model.var_ids, initialize=0.0)
+    model.hessian_f =  Param(model.var_ids, model.var_ids, mutable=True, rule=lambda m, i, j: G[i, j])
+    model.jacobian_c =  Param(model.con_ids, model.var_ids, mutable=True, rule=lambda m, i, j: A[i, j])
+    model.rhs =  Param(model.con_ids, mutable=True, rule=lambda m, i: b[i])
+    model.grad_f =  Param(model.var_ids, mutable=True, rule=lambda m, i: c[i])
 
     def equality_constraint_rule(m, i):
         return sum(m.jacobian_c[i, j] * m.x[j] for j in m.var_ids) == m.rhs[i]
-    model.equalities = pyo.Constraint(model.con_ids, rule=equality_constraint_rule)
+    model.equalities =  Constraint(model.con_ids, rule=equality_constraint_rule)
 
     def objective_rule(m):
         accum = 0.0
@@ -83,40 +84,40 @@ def create_model3(G, A, b, c):
         accum += sum(m.x[j] * m.grad_f[j] for j in m.var_ids)
         return accum
 
-    model.obj = pyo.Objective(rule=objective_rule, sense=pyo.minimize)
+    model.obj =  Objective(rule=objective_rule, sense= minimize)
 
     return model
 
 def create_model4():
-    m = pyo.ConcreteModel()
-    m.x = pyo.Var([1, 2], initialize=1.0)
-    m.c1 = pyo.Constraint(expr=m.x[1] + m.x[2] - 1 == 0)
-    m.obj = pyo.Objective(expr=2 * m.x[1] ** 2 + m.x[2] ** 2)
+    m =  ConcreteModel()
+    m.x =  Var([1, 2], initialize=1.0)
+    m.c1 =  Constraint(expr=m.x[1] + m.x[2] - 1 == 0)
+    m.obj =  Objective(expr=2 * m.x[1] ** 2 + m.x[2] ** 2)
     return m
 
 
 def create_model6():
-    model = pyo.ConcreteModel()
+    model =  ConcreteModel()
 
     model.S = [1, 2]
-    model.x = pyo.Var(model.S, initialize=1.0)
+    model.x =  Var(model.S, initialize=1.0)
 
     def f(model):
-        return model.x[1] ** 4 + (model.x[1] + model.x[2]) ** 2 + (-1.0 + pyo.exp(model.x[2])) ** 2
+        return model.x[1] ** 4 + (model.x[1] + model.x[2]) ** 2 + (-1.0 +  exp(model.x[2])) ** 2
 
-    model.f = pyo.Objective(rule=f)
+    model.f =  Objective(rule=f)
     return model
 
 
 def create_model9():
     # clplatea OXR2-MN-V-0
-    model = pyo.ConcreteModel()
+    model =  ConcreteModel()
 
     p = 71
     wght = -0.1
     hp2 = 0.5 * p ** 2
 
-    model.x = pyo.Var(pyo.RangeSet(1, p), pyo.RangeSet(1, p), initialize=0.0)
+    model.x =  Var( RangeSet(1, p),  RangeSet(1, p), initialize=0.0)
 
     def f(model):
         return sum(0.5 * (model.x[i, j] - model.x[i, j - 1]) ** 2 + \
@@ -125,7 +126,7 @@ def create_model9():
                    hp2 * (model.x[i, j] - model.x[i - 1, j]) ** 4 \
                    for i in range(2, p + 1) for j in range(2, p + 1)) + (wght * model.x[p, p])
 
-    model.f = pyo.Objective(rule=f)
+    model.f =  Objective(rule=f)
 
     for j in range(1, p + 1):
         model.x[1, j] = 0.0
@@ -151,7 +152,7 @@ class TestCyIpoptSolver(unittest.TestCase):
 
     def test_model1_with_scaling(self):
         m = create_model1()
-        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor = Suffix(direction=Suffix.EXPORT)
         m.scaling_factor[m.o] = 1e-6 # scale the objective
         m.scaling_factor[m.c] = 2.0  # scale the equality constraint
         m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
@@ -223,7 +224,4 @@ class TestCyIpoptSolver(unittest.TestCase):
         x, info = solver.solve(tee=False)
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e+02, places=5)
-
-        
-
 

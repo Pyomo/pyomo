@@ -24,19 +24,15 @@ import platform
 is_osx = platform.mac_ver()[0] != ''
 
 import pyutilib.th as unittest
-import tempfile
 import sys
 import os
-import shutil
-import glob
 import subprocess
-import sys
 from itertools import product
 
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
-import pyomo.environ as pyo
+from pyomo.environ import ConcreteModel, Set, Var
 
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
@@ -51,9 +47,9 @@ testdir = os.path.dirname(os.path.abspath(__file__))
 
 class Object_from_string_Tester(unittest.TestCase):
     def setUp(self):
-        self.instance = pyo.ConcreteModel()
-        self.instance.IDX = pyo.Set(initialize=['a', 'b', 'c'])
-        self.instance.x = pyo.Var(self.instance.IDX, initialize=1134)
+        self.instance = ConcreteModel()
+        self.instance.IDX = Set(initialize=['a', 'b', 'c'])
+        self.instance.x = Var(self.instance.IDX, initialize=1134)
         # TBD add a block
         if imports_present:
             np.random.seed(1134)

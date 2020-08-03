@@ -9,9 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.kernel.base import \
-    (_no_ctype,
-     _convert_descend_into,
-     ICategorizedObjectContainer)
+    (ICategorizedObjectContainer)
 
 class IHomogeneousContainer(ICategorizedObjectContainer):
     """

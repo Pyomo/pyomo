@@ -1,18 +1,21 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
 
-import logging
-from math import fabs, floor, log
-
-from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
-                        Objective, Reals, Suffix, Var, minimize, value)
+from pyomo.core import (Objective, Suffix)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory
-from pyomo.opt.results import ProblemSense
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 

@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Integers, Binary, NonNegativeReals
+from pyomo.kernel import block, variable, objective, constraint, parameter
+from pyomo.core import ConcreteModel, Param, Var, Objective, Constraint, Binary, NonNegativeReals
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -49,14 +49,14 @@ class MILP_simple(_BaseTestModel):
 class MILP_simple_kernel(MILP_simple):
 
     def _generate_model(self):
-        self.model = pmo.block()
+        self.model =  block()
         model = self.model
         model._name = self.description
 
-        model.a = pmo.parameter(value=1.0)
-        model.x = pmo.variable(domain=NonNegativeReals)
-        model.y = pmo.variable(domain=Binary)
+        model.a =  parameter(value=1.0)
+        model.x =  variable(domain=NonNegativeReals)
+        model.y =  variable(domain=Binary)
 
-        model.obj = pmo.objective(model.x + 3.0*model.y)
-        model.c1 = pmo.constraint(model.a <= model.y)
-        model.c2 = pmo.constraint((2.0, model.x/model.a - model.y, 10))
+        model.obj =  objective(model.x + 3.0*model.y)
+        model.c1 =  constraint(model.a <= model.y)
+        model.c2 =  constraint((2.0, model.x/model.a - model.y, 10))

@@ -12,16 +12,17 @@ from __future__ import division
 import math
 
 #
+# Common intrinsic functions
+#
+from pyomo.core.expr import expr_common as common
+
+#
 # Provide a global value that indicates which expression system is being used
 #
 class Mode(object):
     pyomo5_trees = (3,)
 _mode = Mode.pyomo5_trees
 
-#
-# Common intrinsic functions
-#
-from pyomo.core.expr import expr_common as common
 #
 # Pull symbols from the appropriate expression system
 #

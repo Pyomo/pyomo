@@ -14,7 +14,7 @@
 #
 
 from __future__ import division
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Param, Var, Objective, Constraint, Set, Expression, Suffix, value, exp
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.core import TransformationFactory
 from pyomo.dae.simulator import Simulator

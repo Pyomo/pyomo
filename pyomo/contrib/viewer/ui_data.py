@@ -18,7 +18,7 @@ __author__ = "John Eslick"
 import logging
 from pyomo.contrib.viewer.qt import *
 from pyomo.kernel import ComponentMap
-import pyomo.environ as pe
+from pyomo.environ import Constraint, value, Expression
 
 _log = logging.getLogger(__name__)
 
@@ -82,17 +82,17 @@ class UIDataNoUi(object):
         self.emit_update()
 
     def calculate_constraints(self):
-        for o in self.model.component_data_objects(pe.Constraint, active=True):
+        for o in self.model.component_data_objects( Constraint, active=True):
             try:
-                self.value_cache[o] = pe.value(o.body, exception=False)
+                self.value_cache[o] =  value(o.body, exception=False)
             except ZeroDivisionError:
                 self.value_cache[o] = "Divide_by_0"
         self.emit_exec_refresh()
 
     def calculate_expressions(self):
-        for o in self.model.component_data_objects(pe.Expression, active=True):
+        for o in self.model.component_data_objects(Expression, active=True):
             try:
-                self.value_cache[o] = pe.value(o, exception=False)
+                self.value_cache[o] =  value(o, exception=False)
             except ZeroDivisionError:
                 self.value_cache[o] = "Divide_by_0"
         self.emit_exec_refresh()

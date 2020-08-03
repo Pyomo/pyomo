@@ -14,8 +14,8 @@
 import pyutilib.th as unittest
 
 from pyomo.common.dependencies import numpy_available, networkx_available
-from pyomo.environ import *
-from pyomo.network import *
+from pyomo.environ import SolverFactory, value, ConcreteModel, Set, Block, Var, TransformationFactory, Reference
+from pyomo.network import Port, SequentialDecomposition, Arc
 from types import MethodType
 
 import_available = numpy_available and networkx_available

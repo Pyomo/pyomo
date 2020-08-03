@@ -17,15 +17,13 @@ import filecmp
 import shutil
 import subprocess
 import sys
-import pyutilib.subprocess
-import pyutilib.services
+from pyutilib.subprocess import run
 import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
                                   _kill)
-from pyomo.environ import *
 
 from six import StringIO
 
@@ -90,7 +88,7 @@ class TestConvertSMPSSimple(unittest.TestCase):
     def _run_bad_conversion_test(self, *args, **kwds):
         cmd, output_dir = self._get_cmd(*args, **kwds)
         outfile = output_dir+".out"
-        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
+        rc = run(cmd, outfile=outfile)
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
@@ -153,7 +151,7 @@ class TestConvertSMPSSimple(unittest.TestCase):
         cmd, output_dir = self._get_cmd(
             join(thisdir, "model_too_many_declarations.py"))
         outfile = output_dir+".out"
-        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
+        rc = run(cmd, outfile=outfile)
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
@@ -172,7 +170,7 @@ class TestConvertSMPSSimple(unittest.TestCase):
         cmd, output_dir = self._get_cmd(
             join(thisdir, "model_bad_component_type.py"))
         outfile = output_dir+".out"
-        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
+        rc = run(cmd, outfile=outfile)
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
@@ -188,7 +186,7 @@ class TestConvertSMPSSimple(unittest.TestCase):
         cmd, output_dir = self._get_cmd(
             join(thisdir, "model_unsupported_variable_bounds.py"))
         outfile = output_dir+".out"
-        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
+        rc = run(cmd, outfile=outfile)
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,

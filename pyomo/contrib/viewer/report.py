@@ -8,10 +8,9 @@
 #
 # This software is distributed under the 3-clause BSD License.
 ##############################################################################
-from pyomo.environ import *
+from pyomo.environ import Constraint, value
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.network.port import _PortData, SimplePort
 
 def value_no_exception(c, div0=None):
     """

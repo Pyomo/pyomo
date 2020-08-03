@@ -19,7 +19,7 @@ from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.opt import check_available_solvers
 import pyomo.scripting.pyomo_command as main
-from pyomo.core import *
+from pyomo.core import AbstractModel, ConcreteModel, Block, Set, Param, Var, Objective, Constraint, Reals, display
 
 from six import StringIO
 

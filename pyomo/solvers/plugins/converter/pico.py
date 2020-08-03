@@ -16,7 +16,7 @@ import pyutilib.common
 import pyutilib.subprocess
 import pyomo.common
 
-from pyomo.opt.base import *
+from pyomo.opt.base import ProblemFormat, ConverterError
 
 
 class PicoMIPConverter(object):

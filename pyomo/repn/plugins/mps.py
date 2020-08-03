@@ -13,10 +13,8 @@
 #
 
 import logging
-import math
-import operator
 
-from six import iteritems, iterkeys, StringIO
+from six import iteritems, StringIO
 from six.moves import xrange
 
 from pyutilib.misc import PauseGC

@@ -1,12 +1,20 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import logging
 import copy
 import math
 
-import pyomo.common.plugin
+from pyomo.common.plugin import implements, alias, SingletonPlugin
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import indexToString
-
-from pyomo.pysp.plugins.phboundextension import _PHBoundExtensionImpl
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -189,12 +197,12 @@ class _AdaptiveRhoBase(object):
     def post_ph_execution(self, ph):
         pass
 
-class admm(pyomo.common.plugin.SingletonPlugin,
+class admm(SingletonPlugin,
            _AdaptiveRhoBase):
 
-    pyomo.common.plugin.implements(phextension.IPHExtension)
+    implements(phextension.IPHExtension)
 
-    pyomo.common.plugin.alias("admm")
+    alias("admm")
 
     def __init__(self):
         _AdaptiveRhoBase.__init__(self)

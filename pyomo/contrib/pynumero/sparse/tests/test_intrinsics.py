@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import sys
+
 import pyutilib.th as unittest
 
 from pyomo.contrib.pynumero.dependencies import (
@@ -18,7 +18,7 @@ if not (numpy_available and scipy_available):
         "Pynumero needs scipy and numpy to run Sparse intrinsict tests")
 
 from pyomo.contrib.pynumero.sparse import BlockVector
-import pyomo.contrib.pynumero as pn
+from pyomo.contrib.pynumero import where, isin, intersect1d, setdiff1d
 
 
 class TestSparseIntrinsics(unittest.TestCase):
@@ -37,44 +37,44 @@ class TestSparseIntrinsics(unittest.TestCase):
 
         bv = self.bv
         condition = bv >= 4.5
-        res = pn.where(condition)[0]
+        res =  where(condition)[0]
         for bid, blk in enumerate(res):
-            self.assertTrue(np.allclose(blk, pn.where(bv.get_block(bid) >= 4.5)))
+            self.assertTrue(np.allclose(blk,  where(bv.get_block(bid) >= 4.5)))
 
         flat_condition = condition.flatten()
-        res = pn.where(condition, 2.0, 1.0)
-        res_flat = pn.where(flat_condition, 2.0, 1.0)
+        res =  where(condition, 2.0, 1.0)
+        res_flat =  where(flat_condition, 2.0, 1.0)
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
-        res = pn.where(condition, 2.0, np.ones(bv.size))
-        res_flat = pn.where(flat_condition, 2.0, np.ones(bv.size))
+        res =  where(condition, 2.0, np.ones(bv.size))
+        res_flat =  where(flat_condition, 2.0, np.ones(bv.size))
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
-        res = pn.where(condition, np.ones(bv.size) * 2.0, 1.0)
-        res_flat = pn.where(flat_condition, np.ones(bv.size) * 2.0, 1.0)
+        res =  where(condition, np.ones(bv.size) * 2.0, 1.0)
+        res_flat =  where(flat_condition, np.ones(bv.size) * 2.0, 1.0)
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
-        res = pn.where(condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
-        res_flat = pn.where(flat_condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
+        res =  where(condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
+        res_flat =  where(flat_condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
         bones = BlockVector(2)
         bones.set_blocks([np.ones(3), np.ones(4)])
 
-        res = pn.where(condition, bones * 2.0, 1.0)
-        res_flat = pn.where(flat_condition, np.ones(bv.size) * 2.0, 1.0)
+        res =  where(condition, bones * 2.0, 1.0)
+        res_flat =  where(flat_condition, np.ones(bv.size) * 2.0, 1.0)
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
-        res = pn.where(condition, 2.0, bones)
-        res_flat = pn.where(flat_condition, 2.0, bones)
+        res =  where(condition, 2.0, bones)
+        res_flat =  where(flat_condition, 2.0, bones)
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
-        res = pn.where(condition, np.ones(bv.size) * 2.0, bones)
-        res_flat = pn.where(flat_condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
+        res =  where(condition, np.ones(bv.size) * 2.0, bones)
+        res_flat =  where(flat_condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
-        res = pn.where(condition, bones * 2.0, np.ones(bv.size))
-        res_flat = pn.where(flat_condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
+        res =  where(condition, bones * 2.0, np.ones(bv.size))
+        res_flat =  where(flat_condition, np.ones(bv.size) * 2.0, np.ones(bv.size))
         self.assertTrue(np.allclose(res.flatten(), res_flat))
 
     def test_isin(self):
@@ -86,27 +86,27 @@ class TestSparseIntrinsics(unittest.TestCase):
         test_bv.set_block(0, a)
         test_bv.set_block(1, b)
 
-        res = pn.isin(bv, test_bv)
+        res =  isin(bv, test_bv)
         for bid, blk in enumerate(bv):
             self.assertEqual(blk.size, res.get_block(bid).size)
             res_flat = np.isin(blk, test_bv.get_block(bid))
             self.assertTrue(np.allclose(res.get_block(bid), res_flat))
 
         c = np.concatenate([a, b])
-        res = pn.isin(bv, c)
+        res =  isin(bv, c)
         for bid, blk in enumerate(bv):
             self.assertEqual(blk.size, res.get_block(bid).size)
             res_flat = np.isin(blk, c)
             self.assertTrue(np.allclose(res.get_block(bid), res_flat))
 
-        res = pn.isin(bv, test_bv, invert=True)
+        res =  isin(bv, test_bv, invert=True)
         for bid, blk in enumerate(bv):
             self.assertEqual(blk.size, res.get_block(bid).size)
             res_flat = np.isin(blk, test_bv.get_block(bid), invert=True)
             self.assertTrue(np.allclose(res.get_block(bid), res_flat))
 
         c = np.concatenate([a, b])
-        res = pn.isin(bv, c, invert=True)
+        res =  isin(bv, c, invert=True)
         for bid, blk in enumerate(bv):
             self.assertEqual(blk.size, res.get_block(bid).size)
             res_flat = np.isin(blk, c, invert=True)
@@ -120,16 +120,16 @@ class TestSparseIntrinsics(unittest.TestCase):
         vv2 = np.array([4.4, 7.7])
         bvv = BlockVector(2)
         bvv.set_blocks([vv1, vv2])
-        res = pn.intersect1d(self.bv, bvv)
+        res =  intersect1d(self.bv, bvv)
         self.assertIsInstance(res, BlockVector)
         self.assertTrue(np.allclose(res.get_block(0), vv1))
         self.assertTrue(np.allclose(res.get_block(1), vv2))
         vv3 = np.array([1.1, 7.7])
-        res = pn.intersect1d(self.bv, vv3)
+        res =  intersect1d(self.bv, vv3)
         self.assertIsInstance(res, BlockVector)
         self.assertTrue(np.allclose(res.get_block(0), np.array([1.1])))
         self.assertTrue(np.allclose(res.get_block(1), np.array([7.7])))
-        res = pn.intersect1d(vv3, self.bv)
+        res =  intersect1d(vv3, self.bv)
         self.assertIsInstance(res, BlockVector)
         self.assertTrue(np.allclose(res.get_block(0), np.array([1.1])))
         self.assertTrue(np.allclose(res.get_block(1), np.array([7.7])))
@@ -140,12 +140,12 @@ class TestSparseIntrinsics(unittest.TestCase):
         vv2 = np.array([4.4, 7.7])
         bvv = BlockVector(2)
         bvv.set_blocks([vv1, vv2])
-        res = pn.setdiff1d(self.bv, bvv)
+        res =  setdiff1d(self.bv, bvv)
         self.assertIsInstance(res, BlockVector)
         self.assertTrue(np.allclose(res.get_block(0), np.array([2.2])))
         self.assertTrue(np.allclose(res.get_block(1), np.array([5.5, 6.6])))
         vv3 = np.array([1.1, 7.7])
-        res = pn.setdiff1d(self.bv, vv3)
+        res =  setdiff1d(self.bv, vv3)
         self.assertIsInstance(res, BlockVector)
         self.assertTrue(np.allclose(res.get_block(0), np.array([2.2, 3.3])))
         self.assertTrue(np.allclose(res.get_block(1), np.array([4.4, 5.5, 6.6])))

@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Block, NonNegativeReals
+from pyomo.kernel import block, block_dict, variable, parameter, objective, constraint
+from pyomo.core import ConcreteModel, Param, Var, Objective, Constraint, Block, NonNegativeReals
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -52,20 +52,20 @@ class LP_block(_BaseTestModel):
 class LP_block_kernel(LP_block):
 
     def _generate_model(self):
-        self.model = pmo.block()
+        self.model =  block()
         model = self.model
         model._name = self.description
 
-        model.b = pmo.block()
-        model.B = pmo.block_dict((i, pmo.block())
+        model.b =  block()
+        model.B =  block_dict((i,  block())
                                  for i in range(1,4))
-        model.a = pmo.parameter(value=1.0)
-        model.b.x = pmo.variable(lb=0)
-        model.B[1].x = pmo.variable(lb=0)
+        model.a =  parameter(value=1.0)
+        model.b.x =  variable(lb=0)
+        model.B[1].x =  variable(lb=0)
 
-        model.obj = pmo.objective(expr=model.b.x + 3.0*model.B[1].x)
+        model.obj =  objective(expr=model.b.x + 3.0*model.B[1].x)
         model.obj.deactivate()
-        model.B[2].c = pmo.constraint(expr=-model.B[1].x <= -model.a)
-        model.B[2].obj = pmo.objective(expr=model.b.x + 3.0*model.B[1].x + 2)
-        model.B[3].c = pmo.constraint(expr=(2.0, model.b.x/model.a - model.B[1].x, 10))
+        model.B[2].c =  constraint(expr=-model.B[1].x <= -model.a)
+        model.B[2].obj =  objective(expr=model.b.x + 3.0*model.B[1].x + 2)
+        model.B[3].c =  constraint(expr=(2.0, model.b.x/model.a - model.B[1].x, 10))
 

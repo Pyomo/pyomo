@@ -14,7 +14,7 @@ Unit Tests for interfacing with sIPOPT
 
 import pyutilib.th as unittest
 
-from pyomo.environ import * 
+from pyomo.environ import ConcreteModel, Param, Var, Block,  Suffix, value
 from pyomo.opt import SolverFactory
 from pyomo.dae import ContinuousSet
 from pyomo.dae.simulator import scipy_available

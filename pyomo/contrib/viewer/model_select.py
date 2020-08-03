@@ -20,7 +20,7 @@ import os
 
 _log = logging.getLogger(__name__)
 
-import pyomo.environ as pyo
+from pyomo.environ import Block
 from pyomo.contrib.viewer.qt import *
 
 mypath = os.path.dirname(__file__)
@@ -54,7 +54,7 @@ class ModelSelect(_ModelSelect, _ModelSelectUI):
         s = __main__.__dict__
         keys = []
         for k in s:
-            if isinstance(s[k], pyo.Block):
+            if isinstance(s[k],  Block):
                 keys.append(k)
         self.tableWidget.clearContents()
         self.tableWidget.setRowCount(len(keys))

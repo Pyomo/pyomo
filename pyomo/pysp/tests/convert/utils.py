@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.core import *
 from pyomo.pysp.scenariotree.tree_structure_model import \
     ScenarioTreeModelFromNetworkX
@@ -53,7 +63,7 @@ def simple_threestage_scenario_tree():
     st_model.StageCost[second_stage] = 'StageCost[2]'
     st_model.StageVariables[second_stage].add('y')
     # Third Stage
-    st_model.StageCost[thrid_stage] = 'StageCost[3]'
+    st_model.StageCost[third_stage] = 'StageCost[3]'
     st_model.StageVariables[second_stage].add('z')
     return st_model
 

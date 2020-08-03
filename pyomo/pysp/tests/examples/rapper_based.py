@@ -9,19 +9,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
-import math
 import sys
 
 import pyutilib.th as unittest
 import tempfile
-import sys
 import os
 import shutil
-import json
-import pyomo.environ as pyo
+from pyomo.environ import TerminationCondition
 import pyomo.pysp.util.rapper as rapper
-from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 import pyomo as pyomoroot
 
 solvername = "ipopt" # could use almost any solver
@@ -70,7 +65,7 @@ class Example_via_rapper(unittest.TestCase):
                                       tree_model  = g)
         ef_sol = stsolver.solve_ef(solvername)
         assert(ef_sol.solver.termination_condition \
-               ==  pyo.TerminationCondition.optimal)
+               ==   TerminationCondition.optimal)
         obj = stsolver.root_E_obj()
         assert(abs(-108385 - obj) < 100) # any solver should get this close
 

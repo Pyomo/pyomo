@@ -12,9 +12,6 @@ from pyomo.core import (Var, Block, Constraint, Param, Set, SetOf, Suffix,
                         Expression, Objective, SortComponents, value,
                         ConstraintList)
 from pyomo.core.base import TransformationFactory, _VarData
-from pyomo.core.base.block import _BlockData
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base.constraint import _ConstraintData
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
@@ -26,7 +23,6 @@ from pyomo.opt import TerminationCondition
 import logging
 
 from six import iteritems
-import inspect
 
 logger = logging.getLogger('pyomo.contrib.fourier_motzkin_elimination')
 

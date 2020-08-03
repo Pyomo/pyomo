@@ -1,25 +1,35 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
-import pyomo.environ as pe
+from pyomo.environ import ConcreteModel, Var, Objective, Constraint, ComponentMap, SolverFactory, log
 
 
 def create_master():
-    m = pe.ConcreteModel()
-    m.y = pe.Var(bounds=(1, None))
-    m.eta = pe.Var(bounds=(-10, None))
-    m.obj = pe.Objective(expr=m.y**2 + m.eta)
+    m =  ConcreteModel()
+    m.y =  Var(bounds=(1, None))
+    m.eta =  Var(bounds=(-10, None))
+    m.obj =  Objective(expr=m.y**2 + m.eta)
     return m
 
 
 def create_subproblem(master):
-    m = pe.ConcreteModel()
-    m.x1 = pe.Var()
-    m.x2 = pe.Var()
-    m.y = pe.Var()
-    m.obj = pe.Objective(expr=-m.x2)
-    m.c1 = pe.Constraint(expr=(m.x1 - 1)**2 + m.x2**2 <= pe.log(m.y))
-    m.c2 = pe.Constraint(expr=(m.x1 + 1)**2 + m.x2**2 <= pe.log(m.y))
+    m =  ConcreteModel()
+    m.x1 =  Var()
+    m.x2 =  Var()
+    m.y =  Var()
+    m.obj =  Objective(expr=-m.x2)
+    m.c1 =  Constraint(expr=(m.x1 - 1)**2 + m.x2**2 <=  log(m.y))
+    m.c2 =  Constraint(expr=(m.x1 + 1)**2 + m.x2**2 <=  log(m.y))
 
-    complicating_vars_map = pe.ComponentMap()
+    complicating_vars_map =  ComponentMap()
     complicating_vars_map[master.y] = m.y
 
     return m, complicating_vars_map
@@ -34,7 +44,7 @@ def main():
                              subproblem_fn_kwargs={'master': m},
                              master_eta=m.eta,
                              subproblem_solver='ipopt', )
-    opt = pe.SolverFactory('gurobi_direct')
+    opt =  SolverFactory('gurobi_direct')
 
     for i in range(30):
         res = opt.solve(m, tee=False)

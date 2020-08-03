@@ -14,7 +14,6 @@ __all__ = ('OptSolver',
            'check_available_solvers')
 
 import re
-import os
 import sys
 import time
 import logging
@@ -96,7 +95,7 @@ class UnknownSolver(object):
         """Determine if this optimizer is available."""
         if exception_flag:
             from pyutilib.common import ApplicationError
-            raise pyutilib.common.ApplicationError("Solver (%s) not available" % str(self.name))
+            raise ApplicationError("Solver (%s) not available" % str(self.name))
         return False
 
     def warm_start_capable(self):

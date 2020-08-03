@@ -20,7 +20,7 @@ import weakref
 import textwrap
 
 from inspect import isclass
-from operator import itemgetter, attrgetter
+from operator import itemgetter
 from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
@@ -32,14 +32,14 @@ else:
 from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import *  # ModelComponentFactory
+from pyomo.core.base.plugin import ModelComponentFactory  # ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID
-from pyomo.core.base.set import Set, RangeSet, GlobalSetBase, _SetDataBase
+from pyomo.core.base.set import GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
-from pyomo.core.base.indexed_component import IndexedComponent, \
+from pyomo.core.base.indexed_component import \
     ActiveIndexedComponent, UnindexedComponent_set
 
 from pyomo.opt.base import ProblemFormat, guess_format

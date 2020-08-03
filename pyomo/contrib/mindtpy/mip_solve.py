@@ -1,28 +1,23 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Master problem functions."""
 from __future__ import division
 
 from pyomo.contrib.gdpopt.util import copy_var_list_values
-from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
+from pyomo.core import Constraint, Expression, Objective, minimize, value
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination, solve_NLP_feas)
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_int_cut)
-from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
-from math import copysign
-from pyomo.environ import *
-from pyomo.core import Constraint, minimize, value
-from pyomo.core.expr import current as EXPR
-from math import fabs
-
-from pyomo.repn import generate_standard_repn
-
 from pyomo.common.dependencies import attempt_import
 
 single_tree, single_tree_available = attempt_import(

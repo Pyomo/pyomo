@@ -26,7 +26,6 @@ except:
 
 import pyutilib.th as unittest
 from pyutilib.misc.comparison import open_possibly_compressed_file
-import pyutilib.services
 from pyomo.common.dependencies import yaml_available
 from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,

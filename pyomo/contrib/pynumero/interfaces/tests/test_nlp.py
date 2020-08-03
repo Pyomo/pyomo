@@ -21,22 +21,19 @@ if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run NLP tests")
 
-import pyomo.environ as pyo
-from pyomo.opt.base import WriterFactory
+from pyomo.environ import ConcreteModel, Suffix, Set, Var, Constraint, Objective, Reals
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP, AmplNLP
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import tempfile
-
-from scipy.sparse import coo_matrix
 
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix, \
     build_compression_mask_for_finite_values, full_to_compressed, compressed_to_full
 
 def create_pyomo_model1():
-    m = pyo.ConcreteModel()
-    m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+    m =  ConcreteModel()
+    m.dual =  Suffix(direction= Suffix.IMPORT_EXPORT)
 
-    m.S = pyo.Set(initialize=[i+1 for i in range(9)])
+    m.S =  Set(initialize=[i+1 for i in range(9)])
 
     xb = dict()
     xb[1] = (-1,1)
@@ -48,7 +45,7 @@ def create_pyomo_model1():
     xb[7] = (-7,np.inf)
     xb[8] = (-np.inf,np.inf)
     xb[9] = (-9,9)
-    m.x = pyo.Var(m.S, initialize=1.0, bounds=lambda m,i: xb[i])
+    m.x =  Var(m.S, initialize=1.0, bounds=lambda m,i: xb[i])
 
     cb = dict()
     cb[1] = (-1,1)
@@ -63,14 +60,14 @@ def create_pyomo_model1():
 
     def c_rule(m,i):
         return (cb[i][0], sum(i*j*m.x[j] for j in m.S), cb[i][1])
-    m.c = pyo.Constraint(m.S, rule=c_rule)
+    m.c =  Constraint(m.S, rule=c_rule)
     for i in m.S:
         m.dual.set_value(m.c[i], i)
 
-    m.obj = pyo.Objective(expr=sum(i*j*m.x[i]*m.x[j] for i in m.S for j in m.S))
+    m.obj =  Objective(expr=sum(i*j*m.x[i]*m.x[j] for i in m.S for j in m.S))
 
     # add scaling parameters for testing
-    m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+    m.scaling_factor = Suffix(direction=Suffix.EXPORT)
     m.scaling_factor[m.obj] = 5
     for i in m.S:
         m.scaling_factor[m.x[i]] = 2*float(i)
@@ -80,19 +77,19 @@ def create_pyomo_model1():
     return m
 
 def create_pyomo_model2():
-    m = pyo.ConcreteModel()
-    m.x = pyo.Var([1, 2, 3], domain=pyo.Reals)
+    m =  ConcreteModel()
+    m.x =  Var([1, 2, 3], domain= Reals)
     for i in range(1, 4):
         m.x[i].value = i
-    m.e1 = pyo.Constraint(expr=m.x[1] ** 2 - m.x[2] - 1 == 0)
-    m.e2 = pyo.Constraint(expr=m.x[1] - m.x[3] - 0.5 == 0)
-    m.i1 = pyo.Constraint(expr=m.x[1] + m.x[2] <= 100.0)
-    m.i2 = pyo.Constraint(expr=m.x[2] + m.x[3] >= -100.0)
-    m.i3 = pyo.Constraint(expr=m.x[2] + m.x[3] + m.x[1] >= -500.0)
+    m.e1 =  Constraint(expr=m.x[1] ** 2 - m.x[2] - 1 == 0)
+    m.e2 =  Constraint(expr=m.x[1] - m.x[3] - 0.5 == 0)
+    m.i1 =  Constraint(expr=m.x[1] + m.x[2] <= 100.0)
+    m.i2 =  Constraint(expr=m.x[2] + m.x[3] >= -100.0)
+    m.i3 =  Constraint(expr=m.x[2] + m.x[3] + m.x[1] >= -500.0)
     m.x[2].setlb(0.0)
     m.x[3].setlb(0.0)
     m.x[2].setub(100.0)
-    m.obj = pyo.Objective(expr=m.x[2]**2)
+    m.obj =  Objective(expr=m.x[2]**2)
     return m
 
 def execute_extended_nlp_interface(self, anlp):
@@ -575,9 +572,9 @@ class TestPyomoNLP(unittest.TestCase):
         self.assertTrue(np.array_equal(dense_hess, expected_hess))
 
     def test_no_objective(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var()
-        m.c = pyo.Constraint(expr=2.0*m.x>=5)
+        m =  ConcreteModel()
+        m.x =  Var()
+        m.c =  Constraint(expr=2.0*m.x>=5)
         with self.assertRaises(NotImplementedError):
             nlp = PyomoNLP(m)
 

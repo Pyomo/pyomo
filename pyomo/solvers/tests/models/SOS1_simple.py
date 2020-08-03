@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals, SOSConstraint, sum_product
+from pyomo.kernel import block, variable, objective, constraint, variable_dict, parameter, sos1
+from pyomo.core import ConcreteModel, Param, Var, Objective, Constraint, NonNegativeReals, SOSConstraint, sum_product
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -57,21 +57,21 @@ class SOS1_simple(_BaseTestModel):
 class SOS1_simple_kernel(SOS1_simple):
 
     def _generate_model(self):
-        self.model = pmo.block()
+        self.model =  block()
         model = self.model
         model._name = self.description
 
-        model.a = pmo.parameter(value=0.1)
-        model.x = pmo.variable(domain=NonNegativeReals)
-        model.y = pmo.variable_dict()
-        model.y[1] = pmo.variable(domain=NonNegativeReals)
-        model.y[2] = pmo.variable(domain=NonNegativeReals)
+        model.a =  parameter(value=0.1)
+        model.x =  variable(domain=NonNegativeReals)
+        model.y =  variable_dict()
+        model.y[1] =  variable(domain=NonNegativeReals)
+        model.y[2] =  variable(domain=NonNegativeReals)
 
-        model.obj = pmo.objective(model.x + model.y[1]+2*model.y[2])
-        model.c1 = pmo.constraint(model.a <= model.y[2])
-        model.c2 = pmo.constraint((2.0, model.x, 10.0))
-        model.c3 = pmo.sos1(model.y.values())
-        model.c4 = pmo.constraint(sum(model.y.values()) == 1)
+        model.obj =  objective(model.x + model.y[1]+2*model.y[2])
+        model.c1 =  constraint(model.a <= model.y[2])
+        model.c2 =  constraint((2.0, model.x, 10.0))
+        model.c3 =  sos1(model.y.values())
+        model.c4 =  constraint(sum(model.y.values()) == 1)
 
         # Make an empty SOS constraint
-        model.c5 = pmo.sos1([])
+        model.c5 =  sos1([])

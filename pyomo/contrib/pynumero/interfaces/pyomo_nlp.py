@@ -18,11 +18,10 @@ import six
 
 from scipy.sparse import coo_matrix
 
-import pyutilib
 import pyomo
-import pyomo.environ as aml
-from pyomo.common.env import CtypesEnviron
+from pyomo.environ import Objective, Suffix, CtypesEnviron
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
+from pyutilib.services import TempfileManager
 
 
 __all__ = ['PyomoNLP']
@@ -38,10 +37,10 @@ class PyomoNLP(AslNLP):
         pyomo_model: pyomo.environ.ConcreteModel
             Pyomo concrete model
         """
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
         try:
             # get the temp file names for the nl file
-            nl_file = pyutilib.services.TempfileManager.create_tempfile(suffix='pynumero.nl')
+            nl_file = TempfileManager.create_tempfile(suffix='pynumero.nl')
 
             # The current AmplInterface code only supports a single objective function
             # Therefore, we throw an error if there is not one (and only one) active
@@ -50,7 +49,7 @@ class PyomoNLP(AslNLP):
             # this objective later
             # TODO: extend the AmplInterface and the AslNLP to correctly handle this
             # This currently addresses issue #1217
-            objectives = list(pyomo_model.component_data_objects(ctype=aml.Objective, active=True, descend_into=True))
+            objectives = list(pyomo_model.component_data_objects(ctype=Objective, active=True, descend_into=True))
             if len(objectives) != 1:
                 raise NotImplementedError('The ASL interface and PyomoNLP in PyNumero currently only support single objective'
                                           ' problems. Deactivate any extra objectives you may have, or add a dummy objective'
@@ -87,7 +86,7 @@ class PyomoNLP(AslNLP):
 
         finally:
             # delete the nl file
-            pyutilib.services.TempfileManager.pop()
+            TempfileManager.pop()
 
     def pyomo_model(self):
         """
@@ -182,7 +181,7 @@ class PyomoNLP(AslNLP):
     def get_obj_scaling(self):
         obj = self.get_pyomo_objective()
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix and \
+        if scaling_suffix and scaling_suffix.ctype is Suffix and \
            obj in scaling_suffix:
             return scaling_suffix[obj]
         return None
@@ -190,7 +189,7 @@ class PyomoNLP(AslNLP):
     # overloaded from NLP
     def get_primals_scaling(self):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+        if scaling_suffix and scaling_suffix.ctype is Suffix:
             primals_scaling = np.ones(self.n_primals())
             for i,v in enumerate(self.get_pyomo_variables()):
                 if v in scaling_suffix:
@@ -201,7 +200,7 @@ class PyomoNLP(AslNLP):
     # overloaded from NLP
     def get_constraints_scaling(self):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+        if scaling_suffix and scaling_suffix.ctype is Suffix:
             constraints_scaling = np.ones(self.n_constraints())
             for i,c in enumerate(self.get_pyomo_constraints()):
                 if c in scaling_suffix:

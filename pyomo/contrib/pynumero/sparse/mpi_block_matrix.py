@@ -22,13 +22,11 @@ where m_{i,j} are sparse matrices
 """
 
 from .mpi_block_vector import MPIBlockVector
-from .mpi_block_vector import assert_block_structure as mpi_block_vector_assert_block_structure
 from .block_vector import BlockVector
 from .block_vector import assert_block_structure as block_vector_assert_block_structure
 from .block_matrix import BlockMatrix, NotFullyDefinedBlockMatrixError
 from .block_matrix import assert_block_structure as block_matrix_assert_block_structure
 from .base_block import BaseBlockMatrix
-from warnings import warn
 from mpi4py import MPI
 import numpy as np
 from scipy.sparse import coo_matrix

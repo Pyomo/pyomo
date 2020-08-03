@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.sympy_tools import sympy_available, sympyify_expression, sympy2pyomo_expression
-from pyomo.common.errors import NondifferentiableError
 
 # A "public" attribute indicating that differentiate() can be called
 # ... this provides a bit of future-proofing for alternative approaches

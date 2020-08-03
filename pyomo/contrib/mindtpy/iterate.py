@@ -1,12 +1,24 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Iteration loop for MindtPy."""
 from __future__ import division
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master,
-                                             handle_master_mip_optimal, handle_master_mip_other_conditions)
+                                             handle_master_mip_optimal,
+                                             handle_master_mip_other_conditions)
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
+                                             handle_NLP_subproblem_optimal,
+                                             handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
-from pyomo.core import minimize, Objective, Var
+from pyomo.core import Objective, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time
 

@@ -27,12 +27,10 @@ except ImportError:                         #pragma:nocover
 
 from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
-                        CounterLabeler,
-                        Objective, SOSConstraint, Set,
+                        Objective, SOSConstraint,
                         ComponentUID)
 from pyomo.core.base.suffix import ComponentMap
-from pyomo.core.base.block import (_BlockData,
-                                   generate_cuid_names)
+from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.repn import generate_standard_repn
 from pyomo.pysp.phutils import (BasicSymbolMap,
@@ -42,7 +40,6 @@ from pyomo.pysp.phutils import (BasicSymbolMap,
                                 extractComponentIndices,
                                 find_active_objective)
 
-import six
 from six import iterkeys, iteritems, itervalues
 from six.moves import xrange
 

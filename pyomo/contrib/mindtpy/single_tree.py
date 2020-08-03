@@ -1,19 +1,25 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from __future__ import division
 
 
-from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
+from pyomo.core import Constraint, Objective, minimize, value
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination, solve_NLP_feas)
+                                             solve_NLP_feas)
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
 from math import copysign
-from pyomo.environ import *
 from pyomo.core.expr import current as EXPR
 from math import fabs
 from pyomo.repn import generate_standard_repn
-import logging
-from pyomo.common.dependencies import attempt_import
 import cplex
 from cplex.callbacks import LazyConstraintCallback
 

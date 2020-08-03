@@ -1,7 +1,16 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyutilib.th as unittest
-import pyomo.environ as pe
+from pyomo.environ import ConcreteModel, Block, Var, Param, Set, Constraint, ConstraintList, Binary, Integers, value, inequality, sin, cos, tan, sqrt, exp, log, log10, acos, asin, atan
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
-from pyomo.contrib.fbbt import interval
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import ProductExpression, UnaryFunctionExpression
@@ -20,17 +29,17 @@ class TestFBBT(unittest.TestCase):
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
-                m = pe.Block(concrete=True)
-                m.x = pe.Var(bounds=(xl, xu))
-                m.y = pe.Var()
-                m.p = pe.Param(mutable=True)
+                m =  Block(concrete=True)
+                m.x =  Var(bounds=(xl, xu))
+                m.y =  Var()
+                m.p =  Param(mutable=True)
                 m.p.value = 1
-                m.c = pe.Constraint(expr=pe.inequality(body=m.x+m.y+(m.p+1), lower=cl, upper=cu))
+                m.c =  Constraint(expr= inequality(body=m.x+m.y+(m.p+1), lower=cl, upper=cu))
                 new_bounds = fbbt(m)
-                self.assertEqual(new_bounds[m.x], (pe.value(m.x.lb), pe.value(m.x.ub)))
-                self.assertEqual(new_bounds[m.y], (pe.value(m.y.lb), pe.value(m.y.ub)))
-                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
-                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+                self.assertEqual(new_bounds[m.x], ( value(m.x.lb),  value(m.x.ub)))
+                self.assertEqual(new_bounds[m.y], ( value(m.y.lb),  value(m.y.ub)))
+                x = np.linspace( value(m.x.lb),  value(m.x.ub), 100)
+                z = np.linspace( value(m.c.lower),  value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -50,13 +59,13 @@ class TestFBBT(unittest.TestCase):
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
-                m = pe.Block(concrete=True)
-                m.x = pe.Var(bounds=(xl, xu))
-                m.y = pe.Var()
-                m.c = pe.Constraint(expr=pe.inequality(body=m.x-m.y, lower=cl, upper=cu))
+                m =  Block(concrete=True)
+                m.x =  Var(bounds=(xl, xu))
+                m.y =  Var()
+                m.c =  Constraint(expr= inequality(body=m.x-m.y, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
-                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+                x = np.linspace( value(m.x.lb),  value(m.x.ub), 100)
+                z = np.linspace( value(m.c.lower),  value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -76,13 +85,13 @@ class TestFBBT(unittest.TestCase):
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
-                m = pe.Block(concrete=True)
-                m.x = pe.Var(bounds=(xl, xu))
-                m.y = pe.Var()
-                m.c = pe.Constraint(expr=pe.inequality(body=m.y-m.x, lower=cl, upper=cu))
+                m =  Block(concrete=True)
+                m.x =  Var(bounds=(xl, xu))
+                m.y =  Var()
+                m.c =  Constraint(expr= inequality(body=m.y-m.x, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
-                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+                x = np.linspace( value(m.x.lb),  value(m.x.ub), 100)
+                z = np.linspace( value(m.c.lower),  value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -102,13 +111,13 @@ class TestFBBT(unittest.TestCase):
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
-                m = pe.Block(concrete=True)
-                m.x = pe.Var(bounds=(xl, xu))
-                m.y = pe.Var()
-                m.c = pe.Constraint(expr=pe.inequality(body=m.x*m.y, lower=cl, upper=cu))
+                m =  Block(concrete=True)
+                m.x =  Var(bounds=(xl, xu))
+                m.y =  Var()
+                m.c =  Constraint(expr= inequality(body=m.x*m.y, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(pe.value(m.x.lb) + 1e-6, pe.value(m.x.ub), 100, endpoint=False)
-                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+                x = np.linspace( value(m.x.lb) + 1e-6,  value(m.x.ub), 100, endpoint=False)
+                z = np.linspace( value(m.c.lower),  value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -128,13 +137,13 @@ class TestFBBT(unittest.TestCase):
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
-                m = pe.Block(concrete=True)
-                m.x = pe.Var(bounds=(xl, xu))
-                m.y = pe.Var()
-                m.c = pe.Constraint(expr=pe.inequality(body=m.x/m.y, lower=cl, upper=cu))
+                m =  Block(concrete=True)
+                m.x =  Var(bounds=(xl, xu))
+                m.y =  Var()
+                m.c =  Constraint(expr= inequality(body=m.x/m.y, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
-                z = np.linspace(pe.value(m.c.lower) + 1e-6, pe.value(m.c.upper), 100, endpoint=False)
+                x = np.linspace( value(m.x.lb),  value(m.x.ub), 100)
+                z = np.linspace( value(m.c.lower) + 1e-6,  value(m.c.upper), 100, endpoint=False)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -154,13 +163,13 @@ class TestFBBT(unittest.TestCase):
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
-                m = pe.Block(concrete=True)
-                m.x = pe.Var(bounds=(xl, xu))
-                m.y = pe.Var()
-                m.c = pe.Constraint(expr=pe.inequality(body=m.y/m.x, lower=cl, upper=cu))
+                m =  Block(concrete=True)
+                m.x =  Var(bounds=(xl, xu))
+                m.y =  Var()
+                m.c =  Constraint(expr= inequality(body=m.y/m.x, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(pe.value(m.x.lb), pe.value(m.x.ub), 100)
-                z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+                x = np.linspace( value(m.x.lb),  value(m.x.ub), 100)
+                z = np.linspace( value(m.c.lower),  value(m.c.upper), 100)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -180,17 +189,17 @@ class TestFBBT(unittest.TestCase):
         c_bounds = [(-2.5, 2.8), (0.5, 2.8), (-2.5, 0), (0, 2.8), (1, 2.8), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
-                m = pe.Block(concrete=True)
-                m.x = pe.Var(bounds=(xl, xu))
-                m.y = pe.Var()
-                m.c = pe.Constraint(expr=pe.inequality(body=m.x**m.y, lower=cl, upper=cu))
+                m =  Block(concrete=True)
+                m.x =  Var(bounds=(xl, xu))
+                m.y =  Var()
+                m.c =  Constraint(expr= inequality(body=m.x**m.y, lower=cl, upper=cu))
                 if xl > 0 and cu <= 0:
                     with self.assertRaises(InfeasibleConstraintException):
                         fbbt(m)
                 else:
                     fbbt(m)
-                    x = np.linspace(pe.value(m.x.lb) + 1e-6, pe.value(m.x.ub), 100, endpoint=False)
-                    z = np.linspace(pe.value(m.c.lower) + 1e-6, pe.value(m.c.upper), 100, endpoint=False)
+                    x = np.linspace( value(m.x.lb) + 1e-6,  value(m.x.ub), 100, endpoint=False)
+                    z = np.linspace( value(m.c.lower) + 1e-6,  value(m.c.upper), 100, endpoint=False)
                     if m.y.lb is None:
                         yl = -np.inf
                     else:
@@ -210,13 +219,13 @@ class TestFBBT(unittest.TestCase):
         c_bounds = [(-2.5, 2.8), (0.5, 2.8), (0, 2.8), (1, 2.8), (0.5, 1)]
         for xl, xu in x_bounds:
             for cl, cu in c_bounds:
-                m = pe.Block(concrete=True)
-                m.x = pe.Var(bounds=(xl, xu))
-                m.y = pe.Var()
-                m.c = pe.Constraint(expr=pe.inequality(body=m.y**m.x, lower=cl, upper=cu))
+                m =  Block(concrete=True)
+                m.x =  Var(bounds=(xl, xu))
+                m.y =  Var()
+                m.c =  Constraint(expr= inequality(body=m.y**m.x, lower=cl, upper=cu))
                 fbbt(m)
-                x = np.linspace(pe.value(m.x.lb) + 1e-6, pe.value(m.x.ub), 100, endpoint=False)
-                z = np.linspace(pe.value(m.c.lower) + 1e-6, pe.value(m.c.upper), 100, endpoint=False)
+                x = np.linspace( value(m.x.lb) + 1e-6,  value(m.x.ub), 100, endpoint=False)
+                z = np.linspace( value(m.c.lower) + 1e-6,  value(m.c.upper), 100, endpoint=False)
                 if m.y.lb is None:
                     yl = -np.inf
                 else:
@@ -231,10 +240,10 @@ class TestFBBT(unittest.TestCase):
                     self.assertTrue(np.all(yu >= _y))
 
     def test_x_sq(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c = pe.Constraint(expr=m.x**2 == m.y)
+        m =  ConcreteModel()
+        m.x =  Var()
+        m.y =  Var()
+        m.c =  Constraint(expr=m.x**2 == m.y)
 
         fbbt(m)
         self.assertEqual(m.x.lb, None)
@@ -284,20 +293,20 @@ class TestFBBT(unittest.TestCase):
         self.assertEqual(m.x.ub, 0)
 
     def test_pow5(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var(bounds=(0.5, 1))
-        m.c = pe.Constraint(expr=2**m.x == m.y)
+        m =  ConcreteModel()
+        m.x =  Var()
+        m.y =  Var(bounds=(0.5, 1))
+        m.c =  Constraint(expr=2**m.x == m.y)
 
         fbbt(m)
         self.assertAlmostEqual(m.x.lb, -1)
         self.assertAlmostEqual(m.x.ub, 0)
 
     def test_x_pow_minus_2(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c = pe.Constraint(expr=m.x**(-2) == m.y)
+        m =  ConcreteModel()
+        m.x =  Var()
+        m.y =  Var()
+        m.c =  Constraint(expr=m.x**(-2) == m.y)
 
         fbbt(m)
         self.assertEqual(m.x.lb, None)
@@ -336,10 +345,10 @@ class TestFBBT(unittest.TestCase):
         self.assertAlmostEqual(m.x.ub, -1)
 
     def test_x_cubed(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c = pe.Constraint(expr=m.x**3 == m.y)
+        m =  ConcreteModel()
+        m.x =  Var()
+        m.y =  Var()
+        m.c =  Constraint(expr=m.x**3 == m.y)
 
         fbbt(m)
         self.assertEqual(m.x.lb, None)
@@ -380,10 +389,10 @@ class TestFBBT(unittest.TestCase):
         self.assertAlmostEqual(m.x.ub, -1)
 
     def test_x_pow_minus_3(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c = pe.Constraint(expr=m.x**(-3) == m.y)
+        m =  ConcreteModel()
+        m.x =  Var()
+        m.y =  Var()
+        m.c =  Constraint(expr=m.x**(-3) == m.y)
 
         fbbt(m)
         self.assertEqual(m.x.lb, None)
@@ -424,12 +433,12 @@ class TestFBBT(unittest.TestCase):
         exp_vals = [-3, -2.5, -2, -1.5, -1, -0.5, 0.5, 1, 1.5, 2, 2.5, 3]
         for yl, yu in y_bounds:
             for _exp_val in exp_vals:
-                m = pe.Block(concrete=True)
-                m.x = pe.Var()
-                m.y = pe.Var(bounds=(yl, yu))
-                m.c = pe.Constraint(expr=m.x**_exp_val == m.y)
+                m =  Block(concrete=True)
+                m.x =  Var()
+                m.y =  Var(bounds=(yl, yu))
+                m.c =  Constraint(expr=m.x**_exp_val == m.y)
                 fbbt(m)
-                y = np.linspace(pe.value(m.y.lb) + 1e-6, pe.value(m.y.ub), 100, endpoint=True)
+                y = np.linspace( value(m.y.lb) + 1e-6,  value(m.y.ub), 100, endpoint=True)
                 if m.x.lb is None:
                     xl = -np.inf
                 else:
@@ -443,10 +452,10 @@ class TestFBBT(unittest.TestCase):
                 self.assertTrue(np.all(xu >= _x))
 
     def test_sqrt(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c = pe.Constraint(expr=pe.sqrt(m.x) == m.y)
+        m =  ConcreteModel()
+        m.x =  Var()
+        m.y =  Var()
+        m.c =  Constraint(expr= sqrt(m.x) == m.y)
 
         fbbt(m)
         self.assertEqual(m.x.lb, 0)
@@ -489,23 +498,23 @@ class TestFBBT(unittest.TestCase):
     def test_exp(self):
         c_bounds = [(-2.5, 2.8), (0.5, 2.8), (0, 2.8), (1, 2.8), (0.5, 1)]
         for cl, cu in c_bounds:
-            m = pe.Block(concrete=True)
-            m.x = pe.Var()
-            m.c = pe.Constraint(expr=pe.inequality(body=pe.exp(m.x), lower=cl, upper=cu))
+            m =  Block(concrete=True)
+            m.x =  Var()
+            m.c =  Constraint(expr= inequality(body= exp(m.x), lower=cl, upper=cu))
             fbbt(m)
-            if pe.value(m.c.lower) <= 0:
+            if  value(m.c.lower) <= 0:
                 _cl = 1e-6
             else:
-                _cl = pe.value(m.c.lower)
-            z = np.linspace(_cl, pe.value(m.c.upper), 100)
+                _cl =  value(m.c.lower)
+            z = np.linspace(_cl,  value(m.c.upper), 100)
             if m.x.lb is None:
                 xl = -np.inf
             else:
-                xl = pe.value(m.x.lb)
+                xl =  value(m.x.lb)
             if m.x.ub is None:
                 xu = np.inf
             else:
-                xu = pe.value(m.x.ub)
+                xu =  value(m.x.ub)
             x = np.log(z)
             self.assertTrue(np.all(xl <= x))
             self.assertTrue(np.all(xu >= x))
@@ -514,19 +523,19 @@ class TestFBBT(unittest.TestCase):
     def test_log(self):
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for cl, cu in c_bounds:
-            m = pe.Block(concrete=True)
-            m.x = pe.Var()
-            m.c = pe.Constraint(expr=pe.inequality(body=pe.log(m.x), lower=cl, upper=cu))
+            m =  Block(concrete=True)
+            m.x =  Var()
+            m.c =  Constraint(expr= inequality(body= log(m.x), lower=cl, upper=cu))
             fbbt(m)
-            z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+            z = np.linspace( value(m.c.lower),  value(m.c.upper), 100)
             if m.x.lb is None:
                 xl = -np.inf
             else:
-                xl = pe.value(m.x.lb)
+                xl =  value(m.x.lb)
             if m.x.ub is None:
                 xu = np.inf
             else:
-                xu = pe.value(m.x.ub)
+                xu =  value(m.x.ub)
             x = np.exp(z)
             self.assertTrue(np.all(xl <= x))
             self.assertTrue(np.all(xu >= x))
@@ -535,19 +544,19 @@ class TestFBBT(unittest.TestCase):
     def test_log10(self):
         c_bounds = [(-2.5, 2.8), (-2.5, -0.5), (0.5, 2.8), (-2.5, 0), (0, 2.8), (-2.5, -1), (1, 2.8), (-1, -0.5), (0.5, 1)]
         for cl, cu in c_bounds:
-            m = pe.Block(concrete=True)
-            m.x = pe.Var()
-            m.c = pe.Constraint(expr=pe.inequality(body=pe.log10(m.x), lower=cl, upper=cu))
+            m =  Block(concrete=True)
+            m.x =  Var()
+            m.c =  Constraint(expr= inequality(body= log10(m.x), lower=cl, upper=cu))
             fbbt(m)
-            z = np.linspace(pe.value(m.c.lower), pe.value(m.c.upper), 100)
+            z = np.linspace( value(m.c.lower),  value(m.c.upper), 100)
             if m.x.lb is None:
                 xl = -np.inf
             else:
-                xl = pe.value(m.x.lb)
+                xl =  value(m.x.lb)
             if m.x.ub is None:
                 xu = np.inf
             else:
-                xu = pe.value(m.x.ub)
+                xu =  value(m.x.ub)
             x = 10**z
             print(xl, xu, cl, cu)
             print(x)
@@ -555,149 +564,149 @@ class TestFBBT(unittest.TestCase):
             self.assertTrue(np.all(xu >= x))
 
     def test_sin(self):
-        m = pe.Block(concrete=True)
-        m.x = pe.Var(bounds=(-math.pi/2, math.pi/2))
-        m.c = pe.Constraint(expr=pe.inequality(body=pe.sin(m.x), lower=-0.5, upper=0.5))
+        m =  Block(concrete=True)
+        m.x =  Var(bounds=(-math.pi/2, math.pi/2))
+        m.c =  Constraint(expr= inequality(body= sin(m.x), lower=-0.5, upper=0.5))
         fbbt(m.c)
-        self.assertAlmostEqual(pe.value(m.x.lb), math.asin(-0.5))
-        self.assertAlmostEqual(pe.value(m.x.ub), math.asin(0.5))
+        self.assertAlmostEqual( value(m.x.lb), math.asin(-0.5))
+        self.assertAlmostEqual( value(m.x.ub), math.asin(0.5))
 
-        m = pe.Block(concrete=True)
-        m.x = pe.Var()
-        m.c = pe.Constraint(expr=pe.inequality(body=pe.sin(m.x), lower=-0.5, upper=0.5))
+        m =  Block(concrete=True)
+        m.x =  Var()
+        m.c =  Constraint(expr= inequality(body= sin(m.x), lower=-0.5, upper=0.5))
         fbbt(m.c)
         self.assertEqual(m.x.lb, None)
         self.assertEqual(m.x.ub, None)
 
     def test_cos(self):
-        m = pe.Block(concrete=True)
-        m.x = pe.Var(bounds=(0, math.pi))
-        m.c = pe.Constraint(expr=pe.inequality(body=pe.cos(m.x), lower=-0.5, upper=0.5))
+        m =  Block(concrete=True)
+        m.x =  Var(bounds=(0, math.pi))
+        m.c =  Constraint(expr= inequality(body= cos(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
-        self.assertAlmostEqual(pe.value(m.x.lb), math.acos(0.5))
-        self.assertAlmostEqual(pe.value(m.x.ub), math.acos(-0.5))
+        self.assertAlmostEqual( value(m.x.lb), math.acos(0.5))
+        self.assertAlmostEqual( value(m.x.ub), math.acos(-0.5))
 
-        m = pe.Block(concrete=True)
-        m.x = pe.Var()
-        m.c = pe.Constraint(expr=pe.inequality(body=pe.cos(m.x), lower=-0.5, upper=0.5))
+        m =  Block(concrete=True)
+        m.x =  Var()
+        m.c =  Constraint(expr= inequality(body= cos(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
         self.assertEqual(m.x.lb, None)
         self.assertEqual(m.x.ub, None)
 
     def test_tan(self):
-        m = pe.Block(concrete=True)
-        m.x = pe.Var(bounds=(-math.pi/2, math.pi/2))
-        m.c = pe.Constraint(expr=pe.inequality(body=pe.tan(m.x), lower=-0.5, upper=0.5))
+        m =  Block(concrete=True)
+        m.x =  Var(bounds=(-math.pi/2, math.pi/2))
+        m.c =  Constraint(expr= inequality(body= tan(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
-        self.assertAlmostEqual(pe.value(m.x.lb), math.atan(-0.5))
-        self.assertAlmostEqual(pe.value(m.x.ub), math.atan(0.5))
+        self.assertAlmostEqual( value(m.x.lb), math.atan(-0.5))
+        self.assertAlmostEqual( value(m.x.ub), math.atan(0.5))
 
-        m = pe.Block(concrete=True)
-        m.x = pe.Var()
-        m.c = pe.Constraint(expr=pe.inequality(body=pe.tan(m.x), lower=-0.5, upper=0.5))
+        m =  Block(concrete=True)
+        m.x =  Var()
+        m.c =  Constraint(expr= inequality(body= tan(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
         self.assertEqual(m.x.lb, None)
         self.assertEqual(m.x.ub, None)
 
     def test_asin(self):
-        m = pe.Block(concrete=True)
-        m.x = pe.Var()
-        m.c = pe.Constraint(expr=pe.inequality(body=pe.asin(m.x), lower=-0.5, upper=0.5))
+        m =  Block(concrete=True)
+        m.x =  Var()
+        m.c =  Constraint(expr= inequality(body= asin(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
-        self.assertAlmostEqual(pe.value(m.x.lb), math.sin(-0.5))
-        self.assertAlmostEqual(pe.value(m.x.ub), math.sin(0.5))
+        self.assertAlmostEqual( value(m.x.lb), math.sin(-0.5))
+        self.assertAlmostEqual( value(m.x.ub), math.sin(0.5))
 
     def test_acos(self):
-        m = pe.Block(concrete=True)
-        m.x = pe.Var()
-        m.c = pe.Constraint(expr=pe.inequality(body=pe.acos(m.x), lower=1, upper=2))
+        m =  Block(concrete=True)
+        m.x =  Var()
+        m.c =  Constraint(expr= inequality(body= acos(m.x), lower=1, upper=2))
         fbbt(m)
-        self.assertAlmostEqual(pe.value(m.x.lb), math.cos(2))
-        self.assertAlmostEqual(pe.value(m.x.ub), math.cos(1))
+        self.assertAlmostEqual( value(m.x.lb), math.cos(2))
+        self.assertAlmostEqual( value(m.x.ub), math.cos(1))
 
     def test_atan(self):
-        m = pe.Block(concrete=True)
-        m.x = pe.Var()
-        m.c = pe.Constraint(expr=pe.inequality(body=pe.atan(m.x), lower=-0.5, upper=0.5))
+        m =  Block(concrete=True)
+        m.x =  Var()
+        m.c =  Constraint(expr= inequality(body= atan(m.x), lower=-0.5, upper=0.5))
         fbbt(m)
-        self.assertAlmostEqual(pe.value(m.x.lb), math.tan(-0.5))
-        self.assertAlmostEqual(pe.value(m.x.ub), math.tan(0.5))
+        self.assertAlmostEqual( value(m.x.lb), math.tan(-0.5))
+        self.assertAlmostEqual( value(m.x.ub), math.tan(0.5))
 
     def test_multiple_constraints(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-3, 3))
-        m.y = pe.Var(bounds=(0, None))
-        m.z = pe.Var()
-        m.c = pe.ConstraintList()
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(-3, 3))
+        m.y =  Var(bounds=(0, None))
+        m.z =  Var()
+        m.c =  ConstraintList()
         m.c.add(m.x + m.y >= -1)
         m.c.add(m.x + m.y <= -1)
         m.c.add(m.y - m.x*m.z <= 2)
         m.c.add(m.y - m.x*m.z >= -2)
         m.c.add(m.x + m.z == 1)
         fbbt(m)
-        self.assertAlmostEqual(pe.value(m.x.lb), -1, 8)
-        self.assertAlmostEqual(pe.value(m.x.ub), -1, 8)
-        self.assertAlmostEqual(pe.value(m.y.lb), 0, 8)
-        self.assertAlmostEqual(pe.value(m.y.ub), 0, 8)
-        self.assertAlmostEqual(pe.value(m.z.lb), 2, 8)
-        self.assertAlmostEqual(pe.value(m.z.ub), 2, 8)
+        self.assertAlmostEqual( value(m.x.lb), -1, 8)
+        self.assertAlmostEqual( value(m.x.ub), -1, 8)
+        self.assertAlmostEqual( value(m.y.lb), 0, 8)
+        self.assertAlmostEqual( value(m.y.ub), 0, 8)
+        self.assertAlmostEqual( value(m.z.lb), 2, 8)
+        self.assertAlmostEqual( value(m.z.ub), 2, 8)
 
     def test_multiple_constraints2(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-3, 3))
-        m.y = pe.Var(bounds=(None, 0))
-        m.z = pe.Var()
-        m.c = pe.ConstraintList()
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(-3, 3))
+        m.y =  Var(bounds=(None, 0))
+        m.z =  Var()
+        m.c =  ConstraintList()
         m.c.add(-m.x - m.y >= -1)
         m.c.add(-m.x - m.y <= -1)
         m.c.add(-m.y - m.x*m.z >= -2)
         m.c.add(-m.y - m.x*m.z <= 2)
         m.c.add(-m.x - m.z == 1)
         fbbt(m)
-        self.assertAlmostEqual(pe.value(m.x.lb), 1, 8)
-        self.assertAlmostEqual(pe.value(m.x.ub), 1, 8)
-        self.assertAlmostEqual(pe.value(m.y.lb), 0, 8)
-        self.assertAlmostEqual(pe.value(m.y.ub), 0, 8)
-        self.assertAlmostEqual(pe.value(m.z.lb), -2, 8)
-        self.assertAlmostEqual(pe.value(m.z.ub), -2, 8)
+        self.assertAlmostEqual( value(m.x.lb), 1, 8)
+        self.assertAlmostEqual( value(m.x.ub), 1, 8)
+        self.assertAlmostEqual( value(m.y.lb), 0, 8)
+        self.assertAlmostEqual( value(m.y.ub), 0, 8)
+        self.assertAlmostEqual( value(m.z.lb), -2, 8)
+        self.assertAlmostEqual( value(m.z.ub), -2, 8)
 
     def test_binary(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(domain=pe.Binary)
-        m.y = pe.Var(domain=pe.Binary)
-        m.c = pe.Constraint(expr=m.x + m.y >= 1.5)
+        m =  ConcreteModel()
+        m.x =  Var(domain= Binary)
+        m.y =  Var(domain= Binary)
+        m.c =  Constraint(expr=m.x + m.y >= 1.5)
         fbbt(m)
-        self.assertEqual(pe.value(m.x.lb), 1)
-        self.assertEqual(pe.value(m.x.ub), 1)
-        self.assertEqual(pe.value(m.y.lb), 1)
-        self.assertEqual(pe.value(m.y.ub), 1)
+        self.assertEqual( value(m.x.lb), 1)
+        self.assertEqual( value(m.x.ub), 1)
+        self.assertEqual( value(m.y.lb), 1)
+        self.assertEqual( value(m.y.ub), 1)
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var(domain=pe.Binary)
-        m.y = pe.Var(domain=pe.Binary)
-        m.c = pe.Constraint(expr=m.x + m.y <= 0.5)
+        m =  ConcreteModel()
+        m.x =  Var(domain= Binary)
+        m.y =  Var(domain= Binary)
+        m.c =  Constraint(expr=m.x + m.y <= 0.5)
         fbbt(m)
-        self.assertEqual(pe.value(m.x.lb), 0)
-        self.assertEqual(pe.value(m.x.ub), 0)
-        self.assertEqual(pe.value(m.y.lb), 0)
-        self.assertEqual(pe.value(m.y.ub), 0)
+        self.assertEqual( value(m.x.lb), 0)
+        self.assertEqual( value(m.x.ub), 0)
+        self.assertEqual( value(m.y.lb), 0)
+        self.assertEqual( value(m.y.ub), 0)
 
     def test_always_feasible(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(1,2))
-        m.y = pe.Var(bounds=(1,2))
-        m.c = pe.Constraint(expr=m.x + m.y >= 0)
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(1,2))
+        m.y =  Var(bounds=(1,2))
+        m.c =  Constraint(expr=m.x + m.y >= 0)
         fbbt(m)
         self.assertTrue(m.c.active)
         fbbt(m, deactivate_satisfied_constraints=True)
         self.assertFalse(m.c.active)
 
     def test_iteration_limit(self):
-        m = pe.ConcreteModel()
-        m.x_set = pe.Set(initialize=[0, 1, 2], ordered=True)
-        m.c_set = pe.Set(initialize=[0, 1], ordered=True)
-        m.x = pe.Var(m.x_set)
-        m.c = pe.Constraint(m.c_set)
+        m =  ConcreteModel()
+        m.x_set =  Set(initialize=[0, 1, 2], ordered=True)
+        m.c_set =  Set(initialize=[0, 1], ordered=True)
+        m.x =  Var(m.x_set)
+        m.c =  Constraint(m.c_set)
         m.c[0] = m.x[0] == m.x[1]
         m.c[1] = m.x[1] == m.x[2]
         m.x[2].setlb(-1)
@@ -709,9 +718,9 @@ class TestFBBT(unittest.TestCase):
         self.assertEqual(m.x[0].ub, None)
 
     def test_inf_bounds_on_expr(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1, 1))
-        m.y = pe.Var()
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(-1, 1))
+        m.y =  Var()
         lb, ub = compute_bounds_on_expr(m.x + m.y)
         self.assertEqual(lb, None)
         self.assertEqual(ub, None)
@@ -719,11 +728,11 @@ class TestFBBT(unittest.TestCase):
     @unittest.skip('This test passes locally, but not on travis or appveyor. I will add an issue.')
     def test_skip_unknown_expression1(self):
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(1,1))
-        m.y = pe.Var()
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(1,1))
+        m.y =  Var()
         expr = DummyExpr([m.x, m.y])
-        m.c = pe.Constraint(expr=expr == 1)
+        m.c =  Constraint(expr=expr == 1)
         logging_io = io.StringIO()
         handler = logging.StreamHandler(stream=logging_io)
         handler.setLevel(logging.WARNING)
@@ -731,10 +740,10 @@ class TestFBBT(unittest.TestCase):
         logger.addHandler(handler)
         new_bounds = fbbt(m)
         handler.flush()
-        self.assertEqual(pe.value(m.x.lb), 1)
-        self.assertEqual(pe.value(m.x.ub), 1)
-        self.assertEqual(pe.value(m.y.lb), None)
-        self.assertEqual(pe.value(m.y.ub), None)
+        self.assertEqual( value(m.x.lb), 1)
+        self.assertEqual( value(m.x.ub), 1)
+        self.assertEqual( value(m.y.lb), None)
+        self.assertEqual( value(m.y.ub), None)
         a = "Unsupported expression type for FBBT"
         b = logging_io.getvalue()
         a = a.strip()
@@ -747,10 +756,10 @@ class TestFBBT(unittest.TestCase):
         def dummy_unary_expr(x):
             return 0.5*x
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(0,4))
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(0,4))
         expr = UnaryFunctionExpression((m.x,), name='dummy_unary_expr', fcn=dummy_unary_expr)
-        m.c = pe.Constraint(expr=expr == 1)
+        m.c =  Constraint(expr=expr == 1)
         logging_io = io.StringIO()
         handler = logging.StreamHandler(stream=logging_io)
         handler.setLevel(logging.WARNING)
@@ -758,8 +767,8 @@ class TestFBBT(unittest.TestCase):
         logger.addHandler(handler)
         new_bounds = fbbt(m)
         handler.flush()
-        self.assertEqual(pe.value(m.x.lb), 0)
-        self.assertEqual(pe.value(m.x.ub), 4)
+        self.assertEqual( value(m.x.lb), 0)
+        self.assertEqual( value(m.x.ub), 4)
         a = "Unsupported expression type for FBBT"
         b = logging_io.getvalue()
         a = a.strip()
@@ -768,19 +777,19 @@ class TestFBBT(unittest.TestCase):
         logger.removeHandler(handler)
 
     def test_compute_expr_bounds(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1,1))
-        m.y = pe.Var(bounds=(-1,1))
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(-1,1))
+        m.y =  Var(bounds=(-1,1))
         e = m.x + m.y
         lb, ub = compute_bounds_on_expr(e)
         self.assertAlmostEqual(lb, -2, 14)
         self.assertAlmostEqual(ub, 2, 14)
 
     def test_encountered_bugs1(self):
-        m = pe.Block(concrete=True)
-        m.x = pe.Var(bounds=(-0.035, -0.035))
-        m.y = pe.Var(bounds=(-0.023, -0.023))
-        m.c = pe.Constraint(expr=m.x**2 + m.y**2 <= 0.0256)
+        m =  Block(concrete=True)
+        m.x =  Var(bounds=(-0.035, -0.035))
+        m.y =  Var(bounds=(-0.023, -0.023))
+        m.c =  Constraint(expr=m.x**2 + m.y**2 <= 0.0256)
         fbbt(m.c)
         self.assertEqual(m.x.lb, -0.035)
         self.assertEqual(m.x.ub, -0.035)
@@ -788,10 +797,10 @@ class TestFBBT(unittest.TestCase):
         self.assertEqual(m.y.ub, -0.023)
 
     def test_encountered_bugs2(self):
-        m = pe.Block(concrete=True)
-        m.x = pe.Var(within=pe.Integers)
-        m.y = pe.Var(within=pe.Integers)
-        m.c = pe.Constraint(expr=m.x + m.y == 1)
+        m =  Block(concrete=True)
+        m.x =  Var(within= Integers)
+        m.y =  Var(within= Integers)
+        m.c =  Constraint(expr=m.x + m.y == 1)
         fbbt(m.c)
         self.assertEqual(m.x.lb, None)
         self.assertEqual(m.x.ub, None)
@@ -804,11 +813,11 @@ class TestFBBT(unittest.TestCase):
         yl = 0.03369608678342047
         yu = 0.04009243987444148
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(xl, xu))
-        m.y = pe.Var(bounds=(yl, yu))
+        m =  ConcreteModel()
+        m.x =  Var(bounds=(xl, xu))
+        m.y =  Var(bounds=(yl, yu))
 
-        m.c = pe.Constraint(expr=m.x == pe.sin(m.y))
+        m.c =  Constraint(expr=m.x ==  sin(m.y))
 
         fbbt(m.c)
 

@@ -15,8 +15,6 @@ import os
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
-
 try:
     import pyodbc
     pyodbc_available = True

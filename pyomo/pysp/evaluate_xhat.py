@@ -8,13 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
 import time
 import copy
 
 from pyomo.common import pyomo_command
 from pyomo.common.dependencies import yaml
-from pyomo.core import minimize
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option,
@@ -150,8 +148,6 @@ def run_evaluate_xhat_register_options(options=None):
 def run_evaluate_xhat(options,
                       solution_loaders=(),
                       solution_savers=()):
-
-    import pyomo.environ
 
     start_time = time.time()
 

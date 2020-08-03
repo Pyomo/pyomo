@@ -1,13 +1,17 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pickle
 
 import pyutilib.th as unittest
-import pyomo.kernel as pmo
-from pyomo.core.tests.unit.kernel.test_dict_container import \
-    _TestActiveDictContainerBase
-from pyomo.core.tests.unit.kernel.test_tuple_container import \
-    _TestActiveTupleContainerBase
-from pyomo.core.tests.unit.kernel.test_list_container import \
-    _TestActiveListContainerBase
+from pyomo.kernel import pprint, preorder_traversal
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      ICategorizedObjectContainer)
@@ -16,7 +20,6 @@ from pyomo.core.kernel.homogeneous_container import \
 from pyomo.core.kernel.tuple_container import TupleContainer
 from pyomo.core.kernel.constraint import (IConstraint,
                                           constraint,
-                                          linear_constraint,
                                           constraint_dict,
                                           constraint_tuple,
                                           constraint_list)
@@ -26,12 +29,9 @@ from pyomo.core.kernel.matrix_constraint import \
 from pyomo.core.kernel.variable import (variable,
                                         variable_list)
 from pyomo.core.kernel.parameter import parameter
-from pyomo.core.kernel.expression import (expression,
-                                          data_expression)
+from pyomo.core.kernel.expression import expression
 from pyomo.core.kernel.block import (block,
                                      block_list)
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet)
 
 try:
     import numpy
@@ -59,7 +59,6 @@ def _create_variable_list(size, **kwds):
 class Test_matrix_constraint(unittest.TestCase):
 
     def test_pprint(self):
-        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
@@ -70,16 +69,16 @@ class Test_matrix_constraint(unittest.TestCase):
                                    lb=1,
                                    ub=2,
                                    x=vlist)
-        pmo.pprint(ctuple)
+        pprint(ctuple)
         b = block()
         b.c = ctuple
-        pmo.pprint(ctuple)
-        pmo.pprint(b)
+        pprint(ctuple)
+        pprint(b)
         m = block()
         m.b = b
-        pmo.pprint(ctuple)
-        pmo.pprint(b)
-        pmo.pprint(m)
+        pprint(ctuple)
+        pprint(b)
+        pprint(m)
 
     def test_ctype(self):
         ctuple = matrix_constraint(numpy.random.rand(3,3))
@@ -1199,7 +1198,7 @@ class Test_matrix_constraint(unittest.TestCase):
                 return False
             return True
         cnt = 0
-        for obj in pmo.preorder_traversal(m,
+        for obj in preorder_traversal(m,
                                           ctype=IConstraint,
                                           descend=no_mc_descend):
             self.assertTrue(type(obj.parent) is not matrix_constraint)
@@ -1210,7 +1209,7 @@ class Test_matrix_constraint(unittest.TestCase):
 
         cnt = 0
         mc_child_cnt = 0
-        for obj in pmo.preorder_traversal(m, ctype=IConstraint):
+        for obj in preorder_traversal(m, ctype=IConstraint):
             self.assertTrue((obj.ctype is block._ctype) or \
                             (obj.ctype is constraint._ctype))
             if type(obj.parent) is matrix_constraint:

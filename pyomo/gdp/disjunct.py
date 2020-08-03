@@ -24,7 +24,7 @@ from pyomo.core import (
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
-from pyomo.core.base.numvalue import native_types
+from pyomo.core.base.numvalue import native_types, value
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent

@@ -46,7 +46,6 @@ from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option,
-                                    safe_register_unique_option,
                                     safe_declare_common_option,
                                     safe_declare_unique_option,
                                     _domain_percent,

@@ -1,4 +1,14 @@
-import pyomo.environ as pyo
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+from pyomo.environ import Suffix, SolverFactory, value
 from pyomo.opt import check_optimal_termination
 from pyomo.common.dependencies import attempt_import
 from .interface import InteriorPointInterface
@@ -44,18 +54,18 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     # so the reduced hessian kkt system is setup correctly from
     # the ipopt solution
     if not hasattr(m, 'ipopt_zL_out'):
-        m.ipopt_zL_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
     if not hasattr(m, 'ipopt_zU_out'):
-        m.ipopt_zU_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+        m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
     if not hasattr(m, 'ipopt_zL_in'):
-        m.ipopt_zL_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.ipopt_zL_in = Suffix(direction=Suffix.EXPORT)
     if not hasattr(m, 'ipopt_zU_in'):
-        m.ipopt_zU_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.ipopt_zU_in = Suffix(direction=Suffix.EXPORT)
     if not hasattr(m, 'dual'):
-        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+        m.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
 
     # create the ipopt solver
-    solver = pyo.SolverFactory('ipopt')
+    solver = SolverFactory('ipopt')
     
     # copy additional solver options
     if solver_options is not None:
@@ -76,10 +86,10 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     estimated_mu = list()
     for v in m.ipopt_zL_out:
         if v.has_lb():
-            estimated_mu.append((pyo.value(v) - v.lb)*m.ipopt_zL_out[v])
+            estimated_mu.append((value(v) - v.lb)*m.ipopt_zL_out[v])
     for v in m.ipopt_zU_out:
         if v.has_ub():
-            estimated_mu.append((v.ub - pyo.value(v))*m.ipopt_zU_out[v])
+            estimated_mu.append((v.ub - value(v))*m.ipopt_zU_out[v])
     if len(estimated_mu) == 0:
         mu = 10**-8.6
     else:
@@ -100,8 +110,8 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
 
     # check that none of the independent variables are at their bounds
     for v in ind_vardatas:
-        if (v.has_lb() and pyo.value(v) - v.lb <= bound_tolerance) or \
-           (v.has_ub() and v.ub - pyo.value(b) <= bound_tolerance):
+        if (v.has_lb() and value(v) - v.lb <= bound_tolerance) or \
+           (v.has_ub() and v.ub - value(v) <= bound_tolerance):
                 raise ValueError("Independent variable: {} has a solution value that is near"
                                  " its bound (according to tolerance). The reduced hessian"
                                  " computation does not support this at this time. All"

@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals
+from pyomo.kernel import block, variable, objective, constraint
+from pyomo.core import ConcreteModel, Var, Objective, Constraint
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
@@ -56,11 +56,11 @@ class LP_infeasible1(_BaseTestModel):
 class LP_infeasible1_kernel(LP_infeasible1):
 
     def _generate_model(self):
-        self.model = pmo.block()
+        self.model =  block()
         model = self.model
         model._name = self.description
 
-        model.x = pmo.variable(lb=1)
-        model.y = pmo.variable(lb=1)
-        model.o = pmo.objective(model.x+model.y)
-        model.c = pmo.constraint(model.x+model.y <= 0)
+        model.x =  variable(lb=1)
+        model.y =  variable(lb=1)
+        model.o =  objective(model.x+model.y)
+        model.c =  constraint(model.x+model.y <= 0)

@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Solution of NLP subproblems."""
 from __future__ import division
 
@@ -5,7 +15,7 @@ from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_int_cut)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values
-from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
+from pyomo.core import (Constraint, Objective, TransformationFactory,
                         minimize, value)
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt import TerminationCondition as tc

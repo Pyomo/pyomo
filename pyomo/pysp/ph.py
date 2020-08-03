@@ -10,12 +10,10 @@
 
 import gc
 import logging
-import pickle
 import sys
 import time
 import inspect
 import uuid
-from operator import itemgetter
 from math import fabs, sqrt
 
 try:
@@ -26,15 +24,13 @@ except ImportError:
 
 import pyutilib.common
 
-from pyomo.core import *
+from pyomo.core import Var, Set, BooleanSet, IntegerSet, Suffix, value, minimize, maximize
 from pyomo.opt import (UndefinedData,
-                       ProblemFormat,
                        undefined,
                        SolverFactory,
                        SolverStatus,
                        TerminationCondition,
-                       SolutionStatus,
-                       SolverStatus)
+                       SolutionStatus)
 
 import pyomo.pysp.convergence
 from pyomo.pysp.phboundbase import (_PHBoundBase,

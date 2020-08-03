@@ -7,13 +7,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from pyomo.common.fileutils import find_library
 import numpy.ctypeslib as npct
 import numpy as np
-import platform
 import ctypes
-import sys
-import os
+from os import name
+from os.path import exists
 
 class _NotSet:
     pass
@@ -28,14 +28,14 @@ class AmplInterface(object):
             cls.libname = find_library('pynumero_ASL')
         if cls.libname is None:
             return False
-        return os.path.exists(cls.libname)
+        return exists(cls.libname)
 
     def __init__(self, filename=None, nl_buffer=None):
 
         if not AmplInterface.available():
             raise RuntimeError(
                 "ASL interface is not supported on this platform (%s)"
-                % (os.name,) )
+                % (name,) )
 
         if nl_buffer is not None:
             raise NotImplementedError("AmplInterface only supported form NL-file for now")
@@ -201,7 +201,7 @@ class AmplInterface(object):
             self._obj = self.ASLib.EXTERNAL_AmplInterface_new_file(b_data)
         elif nl_buffer is not None:
             b_data = nl_buffer.encode('utf-8')
-            if os.name in ['nt', 'dos']:
+            if name in ['nt', 'dos']:
                 self._obj = self.ASLib.EXTERNAL_AmplInterface_new_file(b_data)
             else:
                 self._obj = self.ASLib.EXTERNAL_AmplInterface_new_str(b_data)
