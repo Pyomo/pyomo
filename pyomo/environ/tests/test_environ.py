@@ -117,13 +117,22 @@ class TestPyomoEnviron(unittest.TestCase):
         # value (at time of writing, TPL imports were 52-57% of the
         # import time on a development machine)
         self.assertLess(tpl_time / total, 0.65)
-        # Spot-check the (known) worst offenders
-        ref = {'six'}
+        # Spot-check the (known) worst offenders.  The following are
+        # modules from the "standard" library.  Their order in the list
+        # of slow-loading TPLs can vary from platform to platform.
+        ref = {'tempfile', 'logging', 'ctypes', 'ssl', 'argparse',
+               'textwrap', 'inspect', 'xml', 'platform'}
+        # Non-standard-library TPLs that Pyomo will load unconditionally
+        #ref.add('six')
+        ref.add('ply')
         if numpy_available:
             ref.add('numpy')
         if pyro4_available:
             ref.add('Pyro4')
-        self.assertEqual(ref, set(_[0] for _ in tpl_by_time[-len(ref):]))
+        diff = set(_[0] for _ in tpl_by_time[-4:]).difference(ref)
+        self.assertEqual(
+            diff, set(),
+            "Unexpected module found in 4 slowest-loading modules")
 
 
 if __name__ == "__main__":
