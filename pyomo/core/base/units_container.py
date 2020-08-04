@@ -791,7 +791,6 @@ class UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         for (arg_unit, unit_tuple) in zip(arg_units, list_of_unit_tuples):
             pyomo_arg_unit, pint_arg_unit = self._pyomo_units_container._get_units_tuple(arg_unit)
             pint_child_unit = unit_tuple[1]
-            print(pint_arg_unit, pint_child_unit)
             if not self._pint_units_equivalent(pint_arg_unit, pint_child_unit):
                 raise InconsistentUnitsError(arg_unit, unit_tuple[0], 'Inconsistent units found in ExternalFunction.')
 
