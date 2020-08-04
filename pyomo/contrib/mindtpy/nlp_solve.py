@@ -335,8 +335,9 @@ def solve_NLP_feas(solve_data, config):
         duals[i] = c_geq * max(
             0, c_geq * (rhs - value(c.body)))
 
-    if value(MindtPy.MindtPy_feas_obj.expr) == 0:
-        raise ValueError(
-            "Feasibility NLP problem is not feasible, check NLP solver output")
+    if value(MindtPy.MindtPy_feas_obj.expr) <= config.zero_tolerance:
+        config.logger.warning("The objective value %.4E of feasibility problem is less than zero_tolerance. "
+                              "This indicates that the nlp subproblem is feasible, although it is found infeasible in the previous step. "
+                              "Check the nlp solver output" % value(MindtPy.MindtPy_feas_obj.expr))
 
     return feas_nlp, feas_soln

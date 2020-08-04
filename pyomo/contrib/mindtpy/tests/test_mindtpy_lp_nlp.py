@@ -131,7 +131,7 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True
                                 )
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.maxIterations)
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample(self):

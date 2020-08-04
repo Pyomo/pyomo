@@ -104,7 +104,10 @@ def init_rNLP(solve_data, config):
         results = SolverFactory(config.nlp_solver).solve(
             m, **config.nlp_solver_args)
     subprob_terminate_cond = results.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
+    if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
+        if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
+            config.logger.info(
+                'relaxed NLP is not solved to optimality.')
         main_objective = next(m.component_data_objects(Objective, active=True))
         nlp_solution_values = list(v.value for v in MindtPy.variable_list)
         dual_values = list(

@@ -108,8 +108,10 @@ def solve_OA_master(solve_data, config):
         solve_data.mip, **mip_args)  # , tee=True)
     # print(master_mip_results)
 
+    # if config.single_tree is False and config.add_nogood_cuts is False:
+
     if master_mip_results.solver.termination_condition is tc.optimal:
-        if config.single_tree:
+        if config.single_tree and config.add_nogood_cuts is False:
             if main_objective.sense == minimize:
                 solve_data.LB = max(
                     master_mip_results.problem.lower_bound, solve_data.LB)
@@ -250,6 +252,7 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
         config.logger.warning(
             'MindtPy initialization may have generated poor '
             'quality cuts.')
+    # TODO nogood cuts for single tree case
     # set optimistic bound to infinity
     main_objective = next(
         master_mip.component_data_objects(Objective, active=True))
@@ -259,10 +262,11 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
         solve_data.UB_progress.append(solve_data.UB)
     config.logger.info(
         'MindtPy exiting due to MILP master problem infeasibility.')
-    if solve_data.mip_iter == 0:
-        solve_data.results.solver.termination_condition = tc.infeasible
-    else:
-        solve_data.results.solver.termination_condition = tc.feasible
+    if solve_data.results.solver.termination_condition is None:
+        if solve_data.mip_iter == 0:
+            solve_data.results.solver.termination_condition = tc.infeasible
+        else:
+            solve_data.results.solver.termination_condition = tc.feasible
 
 
 def handle_master_mip_max_timelimit(master_mip, solve_data, config):

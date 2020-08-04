@@ -180,6 +180,8 @@ class MindtPySolver(object):
             solve_data.UB = float('inf')
             solve_data.LB_progress = [solve_data.LB]
             solve_data.UB_progress = [solve_data.UB]
+            if config.single_tree and config.add_nogood_cuts:
+                solve_data.stored_bound = {}
 
             # Set of NLP iterations for which cuts were generated
             lin.nlp_iters = Set(dimen=1)
