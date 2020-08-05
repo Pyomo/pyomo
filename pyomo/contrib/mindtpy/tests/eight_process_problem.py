@@ -32,7 +32,7 @@ from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
 class EightProcessFlowsheet(ConcreteModel):
     """Flowsheet for the 8 process problem."""
 
-    def __init__(self, convex=True, *args, **kwargs):
+    def __init__(self, *args, **kwargs, convex=True):
         """Create the flowsheet."""
         kwargs.setdefault('name', 'DuranEx3')
         super(EightProcessFlowsheet, self).__init__(*args, **kwargs)
