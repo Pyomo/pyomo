@@ -404,12 +404,13 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         self.handle_lazy_master_mip_feasible_sol(
             master_mip, solve_data, config, opt)
 
-        # if solve_data.LB + config.bound_tolerance >= solve_data.UB:
-        #     config.logger.info(
-        #         'MindtPy exiting on bound convergence. '
-        #         'LB: {} + (tol {}) >= UB: {}\n'.format(
-        #             solve_data.LB, config.bound_tolerance, solve_data.UB))
-        #     solve_data.results.solver.termination_condition = tc.optimal
+        if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+            config.logger.info(
+                'MindtPy exiting on bound convergence. '
+                'LB: {} + (tol {}) >= UB: {}\n'.format(
+                    solve_data.LB, config.bound_tolerance, solve_data.UB))
+            solve_data.results.solver.termination_condition = tc.optimal
+            return
         # else:
         # solve subproblem
         # Solve NLP subproblem
@@ -421,13 +422,13 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
             self.handle_lazy_NLP_subproblem_optimal(
                 fixed_nlp, solve_data, config, opt)
-            # if solve_data.LB + config.bound_tolerance >= solve_data.UB:
-            #     config.logger.info(
-            #         'MindtPy exiting on bound convergence. '
-            #         'LB: {} + (tol {}) >= UB: {}\n'.format(
-            #             solve_data.LB, config.bound_tolerance, solve_data.UB))
-            #     solve_data.results.solver.termination_condition = tc.optimal
-            #     return
+            if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+                config.logger.info(
+                    'MindtPy exiting on bound convergence. '
+                    'LB: {} + (tol {}) >= UB: {}\n'.format(
+                        solve_data.LB, config.bound_tolerance, solve_data.UB))
+                solve_data.results.solver.termination_condition = tc.optimal
+                return
         elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
             self.handle_lazy_NLP_subproblem_infeasible(
                 fixed_nlp, solve_data, config, opt)
