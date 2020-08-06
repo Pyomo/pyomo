@@ -1,6 +1,9 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts,
+                                                  add_int_cut)
+
 from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master,
                                              handle_master_mip_optimal, handle_master_mip_other_conditions)
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
@@ -36,12 +39,9 @@ def MindtPy_iteration_loop(solve_data, config):
             '---MindtPy Master Iteration %s---'
             % solve_data.mip_iter)
 
-        if algorithm_should_terminate(solve_data, config, check_cycling=False):
-            break
-
         solve_data.mip_subiter = 0
         # solve MILP master problem
-        if config.strategy == 'OA':
+        if config.strategy == 'OA' or config.strategy == 'ECP':
             master_mip, master_mip_results = solve_OA_master(
                 solve_data, config)
             if master_mip_results.solver.termination_condition is tc.optimal:
@@ -57,7 +57,7 @@ def MindtPy_iteration_loop(solve_data, config):
         if algorithm_should_terminate(solve_data, config, check_cycling=True):
             break
 
-        if config.single_tree is False:  # if we don't use lazy callback, i.e. LP_NLP
+        if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
             fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
@@ -71,6 +71,12 @@ def MindtPy_iteration_loop(solve_data, config):
                                                         solve_data, config)
             # Call the NLP post-solve callback
             config.call_after_subproblem_solve(fixed_nlp, solve_data)
+
+        if algorithm_should_terminate(solve_data, config, check_cycling=False):
+            break
+
+        if config.strategy == 'ECP':
+            add_ecp_cuts(solve_data.mip, solve_data, config)
 
         # if config.strategy == 'PSC':
         #     # If the hybrid algorithm is not making progress, switch to OA.
@@ -110,7 +116,7 @@ def MindtPy_iteration_loop(solve_data, config):
     # if add_integer_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
     if config.add_integer_cuts:
-        config.zero_tolerance = 1E-4
+        config.bound_tolerance = 1E-4
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
@@ -125,17 +131,27 @@ def MindtPy_iteration_loop(solve_data, config):
 
         MindtPy = solve_data.mip.MindtPy_utils
         MindtPy.MindtPy_linear_cuts.integer_cuts.deactivate()
-        MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
+        if config.strategy == 'OA':
+            MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
+        # elif config.strategy == 'ECP':
+        #     MindtPy.MindtPy_linear_cuts.ecp_cuts.activate()
+
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.
         if isinstance(masteropt, PersistentSolver):
             masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
         mip_args = dict(config.mip_solver_args)
+
+        # setting up special options for GAMS subsolvers
         if config.mip_solver == 'gams':
             mip_args['add_options'] = mip_args.get('add_options', [])
             mip_args['add_options'].append('option optcr=0.0;')
+
+        # Solve MILP problem
         master_mip_results = masteropt.solve(
             solve_data.mip, **mip_args)
+
+        # Update lower and upper bounds
         if main_objective.sense == minimize:
             solve_data.LB = master_mip_results.problem.lower_bound
             solve_data.LB_progress.append(solve_data.LB)
@@ -145,6 +161,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
 
 def algorithm_should_terminate(solve_data, config, check_cycling):
+
     """
     Checks if the algorithm should terminate at the given point
 
@@ -166,6 +183,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     boolean
         True if the algorithm should terminate else returns False
     """
+
     # Check bound convergence
     if solve_data.LB + config.bound_tolerance >= solve_data.UB:
         config.logger.info(
@@ -199,8 +217,72 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
         return True
 
+    # Check if algorithm is stalling
+    if len(solve_data.LB_progress) >= config.stalling_limit:
+        if abs(solve_data.LB_progress[-1] - solve_data.LB_progress[-config.stalling_limit]) <= config.zero_tolerance:
+            config.logger.info(
+                'Algorithm is not making enough progress. '
+                'Exiting iteration loop.')
+            config.logger.info(
+                'Final bound values: LB: {}  UB: {}'.
+                format(solve_data.LB, solve_data.UB))
+            if solve_data.best_solution_found is not None:
+                solve_data.results.solver.termination_condition = tc.feasible
+            else:
+                solve_data.best_solution_found = solve_data.working_model.clone()
+                config.logger.warning(
+                    'Algorithm did not find a feasible solution. '
+                    'Returning best bound solution. Consider increasing stalling_limit or bound_tolerance.')
+                solve_data.results.solver.termination_condition = tc.noSolution
+
+            return True
+
+    if config.strategy == 'ECP':
+        # check to see if the nonlinear constraints are satisfied
+        MindtPy = solve_data.working_model.MindtPy_utils
+        nonlinear_constraints = [c for c in MindtPy.constraint_list if
+                                 c.body.polynomial_degree() not in (1, 0)]
+        for nlc in nonlinear_constraints:
+            if nlc.has_lb():
+                try:
+                    lower_slack = nlc.lslack()
+                except (ValueError, OverflowError):
+                    lower_slack = -10
+                    # Use not fixed numbers in this case. Try some factor of ecp_tolerance
+                if lower_slack < -config.ecp_tolerance:
+                    config.logger.info(
+                        'MindtPy-ECP continuing as {} has not met the '
+                        'nonlinear constraints satisfaction.'
+                        '\n'.format(
+                            nlc))
+                    return False
+            if nlc.has_ub():
+                try:
+                    upper_slack = nlc.uslack()
+                except (ValueError, OverflowError):
+                    upper_slack = -10
+                if upper_slack < -config.ecp_tolerance:
+                    config.logger.info(
+                        'MindtPy-ECP continuing as {} has not met the '
+                        'nonlinear constraints satisfaction.'
+                        '\n'.format(
+                            nlc))
+                    return False
+        # For ECP to know whether to know which bound to copy over (primal or dual)
+        if solve_data.objective_sense == 1:
+            solve_data.UB = solve_data.LB
+        else:
+            solve_data.LB = solve_data.UB
+        config.logger.info(
+            'MindtPy-ECP exiting on nonlinear constraints satisfaction. '
+            'LB: {} UB: {}\n'.format(
+                solve_data.LB, solve_data.UB))
+
+        solve_data.best_solution_found = solve_data.working_model.clone()
+        solve_data.results.solver.termination_condition = tc.optimal
+        return True
     # Cycling check
-    if config.cycling_check == True and solve_data.mip_iter >= 1 and check_cycling:
+    if config.cycling_check is True and solve_data.mip_iter >= 1 and check_cycling:
         temp = []
         for var in solve_data.mip.component_data_objects(ctype=Var):
             if var.is_integer():

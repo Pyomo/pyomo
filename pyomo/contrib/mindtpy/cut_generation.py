@@ -90,7 +90,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 
         else:  # Inequality constraint (possibly two-sided)
             if constr.has_ub() \
-                and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
+                and (linearize_active and abs(constr.uslack()) < config.bound_tolerance) \
                     or (linearize_violated and constr.uslack() < 0) \
                     or (config.linearize_inactive and constr.uslack() > 0):
                 if config.add_slack:
@@ -104,7 +104,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                 )
 
             if constr.has_lb() \
-                and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
+                and (linearize_active and abs(constr.lslack()) < config.bound_tolerance) \
                     or (linearize_violated and constr.lslack() < 0) \
                     or (config.linearize_inactive and constr.lslack() > 0):
                 if config.add_slack:
@@ -115,6 +115,90 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                               for var in constr_vars) + value(constr.body)
                           + (slack_var if config.add_slack else 0)
                           >= constr.lower)
+                )
+
+def add_ecp_cuts(target_model, solve_data, config,
+                linearize_active=True,
+                linearize_violated=True):
+    """
+    Linearizes nonlinear constraints. Adds the cuts for the ECP method.
+
+    For nonconvex problems, turn on 'config.add_slack'. Slack variables will
+    always be used for nonlinear equality constraints.
+
+    Parameters
+    ----------
+    target_model:
+        this is the MIP/MILP model for the OA algorithm; we want to add the OA cuts to 'target_model'
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    linearize_active: bool, optional
+        this parameter acts as a Boolean flag that signals whether the linearized constraint is active
+    linearize_violated: bool, optional
+        this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
+        linearized constraint has been violated
+    """
+    for constr in target_model.MindtPy_utils.constraint_list:
+
+        if constr.body.polynomial_degree() in (0, 1):
+            continue
+
+        constr_vars = list(identify_variables(constr.body))
+        jacs = solve_data.jacobians
+
+        if constr.has_lb() and constr.has_ub():
+            config.logger.warning(
+                'constraint {} has both a lower '
+                'and upper bound.'
+                '\n'.format(
+                    constr))
+            continue
+        if constr.has_ub():
+            try:
+                upper_slack = constr.uslack()
+            except (ValueError, OverflowError):
+                config.logger.warning(
+                    'constraint {} has caused either a '
+                    'ValueError or OverflowError.'
+                    '\n'.format(
+                        constr))
+                continue
+            if (linearize_active and abs(upper_slack) < config.ecp_tolerance) \
+                or (linearize_violated and upper_slack < 0) \
+                or (config.linearize_inactive and upper_slack > 0):
+                if config.add_slack:
+                    slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+
+                target_model.MindtPy_utils.MindtPy_linear_cuts.ecp_cuts.add(
+                    expr=(sum(value(jacs[constr][var])*(var - var.value)
+                              for var in constr_vars)
+                          - (slack_var if config.add_slack else 0)
+                          <= upper_slack)
+                )
+
+        if constr.has_lb():
+            try:
+                lower_slack = constr.lslack()
+            except (ValueError, OverflowError):
+                config.logger.warning(
+                    'constraint {} has caused either a '
+                    'ValueError or OverflowError.'
+                    '\n'.format(
+                        constr))
+                continue
+            if (linearize_active and abs(lower_slack) < config.ecp_tolerance) \
+                or (linearize_violated and lower_slack < 0) \
+                or (config.linearize_inactive and lower_slack > 0):
+                if config.add_slack:
+                    slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+
+                target_model.MindtPy_utils.MindtPy_linear_cuts.ecp_cuts.add(
+                    expr=(sum(value(jacs[constr][var])*(var - var.value)
+                              for var in constr_vars)
+                          + (slack_var if config.add_slack else 0)
+                          >= -lower_slack)
                 )
 
 # def add_oa_equality_relaxation(var_values, duals, solve_data, config, ignore_integrality=False):

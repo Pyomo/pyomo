@@ -56,16 +56,22 @@ class MindtPySolver(object):
 
     CONFIG = ConfigBlock("MindtPy")
     CONFIG.declare("bound_tolerance", ConfigValue(
-        default=1E-5,
+        default=1E-6,
         domain=PositiveFloat,
         description="Bound tolerance",
         doc="Relative tolerance for bound feasibility checks."
     ))
     CONFIG.declare("iteration_limit", ConfigValue(
-        default=30,
+        default=50,
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods."
+    ))
+    CONFIG.declare("stalling_limit", ConfigValue(
+        default=15,
+        domain=PositiveInt,
+        description="Stalling limit",
+        doc="Stalling limit for progress in the decomposition methods."
     ))
     CONFIG.declare("time_limit", ConfigValue(
         default=600,
@@ -85,7 +91,7 @@ class MindtPySolver(object):
             "Benders Decomposition (GBD)."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
-        default="rNLP",
+        default=None,
         domain=In(["rNLP", "initial_binary", "max_binary"]),
         description="Initialization strategy",
         doc="Initialization strategy used by any method. Currently the "
@@ -108,7 +114,7 @@ class MindtPySolver(object):
             "slack variables corresponding to all the constraints get "
             "multiplied by this number and added to the objective."
     ))
-    CONFIG.declare("ECP_tolerance", ConfigValue(
+    CONFIG.declare("ecp_tolerance", ConfigValue(
         default=1E-4,
         domain=PositiveFloat,
         description="ECP tolerance",
@@ -300,6 +306,10 @@ class MindtPySolver(object):
         if config.max_slack == 0.0:
             config.add_slack = False
 
+        # if ecp tolerance is not provided use bound tolerance
+        if config.ecp_tolerance is None:
+            config.ecp_tolerance = config.bound_tolerance
+
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()
@@ -320,6 +330,8 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
+
+            # Process objective in case that it is nonlinear move it to constraints
             process_objective(solve_data, config, use_mcpp=False)
 
             # Save model initial values.
