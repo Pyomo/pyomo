@@ -1642,7 +1642,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             return self._pint_dimensionless
 
         elif node_func is not None:
-            #return node_func(self, node, data)
+            return node_func(self, node, data)
             if node_func is PintUnitExtractionVisitor._get_unit_for_linear_expression or \
                     node_func is PintUnitExtractionVisitor._get_unit_for_pow or \
                     node_func is PintUnitExtractionVisitor._get_units_ExternalFunction:
@@ -1654,6 +1654,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
                 tup = (node_func, node.getname(), tuple(data))
             else:
                 tup = (node_func, tuple(data))
+
             pint_unit = self._pyomo_units_container.cache.get(tup, None)
             if pint_unit is None:
                 pint_unit = node_func(self, node, data)
