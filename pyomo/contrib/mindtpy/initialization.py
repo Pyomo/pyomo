@@ -138,6 +138,12 @@ def init_rNLP(solve_data, config):
         config.logger.info(
             'Initial relaxed NLP problem is infeasible. '
             'Problem may be infeasible.')
+    elif subprob_terminate_cond is tc.maxTimeLimit:
+        config.logger.info(
+            'NLP subproblem failed to converge within time limit.')
+    elif subprob_terminate_cond is tc.maxIterations:
+        config.logger.info(
+            'NLP subproblem failed to converge within iteration limit.')
     else:
         raise ValueError(
             'MindtPy unable to handle relaxed NLP termination condition '
@@ -203,6 +209,12 @@ def init_max_binaries(solve_data, config):
             'MILP master problem is infeasible. '
             'Problem may have no more feasible '
             'binary configurations.')
+    elif subprob_terminate_cond is tc.maxTimeLimit:
+        config.logger.info(
+            'NLP subproblem failed to converge within time limit.')
+    elif subprob_terminate_cond is tc.maxIterations:
+        config.logger.info(
+            'NLP subproblem failed to converge within iteration limit.')
     else:
         raise ValueError(
             'MindtPy unable to handle MILP master termination condition '
