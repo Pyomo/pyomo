@@ -407,6 +407,7 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_ok(linex1, uc, 'kg', EXPR.LinearExpression)
 
         linex2 = sum_product(model.vv, {'A': kg, 'B': m, 'C':kg}, index=['A', 'B', 'C'])
+        print(linex2)
         self._get_check_units_fail(linex2, uc, EXPR.LinearExpression)
 
     def test_named_expression(self):
