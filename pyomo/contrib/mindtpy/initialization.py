@@ -1,7 +1,7 @@
 """Initialization functions."""
 from __future__ import division
 
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values, get_main_elapsed_time
 from pyomo.contrib.mindtpy.cut_generation import (
     add_oa_cuts, add_affine_cuts, add_objective_linearization,
 )
@@ -100,9 +100,17 @@ def init_rNLP(solve_data, config):
         "NLP %s: Solve relaxed integrality" % (solve_data.nlp_iter,))
     MindtPy = m.MindtPy_utils
     TransformationFactory('core.relax_integer_vars').apply_to(m)
+    nlp_args = dict(config.nlp_solver_args)
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
+    if config.nlp_solver == 'gams':
+        nlp_args['add_options'] = nlp_args.get('add_options', [])
+        nlp_args['add_options'].append('option reslim=%s;' % remaining)
+    # else:
+    #     nlp_args['timelimit'] = remaining
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
-            m, **config.nlp_solver_args)
+            m, **nlp_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
         if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
@@ -191,9 +199,14 @@ def init_max_binaries(solve_data, config):
     if isinstance(opt, PersistentSolver):
         opt.set_instance(m)
     mip_args = dict(config.mip_solver_args)
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.0;')
+    # else:
+    #     mip_args['timelimit'] = remaining
+    #     opt.options['timelimit'] = remaining
     results = opt.solve(m, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition

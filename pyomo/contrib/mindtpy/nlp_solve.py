@@ -4,7 +4,7 @@ from __future__ import division
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_nogood_cuts, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
-from pyomo.contrib.gdpopt.util import copy_var_list_values
+from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
                         minimize, value)
 from pyomo.core.kernel.component_map import ComponentMap
@@ -84,9 +84,19 @@ def solve_NLP_subproblem(solve_data, config):
     TransformationFactory('contrib.deactivate_trivial_constraints')\
         .apply_to(fixed_nlp, tmp=True, ignore_infeasible=True)
     # Solve the NLP
+    nlpopt = SolverFactory(config.nlp_solver)
+    nlp_args = dict(config.nlp_solver_args)
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
+    if config.nlp_solver == 'gams':
+        nlp_args['add_options'] = nlp_args.get('add_options', [])
+        nlp_args['add_options'].append('option reslim=%s;' % remaining)
+    # else:
+    #     nlpopt.options['timelimit'] = remaining
+    #     nlp_args['timelimit'] = remaining
     with SuppressInfeasibleWarning():
-        results = SolverFactory(config.nlp_solver).solve(
-            fixed_nlp, **config.nlp_solver_args)
+        results = nlpopt.solve(
+            fixed_nlp, **nlp_args)
     return fixed_nlp, results
 
 
@@ -302,16 +312,26 @@ def solve_NLP_feas(solve_data, config):
     TransformationFactory('core.fix_integer_vars').apply_to(feas_nlp)
     with SuppressInfeasibleWarning():
         try:
-            feas_soln = SolverFactory(config.nlp_solver).solve(
-                feas_nlp, **config.nlp_solver_args)
+            nlpopt = SolverFactory(config.nlp_solver)
+            nlp_args = dict(config.nlp_solver_args)
+            elapsed = get_main_elapsed_time(solve_data.timing)
+            remaining = int(max(config.time_limit - elapsed, 1))
+            if config.nlp_solver == 'gams':
+                nlp_args['add_options'] = nlp_args.get('add_options', [])
+                nlp_args['add_options'].append('option reslim=%s;' % remaining)
+            # else:
+            #     nlpopt.options['timelimit'] = remaining
+            #     nlp_args['timelimit'] = remaining
+            feas_soln = nlpopt.solve(
+                feas_nlp, **nlp_args)
         except (ValueError, OverflowError) as error:
             for nlp_var, orig_val in zip(
                     MindtPy.variable_list,
                     solve_data.initial_var_values):
                 if not nlp_var.fixed and not nlp_var.is_binary():
                     nlp_var.value = orig_val
-            feas_soln = SolverFactory(config.nlp_solver).solve(
-                feas_nlp, **config.nlp_solver_args)
+            feas_soln = nlpopt.solve(
+                feas_nlp, **nlp_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
         copy_var_list_values(

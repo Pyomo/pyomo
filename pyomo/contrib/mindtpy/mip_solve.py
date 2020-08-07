@@ -5,7 +5,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
@@ -101,12 +101,16 @@ def solve_OA_master(solve_data, config):
         if config.threads > 0:
             masteropt.options["threads"] = config.threads
     mip_args = dict(config.mip_solver_args)
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.0;')
+        mip_args['add_options'].append('option reslim=%s;' % remaining)
+    # else:
+    #     masteropt.options['timelimit'] = remaining
     master_mip_results = masteropt.solve(
-        solve_data.mip, **mip_args)  # , tee=True)
-    # print(master_mip_results)
+        solve_data.mip, **mip_args)
 
     # if config.single_tree is False and config.add_nogood_cuts is False:
 
