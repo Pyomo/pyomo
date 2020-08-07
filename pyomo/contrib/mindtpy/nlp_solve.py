@@ -91,7 +91,7 @@ def solve_NLP_subproblem(solve_data, config):
     if config.nlp_solver == 'gams':
         nlp_args['add_options'] = nlp_args.get('add_options', [])
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
-    # else:
+    # elif config.nlp_solver == 'ipopt':
     #     nlpopt.options['timelimit'] = remaining
     #     nlp_args['timelimit'] = remaining
     with SuppressInfeasibleWarning():
@@ -319,7 +319,7 @@ def solve_NLP_feas(solve_data, config):
             if config.nlp_solver == 'gams':
                 nlp_args['add_options'] = nlp_args.get('add_options', [])
                 nlp_args['add_options'].append('option reslim=%s;' % remaining)
-            # else:
+            # elif config.nlp_solver == 'ipopt':
             #     nlpopt.options['timelimit'] = remaining
             #     nlp_args['timelimit'] = remaining
             feas_soln = nlpopt.solve(

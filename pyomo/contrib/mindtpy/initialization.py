@@ -106,7 +106,7 @@ def init_rNLP(solve_data, config):
     if config.nlp_solver == 'gams':
         nlp_args['add_options'] = nlp_args.get('add_options', [])
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
-    # else:
+    # elif config.nlp_solver == 'ipopt':
     #     nlp_args['timelimit'] = remaining
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
@@ -204,7 +204,7 @@ def init_max_binaries(solve_data, config):
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.0;')
-    # else:
+    # elif config.mip_solver == 'glpk':
     #     mip_args['timelimit'] = remaining
     #     opt.options['timelimit'] = remaining
     results = opt.solve(m, **mip_args)

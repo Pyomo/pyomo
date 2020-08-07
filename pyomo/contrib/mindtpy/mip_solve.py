@@ -107,7 +107,7 @@ def solve_OA_master(solve_data, config):
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.0;')
         mip_args['add_options'].append('option reslim=%s;' % remaining)
-    # else:
+    # elif config.mip_solver == 'glpk':
     #     masteropt.options['timelimit'] = remaining
     master_mip_results = masteropt.solve(
         solve_data.mip, **mip_args)
