@@ -6,16 +6,22 @@ from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
 def _get_GDPopt_config():
     CONFIG = ConfigBlock("MindtPy")
     CONFIG.declare("bound_tolerance", ConfigValue(
-        default=1E-5,
+        default=1E-6,
         domain=PositiveFloat,
         description="Bound tolerance",
         doc="Relative tolerance for bound feasibility checks."
     ))
     CONFIG.declare("iteration_limit", ConfigValue(
-        default=30,
+        default=50,
         domain=PositiveInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods."
+    ))
+    CONFIG.declare("stalling_limit", ConfigValue(
+        default=15,
+        domain=PositiveInt,
+        description="Stalling limit",
+        doc="Stalling limit for progress in the decomposition methods."
     ))
     CONFIG.declare("time_limit", ConfigValue(
         default=600,
@@ -35,7 +41,7 @@ def _get_GDPopt_config():
             "Benders Decomposition (GBD)."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
-        default="rNLP",
+        default=None,
         domain=In(["rNLP", "initial_binary", "max_binary"]),
         description="Initialization strategy",
         doc="Initialization strategy used by any method. Currently the "
@@ -58,8 +64,8 @@ def _get_GDPopt_config():
             "slack variables corresponding to all the constraints get "
             "multiplied by this number and added to the objective."
     ))
-    CONFIG.declare("ECP_tolerance", ConfigValue(
-        default=1E-4,
+    CONFIG.declare("ecp_tolerance", ConfigValue(
+        default=None,
         domain=PositiveFloat,
         description="ECP tolerance",
         doc="Feasibility tolerance used to determine the stopping criterion in"
