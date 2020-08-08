@@ -115,7 +115,7 @@ class MindtPySolver(object):
             "multiplied by this number and added to the objective."
     ))
     CONFIG.declare("ecp_tolerance", ConfigValue(
-        default=1E-4,
+        default=None,
         domain=PositiveFloat,
         description="ECP tolerance",
         doc="Feasibility tolerance used to determine the stopping criterion in"
