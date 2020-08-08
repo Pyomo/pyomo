@@ -62,6 +62,10 @@ def solve_OA_master(solve_data, config):
     sign_adjust = 1 if main_objective.sense == minimize else - 1
     MindtPy.del_component('MindtPy_oa_obj')
 
+    # Delete previously added dual bound constraint
+    if MindtPy.MindtPy_linear_cuts.find_component('dual_bound') is not None:
+        MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
+
     if config.add_slack:
         MindtPy.del_component('MindtPy_penalty_expr')
 
@@ -72,10 +76,30 @@ def solve_OA_master(solve_data, config):
         MindtPy.MindtPy_oa_obj = Objective(
             expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
             sense=main_objective.sense)
+
+        if main_objective.sense == minimize:
+            MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                expr=main_objective.expr + MindtPy.MindtPy_penalty_expr >= solve_data.LB,
+                doc='Objective function expression should improve on the best found dual bound')
+        else:
+            MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                expr=main_objective.expr + MindtPy.MindtPy_penalty_expr <= solve_data.UB,
+                doc='Objective function expression should improve on the best found dual bound')
+
     else:
         MindtPy.MindtPy_oa_obj = Objective(
             expr=main_objective.expr,
             sense=main_objective.sense)
+
+        if main_objective.sense == minimize:
+            MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                expr=main_objective.expr >= solve_data.LB,
+                doc='Objective function expression should improve on the best found dual bound')
+        else:
+            MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                expr=main_objective.expr <= solve_data.UB,
+                doc='Objective function expression should improve on the best found dual bound')
+
     # Deactivate extraneous IMPORT/EXPORT suffixes
     if config.nlp_solver == 'ipopt':
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -160,7 +184,7 @@ def handle_master_mip_optimal(master_mip, solve_data, config):
     for var in MindtPy.variable_list:
         if var.value is None and var.is_integer():
             config.logger.warning(
-                "Integer variable {} not initialized. It is set to it's lower bound when using the initial_binary initialization method".format(var.name))
+                "Integer variable {} not initialized. It is set to it's lower bound".format(var.name))
             var.value = var.lb  # nlp_var.bounds[0]
     # warm start for the nlp subproblem
     copy_var_list_values(
@@ -205,7 +229,7 @@ def handle_master_mip_other_conditions(master_mip, master_mip_results, solve_dat
     elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
         handle_master_mip_max_timelimit(master_mip, solve_data, config)
     elif (master_mip_results.solver.termination_condition is tc.other and
-            master_mip_results.solution.status is SolutionStatus.feasible):
+          master_mip_results.solution.status is SolutionStatus.feasible):
         # load the solution and suppress the warning message by setting
         # solver status to ok.
         MindtPy = master_mip.MindtPy_utils

@@ -44,9 +44,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     v_to.stale = False
             except ValueError:
                 # Snap the value to the bounds
-                if v_to.has_lb() and v_val < v_to.lb and v_to.lb - v_val <= config.zero_tolerance:
+                if v_to.has_lb() and v_val < v_to.lb and v_to.lb - v_val <= config.bound_tolerance:
                     v_to.set_value(v_to.lb)
-                elif v_to.has_ub() and v_val > v_to.ub and v_val - v_to.ub <= config.zero_tolerance:
+                elif v_to.has_ub() and v_val > v_to.ub and v_val - v_to.ub <= config.bound_tolerance:
                     v_to.set_value(v_to.ub)
                 # ... or the nearest integer
                 elif v_to.is_integer():
@@ -86,7 +86,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                          rhs=cplex_rhs)
             else:  # Inequality constraint (possibly two-sided)
                 if constr.has_ub() \
-                    and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
+                    and (linearize_active and abs(constr.uslack()) < config.bound_tolerance) \
                         or (linearize_violated and constr.uslack() < 0) \
                         or (config.linearize_inactive and constr.uslack() > 0):
 
@@ -98,7 +98,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                              sense="L",
                              rhs=constr.upper.value + cplex_rhs)
                 if constr.has_lb() \
-                    and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
+                    and (linearize_active and abs(constr.lslack()) < config.bound_tolerance) \
                         or (linearize_violated and constr.lslack() < 0) \
                         or (config.linearize_inactive and constr.lslack() > 0):
                     pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(

@@ -101,6 +101,9 @@ class MindtPySolver(object):
 
         if config.nlp_solver == "baron":
             config.use_dual = False
+        # if ecp tolerance is not provided use bound tolerance
+        if config.ecp_tolerance is None:
+            config.ecp_tolerance = config.bound_tolerance
 
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
