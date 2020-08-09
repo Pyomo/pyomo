@@ -6,7 +6,7 @@ from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
 def _get_GDPopt_config():
     CONFIG = ConfigBlock("MindtPy")
     CONFIG.declare("bound_tolerance", ConfigValue(
-        default=1E-6,
+        default=1E-4,
         domain=PositiveFloat,
         description="Bound tolerance",
         doc="Relative tolerance for bound feasibility checks."

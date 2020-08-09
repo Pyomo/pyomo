@@ -322,9 +322,6 @@ def bound_fix(solve_data, config, last_iter_cuts):
         if config.mip_solver == 'gams':
             mip_args['add_options'] = mip_args.get('add_options', [])
             mip_args['add_options'].append('option optcr=0.0;')
-        # elif config.mip_solver == 'glpk':
-        #     masteropt.options['timelimit'] = remaining
-        #     mip_args['timelimit'] = remaining
         master_mip_results = masteropt.solve(
             solve_data.mip, **mip_args)
         main_objective = next(

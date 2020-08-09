@@ -74,8 +74,6 @@ def MindtPy_initialize_master(solve_data, config):
         init_rNLP(solve_data, config)
     elif config.init_strategy == 'max_binary':
         init_max_binaries(solve_data, config)
-#        if config.strategy == 'ECP':
-#            add_ecp_cuts(solve_data.mip, solve_data, config)
     elif config.init_strategy == 'initial_binary':
         if config.strategy != 'ECP':
             fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
@@ -113,8 +111,6 @@ def init_rNLP(solve_data, config):
     if config.nlp_solver == 'gams':
         nlp_args['add_options'] = nlp_args.get('add_options', [])
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
-    # elif config.nlp_solver == 'ipopt':
-    #     nlp_args['timelimit'] = remaining
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
             m, **nlp_args)
@@ -211,9 +207,6 @@ def init_max_binaries(solve_data, config):
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.0;')
-    # elif config.mip_solver == 'glpk':
-    #     mip_args['timelimit'] = remaining
-    #     opt.options['timelimit'] = remaining
     results = opt.solve(m, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition
