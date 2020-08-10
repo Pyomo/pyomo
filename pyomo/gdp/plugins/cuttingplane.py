@@ -52,11 +52,199 @@ logger = logging.getLogger('pyomo.gdp.cuttingplane')
 # DEBUG
 from nose.tools import set_trace
 
+# TODO: open question which of these should be private or not
+def _do_not_tighten(m):
+    return m
+
+def get_constraint_exprs(constraints, var_map):
+    cuts = []
+    for cons in constraints:
+        cuts.append(clone_without_expression_components( 
+            cons.expr, substitute=dict((id(v), subs) for v, subs in
+                                       iteritems(var_map))))
+    return cuts
+
+def constraint_tight(model, constraint):
+    val = value(constraint.body)
+    ans = 0
+    if constraint.lower is not None:
+        if value(constraint.lower) >= val:
+            # tight or in violation of LB
+            ans -= 1
+
+    if constraint.upper is not None:
+        if value(constraint.upper) <= val:
+            # tight or in violation of UB
+            ans += 1
+
+    return ans
+
+def get_linear_approximation_expr(normal_vec, point):
+    body = 0
+    for coef, v in zip(point, normal_vec):
+        body -= coef*v
+    return body >= -sum(normal_vec[idx]*v.value for (idx, v) in
+                       enumerate(point))
+
+def create_cuts_fme(var_info, var_map, disaggregated_vars,
+                     disaggregation_constraints, rHull_vars, instance_rHull,
+                     rBigM_linear_constraints, transBlock_rBigm,
+                     transBlock_rHull):
+    # loop through all constraints in rHull and figure out which are active
+    # or slightly violated. For each we will get the tangent plane at xhat
+    # (which is x_hull below). We get the normal vector for each of these
+    # tangent planes and sum them to get a composite normal. Our cut is then
+    # the hyperplane normal to this composite through xbar (projected into
+    # the original space).
+    normal_vectors = []
+    tight_constraints = Block()
+    conslist = tight_constraints.constraints = Constraint(
+        NonNegativeIntegers)
+    conslist.construct()
+    for constraint in instance_rHull.component_data_objects(
+            Constraint,
+            active=True,
+            descend_into=Block,
+            sort=SortComponents.deterministic):
+        multiplier = constraint_tight(instance_rHull, constraint)
+        if multiplier:
+            f = constraint.body
+            firstDerivs = differentiate(f, wrt_list=rHull_vars)
+            normal_vec = [multiplier*value(_) for _ in firstDerivs]
+            normal_vectors.append(normal_vec)
+            # check if constraint is linear
+            if f.polynomial_degree() == 1:
+                conslist[len(conslist)] = constraint.expr
+            else: 
+                # we will use the linear approximation of this constraint at
+                # x_hat
+                conslist[len(conslist)] = get_linear_approximation_expr(
+                    normal_vec, rHull_vars)
+        # even if it was satisfied exactly, we need to grab the
+        # disaggregation constraints in order to do the projection.
+        elif constraint in disaggregation_constraints:
+            conslist[len(conslist)] = constraint.expr
+
+    # It is possible that the separation problem returned a point in
+    # the interior of the convex hull.  It is also possible that the
+    # only active constraints are (feasible) equality constraints.
+    # in these situations, there are no normal vectors from which to
+    # create a valid cut.
+    if not normal_vectors:
+        return None
+
+    hull_xform = TransformationFactory('gdp.hull')
+
+    composite_normal = list(
+        sum(_) for _ in zip(*tuple(normal_vectors)) )
+    composite_normal_map = ComponentMap(
+        (v,n) for v,n in zip(rHull_vars, composite_normal))
+
+    composite_cutexpr_Hull = 0
+    for x_bigm, x_rbigm, x_hull, x_star in var_info:
+        # make the cut in the Hull space with the Hull variables. We will
+        # translate it all to BigM and rBigM later when we have projected
+        # out the disaggregated variables
+        composite_cutexpr_Hull += composite_normal_map[x_hull]*\
+                                   (x_hull - x_hull.value)
+
+    # expand the composite_cutexprs to be in the extended space
+    vars_to_eliminate = ComponentSet()
+    do_fme = False
+    # add the part of the expression involving the disaggregated variables.
+    for x_disaggregated in disaggregated_vars:
+        normal_vec_component = composite_normal_map[x_disaggregated]
+        composite_cutexpr_Hull += normal_vec_component*\
+                                   (x_disaggregated - x_disaggregated.value)
+        vars_to_eliminate.add(x_disaggregated)
+        # check that at least one disaggregated variable appears in the
+        # constraint. Else we don't need to do FME
+        if not do_fme and normal_vec_component != 0:
+            do_fme = True
+
+    conslist[len(conslist)] = composite_cutexpr_Hull <= 0
+
+    if do_fme:
+        tight_constraints.construct()
+        TransformationFactory('contrib.fourier_motzkin_elimination').\
+            apply_to(tight_constraints, vars_to_eliminate=vars_to_eliminate)
+        # I made this block, so I know they are here. Not that I won't hate
+        # myself later for messing with private stuff.
+        fme_results = tight_constraints._pyomo_contrib_fme_transformation.\
+                      projected_constraints
+        projected_constraints = [cons for i, cons in iteritems(fme_results)]
+    else:
+        # we didn't need to project, so it's the last guy we added.
+        projected_constraints = [conslist[len(conslist) - 1]]
+
+    # we created these constraints with the variables from rHull. We
+    # actually need constraints for BigM and rBigM now!
+    cuts = get_constraint_exprs(projected_constraints, var_map)
+
+    # We likely have some cuts that duplicate other constraints now. We will
+    # filter them to make sure that they do in fact cut off x*. If that's
+    # the case, we know they are not already in the BigM relaxation.
+    for i in sorted(range(len(cuts)), reverse=True):
+        cut = cuts[i]
+        # x* is still in rBigM, so we can just remove this constraint if it
+        # is satisfied at x*
+        print("hi there")
+        print(cut)
+        if value(cut):
+            del cuts[i]
+            continue
+        # we have found a constraint which cuts of x* by some convincing
+        # amount and is not already in rBigM, this has to be our cut and we
+        # can stop. We know cut is lb <= expr and that it's violated
+        assert len(cut.args) == 2
+        # TODO: OK, we need a tolerance option here...
+        print("maybe: ")
+        print(cut)
+        print(value(cut.args[0]) - value(cut.args[1]))
+        if value(cut.args[0]) - value(cut.args[1]) > 0.001:
+            return [cut]
+
+    return None
+
+# TODO, this is a dumb name. Not sure what to call it right now.
+def create_cuts_quadratic_projection(var_info, var_map,
+                                      disaggregated_vars,
+                                      disaggregation_constraints,
+                                      rHull_vars, instance_rHull,
+                                      rBigM_linear_constraints,
+                                      transBlock_rBigM, transBlock_rHull):
+    cut_number = len(transBlock_rBigM.cuts)
+    logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
+                   % (cut_number,))
+
+    cutexpr = 0
+    for x_bigm, x_rbigm, x_hull, x_star in var_info:
+        cutexpr += (x_hull.value - x_star.value)*(x_rbigm - x_hull.value)
+
+    return [cutexpr >= 0]
+
 @TransformationFactory.register('gdp.cuttingplane',
                                 doc="Relaxes a linear disjunctive model by "
                                 "adding cuts from convex hull to Big-M "
                                 "relaxation.")
 class CuttingPlane_Transformation(Transformation):
+    """Relax disjunctive model by forming the bigm relaxation and then
+    iteratively adding cuts from the hull relaxation (or the hull relaxation
+    after some basic steps) in order to strengthen the formulation.
+
+    This transformation accepts the following keyword arguments:
+    
+    Parameters
+    ----------
+    solver : 
+    EPS : 
+    stream_solver : 
+    TODO: callbacks: 
+
+    By default, the callbacks will be set such that the algorithm performed is
+    that of the cuttingplanes paper.
+    """
+
     CONFIG = ConfigBlock("gdp.cuttingplane")
     CONFIG.declare('solver', ConfigValue(
         default='ipopt',
@@ -96,6 +284,36 @@ class CuttingPlane_Transformation(Transformation):
         relaxed BigM and separation problem solves.
         """
     ))
+    CONFIG.declare('tighten_relaxation_callback', ConfigValue(
+        default=_do_not_tighten,
+        description="Function which takes TODO",
+        doc="""
+        Option 1: Either we say, you do whatever you want here and give us a 
+        GDP back, which we will take the hull of... Or:
+
+        Option 2: We say do whatever you want, we expect it to be tighter than 
+        bigm. And you need to specify any variables that put it in extended 
+        space. Because we won't assume you did hull.
+
+        I'm leaning for starting with 1. We can always move to 2 if it seems
+        to ever be reasonable.
+        """
+    ))
+    CONFIG.declare('create_cuts', ConfigValue(
+        # TODO: change this default later
+        default=create_cuts_quadratic_projection,
+        description="Function which takes TODO",
+        doc="""
+        TODO
+        """
+    ))
+    CONFIG.declare('post_process_cut_callback', ConfigValue(
+        default=None,
+        description="TODO John will be so happy",
+        doc="""
+        TODO
+        """
+    ))
 
     def __init__(self):
         super(CuttingPlane_Transformation, self).__init__()
@@ -108,7 +326,7 @@ class CuttingPlane_Transformation(Transformation):
          var_map, disaggregated_vars, 
          disaggregation_constraints, 
          rBigM_linear_constraints, transBlockName) = self._setup_subproblems(
-             instance, bigM)
+             instance, bigM, self._config.tighten_relaxation_callback)
 
         self._generate_cuttingplanes( instance_rBigM, instance_rHull, var_info,
                                       var_map, disaggregated_vars,
@@ -119,7 +337,7 @@ class CuttingPlane_Transformation(Transformation):
         TransformationFactory('core.relax_integer_vars').apply_to(instance,
                                                                   undo=True)
 
-    def _setup_subproblems(self, instance, bigM):
+    def _setup_subproblems(self, instance, bigM, tighten_relaxation_callback):
         # create transformation block
         transBlockName, transBlock = self._add_relaxation_block(
             instance,
@@ -147,6 +365,7 @@ class CuttingPlane_Transformation(Transformation):
         # Generate the Hull relaxation (used for the separation
         # problem to generate cutting planes)
         #
+        tighter_instance = tighten_relaxation_callback(instance)
         instance_rHull = hullRelaxation.create_using(instance)
         # collect a list of disaggregated variables.
         (disaggregated_vars, 
@@ -340,10 +559,12 @@ class CuttingPlane_Transformation(Transformation):
             if abs(value(transBlock_rHull.separation_objective)) < epsilon:
                 break
 
-            cuts = self._create_cuts(var_info, var_map, disaggregated_vars,
-                                     disaggregation_constraints, rHull_vars,
-                                     instance_rHull, rBigM_linear_constraints,
-                                     transBlock_rBigM, transBlock_rHull)
+            cuts = self._config.create_cuts(var_info, var_map,
+                                            disaggregated_vars,
+                                            disaggregation_constraints,
+                                            rHull_vars, instance_rHull,
+                                            rBigM_linear_constraints,
+                                            transBlock_rBigM, transBlock_rHull)
            
             # We are done if the cut generator couldn't return a valid cut
             if cuts is None or not improving:
@@ -380,157 +601,6 @@ class CuttingPlane_Transformation(Transformation):
         # add separation objective to transformation block
         transBlock_rHull.separation_objective = Objective(expr=obj_expr)
 
-
-    def _create_cuts(self, var_info, var_map, disaggregated_vars,
-                     disaggregation_constraints, rHull_vars, instance_rHull,
-                     rBigM_linear_constraints, transBlock_rBigm,
-                     transBlock_rHull):
-        cut_number = len(transBlock_rBigm.cuts)
-        logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
-                       % (cut_number,))
-
-        # loop through all constraints in rHull and figure out which are active
-        # or slightly violated. For each we will get the tangent plane at xhat
-        # (which is x_hull below). We get the normal vector for each of these
-        # tangent planes and sum them to get a composite normal. Our cut is then
-        # the hyperplane normal to this composite through xbar (projected into
-        # the original space).
-        normal_vectors = []
-        tight_constraints = Block()
-        conslist = tight_constraints.constraints = Constraint(
-            NonNegativeIntegers)
-        conslist.construct()
-        for constraint in instance_rHull.component_data_objects(
-                Constraint,
-                active=True,
-                descend_into=Block,
-                sort=SortComponents.deterministic):
-            multiplier = self.constraint_tight(instance_rHull, constraint)
-            if multiplier:
-                f = constraint.body
-                firstDerivs = differentiate(f, wrt_list=rHull_vars)
-                normal_vec = [multiplier*value(_) for _ in firstDerivs]
-                normal_vectors.append(normal_vec)
-                # check if constraint is linear
-                if f.polynomial_degree() == 1:
-                    conslist[len(conslist)] = constraint.expr
-                else: 
-                    # we will use the linear approximation of this constraint at
-                    # x_hat
-                    conslist[len(conslist)] = self.get_linear_approximation_expr(
-                        normal_vec, rHull_vars)
-            # even if it was satisfied exactly, we need to grab the
-            # disaggregation constraints in order to do the projection.
-            elif constraint in disaggregation_constraints:
-                conslist[len(conslist)] = constraint.expr
-
-        # It is possible that the separation problem returned a point in
-        # the interior of the convex hull.  It is also possible that the
-        # only active constraints are (feasible) equality constraints.
-        # in these situations, there are no normal vectors from which to
-        # create a valid cut.
-        if not normal_vectors:
-            return None
-
-        hull_xform = TransformationFactory('gdp.hull')
-
-        composite_normal = list(
-            sum(_) for _ in zip(*tuple(normal_vectors)) )
-        composite_normal_map = ComponentMap(
-            (v,n) for v,n in zip(rHull_vars, composite_normal))
         
-        composite_cutexpr_Hull = 0
-        for x_bigm, x_rbigm, x_hull, x_star in var_info:
-            # make the cut in the Hull space with the Hull variables. We will
-            # translate it all to BigM and rBigM later when we have projected
-            # out the disaggregated variables
-            composite_cutexpr_Hull += composite_normal_map[x_hull]*\
-                                       (x_hull - x_hull.value)
 
-        # expand the composite_cutexprs to be in the extended space
-        vars_to_eliminate = ComponentSet()
-        do_fme = False
-        # add the part of the expression involving the disaggregated variables.
-        for x_disaggregated in disaggregated_vars:
-            normal_vec_component = composite_normal_map[x_disaggregated]
-            composite_cutexpr_Hull += normal_vec_component*\
-                                       (x_disaggregated - x_disaggregated.value)
-            vars_to_eliminate.add(x_disaggregated)
-            # check that at least one disaggregated variable appears in the
-            # constraint. Else we don't need to do FME
-            if not do_fme and normal_vec_component != 0:
-                do_fme = True
-    
-        conslist[len(conslist)] = composite_cutexpr_Hull <= 0
-        
-        if do_fme:
-            tight_constraints.construct()
-            TransformationFactory('contrib.fourier_motzkin_elimination').\
-                apply_to(tight_constraints, vars_to_eliminate=vars_to_eliminate)
-            # I made this block, so I know they are here. Not that I won't hate
-            # myself later for messing with private stuff.
-            fme_results = tight_constraints._pyomo_contrib_fme_transformation.\
-                          projected_constraints
-            projected_constraints = [cons for i, cons in iteritems(fme_results)]
-        else:
-            # we didn't need to project, so it's the last guy we added.
-            projected_constraints = [conslist[len(conslist) - 1]]
 
-        # we created these constraints with the variables from rHull. We
-        # actually need constraints for BigM and rBigM now!
-        cuts = self.get_constraint_exprs(projected_constraints, var_map)
-
-        # We likely have some cuts that duplicate other constraints now. We will
-        # filter them to make sure that they do in fact cut off x*. If that's
-        # the case, we know they are not already in the BigM relaxation.
-        for i in sorted(range(len(cuts)), reverse=True):
-            cut = cuts[i]
-            # x* is still in rBigM, so we can just remove this constraint if it
-            # is satisfied at x*
-            print("hi there")
-            print(cut)
-            if value(cut):
-                del cuts[i]
-                continue
-            # we have found a constraint which cuts of x* by some convincing
-            # amount and is not already in rBigM, this has to be our cut and we
-            # can stop. We know cut is lb <= expr and that it's violated
-            assert len(cut.args) == 2
-            # TODO: OK, we need a tolerance option here...
-            print("maybe: ")
-            print(cut)
-            print(value(cut.args[0]) - value(cut.args[1]))
-            if value(cut.args[0]) - value(cut.args[1]) > 0.001:
-                return [cut]
-
-        return None
-
-    def get_constraint_exprs(self, constraints, var_map):
-        cuts = []
-        for cons in constraints:
-            cuts.append(clone_without_expression_components( 
-                cons.expr, substitute=dict((id(v), subs) for v, subs in
-                                           iteritems(var_map))))
-        return cuts
-            
-    def constraint_tight(self, model, constraint):
-        val = value(constraint.body)
-        ans = 0
-        if constraint.lower is not None:
-            if value(constraint.lower) >= val:
-                # tight or in violation of LB
-                ans -= 1
-
-        if constraint.upper is not None:
-            if value(constraint.upper) <= val:
-                # tight or in violation of UB
-                ans += 1
-
-        return ans
-
-    def get_linear_approximation_expr(self, normal_vec, point):
-        body = 0
-        for coef, v in zip(point, normal_vec):
-            body -= coef*v
-        return body >= -sum(normal_vec[idx]*v.value for (idx, v) in
-                           enumerate(point))
