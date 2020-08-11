@@ -127,6 +127,84 @@ class TestScaleModelTransformation(unittest.TestCase):
                 self.assertEqual((mk in model.dual), (umk in unscaled_model.dual)) 
                 if mk in model.dual:
                     self.assertAlmostEqual(pe.value(model.dual[mk]), pe.value(unscaled_model.dual[umk]), 4)
+
+    def test_scaling_with_references(self):
+        # - create very simple model with scaling factors and some
+        #   constraint/var references 
+        # - call scaling transformation
+        # - assert hasattr scaled_...
+        # - assert variable/constraint values have changed by scaling factors
+        m = pe.ConcreteModel()
+        m.scaling_factor = pe.Suffix(direction=pe.Suffix.EXPORT)
+        m.v1 = pe.Var(initialize=10)
+        m.v2 = pe.Var(initialize=20)
+
+        def c1_rule(m):
+            return m.v1 == 1e6
+        m.c1 = pe.Constraint(rule=c1_rule)
+        def c2_rule(m):
+            return m.v2 == 1e-4
+        m.c2 = pe.Constraint(rule=c2_rule)
+
+        m.scaling_factor[m.v1] = 1.0
+        m.scaling_factor[m.v2] = 0.5
+        m.scaling_factor[m.c1] = 1e-5
+        m.scaling_factor[m.c2] = 1e5
+
+        values = {}
+        values[id(m.v1)] = (m.v1.value, m.scaling_factor[m.v1])
+        values[id(m.v2)] = (m.v2.value, m.scaling_factor[m.v2])
+        values[id(m.c1)] = (pe.value(m.c1.body), m.scaling_factor[m.c1])
+        values[id(m.c2)] = (pe.value(m.c2.body), m.scaling_factor[m.c2])
+
+        m.v1_ref = pe.Reference(m.v1)
+        m.c1_ref = pe.Reference(m.c1)
+
+        scale = pe.TransformationFactory('core.scale_model')
+        scale.apply_to(m)
+
+        self.assertTrue(hasattr(m, 'scaled_v1'))
+        self.assertTrue(hasattr(m, 'scaled_v2'))
+        self.assertTrue(hasattr(m, 'scaled_c1'))
+        self.assertTrue(hasattr(m, 'scaled_c2'))
+
+        # The Reference components still exist on the model,
+        # and have been renamed.
+        # Accessing their data objects will result in an error 
+        # that is difficult to decipher, however.
+        self.assertTrue(hasattr(m, 'scaled_v1_ref'))
+        self.assertTrue(hasattr(m, 'scaled_c1_ref'))
+        # The only ways to scale a model without breaking
+        # references seem to be:
+        #   a) rename the getattr args in their _call_stack attributes (?)
+        #   b) don't rename
+
+        # Aside from the references now being broken, the model
+        # has been scaled as expected.
+        orig_val, factor = values[id(m.scaled_v1)]
+        self.assertAlmostEqual(
+                m.scaled_v1.value,
+                orig_val*factor,
+                )
+
+        orig_val, factor = values[id(m.scaled_v2)]
+        self.assertAlmostEqual(
+                m.scaled_v2.value,
+                orig_val*factor,
+                )
+
+        orig_val, factor = values[id(m.scaled_c1)]
+        self.assertAlmostEqual(
+                pe.value(m.scaled_c1.body),
+                orig_val*factor,
+                )
+
+        orig_val, factor = values[id(m.scaled_c2)]
+        self.assertAlmostEqual(
+                pe.value(m.scaled_c2.body),
+                orig_val*factor,
+                )
         
+
 if __name__ == "__main__":
     unittest.main()
