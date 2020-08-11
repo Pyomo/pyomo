@@ -335,6 +335,9 @@ def solve_NLP_feas(solve_data, config):
     elif subprob_terminate_cond is tc.infeasible:
         raise ValueError('Feasibility NLP infeasible. '
                          'This should never happen.')
+    elif subprob_terminate_cond is tc.maxIterations:
+        raise ValueError('Subsolver reached its maximum number of iterations without converging, '
+                         'consider increasing the iterations limit of the subsolver or reviewing your formulation.')
     else:
         raise ValueError(
             'MindtPy unable to handle feasibility NLP termination condition '
