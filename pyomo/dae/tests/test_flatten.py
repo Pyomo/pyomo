@@ -9,10 +9,10 @@
 #  ___________________________________________________________________________
 import pyutilib.th as unittest
 
-from pyomo.environ import ConcreteModel, Block, Var, Reference, Set
+from pyomo.environ import ConcreteModel, Block, Var, Reference, Set, Constraint
 from pyomo.dae import ContinuousSet
 # This inport will have to change when we decide where this should go...
-from pyomo.dae.flatten import flatten_dae_variables
+from pyomo.dae.flatten import flatten_dae_components
 
 class TestCategorize(unittest.TestCase):
     def _hashRef(self, ref):
@@ -27,7 +27,7 @@ class TestCategorize(unittest.TestCase):
         m.b = Var(m.T, [1,2])
         m.c = Var([3,4], m.T)
 
-        regular, time = flatten_dae_variables(m, m.T)
+        regular, time = flatten_dae_components(m, m.T, Var)
         regular_id = set(id(_) for _ in regular)
         self.assertEqual(len(regular), 3)
         self.assertIn(id(m.x), regular_id)
@@ -56,7 +56,7 @@ class TestCategorize(unittest.TestCase):
         def B(b, i, t):
             b.x = Var(list(range(2*i, 2*i+2)))
 
-        regular, time = flatten_dae_variables(m, m.T)
+        regular, time = flatten_dae_components(m, m.T, Var)
         self.assertEqual(len(regular), 0)
         # Output for debugging
         #for v in time:
@@ -84,7 +84,7 @@ class TestCategorize(unittest.TestCase):
                 bb.y = Var([10,11])
             b.x = Var(list(range(2*i, 2*i+2)))
 
-        regular, time = flatten_dae_variables(m, m.T)
+        regular, time = flatten_dae_components(m, m.T, Var)
         self.assertEqual(len(regular), 0)
         # Output for debugging
         #for v in time:
@@ -116,7 +116,7 @@ class TestCategorize(unittest.TestCase):
 
         m.v = Var(m.time, [('a',1), ('b',2)])
 
-        scalar, dae = flatten_dae_variables(m, m.time)
+        scalar, dae = flatten_dae_components(m, m.time, Var)
         self.assertEqual(len(scalar), 0)
         ref_data = {
                 self._hashRef(Reference(m.v[:,'a',1])),
@@ -140,7 +140,7 @@ class TestCategorize(unittest.TestCase):
 
         m.b = Block(m.comp, rule=b_rule)
 
-        scalar, dae = flatten_dae_variables(m, m.time)
+        scalar, dae = flatten_dae_components(m, m.time, Var)
         self.assertEqual(len(scalar), 0)
         ref_data = {
                 self._hashRef(Reference(m.b['a'].bb[:].dae_var)),
@@ -149,6 +149,43 @@ class TestCategorize(unittest.TestCase):
         self.assertEqual(len(dae), len(ref_data))
         for ref in dae:
             self.assertIn(self._hashRef(ref), ref_data)
+
+
+    def test_constraint(self):
+        m = ConcreteModel()
+        m.time = ContinuousSet(bounds=(0,1))
+        m.comp = Set(initialize=['a', 'b'])
+        m.v0 = Var()
+        m.v1 = Var(m.time)
+        m.v2 = Var(m.time, m.comp)
+        
+        def c0_rule(m):
+            return m.v0 == 1
+        m.c0 = Constraint(rule=c0_rule)
+
+        def c1_rule(m, t):
+            return m.v1[t] == 3
+        m.c1 = Constraint(m.time, rule=c1_rule)
+
+        @m.Block(m.time)
+        def b(b, t):
+            def c2_rule(b, j):
+                return b.model().v2[t, j] == 5
+            b.c2 = Constraint(m.comp, rule=c2_rule)
+
+        scalar, dae = flatten_dae_components(m, m.time, Constraint)
+        hash_scalar = {id(s) for s in scalar}
+        self.assertIn(id(m.c0), hash_scalar)
+
+        ref_data = {
+                self._hashRef(Reference(m.c1[:])),
+                self._hashRef(Reference(m.b[:].c2['a'])),
+                self._hashRef(Reference(m.b[:].c2['b'])),
+                }
+        self.assertEqual(len(dae), len(ref_data))
+        for ref in dae:
+            self.assertIn(self._hashRef(ref), ref_data)
+
 
     # TODO: Add tests for Sets with dimen==None
 
