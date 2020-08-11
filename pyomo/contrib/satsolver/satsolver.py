@@ -1,5 +1,6 @@
 import math 
 
+from pyomo.common.dependencies import attempt_import
 from pyomo.core import value, SymbolMap, NumericLabeler, Var, Constraint
 from pyomo.core.expr.logical_expr import (
     EqualityExpression,
@@ -24,11 +25,7 @@ from pyomo.core.expr.visitor import (
 )
 from pyomo.gdp import Disjunction
 
-_z3_available = True
-try:
-    import z3
-except ImportError:
-    _z3_available = False
+z3, z3_available = attempt_import('z3')
 
 
 def satisfiable(model, logger=None):

@@ -455,8 +455,8 @@ class Estimator(object):
 
                 solver = SolverFactory('ipopt')
                 if self.solver_options is not None:
-                    for key in sopts:
-                        solver.options[key] = sopts[key]
+                    for key in self.solver_options:
+                        solver.options[key] = self.solver_options[key]
 
                 solve_result = solver.solve(EF.ef, tee = self.tee)
 
