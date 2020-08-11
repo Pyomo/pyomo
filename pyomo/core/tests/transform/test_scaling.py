@@ -205,6 +205,5 @@ class TestScaleModelTransformation(unittest.TestCase):
                 orig_val*factor,
                 )
         
-
 if __name__ == "__main__":
     unittest.main()
