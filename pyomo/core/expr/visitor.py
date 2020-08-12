@@ -32,11 +32,17 @@ from .symbol_map import SymbolMap
 from . import expr_common as common
 from .expr_errors import TemplateExpressionError
 from pyomo.common.deprecation import deprecation_warning
+
+from pyomo.core.expr.boolean_value import (
+    BooleanValue,)
+
+
 from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
     native_numeric_types,
-    value,
-)
+    value,)
+
+
 # NOTE: This module also has dependencies on numeric_expr; however, to
 # avoid circular dependencies, we will NOT import them here.  Instead,
 # until we can resolve the circular dependencies, they will be injected
@@ -956,6 +962,8 @@ class _EvaluationVisitor(ExpressionValueVisitor):
             return False, None
 
         if node.is_numeric_type():
+            return True, value(node)
+        elif node.is_logical_type():
             return True, value(node)
         else:
             return True, node

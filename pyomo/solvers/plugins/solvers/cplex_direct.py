@@ -294,9 +294,10 @@ class CPLEXDirect(DirectSolver):
 
         return cplex_expr, referenced_vars
 
-    def _add_var(self, var, var_data=None):
-        varname = self._symbol_map.getSymbol(var, self._labeler)
-        vtype = self._cplex_vtype_from_var(var)
+    def _cplex_lb_ub_from_var(self, var):
+        if var.is_fixed():
+            val = var.value
+            return val, val
         if var.has_lb():
             lb = value(var.lb)
         else:
@@ -305,10 +306,12 @@ class CPLEXDirect(DirectSolver):
             ub = value(var.ub)
         else:
             ub = self._cplex.infinity
+        return lb, ub
 
-        if var.is_fixed():
-            lb = value(var)
-            ub = value(var)
+    def _add_var(self, var, var_data=None):
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vtype = self._cplex_vtype_from_var(var)
+        lb, ub = self._cplex_lb_ub_from_var(var)
 
         cplex_var_data = (
             _VariableData(self._solver_model) if var_data is None else var_data

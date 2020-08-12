@@ -25,6 +25,16 @@ sys.path.insert(0, os.path.abspath('../../../pyutilib'))
 # top-level pyomo source directory
 sys.path.insert(0, os.path.abspath('../..'))
 
+# -- Rebuild SPY files ----------------------------------------------------
+sys.path.insert(0, os.path.abspath('tests'))
+try:
+    print("Regenerating SPY files...")
+    from strip_examples import generate_spy_files
+    generate_spy_files(os.path.abspath('tests'))
+    generate_spy_files(os.path.abspath(os.path.join(
+        'library_reference','kernel','examples')))
+finally:
+    sys.path.pop(0)
 
 # -- General configuration ------------------------------------------------
 
@@ -211,4 +221,10 @@ import pyomo.opt
 ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
 sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
 baron_available = bool(pyomo.opt.check_available_solvers('baron'))
+glpk_available = bool(pyomo.opt.check_available_solvers('glpk'))
+try:
+    import gurobipy
+    gurobipy_available = True
+except ImportError:
+    gurobipy_available = False
 '''
