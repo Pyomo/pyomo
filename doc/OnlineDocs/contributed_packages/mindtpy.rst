@@ -67,9 +67,8 @@ MindtPy also supports setting options for mip solver and nlp solver.
                                      strategy='OA',
                                      time_limit=3600,
                                      mip_solver='gams',
-                                     mip_solver_args=dict(solver='gurobi', warmstart=True),
-                                     nlp_solver='gams',
-                                     nlp_solver_args=dict(solver='scip', warmstart=True, tee=True),
+                                     mip_solver_args=dict(solver='cplex', warmstart=True),
+                                     nlp_solver='ipopt',
                                      tee=True)
 
 There are three initialization strategies in MindtPy, rNLP, initial_binary, max_binary. In OA and GOA strategies, the default initialization strategy is rNLP. In ECP strategy, the default initialization strategy is max_binary.
