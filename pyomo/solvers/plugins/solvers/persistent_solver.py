@@ -15,6 +15,8 @@ from pyomo.core.base.objective import Objective
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.suffix import import_suffix_generator
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numvalue import native_numeric_types
 import pyutilib.misc
 import pyutilib.common
 import time
@@ -26,6 +28,13 @@ from pyomo.core.base.sos import SOSConstraint
 
 logger = logging.getLogger('pyomo.solvers')
 
+def _convert_to_const(val):
+    if val.__class__ in native_numeric_types:
+        return val
+    elif val.is_expression_type():
+        return EXPR.evaluate_expression(val)
+    else:
+        return value(val)
 
 class PersistentSolver(DirectOrPersistentSolver):
     """
@@ -143,6 +152,8 @@ class PersistentSolver(DirectOrPersistentSolver):
         """
         if self._pyomo_model is None:
             raise RuntimeError('You must call set_instance before calling add_var.')
+        if id(self._pyomo_model) != id(var.model()):
+            raise RuntimeError('The pyomo var must be attached to the solver model')
         # see PR #366 for discussion about handling indexed
         # objects and keeping compatibility with the
         # pyomo.kernel objects
@@ -172,6 +183,76 @@ class PersistentSolver(DirectOrPersistentSolver):
         #        self._add_sos_constraint(child_con)
         #else:
         self._add_sos_constraint(con)
+
+    def add_column(self, model, var, obj_coef, constraints, coefficients):
+        """Add a column to the solver's and Pyomo model
+
+        This will add the Pyomo variable var to the solver's
+        model, and put the coefficients on the associated 
+        constraints in the solver model. If the obj_coef is
+        not zero, it will add obj_coef*var to the objective 
+        of both the Pyomo and solver's model.
+
+        Parameters
+        ----------
+        model: pyomo ConcreteModel to which the column will be added
+        var: Var (scalar Var or single _VarData)
+        obj_coef: float, pyo.Param
+        constraints: list of scalar Constraints of single _ConstraintDatas  
+        coefficients: list of the coefficient to put on var in the associated constraint
+
+        """
+        if self._pyomo_model is None:
+            raise RuntimeError('You must call set_instance before calling add_column.')
+        if id(self._pyomo_model) != id(model):
+            raise RuntimeError('The pyomo model which the column is being added to '
+                                'must be the same as the pyomo model attached to this '
+                                'PersistentSolver instance; i.e., the same pyomo model '
+                                'used in set_instance.')
+        if id(self._pyomo_model) != id(var.model()):
+            raise RuntimeError('The pyomo var must be attached to the solver model')
+        if var in self._pyomo_var_to_solver_var_map:
+            raise RuntimeError('The pyomo var must not have been already added to '
+                                'the solver model')
+        if len(constraints) != len(coefficients):
+            raise RuntimeError('The list of constraints and the list of coefficents '
+                               'be of equal length')
+        obj_coef, constraints, coefficients = self._add_and_collect_column_data(
+                var, obj_coef, constraints, coefficients)
+        self._add_column(var, obj_coef, constraints, coefficients)
+
+    """ This method should be implemented by subclasses."""
+    def _add_column(self, var, obj_coef, constraints, coefficients):
+        raise NotImplementedError('This method should be implemented by subclasses.')
+
+    def _add_and_collect_column_data(self, var, obj_coef, constraints, coefficients):
+        """
+        Update the objective Pyomo objective function and constraints, and update
+        the _vars_referenced_by Maps
+
+        Returns the column and objective coefficient data to pass to the solver
+        """
+        ## process the objective
+        if obj_coef.__class__ in native_numeric_types and obj_coef == 0.:
+            pass ## nothing to do
+        else:
+            self._objective.expr += obj_coef*var
+            self._vars_referenced_by_obj.add(var)
+            obj_coef = _convert_to_const(obj_coef)
+
+        ## add the constraints, collect the
+        ## column information
+        coeff_list = list()
+        constr_list = list()
+        for val,c in zip(coefficients,constraints):
+            c._body += val*var
+            self._vars_referenced_by_con[c].add(var)
+
+            cval = _convert_to_const(val)
+            coeff_list.append(cval)
+            constr_list.append(self._pyomo_con_to_solver_con_map[c])
+
+        return obj_coef, constr_list, coeff_list
 
     """ This method should be implemented by subclasses."""
     def _remove_constraint(self, solver_con):

@@ -12,6 +12,7 @@ from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.solvers.plugins.solvers.xpress_direct import XpressDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.numvalue import value, is_fixed
+from pyomo.core.expr import current as EXPR
 from pyomo.opt.base import SolverFactory
 import collections
 
@@ -98,18 +99,44 @@ class XpressPersistent(PersistentSolver, XpressDirect):
             raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
         xpress_var = self._pyomo_var_to_solver_var_map[var]
         qctype = self._xpress_chgcoltype_from_var(var)
-        if var.is_fixed():
-            lb = var.value
-            ub = var.value
-        else:
-            lb = -self._xpress.infinity
-            ub = self._xpress.infinity
-            if var.has_lb():
-                lb = value(var.lb)
-            if var.has_ub():
-                ub = value(var.ub)
+        lb, ub = self._xpress_lb_ub_from_var(var)
+
         self._solver_model.chgbounds([xpress_var, xpress_var], ['L', 'U'], [lb, ub])
         self._solver_model.chgcoltype([xpress_var], [qctype])
+
+    def _add_column(self, var, obj_coef, constraints, coefficients):
+        """Add a column to the solver's model
+
+        This will add the Pyomo variable var to the solver's
+        model, and put the coefficients on the associated 
+        constraints in the solver model. If the obj_coef is
+        not zero, it will add obj_coef*var to the objective 
+        of the solver's model.
+
+        Parameters
+        ----------
+        var: Var (scalar Var or single _VarData)
+        obj_coef: float
+        constraints: list of solver constraints
+        coefficients: list of coefficients to put on var in the associated constraint
+        """
+
+        ## set-up add var
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vartype = self._xpress_chgcoltype_from_var(var)
+        lb, ub = self._xpress_lb_ub_from_var(var)
+
+        self._solver_model.addcols(objx=[obj_coef], mstart=[0,len(coefficients)],
+                                    mrwind=constraints, dmatval=coefficients, 
+                                    bdl=[lb], bdu=[ub], names=[varname], 
+                                    types=[vartype])
+
+        xpress_var = self._solver_model.getVariable(
+                        index=self._solver_model.getIndexFromName(type=2, name=varname))
+
+        self._pyomo_var_to_solver_var_map[var] = xpress_var
+        self._solver_var_to_pyomo_var_map[xpress_var] = var
+        self._referenced_variables[var] = len(coefficients)
 
     def get_xpress_attribute(self, *args):
         """
