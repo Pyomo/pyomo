@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -8,7 +10,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# -*- coding: utf-8 -*-
 """Transformation to deactivate trivial constraints."""
 import logging
 
