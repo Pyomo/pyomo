@@ -10,25 +10,31 @@ from pyomo.core.kernel.component_map import ComponentMap
 
 from pyomo.common.dependencies import attempt_import
 
-sympy, _sympy_available = attempt_import('sympy')
+_operatorMap = {}
+_pyomo_operator_map = {}
 
-if _sympy_available:
-    _operatorMap = {
+def _configure_sympy(sympy, available):
+    if not available:
+        return
+
+    _operatorMap.update({
         sympy.Or: lor,
         sympy.And: land,
         sympy.Implies: implies,
         sympy.Equivalent: equivalent,
         sympy.Not: lnot,
-    }
+    })
 
-    _pyomo_operator_map = {
+    _pyomo_operator_map.update({
         AndExpression: sympy.And,
         OrExpression: sympy.Or,
         ImplicationExpression: sympy.Implies,
         EquivalenceExpression: sympy.Equivalent,
         XorExpression: sympy.Xor,
         NotExpression: sympy.Not,
-    }
+    })
+
+sympy, _sympy_available = attempt_import('sympy', callback=_configure_sympy)
 
 
 class _PyomoSympyLogicalBimap(object):
@@ -59,6 +65,7 @@ class _PyomoSympyLogicalBimap(object):
 class _Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, object_map, bool_varlist):
+        sympy.Add  # this ensures _configure_sympy gets run
         super(_Pyomo2SympyVisitor, self).__init__()
         self.object_map = object_map
         self.boolean_variable_list = bool_varlist
@@ -103,6 +110,7 @@ class _Pyomo2SympyVisitor(StreamBasedExpressionVisitor):
 class _Sympy2PyomoVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, object_map):
+        sympy.Add  # this ensures _configure_sympy gets run
         super(_Sympy2PyomoVisitor, self).__init__()
         self.object_map = object_map
 

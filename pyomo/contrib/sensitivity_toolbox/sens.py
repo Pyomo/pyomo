@@ -153,49 +153,31 @@ def sipopt(instance, paramSubList, perturbList,
                     substitute=variableSubMap,
                     remove_named_expressions=True).dfs_postorder_stack(cc.expr))
         else:
-            try:
-                b.constList.add(expr=ExpresssionReplacementVisitor(
+            if cc.lower is None or cc.upper is None:
+                b.constList.add(expr=ExpressionReplacementVisitor(
                     substitute=variableSubMap,
                     remove_named_expressions=True).dfs_postorder_stack(cc.expr))
-            except:
-                # Params in either the upper or lower bounds of a ranged 
-                # inequaltiy will result in an invalid expression (you cannot 
-                # have variables in the bounds of a constraint).  If we hit that
-                # problem, we will break up the ranged inequality into separate
-                # constraints
+            else:
+                # Constraint must be a ranged inequality, break into separate constraints
 
-                # Note that the test for lower / upper == None is probably not
-                # necessary, as the only way we should get here (especially if
-                # we are more careful about the exception that we catch) is if
-                # this is a ranged inequality and we are attempting to insert a
-                # variable into either the lower or upper bound.
-                if cc.lower is not None:
-                    b.constList.add(expr=ExpressionReplacementVisitor(
-                        substitute=variableSubMap,
-                        remove_named_expressions=True).dfs_postorder_stack(
-                            cc.lower) <= ExpressionReplacementVisitor(
-                                substitute=variableSubMap,
-                                remove_named_expressions=
-                                  True).dfs_postorder_stack(cc.body)
-                                )
-                #if cc.lower is not None:
-                #    b.constList.add(expr=0<=ExpressionReplacementVisitor(
-                #        substitute=variableSubMap,
-                #        remove_named_expressions=True).dfs_postorder_stack(
-                #            cc.lower) - ExpressionReplacementVisitor(
-                #                substitute=variableSubMap,
-                #                remove_named_expressions=
-                #                  True).dfs_postorder_stack(cc.body)
-                #                )
-                if cc.upper is not None:
-                    b.constList.add(expr=ExpressionReplacementVisitor(
-                        substitute=variableSubMap,
-                        remove_named_expressions=True).dfs_postorder_stack(
-                            cc.upper) >= ExpressionReplacementVisitor(
-                                substitute=variableSubMap,
-                                remove_named_expressions=
-                                  True).dfs_postorder_stack(cc.body)
-                                )
+                # Add constraint for lower bound
+                b.constList.add(expr=ExpressionReplacementVisitor(
+                    substitute=variableSubMap,
+                    remove_named_expressions=True).dfs_postorder_stack(
+                        cc.lower) <= ExpressionReplacementVisitor(
+                            substitute=variableSubMap,
+                            remove_named_expressions=
+                            True).dfs_postorder_stack(cc.body)
+                    )
+                # Add constraint for upper bound
+                b.constList.add(expr=ExpressionReplacementVisitor(
+                    substitute=variableSubMap,
+                    remove_named_expressions=True).dfs_postorder_stack(
+                        cc.upper) >= ExpressionReplacementVisitor(
+                            substitute=variableSubMap,
+                            remove_named_expressions=
+                            True).dfs_postorder_stack(cc.body)
+                    )
         cc.deactivate()
 
     #paramData to varData constraint list
