@@ -601,6 +601,8 @@ class Grossmann_TestCases(unittest.TestCase):
 
         self.check_2disj_cuts_valid_for_extreme_pts(m)
 
+# as written, there's no point in doing these tests with FME becuase all the
+# constraints are nonlinear, so there's nothing to project.
 class NonlinearConvex_TwoCircles(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_valid_for_optimal(self):
@@ -608,7 +610,7 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-        
+
         m.x.fix(2)
         m.y.fix(7)
         m.upper_circle.indicator_var.fix(1)
