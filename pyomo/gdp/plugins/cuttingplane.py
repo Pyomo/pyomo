@@ -223,6 +223,42 @@ def create_cuts_quadratic_projection(var_info, var_map,
 
     return [cutexpr >= 0]
 
+def restore_objective(instance_rHull, transBlock_rHull):
+    transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
+    transBlock_rHull.separation_objective.activate()
+
+def back_off_constraint(instance_rHull, transBlock_rHull, cut, var_info, opt,
+                        stream_solver, TOL):
+    # Take a constraint. We will solve a problem maximizing its violation
+    # subject to rHull. Then we will add that much padding to it and we believe
+    # that it will be valid because our error is in the direction of violating
+    # constraints, not landing in the interior, so this should be
+    # pessimistic. Or John believes this, I think? Not sure if I'm convinced...
+    transBlock_rHull.separation_objective.deactivate()
+    # TODO: You need only do this once, actually, Emma, this was just
+    # prototyping
+    backmap = dict((id(var_info[i][0]), var_info[i][2]) for i in
+                   range(len(var_info)))
+    transBlock_rHull.infeasibility_objective = Objective(
+        expr=clone_without_expression_components(cut.body, substitute=backmap))
+
+    results = opt.solve(instance_rHull, tee=stream_solver)
+    if verify_successful_solve(results) is not NORMAL:
+        logger.warning("GDP.cuttingplane: Problem to determine how much to "
+                       "back off the new cut "
+                       "did not solve normally. Leaving the constraint as is, "
+                       "which could lead to numerical trouble%s" % (results,))
+        restore_objective(instance_rHull, transBlock_rHull, orig_obj)
+        return
+
+    val = value(transBlock_rHull.infeasibility_objective) - TOL
+    print("VAL IS %s" % val)
+    if val <= 0:
+        print("BACKING off by %s" % val)
+        cut._body += abs(val)
+    # else there is nothing to do
+    restore_objective(instance_rHull, transBlock_rHull)
+
 @TransformationFactory.register('gdp.cuttingplane',
                                 doc="Relaxes a linear disjunctive model by "
                                 "adding cuts from convex hull to Big-M "
@@ -308,10 +344,21 @@ class CuttingPlane_Transformation(Transformation):
         """
     ))
     CONFIG.declare('post_process_cut_callback', ConfigValue(
-        default=None,
+        default=back_off_constraint,
         description="TODO John will be so happy",
         doc="""
         TODO
+        """
+    ))
+    CONFIG.declare('post_process_cut_tolerance', ConfigValue(
+        default=1e-8,
+        description="Tolerance to pass to the post_process_cut_callback.",
+        doc="""
+        Tolerance passed to the post_process_cut_callback.
+
+        Depending on the callback, different values could make sense, but 
+        something on the order of the solver's optimality or constraint 
+        tolerances makes sense.
         """
     ))
 
@@ -575,6 +622,14 @@ class CuttingPlane_Transformation(Transformation):
                 logger.warning("GDP.cuttingplane: Adding cut %s to BM model."
                                % (cut_number,))
                 transBlock_rBigM.cuts.add(cut_number, cut)
+                if self._config.post_process_cut_callback is not None:
+                    self._config.post_process_cut_callback( 
+                        instance_rHull,
+                        transBlock_rHull,
+                        transBlock_rBigM.cuts[cut_number],
+                        var_info, opt,
+                        stream_solver,
+                        self._config.post_process_cut_tolerance)
 
             prev_obj = rBigM_objVal
 

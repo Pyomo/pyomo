@@ -12,6 +12,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 from pyomo.gdp import *
+from pyomo.gdp.plugins.cuttingplane import create_cuts_fme
 
 import pyomo.opt
 import pyomo.gdp.tests.models as models
@@ -29,31 +30,21 @@ solvers = pyomo.opt.check_available_solvers('ipopt')
 #     - test that deactivated objectives on the model don't get used by the
 #       transformation
 
-def check_validity(self, body, lower, upper):
+def check_validity(self, body, lower, upper, TOL=0):
     if lower is not None:
-        self.assertGreaterEqual(value(body), value(lower))
+        self.assertGreaterEqual(value(body), value(lower) - TOL)
     if upper is not None:
-        self.assertLessEqual(value(body), value(upper))
+        self.assertLessEqual(value(body), value(upper) + TOL)
 
 class OneVarDisj(unittest.TestCase):
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_no_cuts_for_optimal_m(self):
-        m = models.oneVarDisj_2pts()
-
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
+    def check_no_cuts_for_optimal_m(self, m):
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         # Big-m is actually tight for the optimal M value, so I should have no
         # cuts. If I have any then we are wasting our time.
         self.assertEqual(len(cuts), 0)
 
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_expected_two_segment_cut(self):
-        m = models.twoSegments_SawayaGrossmann()
-        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
-        # 0 <= Y <= 1 (in the limit)
-        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
-
+    def check_expected_two_segment_cut(self, m):
         # I am expecting exactly one cut
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
@@ -77,13 +68,7 @@ class OneVarDisj(unittest.TestCase):
         m.disj1.indicator_var.fix(0)
         self.assertAlmostEqual(value(cut_expr), 0)
 
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_two_segment_cuts_valid(self):
-        m = models.twoSegments_SawayaGrossmann()
-        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
-        # 0 <= Y <= 1 (in the limit)
-        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
-
+    def check_two_segment_cuts_valid(self, m):
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
         # check that all the cuts are valid everywhere
@@ -107,10 +92,66 @@ class OneVarDisj(unittest.TestCase):
             m.x.fix(2)
             m.disj2.indicator_var.fix(1)
             check_validity(self, cut_expr, cut_lower, cut_upper)
-            
+
             # (3, 1)
             m.x.fix(3)
             check_validity(self, cut_expr, cut_lower, cut_upper)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_no_cuts_for_optimal_m(self):
+        m = models.oneVarDisj_2pts()
+
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+        self.check_no_cuts_for_optimal_m(m)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_no_cuts_for_optimal_m_fme(self):
+        m = models.oneVarDisj_2pts()
+
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, 
+            create_cuts=create_cuts_fme,
+            post_process_cut_callback=None
+        )
+        self.check_no_cuts_for_optimal_m(m)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_expected_two_segment_cut(self):
+        m = models.twoSegments_SawayaGrossmann()
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
+        self.check_expected_two_segment_cut(m)
+    
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_expected_two_segment_cut_fme(self):
+        m = models.twoSegments_SawayaGrossmann()
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, bigM=1e6, create_cuts=create_cuts_fme,
+            post_process_cut_callback=None)
+        self.check_expected_two_segment_cut(m)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_two_segment_cuts_valid(self):
+        m = models.twoSegments_SawayaGrossmann()
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
+
+        self.check_two_segment_cuts_valid(m)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_two_segment_cuts_valid_fme(self):
+        m = models.twoSegments_SawayaGrossmann()
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, bigM=1e6, create_cuts=create_cuts_fme,
+            post_process_cut_callback=None)
+
+        self.check_two_segment_cuts_valid(m)
         
 
 class TwoTermDisj(unittest.TestCase):
@@ -138,11 +179,7 @@ class TwoTermDisj(unittest.TestCase):
         cuts = transBlock.cuts
         self.assertIsInstance(cuts, Constraint)
 
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cuts_valid_for_optimal(self):
-        m = models.makeTwoTermDisj_boxes()
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
-
+    def check_cuts_valid_for_optimal(self, m, TOL):
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
@@ -152,13 +189,25 @@ class TwoTermDisj(unittest.TestCase):
             m.d[1].indicator_var.fix(0)
             m.x.fix(3)
             m.y.fix(1)
-            check_validity(self, cut_expr, lower, upper)
+            check_validity(self, cut_expr, lower, upper, TOL)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cuts_valid_on_chull_vertices(self):
+    def test_cuts_valid_for_optimal_fme(self):
         m = models.makeTwoTermDisj_boxes()
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, create_cuts=create_cuts_fme, post_process_cut_callback=None)
 
+        self.check_cuts_valid_for_optimal(m, TOL=0)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_valid_for_optimal_with_tolerance(self):
+        m = models.makeTwoTermDisj_boxes()
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, post_process_cut_tolerance=1e-7)
+
+        self.check_cuts_valid_for_optimal(m, TOL=1e-8)
+
+    def check_cuts_valid_on_hull_vertices(self, m, TOL=0):
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         for cut in cuts.values():
             cut_expr = cut.body
@@ -170,19 +219,33 @@ class TwoTermDisj(unittest.TestCase):
                 m.d[1].indicator_var.fix(pt[1])
                 m.x.fix(pt[2])
                 m.y.fix(pt[3])
-                check_validity(self, cut_expr, lower, upper)
+                check_validity(self, cut_expr, lower, upper, TOL)
 
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_valid_on_hull_vertices_fme(self):
+        m = models.makeTwoTermDisj_boxes()
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, create_cuts=create_cuts_fme, post_process_cut_callback=None)
+
+        self.check_cuts_valid_on_hull_vertices(m, TOL=0)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_valid_on_hull_vertices_with_tolerance(self):
+        m = models.makeTwoTermDisj_boxes()
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, post_process_cut_tolerance=1e-7)
+
+        self.check_cuts_valid_on_hull_vertices(m, TOL=1e-8)
+        
     # [ESJ 15 Mar 19] This is kind of a miracle that this passes... But it is
     # true and deserves brownie points. But I'm not sure that makes it a good
     # test? My other idea is below... Both are a little scary because I am
     # allowing NO numerical error. But I also don't have any!
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cut_is_correct_facet(self):
+    def test_cuts_are_correct_facets_fme(self):
         m = models.makeTwoTermDisj_boxes()
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
-
-        # I'm pretty sure this could be one of two facets, but it turns out to
-        # be this one, which is fine.
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, create_cuts=create_cuts_fme, post_process_cut_callback=None)
         facet_extreme_pts = [
             (1,0,3,1),
             (1,0,3,2),
@@ -228,37 +291,53 @@ class TwoTermDisj(unittest.TestCase):
             if upper is not None:
                 self.assertEqual(value(upper), value(cut_expr))
 
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_are_correct_facets_with_tolerance(self):
+        m = models.makeTwoTermDisj_boxes()
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+        cut1_tight_pts = [
+            (1,0,3,1),
+            (0,1,1,3)
+        ]
+        facet2_extreme_pts = [
+            (1,0,3,1),
+            (1,0,4,1)
+        ]
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        # ESJ: In this version, we don't get the facets, but we still get two
+        # cuts, and we check they are tight at points on the relevant facets.
+        self.assertEqual(len(cuts), 2)
+        cut = cuts[0]
+        cut_expr = cut.body
+        lower = cut.lower
+        upper = cut.upper
+        for pt in cut1_tight_pts:
+            m.d[0].indicator_var.fix(pt[0])
+            m.d[1].indicator_var.fix(pt[1])
+            m.x.fix(pt[2])
+            m.y.fix(pt[3])
+            if lower is not None:
+                # ESJ: I had to increase the tolerance here, but I guess I don't
+                # care as long as the error is in the right direction... (Which
+                # we do test when we check the cuts are valid on the hull
+                # vertices)
+                self.assertAlmostEqual(value(lower), value(cut_expr), places=6)
+            if upper is not None:
+                self.assertAlmostEqual(value(upper), value(cut_expr))
 
-    # [ESJ 15 Mar 19]: This is a slightly weird idea, but I think we've kind of
-    # messed up if each of our cuts isn't tight for at least one extreme point of
-    # the convex hull (in the original space). I don't think this is a very
-    # robust test yet because I am asking for exact equality. But on the other
-    # hand, exact means numerically life is very good.
-    # [ESJ 05 June 20]: This tests is redundant with the above because we 
-    # only get one cut.
-    # @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    # def test_cuts_tight_somewhere(self):
-    #     m = models.makeTwoTermDisj_boxes()
-    #     TransformationFactory('gdp.cuttingplane').apply_to(m)
-
-    #     cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-    #     for cut in cuts.values():
-    #         cut_expr = cut.body
-    #         lower = value(cut.lower)
-    #         upper = value(cut.upper)
-    #         tight = 0
-    #         for pt in self.extreme_points:
-    #             m.d[0].indicator_var.fix(pt[0])
-    #             m.d[1].indicator_var.fix(pt[1])
-    #             m.x.fix(pt[2])
-    #             m.y.fix(pt[3])
-    #             if lower is not None:
-    #                 if value(cut_expr) == lower:
-    #                     tight += 1
-    #             if upper is not None:
-    #                 if value(cut_expr) == upper:
-    #                     tight += 1
-    #         self.assertGreaterEqual(tight, 1)
+        cut = cuts[1]
+        cut_expr = cut.body
+        lower = cut.lower
+        upper = cut.upper
+        for pt in facet2_extreme_pts:
+            m.d[0].indicator_var.fix(pt[0])
+            m.d[1].indicator_var.fix(pt[1])
+            m.x.fix(pt[2])
+            m.y.fix(pt[3])
+            if lower is not None:
+                self.assertAlmostEqual(value(lower), value(cut_expr))
+            if upper is not None:
+                self.assertAlmostEqual(value(upper), value(cut_expr))
    
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_create_using(self):
@@ -278,11 +357,7 @@ class TwoTermDisj(unittest.TestCase):
         )
 
 class Grossmann_TestCases(unittest.TestCase):
-    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cut_valid_at_extreme_pts(self):
-        m = models.grossmann_oneDisj()
-        TransformationFactory('gdp.cuttingplane').apply_to(m)
-
+    def check_cuts_valid_at_extreme_pts(self, m):
         extreme_points = [
             (1,0,2,10),
             (1,0,0,10),
@@ -309,9 +384,27 @@ class Grossmann_TestCases(unittest.TestCase):
                 check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cut_is_correct_facet(self):
+    def test_cut_valid_at_extreme_pts_fme(self):
+        m = models.grossmann_oneDisj()
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, create_cuts=create_cuts_fme, post_process_cut_callback=None)
+
+        self.check_cuts_valid_at_extreme_pts(m)
+
+    # ESJ: This is a bit inconsistent because this one passes without a
+    # tolerance... But since it does I'm tempted to leave it this way?
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cut_valid_at_extreme_pts_projection(self):
         m = models.grossmann_oneDisj()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
+
+        self.check_cuts_valid_at_extreme_pts(m)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cut_is_correct_facet_fme(self):
+        m = models.grossmann_oneDisj()
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, create_cuts=create_cuts_fme, post_process_cut_callback=None)
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         # ESJ: Again, for FME, we don't mind getting both the possible facets,
         # as long as they are beautiful.
@@ -337,11 +430,48 @@ class Grossmann_TestCases(unittest.TestCase):
             m.disjunct1.indicator_var.fix(pt[0])
             m.disjunct2.indicator_var.fix(pt[1])
             self.assertEqual(value(cuts[0].lower), value(cuts[0].body))
-        
+        for pt in facet2_extreme_points:
+            m.x.fix(pt[2])
+            m.y.fix(pt[3])
+            m.disjunct1.indicator_var.fix(pt[0])
+            m.disjunct2.indicator_var.fix(pt[1])
+            self.assertEqual(value(cuts[1].lower), value(cuts[1].body))
+
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cuts_valid_at_extreme_pts_rescaled(self):
-        m = models.to_break_constraint_tolerances()
+    def test_cut_is_correct_facet_projection(self):
+        m = models.grossmann_oneDisj()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        # ESJ: We do get to cuts, but they aren't the facets like FME
+        self.assertEqual(len(cuts), 2)
+        # similar to the two boxes example, this is on the line where two facets
+        # intersect, we get cuts which intersect the two facets from FME. This
+        # makes sense because these are angled.
+        cut1_tight_points = [
+            (1,0,2,10),
+            (0,1,10,3)
+        ]
+        cut2_tight_points = [
+            (1,0,2,10),
+            (1,0,0,10)
+        ]
+
+        for pt in cut1_tight_points:
+            m.x.fix(pt[2])
+            m.y.fix(pt[3])
+            m.disjunct1.indicator_var.fix(pt[0])
+            m.disjunct2.indicator_var.fix(pt[1])
+            self.assertAlmostEqual(value(cuts[0].lower), value(cuts[0].body),
+                                   places=6)
+        for pt in cut2_tight_points:
+            m.x.fix(pt[2])
+            m.y.fix(pt[3])
+            m.disjunct1.indicator_var.fix(pt[0])
+            m.disjunct2.indicator_var.fix(pt[1])
+            self.assertAlmostEqual(value(cuts[1].lower), value(cuts[1].body),
+                                   places=6)
+
+    def check_cuts_valid_at_extreme_pts_rescaled(self, m):
         extreme_points = [
             (1,0,2,127),
             (1,0,0,127),
@@ -368,9 +498,24 @@ class Grossmann_TestCases(unittest.TestCase):
                 check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_cut_is_correct_facet_rescaled(self):
+    def test_cuts_valid_at_extreme_pts_rescaled_fme(self):
+        m = models.to_break_constraint_tolerances()
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, create_cuts=create_cuts_fme, post_process_cut_callback=None)
+        self.check_cuts_valid_at_extreme_pts_rescaled(m)
+
+    # Again, this actually passes without tolerance, so leaving it for now...
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_valid_at_extreme_pts_rescaled_projection(self):
         m = models.to_break_constraint_tolerances()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
+        self.check_cuts_valid_at_extreme_pts_rescaled(m)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cut_is_correct_facet_rescaled_fme(self):
+        m = models.to_break_constraint_tolerances()
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, create_cuts=create_cuts_fme, post_process_cut_callback=None)
 
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         self.assertEqual(len(cuts), 1)
@@ -390,10 +535,30 @@ class Grossmann_TestCases(unittest.TestCase):
             self.assertEqual(value(cuts[0].lower), value(cuts[0].body))
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
-    def test_2disj_cuts_valid_for_extreme_pts(self):
-        m = models.grossmann_twoDisj()
+    def test_cut_is_correct_facet_rescaled_projection(self):
+        m = models.to_break_constraint_tolerances()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
 
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        self.assertEqual(len(cuts), 1)
+        
+        cut_tight_points = [
+            (1,0,2,127),
+            (0,1,120,3)
+        ]
+
+        for pt in cut_tight_points:
+            m.x.fix(pt[2])
+            m.y.fix(pt[3])
+            m.disjunct1.indicator_var.fix(pt[0])
+            m.disjunct2.indicator_var.fix(pt[1])
+            # ESJ: 5 places is not ideal... But it's in the direction of valid,
+            # so I think that's just the price we pay. This test still seems
+            # useful to me as a sanity check that the cut is where it should be.
+            self.assertAlmostEqual(value(cuts[0].lower), value(cuts[0].body),
+                                   places=5)
+
+    def check_2disj_cuts_valid_for_extreme_pts(self, m):
         extreme_points = [
             (1,0,1,0,1,7),
             (1,0,1,0,1,8),
@@ -406,7 +571,6 @@ class Grossmann_TestCases(unittest.TestCase):
         ]
 
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-        cuts.pprint()
         for cut in cuts.values():
             cut_expr = cut.body
             lower = cut.lower
@@ -420,6 +584,22 @@ class Grossmann_TestCases(unittest.TestCase):
                 m.disjunct3.indicator_var.fix(pt[2])
                 m.disjunct4.indicator_var.fix(pt[3])
                 check_validity(self, cut_expr, lower, upper)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_2disj_cuts_valid_for_extreme_pts_fme(self):
+        m = models.grossmann_twoDisj()
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, create_cuts=create_cuts_fme, post_process_cut_callback=None)
+
+        self.check_2disj_cuts_valid_for_extreme_pts(m)
+
+    # This passes without a tolerance.
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_2disj_cuts_valid_for_extreme_pts_projection(self):
+        m = models.grossmann_twoDisj()
+        TransformationFactory('gdp.cuttingplane').apply_to(m)
+
+        self.check_2disj_cuts_valid_for_extreme_pts(m)
 
 class NonlinearConvex_TwoCircles(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -452,6 +632,10 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_valid_for_other_extreme_points(self):
+        # testing that we don't cut off anything on "the other side" (of the R^2
+        # picture). There's little reason we should, but this is also a sanity
+        # check that the cuts are in the correct direction. (Which one can lose
+        # confidence about in the case of numerical difficulties...)
         m = models.twoDisj_twoCircles_easy()
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
 
