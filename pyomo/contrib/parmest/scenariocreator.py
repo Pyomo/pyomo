@@ -11,7 +11,7 @@
 # ScenariosCreator.py - Class to create and deliver scenarios using parmest
 # DLW March 2020
 
-from pyomo.environ import SolverFactory, value
+import pyomo.environ as pyo
 
 
 class ScenarioSet(object):
@@ -143,13 +143,13 @@ class ScenarioCreator(object):
             ##print("Experiment number=", exp_num)
             model = self.pest._instance_creation_callback(exp_num,
                                                         self.pest.callback_data)
-            opt = SolverFactory(self.solvername)
+            opt = pyo.SolverFactory(self.solvername)
             results = opt.solve(model)  # solves and updates model
             ## pyo.check_termination_optimal(results)
             ThetaVals = dict()
             for theta in self.pest.theta_names:
                 tvar = eval('model.'+theta)
-                tval = value(tvar)
+                tval = pyo.value(tvar)
                 ##print("    theta, tval=", tvar, tval)
                 ThetaVals[theta] = tval
             addtoSet.addone(ParmestScen("ExpScen"+str(exp_num), ThetaVals, prob))

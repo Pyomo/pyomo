@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects

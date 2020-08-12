@@ -12,7 +12,8 @@
 
 from __future__ import division
 
-from math import fabs, floor, ceil
+from math import fabs
+import math
 
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
@@ -91,9 +92,11 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
             if var.is_integer() or var.is_binary():
                 # Make sure that the lb and ub are integral. Use safe construction if near to integer.
                 if var.has_lb():
-                    var.setlb(int(min(ceil(var.lb - config.tolerance), ceil(var.lb))))
+                    var.setlb(int(min(math.ceil(var.lb - config.tolerance),
+                                      math.ceil(var.lb))))
                 if var.has_ub():
-                    var.setub(int(max(floor(var.ub + config.tolerance), floor(var.ub))))
+                    var.setub(int(max(math.floor(var.ub + config.tolerance),
+                                      math.floor(var.ub))))
 
             if var is not None and var.value is not None:
                 _adjust_var_value_if_not_feasible(var)

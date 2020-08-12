@@ -8,6 +8,7 @@
 #
 # This software is distributed under the 3-clause BSD License.
 ##############################################################################
+
 """
 UI data objects for sharing data and settings between different parts of the UI.
 """
@@ -18,7 +19,7 @@ __author__ = "John Eslick"
 import logging
 from pyomo.contrib.viewer.qt import *
 from pyomo.kernel import ComponentMap
-from pyomo.environ import Constraint, value, Expression
+import pyomo.environ as pyo
 
 _log = logging.getLogger(__name__)
 
@@ -82,17 +83,17 @@ class UIDataNoUi(object):
         self.emit_update()
 
     def calculate_constraints(self):
-        for o in self.model.component_data_objects( Constraint, active=True):
+        for o in self.model.component_data_objects(pyo.Constraint, active=True):
             try:
-                self.value_cache[o] =  value(o.body, exception=False)
+                self.value_cache[o] = pyo.value(o.body, exception=False)
             except ZeroDivisionError:
                 self.value_cache[o] = "Divide_by_0"
         self.emit_exec_refresh()
 
     def calculate_expressions(self):
-        for o in self.model.component_data_objects(Expression, active=True):
+        for o in self.model.component_data_objects(pyo.Expression, active=True):
             try:
-                self.value_cache[o] =  value(o, exception=False)
+                self.value_cache[o] = pyo.value(o, exception=False)
             except ZeroDivisionError:
                 self.value_cache[o] = "Divide_by_0"
         self.emit_exec_refresh()

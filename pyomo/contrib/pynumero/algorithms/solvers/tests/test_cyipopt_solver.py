@@ -9,9 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
-
-from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Param, RangeSet, minimize, exp, Suffix
-import os
+import pyomo.environ as pyo
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available, scipy_sparse as spa, scipy_available
@@ -31,197 +29,193 @@ try:
 except ImportError:
     raise unittest.SkipTest("Pynumero needs cyipopt to run CyIpoptSolver tests")
 
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver, CyIpoptNLP
-)
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptNLP
+
 
 def create_model1():
-    m =  ConcreteModel()
-    m.x =  Var([1, 2, 3], initialize=4.0)
-    m.c =  Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
-    m.d =  Constraint(expr=m.x[2] ** 2 + m.x[1] <= 18.0)
-    m.o =  Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([1, 2, 3], initialize=4.0)
+    m.d = pyo.Constraint(expr=m.x[1] + m.x[2] ** 2 <= 18.0)
+    m.c = pyo.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
+    m.o = pyo.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
     m.x[1].setlb(0.0)
     m.x[2].setlb(0.0)
-
     return m
 
-def create_model2():
-    m =  ConcreteModel()
-    m.x =  Var([1, 2], initialize=4.0)
-    m.d =  Constraint(expr=m.x[1] + m.x[2] <= 5)
-    m.o =  Objective(expr=m.x[1] ** 2 + 4 * m.x[2] ** 2 - 8 * m.x[1] - 16 * m.x[2])
-    m.x[1].setub(3.0)
-    m.x[1].setlb(0.0)
-    m.x[2].setlb(0.0)
+class TestCyIpoptNLP(unittest.TestCase):
 
-    return m
-
-
-def create_model3(G, A, b, c):
-    nx = G.shape[0]
-    nl = A.shape[0]
-
-    model =  ConcreteModel()
-    model.var_ids = range(nx)
-    model.con_ids = range(nl)
-
-    model.x =  Var(model.var_ids, initialize=0.0)
-    model.hessian_f =  Param(model.var_ids, model.var_ids, mutable=True, rule=lambda m, i, j: G[i, j])
-    model.jacobian_c =  Param(model.con_ids, model.var_ids, mutable=True, rule=lambda m, i, j: A[i, j])
-    model.rhs =  Param(model.con_ids, mutable=True, rule=lambda m, i: b[i])
-    model.grad_f =  Param(model.var_ids, mutable=True, rule=lambda m, i: c[i])
-
-    def equality_constraint_rule(m, i):
-        return sum(m.jacobian_c[i, j] * m.x[j] for j in m.var_ids) == m.rhs[i]
-    model.equalities =  Constraint(model.con_ids, rule=equality_constraint_rule)
-
-    def objective_rule(m):
-        accum = 0.0
-        for i in m.var_ids:
-            accum += m.x[i] * sum(m.hessian_f[i, j] * m.x[j] for j in m.var_ids)
-        accum *= 0.5
-        accum += sum(m.x[j] * m.grad_f[j] for j in m.var_ids)
-        return accum
-
-    model.obj =  Objective(rule=objective_rule, sense= minimize)
-
-    return model
-
-def create_model4():
-    m =  ConcreteModel()
-    m.x =  Var([1, 2], initialize=1.0)
-    m.c1 =  Constraint(expr=m.x[1] + m.x[2] - 1 == 0)
-    m.obj =  Objective(expr=2 * m.x[1] ** 2 + m.x[2] ** 2)
-    return m
-
-
-def create_model6():
-    model =  ConcreteModel()
-
-    model.S = [1, 2]
-    model.x =  Var(model.S, initialize=1.0)
-
-    def f(model):
-        return model.x[1] ** 4 + (model.x[1] + model.x[2]) ** 2 + (-1.0 +  exp(model.x[2])) ** 2
-
-    model.f =  Objective(rule=f)
-    return model
-
-
-def create_model9():
-    # clplatea OXR2-MN-V-0
-    model =  ConcreteModel()
-
-    p = 71
-    wght = -0.1
-    hp2 = 0.5 * p ** 2
-
-    model.x =  Var( RangeSet(1, p),  RangeSet(1, p), initialize=0.0)
-
-    def f(model):
-        return sum(0.5 * (model.x[i, j] - model.x[i, j - 1]) ** 2 + \
-                   0.5 * (model.x[i, j] - model.x[i - 1, j]) ** 2 + \
-                   hp2 * (model.x[i, j] - model.x[i, j - 1]) ** 4 + \
-                   hp2 * (model.x[i, j] - model.x[i - 1, j]) ** 4 \
-                   for i in range(2, p + 1) for j in range(2, p + 1)) + (wght * model.x[p, p])
-
-    model.f =  Objective(rule=f)
-
-    for j in range(1, p + 1):
-        model.x[1, j] = 0.0
-        model.x[1, j].fixed = True
-
-    return model
-
-
-class TestCyIpoptSolver(unittest.TestCase):
-
-    def test_model1(self):
+    def test_model1_CyIpoptNLP(self):
         model = create_model1()
         nlp = PyomoNLP(model)
-        solver = CyIpoptSolver(CyIpoptNLP(nlp))
-        x, info = solver.solve(tee=False)
-        x_sol = np.array([3.85958688, 4.67936007, 3.10358931])
-        y_sol = np.array([-1.0, 53.90357665])
-        self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
-        nlp.set_primals(x)
-        nlp.set_duals(y_sol)
-        self.assertAlmostEqual(nlp.evaluate_objective(), -428.6362455416348, places=5)
-        self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
+        cynlp = CyIpoptNLP(nlp)
+        self._check_model1(nlp, cynlp)
 
-    def test_model1_with_scaling(self):
+    def test_model1_CyIpoptNLP_scaling(self):
         m = create_model1()
-        m.scaling_factor = Suffix(direction=Suffix.EXPORT)
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
         m.scaling_factor[m.o] = 1e-6 # scale the objective
         m.scaling_factor[m.c] = 2.0  # scale the equality constraint
         m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
         m.scaling_factor[m.x[1]] = 4.0  # scale one of the x variables
 
         cynlp = CyIpoptNLP(PyomoNLP(m))
-        options={'nlp_scaling_method': 'user-scaling',
-                 'output_file': '_cyipopt-scaling.log',
-                 'file_print_level':10,
-                 'max_iter': 0}
-        solver = CyIpoptSolver(cynlp, options=options)
-        x, info = solver.solve()
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling == 1e-6)
+        self.assertTrue(len(x_scaling) == 3)
+        # vars are in order x[2], x[3], x[1]
+        self.assertTrue(x_scaling[0] == 1.0)
+        self.assertTrue(x_scaling[1] == 1.0)
+        self.assertTrue(x_scaling[2] == 4.0)
+        self.assertTrue(len(g_scaling) == 2)
+        # assuming the order is d then c
+        self.assertTrue(g_scaling[0] == 3.0)
+        self.assertTrue(g_scaling[1] == 2.0)
 
-        with open('_cyipopt-scaling.log', 'r') as fd:
-            solver_trace = fd.read()
-        os.remove('_cyipopt-scaling.log')
+        # test missing obj
+        m = create_model1()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
-        # check for the following strings in the log and then delete the log
-        self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
-        self.assertIn('output_file = _cyipopt-scaling.log', solver_trace)
-        self.assertIn('objective scaling factor = 1e-06', solver_trace)
-        self.assertIn('x scaling provided', solver_trace)
-        self.assertIn('c scaling provided', solver_trace)
-        self.assertIn('d scaling provided', solver_trace)
-        self.assertIn('DenseVector "x scaling vector" with 3 elements:', solver_trace)
-        self.assertIn('x scaling vector[    1]= 1.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    2]= 1.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    3]= 4.0000000000000000e+00', solver_trace)
-        self.assertIn('DenseVector "c scaling vector" with 1 elements:', solver_trace)
-        self.assertIn('c scaling vector[    1]= 2.0000000000000000e+00', solver_trace)
-        self.assertIn('DenseVector "d scaling vector" with 1 elements:', solver_trace)
-        self.assertIn('d scaling vector[    1]= 3.0000000000000000e+00', solver_trace)
+        #m.scaling_factor[m.o] = 1e-6 # scale the objective
+        m.scaling_factor[m.c] = 2.0  # scale the equality constraint
+        m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
+        m.scaling_factor[m.x[1]] = 4.0  # scale the x variable
 
-    def test_model2(self):
-        model = create_model2()
-        nlp = PyomoNLP(model)
-        solver = CyIpoptSolver(CyIpoptNLP(nlp))
-        x, info = solver.solve(tee=False)
-        x_sol = np.array([3.0, 1.99997807])
-        y_sol = np.array([0.00017543])
-        self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
-        nlp.set_primals(x)
-        nlp.set_duals(y_sol)
-        self.assertAlmostEqual(nlp.evaluate_objective(), -31.000000057167462, places=5)
-        self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
+        cynlp = CyIpoptNLP(PyomoNLP(m))
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling == None)
+        self.assertTrue(len(x_scaling) == 3)
+        # vars are in order x[2], x[3], x[1]
+        self.assertTrue(x_scaling[0] == 1.0)
+        self.assertTrue(x_scaling[1] == 1.0)
+        self.assertTrue(x_scaling[2] == 4.0)
+        self.assertTrue(len(g_scaling) == 2)
+        # assuming the order is d then c
+        self.assertTrue(g_scaling[0] == 3.0)
+        self.assertTrue(g_scaling[1] == 2.0)
 
-    def test_model3(self):
-        G = np.array([[6, 2, 1], [2, 5, 2], [1, 2, 4]])
-        A = np.array([[1, 0, 1], [0, 1, 1]])
-        b = np.array([3, 0])
-        c = np.array([-8, -3, -3])
+        # test missing var
+        m = create_model1()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
-        model = create_model3(G, A, b, c)
-        nlp = PyomoNLP(model)
-        solver = CyIpoptSolver(CyIpoptNLP(nlp))
-        x, info = solver.solve(tee=False)
-        x_sol = np.array([2.0, -1.0, 1.0])
-        y_sol = np.array([-3.,  2.])
-        self.assertTrue(np.allclose(x, x_sol, rtol=1e-4))
-        nlp.set_primals(x)
-        nlp.set_duals(y_sol)
-        self.assertAlmostEqual(nlp.evaluate_objective(), -3.5, places=5)
-        self.assertTrue(np.allclose(info['mult_g'], y_sol, rtol=1e-4))
+        m.scaling_factor[m.o] = 1e-6 # scale the objective
+        m.scaling_factor[m.c] = 2.0  # scale the equality constraint
+        m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
+        #m.scaling_factor[m.x] = 4.0  # scale the x variable
 
-    def test_options(self):
-        model = create_model1()
-        nlp = PyomoNLP(model)
-        solver = CyIpoptSolver(CyIpoptNLP(nlp), options={'max_iter': 1})
-        x, info = solver.solve(tee=False)
-        nlp.set_primals(x)
-        self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e+02, places=5)
+        cynlp = CyIpoptNLP(PyomoNLP(m))
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling == 1e-6)
+        self.assertTrue(len(x_scaling) == 3)
+        # vars are in order x[2], x[3], x[1]
+        self.assertTrue(x_scaling[0] == 1.0)
+        self.assertTrue(x_scaling[1] == 1.0)
+        self.assertTrue(x_scaling[2] == 1.0)
+        self.assertTrue(len(g_scaling) == 2)
+        # assuming the order is d then c
+        self.assertTrue(g_scaling[0] == 3.0)
+        self.assertTrue(g_scaling[1] == 2.0)
 
+        # test missing c
+        m = create_model1()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.scaling_factor[m.o] = 1e-6 # scale the objective
+        #m.scaling_factor[m.c] = 2.0  # scale the equality constraint
+        m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
+        m.scaling_factor[m.x[1]] = 4.0  # scale the x variable
+
+        cynlp = CyIpoptNLP(PyomoNLP(m))
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling == 1e-6)
+        self.assertTrue(len(x_scaling) == 3)
+        # vars are in order x[2], x[3], x[1]
+        self.assertTrue(x_scaling[0] == 1.0)
+        self.assertTrue(x_scaling[1] == 1.0)
+        self.assertTrue(x_scaling[2] == 4.0)
+        self.assertTrue(len(g_scaling) == 2)
+        # assuming the order is d then c
+        self.assertTrue(g_scaling[0] == 3.0)
+        self.assertTrue(g_scaling[1] == 1.0)
+
+        # test missing all
+        m = create_model1()
+        #m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        #m.scaling_factor[m.o] = 1e-6 # scale the objective
+        #m.scaling_factor[m.c] = 2.0  # scale the equality constraint
+        #m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
+        #m.scaling_factor[m.x] = 4.0  # scale the x variable
+
+        cynlp = CyIpoptNLP(PyomoNLP(m))
+        obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
+        self.assertTrue(obj_scaling is None)
+        self.assertTrue(x_scaling is None)
+        self.assertTrue(g_scaling is None)
+        
+    def _check_model1(self, nlp, cynlp):
+        # test x_init
+        expected_xinit = np.asarray([4.0, 4.0, 4.0], dtype=np.float64)
+        xinit = cynlp.x_init()
+        self.assertTrue(np.array_equal(xinit, expected_xinit))
+
+        # test x_lb
+        expected_xlb = list()
+        for v in nlp.get_pyomo_variables():
+            if v.lb == None:
+                expected_xlb.append(-np.inf)
+            else:
+                expected_xlb.append(v.lb)
+        expected_xlb = np.asarray(expected_xlb)
+        xlb = cynlp.x_lb()
+        self.assertTrue(np.array_equal(xlb, expected_xlb))
+
+        # test x_ub
+        expected_xub = list()
+        for v in nlp.get_pyomo_variables():
+            if v.ub == None:
+                expected_xub.append(np.inf)
+            else:
+                expected_xub.append(v.ub)
+        expected_xub = np.asarray(expected_xub)
+        xub = cynlp.x_ub()
+        self.assertTrue(np.array_equal(xub, expected_xub))
+
+        # test g_lb
+        expected_glb = np.asarray([-np.inf, 0.0], dtype=np.float64)
+        glb = cynlp.g_lb()
+        self.assertTrue(np.array_equal(glb, expected_glb))
+
+        # test g_ub
+        expected_gub = np.asarray([18, 0.0], dtype=np.float64)
+        gub = cynlp.g_ub()
+        print(expected_gub)
+        print(gub)
+        self.assertTrue(np.array_equal(gub, expected_gub))
+
+        x = cynlp.x_init()
+        # test objective
+        self.assertEqual(cynlp.objective(x), -504)
+        # test gradient
+        expected = np.asarray([-576, 8, 64], dtype=np.float64)
+        self.assertTrue(np.allclose(expected, cynlp.gradient(x)))
+        # test constraints
+        expected = np.asarray([20, -5], dtype=np.float64)
+        constraints = cynlp.constraints(x)
+        self.assertTrue(np.allclose(expected, constraints)) 
+        
+        # test jacobian
+        expected = np.asarray([[8.0, 0, 1.0],[0.0, 8.0, 1.0]])
+        spexpected = spa.coo_matrix(expected).todense()
+        rows, cols = cynlp.jacobianstructure()
+        values = cynlp.jacobian(x)
+        jac = spa.coo_matrix((values, (rows,cols)), shape=(len(constraints), len(x))).todense()
+        self.assertTrue(np.allclose(spexpected, jac))
+
+        # test hessian
+        y = constraints.copy()
+        y.fill(1.0)
+        rows, cols = cynlp.hessianstructure()
+        values = cynlp.hessian(x, y, obj_factor=1.0)
+        hess_lower = spa.coo_matrix((values, (rows,cols)), shape=(len(x), len(x))).todense()
+        expected_hess_lower = np.asarray([[-286.0, 0.0, 0.0], [0.0, 4.0, 0.0], [-144.0, 0.0, 192.0]], dtype=np.float64)
+        self.assertTrue(np.allclose(expected_hess_lower, hess_lower))

@@ -19,8 +19,8 @@ import six
 from scipy.sparse import coo_matrix
 
 import pyomo
+import pyomo.environ as pyo
 from pyomo.common.env import CtypesEnviron
-from pyomo.environ import Objective, Suffix
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 from pyutilib.services import TempfileManager
 
@@ -50,7 +50,7 @@ class PyomoNLP(AslNLP):
             # this objective later
             # TODO: extend the AmplInterface and the AslNLP to correctly handle this
             # This currently addresses issue #1217
-            objectives = list(pyomo_model.component_data_objects(ctype=Objective, active=True, descend_into=True))
+            objectives = list(pyomo_model.component_data_objects(ctype=pyo.Objective, active=True, descend_into=True))
             if len(objectives) != 1:
                 raise NotImplementedError('The ASL interface and PyomoNLP in PyNumero currently only support single objective'
                                           ' problems. Deactivate any extra objectives you may have, or add a dummy objective'
@@ -182,7 +182,7 @@ class PyomoNLP(AslNLP):
     def get_obj_scaling(self):
         obj = self.get_pyomo_objective()
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is Suffix and \
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix and \
            obj in scaling_suffix:
             return scaling_suffix[obj]
         return None
@@ -190,7 +190,7 @@ class PyomoNLP(AslNLP):
     # overloaded from NLP
     def get_primals_scaling(self):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is Suffix:
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             primals_scaling = np.ones(self.n_primals())
             for i,v in enumerate(self.get_pyomo_variables()):
                 if v in scaling_suffix:
@@ -201,7 +201,7 @@ class PyomoNLP(AslNLP):
     # overloaded from NLP
     def get_constraints_scaling(self):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is Suffix:
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             constraints_scaling = np.ones(self.n_constraints())
             for i,c in enumerate(self.get_pyomo_constraints()):
                 if c in scaling_suffix:

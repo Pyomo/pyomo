@@ -19,27 +19,32 @@ from pyomo.common.dependencies import (
     pandas as pd, pandas_available,
     scipy, scipy_available,
 )
-parmest_available = numpy_available & pandas_available & scipy_available
 
-from pyomo.environ import Block, Constraint, Var, Suffix, TerminationCondition, Expression, minimize, value
+import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 from pyomo.opt import SolverFactory
+from pyomo.environ import Block
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import fit_rect_dist, fit_mvn_dist, fit_kde_dist, pairwise_plot, grouped_boxplot, grouped_violinplot
+from pyomo.contrib.parmest.graphics import (fit_rect_dist,
+                                            fit_mvn_dist,
+                                            fit_kde_dist)
+
+parmest_available = numpy_available & pandas_available & scipy_available
 
 if numpy_available and scipy_available:
     from pyomo.contrib.pynumero.asl import AmplInterface
     asl_available = AmplInterface.available()
 else:
-    asl_available=False
+    asl_available = False
 
 if asl_available:
     from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
 
 __version__ = 0.1
+
 
 #=============================================
 def _object_from_string(instance, vstr):
@@ -49,8 +54,8 @@ def _object_from_string(instance, vstr):
         instance: a concrete pyomo model
         vstr: a particular Var or Param (e.g. "pp.Keq_a[2]")
     output:
-        the object 
-    NOTE: We need to deal with blocks 
+        the object
+    NOTE: We need to deal with blocks
           and with indexes that might really be strings or ints
     """
     # pull off the index
@@ -97,7 +102,7 @@ def _ef_ROOT_node_Object_from_string(efinstance, vstr):
 
     args:
         model: ConcreteModel
-        complist:  Var and  Param names in model
+        complist: pyo.Var and pyo.Param names in model
     return:
         vardatalist: a list of Vardata objects (perhaps empty)
         paramdatalist: a list of Paramdata objects or (perhaps empty)
@@ -112,13 +117,13 @@ def _ef_ROOT_node_Object_from_string(efinstance, vstr):
     
     for comp in complist:
         c = getattr(model, comp)
-        if c.is_indexed() and isinstance(c,  Var):
+        if c.is_indexed() and isinstance(c, pyo.Var):
             vardatalist.extend([c[i] for i in sorted(c.keys())])
-        elif isinstance(c,  Var):
+        elif isinstance(c, pyo.Var):
             vardatalist.append(c)
-        elif c.is_indexed() and isinstance(c,  Param):
+        elif c.is_indexed() and isinstance(c, pyo.Param):
             paramdatalist.extend([c[i] for i in sorted(c.keys())])
-        elif isinstance(c,  Param):
+        elif isinstance(c, pyo.Param):
             paramdatalist.append(c)
         else:
             raise RuntimeError("Invalid component list entry= "+\
@@ -367,7 +372,7 @@ class Estimator(object):
         model = self.model_function(data)
         
         if (len(self.theta_names) == 1) and (self.theta_names[0] == 'parmest_dummy_var'):
-            model.parmest_dummy_var =  Var(initialize = 1.0)
+            model.parmest_dummy_var = pyo.Var(initialize = 1.0)
             
         for theta in self.theta_names:
             try:
@@ -382,12 +387,12 @@ class Estimator(object):
         
             def FirstStageCost_rule(model):
                 return 0
-            model.FirstStageCost =  Expression(rule=FirstStageCost_rule)
-            model.SecondStageCost =  Expression(rule=_SecondStateCostExpr(self.obj_function, data))
+            model.FirstStageCost = pyo.Expression(rule=FirstStageCost_rule)
+            model.SecondStageCost = pyo.Expression(rule=_SecondStateCostExpr(self.obj_function, data))
             
             def TotalCost_rule(model):
                 return model.FirstStageCost + model.SecondStageCost
-            model.Total_Cost_Objective =  Objective(rule=TotalCost_rule, sense= minimize)
+            model.Total_Cost_Objective = pyo.Objective(rule=TotalCost_rule, sense=pyo.minimize)
         
         self.parmest_model = model
         
@@ -584,17 +589,17 @@ class Estimator(object):
             kaug = SolverFactory('k_aug')
 
             #: ipopt suffixes  REQUIRED FOR K_AUG!
-            model.dual =  Suffix(direction= Suffix.IMPORT_EXPORT)
-            model.ipopt_zL_out =  Suffix(direction= Suffix.IMPORT)
-            model.ipopt_zU_out =  Suffix(direction= Suffix.IMPORT)
-            model.ipopt_zL_in =  Suffix(direction= Suffix.EXPORT)
-            model.ipopt_zU_in =  Suffix(direction= Suffix.EXPORT)
+            model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+            model.ipopt_zL_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+            model.ipopt_zU_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+            model.ipopt_zL_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+            model.ipopt_zU_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
             # declare the suffix to be imported by the solver
-            model.red_hessian =  Suffix(direction= Suffix.EXPORT)
+            model.red_hessian = pyo.Suffix(direction=pyo.Suffix.EXPORT)
             #: K_AUG SUFFIXES
-            model.dof_v =  Suffix(direction= Suffix.EXPORT) 
-            model.rh_name =  Suffix(direction= Suffix.IMPORT)
+            model.dof_v = pyo.Suffix(direction=pyo.Suffix.EXPORT) 
+            model.rh_name = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
             for vstrindex in range(len(self.theta_names)):
                 vstr = self.theta_names[vstrindex]
@@ -646,7 +651,7 @@ class Estimator(object):
                 # Get theta value (there is probably a better way...)
                 vstr = self.theta_names[i]
                 varobject = _ef_ROOT_node_Object_from_string(model, vstr)
-                thetavals[self.theta_names[i]] =  value(varobject)
+                thetavals[self.theta_names[i]] = pyo.value(varobject)
             return objval, thetavals, HessDict
 
         else:
@@ -670,11 +675,11 @@ class Estimator(object):
             A dictionary of all values for theta that were input.
         solvertermination: Pyomo TerminationCondition
             Tries to return the "worst" solver status across the scenarios.
-             TerminationCondition.optimal is the best and 
-             TerminationCondition.infeasible is the worst.
+            pyo.TerminationCondition.optimal is the best and 
+            pyo.TerminationCondition.infeasible is the worst.
         """
 
-        optimizer =  SolverFactory('ipopt')
+        optimizer = pyo.SolverFactory('ipopt')
         dummy_tree = lambda: None # empty object (we don't need a tree)
         dummy_tree.CallbackModule = None
         dummy_tree.CallbackFunction = self._instance_creation_callback
@@ -688,14 +693,14 @@ class Estimator(object):
         # (ipopt will crash or complain on such problems without special care)
         instance = _pysp_instance_creation_callback(dummy_tree, "FOO1", None)    
         try: # deal with special problems so Ipopt will not crash
-            first = next(instance.component_objects( Constraint, active=True))
+            first = next(instance.component_objects(pyo.Constraint, active=True))
         except:
             sillylittle = True 
         else:
             sillylittle = False
         # end block of code to deal with models with no constraints
 
-        WorstStatus =  TerminationCondition.optimal
+        WorstStatus = pyo.TerminationCondition.optimal
         totobj = 0
         for snum in self._numbers_list:
             sname = "scenario_NODE"+str(snum)
@@ -716,13 +721,13 @@ class Estimator(object):
                             str(results.solver.termination_condition))
 
                 if results.solver.termination_condition \
-                   !=  TerminationCondition.optimal :
+                   != pyo.TerminationCondition.optimal :
                     # DLW: Aug2018: not distinguishing "middlish" conditions
-                    if WorstStatus !=  TerminationCondition.infeasible:
+                    if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
                     
             objobject = getattr(instance, self._second_stage_cost_exp)
-            objval =  value(objobject)
+            objval = pyo.value(objobject)
             totobj += objval
         retval = totobj / len(self._numbers_list) # -1??
 
@@ -1030,7 +1035,7 @@ class Estimator(object):
         all_obj = list()
         for Theta in local_thetas:
             obj, thetvals, worststatus = self._Q_at_theta(Theta)
-            if worststatus !=  TerminationCondition.infeasible:
+            if worststatus != pyo.TerminationCondition.infeasible:
                  all_obj.append(list(Theta.values()) + [obj])
             # DLW, Aug2018: should we also store the worst solver status?
             

@@ -22,7 +22,7 @@ _log = logging.getLogger(__name__)
 
 from pyomo.contrib.viewer.qt import *
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
-from pyomo.environ import Constraint
+import pyomo.environ as pyo
 
 mypath = os.path.dirname(__file__)
 try:
@@ -74,7 +74,7 @@ class ResidualDataModel(QAbstractTableModel):
         else:
             ac = True
         self._items = list(self.ui_data.model.component_data_objects(
-             Constraint, active=ac))
+             pyo.Constraint, active=ac))
 
     def sort(self):
         self._items.sort(key=
