@@ -42,6 +42,7 @@ def add_objective_linearization(solve_data, config):
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
 
+'''
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True):
@@ -105,6 +106,65 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 
             if constr.has_lb() \
                 and (linearize_active and abs(constr.lslack()) < config.bound_tolerance) \
+                    or (linearize_violated and constr.lslack() < 0) \
+                    or (config.linearize_inactive and constr.lslack() > 0):
+                if config.add_slack:
+                    slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+
+                target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                    expr=(sum(value(jacs[constr][var])*(var - var.value)
+                              for var in constr_vars) + value(constr.body)
+                          + (slack_var if config.add_slack else 0)
+                          >= constr.lower)
+                )
+'''
+
+
+def add_oa_cuts(target_model, dual_values, solve_data, config,
+                linearize_active=True,
+                linearize_violated=True):
+    """Linearizes nonlinear constraints.
+
+    For nonconvex problems, turn on 'config.add_slack'. Slack variables will
+    always be used for nonlinear equality constraints.
+    """
+    for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
+        if constr.body.polynomial_degree() in (0, 1):
+            continue
+
+        constr_vars = list(identify_variables(constr.body))
+        jacs = solve_data.jacobians
+
+        # Equality constraint (makes the problem nonconvex)
+        if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower and config.use_dual:
+            sign_adjust = -1 if solve_data.objective_sense == minimize else 1
+            rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+            if config.add_slack:
+                slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+            target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                expr=copysign(1, sign_adjust * dual_values[index])
+                * (sum(value(jacs[constr][var]) * (var - value(var))
+                       for var in list(EXPR.identify_variables(constr.body)))
+                    + value(constr.body) - rhs)
+                - (slack_var if config.add_slack else 0) <= 0)
+
+        else:  # Inequality constraint (possibly two-sided)
+            if constr.has_ub() \
+                and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
+                    or (linearize_violated and constr.uslack() < 0) \
+                    or (config.linearize_inactive and constr.uslack() > 0):
+                if config.add_slack:
+                    slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+
+                target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                    expr=(sum(value(jacs[constr][var])*(var - var.value)
+                              for var in constr_vars) + value(constr.body)
+                          - (slack_var if config.add_slack else 0)
+                          <= constr.upper)
+                )
+
+            if constr.has_lb() \
+                and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                     or (linearize_violated and constr.lslack() < 0) \
                     or (config.linearize_inactive and constr.lslack() > 0):
                 if config.add_slack:
@@ -253,7 +313,7 @@ def add_ecp_cuts(target_model, solve_data, config,
 #             - slack_var <= 0)
 
 
-def add_int_cut(var_values, solve_data, config, feasible=False):
+def add_nogood_cuts(var_values, solve_data, config, feasible=False):
     """
     Adds integer cuts; modifies the model to include integer cuts
 
@@ -268,10 +328,10 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
     feasible: bool, optional
         boolean indicating if integer combination yields a feasible or infeasible NLP
     """
-    if not config.add_integer_cuts:
+    if not config.add_nogood_cuts:
         return
 
-    config.logger.info("Adding integer cuts")
+    config.logger.info("Adding nogood cuts")
 
     m = solve_data.mip
     MindtPy = m.MindtPy_utils
@@ -309,18 +369,18 @@ def add_int_cut(var_values, solve_data, config, feasible=False):
     #     MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)
 
 
-def add_affine_cuts(nlp_result, solve_data, config):
+def add_affine_cuts(solve_data, config):
     """
     Adds affine cuts using MCPP; modifies the model to include affine cuts
 
-    nlp_result: TODO: Fill this in
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
+
     m = solve_data.mip
-    config.logger.info("Adding affine cuts.")
+    config.logger.info("Adding affine cuts")
     counter = 0
 
     for constr in m.MindtPy_utils.constraint_list:
@@ -339,10 +399,33 @@ def add_affine_cuts(nlp_result, solve_data, config):
             config.logger.debug(
                 "Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
             continue  # skip to the next constraint
+
         ccSlope = mc_eqn.subcc()
         cvSlope = mc_eqn.subcv()
         ccStart = mc_eqn.concave()
         cvStart = mc_eqn.convex()
+
+        # check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
+        concave_cut_valid = True
+        convex_cut_valid = True
+        for var in vars_in_constr:
+            if not var.fixed:
+                if ccSlope[var] == float('nan') or ccSlope[var] == float('inf'):
+                    concave_cut_valid = False
+                if cvSlope[var] == float('nan') or cvSlope[var] == float('inf'):
+                    convex_cut_valid = False
+        # check if the value of ccSlope and cvSlope all equals zero. if so, we skip this.
+        if not any(list(ccSlope.values())):
+            concave_cut_valid = False
+        if not any(list(cvSlope.values())):
+            convex_cut_valid = False
+        if ccStart == float('nan') or ccStart == float('inf'):
+            concave_cut_valid = False
+        if cvStart == float('nan') or cvStart == float('inf'):
+            convex_cut_valid = False
+        if (concave_cut_valid or convex_cut_valid) is False:
+            continue
+
         ub_int = min(constr.upper, mc_eqn.upper()
                      ) if constr.has_ub() else mc_eqn.upper()
         lb_int = max(constr.lower, mc_eqn.lower()
@@ -350,20 +433,24 @@ def add_affine_cuts(nlp_result, solve_data, config):
 
         parent_block = constr.parent_block()
         # Create a block on which to put outer approximation cuts.
+        # TODO: create it at the beginning.
         aff_utils = parent_block.component('MindtPy_aff')
         if aff_utils is None:
             aff_utils = parent_block.MindtPy_aff = Block(
                 doc="Block holding affine constraints")
             aff_utils.MindtPy_aff_cons = ConstraintList()
         aff_cuts = aff_utils.MindtPy_aff_cons
-        concave_cut = sum(ccSlope[var] * (var - var.value)
-                          for var in vars_in_constr
-                          if not var.fixed) + ccStart >= lb_int
-        convex_cut = sum(cvSlope[var] * (var - var.value)
-                         for var in vars_in_constr
-                         if not var.fixed) + cvStart <= ub_int
-        aff_cuts.add(expr=concave_cut)
-        aff_cuts.add(expr=convex_cut)
-        counter += 2
+        if concave_cut_valid:
+            concave_cut = sum(ccSlope[var] * (var - var.value)
+                              for var in vars_in_constr
+                              if not var.fixed) + ccStart >= lb_int
+            aff_cuts.add(expr=concave_cut)
+            counter += 1
+        if convex_cut_valid:
+            convex_cut = sum(cvSlope[var] * (var - var.value)
+                             for var in vars_in_constr
+                             if not var.fixed) + cvStart <= ub_int
+            aff_cuts.add(expr=convex_cut)
+            counter += 1
 
     config.logger.info("Added %s affine cuts" % counter)

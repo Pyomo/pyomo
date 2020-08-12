@@ -1,4 +1,4 @@
-"""Tests for the MINDT solver plugin."""
+"""Tests for the MindtPy solver plugin."""
 from math import fabs
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
@@ -131,7 +131,7 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True
                                 )
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.maxIterations)
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample(self):

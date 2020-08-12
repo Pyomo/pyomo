@@ -1,8 +1,9 @@
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
-
 import logging
 from math import fabs, floor, log
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
+                                                  add_nogood_cuts, add_affine_cuts)
 
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Suffix, Var, minimize, value)
@@ -72,7 +73,7 @@ def model_is_valid(solve_data, config):
             mipopt.solve(solve_data.original_model, **config.mip_solver_args)
             return False
 
-    if not hasattr(m, 'dual'):  # Set up dual value reporting
+    if not hasattr(m, 'dual') and config.use_dual:  # Set up dual value reporting
         m.dual = Suffix(direction=Suffix.IMPORT)
 
     # TODO if any continuous variables are multiplied with binary ones,
@@ -127,15 +128,24 @@ def add_feas_slacks(m, config):
     # generate new constraints
     for i, constr in enumerate(MindtPy.constraint_list, 1):
         if constr.body.polynomial_degree() not in [0, 1]:
-            rhs = constr.upper if constr.has_ub() else constr.lower
-            if config.feasibility_norm in {'L1', 'L2'}:
-                c = MindtPy.MindtPy_feas.feas_constraints.add(
-                    constr.body - rhs
-                    <= MindtPy.MindtPy_feas.slack_var[i])
-            else:
-                c = MindtPy.MindtPy_feas.feas_constraints.add(
-                    constr.body - rhs
-                    <= MindtPy.MindtPy_feas.slack_var)
+            if constr.has_ub():
+                if config.feasibility_norm in {'L1', 'L2'}:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.upper
+                        <= MindtPy.MindtPy_feas.slack_var[i])
+                else:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.upper
+                        <= MindtPy.MindtPy_feas.slack_var)
+            if constr.has_lb():
+                if config.feasibility_norm in {'L1', 'L2'}:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.lower
+                        >= -MindtPy.MindtPy_feas.slack_var[i])
+                else:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.lower
+                        >= -MindtPy.MindtPy_feas.slack_var)
 
 
 def var_bound_add(solve_data, config):

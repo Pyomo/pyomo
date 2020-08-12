@@ -5,15 +5,12 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination, solve_NLP_feas)
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_int_cut)
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
 from math import copysign
 from pyomo.environ import *
@@ -104,8 +101,9 @@ def solve_OA_master(solve_data, config):
                 doc='Objective function expression should improve on the best found dual bound')
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
-    getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
-    getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
+    if config.nlp_solver == 'ipopt':
+        getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
 
     masteropt = SolverFactory(config.mip_solver)
     # determine if persistent solver is called.
@@ -124,15 +122,24 @@ def solve_OA_master(solve_data, config):
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
         masteropt.options['timelimit'] = config.time_limit
+        if config.threads > 0:
+            masteropt.options["threads"] = config.threads
     mip_args = dict(config.mip_solver_args)
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.0;')
+        mip_args['add_options'].append('option reslim=%s;' % remaining)
+    # elif config.mip_solver == 'glpk':
+    #     masteropt.options['timelimit'] = remaining
     master_mip_results = masteropt.solve(
-        solve_data.mip, **mip_args)  # , tee=True)
+        solve_data.mip, **mip_args)
+
+    # if config.single_tree is False and config.add_nogood_cuts is False:
 
     if master_mip_results.solver.termination_condition is tc.optimal:
-        if config.single_tree:
+        if config.single_tree and config.add_nogood_cuts is False:
             if main_objective.sense == minimize:
                 solve_data.LB = max(
                     master_mip_results.problem.lower_bound, solve_data.LB)
@@ -273,6 +280,7 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
         config.logger.warning(
             'MindtPy initialization may have generated poor '
             'quality cuts.')
+    # TODO nogood cuts for single tree case
     # set optimistic bound to infinity
     main_objective = next(
         master_mip.component_data_objects(Objective, active=True))
@@ -280,6 +288,13 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
         solve_data.LB_progress.append(solve_data.LB)
     else:
         solve_data.UB_progress.append(solve_data.UB)
+    config.logger.info(
+        'MindtPy exiting due to MILP master problem infeasibility.')
+    if solve_data.results.solver.termination_condition is None:
+        if solve_data.mip_iter == 0:
+            solve_data.results.solver.termination_condition = tc.infeasible
+        else:
+            solve_data.results.solver.termination_condition = tc.feasible
 
 
 def handle_master_mip_max_timelimit(master_mip, solve_data, config):

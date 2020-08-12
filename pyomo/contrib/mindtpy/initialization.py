@@ -1,9 +1,9 @@
 """Initialization functions."""
 from __future__ import division
 
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values, get_main_elapsed_time
 from pyomo.contrib.mindtpy.cut_generation import (
-    add_oa_cuts, add_objective_linearization,
+    add_oa_cuts, add_affine_cuts, add_objective_linearization,
 )
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
@@ -16,8 +16,7 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
 from pyomo.contrib.mindtpy.util import var_bound_add
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts,
-                                                  add_int_cut)
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -40,7 +39,8 @@ def MindtPy_initialize_master(solve_data, config):
 
     m = solve_data.mip = solve_data.working_model.clone()
     MindtPy = m.MindtPy_utils
-    m.dual.deactivate()
+    if config.use_dual:
+        m.dual.deactivate()
 
     if config.strategy == 'OA':
         calc_jacobians(solve_data, config)  # preload jacobians
@@ -60,7 +60,7 @@ def MindtPy_initialize_master(solve_data, config):
 
     # Set default initialization_strategy
     if config.init_strategy is None:
-        if config.strategy == 'OA':
+        if config.strategy in {'OA', 'GOA'}:
             config.init_strategy = 'rNLP'
         else:
             config.init_strategy = 'max_binary'
@@ -74,11 +74,10 @@ def MindtPy_initialize_master(solve_data, config):
         init_rNLP(solve_data, config)
     elif config.init_strategy == 'max_binary':
         init_max_binaries(solve_data, config)
-#        if config.strategy == 'ECP':
-#            add_ecp_cuts(solve_data.mip, solve_data, config)
     elif config.init_strategy == 'initial_binary':
         if config.strategy != 'ECP':
-            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(solve_data, config)
+            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
+                solve_data, config)
             if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
@@ -106,14 +105,24 @@ def init_rNLP(solve_data, config):
         "NLP %s: Solve relaxed integrality" % (solve_data.nlp_iter,))
     MindtPy = m.MindtPy_utils
     TransformationFactory('core.relax_integer_vars').apply_to(m)
+    nlp_args = dict(config.nlp_solver_args)
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
+    if config.nlp_solver == 'gams':
+        nlp_args['add_options'] = nlp_args.get('add_options', [])
+        nlp_args['add_options'].append('option reslim=%s;' % remaining)
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
-            m, **config.nlp_solver_args)
+            m, **nlp_args)
     subprob_terminate_cond = results.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
+    if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
+        if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
+            config.logger.info(
+                'relaxed NLP is not solved to optimality.')
         main_objective = next(m.component_data_objects(Objective, active=True))
         nlp_solution_values = list(v.value for v in MindtPy.variable_list)
-        dual_values = list(m.dual[c] for c in MindtPy.constraint_list)
+        dual_values = list(
+            m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut
         if main_objective.sense == minimize:
             solve_data.LB = value(main_objective.expr)
@@ -123,11 +132,15 @@ def init_rNLP(solve_data, config):
             'NLP %s: OBJ: %s  LB: %s  UB: %s'
             % (solve_data.nlp_iter, value(main_objective.expr),
                solve_data.LB, solve_data.UB))
-        if config.strategy == 'OA':
+        if config.strategy in {'OA', 'GOA'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
-            add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+            if config.strategy == 'OA':
+                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+            elif config.strategy == 'GOA':
+                add_affine_cuts(solve_data, config)
+            # TODO check if value of the binary or integer varibles is 0/1 or integer value.
             for var in solve_data.mip.component_data_objects(ctype=Var):
                 if var.is_integer():
                     var.value = int(round(var.value))
@@ -136,6 +149,12 @@ def init_rNLP(solve_data, config):
         config.logger.info(
             'Initial relaxed NLP problem is infeasible. '
             'Problem may be infeasible.')
+    elif subprob_terminate_cond is tc.maxTimeLimit:
+        config.logger.info(
+            'NLP subproblem failed to converge within time limit.')
+    elif subprob_terminate_cond is tc.maxIterations:
+        config.logger.info(
+            'NLP subproblem failed to converge within iteration limit.')
     else:
         raise ValueError(
             'MindtPy unable to handle relaxed NLP termination condition '
@@ -158,7 +177,8 @@ def init_max_binaries(solve_data, config):
         contains the specific configurations for the algorithm
     """
     m = solve_data.working_model.clone()
-    m.dual.deactivate()
+    if config.use_dual:
+        m.dual.deactivate()
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1
     config.logger.info(
@@ -182,6 +202,8 @@ def init_max_binaries(solve_data, config):
     if isinstance(opt, PersistentSolver):
         opt.set_instance(m)
     mip_args = dict(config.mip_solver_args)
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.0;')
@@ -200,6 +222,12 @@ def init_max_binaries(solve_data, config):
             'MILP master problem is infeasible. '
             'Problem may have no more feasible '
             'binary configurations.')
+    elif subprob_terminate_cond is tc.maxTimeLimit:
+        config.logger.info(
+            'NLP subproblem failed to converge within time limit.')
+    elif subprob_terminate_cond is tc.maxIterations:
+        config.logger.info(
+            'NLP subproblem failed to converge within iteration limit.')
     else:
         raise ValueError(
             'MindtPy unable to handle MILP master termination condition '

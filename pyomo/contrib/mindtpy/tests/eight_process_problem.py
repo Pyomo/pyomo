@@ -151,6 +151,8 @@ class EightProcessFlowsheet(ConcreteModel):
 
         """Bound definitions"""
         # x (flow) upper bounds
-        x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
+        # x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
+        x_ubs = {2: 10, 3: 2, 4: 10, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 18: 10, 19: 2,
+                 20: 10, 21: 2, 22: 10, 25: 3}  # add bounds for variables in nonlinear constraints
         for i, x_ub in iteritems(x_ubs):
             X[i].setub(x_ub)
