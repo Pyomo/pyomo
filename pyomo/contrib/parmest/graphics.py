@@ -21,11 +21,15 @@ except ImportError:
 try:
     # matplotlib.pyplot can generate a runtime error on OSX when not
     # installed as a Framework (as is the case in the CI systems)
+    #
+    # occasionally dependent conda packages for older distributions
+    # (e.g. python 3.5) get released that are either broken not
+    # compatible, resulting in a SyntaxError
     import seaborn as sns
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from matplotlib.lines import Line2D
-except (ImportError, RuntimeError):
+except (ImportError, RuntimeError, SyntaxError):
     imports_available = False
 
 
