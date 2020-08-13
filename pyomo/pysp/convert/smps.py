@@ -19,6 +19,7 @@ import logging
 import itertools
 from collections import namedtuple
 
+from pyomo.common.collections import ComponentMap
 from pyomo.opt import WriterFactory
 from pyomo.core.base.numvalue import value, as_numeric
 from pyomo.core.base.block import (Block,
@@ -28,7 +29,6 @@ from pyomo.core.base.objective import Objective
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base.sos import SOSConstraint
-from pyomo.core.base.suffix import ComponentMap
 from pyomo.repn import generate_standard_repn
 from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.embeddedsp import (EmbeddedSP,

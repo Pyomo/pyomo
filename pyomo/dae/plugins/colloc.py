@@ -18,9 +18,10 @@ from six import next
 # stored dictionary for up to 10 collocation points.
 from pyomo.common.dependencies import numpy, numpy_available
 
+from pyomo.common.collections import ComponentSet
+
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import Var, ConstraintList, Expression, Objective
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 
 from pyomo.dae.misc import generate_finite_elements

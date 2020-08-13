@@ -19,10 +19,10 @@ from six import StringIO
 import pyutilib.th as unittest
 
 from pyomo.environ import *
+from pyomo.common.collections import ComponentMap
 from pyomo.common.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.misc import *
-from pyomo.core.kernel.component_map import ComponentMap
 
 currdir = dirname(abspath(__file__)) + os.sep
 

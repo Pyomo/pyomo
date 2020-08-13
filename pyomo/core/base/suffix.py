@@ -15,8 +15,8 @@ __all__ = ('Suffix',
 import logging
 import pprint
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponent
 

@@ -16,8 +16,8 @@ from __future__ import division, print_function, absolute_import
 __author__ = "John Eslick"
 
 import logging
+from pyomo.common.collections import ComponentMap
 from pyomo.contrib.viewer.qt import *
-from pyomo.kernel import ComponentMap
 import pyomo.environ as pe
 
 _log = logging.getLogger(__name__)

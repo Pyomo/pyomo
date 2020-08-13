@@ -20,10 +20,10 @@ import pyutilib.th as unittest
 
 from pyomo.core.base import *
 from pyomo.environ import SolverFactory
+from pyomo.common.collections import ComponentMap
 from pyomo.common.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.initialization import *
-from pyomo.core.kernel.component_map import ComponentMap
 
 currdir = dirname(abspath(__file__)) + os.sep
 
