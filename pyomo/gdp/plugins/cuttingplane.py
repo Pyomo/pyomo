@@ -89,7 +89,7 @@ def get_linear_approximation_expr(normal_vec, point):
 def create_cuts_fme(var_info, var_map, disaggregated_vars,
                      disaggregation_constraints, rHull_vars, instance_rHull,
                      rBigM_linear_constraints, transBlock_rBigm,
-                     transBlock_rHull):
+                     transBlock_rHull, TOL):
     # loop through all constraints in rHull and figure out which are active
     # or slightly violated. For each we will get the tangent plane at xhat
     # (which is x_hull below). We get the normal vector for each of these
@@ -182,15 +182,17 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
     cuts = get_constraint_exprs(projected_constraints, var_map)
 
     # We likely have some cuts that duplicate other constraints now. We will
-    # filter them to make sure that they do in fact cut off x*. If that's
-    # the case, we know they are not already in the BigM relaxation.
+    # filter them to make sure that they do in fact cut off x*. If that's the
+    # case, we know they are not already in the BigM relaxation. Because they
+    # came from FME, they are very likely redundant, so we'll just keep the
+    # first good one we find.
     for i in sorted(range(len(cuts)), reverse=True):
         cut = cuts[i]
         # x* is still in rBigM, so we can just remove this constraint if it
         # is satisfied at x*
-        print("hi there")
-        print(cut)
+        logger.info("FME: Post-processing cut %s" % cut)
         if value(cut):
+            logger.info("FME:\t Doesn't cut off x*")
             del cuts[i]
             continue
         # we have found a constraint which cuts of x* by some convincing
@@ -198,30 +200,28 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
         # can stop. We know cut is lb <= expr and that it's violated
         assert len(cut.args) == 2
         # TODO: OK, we need a tolerance option here...
-        print("maybe: ")
-        print(cut)
         print(value(cut.args[0]) - value(cut.args[1]))
-        if value(cut.args[0]) - value(cut.args[1]) > 0.001:
+        if value(cut.args[0]) - value(cut.args[1]) > TOL:
+            logger.info("FME:\t Cuts off x* by more than %s, returning." % TOL)
             return [cut]
 
     return None
 
 # TODO, this is a dumb name. Not sure what to call it right now.
-def create_cuts_quadratic_projection(var_info, var_map,
-                                      disaggregated_vars,
-                                      disaggregation_constraints,
-                                      rHull_vars, instance_rHull,
-                                      rBigM_linear_constraints,
-                                      transBlock_rBigM, transBlock_rHull):
+def create_cuts_subgradient(var_info, var_map, disaggregated_vars,
+                                     disaggregation_constraints, rHull_vars,
+                                     instance_rHull, rBigM_linear_constraints,
+                                     transBlock_rBigM, transBlock_rHull, TOL):
     cut_number = len(transBlock_rBigM.cuts)
-    logger.warning("gdp.cuttingplane: Creating (but not yet adding) cut %s."
-                   % (cut_number,))
 
     cutexpr = 0
     for x_bigm, x_rbigm, x_hull, x_star in var_info:
         cutexpr += (x_hull.value - x_star.value)*(x_rbigm - x_hull.value)
 
-    return [cutexpr >= 0]
+    # make sure we're cutting off x* by enough.
+    if value(cutexpr) < -TOL:
+        return [cutexpr >= 0]
+    return None
 
 def restore_objective(instance_rHull, transBlock_rHull):
     transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
@@ -229,6 +229,7 @@ def restore_objective(instance_rHull, transBlock_rHull):
 
 def back_off_constraint(instance_rHull, transBlock_rHull, cut, var_info, opt,
                         stream_solver, TOL):
+    logger.info("Post-processing cut: %s" % cut.expr)
     # Take a constraint. We will solve a problem maximizing its violation
     # subject to rHull. Then we will add that much padding to it and we believe
     # that it will be valid because our error is in the direction of violating
@@ -252,9 +253,8 @@ def back_off_constraint(instance_rHull, transBlock_rHull, cut, var_info, opt,
         return
 
     val = value(transBlock_rHull.infeasibility_objective) - TOL
-    print("VAL IS %s" % val)
     if val <= 0:
-        print("BACKING off by %s" % val)
+        logger.info("\tBacking off cut by %s" % val)
         cut._body += abs(val)
     # else there is nothing to do
     restore_objective(instance_rHull, transBlock_rHull)
@@ -337,7 +337,7 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('create_cuts', ConfigValue(
         # TODO: change this default later
-        default=create_cuts_quadratic_projection,
+        default=create_cuts_subgradient,
         description="Function which takes TODO",
         doc="""
         TODO
@@ -361,6 +361,29 @@ class CuttingPlane_Transformation(Transformation):
         tolerances makes sense.
         """
     ))
+    CONFIG.declare('verbose', ConfigValue(
+        default=False,
+        domain=bool,
+        description="Flag to enable verbose output",
+        doc="""
+        If True, prints subproblem solutions, as well as potential and added cuts
+        during algorithm.
+
+        If False, only the relaxed BigM objective and minimal information about 
+        cuts is logged.
+        """
+    ))
+    CONFIG.declare('keep_cut_tolerance', ConfigValue(
+        default=0.001,
+        domain=float,
+        description="Tolerance used to decide if a cut removes x* from the "
+        "relaxed BigM problem by enough to be kept.",
+        doc="""
+        Absolute tolerance used to decide whether to keep a cut. We require
+        that, when evaluated at x* (the relaxed BigM optimal solution), the 
+        cut be infeasible by at least this tolerance.
+        """
+    ))
 
     def __init__(self):
         super(CuttingPlane_Transformation, self).__init__()
@@ -368,6 +391,9 @@ class CuttingPlane_Transformation(Transformation):
     def _apply_to(self, instance, bigM=None, **kwds):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
+
+        if self._config.verbose:
+            logger.setLevel(logging.INFO)
 
         (instance_rBigM, instance_rHull, var_info, 
          var_map, disaggregated_vars, 
@@ -562,22 +588,22 @@ class CuttingPlane_Transformation(Transformation):
             # solve rBigM, solution is xstar
             results = opt.solve(instance_rBigM, tee=stream_solver)
             if verify_successful_solve(results) is not NORMAL:
-                logger.warning("GDP.cuttingplane: Relaxed BigM subproblem "
+                logger.warning("Relaxed BigM subproblem "
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
 
             rBigM_objVal = value(rBigM_obj)
-            logger.warning("gdp.cuttingplane: rBigM objective = %s"
+            logger.warning("rBigM objective = %s"
                            % (rBigM_objVal,))
 
             # copy over xstar
-            print("x* is:")
+            logger.info("x* is:")
             for x_bigm, x_rbigm, x_hull, x_star in var_info:
                 x_star.value = x_rbigm.value
                 # initialize the X values
                 x_hull.value = x_rbigm.value
-                print("%s: %s" % (x_rbigm.name, x_rbigm.value))
+                logger.info("\t%s = %s" % (x_rbigm.name, x_rbigm.value))
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
@@ -589,14 +615,13 @@ class CuttingPlane_Transformation(Transformation):
             # solve separation problem to get xhat.
             opt.solve(instance_rHull, tee=stream_solver)
             if verify_successful_solve(results) is not NORMAL:
-                logger.warning("GDP.cuttingplane: Hull separation subproblem "
+                logger.warning("Hull separation subproblem "
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
-            # DEBUG:
-            print("xhat is: ")
+            logger.info("xhat is: ")
             for x_bigm, x_rbigm, x_hull, x_star in var_info:
-                print("%s: %s" % (x_hull.name, x_hull.value))
+                logger.info("\t%s = %s" % (x_hull.name, x_hull.value))
 
             # [JDS 19 Dec 18] Note: we check that the separation objective was
             # significantly nonzero.  If it is too close to zero, either the
@@ -611,7 +636,8 @@ class CuttingPlane_Transformation(Transformation):
                                             disaggregation_constraints,
                                             rHull_vars, instance_rHull,
                                             rBigM_linear_constraints,
-                                            transBlock_rBigM, transBlock_rHull)
+                                            transBlock_rBigM, transBlock_rHull,
+                                            self._config.keep_cut_tolerance)
            
             # We are done if the cut generator couldn't return a valid cut
             if cuts is None or not improving:
@@ -619,8 +645,7 @@ class CuttingPlane_Transformation(Transformation):
 
             for cut in cuts:
                 cut_number = len(transBlock_rBigM.cuts)
-                logger.warning("GDP.cuttingplane: Adding cut %s to BM model."
-                               % (cut_number,))
+                logger.warning("Adding cut %s to BigM model." % (cut_number,))
                 transBlock_rBigM.cuts.add(cut_number, cut)
                 if self._config.post_process_cut_callback is not None:
                     self._config.post_process_cut_callback( 

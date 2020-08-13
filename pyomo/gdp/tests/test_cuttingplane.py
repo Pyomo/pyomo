@@ -120,7 +120,8 @@ class OneVarDisj(unittest.TestCase):
         m = models.twoSegments_SawayaGrossmann()
         # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
         # 0 <= Y <= 1 (in the limit)
-        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
+        TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6,
+                                                           verbose=True)
         self.check_expected_two_segment_cut(m)
     
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
