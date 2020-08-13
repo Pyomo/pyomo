@@ -9,3 +9,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentSet
+from pyomo.common.deprecation import deprecation_warning
+deprecation_warning(
+    'The pyomo.core.kernel.component_set module is deprecated.  '
+    'Import ComponentSet from pyomo.common.collections.',
+    version='TBD')
