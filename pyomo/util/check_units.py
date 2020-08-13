@@ -159,7 +159,7 @@ def _assert_units_consistent_block(obj):
     and checks if the units are consistent on each of them
     """
     # check all the component objects
-    for component in obj.component_objects(descend_into=True, active=True):
+    for component in obj.component_objects(descend_into=False, active=True):
         assert_units_consistent(component)
 
 _component_data_handlers = {
