@@ -21,7 +21,8 @@ except:
     from ordereddict import OrderedDict
 
 
-from pyomo.common.config import ConfigBlock, ConfigValue, PositiveFloat
+from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveFloat,
+                                 NonNegativeFloat)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
                          SortComponents, Transformation, TransformationFactory,
@@ -199,7 +200,6 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
         # amount and is not already in rBigM, this has to be our cut and we
         # can stop. We know cut is lb <= expr and that it's violated
         assert len(cut.args) == 2
-        # TODO: OK, we need a tolerance option here...
         print(value(cut.args[0]) - value(cut.args[1]))
         if value(cut.args[0]) - value(cut.args[1]) > TOL:
             logger.info("FME:\t Cuts off x* by more than %s, returning." % TOL)
@@ -207,7 +207,6 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
 
     return None
 
-# TODO, this is a dumb name. Not sure what to call it right now.
 def create_cuts_subgradient(var_info, var_map, disaggregated_vars,
                                      disaggregation_constraints, rHull_vars,
                                      instance_rHull, rBigM_linear_constraints,
@@ -227,25 +226,21 @@ def restore_objective(instance_rHull, transBlock_rHull):
     transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
     transBlock_rHull.separation_objective.activate()
 
-def back_off_constraint(instance_rHull, transBlock_rHull, cut, var_info, opt,
-                        stream_solver, TOL):
+def back_off_constraint(instance_rHull, transBlock_rHull, cut, bigm_to_hull_map,
+                        opt, stream_solver, TOL):
     logger.info("Post-processing cut: %s" % cut.expr)
     # Take a constraint. We will solve a problem maximizing its violation
-    # subject to rHull. Then we will add that much padding to it and we believe
-    # that it will be valid because our error is in the direction of violating
-    # constraints, not landing in the interior, so this should be
-    # pessimistic. Or John believes this, I think? Not sure if I'm convinced...
+    # subject to rHull. We will add some user-specified tolerance to that
+    # violation, and then add that much padding to it if it can be violated.
     transBlock_rHull.separation_objective.deactivate()
-    # TODO: You need only do this once, actually, Emma, this was just
-    # prototyping
-    backmap = dict((id(var_info[i][0]), var_info[i][2]) for i in
-                   range(len(var_info)))
+
     transBlock_rHull.infeasibility_objective = Objective(
-        expr=clone_without_expression_components(cut.body, substitute=backmap))
+        expr=clone_without_expression_components(cut.body,
+                                                 substitute=bigm_to_hull_map))
 
     results = opt.solve(instance_rHull, tee=stream_solver)
     if verify_successful_solve(results) is not NORMAL:
-        logger.warning("GDP.cuttingplane: Problem to determine how much to "
+        logger.warning("Problem to determine how much to "
                        "back off the new cut "
                        "did not solve normally. Leaving the constraint as is, "
                        "which could lead to numerical trouble%s" % (results,))
@@ -336,7 +331,6 @@ class CuttingPlane_Transformation(Transformation):
         """
     ))
     CONFIG.declare('create_cuts', ConfigValue(
-        # TODO: change this default later
         default=create_cuts_subgradient,
         description="Function which takes TODO",
         doc="""
@@ -352,6 +346,7 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('post_process_cut_tolerance', ConfigValue(
         default=1e-8,
+        domain=NonNegativeFloat,
         description="Tolerance to pass to the post_process_cut_callback.",
         doc="""
         Tolerance passed to the post_process_cut_callback.
@@ -375,7 +370,7 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('keep_cut_tolerance', ConfigValue(
         default=0.001,
-        domain=float,
+        domain=NonNegativeFloat,
         description="Tolerance used to decide if a cut removes x* from the "
         "relaxed BigM problem by enough to be kept.",
         doc="""
@@ -396,13 +391,14 @@ class CuttingPlane_Transformation(Transformation):
             logger.setLevel(logging.INFO)
 
         (instance_rBigM, instance_rHull, var_info, 
-         var_map, disaggregated_vars, 
+         var_map, bigm_to_hull_map, disaggregated_vars, 
          disaggregation_constraints, 
          rBigM_linear_constraints, transBlockName) = self._setup_subproblems(
              instance, bigM, self._config.tighten_relaxation_callback)
 
         self._generate_cuttingplanes( instance_rBigM, instance_rHull, var_info,
-                                      var_map, disaggregated_vars,
+                                      var_map, bigm_to_hull_map,
+                                      disaggregated_vars,
                                       disaggregation_constraints,
                                       rBigM_linear_constraints, transBlockName)
 
@@ -419,8 +415,10 @@ class CuttingPlane_Transformation(Transformation):
         # We store a list of all vars so that we can efficiently
         # generate maps among the subproblems
 
-        # TODO: AAAAGH, we're going to have to make the fixed thing an option
-        # here too!
+        # TODO: In the other transformations, we are able to offer an option
+        # about how to handle fixed variables. We don't have the same luxury
+        # here unless we unfix them and then fix them back at the end. Should we
+        # do that?
         transBlock.all_vars = list(v for v in instance.component_data_objects(
             Var,
             descend_into=(Block, Disjunct),
@@ -482,8 +480,9 @@ class CuttingPlane_Transformation(Transformation):
             # TODO: Guess this shouldn't have been private...
             rBigM_linear_constraints.extend(fme._process_constraint(cons))
 
-        # [ESJ 3 June 2020] TODO: Do we need to also pull out variable bounds
-        # here?? I think so, right??
+        # [ESJ Aug 13 2020] NOTE: We actually don't need to worry about variable
+        # bounds here becuase the FME transformation will take care of them
+        # (i.e. convert them to constraints for the purposes of the projection.)
 
         #
         # Add the xstar parameter for the Hull problem
@@ -522,15 +521,17 @@ class CuttingPlane_Transformation(Transformation):
         # replace var_info?
         var_map = ComponentMap((transBlock_rHull.all_vars[i], v)
                                for i,v in enumerate(transBlock.all_vars))
+        bigm_to_hull_map = dict((id(var_info[i][0]), var_info[i][2]) for i in
+                                range(len(var_info)))
 
         #
         # Add the separation objective to the hull subproblem
         #
         self._add_separation_objective(var_info, transBlock_rHull)
 
-        return (instance, instance_rHull, var_info, var_map, disaggregated_vars,
-                disaggregation_constraints, rBigM_linear_constraints,
-                transBlockName)
+        return (instance, instance_rHull, var_info, var_map, bigm_to_hull_map,
+                disaggregated_vars, disaggregation_constraints,
+                rBigM_linear_constraints, transBlockName)
 
     def _get_disaggregated_vars(self, hull):
         disaggregatedVars = []
@@ -552,7 +553,7 @@ class CuttingPlane_Transformation(Transformation):
         return disaggregatedVars, disaggregationConstraints
 
     def _generate_cuttingplanes( self, instance_rBigM, instance_rHull, var_info,
-                                 var_map, disaggregated_vars,
+                                 var_map, bigm_to_hull_map, disaggregated_vars,
                                  disaggregation_constraints,
                                  rBigM_linear_constraints, transBlockName):
 
@@ -652,7 +653,7 @@ class CuttingPlane_Transformation(Transformation):
                         instance_rHull,
                         transBlock_rHull,
                         transBlock_rBigM.cuts[cut_number],
-                        var_info, opt,
+                        bigm_to_hull_map, opt,
                         stream_solver,
                         self._config.post_process_cut_tolerance)
 
