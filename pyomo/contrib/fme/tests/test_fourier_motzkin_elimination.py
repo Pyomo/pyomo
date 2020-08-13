@@ -693,7 +693,6 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             vars_to_eliminate=m.x, 
             do_integer_arithmetic=True)
 
-    @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_integer_arithmetic_non1_coefficients(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0,9))
