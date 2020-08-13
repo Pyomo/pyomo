@@ -68,6 +68,22 @@ def vars_to_eliminate_list(x):
             "Expected Var or list of Vars."
             "\n\tRecieved %s" % type(x))
 
+def _is_integer(x):
+    if int(x) == x:
+        return True
+    return False
+
+def gcd(a,b):
+    while b != 0:
+        a, b = b, a % b
+    return abs(a)
+
+def lcm(ints):
+    a = ints[0]
+    for b in ints[1:]:
+        a = abs(a*b) // gcd(a,b)
+    return a
+
 @TransformationFactory.register('contrib.fourier_motzkin_elimination',
                                 doc="Project out specified (continuous) "
                                 "variables from a linear model.")
@@ -111,6 +127,22 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         indicating whether or not to add it to the model.
         """
     ))
+    CONFIG.declare('do_integer_arithmetic', ConfigValue(
+        default=False,
+        domain=bool,
+        description="A Boolean flag to decide whether Fourier-Motzkin "
+        "elimination will be performed with only integer arithmetic.",
+        doc="""
+        If True, only integer arithmetic will be performed during Fourier-
+        Motzkin elimination. This should result in no numerical error.
+        If True and there is non-integer data in the constraints being 
+        projected, an error will be raised.
+
+        If False, the algorithm will not check whether data is integer, and will
+        perform division operations. Use this setting when not all data is 
+        integer, or when you are willing to sacrifice some numeric accuracy.
+        """
+    ))
 
     def __init__(self):
         """Initialize transformation object"""
@@ -121,6 +153,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         config.set_value(kwds)
         vars_to_eliminate = config.vars_to_eliminate
         self.constraint_filter = config.constraint_filtering_callback
+        self.do_integer_arithmetic = config.do_integer_arithmetic
         if vars_to_eliminate is None:
             raise RuntimeError("The Fourier-Motzkin Elimination transformation "
                                "requires the argument vars_to_eliminate, a "
@@ -302,6 +335,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             geq_list = []
             waiting_list = []
 
+            coefs = []
             for cons in constraints:
                 leaving_var_coef = cons['map'].get(the_var)
                 if leaving_var_coef is None or leaving_var_coef == 0:
@@ -313,14 +347,39 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 # NOTE: neither of the scalar multiplications below flip the
                 # constraint. So we are sure to have only geq constraints
                 # forever, which is exactly what we want.
-                if leaving_var_coef < 0:
-                    leq_list.append(
-                        self._nonneg_scalar_multiply_linear_constraint(
-                            cons, -1.0/leaving_var_coef))
+                if not self.do_integer_arithmetic:
+                    if leaving_var_coef < 0:
+                        leq_list.append(
+                            self._nonneg_scalar_multiply_linear_constraint(
+                                cons, -1.0/leaving_var_coef))
+                    else:
+                        geq_list.append(
+                            self._nonneg_scalar_multiply_linear_constraint(
+                                cons, 1.0/leaving_var_coef))
                 else:
-                    geq_list.append(
-                        self._nonneg_scalar_multiply_linear_constraint(
-                            cons, 1.0/leaving_var_coef))
+                    if not _is_integer(leaving_var_coef):
+                        raise RuntimeError("The do_integer_arithmetic flag was "
+                                           "set to True, but the coefficient of "
+                                           "%s is non-integer, with value %s. \n"
+                                           "Please set do_integer_arithmetic="
+                                           "False, or make your data integer." %
+                                           (the_var.name, leaving_var_coef))
+                    coefs.append(int(leaving_var_coef))
+            if self.do_integer_arithmetic and len(coefs) > 0:
+                least_common_mult = lcm(coefs)
+                for cons in constraints:
+                    leaving_var_coef = cons['map'].get(the_var)
+                    if leaving_var_coef is None or leaving_var_coef == 0:
+                        continue
+                    to_lcm = least_common_mult // abs(int(leaving_var_coef))
+                    if leaving_var_coef < 0:
+                        leq_list.append(
+                            self._nonneg_scalar_multiply_linear_constraint(
+                                cons, to_lcm))
+                    else:
+                        geq_list.append(
+                            self._nonneg_scalar_multiply_linear_constraint(
+                                cons, to_lcm))
 
             constraints = waiting_list
             for leq in leq_list:

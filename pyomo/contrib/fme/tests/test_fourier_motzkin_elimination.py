@@ -300,7 +300,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.b.b2 = Block()
         m.b.b2.c = Constraint(expr=m.y >= 4)
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
-            m, vars_to_eliminate=m.y)
+            m, vars_to_eliminate=m.y, do_integer_arithmetic=True)
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         self.assertEqual(len(constraints), 2)
@@ -518,7 +518,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                    create_using(m, vars_to_eliminate=disaggregatedVars)
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
             m, vars_to_eliminate=disaggregatedVars,
-            constraint_filtering_callback=None)
+            constraint_filtering_callback=None, do_integer_arithmetic=True)
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # we of course get tremendous amounts of garbage, but we make sure that
@@ -529,7 +529,6 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # and when we filter, it's still there.
         constraints = filtered._pyomo_contrib_fme_transformation.\
                       projected_constraints
-        constraints.pprint()
         self.check_hull_projected_constraints(filtered, constraints, [6, 5, 16,
                                                                        17, 15,
                                                                        9, 8, 1,
@@ -539,7 +538,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     def test_post_processing(self):
         m, disaggregatedVars = self.create_hull_model()
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        fme.apply_to(m, vars_to_eliminate=disaggregatedVars)
+        fme.apply_to(m, vars_to_eliminate=disaggregatedVars,
+                     do_integer_arithmetic=True)
         # post-process
         fme.post_process_fme_constraints(m, SolverFactory('glpk'))
 
@@ -671,3 +671,65 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(len(constraints), 5)
         # and it should be the y <= 3 one...
         self.assertIsNone(dict(constraints).get(5))
+
+    @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
+    def test_noninteger_data_error(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,9))
+        m.y = Var(bounds=(-5, 5))
+        m.c1 = Constraint(expr=2*m.x + 0.5*m.y >= 2)
+        m.c2 = Constraint(expr=0.25*m.y >= 0.5*m.x)
+
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        self.assertRaisesRegexp(
+            RuntimeError,
+            "The do_integer_arithmetic flag was "
+            "set to True, but the coefficient of "
+            "x is non-integer, with value -0.5. \n"
+            "Please set do_integer_arithmetic="
+            "False, or make your data integer.",
+            fme.apply_to,
+            m, 
+            vars_to_eliminate=m.x, 
+            do_integer_arithmetic=True)
+
+    @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
+    def test_integer_arithmetic_non1_coefficients(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,9))
+        m.y = Var(bounds=(-5, 5))
+        m.c1 = Constraint(expr=4*m.x + m.y >= 4)
+        m.c2 = Constraint(expr=m.y >= 2*m.x)
+
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        
+        fme.apply_to( m, vars_to_eliminate=m.x,
+                      constraint_filtering_callback=None,
+                      do_integer_arithmetic=True)
+
+        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+
+        self.assertEqual(len(constraints), 3)
+
+        cons = constraints[1]
+        self.assertEqual(cons.lower, -32)
+        self.assertIs(cons.body, m.y)
+        self.assertIsNone(cons.upper)
+
+        cons = constraints[2]
+        self.assertEqual(cons.lower, 0)
+        self.assertIsNone(cons.upper)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_coefs), 1)
+        self.assertIs(repn.linear_vars[0], m.y)
+        self.assertEqual(repn.linear_coefs[0], 2)
+
+        cons = constraints[3]
+        self.assertEqual(cons.lower, 4)
+        self.assertIsNone(cons.upper)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_coefs), 1)
+        self.assertIs(repn.linear_vars[0], m.y)
+        self.assertEqual(repn.linear_coefs[0], 3)
