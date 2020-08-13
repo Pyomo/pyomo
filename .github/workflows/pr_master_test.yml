@@ -7,6 +7,11 @@ on:
   pull_request:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Hash (Optional)
+        required: false
 
 defaults:
   run:

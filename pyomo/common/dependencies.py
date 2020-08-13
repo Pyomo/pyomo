@@ -162,16 +162,16 @@ class _DeferredOr(_DeferredImportIndicatorBase):
         return bool(self._a) or bool(self._b)
 
 
-try:
-    from packaging import version as _version
-    _parser = _version.parse
-except ImportError:
-    # pkg_resources is an order of magnitude slower to import than
-    # packaging.  Only use it if the preferred (but optional) packaging
-    # library is not present
-    from pkg_resources import parse_version as _parser
-
 def _check_version(module, min_version):
+    try:
+        from packaging import version as _version
+        _parser = _version.parse
+    except ImportError:
+        # pkg_resources is an order of magnitude slower to import than
+        # packaging.  Only use it if the preferred (but optional)
+        # packaging library is not present
+        from pkg_resources import parse_version as _parser
+
     version = getattr(module, '__version__', '0.0.0')
     return _parser(min_version) <= _parser(version)
 
