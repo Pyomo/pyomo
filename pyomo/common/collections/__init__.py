@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 from .orderedset import OrderedDict, OrderedSet
-from .hashabletuple import HashableTuple
 from .component_map import ComponentMap
 from .component_set import ComponentSet
 
