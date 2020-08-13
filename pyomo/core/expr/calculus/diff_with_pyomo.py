@@ -445,7 +445,7 @@ def reverse_ad(expr):
 
     Returns
     -------
-    pyomo.core.kernel.component_map.ComponentMap
+    ComponentMap
         component_map mapping variables to derivatives with respect
         to the corresponding variable
     """
@@ -540,7 +540,7 @@ def reverse_sd(expr):
 
     Returns
     -------
-    pyomo.core.kernel.component_map.ComponentMap
+    ComponentMap
         component_map mapping variables to derivatives with respect
         to the corresponding variable
     """
