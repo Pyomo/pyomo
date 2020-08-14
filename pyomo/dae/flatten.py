@@ -65,7 +65,7 @@ def generate_time_only_slices(obj, time):
         yield IndexedComponent_slice(obj, time_fixed, time_sliced, None)
 
 
-def generate_time_indexed_block_slices(block, time):
+def generate_time_indexed_block_slices(block, time, ctype):
     # TODO: We should probably do a sanity check that time does not
     # appear in any sub-block / var indices.
     queue = list( generate_time_only_slices(block, time) )
@@ -83,29 +83,31 @@ def generate_time_indexed_block_slices(block, time):
             for idx in sub_b:
                 queue.append(_slice.component(_name)[idx])
         # Any Vars must be mapped to slices and returned
-        for v in b.component_objects(Var, descend_into=False):
+        for v in b.component_objects(ctype, descend_into=False):
             _name = v.local_name
             for idx in v:
                 yield _slice.component(_name)[idx]
         
 
-def flatten_dae_variables(model, time):
+def flatten_dae_components(model, time, ctype):
     """
     This function takes in a (hierarchical, block-structured) Pyomo
     model and a `ContinuousSet` and returns two lists of "flattened"
-    variables. The first is a list of all `_VarData` that are not
+    components. The first is a list of all `_ComponentData` that are not
     indexed by the `ContinuousSet` and the second is a list of
     `Reference` components such that each reference is indexed only by
     the specified `ContinuousSet`. This function is convenient for
-    identifying variables that are implicitly indexed by the
-    `ContinuousSet`, for example, a singleton `Var` living on a `Block`
-    that is indexed by the `ContinuousSet`.
+    identifying components that are implicitly indexed by the
+    `ContinuousSet`, for example, a singleton `Component` living on a 
+    `Block` that is indexed by the `ContinuousSet`.
 
     Parameters
     ----------
     model : Concrete Pyomo model
 
     time : ``pyomo.dae.ContinuousSet``
+
+    ctype : Pyomo Component type
 
     Returns
     -------
@@ -114,27 +116,27 @@ def flatten_dae_variables(model, time):
     assert time.model() is model.model()
 
     block_queue = [model]
-    regular_vars = []
-    time_indexed_vars = []
+    regular_comps = []
+    time_indexed_comps = []
     while block_queue:
         b = block_queue.pop(0)
         b_sets = b.index_set().subsets()
         if time in b_sets:
-            for _slice in generate_time_indexed_block_slices(b, time):
-                time_indexed_vars.append(Reference(_slice))
+            for _slice in generate_time_indexed_block_slices(b, time, ctype):
+                time_indexed_comps.append(Reference(_slice))
             continue
         for blkdata in b.values():
             block_queue.extend(
                 blkdata.component_objects(Block, descend_into=False)
             )
         for blkdata in b.values():
-            for v in blkdata.component_objects(SubclassOf(Var), 
+            for v in blkdata.component_objects(SubclassOf(ctype), 
                     descend_into=False):
                 v_sets = v.index_set().subsets()
                 if time in v_sets:
                     for _slice in generate_time_only_slices(v, time):
-                        time_indexed_vars.append(Reference(_slice))
+                        time_indexed_comps.append(Reference(_slice))
                 else:
-                    regular_vars.extend(v.values())
+                    regular_comps.extend(v.values())
 
-    return regular_vars, time_indexed_vars
+    return regular_comps, time_indexed_comps
