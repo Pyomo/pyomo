@@ -302,6 +302,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         # We only need to eliminate variables that actually appear in
         # this set of constraints... Revise our list.
         vars_that_appear = []
+        vars_that_appear_set = ComponentSet()
         for cons in constraints:
             std_repn = cons['body']
             if not std_repn.is_linear():
@@ -321,7 +322,9 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                            var.name)
             for var in std_repn.linear_vars:
                 if var in vars_to_eliminate:
-                    vars_that_appear.append(var)
+                    if not var in vars_that_appear_set:
+                        vars_that_appear.append(var)
+                        vars_that_appear_set.add(var)
 
         # we actually begin the recursion here
         while vars_that_appear:
