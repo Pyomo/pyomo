@@ -192,13 +192,10 @@ class TestScaleModelTransformation(unittest.TestCase):
         orig_val, factor = values[id(m.v3)]
         self.assertAlmostEqual(
                 m.v3_ref[None].value,
-                orig_val*factor*factor,
+                orig_val*factor,
                 )
         # Note that because the model was not renamed,
-        # v3_ref is still intact. However, v3 has been
-        # scaled twice. Once for itself and once for the
-        # reference to it.
-                
+        # v3_ref is still intact.
 
 if __name__ == "__main__":
     unittest.main()
