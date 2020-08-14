@@ -137,10 +137,14 @@ class ScaleModel(Transformation):
         # scale the variable bounds and values and build the variable substitution map
         # for scaling vars in constraints
         variable_substitution_map = ComponentMap()
+        already_scaled = set()
         for variable in [var for var in model.component_objects(ctype=Var, descend_into=True)]:
             # set the bounds/value for the scaled variable
             for k in variable:
                 v = variable[k]
+                if id(v) in already_scaled:
+                    continue
+                already_scaled.add(id(v))
                 scaling_factor = component_scaling_factor_map[v]
                 variable_substitution_map[v] = v / scaling_factor
 
@@ -167,9 +171,13 @@ class ScaleModel(Transformation):
         variable_substitution_dict = {id(k):variable_substitution_map[k]
                                       for k in variable_substitution_map}
 
+        already_scaled = set()
         for component in model.component_objects(ctype=(Constraint, Objective), descend_into=True):
             for k in component:
                 c = component[k]
+                if id(c) in already_scaled:
+                    continue
+                already_scaled.add(id(c))
                 # perform the constraint/objective scaling and variable sub
                 scaling_factor = component_scaling_factor_map[c]
                 if isinstance(c, _ConstraintData):
