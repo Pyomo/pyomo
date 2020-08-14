@@ -53,8 +53,7 @@ logger = logging.getLogger('pyomo.gdp.cuttingplane')
 # DEBUG
 from nose.tools import set_trace
 
-# TODO: open question which of these should be private or not
-def _do_not_tighten(m):
+def do_not_tighten(m):
     return m
 
 def get_constraint_exprs(constraints, var_map):
@@ -90,13 +89,33 @@ def get_linear_approximation_expr(normal_vec, point):
 def create_cuts_fme(var_info, var_map, disaggregated_vars,
                      disaggregation_constraints, rHull_vars, instance_rHull,
                      rBigM_linear_constraints, transBlock_rBigm,
-                     transBlock_rHull, TOL):
-    # loop through all constraints in rHull and figure out which are active
-    # or slightly violated. For each we will get the tangent plane at xhat
-    # (which is x_hull below). We get the normal vector for each of these
-    # tangent planes and sum them to get a composite normal. Our cut is then
-    # the hyperplane normal to this composite through xbar (projected into
-    # the original space).
+                     transBlock_rHull, cut_threshold):
+    """Returns a cut which removes x* from the relaxed bigm feasible region.
+
+    Finds all the constraints which are tight at xhat (assumed to be the 
+    solution currently in instance_rHull), and calculates a composite normal
+    vector by summing the vectors normal to each of these constraints. Then
+    Fourier-Motzkin elimination is used to project the disaggregated variables
+    out of the polyhedron formed by the composite normal and the collection 
+    of tight constraints. This results in multiple cuts, of which we select
+    one which cuts of x* by the greatest margin, as long as that margin is
+    more than cut_threshold. If no cut satisfies the margin specified by 
+    cut_threshold, we return None.
+
+    Parameters
+    -----------
+    var_info: 
+    var_map: 
+    disaggregated_vars:
+    disaggregation_constraints:
+    rHull_vars:
+    instance_rHull:
+    rBigM_linear_constraints:
+    transBlock_rBigm:
+    transBlock_rHull:
+    cut_threshold:
+    """
+
     normal_vectors = []
     tight_constraints = Block()
     conslist = tight_constraints.constraints = Constraint(
@@ -201,16 +220,17 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
         # can stop. We know cut is lb <= expr and that it's violated
         assert len(cut.args) == 2
         print(value(cut.args[0]) - value(cut.args[1]))
-        if value(cut.args[0]) - value(cut.args[1]) > TOL:
-            logger.info("FME:\t Cuts off x* by more than %s, returning." % TOL)
+        if value(cut.args[0]) - value(cut.args[1]) > cut_threshold:
+            logger.info("FME:\t Cuts off x* by more than %s, returning." %
+                        cut_threshold)
             return [cut]
 
     return None
 
-def create_cuts_subgradient(var_info, var_map, disaggregated_vars,
-                                     disaggregation_constraints, rHull_vars,
-                                     instance_rHull, rBigM_linear_constraints,
-                                     transBlock_rBigM, transBlock_rHull, TOL):
+def create_cuts_normal_vector(var_info, var_map, disaggregated_vars,
+                              disaggregation_constraints, rHull_vars,
+                              instance_rHull, rBigM_linear_constraints,
+                              transBlock_rBigM, transBlock_rHull, TOL):
     cut_number = len(transBlock_rBigM.cuts)
 
     cutexpr = 0
@@ -222,12 +242,14 @@ def create_cuts_subgradient(var_info, var_map, disaggregated_vars,
         return [cutexpr >= 0]
     return None
 
-def restore_objective(instance_rHull, transBlock_rHull):
+def _restore_objective(instance_rHull, transBlock_rHull):
     transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
     transBlock_rHull.separation_objective.activate()
 
-def back_off_constraint(instance_rHull, transBlock_rHull, cut, bigm_to_hull_map,
-                        opt, stream_solver, TOL):
+def back_off_constraint_with_calculated_cut_violation(instance_rHull,
+                                                      transBlock_rHull, cut,
+                                                      bigm_to_hull_map, opt,
+                                                      stream_solver, TOL):
     logger.info("Post-processing cut: %s" % cut.expr)
     # Take a constraint. We will solve a problem maximizing its violation
     # subject to rHull. We will add some user-specified tolerance to that
@@ -244,7 +266,7 @@ def back_off_constraint(instance_rHull, transBlock_rHull, cut, bigm_to_hull_map,
                        "back off the new cut "
                        "did not solve normally. Leaving the constraint as is, "
                        "which could lead to numerical trouble%s" % (results,))
-        restore_objective(instance_rHull, transBlock_rHull, orig_obj)
+        _restore_objective(instance_rHull, transBlock_rHull, orig_obj)
         return
 
     val = value(transBlock_rHull.infeasibility_objective) - TOL
@@ -252,12 +274,17 @@ def back_off_constraint(instance_rHull, transBlock_rHull, cut, bigm_to_hull_map,
         logger.info("\tBacking off cut by %s" % val)
         cut._body += abs(val)
     # else there is nothing to do
-    restore_objective(instance_rHull, transBlock_rHull)
+    _restore_objective(instance_rHull, transBlock_rHull)
+
+def back_off_constraint_by_fixed_tolerance(instance_rHull, transBlock_rHull,
+                                           cut, bigm_to_hull_map, opt,
+                                           stream_solver, TOL):
+    cut._body += TOL
 
 @TransformationFactory.register('gdp.cuttingplane',
                                 doc="Relaxes a linear disjunctive model by "
                                 "adding cuts from convex hull to Big-M "
-                                "relaxation.")
+                                "reformulation.")
 class CuttingPlane_Transformation(Transformation):
     """Relax disjunctive model by forming the bigm relaxation and then
     iteratively adding cuts from the hull relaxation (or the hull relaxation
@@ -289,7 +316,7 @@ class CuttingPlane_Transformation(Transformation):
         problem.
         """
     ))
-    CONFIG.declare('EPS', ConfigValue(
+    CONFIG.declare('minimum_improvement_threshold', ConfigValue(
         default=0.01,
         domain=PositiveFloat,
         description="Epsilon value used to decide when to stop adding cuts",
@@ -297,6 +324,18 @@ class CuttingPlane_Transformation(Transformation):
         If the difference between the objectives in two consecutive iterations is
         less than this value, the algorithm terminates without adding the cut
         generated in the last iteration.  """
+    ))
+    CONFIG.declare('verbose', ConfigValue(
+        default=False,
+        domain=bool,
+        description="Flag to enable verbose output",
+        doc="""
+        If True, prints subproblem solutions, as well as potential and added cuts
+        during algorithm.
+
+        If False, only the relaxed BigM objective and minimal information about 
+        cuts is logged.
+        """
     ))
     CONFIG.declare('stream_solver', ConfigValue(
         default=False,
@@ -315,64 +354,52 @@ class CuttingPlane_Transformation(Transformation):
         relaxed BigM and separation problem solves.
         """
     ))
-    CONFIG.declare('tighten_relaxation_callback', ConfigValue(
-        default=_do_not_tighten,
-        description="Function which takes TODO",
+    CONFIG.declare('tighten_relaxation', ConfigValue(
+        default=do_not_tighten,
+        description="Function which takes the GDP formulation and returns a "
+        "GDP formulation with a tighter hull relaxation",
         doc="""
-        Option 1: Either we say, you do whatever you want here and give us a 
-        GDP back, which we will take the hull of... Or:
+        Function which accepts the GDP formulation of the problem and returns
+        a GDP formulation which the transformation will then take the hull
+        reformulation of.
 
-        Option 2: We say do whatever you want, we expect it to be tighter than 
-        bigm. And you need to specify any variables that put it in extended 
-        space. Because we won't assume you did hull.
-
-        I'm leaning for starting with 1. We can always move to 2 if it seems
-        to ever be reasonable.
+        Most typically, this callback would be used to apply basic steps before
+        taking the hull reformulation, but anything which tightens the GDP can 
+        be performed here.
         """
     ))
     CONFIG.declare('create_cuts', ConfigValue(
-        default=create_cuts_subgradient,
+        default=create_cuts_normal_vector,
         description="Function which takes TODO",
         doc="""
         TODO
         """
     ))
-    CONFIG.declare('post_process_cut_callback', ConfigValue(
-        default=back_off_constraint,
+    CONFIG.declare('post_process_cut', ConfigValue(
+        default=back_off_constraint_with_calculated_cut_violation,
         description="TODO John will be so happy",
         doc="""
         TODO
         """
     ))
-    CONFIG.declare('post_process_cut_tolerance', ConfigValue(
+    # back off problem tolerance (on top of the solver's (sometimes))
+    CONFIG.declare('back_off_problem_tolerance', ConfigValue(
         default=1e-8,
         domain=NonNegativeFloat,
-        description="Tolerance to pass to the post_process_cut_callback.",
+        description="Tolerance to pass to the post_process_cut callback.",
         doc="""
-        Tolerance passed to the post_process_cut_callback.
+        Tolerance passed to the post_process_cut callback.
 
         Depending on the callback, different values could make sense, but 
         something on the order of the solver's optimality or constraint 
-        tolerances makes sense.
+        tolerances is appropriate.
         """
     ))
-    CONFIG.declare('verbose', ConfigValue(
-        default=False,
-        domain=bool,
-        description="Flag to enable verbose output",
-        doc="""
-        If True, prints subproblem solutions, as well as potential and added cuts
-        during algorithm.
-
-        If False, only the relaxed BigM objective and minimal information about 
-        cuts is logged.
-        """
-    ))
-    CONFIG.declare('keep_cut_tolerance', ConfigValue(
+    CONFIG.declare('cut_filtering_threshold', ConfigValue(
         default=0.001,
         domain=NonNegativeFloat,
         description="Tolerance used to decide if a cut removes x* from the "
-        "relaxed BigM problem by enough to be kept.",
+        "relaxed BigM problem by enough to be added to the bigM problem.",
         doc="""
         Absolute tolerance used to decide whether to keep a cut. We require
         that, when evaluated at x* (the relaxed BigM optimal solution), the 
@@ -394,7 +421,7 @@ class CuttingPlane_Transformation(Transformation):
          var_map, bigm_to_hull_map, disaggregated_vars, 
          disaggregation_constraints, 
          rBigM_linear_constraints, transBlockName) = self._setup_subproblems(
-             instance, bigM, self._config.tighten_relaxation_callback)
+             instance, bigM, self._config.tighten_relaxation)
 
         self._generate_cuttingplanes( instance_rBigM, instance_rHull, var_info,
                                       var_map, bigm_to_hull_map,
@@ -563,7 +590,7 @@ class CuttingPlane_Transformation(Transformation):
 
         improving = True
         prev_obj = float("inf")
-        epsilon = self._config.EPS
+        epsilon = self._config.minimum_improvement_threshold
         cuts = None
 
         transBlock_rBigM = instance_rBigM.component(transBlockName)
@@ -638,7 +665,7 @@ class CuttingPlane_Transformation(Transformation):
                                             rHull_vars, instance_rHull,
                                             rBigM_linear_constraints,
                                             transBlock_rBigM, transBlock_rHull,
-                                            self._config.keep_cut_tolerance)
+                                            self._config.cut_filtering_threshold)
            
             # We are done if the cut generator couldn't return a valid cut
             if cuts is None or not improving:
@@ -648,14 +675,14 @@ class CuttingPlane_Transformation(Transformation):
                 cut_number = len(transBlock_rBigM.cuts)
                 logger.warning("Adding cut %s to BigM model." % (cut_number,))
                 transBlock_rBigM.cuts.add(cut_number, cut)
-                if self._config.post_process_cut_callback is not None:
-                    self._config.post_process_cut_callback( 
+                if self._config.post_process_cut is not None:
+                    self._config.post_process_cut( 
                         instance_rHull,
                         transBlock_rHull,
                         transBlock_rBigM.cuts[cut_number],
                         bigm_to_hull_map, opt,
                         stream_solver,
-                        self._config.post_process_cut_tolerance)
+                        self._config.back_off_problem_tolerance)
 
             prev_obj = rBigM_objVal
 
