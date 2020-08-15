@@ -60,7 +60,7 @@ def model_is_valid(solve_data, config):
                 "Your model is an NLP (nonlinear program). "
                 "Using NLP solver %s to solve." % config.nlp_solver)
             SolverFactory(config.nlp_solver).solve(
-                solve_data.original_model, **config.nlp_solver_args)
+                solve_data.original_model, tee=config.solver_tee, **config.nlp_solver_args)
             return False
         else:
             config.logger.info(
@@ -70,7 +70,8 @@ def model_is_valid(solve_data, config):
             if isinstance(mipopt, PersistentSolver):
                 mipopt.set_instance(solve_data.original_model)
 
-            mipopt.solve(solve_data.original_model, **config.mip_solver_args)
+            mipopt.solve(solve_data.original_model,
+                         tee=config.solver_tee, **config.mip_solver_args)
             return False
 
     if not hasattr(m, 'dual') and config.use_dual:  # Set up dual value reporting

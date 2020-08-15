@@ -134,7 +134,7 @@ def solve_OA_master(solve_data, config):
     # elif config.mip_solver == 'glpk':
     #     masteropt.options['timelimit'] = remaining
     master_mip_results = masteropt.solve(
-        solve_data.mip, **mip_args)
+        solve_data.mip, tee=config.solver_tee, **mip_args)
 
     # if config.single_tree is False and config.add_nogood_cuts is False:
 
@@ -366,4 +366,4 @@ def handle_master_mip_unbounded(master_mip, solve_data, config):
         if isinstance(opt, PersistentSolver):
             opt.set_instance(master_mip)
         master_mip_results = opt.solve(
-            master_mip, **config.mip_solver_args)
+            master_mip, tee=config.solver_tee, **config.mip_solver_args)
