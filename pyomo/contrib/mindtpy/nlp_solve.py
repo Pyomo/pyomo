@@ -93,7 +93,7 @@ def solve_NLP_subproblem(solve_data, config):
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
     with SuppressInfeasibleWarning():
         results = nlpopt.solve(
-            fixed_nlp, **nlp_args)
+            fixed_nlp, tee=config.solver_tee, **nlp_args)
     return fixed_nlp, results
 
 
@@ -317,7 +317,7 @@ def solve_NLP_feas(solve_data, config):
                 nlp_args['add_options'] = nlp_args.get('add_options', [])
                 nlp_args['add_options'].append('option reslim=%s;' % remaining)
             feas_soln = nlpopt.solve(
-                feas_nlp, **nlp_args)
+                feas_nlp, tee=config.solver_tee, **nlp_args)
         except (ValueError, OverflowError) as error:
             for nlp_var, orig_val in zip(
                     MindtPy.variable_list,
@@ -325,7 +325,7 @@ def solve_NLP_feas(solve_data, config):
                 if not nlp_var.fixed and not nlp_var.is_binary():
                     nlp_var.value = orig_val
             feas_soln = nlpopt.solve(
-                feas_nlp, **nlp_args)
+                feas_nlp, tee=config.solver_tee, **nlp_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
         copy_var_list_values(
