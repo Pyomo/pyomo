@@ -339,9 +339,12 @@ class Estimator(object):
         If True, print diagnostics from the solver
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute)
+    solver_path: string, optional
+        Absolute or relative path to the solver executable (e.g., ~/Ipopt/ipopt)
     """
     def __init__(self, model_function, data, theta_names, obj_function=None, 
-                 tee=False, diagnostic_mode=False, solver_options=None):
+                 tee=False, diagnostic_mode=False, solver_options=None,
+                 solver_path=None):
         
         self.model_function = model_function
         self.callback_data = data
@@ -355,6 +358,7 @@ class Estimator(object):
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
+        self.solver_path = solver_path
         
         self._second_stage_cost_exp = "SecondStageCost"
         self._numbers_list = list(range(len(data)))
@@ -479,7 +483,7 @@ class Estimator(object):
             if not calc_cov:
                 # Do not calculate the reduced hessian
 
-                solver = SolverFactory('ipopt')
+                solver = SolverFactory('ipopt', executable=self.solver_path)
                 if self.solver_options is not None:
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
@@ -581,9 +585,9 @@ class Estimator(object):
 
             model = stsolver.make_ef()
             stream_solver = True
-            ipopt = SolverFactory('ipopt')
-            sipopt = SolverFactory('ipopt_sens')
-            kaug = SolverFactory('k_aug')
+            ipopt = SolverFactory('ipopt', executable=self.solver_path)
+            sipopt = SolverFactory('ipopt_sens', executable=self.solver_path)
+            kaug = SolverFactory('k_aug', executable=self.solver_path)
 
             #: ipopt suffixes  REQUIRED FOR K_AUG!
             model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
@@ -676,7 +680,7 @@ class Estimator(object):
             pyo.TerminationCondition.infeasible is the worst.
         """
 
-        optimizer = pyo.SolverFactory('ipopt')
+        optimizer = pyo.SolverFactory('ipopt', executable=self.solver_path)
         dummy_tree = lambda: None # empty object (we don't need a tree)
         dummy_tree.CallbackModule = None
         dummy_tree.CallbackFunction = self._instance_creation_callback
