@@ -732,3 +732,102 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(len(repn.linear_coefs), 1)
         self.assertIs(repn.linear_vars[0], m.y)
         self.assertEqual(repn.linear_coefs[0], 3)
+
+    def test_numerical_instability_almost_canceling(self):
+        # It's possible that we get almost-but-not-quite zero on the variable
+        # being eliminated when we are doing this with floating point
+        # arithmetic. This can get ugly later becuase it might get muliplied by
+        # a large number later and start to "reappear"
+        m = ConcreteModel()
+        m.x = Var()
+        m.x0 = Var()
+        m.y = Var()
+
+        m.cons1 = Constraint(expr=(1.342 + 2.371e-8)*m.x0 <= m.x + 17*m.y)
+        m.cons2 = Constraint(expr=(17.56 + 3.2e-7)*m.x0 >= m.y)
+        
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        
+        fme.apply_to(m, vars_to_eliminate=[m.x0], verbose=True,
+                     zero_tolerance=1e-9)
+
+        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+
+        # There's going to be numerical error here, and I can't really help
+        # it. What I care about is that x0 really is gone.
+
+        useful = constraints[1]
+        repn = generate_standard_repn(useful.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_coefs), 2) # this is the real test
+        self.assertEqual(useful.lower, 0)
+        self.assertIs(repn.linear_vars[0], m.x)
+        self.assertAlmostEqual(repn.linear_coefs[0], 0.7451564696962295)
+        self.assertIs(repn.linear_vars[1], m.y)
+        self.assertAlmostEqual(repn.linear_coefs[1], 12.610712377673217)
+        self.assertEqual(repn.constant, 0)
+        self.assertIsNone(useful.upper)
+
+    def test_numerical_instability_early_elimination(self):
+        # A more subtle numerical problem is that, in infinite precision, a
+        # variable might be eliminated early. However, if this goes wrong, the
+        # result can be unexpected (including getting no constraints when some
+        # are expected.)
+        m = ConcreteModel()
+        m.x = Var()
+        m.x0 = Var()
+        m.y = Var()
+        
+        # we'll pretend that the 1.123e-9 is noise from previous calculations
+        m.cons1 = Constraint(expr=0 <= (4.27 + 1.123e-9)*m.x + 13*m.y - m.x0)
+        m.cons2 = Constraint(expr=m.x0 >= 12*m.y + 4.27*m.x)
+
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        
+        # doing my own clones because I want assertIs tests
+        first = m.clone()
+        second = m.clone()
+        third = m.clone()
+
+        fme.apply_to(first, vars_to_eliminate=[first.x0], zero_tolerance=1e-10)
+        constraints = first._pyomo_contrib_fme_transformation.\
+                      projected_constraints
+        cons = constraints[1]
+        self.assertEqual(cons.lower, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_coefs), 2) # x is still around
+        self.assertIs(repn.linear_vars[0], first.x)
+        self.assertAlmostEqual(repn.linear_coefs[0], 1.123e-9)
+        self.assertIs(repn.linear_vars[1], first.y)
+        self.assertEqual(repn.linear_coefs[1], 1)
+        self.assertIsNone(cons.upper)
+
+        # so just to drive home the point, this results in no constraints:
+        # (Though also note that that only happens if x0 is the first to be
+        # projected out)
+        fme.apply_to(second, vars_to_eliminate=[second.x0, second.x],
+                     zero_tolerance=1e-10)
+        self.assertEqual(len(second._pyomo_contrib_fme_transformation.\
+                             projected_constraints), 0)
+        
+        # but in this version, we assume that x is already gone...
+        fme.apply_to(third, vars_to_eliminate=[third.x0], verbose=True,
+                     zero_tolerance=1e-8)
+        constraints = third._pyomo_contrib_fme_transformation.\
+                      projected_constraints
+        cons = constraints[1]
+        self.assertEqual(cons.lower, 0)
+        cons.pprint()
+        self.assertIs(cons.body, third.y)
+        self.assertIsNone(cons.upper)
+
+        # and this is exactly the same as the above:
+        fme.apply_to(m, vars_to_eliminate=[m.x0, m.x], verbose=True,
+                     zero_tolerance=1e-8)
+        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+        cons = constraints[1]
+        self.assertEqual(cons.lower, 0)
+        self.assertIs(cons.body, m.y)
+        self.assertIsNone(cons.upper)

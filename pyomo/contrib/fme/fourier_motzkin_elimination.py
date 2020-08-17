@@ -16,7 +16,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import _ConstraintData
 from pyomo.core.plugins.transform.hierarchy import Transformation
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.common.modeling import unique_component_name
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.kernel.component_map import ComponentMap
@@ -29,6 +29,7 @@ from six import iteritems
 import inspect
 
 logger = logging.getLogger('pyomo.contrib.fourier_motzkin_elimination')
+NAME_BUFFER = {}
 
 def _check_var_bounds_filter(constraint):
     """Check if the constraint is already implied by the variable bounds"""
@@ -143,6 +144,27 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         integer, or when you are willing to sacrifice some numeric accuracy.
         """
     ))
+    CONFIG.declare('verbose', ConfigValue(
+        default=False,
+        domain=bool,
+        description="A Boolean flag to enable verbose output.",
+        doc="""
+        If True, logs the steps of the projection.
+        """
+    ))
+    CONFIG.declare('zero_tolerance', ConfigValue(
+        default=0,
+        domain=NonNegativeFloat,
+        description="Absolute tolerance at which a float will be considered 0.",
+        doc="""
+        Whenever fourier-motzkin elimination is used with non-integer data,
+        there is a chance of numeric trouble, the most obvious of which is 
+        that 'eliminated' variables will remain in the constraints with very
+        small coefficients. Set this tolerance so that floating points smaller
+        than this will be treated as 0 (and reported that way in the final 
+        constraints).
+        """
+    ))
 
     def __init__(self):
         """Initialize transformation object"""
@@ -151,6 +173,9 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
     def _apply_to(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
+        if config.verbose:
+            logger.setLevel(logging.INFO)
+
         vars_to_eliminate = config.vars_to_eliminate
         self.constraint_filter = config.constraint_filtering_callback
         self.do_integer_arithmetic = config.do_integer_arithmetic
@@ -205,8 +230,11 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                     "and Objectives may be active on the model." % (obj.name, 
                                                                     obj.ctype))
 
-        new_constraints = self._fourier_motzkin_elimination(constraints,
-                                                            vars_to_eliminate)
+        new_constraints = self._fourier_motzkin_elimination(
+            constraints,
+            vars_to_eliminate,
+            config.zero_tolerance,
+            config.verbose)
 
         # put the new constraints on the transformation block
         for cons in new_constraints:
@@ -293,7 +321,8 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                             [value(coef) for coef in
                                              body.linear_coefs]))
 
-    def _fourier_motzkin_elimination(self, constraints, vars_to_eliminate):
+    def _fourier_motzkin_elimination(self, constraints, vars_to_eliminate,
+                                     zero_tolerance, verbose):
         """Performs FME on the constraint list in the argument 
         (which is assumed to be all >= constraints and stored in the 
         dictionary representation), projecting out each of the variables in 
@@ -330,6 +359,11 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         while vars_that_appear:
             # first var we will project out
             the_var = vars_that_appear.pop()
+            if verbose:
+                logger.info("Projecting out %s" %
+                            the_var.getname(fully_qualified=True,
+                                            name_buffer=NAME_BUFFER))
+                logger.info("New constraints are:")
 
             # we are 'reorganizing' the constraints, we sort based on the sign
             # of the coefficient of the_var: This tells us whether we have
@@ -343,6 +377,13 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 leaving_var_coef = cons['map'].get(the_var)
                 if leaving_var_coef is None or leaving_var_coef == 0:
                     waiting_list.append(cons)
+                    if verbose:
+                        logger.info("\t%s <= %s" % 
+                                    (cons['lower'], 
+                                     sum(cons['body'].linear_coefs[i]*\
+                                         cons['body'].linear_vars[i]
+                                         for i in range(len(cons['body'].\
+                                                            linear_coefs)))))
                     continue
 
                 # we know the constraint is a >= constraint, using that
@@ -387,17 +428,28 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             constraints = waiting_list
             for leq in leq_list:
                 for geq in geq_list:
-                    constraints.append(self._add_linear_constraints(leq, geq))
+                    constraints.append(
+                        self._add_linear_constraints(leq, geq, zero_tolerance))
+                    if verbose:
+                        cons = constraints[len(constraints)-1]
+                        logger.info("\t%s <= %s" % 
+                                    (cons['lower'], 
+                                     sum(cons['body'].linear_coefs[i]*\
+                                         cons['body'].linear_vars[i]
+                                         for i in range(len(cons['body'].\
+                                                            linear_coefs)))))
 
         return constraints
 
-    def _nonneg_scalar_multiply_linear_constraint(self, cons, scalar):
+    def _nonneg_scalar_multiply_linear_constraint(self, cons, scalar,
+                                                  zero_tolerance=0):
         """Multiplies all coefficients and the RHS of a >= constraint by scalar.
         There is no logic for flipping the equality, so this is just the 
         special case with a nonnegative scalar, which is all we need.
         """
         body = cons['body']
-        body.linear_coefs = [scalar*coef for coef in body.linear_coefs]
+        body.linear_coefs = [scalar*coef if abs(scalar*coef) <= zero_tolerance
+                             else 0 for coef in body.linear_coefs]
         body.quadratic_coefs = [scalar*coef for coef in body.quadratic_coefs]
         body.nonlinear_expr = scalar*body.nonlinear_expr if \
                               body.nonlinear_expr is not None else None
@@ -412,7 +464,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         
         return cons
 
-    def _add_linear_constraints(self, cons1, cons2):
+    def _add_linear_constraints(self, cons1, cons2, zero_tolerance=0):
         """Adds two >= constraints"""
         ans = {'lower': None, 'body': None, 'map': ComponentMap()}
         cons1_body = cons1['body']
@@ -429,8 +481,11 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         expr = 0
         for var in all_vars:
             coef = cons1['map'].get(var, 0) + cons2['map'].get(var, 0)
+            if abs(coef) <= zero_tolerance:
+                coef = 0
             ans['map'][var] = coef
             expr += coef*var
+                
         # deal with nonlinear stuff if there is any
         for cons in [cons1_body, cons2_body]:
             if cons.nonlinear_expr is not None:
