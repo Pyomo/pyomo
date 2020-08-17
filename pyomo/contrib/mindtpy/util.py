@@ -11,10 +11,10 @@
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
 
-from pyomo.core import (Objective, Suffix)
+from pyomo.common.collections import ComponentMap
+from pyomo.core import Objective, Suffix
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 

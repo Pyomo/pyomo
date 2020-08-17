@@ -16,10 +16,10 @@ import filecmp
 import logging
 
 from pyomo.opt import WriterFactory
+from pyomo.common.collections import ComponentMap
 from pyomo.core.base.numvalue import value, as_numeric
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.constraint import Constraint, _ConstraintData
-from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base import TextLabeler, NumericLabeler
 from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.annotations import (locate_annotations,

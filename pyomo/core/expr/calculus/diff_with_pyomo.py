@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.core.expr import current as _expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value
@@ -455,7 +455,7 @@ def reverse_ad(expr):
 
     Returns
     -------
-    pyomo.core.kernel.component_map.ComponentMap
+    ComponentMap
         component_map mapping variables to derivatives with respect
         to the corresponding variable
     """
@@ -550,7 +550,7 @@ def reverse_sd(expr):
 
     Returns
     -------
-    pyomo.core.kernel.component_map.ComponentMap
+    ComponentMap
         component_map mapping variables to derivatives with respect
         to the corresponding variable
     """

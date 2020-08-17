@@ -8,9 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import enum
 from .diff_with_sympy import differentiate as sympy_diff
 from .diff_with_pyomo import reverse_sd, reverse_ad
-import enum
 
 
 class Modes(str, enum.Enum):

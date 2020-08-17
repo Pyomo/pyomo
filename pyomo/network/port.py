@@ -14,6 +14,7 @@ import logging, sys
 from six import iteritems
 from weakref import ref as weakref_ref
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import ConstructionTimer
 from pyomo.common.modeling import unique_component_name
 
@@ -27,7 +28,6 @@ from pyomo.core.base.numvalue import as_numeric, value
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.base.label import alphanum_label_from_name
 from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.kernel.component_map import ComponentMap
 
 from pyomo.network.util import create_var, tighten_var_domain
 

@@ -20,6 +20,7 @@ from scipy.sparse import coo_matrix
 
 import pyomo
 import pyomo.environ as pyo
+from pyomo.common.collections import ComponentMap
 from pyomo.common.env import CtypesEnviron
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 from pyutilib.services import TempfileManager
@@ -61,8 +62,8 @@ class PyomoNLP(AslNLP):
             fname, symbolMap = pyomo.opt.WriterFactory('nl')(pyomo_model, nl_file, lambda x:True, {})
 
             # create component maps from vardata to idx and condata to idx
-            self._vardata_to_idx = vdidx = pyomo.core.kernel.component_map.ComponentMap()
-            self._condata_to_idx = cdidx = pyomo.core.kernel.component_map.ComponentMap()
+            self._vardata_to_idx = vdidx = ComponentMap()
+            self._condata_to_idx = cdidx = ComponentMap()
 
             # TODO: Are these names totally consistent?
             for name, obj in six.iteritems(symbolMap.bySymbol):

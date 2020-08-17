@@ -10,14 +10,13 @@
 
 import logging
 
+from pyomo.common.collections import ComponentMap
+from pyomo.common.log import LoggingIntercept
 from pyomo.core import Suffix, Var, Constraint, Piecewise, Block
 from pyomo.core import Expression, Param
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.block import IndexedBlock
+from pyomo.core.base.block import IndexedBlock, SortComponents
 from pyomo.dae import ContinuousSet, DAE_Error
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.base.block import SortComponents
-from pyomo.common.log import LoggingIntercept
 
 from six import iterkeys, itervalues, StringIO
 

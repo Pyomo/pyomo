@@ -14,6 +14,7 @@ from __future__ import division
 from collections import namedtuple
 from math import copysign, fabs
 from six import iteritems
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
@@ -21,8 +22,6 @@ from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
                         minimize, value, TransformationFactory)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])

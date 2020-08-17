@@ -20,12 +20,18 @@ from pyutilib.misc import Options, Bunch, yaml_fix
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
-from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver, BranchDirection
+from pyomo.common.collections import ComponentMap
+from pyomo.opt.base import (
+    ProblemFormat, ResultsFormat, OptSolver, BranchDirection,
+)
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
-from pyomo.opt.results import SolverResults, SolverStatus, TerminationCondition, SolutionStatus, ProblemSense, Solution
+from pyomo.opt.results import (
+    SolverResults, SolverStatus, TerminationCondition, SolutionStatus,
+    ProblemSense, Solution,
+)
 from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
-from pyomo.core.base import Var, ComponentMap, Suffix, active_export_suffix_generator
+from pyomo.core.base import Var, Suffix, active_export_suffix_generator
 from pyomo.core.kernel.suffix import export_suffix_generator
 from pyomo.core.kernel.block import IBlock
 from pyomo.util.components import iter_component

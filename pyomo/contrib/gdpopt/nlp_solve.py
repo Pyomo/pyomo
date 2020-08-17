@@ -13,13 +13,13 @@ from __future__ import division
 
 from math import fabs
 
+from pyomo.common.collections import ComponentSet
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible, get_main_elapsed_time)
 from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
 

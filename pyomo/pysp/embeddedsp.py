@@ -14,6 +14,7 @@ import itertools
 import random
 import math
 
+from pyomo.common.collections import ComponentMap
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import ComponentUID
 from pyomo.core.base.block import (Block,
@@ -26,7 +27,6 @@ from pyomo.core.base.constraint import (Constraint,
                                         _ConstraintData)
 from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.param import _ParamData
-from pyomo.core.base.suffix import ComponentMap
 from pyomo.pysp.annotations import (locate_annotations,
                                     StageCostAnnotation,
                                     VariableStageAnnotation,

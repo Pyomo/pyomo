@@ -9,8 +9,8 @@
 #  ___________________________________________________________________________
 
 from collections import Counter
+from pyomo.common.collections import ComponentSet
 from pyomo.core.base import Constraint, Block
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.base.set import SetProduct
 
 
