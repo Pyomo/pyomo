@@ -13,6 +13,10 @@
 import logging
 import textwrap
 
+from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
@@ -23,8 +27,6 @@ from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core.base.component import ComponentUID, ActiveComponent
 from pyomo.core.base.PyomoModel import ConcreteModel, AbstractModel
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
@@ -34,9 +36,6 @@ from pyomo.gdp.util import (
     _warn_for_active_disjunction,
     _warn_for_active_disjunct, )
 from pyomo.repn import generate_standard_repn
-from pyomo.common.config import ConfigBlock, ConfigValue
-from pyomo.common.modeling import unique_component_name
-from pyomo.common.deprecation import deprecation_warning
 
 from functools import wraps
 from six import iterkeys, iteritems

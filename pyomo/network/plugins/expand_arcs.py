@@ -15,8 +15,7 @@ from six import next, iteritems, itervalues
 
 from pyomo.common.modeling import unique_component_name
 
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.base.indexed_component import UnindexedComponent_set
 from pyomo.core.base import Transformation, Var, Block, SortComponents, TransformationFactory
 

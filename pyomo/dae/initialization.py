@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.collections import ComponentSet
 from pyomo.core.base import Constraint, Block, value
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.dae.set_utils import (is_explicitly_indexed_by, 
         get_index_set_except, is_in_block_indexed_by,
         deactivate_model_at, index_warning)
