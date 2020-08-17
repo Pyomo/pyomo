@@ -206,7 +206,7 @@ def init_max_binaries(solve_data, config):
     remaining = int(max(config.time_limit - elapsed, 1))
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
-        mip_args['add_options'].append('option optcr=0.0;')
+        mip_args['add_options'].append('option optcr=0.001;')
     results = opt.solve(m, tee=config.solver_tee, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition

@@ -129,7 +129,7 @@ def solve_OA_master(solve_data, config):
     remaining = int(max(config.time_limit - elapsed, 1))
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
-        mip_args['add_options'].append('option optcr=0.0;')
+        mip_args['add_options'].append('option optcr=0.001;')
         mip_args['add_options'].append('option reslim=%s;' % remaining)
     # elif config.mip_solver == 'glpk':
     #     masteropt.options['timelimit'] = remaining
