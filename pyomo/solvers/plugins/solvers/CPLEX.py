@@ -18,12 +18,13 @@ import pyomo.common
 import pyutilib.common
 import pyutilib.misc
 
+from pyomo.common.collections import ComponentMap
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
-from pyomo.core.base import Var, ComponentMap, Suffix, active_export_suffix_generator
+from pyomo.core.base import Var, Suffix, active_export_suffix_generator
 from pyomo.core.kernel.block import IBlock
 from pyomo.util.components import iter_component
 

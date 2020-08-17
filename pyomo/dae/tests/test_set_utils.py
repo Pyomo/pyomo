@@ -20,10 +20,10 @@ import pyutilib.th as unittest
 
 from pyomo.core.base import (Block, Constraint, ConcreteModel, Var, Set,
         TransformationFactory)
+from pyomo.common.collections import ComponentMap
 from pyomo.common.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.set_utils import *
-from pyomo.core.kernel.component_map import ComponentMap
 
 currdir = dirname(abspath(__file__)) + os.sep
 
