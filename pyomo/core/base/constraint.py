@@ -55,8 +55,6 @@ else:
 logger = logging.getLogger('pyomo.core')
 
 _simple_constraint_rule_types = set([ type(None), bool ])
-_constraint_nonexpression_types = set([type, tuple]) \
-                                  | _simple_constraint_rule_types
 
 _rule_returned_none_error = """Constraint '%s': rule returned None.
 
@@ -411,7 +409,6 @@ class _GeneralConstraintData(_ConstraintData):
         """Set the expression on this constraint."""
 
         _expr_type = expr.__class__
-        #if _expr_type in _constraint_nonexpression_types:
         if hasattr(expr, 'is_relational'):
             relational_expr = expr.is_relational()
             if not relational_expr:
@@ -830,7 +827,7 @@ class Constraint(ActiveIndexedComponent):
                 # If the index is not finite, then we cannot iterate
                 # over it.  Since the rule doesn't provide explicit
                 # indices, then there is nothing we can do (the
-                # assumption is tht the user will trigger specific
+                # assumption is that the user will trigger specific
                 # indices to be created at a later time).
                 pass
             else:
