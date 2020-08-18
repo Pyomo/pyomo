@@ -28,6 +28,8 @@ from six import StringIO
 import logging
 import random
 
+from nose.tools import set_trace
+
 solvers = check_available_solvers('glpk')
 
 class TestFourierMotzkinElimination(unittest.TestCase):
@@ -78,6 +80,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def check_projected_constraints(self, m, indices):
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+
         # x - 0.01y <= 1
         cons = constraints[indices[0]]
         self.assertEqual(value(cons.lower), -1)
@@ -100,10 +103,10 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         linear_vars = body.linear_vars
         coefs = body.linear_coefs
         self.assertEqual(len(linear_vars), 2)
-        self.assertIs(linear_vars[0], m.y)
-        self.assertEqual(coefs[0], -1)
-        self.assertIs(linear_vars[1], m.u[1])
-        self.assertEqual(coefs[1], -1000)
+        self.assertIs(linear_vars[0], m.u[1])
+        self.assertEqual(coefs[0], -1000)
+        self.assertIs(linear_vars[1], m.y)
+        self.assertEqual(coefs[1], -1)
 
         # -x + 0.01y + 1 <= 1000*(1 - u_2)
         cons = constraints[indices[2]]
@@ -113,12 +116,12 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         linear_vars = body.linear_vars
         coefs = body.linear_coefs
         self.assertEqual(len(linear_vars), 3)
-        self.assertIs(linear_vars[0], m.x)
-        self.assertEqual(coefs[0], 1)
-        self.assertIs(linear_vars[1], m.y)
-        self.assertEqual(coefs[1], -0.01)
-        self.assertIs(linear_vars[2], m.u[2])
-        self.assertEqual(coefs[2], -1000)
+        self.assertIs(linear_vars[0], m.u[2])
+        self.assertEqual(coefs[0], -1000)
+        self.assertIs(linear_vars[1], m.x)
+        self.assertEqual(coefs[1], 1)
+        self.assertIs(linear_vars[2], m.y)
+        self.assertEqual(coefs[2], -0.01)
 
         # u_2 + 100u_1 >= 1
         cons = constraints[indices[3]]
@@ -323,10 +326,10 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.p[1])
-        self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
-        self.assertEqual(body.linear_coefs[1], -1)
+        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[0], -1)
+        self.assertIs(body.linear_vars[1], m.p[1])
+        self.assertEqual(body.linear_coefs[1], 1)
 
         # p[1] <= 10*on.ind_var + 10*off.ind_var
         cons = constraints[indices[1]]
@@ -336,9 +339,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.off.indicator_var)
         self.assertEqual(body.linear_coefs[0], 10)
-        self.assertIs(body.linear_vars[1], m.off.indicator_var)
+        self.assertIs(body.linear_vars[1], m.on.indicator_var)
         self.assertEqual(body.linear_coefs[1], 10)
         self.assertIs(body.linear_vars[2], m.p[1])
         self.assertEqual(body.linear_coefs[2], -1)
@@ -364,10 +367,10 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
-        self.assertEqual(body.linear_coefs[0], 10)
-        self.assertIs(body.linear_vars[1], m.p[1])
-        self.assertEqual(body.linear_coefs[1], -1)
+        self.assertIs(body.linear_vars[0], m.p[1])
+        self.assertEqual(body.linear_coefs[0], -1)
+        self.assertIs(body.linear_vars[1], m.time1_disjuncts[0].indicator_var)
+        self.assertEqual(body.linear_coefs[1], 10)
 
         # p[2] - p[1] <= 3*on.ind_var + 2*startup.ind_var
         cons = constraints[indices[4]]
@@ -377,14 +380,14 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 4)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[3], m.p[2])
-        self.assertEqual(body.linear_coefs[3], -1)
-        self.assertIs(body.linear_vars[0], m.p[1])
-        self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
-        self.assertEqual(body.linear_coefs[1], 3)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
-        self.assertEqual(body.linear_coefs[2], 2)
+        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[0], 3)
+        self.assertIs(body.linear_vars[1], m.p[1])
+        self.assertEqual(body.linear_coefs[1], 1)
+        self.assertIs(body.linear_vars[2], m.p[2])
+        self.assertEqual(body.linear_coefs[2], -1)
+        self.assertIs(body.linear_vars[3], m.startup.indicator_var)
+        self.assertEqual(body.linear_coefs[3], 2)
 
         # p[2] >= on.ind_var + startup.ind_var
         cons = constraints[indices[5]]
@@ -394,11 +397,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.p[2])
-        self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
-        self.assertEqual(body.linear_coefs[1], -1)
-        self.assertIs(body.linear_vars[2], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertEqual(body.linear_coefs[0], -1)
+        self.assertIs(body.linear_vars[1], m.p[2])
+        self.assertEqual(body.linear_coefs[1], 1)
+        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
         self.assertEqual(body.linear_coefs[2], -1)
 
         # p[2] <= 10*on.ind_var + 2*startup.ind_var
@@ -411,10 +414,10 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertTrue(body.is_linear())
         self.assertIs(body.linear_vars[0], m.on.indicator_var)
         self.assertEqual(body.linear_coefs[0], 10)
-        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
-        self.assertEqual(body.linear_coefs[1], 2)
-        self.assertIs(body.linear_vars[2], m.p[2])
-        self.assertEqual(body.linear_coefs[2], -1)
+        self.assertIs(body.linear_vars[1], m.p[2])
+        self.assertEqual(body.linear_coefs[1], -1)
+        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertEqual(body.linear_coefs[2], 2)
 
         # 1 <= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
         cons = constraints[indices[7]]
@@ -450,13 +453,13 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.off.indicator_var)
         self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[1], m.on.indicator_var)
         self.assertEqual(body.linear_coefs[1], 1)
-        self.assertIs(body.linear_vars[2], m.off.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
         self.assertEqual(body.linear_coefs[2], 1)
-
+        
         # 1 >= on.ind_var + startup.ind_var + off.ind_var
         cons = constraints[indices[10]]
         self.assertEqual(cons.lower, -1)
@@ -465,11 +468,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.off.indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[1], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[1], m.on.indicator_var)
         self.assertEqual(body.linear_coefs[1], -1)
-        self.assertIs(body.linear_vars[2], m.off.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
         self.assertEqual(body.linear_coefs[2], -1)
 
     def create_hull_model(self):
@@ -682,12 +685,13 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         self.assertRaisesRegexp(
-            RuntimeError,
+            ValueError,
             "The do_integer_arithmetic flag was "
             "set to True, but the coefficient of "
-            "x is non-integer, with value -0.5. \n"
+            "x is non-integer within the specified tolerance, "
+            "with value -0.5. \n"
             "Please set do_integer_arithmetic="
-            "False, or make your data integer.",
+            "False, increase integer_tolerance, or make your data integer.",
             fme.apply_to,
             m, 
             vars_to_eliminate=m.x, 
@@ -704,7 +708,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         
         fme.apply_to( m, vars_to_eliminate=m.x,
                       constraint_filtering_callback=None,
-                      do_integer_arithmetic=True)
+                      do_integer_arithmetic=True, verbose=True)
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
 
@@ -819,7 +823,6 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                       projected_constraints
         cons = constraints[1]
         self.assertEqual(cons.lower, 0)
-        cons.pprint()
         self.assertIs(cons.body, third.y)
         self.assertIsNone(cons.upper)
 
