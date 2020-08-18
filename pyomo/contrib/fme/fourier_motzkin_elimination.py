@@ -30,8 +30,6 @@ import inspect
 logger = logging.getLogger('pyomo.contrib.fourier_motzkin_elimination')
 NAME_BUFFER = {}
 
-from nose.tools import set_trace
-
 def _check_var_bounds_filter(constraint):
     """Check if the constraint is already implied by the variable bounds"""
     # this is one of our constraints, so we know that it is >=.
@@ -508,15 +506,16 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         # assume scalar >= 0 and constraint only has lower bound
         lb = cons['lower']
         if lb is not None:
-            self._multiply(scalar, lb, "The do_integer_arithmetic flag was "
-                           "set to True, but the lower bound of "
-                           "%s is non-integer within the specified "
-                           "tolerance, with value %s. \n"
-                           "Please set do_integer_arithmetic="
-                           "False, increase integer_tolerance, "
-                           "or make your data integer." % 
-                           (cons['body'].to_expression() >= cons['lower'], coef))
-        
+            cons['lower'] = self._multiply(scalar, lb, 
+                                           "The do_integer_arithmetic flag was "
+                                           "set to True, but the lower bound of "
+                                           "%s is non-integer within the "
+                                           "specified tolerance, with value %s. "
+                                           "\nPlease set do_integer_arithmetic="
+                                           "False, increase integer_tolerance, "
+                                           "or make your data integer." % 
+                                           (cons['body'].to_expression() >= \
+                                            cons['lower'], coef))
         return cons
 
     def _add_linear_constraints(self, cons1, cons2, zero_tolerance=0):

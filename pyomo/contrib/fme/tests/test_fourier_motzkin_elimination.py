@@ -28,8 +28,6 @@ from six import StringIO
 import logging
 import random
 
-from nose.tools import set_trace
-
 solvers = check_available_solvers('glpk')
 
 class TestFourierMotzkinElimination(unittest.TestCase):
