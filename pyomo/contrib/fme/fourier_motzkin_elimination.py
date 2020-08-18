@@ -73,14 +73,6 @@ def _is_integer(x, TOL):
         return True
     return False
 
-# TODO: This is more efficient but I don't know how to raise a good error with
-# it...
-def _to_integer(x, TOL):
-    int_x = int(x)
-    if abs(int_x - x) <= TOL:
-        return int_x
-    raise ValueError("%s is not an integer, within tolerance %s\n" % (x, TOL))
-
 def gcd(a,b):
     while b != 0:
         a, b = b, a % b
@@ -251,11 +243,9 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                     "and Objectives may be active on the model." % (obj.name, 
                                                                     obj.ctype))
 
-        new_constraints = self._fourier_motzkin_elimination(
-            constraints,
-            vars_to_eliminate,
-            config.zero_tolerance,
-            config.verbose)
+        new_constraints = self._fourier_motzkin_elimination( constraints,
+                                                             vars_to_eliminate,
+                                                             config.verbose)
 
         # put the new constraints on the transformation block
         for cons in new_constraints:
@@ -339,7 +329,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                              body.linear_coefs]))
 
     def _fourier_motzkin_elimination(self, constraints, vars_to_eliminate,
-                                     zero_tolerance, verbose):
+                                     verbose):
         """Performs FME on the constraint list in the argument 
         (which is assumed to be all >= constraints and stored in the 
         dictionary representation), projecting out each of the variables in 
@@ -438,8 +428,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             constraints = waiting_list
             for leq in leq_list:
                 for geq in geq_list:
-                    constraints.append( self._add_linear_constraints( 
-                        leq, geq, zero_tolerance))
+                    constraints.append( self._add_linear_constraints( leq, geq))
                     if verbose:
                         cons = constraints[len(constraints)-1]
                         logger.info("\t%s <= %s" % 
@@ -481,11 +470,14 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         else:
             return 0
         
-    def _nonneg_scalar_multiply_linear_constraint(self, cons, scalar,
-                                                  zero_tolerance=0):
+    def _nonneg_scalar_multiply_linear_constraint(self, cons, scalar):
         """Multiplies all coefficients and the RHS of a >= constraint by scalar.
         There is no logic for flipping the equality, so this is just the 
         special case with a nonnegative scalar, which is all we need.
+
+        If self.do_integer_arithmetic is True, this assumes that scalar is an
+        int. It also will throw an error if any data is non-integer (within
+        tolerance)
         """
         body = cons['body']
         new_coefs = []
@@ -518,8 +510,13 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                             cons['lower'], coef))
         return cons
 
-    def _add_linear_constraints(self, cons1, cons2, zero_tolerance=0):
-        """Adds two >= constraints"""
+    def _add_linear_constraints(self, cons1, cons2):
+        """Adds two >= constraints
+        
+        Because this is always called after 
+        _nonneg_scalar_multiply_linear_constraint, though it is implemented
+        more generally.
+        """
         ans = {'lower': None, 'body': None, 'map': ComponentMap()}
         cons1_body = cons1['body']
         cons2_body = cons2['body']

@@ -674,7 +674,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertIsNone(dict(constraints).get(5))
 
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
-    def test_noninteger_data_error(self):
+    def test_noninteger_coefficients_of_vars_being_projected_error(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0,9))
         m.y = Var(bounds=(-5, 5))
@@ -688,6 +688,28 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             "set to True, but the coefficient of "
             "x is non-integer within the specified tolerance, "
             "with value -0.5. \n"
+            "Please set do_integer_arithmetic="
+            "False, increase integer_tolerance, or make your data integer.",
+            fme.apply_to,
+            m, 
+            vars_to_eliminate=m.x, 
+            do_integer_arithmetic=True)
+
+    @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
+    def test_noninteger_coefficients_of_vars_not_being_projected_error(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,9))
+        m.y = Var(bounds=(-5, 5))
+        m.c1 = Constraint(expr=2*m.x + 0.5*m.y >= 2)
+        m.c2 = Constraint(expr=0.25*m.y >= 5*m.x)
+
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        self.assertRaisesRegexp(
+            ValueError,
+            "The do_integer_arithmetic flag was "
+            "set to True, but the coefficient of "
+            "y is non-integer within the specified tolerance, "
+            "with value 0.5. \n"
             "Please set do_integer_arithmetic="
             "False, increase integer_tolerance, or make your data integer.",
             fme.apply_to,
