@@ -10,13 +10,13 @@
 
 from six import StringIO, iterkeys
 import pyutilib.misc
-from pyomo.core.expr import current
 from pyomo.common import DeveloperError
+from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.errors import NondifferentiableError
+from pyomo.core.expr import current
 from pyomo.core.expr import current as EXPR, native_types
 from pyomo.core.expr.numvalue import value
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.common.errors import NondifferentiableError
 
 #
 # Sympy takes a significant time to load; defer importing it unless

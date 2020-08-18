@@ -8,12 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.collections import ComponentMap
 from pyomo.core.base import Var, Constraint, Objective, _ConstraintData, _ObjectiveData, Suffix, value
 from pyomo.core.plugins.transform.hierarchy import Transformation
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.util.components import rename_components
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import replace_expressions
+from pyomo.util.components import rename_components
 
 
 @TransformationFactory.register('core.scale_model',

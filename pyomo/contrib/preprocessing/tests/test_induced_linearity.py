@@ -4,7 +4,7 @@ from pyomo.contrib.preprocessing.plugins.induced_linearity import (
     _bilinear_expressions,
     detect_effectively_discrete_vars,
     determine_valid_values)
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.common.collections import ComponentSet
 from pyomo.environ import (Binary, ConcreteModel, Constraint, ConstraintList,
                            Integers, RangeSet, SolverFactory,
                            TransformationFactory, Var, exp)

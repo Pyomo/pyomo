@@ -14,13 +14,13 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.collections import ComponentSet
 from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
                         Binary, value, Block, Objective)
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import log
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory, check_available_solvers
 import pyomo.contrib.fme.fourier_motzkin_elimination
 

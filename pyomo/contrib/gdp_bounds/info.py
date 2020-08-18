@@ -1,5 +1,6 @@
 """Provides functions for retrieving disjunctive variable bound information stored on a model."""
-from pyomo.core import value, ComponentMap
+from pyomo.common.collections import ComponentMap
+from pyomo.core import value
 
 inf = float('inf')
 
