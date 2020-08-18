@@ -29,12 +29,11 @@ except:
 
 import pyutilib.th as unittest
 import os
-
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.scenariocreator as sc
 import pyomo.contrib.parmest.examples.semibatch.scencreate as sbc
-
-from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
+from pyomo.environ import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
 testdir = os.path.dirname(os.path.abspath(__file__))

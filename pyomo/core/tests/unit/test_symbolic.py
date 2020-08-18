@@ -11,7 +11,10 @@
 import pyutilib.th as unittest
 
 from pyomo.common.errors import DeveloperError, NondifferentiableError
-from pyomo.core import ConcreteModel, Var, Param, Set, NonNegativeReals, Expression, RangeSet, sin, cos, tan, sinh, cosh, tanh, asin, acos, atan, asinh, acosh, atanh, log, log10, exp, sqrt, ceil, floor
+from pyomo.environ import (ConcreteModel, Var, Param, Set, NonNegativeReals,
+                           Expression, RangeSet, sin, cos, tan, sinh, cosh,
+                           tanh, asin, acos, atan, asinh, acosh, atanh,
+                           log, log10, exp, sqrt, ceil, floor)
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate
 from pyomo.core.expr.sympy_tools import PyomoSympyBimap, sympy_available, sympy2pyomo_expression
 

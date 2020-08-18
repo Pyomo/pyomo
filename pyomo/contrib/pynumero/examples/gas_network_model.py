@@ -7,23 +7,25 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.environ import ConcreteModel, Param, RangeSet, Set, Objective, Var, Constraint, PositiveReals, Any, NonNegativeReals, Expression, log10, value, TransformationFactory
+
+import pyomo.environ as pyo
 import pyomo.dae as dae
 import numpy as np
 import networkx
 
+
 def create_model(demand_factor=1.0):
 
-    model =  ConcreteModel()
+    model = pyo.ConcreteModel()
 
     # sets
     model.TIME = dae.ContinuousSet(bounds=(0.0, 24.0))
     model.DIS = dae.ContinuousSet(bounds=(0.0, 1.0))
-    model.S =  Param(initialize=1)
-    model.SCEN =  RangeSet(1, model.S)
+    model.S = pyo.Param(initialize=1)
+    model.SCEN = pyo.RangeSet(1, model.S)
 
     # links
-    model.LINK =  Set(initialize=['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12'])
+    model.LINK = pyo.Set(initialize=['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12'])
 
     def rule_startloc(m, l):
         ll = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12']
@@ -31,44 +33,39 @@ def create_model(demand_factor=1.0):
         start_locations = dict(zip(ll, ls))
         return start_locations[l]
 
-    model.lstartloc = Param(model.LINK, initialize=rule_startloc, within=Any)
-
+    model.lstartloc = pyo.Param(model.LINK, initialize=rule_startloc, within=pyo.Any)
 
     def rule_endloc(m, l):
         ll = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12']
         ls = ['n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10', 'n11', 'n12', 'n13']
         end_locations = dict(zip(ll, ls))
         return end_locations[l]
-    
-    model.lendloc = Param(model.LINK, initialize=rule_endloc, within=Any)
+    model.lendloc = pyo.Param(model.LINK, initialize=rule_endloc, within=pyo.Any)
 
-
-    model.ldiam =  Param(model.LINK, initialize=920.0, mutable=True)
+    model.ldiam = pyo.Param(model.LINK, initialize=920.0, mutable=True)
 
     def rule_llength(m, l):
         if l == 'l1' or l == 'l12':
             return 300.0
         return 100.0
-    
-    model.llength =  Param(model.LINK, initialize=rule_llength, mutable=True)
+    model.llength = pyo.Param(model.LINK, initialize=rule_llength, mutable=True)
 
     def rule_ltype(m, l):
         if l == 'l1' or l == 'l12':
             return 'p'
         return 'a'
-    
-    model.ltype = Param(model.LINK, initialize=rule_ltype, within=Any)
+    model.ltype = pyo.Param(model.LINK, initialize=rule_ltype, within=pyo.Any)
 
     def link_a_init_rule(m):
         return (l for l in m.LINK if m.ltype[l] == "a")
-    model.LINK_A =  Set(initialize=link_a_init_rule)
+    model.LINK_A = pyo.Set(initialize=link_a_init_rule)
 
     def link_p_init_rule(m):
         return (l for l in m.LINK if m.ltype[l] == "p")
-    model.LINK_P =  Set(initialize=link_p_init_rule)
+    model.LINK_P = pyo.Set(initialize=link_p_init_rule)
 
     # nodes
-    model.NODE =  Set(initialize=['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10', 'n11', 'n12', 'n13'])
+    model.NODE = pyo.Set(initialize=['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10', 'n11', 'n12', 'n13'])
 
     def rule_pmin(m, n):
         if n == 'n1':
@@ -78,66 +75,66 @@ def create_model(demand_factor=1.0):
         else:
             return 34.0
 
-    model.pmin =  Param(model.NODE, initialize=rule_pmin, mutable=True)
+    model.pmin = pyo.Param(model.NODE, initialize=rule_pmin, mutable=True)
 
     def rule_pmax(m, n):
         if n == 'n13':
             return 41.0
         return 70.0
-    model.pmax =  Param(model.NODE, initialize=rule_pmax, mutable=True)
+    model.pmax = pyo.Param(model.NODE, initialize=rule_pmax, mutable=True)
 
     # supply
-    model.SUP = Set(initialize=[1])
-    model.sloc = Param(model.SUP, initialize='n1', within=Any)
-    model.smin = Param(model.SUP, within=NonNegativeReals, initialize=0.000, mutable=True)
-    model.smax = Param(model.SUP, within=NonNegativeReals, initialize=30, mutable=True)
-    model.scost = Param(model.SUP, within=NonNegativeReals)
+    model.SUP = pyo.Set(initialize=[1])
+    model.sloc = pyo.Param(model.SUP, initialize='n1', within=pyo.Any)
+    model.smin = pyo.Param(model.SUP, within=pyo.NonNegativeReals, initialize=0.000, mutable=True)
+    model.smax = pyo.Param(model.SUP, within=pyo.NonNegativeReals, initialize=30, mutable=True)
+    model.scost = pyo.Param(model.SUP, within=pyo.NonNegativeReals)
 
     # demand
-    model.DEM = Set(initialize=[1])
-    model.dloc = Param(model.DEM, initialize='n13', within=Any)
-    model.d = Param(model.DEM, within=PositiveReals, initialize=10, mutable=True)
+    model.DEM = pyo.Set(initialize=[1])
+    model.dloc = pyo.Param(model.DEM, initialize='n13', within=pyo.Any)
+    model.d = pyo.Param(model.DEM, within=pyo.PositiveReals, initialize=10, mutable=True)
 
     # physical data
 
-    model.TDEC =  Param(initialize=9.5)
+    model.TDEC = pyo.Param(initialize=9.5)
 
-    model.eps =  Param(initialize=0.025, within= PositiveReals)
-    model.z =  Param(initialize=0.80, within= PositiveReals)
-    model.rhon =  Param(initialize=0.72, within= PositiveReals)
-    model.R =  Param(initialize=8314.0, within= PositiveReals)
-    model.M =  Param(initialize=18.0, within= PositiveReals)
-    model.pi =  Param(initialize=3.14, within= PositiveReals)
-    model.nu2 =  Param(within= PositiveReals,mutable=True)
-    model.lam =  Param(model.LINK, within= PositiveReals, mutable=True)
-    model.A =  Param(model.LINK, within= NonNegativeReals, mutable=True)
-    model.Tgas =  Param(initialize=293.15, within= PositiveReals)
-    model.Cp =  Param(initialize=2.34, within= PositiveReals)
-    model.Cv =  Param(initialize=1.85, within= PositiveReals)
-    model.gam =  Param(initialize=model.Cp/model.Cv, within= PositiveReals)
-    model.om =  Param(initialize=(model.gam-1.0)/model.gam, within= PositiveReals)
+    model.eps = pyo.Param(initialize=0.025, within=pyo.PositiveReals)
+    model.z = pyo.Param(initialize=0.80, within=pyo.PositiveReals)
+    model.rhon = pyo.Param(initialize=0.72, within=pyo.PositiveReals)
+    model.R = pyo.Param(initialize=8314.0, within=pyo.PositiveReals)
+    model.M = pyo.Param(initialize=18.0, within=pyo.PositiveReals)
+    model.pi = pyo.Param(initialize=3.14, within=pyo.PositiveReals)
+    model.nu2 = pyo.Param(within=pyo.PositiveReals,mutable=True)
+    model.lam = pyo.Param(model.LINK, within=pyo.PositiveReals, mutable=True)
+    model.A = pyo.Param(model.LINK, within=pyo.NonNegativeReals, mutable=True)
+    model.Tgas = pyo.Param(initialize=293.15, within=pyo.PositiveReals)
+    model.Cp = pyo.Param(initialize=2.34, within=pyo.PositiveReals)
+    model.Cv = pyo.Param(initialize=1.85, within=pyo.PositiveReals)
+    model.gam = pyo.Param(initialize=model.Cp/model.Cv, within=pyo.PositiveReals)
+    model.om = pyo.Param(initialize=(model.gam-1.0)/model.gam, within=pyo.PositiveReals)
 
     # scaling and constants
-    model.ffac =  Param(within= PositiveReals, initialize=(1.0e+6*model.rhon)/(24.0*3600.0))
-    model.ffac2 =  Param(within= PositiveReals, initialize=3600.0/(1.0e+4 * model.rhon))
-    model.pfac =  Param(within= PositiveReals, initialize=1.0e+5)
-    model.pfac2 =  Param(within= PositiveReals, initialize=1.0e-5)
-    model.dfac =  Param(within= PositiveReals, initialize=1.0e-3)
-    model.lfac =  Param(within= PositiveReals, initialize=1.0e+3)
+    model.ffac = pyo.Param(within=pyo.PositiveReals, initialize=(1.0e+6*model.rhon)/(24.0*3600.0))
+    model.ffac2 = pyo.Param(within=pyo.PositiveReals, initialize=3600.0/(1.0e+4 * model.rhon))
+    model.pfac = pyo.Param(within=pyo.PositiveReals, initialize=1.0e+5)
+    model.pfac2 = pyo.Param(within=pyo.PositiveReals, initialize=1.0e-5)
+    model.dfac = pyo.Param(within=pyo.PositiveReals, initialize=1.0e-3)
+    model.lfac = pyo.Param(within=pyo.PositiveReals, initialize=1.0e+3)
 
-    model.c1 =  Param(model.LINK, within= PositiveReals, mutable=True)
-    model.c2 =  Param(model.LINK, within= PositiveReals, mutable=True)
-    model.c3 =  Param(model.LINK, within= PositiveReals, mutable=True)
-    model.c4 =  Param(within= PositiveReals, mutable=True)
+    model.c1 = pyo.Param(model.LINK, within=pyo.PositiveReals, mutable=True)
+    model.c2 = pyo.Param(model.LINK, within=pyo.PositiveReals, mutable=True)
+    model.c3 = pyo.Param(model.LINK, within=pyo.PositiveReals, mutable=True)
+    model.c4 = pyo.Param(within=pyo.PositiveReals, mutable=True)
 
     # cost factors
-    model.ce =  Param(initialize=0.1, within= NonNegativeReals)
-    model.cd =  Param(initialize=1.0e+6, within= NonNegativeReals)
-    model.cT =  Param(initialize=1.0e+6, within= NonNegativeReals)
-    model.cs =  Param(initialize=0.0, within= NonNegativeReals)
+    model.ce = pyo.Param(initialize=0.1, within=pyo.NonNegativeReals)
+    model.cd = pyo.Param(initialize=1.0e+6, within=pyo.NonNegativeReals)
+    model.cT = pyo.Param(initialize=1.0e+6, within=pyo.NonNegativeReals)
+    model.cs = pyo.Param(initialize=0.0, within=pyo.NonNegativeReals)
 
     # define stochastic info
-    model.rand_d =  Param(model.SCEN, model.DEM, within= NonNegativeReals, mutable=True)
+    model.rand_d = pyo.Param(model.SCEN, model.DEM, within=pyo.NonNegativeReals, mutable=True)
 
     # convert units for input data
     def rescale_rule(m):
@@ -161,7 +158,7 @@ def create_model(demand_factor=1.0):
 
     def compute_constants(m):
         for i in m.LINK:
-            m.lam[i] = (2.0* log10(3.7*m.ldiam[i]/(m.eps*m.dfac)))**(-2.0)
+            m.lam[i] = (2.0*pyo.log10(3.7*m.ldiam[i]/(m.eps*m.dfac)))**(-2.0)
             m.A[i] = (1.0/4.0)*m.pi*m.ldiam[i]*m.ldiam[i]
             m.nu2 = m.gam*m.z*m.R*m.Tgas/m.M
             m.c1[i] = (m.pfac2/m.ffac2)*(m.nu2/m.A[i])
@@ -193,30 +190,30 @@ def create_model(demand_factor=1.0):
         if t >= m.TDEC+1+4.5:
             return m.d[j]
 
-    model.stochd =  Param(model.SCEN, model.DEM, model.TIME, within= PositiveReals, mutable=True, default=stochd_init)
+    model.stochd = pyo.Param(model.SCEN, model.DEM, model.TIME, within=pyo.PositiveReals, mutable=True, default=stochd_init)
 
     # define temporal variables
     def p_bounds_rule(m, k, j, t):
-        return  value(m.pmin[j]),  value(m.pmax[j])
-    model.p =  Var(model.SCEN, model.NODE, model.TIME, bounds=p_bounds_rule, initialize=50.0)
+        return pyo.value(m.pmin[j]), pyo.value(m.pmax[j])
+    model.p = pyo.Var(model.SCEN, model.NODE, model.TIME, bounds=p_bounds_rule, initialize=50.0)
 
 
-    model.dp =  Var(model.SCEN, model.LINK_A, model.TIME, bounds=(0.0, 100.0), initialize=10.0)
-    model.fin =  Var(model.SCEN, model.LINK, model.TIME, bounds=(1.0, 500.0), initialize=100.0)
-    model.fout =  Var(model.SCEN, model.LINK, model.TIME, bounds=(1.0, 500.0), initialize=100.0)
+    model.dp = pyo.Var(model.SCEN, model.LINK_A, model.TIME, bounds=(0.0, 100.0), initialize=10.0)
+    model.fin = pyo.Var(model.SCEN, model.LINK, model.TIME, bounds=(1.0, 500.0), initialize=100.0)
+    model.fout = pyo.Var(model.SCEN, model.LINK, model.TIME, bounds=(1.0, 500.0), initialize=100.0)
 
     def s_bounds_rule(m, k, j, t):
-        return 0.01,  value(m.smax[j])
-    model.s =  Var(model.SCEN, model.SUP, model.TIME, bounds=s_bounds_rule, initialize=10.0)
-    model.dem =  Var(model.SCEN, model.DEM, model.TIME, initialize=100.0)
-    model.pow =  Var(model.SCEN, model.LINK_A, model.TIME, bounds=(0.0, 3000.0), initialize=1000.0)
-    model.slack =  Var(model.SCEN, model.LINK, model.TIME, model.DIS, bounds=(0.0, None), initialize=10.0)
+        return 0.01, pyo.value(m.smax[j])
+    model.s = pyo.Var(model.SCEN, model.SUP, model.TIME, bounds=s_bounds_rule, initialize=10.0)
+    model.dem = pyo.Var(model.SCEN, model.DEM, model.TIME, initialize=100.0)
+    model.pow = pyo.Var(model.SCEN, model.LINK_A, model.TIME, bounds=(0.0, 3000.0), initialize=1000.0)
+    model.slack = pyo.Var(model.SCEN, model.LINK, model.TIME, model.DIS, bounds=(0.0, None), initialize=10.0)
 
     # define spatio-temporal variables
     # average 55.7278214666423
-    model.px =  Var(model.SCEN, model.LINK, model.TIME, model.DIS, bounds=(10.0, 100.0), initialize=50.0)
+    model.px = pyo.Var(model.SCEN, model.LINK, model.TIME, model.DIS, bounds=(10.0, 100.0), initialize=50.0)
     # average 43.19700578593625
-    model.fx =  Var(model.SCEN, model.LINK, model.TIME, model.DIS, bounds=(1.0, 100.0), initialize=100.0)
+    model.fx = pyo.Var(model.SCEN, model.LINK, model.TIME, model.DIS, bounds=(1.0, 100.0), initialize=100.0)
 
     # define derivatives
     model.dpxdt = dae.DerivativeVar(model.px, wrt=model.TIME, initialize=0)
@@ -230,16 +227,16 @@ def create_model(demand_factor=1.0):
     # compressor equations
     def powereq_rule(m, j, i, t):
         return m.pow[j, i, t] == m.c4 * m.fin[j, i, t] * (((m.p[j, m.lstartloc[i], t]+m.dp[j, i, t])/m.p[j, m.lstartloc[i], t])**m.om - 1.0)
-    model.powereq =  Constraint(model.SCEN, model.LINK_A, model.TIME, rule=powereq_rule)
+    model.powereq = pyo.Constraint(model.SCEN, model.LINK_A, model.TIME, rule=powereq_rule)
 
     # cvar model
-    model.cvar_lambda =  Param(initialize=0.0)
-    model.nu =  Var(initialize=100.0)
-    model.phi =  Var(model.SCEN, bounds=(0.0, None), initialize=100.0)
+    model.cvar_lambda = pyo.Param(initialize=0.0)
+    model.nu = pyo.Var(initialize=100.0)
+    model.phi = pyo.Var(model.SCEN, bounds=(0.0, None), initialize=100.0)
 
     def cvarcost_rule(m):
         return (1.0/m.S) * sum((m.phi[k]/(1.0-0.95) + m.nu) for k in m.SCEN)
-    model.cvarcost =  Expression(rule=cvarcost_rule)
+    model.cvarcost = pyo.Expression(rule=cvarcost_rule)
 
     # node balances
     def nodeeq_rule(m, k, i, t):
@@ -247,102 +244,102 @@ def create_model(demand_factor=1.0):
                sum(m.s[k, j, t] for j in m.SUP if m.sloc[j] == i) -         \
                sum(m.fin[k, j, t] for j in m.LINK if m.lstartloc[j] == i) - \
                sum(m.dem[k, j, t] for j in m.DEM if m.dloc[j] == i) == 0.0
-    model.nodeeq =  Constraint(model.SCEN, model.NODE, model.TIME, rule=nodeeq_rule)
+    model.nodeeq = pyo.Constraint(model.SCEN, model.NODE, model.TIME, rule=nodeeq_rule)
 
     # boundary conditions flow
     def flow_start_rule(m, j, i, t):
         return m.fx[j, i, t, m.DIS.first()] == m.fin[j, i, t]
-    model.flow_start =  Constraint(model.SCEN, model.LINK, model.TIME, rule=flow_start_rule)
+    model.flow_start = pyo.Constraint(model.SCEN, model.LINK, model.TIME, rule=flow_start_rule)
 
     def flow_end_rule(m, j, i, t):
         return m.fx[j, i, t, m.DIS.last()] == m.fout[j, i, t]
-    model.flow_end =  Constraint(model.SCEN, model.LINK, model.TIME, rule=flow_end_rule)
+    model.flow_end = pyo.Constraint(model.SCEN, model.LINK, model.TIME, rule=flow_end_rule)
 
     # First PDE for gas network model
     def flow_rule(m, j, i, t, k):
         if t == m.TIME.first() or k == m.DIS.last():
-            return  Constraint.Skip # Do not apply pde at initial time or final location
+            return pyo.Constraint.Skip # Do not apply pde at initial time or final location
         return m.dpxdt[j, i, t, k]/3600.0 + m.c1[i]/m.llength[i] * m.dfxdx[j, i, t, k] == 0
-    model.flow =  Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=flow_rule)
+    model.flow = pyo.Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=flow_rule)
 
     # Second PDE for gas network model
     def press_rule(m, j, i, t, k):
         if t == m.TIME.first() or k == m.DIS.last():
-            return  Constraint.Skip # Do not apply pde at initial time or final location
+            return pyo.Constraint.Skip # Do not apply pde at initial time or final location
         return m.dfxdt[j, i, t, k]/3600 == -m.c2[i]/m.llength[i]*m.dpxdx[j, i, t, k] - m.slack[j, i, t, k]
-    model.press =  Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=press_rule)
+    model.press = pyo.Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=press_rule)
 
     def slackeq_rule(m, j, i, t, k):
         if t == m.TIME.last():
-            return  Constraint.Skip
+            return pyo.Constraint.Skip
         return m.slack[j, i, t, k] * m.px[j, i, t, k] == m.c3[i] * m.fx[j, i, t, k] * m.fx[j, i, t, k]
-    model.slackeq =  Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=slackeq_rule)
+    model.slackeq = pyo.Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=slackeq_rule)
 
     # boundary conditions pressure, passive links
     def presspas_start_rule(m, j, i, t):
         return m.px[j, i, t, m.DIS.first()] == m.p[j, m.lstartloc[i], t]
-    model.presspas_start =  Constraint(model.SCEN, model.LINK_P, model.TIME, rule=presspas_start_rule)
+    model.presspas_start = pyo.Constraint(model.SCEN, model.LINK_P, model.TIME, rule=presspas_start_rule)
 
     def presspas_end_rule(m, j, i, t):
         return m.px[j, i, t, m.DIS.last()] == m.p[j, m.lendloc[i], t]
-    model.presspas_end =  Constraint(model.SCEN, model.LINK_P, model.TIME, rule=presspas_end_rule)
+    model.presspas_end = pyo.Constraint(model.SCEN, model.LINK_P, model.TIME, rule=presspas_end_rule)
 
     # boundary conditions pressure, active links
     def pressact_start_rule(m, j, i, t):
         return m.px[j, i, t, m.DIS.first()] == m.p[j, m.lstartloc[i], t] + m.dp[j, i, t]
-    model.pressact_start =  Constraint(model.SCEN, model.LINK_A, model.TIME, rule=pressact_start_rule)
+    model.pressact_start = pyo.Constraint(model.SCEN, model.LINK_A, model.TIME, rule=pressact_start_rule)
 
     def pressact_end_rule(m, j, i, t):
         return m.px[j, i, t, m.DIS.last()] == m.p[j, m.lendloc[i], t]
-    model.pressact_end =  Constraint(model.SCEN, model.LINK_A, model.TIME, rule=pressact_end_rule)
+    model.pressact_end = pyo.Constraint(model.SCEN, model.LINK_A, model.TIME, rule=pressact_end_rule)
 
     # fix pressure at supply nodes
     def suppres_rule(m, k, j, t):
         return m.p[k, m.sloc[j], t] == m.pmin[m.sloc[j]]
-    model.suppres =  Constraint(model.SCEN, model.SUP, model.TIME, rule=suppres_rule)
+    model.suppres = pyo.Constraint(model.SCEN, model.SUP, model.TIME, rule=suppres_rule)
 
     # discharge pressure for compressors
     def dispress_rule(m, j, i, t):
         return m.p[j, m.lstartloc[i], t] + m.dp[j, i, t] <= m.pmax[m.lstartloc[i]]
-    model.dispress =  Constraint(model.SCEN, model.LINK_A, model.TIME, rule=dispress_rule)
+    model.dispress = pyo.Constraint(model.SCEN, model.LINK_A, model.TIME, rule=dispress_rule)
 
     # ss constraints
     def flow_ss_rule(m, j, i, k):
         if k == m.DIS.last():
-            return  Constraint.Skip
+            return pyo.Constraint.Skip
         return m.dfxdx[j, i, m.TIME.first(), k] == 0.0
-    model.flow_ss =  Constraint(model.SCEN, model.LINK, model.DIS, rule=flow_ss_rule)
+    model.flow_ss = pyo.Constraint(model.SCEN, model.LINK, model.DIS, rule=flow_ss_rule)
 
     def pres_ss_rule(m, j, i, k):
         if k == m.DIS.last():
-            return  Constraint.Skip
+            return pyo.Constraint.Skip
         return 0.0 == - m.c2[i]/m.llength[i] * m.dpxdx[j, i, m.TIME.first(), k] - m.slack[j, i, m.TIME.first(), k];
-    model.pres_ss =  Constraint(model.SCEN, model.LINK, model.DIS, rule=pres_ss_rule)
+    model.pres_ss = pyo.Constraint(model.SCEN, model.LINK, model.DIS, rule=pres_ss_rule)
 
     # non-anticipativity constraints
     def nonantdq_rule(m, j, i, t):
         if j == 1:
-            return  Constraint.Skip
+            return pyo.Constraint.Skip
         if t >= m.TDEC+1:
-            return  Constraint.Skip
+            return pyo.Constraint.Skip
         return m.dp[j, i, t] == m.dp[1, i, t]
 
-    model.nonantdq =  Constraint(model.SCEN, model.LINK_A, model.TIME, rule=nonantdq_rule)
+    model.nonantdq = pyo.Constraint(model.SCEN, model.LINK_A, model.TIME, rule=nonantdq_rule)
 
     def nonantde_rule(m, j, i, t):
         if j == 1:
-            return  Constraint.Skip
+            return pyo.Constraint.Skip
         if t >= m.TDEC+1:
-            return  Constraint.Skip
+            return pyo.Constraint.Skip
         return m.dem[j, i, t] == m.dem[1, i, t]
 
-    model.nonantde =  Constraint(model.SCEN, model.DEM, model.TIME, rule=nonantde_rule)
+    model.nonantde = pyo.Constraint(model.SCEN, model.DEM, model.TIME, rule=nonantde_rule)
 
     # discretize model
-    discretizer =  TransformationFactory('dae.finite_difference')
+    discretizer = pyo.TransformationFactory('dae.finite_difference')
     discretizer.apply_to(model, nfe=1, wrt=model.DIS, scheme='FORWARD')
 
-    discretizer2 =  TransformationFactory('dae.collocation')
+    discretizer2 = pyo.TransformationFactory('dae.collocation')
     #discretizer2.apply_to(model, nfe=47, ncp=1, wrt=model.TIME, scheme='LAGRANGE-RADAU')
 
     # discretizer.apply_to(model, nfe=48, wrt=model.TIME, scheme='BACKWARD')
@@ -355,52 +352,52 @@ def create_model(demand_factor=1.0):
     def supcost_rule(m, k):
         return sum(m.cs * m.s[k, j, t] * TimeStep for j in m.SUP for t in m.TIME.get_finite_elements())
 
-    model.supcost =  Expression(model.SCEN, rule=supcost_rule)
+    model.supcost = pyo.Expression(model.SCEN, rule=supcost_rule)
 
     def boostcost_rule(m, k):
         return sum(m.ce * m.pow[k, j, t] * TimeStep for j in m.LINK_A for t in m.TIME.get_finite_elements())
 
-    model.boostcost =  Expression(model.SCEN, rule=boostcost_rule)
+    model.boostcost = pyo.Expression(model.SCEN, rule=boostcost_rule)
 
     def trackcost_rule(m, k):
         return sum(
             m.cd * (m.dem[k, j, t] - m.stochd[k, j, t]) ** 2.0 for j in m.DEM for t in m.TIME.get_finite_elements())
 
-    model.trackcost =  Expression(model.SCEN, rule=trackcost_rule)
+    model.trackcost = pyo.Expression(model.SCEN, rule=trackcost_rule)
 
     def sspcost_rule(m, k):
         return sum(
             m.cT * (m.px[k, i, m.TIME.last(), j] - m.px[k, i, m.TIME.first(), j]) ** 2.0 for i in m.LINK for j in m.DIS)
 
-    model.sspcost =  Expression(model.SCEN, rule=sspcost_rule)
+    model.sspcost = pyo.Expression(model.SCEN, rule=sspcost_rule)
 
     def ssfcost_rule(m, k):
         return sum(
             m.cT * (m.fx[k, i, m.TIME.last(), j] - m.fx[k, i, m.TIME.first(), j]) ** 2.0 for i in m.LINK for j in m.DIS)
 
-    model.ssfcost =  Expression(model.SCEN, rule=ssfcost_rule)
+    model.ssfcost = pyo.Expression(model.SCEN, rule=ssfcost_rule)
 
     def cost_rule(m, k):
         return 1e-6 * (m.supcost[k] + m.boostcost[k] + m.trackcost[k] + m.sspcost[k] + m.ssfcost[k])
 
-    model.cost =  Expression(model.SCEN, rule=cost_rule)
+    model.cost = pyo.Expression(model.SCEN, rule=cost_rule)
 
     def mcost_rule(m):
         return sum(m.cost[k] for k in m.SCEN)
 
-    model.mcost =  Expression(rule=mcost_rule)
+    model.mcost = pyo.Expression(rule=mcost_rule)
 
-    model.FirstStageCost =  Expression(expr=0.0)
-    model.SecondStageCost =  Expression(rule=mcost_rule)
+    model.FirstStageCost = pyo.Expression(expr=0.0)
+    model.SecondStageCost = pyo.Expression(rule=mcost_rule)
 
-    model.obj =  Objective(expr=model.FirstStageCost + model.SecondStageCost)
+    model.obj = pyo.Objective(expr=model.FirstStageCost + model.SecondStageCost)
 
     return model
 
 """
 instance = create_model(1.0)
 
-solver =  SolverFactory("ipopt")
+solver = pyo.SolverFactory("ipopt")
 solver.solve(instance, tee=True)
 
 import sys

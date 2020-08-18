@@ -14,8 +14,8 @@ import pyutilib.th as unittest
 
 from pyomo.common.dependencies import numpy_available
 
-from pyomo.environ import Var, ConcreteModel, Reals, ExternalFunction, Objective, Constraint, sqrt, sin
-from pyomo.opt import SolverFactory
+from pyomo.environ import (Var, ConcreteModel, Reals, ExternalFunction,
+                           Objective, Constraint, sqrt, sin, SolverFactory)
 
 @unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
 @unittest.skipIf(not SolverFactory('gjh').available(False), "The GJH solver is not available")

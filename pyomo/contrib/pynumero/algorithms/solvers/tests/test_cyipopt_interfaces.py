@@ -33,11 +33,11 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptNLP
 
 
 def create_model1():
-    m =  pyo.ConcreteModel()
-    m.x =  pyo.Var([1, 2, 3], initialize=4.0)
-    m.d =  pyo.Constraint(expr=m.x[1] + m.x[2] ** 2 <= 18.0)
-    m.c =  pyo.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
-    m.o =  pyo.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([1, 2, 3], initialize=4.0)
+    m.d = pyo.Constraint(expr=m.x[1] + m.x[2] ** 2 <= 18.0)
+    m.c = pyo.Constraint(expr=m.x[3] ** 2 + m.x[1] == 25)
+    m.o = pyo.Objective(expr=m.x[1] ** 4 - 3 * m.x[1] * m.x[2] ** 3 + m.x[3] ** 2 - 8.0)
     m.x[1].setlb(0.0)
     m.x[2].setlb(0.0)
     return m

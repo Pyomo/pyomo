@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
-from pyomo.environ import ConcreteModel, Var, Param, Objective, ExternalFunction, Expression, value, sqrt, exp, log, log10, cos, tan, sin, acos, asin, atan
+import pyomo.environ as pyo
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_ad, reverse_sd
 from pyomo.common.getGSL import find_GSL
 
@@ -20,176 +20,176 @@ tol = 6
 def approx_deriv(expr, wrt, delta=0.001):
     numerator = 0
     wrt.value += 2*delta
-    numerator -=  value(expr)
+    numerator -= pyo.value(expr)
     wrt.value -= delta
-    numerator += 8* value(expr)
+    numerator += 8*pyo.value(expr)
     wrt.value -= 2*delta
-    numerator -= 8* value(expr)
+    numerator -= 8*pyo.value(expr)
     wrt.value -= delta
-    numerator +=  value(expr)
+    numerator += pyo.value(expr)
     wrt.value += 2*delta
     return numerator / (12*delta)
 
 
 class TestDerivs(unittest.TestCase):
     def test_prod(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        m.y =  Var(initialize=3.0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        m.y = pyo.Var(initialize=3.0)
         e = m.x * m.y
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
-        self.assertAlmostEqual(derivs[m.y],  value(symbolic[m.y]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pyo.value(symbolic[m.y]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
 
     def test_sum(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        m.y =  Var(initialize=3.0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        m.y = pyo.Var(initialize=3.0)
         e = 2.0*m.x + 3.0*m.y - m.x*m.y
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
-        self.assertAlmostEqual(derivs[m.y],  value(symbolic[m.y]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pyo.value(symbolic[m.y]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
 
     def test_div(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        m.y =  Var(initialize=3.0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        m.y = pyo.Var(initialize=3.0)
         e = m.x / m.y
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
-        self.assertAlmostEqual(derivs[m.y],  value(symbolic[m.y]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pyo.value(symbolic[m.y]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
 
     def test_pow(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        m.y =  Var(initialize=3.0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        m.y = pyo.Var(initialize=3.0)
         e = m.x ** m.y
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
-        self.assertAlmostEqual(derivs[m.y],  value(symbolic[m.y]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pyo.value(symbolic[m.y]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
 
     def test_sqrt(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        m.y =  Var(initialize=3.0)
-        e =  sqrt(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        m.y = pyo.Var(initialize=3.0)
+        e = pyo.sqrt(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_exp(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        e =  exp(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        e = pyo.exp(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_log(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        e =  log(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        e = pyo.log(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_log10(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        e =  log10(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        e = pyo.log10(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_sin(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        e =  sin(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        e = pyo.sin(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_cos(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        e =  cos(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        e = pyo.cos(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_tan(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        e =  tan(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        e = pyo.tan(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_asin(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=0.5)
-        e =  asin(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=0.5)
+        e = pyo.asin(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_acos(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=0.5)
-        e =  acos(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=0.5)
+        e = pyo.acos(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_atan(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2.0)
-        e =  atan(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        e = pyo.atan(m.x)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
 
     def test_nested(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=2)
-        m.y =  Var(initialize=3)
-        m.p =  Param(initialize=0.5, mutable=True)
-        e =  exp(m.x**m.p + 3.2*m.y - 12)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2)
+        m.y = pyo.Var(initialize=3)
+        m.p = pyo.Param(initialize=0.5, mutable=True)
+        e = pyo.exp(m.x**m.p + 3.2*m.y - 12)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol+3)
-        self.assertAlmostEqual(derivs[m.y],  value(symbolic[m.y]), tol+3)
-        self.assertAlmostEqual(derivs[m.p],  value(symbolic[m.p]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], pyo.value(symbolic[m.y]), tol+3)
+        self.assertAlmostEqual(derivs[m.p], pyo.value(symbolic[m.p]), tol+3)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
         self.assertAlmostEqual(derivs[m.p], approx_deriv(e, m.p), tol)
 
     def test_expressiondata(self):
-        m =  ConcreteModel()
-        m.x =  Var(initialize=3)
-        m.e =  Expression(expr=m.x * 2)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=3)
+        m.e = pyo.Expression(expr=m.x * 2)
 
         @m.Expression([1, 2])
         def e2(m, i):
@@ -197,35 +197,35 @@ class TestDerivs(unittest.TestCase):
                 return m.x + 4
             else:
                 return m.x ** 2
-        m.o =  Objective(expr=m.e + 1 + m.e2[1] + m.e2[2])
+        m.o = pyo.Objective(expr=m.e + 1 + m.e2[1] + m.e2[2])
         derivs = reverse_ad(m.o.expr)
         symbolic = reverse_sd(m.o.expr)
-        self.assertAlmostEqual(derivs[m.x],  value(symbolic[m.x]), tol)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol)
 
     def test_multiple_named_expressions(self):
-        m =  ConcreteModel()
-        m.x =  Var()
-        m.y =  Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
         m.x.value = 1
         m.y.value = 1
-        m.E =  Expression(expr=m.x*m.y)
+        m.E = pyo.Expression(expr=m.x*m.y)
         e = m.E - m.E
         derivs = reverse_ad(e)
         self.assertAlmostEqual(derivs[m.x], 0)
         self.assertAlmostEqual(derivs[m.y], 0)
         symbolic = reverse_sd(e)
-        self.assertAlmostEqual( value(symbolic[m.x]), 0)
-        self.assertAlmostEqual( value(symbolic[m.y]), 0)
+        self.assertAlmostEqual(pyo.value(symbolic[m.x]), 0)
+        self.assertAlmostEqual(pyo.value(symbolic[m.y]), 0)
 
     def test_external(self):
         DLL = find_GSL()
         if not DLL:
             self.skipTest('Could not find the amplgsl.dll library')
 
-        m =  ConcreteModel()
-        m.hypot =  ExternalFunction(library=DLL, function='gsl_hypot')
-        m.x =  Var(initialize=0.5)
-        m.y =  Var(initialize=1.5)
+        m = pyo.ConcreteModel()
+        m.hypot = pyo.ExternalFunction(library=DLL, function='gsl_hypot')
+        m.x = pyo.Var(initialize=0.5)
+        m.y = pyo.Var(initialize=1.5)
         e = 2 * m.hypot(m.x, m.x*m.y)
         derivs = reverse_ad(e)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)

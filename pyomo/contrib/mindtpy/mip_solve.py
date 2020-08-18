@@ -12,9 +12,9 @@
 from __future__ import division
 
 from pyomo.contrib.gdpopt.util import copy_var_list_values
-from pyomo.core import Constraint, Expression, Objective, minimize, value
+from pyomo.environ import (Constraint, Expression, Objective, minimize,
+                           value, SolverFactory, SolutionStatus)
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver

@@ -8,8 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.base import \
-    (ICategorizedObjectContainer)
+from pyomo.core.kernel.base import ICategorizedObjectContainer
 
 class IHomogeneousContainer(ICategorizedObjectContainer):
     """

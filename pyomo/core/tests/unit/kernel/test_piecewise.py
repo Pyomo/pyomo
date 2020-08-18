@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -11,7 +11,7 @@
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.kernel import parameter
+import pyomo.kernel as pmo
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
 from pyomo.core.tests.unit.kernel.test_list_container import \
@@ -402,14 +402,14 @@ class Test_piecewise(unittest.TestCase):
             f(3.1)
 
         # another step function using parameters
-        g = PiecewiseLinearFunction([parameter(1),
-                                     parameter(1),
-                                     parameter(2),
-                                     parameter(3)],
-                                    [parameter(1),
-                                     parameter(2),
-                                     parameter(3),
-                                     parameter(4)],
+        g = PiecewiseLinearFunction([pmo.parameter(1),
+                                     pmo.parameter(1),
+                                     pmo.parameter(2),
+                                     pmo.parameter(3)],
+                                    [pmo.parameter(1),
+                                     pmo.parameter(2),
+                                     pmo.parameter(3),
+                                     pmo.parameter(4)],
                                     equal_slopes_tolerance=-1)
         f = TransformedPiecewiseLinearFunction(
             g,

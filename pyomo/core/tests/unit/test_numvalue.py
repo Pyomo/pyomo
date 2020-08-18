@@ -165,11 +165,11 @@ class Test_value(unittest.TestCase):
         self.assertEqual(val, value(val))
 
     def test_nan(self):
-        val =  nan
+        val = nan
         self.assertEqual(id(val), id(value(val)))
 
     def test_inf(self):
-        val =  infinity
+        val = infinity
         self.assertEqual(id(val), id(value(val)))
 
     def test_string(self):
@@ -181,12 +181,12 @@ class Test_value(unittest.TestCase):
         self.assertEqual(1.0, value(val))
 
     def test_const3(self):
-        val = NumericConstant( nan)
-        self.assertEqual(id( nan), id(value(val)))
+        val = NumericConstant(nan)
+        self.assertEqual(id(nan), id(value(val)))
 
     def test_const4(self):
-        val = NumericConstant( infinity)
-        self.assertEqual(id( infinity), id(value(val)))
+        val = NumericConstant(infinity)
+        self.assertEqual(id(infinity), id(value(val)))
 
     def test_param1(self):
         m = ConcreteModel()
@@ -257,11 +257,11 @@ class Test_polydegree(unittest.TestCase):
         self.assertEqual(0, polynomial_degree(val))
 
     def test_nan(self):
-        val =  nan
+        val = nan
         self.assertEqual(0, polynomial_degree(val))
 
     def test_inf(self):
-        val =  infinity
+        val = infinity
         self.assertEqual(0, polynomial_degree(val))
 
     def test_string(self):
@@ -273,11 +273,11 @@ class Test_polydegree(unittest.TestCase):
         self.assertEqual(0, polynomial_degree(val))
 
     def test_const3(self):
-        val = NumericConstant( nan)
+        val = NumericConstant(nan)
         self.assertEqual(0, polynomial_degree(val))
 
     def test_const4(self):
-        val = NumericConstant( infinity)
+        val = NumericConstant(infinity)
         self.assertEqual(0, polynomial_degree(val))
 
     def test_param1(self):

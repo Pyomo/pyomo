@@ -9,13 +9,14 @@
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
-from pyomo.environ import Var, RangeSet, ConcreteModel
+import pyomo.environ as pyo
 
 from pyomo.core.base.matrix_constraint import MatrixConstraint
 
+
 def _create_variable_list(size, **kwds):
     assert size > 0
-    return  Var( RangeSet(0,size-1), **kwds)
+    return pyo.Var(pyo.RangeSet(0,size-1), **kwds)
 
 def _get_csr(m, n, value):
     data = [value] * (m * n)
@@ -28,7 +29,7 @@ def _get_csr(m, n, value):
 class TestMatrixConstraint(unittest.TestCase):
 
     def test_init(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         m.v = _create_variable_list(3, initialize=1.0)
         data, indices, indptr = _get_csr(3,3,0.0)
         lb = [None] * 3
@@ -54,7 +55,7 @@ class TestMatrixConstraint(unittest.TestCase):
             self.assertEqual(c.has_lb(), False)
             self.assertEqual(c.has_ub(), False)
 
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         m.v = _create_variable_list(3, initialize=3)
         data, indices, indptr = _get_csr(2,3,1.0)
         m.c = MatrixConstraint(data, indices, indptr,
@@ -75,7 +76,7 @@ class TestMatrixConstraint(unittest.TestCase):
             self.assertEqual(c.equality, False)
 
 
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         m.v = _create_variable_list(3, initialize=3)
         data, indices, indptr = _get_csr(2,3,1.0)
         m.c = MatrixConstraint(data, indices, indptr,

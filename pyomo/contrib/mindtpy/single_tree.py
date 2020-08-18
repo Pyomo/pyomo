@@ -22,6 +22,7 @@ from math import fabs
 from pyomo.repn import generate_standard_repn
 import cplex
 from cplex.callbacks import LazyConstraintCallback
+import pyomo.environ
 
 
 class LazyOACallback_cplex(LazyConstraintCallback):

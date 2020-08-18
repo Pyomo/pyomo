@@ -22,7 +22,6 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-# from pyutilib.math import *
 from pyutilib.misc import Container, PauseGC
 
 from pyomo.common import timing, PyomoAPIFactory

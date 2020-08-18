@@ -12,10 +12,9 @@
 from __future__ import division
 
 from pyomo.common.collections import ComponentMap
-from pyomo.core import Objective, Suffix
+from pyomo.environ import Objective, Suffix, SolverFactory
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 

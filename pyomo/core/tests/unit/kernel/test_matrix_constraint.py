@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -11,7 +11,7 @@
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.kernel import pprint, preorder_traversal
+import pyomo.kernel as pmo
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      ICategorizedObjectContainer)
@@ -47,12 +47,14 @@ except:
     has_scipy = False
     _scipy_ver = (0,0)
 
+
 def _create_variable_list(size, **kwds):
     assert size > 0
     vlist = variable_list()
     for i in range(size):
         vlist.append(variable(**kwds))
     return vlist
+
 
 @unittest.skipUnless(has_numpy and has_scipy,
                      "NumPy or SciPy is not available")
@@ -69,16 +71,16 @@ class Test_matrix_constraint(unittest.TestCase):
                                    lb=1,
                                    ub=2,
                                    x=vlist)
-        pprint(ctuple)
+        pmo.pprint(ctuple)
         b = block()
         b.c = ctuple
-        pprint(ctuple)
-        pprint(b)
+        pmo.pprint(ctuple)
+        pmo.pprint(b)
         m = block()
         m.b = b
-        pprint(ctuple)
-        pprint(b)
-        pprint(m)
+        pmo.pprint(ctuple)
+        pmo.pprint(b)
+        pmo.pprint(m)
 
     def test_ctype(self):
         ctuple = matrix_constraint(numpy.random.rand(3,3))
@@ -1198,7 +1200,7 @@ class Test_matrix_constraint(unittest.TestCase):
                 return False
             return True
         cnt = 0
-        for obj in preorder_traversal(m,
+        for obj in pmo.preorder_traversal(m,
                                           ctype=IConstraint,
                                           descend=no_mc_descend):
             self.assertTrue(type(obj.parent) is not matrix_constraint)
@@ -1209,7 +1211,7 @@ class Test_matrix_constraint(unittest.TestCase):
 
         cnt = 0
         mc_child_cnt = 0
-        for obj in preorder_traversal(m, ctype=IConstraint):
+        for obj in pmo.preorder_traversal(m, ctype=IConstraint):
             self.assertTrue((obj.ctype is block._ctype) or \
                             (obj.ctype is constraint._ctype))
             if type(obj.parent) is matrix_constraint:

@@ -15,7 +15,6 @@ from subprocess import Popen
 import os
 import time
 import pyutilib.th as unittest
-from pyomo.environ import *
 
 test_file = os.path.join(os.path.dirname(__file__), "pytest_qt.py")
 
