@@ -114,9 +114,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         shutil.rmtree(tmpdir, ignore_errors=True)
         self.assertFalse(os.path.exists(tmpdir))
         sp = EmbeddedSP(self._get_base_model())
-        convert_embedded(tmpdir,
-                                                 'test',
-                                                 sp)
+        convert_embedded(tmpdir, 'test', sp)
         self.assertTrue(os.path.exists(tmpdir))
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -124,9 +122,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         sp = EmbeddedSP(self._get_base_model())
         sp.time_stages = [1,2,3]
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(str(cm.exception),
                          ("SMPS conversion does not yet handle more "
                           "than 2 time-stages"))
@@ -143,9 +139,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         sp.has_stochastic_variable_bounds = True
         self.assertEqual(sp.has_stochastic_variable_bounds, True)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(str(cm.exception),
                          ("Problems with stochastic variables bounds "
                          "can not be converted into an embedded "
@@ -156,9 +150,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.cost[2].expr = model.y**2 + model.d1
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertTrue(str(cm.exception).startswith(
             "Cannot output embedded SP representation for component "
             "'o'. The embedded SMPS writer does not yet handle "
@@ -169,9 +161,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.cost[2].expr = model.d1*model.y + model.d1
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -189,9 +179,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.cost[2].expr = -model.d1*model.y
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertTrue(str(cm.exception).startswith(
             "Cannot output embedded SP representation for component "
             "'o'. The embedded SMPS writer does not yet handle the "
@@ -210,9 +198,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.cost[2].expr = (model.d1+model.q)*model.y
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -231,9 +217,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
             distribution=UniformDistribution(0.0,1.0))
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Invalid distribution type 'UniformDistribution' for stochastic "
@@ -246,9 +230,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.c2._body = model.d2*model.y**2
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertTrue(str(cm.exception).startswith(
             "Cannot output embedded SP representation for component "
             "'c2'. The embedded SMPS writer does not yet handle "
@@ -263,9 +245,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.c2._body = model.d2*model.y + model.q
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -285,9 +265,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.c3 = pyo.Constraint(expr=pyo.inequality(model.q, model.y, 0))
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -299,9 +277,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.c2._lower = model.d2
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -319,9 +295,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.c2._body = -model.d2*model.y
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertTrue(str(cm.exception).startswith(
             "Cannot output embedded SP representation for component "
             "'c2'. The embedded SMPS writer does not yet handle the "
@@ -340,9 +314,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.c2._body = (model.d2+model.q)*model.y
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -361,9 +333,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
             distribution=UniformDistribution(0.0,1.0))
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Invalid distribution type 'UniformDistribution' for stochastic "
@@ -418,10 +388,7 @@ class TestSMPSEmbedded(unittest.TestCase):
         shutil.rmtree(output_directory,
                       ignore_errors=True)
         os.makedirs(output_directory)
-        convert_embedded(output_directory,
-                                                 basename,
-                                                 sp,
-                                                 **kwds)
+        convert_embedded(output_directory, basename, sp, **kwds)
         return output_directory
 
     def _get_baa99_sp(self):

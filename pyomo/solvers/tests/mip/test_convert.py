@@ -130,7 +130,7 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ApplicationError - glpsol is "
                           "enabled but not available: '%s'" % str(err))
             return
-        except  ConverterError:
+        except ConverterError:
             err = sys.exc_info()[1]
             if Executable("glpsol").available():
                 self.fail("Unexpected ConverterError - glpsol is "
