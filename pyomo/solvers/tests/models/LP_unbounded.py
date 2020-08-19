@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.kernel import block, variable, objective
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Var, Objective
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
@@ -57,11 +57,11 @@ class LP_unbounded(_BaseTestModel):
 class LP_unbounded_kernel(LP_unbounded):
 
     def _generate_model(self):
-        self.model =  block()
+        self.model = pmo.block()
         model = self.model
         model._name = self.description
 
-        model.x =  variable()
-        model.y =  variable()
+        model.x = pmo.variable()
+        model.y = pmo.variable()
 
-        model.o =  objective(model.x+model.y)
+        model.o = pmo.objective(model.x+model.y)

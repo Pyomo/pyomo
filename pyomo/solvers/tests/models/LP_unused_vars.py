@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.kernel import block, variable, objective, constraint, variable_dict, constraint_dict, block_dict
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Var, Objective, Set, ConstraintList, sum_product, Block
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
@@ -115,62 +115,62 @@ class LP_unused_vars_kernel(LP_unused_vars):
 
     def _generate_model(self):
         self.model = None
-        self.model =  block()
+        self.model = pmo.block()
         model = self.model
         model._name = self.description
 
         model.s = [1,2]
-        model.x_unused =  variable()
+        model.x_unused = pmo.variable()
         model.x_unused.stale = False
 
-        model.x_unused_initialy_stale =  variable()
+        model.x_unused_initialy_stale = pmo.variable()
         model.x_unused_initialy_stale.stale = True
 
-        model.X_unused =  variable_dict(
-            (i,  variable()) for i in model.s)
-        model.X_unused_initialy_stale =  variable_dict(
-            (i,  variable()) for i in model.s)
+        model.X_unused = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
+        model.X_unused_initialy_stale = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
 
         for i in model.X_unused:
             model.X_unused[i].stale = False
             model.X_unused_initialy_stale[i].stale = True
 
-        model.x =  variable()
+        model.x = pmo.variable()
         model.x.stale = False
 
-        model.x_initialy_stale =  variable()
+        model.x_initialy_stale = pmo.variable()
         model.x_initialy_stale.stale = True
 
-        model.X =  variable_dict(
-            (i,  variable()) for i in model.s)
-        model.X_initialy_stale =  variable_dict(
-            (i,  variable()) for i in model.s)
+        model.X = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
+        model.X_initialy_stale = pmo.variable_dict(
+            (i, pmo.variable()) for i in model.s)
         for i in model.X:
             model.X[i].stale = False
             model.X_initialy_stale[i].stale = True
 
-        model.obj =  objective(model.x + \
+        model.obj = pmo.objective(model.x + \
                                   model.x_initialy_stale + \
                                   sum(model.X.values()) + \
                                   sum(model.X_initialy_stale.values()))
 
-        model.c =  constraint_dict()
-        model.c[1] =  constraint(model.x          >= 1)
-        model.c[2] =  constraint(model.x_initialy_stale    >= 1)
-        model.c[3] =  constraint(model.X[1]       >= 0)
-        model.c[4] =  constraint(model.X[2]       >= 1)
-        model.c[5] =  constraint(model.X_initialy_stale[1] >= 0)
-        model.c[6] =  constraint(model.X_initialy_stale[2] >= 1)
+        model.c = pmo.constraint_dict()
+        model.c[1] = pmo.constraint(model.x          >= 1)
+        model.c[2] = pmo.constraint(model.x_initialy_stale    >= 1)
+        model.c[3] = pmo.constraint(model.X[1]       >= 0)
+        model.c[4] = pmo.constraint(model.X[2]       >= 1)
+        model.c[5] = pmo.constraint(model.X_initialy_stale[1] >= 0)
+        model.c[6] = pmo.constraint(model.X_initialy_stale[2] >= 1)
 
         # Test that stale flags do not get updated
         # on inactive blocks (where "inactive blocks" mean blocks
         # that do NOT follow a path of all active parent blocks
         # up to the top-level model)
         flat_model = model.clone()
-        model.b =  block()
-        model.B =  block_dict()
-        model.B[1] =  block()
-        model.B[2] =  block()
+        model.b = pmo.block()
+        model.B = pmo.block_dict()
+        model.B[1] = pmo.block()
+        model.B[2] = pmo.block()
         model.b.b = flat_model.clone()
         model.B[1].b = flat_model.clone()
         model.B[2].b = flat_model.clone()

@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.kernel import block, variable, objective, constraint
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Var, Objective, Constraint, Binary, maximize
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
@@ -51,15 +51,15 @@ class MIQCP_simple(_BaseTestModel):
 class MIQCP_simple_kernel(MIQCP_simple):
 
     def _generate_model(self):
-        self.model =  block()
+        self.model = pmo.block()
         model = self.model
         model._name = self.description
 
-        model.x =  variable(domain=Binary)
-        model.y =  variable(domain=Binary)
-        model.z =  variable(domain=Binary)
+        model.x = pmo.variable(domain=Binary)
+        model.y = pmo.variable(domain=Binary)
+        model.z = pmo.variable(domain=Binary)
 
-        model.obj =  objective(model.x,sense=maximize)
-        model.c0 =  constraint(model.x+model.y+model.z == 1)
-        model.qc0 =  constraint(model.x**2 + model.y**2 <= model.z**2)
-        model.qc1 =  constraint(model.x**2 <= model.y*model.z)
+        model.obj = pmo.objective(model.x,sense=maximize)
+        model.c0 = pmo.constraint(model.x+model.y+model.z == 1)
+        model.qc0 = pmo.constraint(model.x**2 + model.y**2 <= model.z**2)
+        model.qc1 = pmo.constraint(model.x**2 <= model.y*model.z)

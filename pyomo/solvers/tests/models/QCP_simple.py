@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.kernel import block, variable, objective, constraint, constraint_dict
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Var, Objective, Constraint, NonNegativeReals, maximize, ConstraintList
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
@@ -79,24 +79,24 @@ class QCP_simple_nosuffixes(QCP_simple):
 class QCP_simple_kernel(QCP_simple):
 
     def _generate_model(self):
-        self.model =  block()
+        self.model = pmo.block()
         model = self.model
         model._name = self.description
 
-        model.x =  variable(domain=NonNegativeReals)
-        model.y =  variable(domain=NonNegativeReals)
-        model.z =  variable(domain=NonNegativeReals)
-        model.fixed_var =  variable()
+        model.x = pmo.variable(domain=NonNegativeReals)
+        model.y = pmo.variable(domain=NonNegativeReals)
+        model.z = pmo.variable(domain=NonNegativeReals)
+        model.fixed_var = pmo.variable()
         model.fixed_var.fix(0.2)
-        model.q1 =  variable(ub=0.2)
-        model.q2 =  variable(lb=-2)
-        model.obj =  objective(model.x+model.q1-model.q2,sense=maximize)
-        model.c0 =  constraint(model.x+model.y+model.z == 1)
-        model.qc0 =  constraint(model.x**2 + model.y**2 + model.fixed_var <= model.z**2)
-        model.qc1 =  constraint(model.x**2 <= model.y*model.z)
-        model.c =  constraint_dict()
-        model.c[1] =  constraint(lb=0, body=-model.q1**2 + model.fixed_var)
-        model.c[2] =  constraint(body=model.q2**2 + model.fixed_var, ub=5)
+        model.q1 = pmo.variable(ub=0.2)
+        model.q2 = pmo.variable(lb=-2)
+        model.obj = pmo.objective(model.x+model.q1-model.q2,sense=maximize)
+        model.c0 = pmo.constraint(model.x+model.y+model.z == 1)
+        model.qc0 = pmo.constraint(model.x**2 + model.y**2 + model.fixed_var <= model.z**2)
+        model.qc1 = pmo.constraint(model.x**2 <= model.y*model.z)
+        model.c = pmo.constraint_dict()
+        model.c[1] = pmo.constraint(lb=0, body=-model.q1**2 + model.fixed_var)
+        model.c[2] = pmo.constraint(body=model.q2**2 + model.fixed_var, ub=5)
 
 @register_model
 class QCP_simple_nosuffixes_kernel(QCP_simple_kernel):

@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.kernel import block, variable, objective, constraint
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Var, Objective, Constraint, Binary
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
@@ -62,17 +62,17 @@ class MILP_infeasible1(_BaseTestModel):
 class MILP_infeasible1_kernel(MILP_infeasible1):
 
     def _generate_model(self):
-        self.model =  block()
+        self.model = pmo.block()
         model = self.model
         model._name = self.description
 
-        model.x =  variable(domain=Binary)
-        model.y =  variable(domain=Binary)
-        model.z =  variable(domain=Binary)
+        model.x = pmo.variable(domain=Binary)
+        model.y = pmo.variable(domain=Binary)
+        model.z = pmo.variable(domain=Binary)
 
-        model.o =  objective(-model.x-model.y-model.z)
+        model.o = pmo.objective(-model.x-model.y-model.z)
 
-        model.c1 =  constraint(model.x+model.y <= 1)
-        model.c2 =  constraint(model.x+model.z <= 1)
-        model.c3 =  constraint(model.y+model.z <= 1)
-        model.c4 =  constraint(model.x+model.y+model.z >= 1.5)
+        model.c1 = pmo.constraint(model.x+model.y <= 1)
+        model.c2 = pmo.constraint(model.x+model.z <= 1)
+        model.c3 = pmo.constraint(model.y+model.z <= 1)
+        model.c4 = pmo.constraint(model.x+model.y+model.z >= 1.5)

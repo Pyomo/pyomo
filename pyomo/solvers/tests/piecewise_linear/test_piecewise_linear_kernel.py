@@ -50,12 +50,12 @@ def createTestMethod(pName,problem,solver,writer,kwds):
 
         model = m.define_model(**kwds)
 
-        opt =  SolverFactory(solver, solver_io=writer)
+        opt = SolverFactory(solver, solver_io=writer)
         results = opt.solve(model)
 
         # non-recursive
         new_results = ((var.name, var.value)
-                       for var in model.components(ctype= variable.ctype,
+                       for var in model.components(ctype=variable.ctype,
                                                    active=True,
                                                    descend_into=False))
         baseline_results = getattr(obj,problem+'_results')
@@ -79,7 +79,7 @@ def assignTests(cls, problem_list):
             for AUX in aux_list:
                 for REPN in ['sos2','mc','inc','cc','dcc','dlog','log']:
                     for BOUND_TYPE in ['lb','ub','eq']:
-                        for SENSE in [ maximize, minimize]:
+                        for SENSE in [maximize, minimize]:
                             if not( ((BOUND_TYPE == 'lb') and (SENSE ==  maximize)) or \
                                     ((BOUND_TYPE == 'ub') and (SENSE ==  minimize)) or \
                                     ((REPN == 'mc') and ('step' in PROBLEM)) ):
@@ -87,10 +87,10 @@ def assignTests(cls, problem_list):
                                 kwds['sense'] = SENSE
                                 kwds['repn'] = REPN
                                 kwds['bound'] = BOUND_TYPE
-                                if SENSE ==  maximize:
+                                if SENSE == maximize:
                                     attrName = "test_{0}_{1}_{2}_{3}_{4}_{5}".format(PROBLEM,REPN,BOUND_TYPE,'maximize',solver,writer)
                                 else:
-                                    assert SENSE ==  minimize
+                                    assert SENSE == minimize
                                     attrName = "test_{0}_{1}_{2}_{3}_{4}_{5}".format(PROBLEM,REPN,BOUND_TYPE,'minimize',solver,writer)
                                 assert len(AUX) == 1
                                 kwds.update(AUX)
