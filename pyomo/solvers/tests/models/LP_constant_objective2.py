@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.kernel import block, variable, objective, constraint
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Var, Objective, Constraint, NonNegativeReals
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
@@ -44,10 +44,10 @@ class LP_constant_objective2(_BaseTestModel):
 class LP_constant_objective2_kernel(LP_constant_objective2):
 
     def _generate_model(self):
-        self.model =  block()
+        self.model = pmo.block()
         model = self.model
         model._name = self.description
 
-        model.x =  variable(domain=NonNegativeReals)
-        model.obj =  objective(model.x-model.x)
-        model.con =  constraint(model.x == 1.0)
+        model.x = pmo.variable(domain=NonNegativeReals)
+        model.obj = pmo.objective(model.x-model.x)
+        model.con = pmo.constraint(model.x == 1.0)

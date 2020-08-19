@@ -15,7 +15,7 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, cop
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
-from pyomo.environ import (ConstraintList, Objective,
+from pyomo.core import (ConstraintList, Objective,
                            TransformationFactory, maximize, minimize,
                            value, Var, SolverFactory)
 from pyomo.opt import TerminationCondition as tc
