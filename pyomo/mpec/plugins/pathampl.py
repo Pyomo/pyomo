@@ -10,8 +10,7 @@
 
 import logging
 
-import pyutilib.services
-import pyutilib.misc
+from pyutilib.misc import Options
 
 from pyomo.opt.base.solvers import SolverFactory
 from pyomo.common import Executable
@@ -34,7 +33,7 @@ class PATHAMPL(ASL):
         #
         # Define solver capabilities, which default to 'None'
         #
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Options()
         self._capabilities.linear = True
 
     def _default_executable(self):

@@ -15,7 +15,7 @@
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir,'..','..','..','examples','mpec'))
+exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'mpec'))
 
 import pyutilib.th as unittest
 
@@ -27,6 +27,7 @@ from pyomo.scripting.util import cleanup
 from six import iteritems
 
 solvers = pyomo.opt.check_available_solvers('ipopt')
+
 
 class CommonTests:
 
