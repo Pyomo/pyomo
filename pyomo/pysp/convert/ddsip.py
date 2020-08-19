@@ -43,6 +43,7 @@ from pyomo.pysp.scenariotree.manager import \
     (ScenarioTreeManagerClientSerial,
      ScenarioTreeManagerClientPyro)
 from pyomo.pysp.util.misc import launch_command
+import pyomo.environ
 
 from six import iteritems
 

@@ -21,7 +21,6 @@ thisfile = os.path.abspath(__file__)
 
 
 from pyomo.core.base import Var, TextLabeler, Expression, Piecewise, _PiecewiseData, SOSConstraint, Constraint, components_data
-# from pyomo.core.base.set_types import *
 from pyomo.pysp.plugins.ddextensionnew import (MatrixEntriesClass,
                                                LPFileObjClass,
                                                LPFileConstraintClass)

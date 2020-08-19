@@ -10,12 +10,11 @@
 #  ___________________________________________________________________________
 
 import sys
-
 import pyutilib.th as unittest
 import tempfile
 import os
 import shutil
-from pyomo.environ import TerminationCondition
+import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as rapper
 import pyomo as pyomoroot
 
@@ -65,7 +64,7 @@ class Example_via_rapper(unittest.TestCase):
                                       tree_model  = g)
         ef_sol = stsolver.solve_ef(solvername)
         assert(ef_sol.solver.termination_condition \
-               ==   TerminationCondition.optimal)
+               ==  pyo.TerminationCondition.optimal)
         obj = stsolver.root_E_obj()
         assert(abs(-108385 - obj) < 100) # any solver should get this close
 

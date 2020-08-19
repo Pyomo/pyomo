@@ -26,7 +26,7 @@ baselinedir = os.path.join(thisdir, "smps_embedded_baselines")
 pysp_examples_dir = \
     join(dirname(dirname(dirname(dirname(thisdir)))), "examples", "pysp")
 
-from pyomo.environ import ConcreteModel, Param, Var, Objective, Constraint, Expression, inequality
+import pyomo.environ as pyo
 from pyomo.pysp.embeddedsp import (EmbeddedSP,
                                    StochasticDataAnnotation,
                                    TableDistribution,
@@ -77,18 +77,18 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         cls.tmpdir = None
 
     def _get_base_model(self):
-        model =  ConcreteModel()
-        model.x =  Var()
-        model.y =  Var()
-        model.d1 =  Param(mutable=True, initialize=0.0)
-        model.d2 =  Param(mutable=True, initialize=0.0)
-        model.d3 =  Param(mutable=True, initialize=0.0)
-        model.cost =  Expression([1,2])
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var()
+        model.y = pyo.Var()
+        model.d1 = pyo.Param(mutable=True, initialize=0.0)
+        model.d2 = pyo.Param(mutable=True, initialize=0.0)
+        model.d3 = pyo.Param(mutable=True, initialize=0.0)
+        model.cost = pyo.Expression([1,2])
         model.cost[1].expr = model.x
         model.cost[2].expr = model.d1*model.y
-        model.o =  Objective(expr= model.cost[1]+model.cost[2])
-        model.c1 =  Constraint(expr= model.x >= 0)
-        model.c2 =  Constraint(expr= model.y*model.d2 >= model.d3)
+        model.o = pyo.Objective(expr= model.cost[1]+model.cost[2])
+        model.c1 = pyo.Constraint(expr= model.x >= 0)
+        model.c2 = pyo.Constraint(expr= model.y*model.d2 >= model.d3)
         model.varstage = VariableStageAnnotation()
         model.varstage.declare(model.x, 1)
         model.varstage.declare(model.y, 2)
@@ -203,14 +203,16 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
 
     def test_stoch_data_nontrivial_expression_objective2(self):
         model = self._get_base_model()
-        model.q =  Param(mutable=True, initialize=0.0)
+        model.q = pyo.Param(mutable=True, initialize=0.0)
         model.stochdata.declare(
             model.q,
             distribution=TableDistribution([0.0,1.0]))
         model.cost[2].expr = (model.d1+model.q)*model.y
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            convert_embedded(self.tmpdir,'test', sp)
+            convert_embedded(self.tmpdir,
+                                                     'test',
+                                                     sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -254,7 +256,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
 
     def test_stoch_constraint_body_constant(self):
         model = self._get_base_model()
-        model.q =  Param(mutable=True, initialize=0.0)
+        model.q = pyo.Param(mutable=True, initialize=0.0)
         model.stochdata.declare(
             model.q,
             distribution=TableDistribution([0.0,1.0]))
@@ -276,11 +278,11 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
 
     def test_stoch_range_constraint(self):
         model = self._get_base_model()
-        model.q =  Param(mutable=True, initialize=0.0)
+        model.q = pyo.Param(mutable=True, initialize=0.0)
         model.stochdata.declare(
             model.q,
             distribution=TableDistribution([0.0,1.0]))
-        model.c3 =  Constraint(expr= inequality(model.q, model.y, 0))
+        model.c3 = pyo.Constraint(expr=pyo.inequality(model.q, model.y, 0))
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
             convert_embedded(self.tmpdir,
@@ -331,7 +333,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
 
     def test_stoch_data_nontrivial_expression_constraint2(self):
         model = self._get_base_model()
-        model.q =  Param(mutable=True, initialize=0.0)
+        model.q = pyo.Param(mutable=True, initialize=0.0)
         model.stochdata.declare(
             model.q,
             distribution=TableDistribution([0.0,1.0]))

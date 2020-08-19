@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import ConcreteModel, Param, Var, Objective, Constraint, Expression, Piecewise, sum_product
+import pyomo.environ as pyo
 from pyomo.pysp.embeddedsp import (EmbeddedSP,
                                    StochasticDataAnnotation,
                                    TableDistribution,
@@ -17,47 +17,47 @@ from pyomo.pysp.embeddedsp import (EmbeddedSP,
 
 def create_embedded():
 
-    model =  ConcreteModel()
-    model.d1 =  Param(mutable=True, initialize=0)
-    model.d2 =  Param(mutable=True, initialize=0)
-    model.d3 =  Param(mutable=True, initialize=0)
-    model.d4 =  Param(mutable=True, initialize=0)
+    model = pyo.ConcreteModel()
+    model.d1 = pyo.Param(mutable=True, initialize=0)
+    model.d2 = pyo.Param(mutable=True, initialize=0)
+    model.d3 = pyo.Param(mutable=True, initialize=0)
+    model.d4 = pyo.Param(mutable=True, initialize=0)
     # first stage
-    model.x =  Var(bounds=(0,10))
+    model.x = pyo.Var(bounds=(0,10))
     # first stage derived
-    model.y =  Expression(expr=model.x + 1)
-    model.fx =  Var()
+    model.y = pyo.Expression(expr=model.x + 1)
+    model.fx = pyo.Var()
     # second stage
-    model.z =  Var(bounds=(-10, 10))
+    model.z = pyo.Var(bounds=(-10, 10))
     # second stage derived
-    model.q =  Expression(expr=model.z**2)
-    model.fz =  Var()
-    model.r =  Var()
+    model.q = pyo.Expression(expr=model.z**2)
+    model.fz = pyo.Var()
+    model.r = pyo.Var()
     # stage costs
-    model.StageCost =  Expression([1,2])
+    model.StageCost = pyo.Expression([1,2])
     model.StageCost.add(1, model.fx)
     model.StageCost.add(2, -model.fz + model.r + model.d1)
-    model.o =  Objective(expr= sum_product(model.StageCost))
+    model.o = pyo.Objective(expr=pyo.sum_product(model.StageCost))
 
-    model.c_first_stage =  Constraint(expr= model.x >= 0)
+    model.c_first_stage = pyo.Constraint(expr= model.x >= 0)
 
     # test our handling of intermediate variables that
     # are created by Piecewise but can not necessarily
     # be declared on the scenario tree
-    model.p_first_stage =  Piecewise(model.fx, model.x,
+    model.p_first_stage = pyo.Piecewise(model.fx, model.x,
                                         pw_pts=[0.,2.,5.,7.,10.],
                                         pw_constr_type='EQ',
                                         pw_repn='INC',
                                         f_rule=[10.,10.,9.,10.,10.],
                                         force_pw=True)
 
-    model.c_second_stage =  Constraint(expr= model.x + model.r * model.d2 >= -100)
-    model.cL_second_stage =  Constraint(expr= model.d3 >= -model.r)
-    model.cU_second_stage =  Constraint(expr= model.r <= 0)
+    model.c_second_stage = pyo.Constraint(expr= model.x + model.r * model.d2 >= -100)
+    model.cL_second_stage = pyo.Constraint(expr= model.d3 >= -model.r)
+    model.cU_second_stage = pyo.Constraint(expr= model.r <= 0)
 
     # exercise more of the code by making this an indexed
     # block
-    model.p_second_stage =  Piecewise([1], model.fz, model.z,
+    model.p_second_stage = pyo.Piecewise([1], model.fz, model.z,
                                          pw_pts=[-10,-5.,0.,5.,10.],
                                          pw_constr_type='EQ',
                                          pw_repn='INC',

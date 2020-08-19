@@ -77,7 +77,7 @@ class TestKestrel(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(0,1), initialize=0)
         m.c = pyo.Constraint(expr=m.x <= 0.5)
-        m.obj = pyo.Objective(expr=2*m.x, sense= maximize)
+        m.obj = pyo.Objective(expr=2*m.x, sense=pyo.maximize)
 
         solver_manager = pyo.SolverManagerFactory('neos')
         results = solver_manager.solve(m, opt='cbc')
