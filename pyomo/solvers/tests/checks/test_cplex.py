@@ -13,7 +13,7 @@ import os
 from pyutilib.services import TempfileManager
 import pyutilib.th as unittest
 
-from pyomo.kernel import block, variable, variable_list, objective, constraint, suffix
+import pyomo.kernel as pmo
 from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix
 from pyomo.opt import ProblemFormat, convert_problem, SolverFactory, BranchDirection
 from pyomo.solvers.plugins.solvers.CPLEX import CPLEXSHELL, MockCPLEX, _validate_file_name
@@ -174,17 +174,17 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
 
 class CPLEXShellWritePrioritiesFileKernel(CPLEXShellWritePrioritiesFile):
-    suffix_cls =  suffix
+    suffix_cls = pmo.suffix
 
     @staticmethod
     def _set_suffix_value(suffix, variable, value):
         suffix[variable] = value
 
     def get_mock_model(self):
-        model =  block()
-        model.x =  variable(domain=Binary)
-        model.con =  constraint(expr=model.x >= 1)
-        model.obj =  objective(expr=model.x)
+        model = pmo.block()
+        model.x = pmo.variable(domain=Binary)
+        model.con = pmo.constraint(expr=model.x >= 1)
+        model.obj = pmo.objective(expr=model.x)
         return model
 
 
@@ -278,18 +278,18 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
 
 class CPLEXShellSolvePrioritiesFileKernel(CPLEXShellSolvePrioritiesFile):
     def get_mock_model_with_priorities(self):
-        m =  block()
-        m.x =  variable(domain=Integers)
+        m = pmo.block()
+        m.x = pmo.variable(domain=Integers)
         m.s = range(10)
 
-        m.y =  variable_list( variable(domain=Integers) for _ in m.s)
+        m.y = pmo.variable_list(pmo.variable(domain=Integers) for _ in m.s)
 
-        m.o =  objective(expr=m.x + sum(m.y), sense=minimize)
-        m.c =  constraint(expr=m.x >= 1)
-        m.c2 =  constraint(expr=quicksum(m.y[i] for i in m.s) >= 10)
+        m.o = pmo.objective(expr=m.x + sum(m.y), sense=minimize)
+        m.c = pmo.constraint(expr=m.x >= 1)
+        m.c2 = pmo.constraint(expr=quicksum(m.y[i] for i in m.s) >= 10)
 
-        m.priority =  suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
-        m.direction =  suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        m.priority = pmo.suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        m.direction = pmo.suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
 
         m.priority[m.x] = 1
         m.priority[m.y] = 2

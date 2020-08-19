@@ -10,7 +10,7 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import ConcreteModel, Param, Var, Objective, Constraint, Expression, ConstraintList, Block
+import pyomo.environ as pyo
 from pyomo.pysp.annotations import (locate_annotations,
                                     StageCostAnnotation,
                                     PySP_StageCostAnnotation,
@@ -50,40 +50,40 @@ class TestAnnotations(unittest.TestCase):
                       type(PySP_StochasticObjectiveAnnotation()))
 
     def _populate_block_with_vars_expressions(self, b):
-        b.x =  Var()
-        b.X1 =  Var([1])
-        b.X2 =  Var([1])
-        b.e =  Expression()
-        b.E1 =  Expression([1])
-        b.E2 =  Expression([1])
+        b.x = pyo.Var()
+        b.X1 = pyo.Var([1])
+        b.X2 = pyo.Var([1])
+        b.e = pyo.Expression()
+        b.E1 = pyo.Expression([1])
+        b.E2 = pyo.Expression([1])
 
     def _populate_block_with_vars(self, b):
-        b.x =  Var()
-        b.X1 =  Var([1])
-        b.X2 =  Var([1])
+        b.x = pyo.Var()
+        b.X1 = pyo.Var([1])
+        b.X2 = pyo.Var([1])
 
     def _populate_block_with_constraints(self, b):
-        b.x =  Var()
-        b.c =  Constraint(expr= b.x == 1)
-        b.C1 =  Constraint([1], rule=lambda m, i: m.x == 1)
-        b.C2 =  Constraint([1], rule=lambda m, i: m.x == 1)
-        b.C3 =  ConstraintList()
+        b.x = pyo.Var()
+        b.c = pyo.Constraint(expr= b.x == 1)
+        b.C1 = pyo.Constraint([1], rule=lambda m, i: m.x == 1)
+        b.C2 = pyo.Constraint([1], rule=lambda m, i: m.x == 1)
+        b.C3 = pyo.ConstraintList()
         b.C3.add(b.x == 1)
 
     def _populate_block_with_objectives(self, b):
-        b.x =  Var()
-        b.o =  Objective(expr= b.x + 1)
-        b.O1 =  Objective([1], rule=lambda m, i: m.x + 1)
-        b.O2 =  Objective([1], rule=lambda m, i: m.x + 1)
+        b.x = pyo.Var()
+        b.o = pyo.Objective(expr= b.x + 1)
+        b.O1 = pyo.Objective([1], rule=lambda m, i: m.x + 1)
+        b.O2 = pyo.Objective([1], rule=lambda m, i: m.x + 1)
 
     def _populate_block_with_params(self, b):
-        b.p =  Param(mutable=True ,initialize=0)
-        b.P1 =  Param([1], mutable=True, initialize=0)
-        b.P2 =  Param([1], mutable=True, initialize=0)
+        b.p = pyo.Param(mutable=True ,initialize=0)
+        b.P1 = pyo.Param([1], mutable=True, initialize=0)
+        b.P2 = pyo.Param([1], mutable=True, initialize=0)
 
     def test_multiple_declarations(self):
-        m =  ConcreteModel()
-        m.x =  Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
         a = StageCostAnnotation()
         a.declare(m, 1)
         a.declare(m.x, 1)
@@ -91,9 +91,9 @@ class TestAnnotations(unittest.TestCase):
             a.expand_entries()
 
     def test_locate_annotations(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         m.a = StageCostAnnotation()
-        m.b =  Block()
+        m.b = pyo.Block()
         m.b.a = StageCostAnnotation()
         self.assertEqual(locate_annotations(m, StageCostAnnotation),
                          [('a', m.a), ('a', m.b.a)])
@@ -106,14 +106,14 @@ class TestAnnotations(unittest.TestCase):
                          [])
 
     def test_stage_cost(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         self._populate_block_with_vars_expressions(m)
-        m.b =  Block()
+        m.b = pyo.Block()
         self._populate_block_with_vars_expressions(m.b)
-        m.b_inactive =  Block()
+        m.b_inactive = pyo.Block()
         self._populate_block_with_vars_expressions(m.b_inactive)
         m.b_inactive.deactivate()
-        m.B =  Block([1],
+        m.B = pyo.Block([1],
                         rule=lambda b: \
             self._populate_block_with_vars_expressions(b))
 
@@ -152,14 +152,14 @@ class TestAnnotations(unittest.TestCase):
                  ('B[1].e', 2), ('B[1].E1', 2), ('B[1].E2', 2)]))
 
     def test_variable_stage(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         self._populate_block_with_vars_expressions(m)
-        m.b =  Block()
+        m.b = pyo.Block()
         self._populate_block_with_vars_expressions(m.b)
-        m.b_inactive =  Block()
+        m.b_inactive = pyo.Block()
         self._populate_block_with_vars_expressions(m.b_inactive)
         m.b_inactive.deactivate()
-        m.B =  Block([1],
+        m.B = pyo.Block([1],
                         rule=lambda b: \
             self._populate_block_with_vars_expressions(b))
 
@@ -198,14 +198,14 @@ class TestAnnotations(unittest.TestCase):
                  ('B[1].e', (2,True)), ('B[1].E1', (2,True)), ('B[1].E2', (2,True))]))
 
     def test_constraint_stage(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         self._populate_block_with_constraints(m)
-        m.b =  Block()
+        m.b = pyo.Block()
         self._populate_block_with_constraints(m.b)
-        m.b_inactive =  Block()
+        m.b_inactive = pyo.Block()
         self._populate_block_with_constraints(m.b_inactive)
         m.b_inactive.deactivate()
-        m.B =  Block([1],
+        m.B = pyo.Block([1],
                         rule=lambda b: \
             self._populate_block_with_constraints(b))
 
@@ -236,14 +236,14 @@ class TestAnnotations(unittest.TestCase):
                  ('B[1].c', 2), ('B[1].C1', 2), ('B[1].C2', 2), ('B[1].C3', 2)]))
 
     def test_stochastic_data(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         self._populate_block_with_params(m)
-        m.b =  Block()
+        m.b = pyo.Block()
         self._populate_block_with_params(m.b)
-        m.b_inactive =  Block()
+        m.b_inactive = pyo.Block()
         self._populate_block_with_params(m.b_inactive)
         m.b_inactive.deactivate()
-        m.B =  Block([1],
+        m.B = pyo.Block([1],
                         rule=lambda b: \
             self._populate_block_with_params(b))
 
@@ -271,14 +271,14 @@ class TestAnnotations(unittest.TestCase):
                  ('B[1].p', 2), ('B[1].P1', 2), ('B[1].P2', 2)]))
 
     def test_constraint_bounds(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         self._populate_block_with_constraints(m)
-        m.b =  Block()
+        m.b = pyo.Block()
         self._populate_block_with_constraints(m.b)
-        m.b_inactive =  Block()
+        m.b_inactive = pyo.Block()
         self._populate_block_with_constraints(m.b_inactive)
         m.b_inactive.deactivate()
-        m.B =  Block([1],
+        m.B = pyo.Block([1],
                         rule=lambda b: \
             self._populate_block_with_constraints(b))
 
@@ -309,14 +309,14 @@ class TestAnnotations(unittest.TestCase):
                  ('B[1].C2', (False,True)), ('B[1].C3', (False,True))]))
 
     def test_stochastic_constraint_body(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         self._populate_block_with_constraints(m)
-        m.b =  Block()
+        m.b = pyo.Block()
         self._populate_block_with_constraints(m.b)
-        m.b_inactive =  Block()
+        m.b_inactive = pyo.Block()
         self._populate_block_with_constraints(m.b_inactive)
         m.b_inactive.deactivate()
-        m.B =  Block([1],
+        m.B = pyo.Block([1],
                         rule=lambda b: \
             self._populate_block_with_constraints(b))
 
@@ -345,14 +345,14 @@ class TestAnnotations(unittest.TestCase):
                  ('B[1].c', 2), ('B[1].C1', 2), ('B[1].C2', 2), ('B[1].C3', 2)]))
 
     def test_stochastic_objective(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         self._populate_block_with_objectives(m)
-        m.b =  Block()
+        m.b = pyo.Block()
         self._populate_block_with_objectives(m.b)
-        m.b_inactive =  Block()
+        m.b_inactive = pyo.Block()
         self._populate_block_with_objectives(m.b_inactive)
         m.b_inactive.deactivate()
-        m.B =  Block([1],
+        m.B = pyo.Block([1],
                         rule=lambda b: \
             self._populate_block_with_objectives(b))
 
@@ -380,14 +380,14 @@ class TestAnnotations(unittest.TestCase):
                  ('B[1].o', (1,False)), ('B[1].O1', (1,False)), ('B[1].O2', (1,False))]))
 
     def test_stochastic_variable_bounds(self):
-        m =  ConcreteModel()
+        m = pyo.ConcreteModel()
         self._populate_block_with_vars(m)
-        m.b =  Block()
+        m.b = pyo.Block()
         self._populate_block_with_vars(m.b)
-        m.b_inactive =  Block()
+        m.b_inactive = pyo.Block()
         self._populate_block_with_vars(m.b_inactive)
         m.b_inactive.deactivate()
-        m.B =  Block([1],
+        m.B = pyo.Block([1],
                         rule=lambda b: \
             self._populate_block_with_vars(b))
 

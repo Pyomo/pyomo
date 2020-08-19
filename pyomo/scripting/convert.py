@@ -75,7 +75,11 @@ def convert(options=Options(), parser=None, model_format=None):
     return model_data
 
 def convert_dakota(options=Options(), parser=None):
-    
+    #
+    # Import plugins
+    #
+    import pyomo.environ
+
     model_file = os.path.basename(options.model.save_file)
     model_file_no_ext = os.path.splitext(model_file)[0]
 
