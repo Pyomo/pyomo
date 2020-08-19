@@ -3,10 +3,13 @@ import logging
 import os
 import numpy as np
 from pyutilib.math import infinity
+from pyomo.common.collections import ComponentSet
 from pyomo.common.modeling import randint, unique_component_name
-from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
+from pyomo.core import (
+    Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, 
+    RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
+)
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.base.external import PythonCallbackFunction
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.numvalue import nonpyomo_leaf_types

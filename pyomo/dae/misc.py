@@ -16,7 +16,7 @@ from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData, IndexedBlock
 from pyomo.dae import ContinuousSet, DerivativeVar, DAE_Error
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.core.base.block import SortComponents
 from pyomo.common.log import LoggingIntercept
 

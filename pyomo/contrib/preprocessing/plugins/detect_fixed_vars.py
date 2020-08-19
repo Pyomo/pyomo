@@ -5,11 +5,11 @@ from math import fabs
 from six import iteritems
 
 from pyomo.core.base.plugin import TransformationFactory
+from pyomo.common.collections import ComponentMap
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
 
