@@ -708,7 +708,7 @@ class CPLEXDirect(DirectSolver):
             rtn_codes.mem_limit_feasible
         }:
             self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_condition = TerminationCondition.unknown
+            self.results.solver.termination_condition = TerminationCondition.maxEvaluations
             soln.status = SolutionStatus.stoppedByLimit
         elif status in {
             rtn_codes.abort_time_limit,

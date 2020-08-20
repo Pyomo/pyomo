@@ -609,10 +609,13 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     results.solver.status = SolverStatus.ok
                 results.solver.termination_condition = TerminationCondition.infeasible
                 results.solver.termination_message = ' '.join(tokens)
-            elif len(tokens) >= 10 and tokens[0] == "MIP" and tokens[2] == "Time" and tokens[3] == "limit" and tokens[6] == "feasible:":
-                # handle processing when the time limit has been exceeded, and we have a feasible solution.
+            elif len(tokens) >= 10 and tokens[0] == "MIP" and tokens[3] == "limit" and tokens[6] == "feasible:":
+                if tokens[2] == "Time":
+                    # handle processing when the time limit has been exceeded, and we have a feasible solution.
+                    results.solver.termination_condition = TerminationCondition.maxTimeLimit
+                elif tokens[2] == "Solution":
+                    results.solver.termination_condition = TerminationCondition.maxEvaluations
                 results.solver.status = SolverStatus.ok
-                results.solver.termination_condition = TerminationCondition.maxTimeLimit
                 results.solver.termination_message = ' '.join(tokens)
             elif len(tokens) >= 10 and tokens[0] == "MIP" and tokens[2] == "Deterministic" and tokens[3] == "time" and tokens[4] == "limit" and tokens[7] == "feasible:":
                 # handle processing when the deterministic time limit has been exceeded, and we have a feasible solution.

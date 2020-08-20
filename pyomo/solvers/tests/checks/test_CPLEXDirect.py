@@ -705,7 +705,7 @@ class TestLoadVars(unittest.TestCase):
             self.assertEqual(results.solver.status,
                              SolverStatus.aborted)
             self.assertEqual(results.solver.termination_condition,
-                             TerminationCondition.unknown)
+                             TerminationCondition.maxEvaluations)
             self.assertEqual(model.solutions[0].status,
                              SolutionStatus.stoppedByLimit)
 
