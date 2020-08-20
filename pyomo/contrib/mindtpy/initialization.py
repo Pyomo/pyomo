@@ -78,7 +78,7 @@ def MindtPy_initialize_master(solve_data, config):
         if config.strategy != 'ECP':
             fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
                 solve_data, config)
-            if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
+            if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
                 handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)

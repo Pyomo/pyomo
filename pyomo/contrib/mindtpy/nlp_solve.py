@@ -11,6 +11,7 @@ from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
+from pyomo.opt.results import ProblemSense
 
 
 def solve_NLP_subproblem(solve_data, config):
@@ -147,6 +148,13 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
 
     if solve_data.solution_improved:
         solve_data.best_solution_found = fixed_nlp.clone()
+        if config.strategy == 'GOA':
+            if solve_data.results.problem.sense == ProblemSense.minimize:
+                solve_data.num_no_good_cuts_added.update(
+                    {solve_data.UB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.integer_cuts)})
+            else:
+                solve_data.num_no_good_cuts_added.update(
+                    {solve_data.LB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.integer_cuts)})
 
     # Add the linear cut
     if config.strategy == 'OA':
@@ -327,7 +335,7 @@ def solve_NLP_feas(solve_data, config):
             feas_soln = nlpopt.solve(
                 feas_nlp, tee=config.solver_tee, **nlp_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal or subprob_terminate_cond is tc.locallyOptimal:
+    if subprob_terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         copy_var_list_values(
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,

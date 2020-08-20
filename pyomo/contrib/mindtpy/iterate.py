@@ -69,7 +69,7 @@ def MindtPy_iteration_loop(solve_data, config):
             # The constraint linearization happens in the handlers
             fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
                 solve_data, config)
-            if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
+            if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
                 handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
@@ -299,7 +299,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
         if last_iter_cuts is False:
             fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
                 solve_data, config)
-            if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
+            if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
                 handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
@@ -309,8 +309,17 @@ def bound_fix(solve_data, config, last_iter_cuts):
 
         MindtPy = solve_data.mip.MindtPy_utils
         # TODO: only deactivate the last integer cut.
-        MindtPy.MindtPy_linear_cuts.integer_cuts[len(
-            MindtPy.MindtPy_linear_cuts.integer_cuts)].deactivate()
+        if config.strategy == 'GOA':
+            if solve_data.results.problem.sense == ProblemSense.minimize:
+                valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
+            else:
+                valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
+            for i in range(valid_no_good_cuts_num+1, len(
+                    MindtPy.MindtPy_linear_cuts.integer_cuts)+1):
+                MindtPy.MindtPy_linear_cuts.integer_cuts[i].deactivate()
+        elif config.strategy == 'OA':
+            MindtPy.MindtPy_linear_cuts.integer_cuts[len(
+                MindtPy.MindtPy_linear_cuts.integer_cuts)].deactivate()
         # MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.

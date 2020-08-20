@@ -512,7 +512,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data, config)
 
         # add oa cuts
-        if fixed_nlp_result.solver.termination_condition is tc.optimal or fixed_nlp_result.solver.termination_condition is tc.locallyOptimal:
+        if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             self.handle_lazy_NLP_subproblem_optimal(
                 fixed_nlp, solve_data, config, opt)
             if solve_data.LB + config.bound_tolerance >= solve_data.UB:
