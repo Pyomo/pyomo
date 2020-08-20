@@ -122,8 +122,8 @@ def solve_OA_master(solve_data, config):
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
         masteropt.options['timelimit'] = config.time_limit
-        if config.threads > 0:
-            masteropt.options["threads"] = config.threads
+    if config.threads > 0:
+        masteropt.options["threads"] = config.threads
     mip_args = dict(config.mip_solver_args)
     elapsed = get_main_elapsed_time(solve_data.timing)
     remaining = int(max(config.time_limit - elapsed, 1))

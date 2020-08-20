@@ -331,6 +331,8 @@ def bound_fix(solve_data, config, last_iter_cuts):
         if config.mip_solver == 'gams':
             mip_args['add_options'] = mip_args.get('add_options', [])
             mip_args['add_options'].append('option optcr=0.001;')
+        if config.threads > 0:
+            masteropt.options["threads"] = config.threads
         master_mip_results = masteropt.solve(
             solve_data.mip, tee=config.solver_tee, **mip_args)
         main_objective = next(
