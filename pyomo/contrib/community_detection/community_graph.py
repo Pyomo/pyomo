@@ -6,7 +6,8 @@ from pyomo.core.expr.current import identify_variables
 from pyomo.contrib.community_detection.event_log import _event_log
 
 
-def generate_model_graph(model, type_of_graph, with_objective=True, weighted_graph=True):
+def generate_model_graph(model, type_of_graph, with_objective=True, weighted_graph=True,
+                         use_only_active_components=True):
     """
     Creates a networkX graph of nodes and edges based on a Pyomo optimization model
 
@@ -31,6 +32,8 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     weighted_graph: bool, optional
         a Boolean argument that specifies whether a weighted or unweighted graph is to be created from the Pyomo
         model; the default is True (type_of_graph='bipartite' creates an unweighted graph regardless of this parameter)
+    use_only_active_components: bool, optional
+        a Boolean argument that specifies whether inactive constraints/objectives are included in the networkX graph
 
     Returns
     -------
@@ -43,7 +46,8 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     """
 
     # Start off by making a bipartite graph (regardless of the value of type_of_graph), then if
-    # type_of_graph = 'variable' or 'constraint', we will "collapse" this bipartite graph into a variable node or constraint node graph
+    # type_of_graph = 'variable' or 'constraint', we will "collapse" this bipartite graph into a variable node
+    # or constraint node graph
 
     # Initialize the data structure needed to keep track of edges in the graph (this graph will be made
     # without edge weights, because edge weights are not useful for this bipartite graph)
@@ -56,11 +60,12 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     # in the NetworkX graph)
     if with_objective:
         component_number_map = ComponentMap((component, number) for number, component in enumerate(
-            model.component_data_objects(ctype=(Constraint, Var, Objective), active=True, descend_into=True,
+            model.component_data_objects(ctype=(Constraint, Var, Objective), active=use_only_active_components,
+                                         descend_into=True,
                                          sort=SortComponents.deterministic)))
     else:
         component_number_map = ComponentMap((component, number) for number, component in enumerate(
-            model.component_data_objects(ctype=(Constraint, Var), active=True, descend_into=True,
+            model.component_data_objects(ctype=(Constraint, Var), active=use_only_active_components, descend_into=True,
                                          sort=SortComponents.deterministic)))
 
     # Create the reverse of component_number_map, which will be used in detect_communities to convert the node numbers
@@ -71,7 +76,8 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     bipartite_model_graph.add_nodes_from([node_number for node_number in range(len(component_number_map))])
 
     # Loop through all constraints in the Pyomo model to determine what edges need to be created
-    for model_constraint in model.component_data_objects(ctype=Constraint, active=True, descend_into=True):
+    for model_constraint in model.component_data_objects(ctype=Constraint, active=use_only_active_components,
+                                                         descend_into=True):
         numbered_constraint = component_number_map[model_constraint]
 
         # Create a list of the variable numbers that occur in the given constraint equation
@@ -94,7 +100,8 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
     if with_objective:
 
         # Use a loop to account for the possibility of multiple objective functions
-        for objective_function in model.component_data_objects(ctype=Objective, active=True, descend_into=True):
+        for objective_function in model.component_data_objects(ctype=Objective, active=use_only_active_components,
+                                                               descend_into=True):
             numbered_objective = component_number_map[objective_function]
 
             # Create a list of the variable numbers that occur in the given objective function

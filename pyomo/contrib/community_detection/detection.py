@@ -10,9 +10,12 @@ Original implementation developed by Rahul Joglekar in the Grossmann research gr
 from logging import getLogger
 
 from pyomo.common.dependencies import attempt_import
-from pyomo.core import ConcreteModel, ComponentMap
+from pyomo.core import ConcreteModel, ComponentMap, Block, Var, Constraint, Objective, ConstraintList
+from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr.visitor import replace_expressions
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
 from pyomo.common.dependencies import networkx as nx
+from itertools import combinations
 
 import copy
 
@@ -30,11 +33,8 @@ if matplotlib_available:
     from matplotlib import cm
 
 
-# TODO: Consider adding an option to include inactive constraints/objectives in the community detection
-
-
 def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
-                       random_seed=None):
+                       random_seed=None, use_only_active_components=True):
     """
     Detects communities in a Pyomo optimization model
 
@@ -61,12 +61,16 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
         model graph regardless of this parameter)
     random_seed: int, optional
         an integer that is used as the random seed for the (heuristic) Louvain community detection
+    use_only_active_components: bool, optional
+        a Boolean argument that specifies whether inactive constraints/objectives are included in the community map
 
     Returns
     -------
-    community_map: dict
-        a Python dictionary that maps arbitrary keys (in this case, integers from zero to the number of
-        communities minus one) to two-list tuples containing Pyomo components in the given community
+    CommunityMap object (dict-like object)
+        The CommunityMap object acts as a Python dictionary, mapping integer keys to tuples containing two lists
+        (which contain the components in the given community) - a constraint list and variable list. Furthermore,
+        the CommunityMap object stores relevant information about the given community map (dict), such as the model
+        used to create it, its networkX representation, etc.
     """
 
     # Check that all arguments are of the correct type
@@ -86,12 +90,17 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
     assert random_seed is None or (type(random_seed) == int and random_seed >= 0), \
         "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed
 
+    assert type(use_only_active_components) == bool, \
+        "Invalid value for use_only_active_components: 'use_only_active_components=%s' - use_only_active_components " \
+        "must be a Boolean" % use_only_active_components
+
     # Generate model_graph (a NetworkX graph based on the given Pyomo optimization model),
     # number_component_map (a dictionary to convert the communities into lists of Pyomo components
     # instead of number values), and constraint_variable_map (a dictionary that maps a constraint to the variables
     # it contains)
     model_graph, number_component_map, constraint_variable_map = generate_model_graph(
-        model, type_of_graph=type_of_community_map, with_objective=with_objective, weighted_graph=weighted_graph)
+        model, type_of_graph=type_of_community_map, with_objective=with_objective, weighted_graph=weighted_graph,
+        use_only_active_components=use_only_active_components)
 
     # Use Louvain community detection to find the communities - this returns a dictionary mapping
     # individual nodes to their communities
@@ -170,21 +179,95 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
 
     # Return community_map, which has integer keys that now map to a tuple of two lists
     # containing Pyomo modeling components
-    return CommunityMap(community_map, model, type_of_community_map, with_objective, weighted_graph, random_seed)
+    return CommunityMap(community_map, type_of_community_map, with_objective, weighted_graph, random_seed,
+                        use_only_active_components, model, model_graph, number_component_map, constraint_variable_map)
 
 
 class CommunityMap(object):
+    """
+    This class is used to create CommunityMap objects which are returned by the detect_communities function. Instances
+    of this class store relevant information about the given community map, such as the model used to create them,
+    their networkX representation, etc.
 
-    def __init__(self, community_map, model, type_of_community_map, with_objective, weighted_graph, random_seed):
+    The CommunityMap object acts as a Python dictionary, mapping integer keys to tuples containing two lists
+    (which contain the components in the given community) - a constraint list and variable list.
+
+    Methods
+    -------
+    repr
+    str
+    iter
+    getitem
+    len
+    keys
+    values
+    items
+    generate_structured_model
+    illustrate_model_graph
+    """
+
+    def __init__(self, community_map, type_of_community_map, with_objective, weighted_graph, random_seed,
+                 use_only_active_components, model, graph, graph_node_mapping, constraint_variable_map):
+        """
+        Constructor method for the CommunityMap class
+
+        Parameters
+        ----------
+        community_map: dict
+            a Python dictionary that maps arbitrary keys (in this case, integers from zero to the number of
+            communities minus one) to two-list tuples containing Pyomo components in the given community
+        type_of_community_map: str
+            a string that specifies the type of community map to be returned, the default is 'constraint'.
+            'constraint' returns a dictionary (community_map) with communities based on constraint nodes,
+            'variable' returns a dictionary (community_map) with communities based on variable nodes,
+            'bipartite' returns a dictionary (community_map) with communities based on a bipartite graph (both constraint
+            and variable nodes)
+        with_objective: bool
+            a Boolean argument that specifies whether or not the objective function is
+            included in the model graph (and thus in 'community_map'); the default is True
+        weighted_graph: bool
+            a Boolean argument that specifies whether community_map is created based on a weighted model graph or an
+            unweighted model graph; the default is True (type_of_community_map='bipartite' creates an unweighted
+            model graph regardless of this parameter)
+        random_seed: int or None
+            an integer that is used as the random seed for the (heuristic) Louvain community detection
+        use_only_active_components: bool, optional
+            a Boolean argument that specifies whether inactive constraints/objectives are included in the community map
+        model: Block
+            a Pyomo model or block to be used for community detection
+        graph: nx.Graph
+            a NetworkX graph with nodes and edges based on the Pyomo optimization model
+        graph_node_mapping: dict
+            a dictionary that maps a number (which corresponds to a node in the networkX graph representation of the
+            model) to a component in the model
+        constraint_variable_map: dict
+            a dictionary that maps a numbered constraint to a list of (numbered) variables that appear in the constraint
+        """
+
         self.community_map = community_map
-        self.model = model
         self.type_of_community_map = type_of_community_map
         self.with_objective = with_objective
         self.weighted_graph = weighted_graph
         self.random_seed = random_seed
+        self.use_only_active_components = use_only_active_components
+        self.model = model
+        self.graph = graph
+        self.graph_node_mapping = graph_node_mapping
+        self.constraint_variable_map = constraint_variable_map
 
     def __repr__(self):
-        return str(self.stringify())
+        return str(self.community_map)
+
+    def __str__(self):
+        # Create str_community_map and give it values that are the strings of the components in community_map
+        str_community_map = dict()
+        for key in self.community_map:
+            str_community_map[key] = ([str(component) for component in self.community_map[key][0]],
+                                      [str(component) for component in self.community_map[key][1]])
+
+        # Return str_community_map, which is identical to community_map except it has the strings of all of the Pyomo
+        # components instead of the actual components
+        return str(str_community_map)
 
     def __iter__(self):
         for key in self.community_map:
@@ -192,6 +275,9 @@ class CommunityMap(object):
 
     def __getitem__(self, item):
         return self.community_map[item]
+
+    def __len__(self):
+        return len(self.community_map)
 
     def keys(self):
         return self.community_map.keys()
@@ -202,17 +288,13 @@ class CommunityMap(object):
     def items(self):
         return self.community_map.items()
 
-    def draw_graph(self, type_of_graph='constraint', with_objective=True, weighted_graph=True, random_seed=None, pos=None):
+    def illustrate_model_graph(self, type_of_graph='constraint', with_objective=True, pos=None):
         """
         This function draws a graph of the communities for a Pyomo model.
 
-        This function takes in a Pyomo model and (optionally) its community map. A NetworkX graph of the model is
-        created with the function generate_model_graph, using the parameters specified by the user.
-        The model and some of the given parameters (type_of_graph, with_objective) are used to create the nodes
-        and edges for the model graph illustration. Then, the 'community_map' is used to color the nodes according to
-        their communities. If no community map is given, then the model and some of the given parameters
-        (type_of_community_map, with_objective, weighted_graph) are used in the function detect_communities to create
-        a community map.
+        The type_of_graph parameter is used to create either a variable-node graph, constraint-node graph, or
+        bipartite graph of the Pyomo model. Then, the nodes are colored based on the communities they are in - which
+        is based on the community map (self.community_map).
 
         Parameters
         ----------
@@ -220,18 +302,10 @@ class CommunityMap(object):
             a string that specifies the types of nodes drawn on the model graph, the default is 'constraint'.
             'constraint' draws a graph with constraint nodes,
             'variable' draws a graph with variable nodes,
-            'bipartite' draws a bipartite graph (with both constraint and variable nodes).
+            'bipartite' draws a bipartite graph (with both constraint and variable nodes)
         with_objective: bool, optional
             a Boolean argument that specifies whether or not the objective function is included in the graph; the
             default is True
-        weighted_graph: bool, optional
-            (this argument is only used if no community_map is provided)
-            a Boolean argument that specifies whether a community map is created based on a weighted graph or an
-            unweighted graph; the default is True (type_of_community_map='bipartite' creates an unweighted graph
-            regardless of this parameter)
-        random_seed: int, optional
-            (this argument is only used if no community_map is provided)
-            an integer that is used as the random seed for the (heuristic) Louvain community detection
         pos: dict, optional
             a dictionary that maps node keys to their positions on the illustration
 
@@ -253,30 +327,34 @@ class CommunityMap(object):
         assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
                                              "must be a Boolean" % with_objective
 
-        assert type(weighted_graph) == bool, "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph " \
-                                             "must be a Boolean" % weighted_graph
-
-        assert random_seed is None or (type(random_seed) == int and random_seed >= 0), \
-            "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed
-
         # No assert statement for pos; the NetworkX function can handle issues with the pos argument
 
-        # Use the generate_model_graph function to create a NetworkX graph of the given model (along with
-        # number_component_map and constraint_variable_map, which will be used to help with drawing the graph)
-        model_graph, number_component_map, constraint_variable_map = generate_model_graph(
-            self.model, type_of_graph=type_of_graph, with_objective=with_objective, weighted_graph=False)
+        # There is a possibility that the desired networkX graph of the model is already stored in the
+        # CommunityMap object (because the networkX graph is required to create the CommunityMap object)
+        if type_of_graph != self.type_of_community_map or with_objective != self.with_objective:
+            # Use the generate_model_graph function to create a NetworkX graph of the given model (along with
+            # number_component_map and constraint_variable_map, which will be used to help with drawing the graph)
+            model_graph, number_component_map, constraint_variable_map = generate_model_graph(
+                self.model, type_of_graph=type_of_graph, with_objective=with_objective, weighted_graph=False)
+        else:
+            # This is the case where, as mentioned above, we can use the networkX graph that was made to create
+            # the CommunityMap object
+            model_graph, number_component_map, constraint_variable_map = self.graph, self.graph_node_mapping, \
+                                                                         self.constraint_variable_map
 
-        # This line creates the "reverse" of the number_component_map returned by generate_model_graph above,
-        # since component_number_map is more convenient to use in this function
+        # This line creates the "reverse" of the number_component_map above, since mapping the Pyomo
+        # components to their nodes in the networkX graph is more convenient in this function
         component_number_map = ComponentMap((comp, number) for number, comp in number_component_map.items())
 
+        # Create a deep copy of the community_map attribute to avoid destructively modifying it
         numbered_community_map = copy.deepcopy(self.community_map)
 
         # Now we will use the component_number_map to change the Pyomo modeling components in community_map into the
         # numbers that correspond to their nodes/edges in the NetworkX graph, model_graph
         for key in self.community_map:
-            numbered_community_map[key] = ([component_number_map[component] for component in self.community_map[key][0]],
-                                           [component_number_map[component] for component in self.community_map[key][1]])
+            numbered_community_map[key] = (
+                [component_number_map[component] for component in self.community_map[key][0]],
+                [component_number_map[component] for component in self.community_map[key][1]])
 
         # Based on type_of_graph, which specifies what Pyomo modeling components are to be drawn as nodes in the graph
         # illustration, we will now get the node list and the color list, which describes how to color nodes
@@ -296,7 +374,8 @@ class CommunityMap(object):
             for node in node_list:
                 not_found = True
                 for community_key in numbered_community_map:
-                    if not_found and node in (numbered_community_map[community_key][0] + numbered_community_map[community_key][1]):
+                    if not_found and node in (
+                            numbered_community_map[community_key][0] + numbered_community_map[community_key][1]):
                         color_list.append(community_key)
                         not_found = False
 
@@ -322,9 +401,9 @@ class CommunityMap(object):
             # below to flatten the list and get our one-dimensional node list
             node_list = [node for sublist in list_of_node_lists for node in sublist]
 
-            # Now, we will find the first community that a node appears in and color the node based on that community
-            # In numbered_community_map, certain nodes may appear in multiple communities, and we have chosen to give preference
-            # to the first community a node appears in
+            # Now, we will find the first community that a node appears in and color the node based on
+            # that community (in numbered_community_map, certain nodes may appear in multiple communities,
+            # and we have chosen to give preference to the first community a node appears in)
             color_list = []
             for node in node_list:
                 not_found = True
@@ -342,7 +421,8 @@ class CommunityMap(object):
 
         # Create the figure and draw the graph
         fig = plt.figure()
-        nx.draw_networkx_nodes(model_graph, pos, nodelist=node_list, node_size=40, cmap=color_map, node_color=color_list)
+        nx.draw_networkx_nodes(model_graph, pos, nodelist=node_list, node_size=40, cmap=color_map,
+                               node_color=color_list)
         nx.draw_networkx_edges(model_graph, pos, alpha=0.5)
 
         # Make the main title
@@ -354,9 +434,10 @@ class CommunityMap(object):
         plt.suptitle(main_graph_title, fontsize=main_font_size)
 
         # Define a dict that will be used for the graph subtitle
-        subtitle_naming_dict = {'bipartite': 'Nodes are variables and constraints & Edges are variables in a constraint',
-                                'constraint': 'Nodes are constraints & Edges are common variables',
-                                'variable': 'Nodes are variables & Edges are shared constraints'}
+        subtitle_naming_dict = {
+            'bipartite': 'Nodes are variables and constraints & Edges are variables in a constraint',
+            'constraint': 'Nodes are constraints & Edges are common variables',
+            'variable': 'Nodes are variables & Edges are shared constraints'}
 
         # Make the subtitle
         subtitle_font_size = 11
@@ -365,350 +446,148 @@ class CommunityMap(object):
         # Return the figure and pos, the position dictionary used for the graph layout
         return fig, pos
 
-    def stringify(self):
+    def generate_structured_model(self):
         """
-        This function takes in a community map of Pyomo components and returns the same community map but with the strings
-        of the Pyomo components. Alternatively, if the user does not provide a community map, this function can take in
-        a model and then create a community map (using the function detect_communities). Then, the same process of
-        "stringifying" the community map is performed, again resulting in a community map but with the strings
-        of the Pyomo components.
+        Use the given model to create another model, structured_model, that will place variables into blocks based on their
+        communities
 
-        Returns
-        -------
-        str_community_map: dict
-            a Python dictionary that maps arbitrary keys (in this case, integers from zero to the number of
-            communities minus one) to two-list tuples containing the strings of the Pyomo components in the given community
+        Mention something about how this is done by using the variables and constraints within the model
+
         """
 
-        # Create str_community_map and give it values that are the strings of the components in community_map
-        str_community_map = dict()
-        for key in self.community_map:
-            str_community_map[key] = ([str(component) for component in self.community_map[key][0]],
-                                      [str(component) for component in self.community_map[key][1]])
+        # Should I just change the variable names to self.model and self.community_map instead of defining them here
+        model, community_map = self.model, self.community_map
 
-        # Return str_community_map, which is identical to community_map except it has the strings of all of the Pyomo
-        # components instead of the actual components
-        return str_community_map
+        # Initialize a new model (structured_model) which will contain variables and constraints in blocks based on
+        # their respective communitites within the CommunityMap
+        structured_model = ConcreteModel()
+        structured_model.b = Block([0, len(community_map) - 1])
 
+        # Initialize a ComponentMap that will map a variable from the model (for example, old_model.x1) used to
+        # create the CommunityMap to a list of variables in various blocks that were created based on this
+        # variable (for example, [structured_model.b[0].x1, structured_model.b[3].x1])
+        blocked_variable_map = ComponentMap()
+        # Example entry -> {original_model.x1 : [structured_model.b[0].x1, structured_model.b[3].x1]}
 
-def visualize_model_graph(model, community_map=None, type_of_graph='constraint', with_objective=True,
-                          weighted_graph=True, random_seed=None, type_of_community_map=None, pos=None):
-    """
-    This function draws a graph of the communities for a Pyomo model.
+        # First loop through community_map to add all the variables to structured_model before we add constraints
+        # that use those variables
+        for community_key, community in community_map.items():
+            _, variables_in_community = community
 
-    This function takes in a Pyomo model and (optionally) its community map. A NetworkX graph of the model is
-    created with the function generate_model_graph, using the parameters specified by the user.
-    The model and some of the given parameters (type_of_graph, with_objective) are used to create the nodes
-    and edges for the model graph illustration. Then, the 'community_map' is used to color the nodes according to
-    their communities. If no community map is given, then the model and some of the given parameters
-    (type_of_community_map, with_objective, weighted_graph) are used in the function detect_communities to create
-    a community map.
+            # Loop through all of the variables (from the original model) in the given community
+            for stored_variable in variables_in_community:
+                # Construct a new_variable whose attributes are determined by querying the variable from the
+                # original model
+                new_variable = Var(domain=stored_variable.domain, bounds=stored_variable.bounds)
 
-    Parameters
-    ----------
-    model: Block
-        a Pyomo model or block to be used for community detection
-    community_map: dict, optional
-        a dictionary that maps an integer key (which corresponds to a community number) to a tuple of two lists.
-        The first list should contain the constraints in the given community and the second list should contain the
-        variables in the given community.
-    type_of_graph: str, optional
-        a string that specifies the types of nodes drawn on the model graph, the default is 'constraint'.
-        'constraint' draws a graph with constraint nodes,
-        'variable' draws a graph with variable nodes,
-        'bipartite' draws a bipartite graph (with both constraint and variable nodes).
-    with_objective: bool, optional
-        a Boolean argument that specifies whether or not the objective function is included in the graph; the
-        default is True
-    weighted_graph: bool, optional
-        (this argument is only used if no community_map is provided)
-        a Boolean argument that specifies whether a community map is created based on a weighted graph or an
-        unweighted graph; the default is True (type_of_community_map='bipartite' creates an unweighted graph
-        regardless of this parameter)
-    random_seed: int, optional
-        (this argument is only used if no community_map is provided)
-        an integer that is used as the random seed for the (heuristic) Louvain community detection
-    type_of_community_map: str, optional
-        (this argument is only used if no community_map is provided)
-        this is used in the function detect_communities to create a community map; the default value is whatever value
-        is given to 'type_of_graph'.
-        'constraint' creates a community map based on constraint nodes,
-        'variable' creates a community map based on variable nodes,
-        'bipartite' creates a community map based on a bipartite graph (both constraint and variable nodes).
-    pos: dict, optional
-        a dictionary that maps node keys to their positions on the illustration
+                # Add this new_variable to its block/community and name it using the string of the variable from the
+                # original model
+                structured_model.b[community_key].add_component(str(stored_variable), new_variable)
 
-    Returns
-    -------
-    fig: matplotlib figure
-        the figure for the model graph drawing - can be illustrated by calling 'plt.show()'
-    pos: dict
-        a dictionary that maps node keys to their positions on the illustration - can be used to create consistent
-        layouts for graphs of a given model
-    """
+                # Since there could be multiple variables 'x1' (such as
+                # structured_model.b[0].x1, structured_model.b[3].x1, etc), we need to create equality constraints
+                # for all of the variables 'x1' within structured_model (this is the purpose of blocked_variable_map)
 
-    # Check that all arguments are of the correct type
+                # Here we update blocked_variable_map to keep track of what equality constraints need to be made
+                variable_in_new_model = structured_model.find_component(new_variable)
+                blocked_variable_map[stored_variable] = blocked_variable_map.get(stored_variable,
+                                                                                 []) + [variable_in_new_model]
 
-    assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
-                                             "ConcreteModel" % model
+        # Now that we have all of our variables within the model, we can construct a dictionary that is used to
+        # replace variables within constraints to other variables (in our case, this will convert variables from the
+        # original model into variables from the new model (structured_model))
+        replace_variables_in_expression_map = dict()
+        for variable, blocked_variable_list in blocked_variable_map.items():
+            replace_variables_in_expression_map[id(variable)] = blocked_variable_list[0]
+        # This dictionary will be used with the function replace_expressions
 
-    assert type_of_graph in ('bipartite', 'constraint', 'variable'), \
-        "Invalid graph type specified: 'type_of_graph=%s' - Valid values: " \
-        "'bipartite', 'constraint', 'variable'" % type_of_graph
+        # Loop through community_map again, this time to add constraints
+        for community_key, community in community_map.items():
+            constraints_in_community, _ = community
 
-    assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
-                                         "must be a Boolean" % with_objective
+            # Loop through all of the constraints (from the original model) in the given community
+            for stored_constraint in constraints_in_community:
 
-    assert type(weighted_graph) == bool, "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph " \
-                                         "must be a Boolean" % weighted_graph
+                # Now, loop through all of the variables within the given constraint expression
+                for variable in identify_variables(stored_constraint.expr):
 
-    assert random_seed is None or (type(random_seed) == int and random_seed >= 0), \
-        "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed
+                    # Loop through each of the "blocked" variables that a variable is mapped to and update
+                    # replace_variables_in_expression_map if a variable has a "blocked" form in the given community
 
-    assert type_of_community_map is None or type_of_community_map in ('bipartite', 'constraint', 'variable'), \
-        "Invalid value for type_of_community_map: 'type_of_community_map=%s' - Valid values: 'bipartite', " \
-        "'constraint', 'variable'" % type_of_community_map
+                    # What this means is that if we are looping through constraints in community 0, then it would be
+                    # best to change a variable x1 into b[0].x1 as opposed to b[2].x1 or b[5].x1 (assuming all of these
+                    # blocked versions of the variable x1 exist (which depends on the community map))
 
-    # No assert statement for pos; the NetworkX function can handle issues with the pos argument
+                    # TODO -  Check that this works as you expect it to!
+                    for blocked_variable in blocked_variable_map[variable]:
+                        if 'b[%d]' % community_key in str(blocked_variable):
+                            # Update replace_variables_in_expression_map accordingly
+                            replace_variables_in_expression_map[id(variable)] = blocked_variable
 
-    # Use the generate_model_graph function to create a NetworkX graph of the given model (along with
-    # number_component_map and constraint_variable_map, which will be used to help with drawing the graph)
-    model_graph, number_component_map, constraint_variable_map = generate_model_graph(
-        model, type_of_graph=type_of_graph, with_objective=with_objective, weighted_graph=False)
+                # Check to see whether 'stored_constraint' is actually an objective (since constraints and objectives
+                # grouped together)
+                if community_map.with_objective and isinstance(stored_constraint, Objective):
+                    # If the constraint is actually an objective, we add it to the block as an objective
+                    new_objective = Objective(
+                        expr=replace_expressions(stored_constraint.expr, replace_variables_in_expression_map))
+                    structured_model.b[community_key].add_component(str(stored_constraint), new_objective)
 
-    # This line creates the "reverse" of the number_component_map returned by generate_model_graph above,
-    # since component_number_map is more convenient to use in this function
-    component_number_map = ComponentMap((comp, number) for number, comp in number_component_map.items())
+                else:
+                    # Construct a constraint based on the expression within stored_constraint and the dict we have
+                    # created for the purpose of replacing the variables within the constraint expression
+                    new_constraint = Constraint(
+                        expr=replace_expressions(stored_constraint.expr, replace_variables_in_expression_map))
 
-    if community_map is None:
-        user_provided_community_map = False  # Will be used for the graph title
+                    # Add this new constraint to the corresponding community/block with its name as the string of the
+                    # constraint from the original model
+                    structured_model.b[community_key].add_component(str(stored_constraint), new_constraint)
 
-        # The default value for type_of_community_map is the same as type_of_graph (and type_of_community_map is
-        # only used when the user does not provide a community_map)
-        if type_of_community_map is None:
-            type_of_community_map = type_of_graph
+        # If with_objective was set to False, that means we still need to add an objective function
+        if not community_map.with_objective:
+            # Construct a new dictionary for replacing the variables (replace_variables_in_objective_map) which will
+            # be specific to the variables in the objective function, since there is the possibility that the
+            # objective contains variables we have not yet seen (and thus not yet added to our new model)
+            replace_variables_in_objective_map = dict()
+            for objective_function in model.component_data_objects(ctype=Objective, active=True, descend_into=True):
+                for variable_in_objective in identify_variables(objective_function):
+                    # Add all of the variables in the objective function (not within any blocks)
+                    new_variable = Var(domain=variable_in_objective.domain, bounds=variable_in_objective.bounds)
+                    structured_model.add_component(str(variable_in_objective), new_variable)
 
-        # Since no community map was given by the user, a community map will be created using the given
-        # model and the detect_communities function
-        community_map = detect_communities(model, type_of_community_map=type_of_community_map,
-                                           with_objective=with_objective,
-                                           weighted_graph=weighted_graph, random_seed=random_seed)
+                    # Again we update blocked_variable_map to keep track of what equality constraints need to be made
+                    variable_in_new_model = structured_model.find_component(new_variable)
+                    blocked_variable_map[variable_in_objective] = blocked_variable_map.get(variable_in_objective,
+                                                                                           []) + [variable_in_new_model]
 
-    else:  # This is the case where the user has provided their own community_map
+                    # Update the dictionary that we will use to replace the variables
+                    replace_variables_in_objective_map[id(variable_in_objective)] = variable_in_new_model
 
-        if type_of_community_map is not None:
-            # type_of_community_map should only be specified if no community_map is being provided
-            logger.info("An argument was provided for both 'community_map' and 'type_of_community_map' - only one of "
-                        "these two parameters should be specified (see docstring). The given 'community_map' was "
-                        "used; 'type_of_community_map' was not used (preference is given to 'community_map')")
+                # Now we will construct a new objective function based on the one from the original model and then
+                # add it to the new model just as we have done before
+                new_objective = Objective(
+                    expr=replace_expressions(objective_function.expr, replace_variables_in_objective_map))
+                structured_model.add_component(str(objective_function), new_objective)
 
-        user_provided_community_map = True  # Will be used for the graph title
+        # Now, we need to create equality constraints for all of the different "versions" of a variable (such
+        # as x1, b[0].x1, b[2].x2, etc.)
 
-        # Check that the contents of the dictionary are of the right types
-        assert type(community_map) == dict, "community_map should be a Python dictionary"
+        # Create a constraint list for the equality constraints
+        structured_model.equality_constraint_list = ConstraintList(doc="Equality Constraints for the different "
+                                                                       "forms of a given variable")
 
-        # Note there is no assertion for the dictionary keys - they do not have to be anything specific
+        # Loop through blocked_variable_map and create constraints accordingly
+        for variable, duplicate_variables in blocked_variable_map.items():
+            # variable -> variable from the original model
+            # duplicate_variables -> list of variables in the new model
 
-        # Check structure of community_map
-        for community_map_value in list(community_map.values()):
-            assert len(community_map_value) == 2 and \
-                   type(community_map_value) == tuple and \
-                   type(community_map_value[0]) == list and \
-                   type(community_map_value[1]) == list, "The values of community_map should " \
-                                                         "all be tuples containing two lists"
+            # Create a list of all the possible equality constraints that need to be made
+            equalities_to_make = combinations(duplicate_variables, 2)
 
-        # Check all the list values in community_map
-        for community_key in community_map:
-            tuple_of_lists = community_map[community_key]
-            for community_member in (tuple_of_lists[0] + tuple_of_lists[1]):
-                assert community_member in component_number_map, \
-                    "All of the list items in community_map should be Pyomo components that exist in the given model"
+            # Loop through the list of two-variable tuples and create an equality constraint for those two variables
+            for variable_1, variable_2 in equalities_to_make:
+                structured_model.equality_constraint_list.add(expr=variable_1 == variable_2)
 
-    # Now we will use the component_number_map to change the Pyomo modeling components in community_map into the
-    # numbers that correspond to their nodes/edges in the NetworkX graph, model_graph
-    for key in community_map:
-        community_map[key] = ([component_number_map[component] for component in community_map[key][0]],
-                              [component_number_map[component] for component in community_map[key][1]])
+        # Return 'structured_model', which is essentially identical to the original model but now has all of the
+        # variables, constraints, and objectives placed into blocks based on the nature of the CommunityMap
 
-    # Based on type_of_graph, which specifies what Pyomo modeling components are to be drawn as nodes in the graph
-    # illustration, we will now get the node list and the color list, which describes how to color nodes
-    # according to their communities (which is based on community_map)
-    if type_of_graph == 'bipartite':
-        list_of_node_lists = [list_of_nodes for list_tuple in community_map.values() for list_of_nodes in
-                              list_tuple]
-
-        # list_of_node_lists is (as it implies) a list of lists, so we will use the list comprehension
-        # below to flatten the list and get our one-dimensional node list
-        node_list = [node for sublist in list_of_node_lists for node in sublist]
-
-        color_list = []
-        # Now, we will find the first community that a node appears in and color the node based on that community
-        # In community_map, certain nodes may appear in multiple communities, and we have chosen to give preference
-        # to the first community a node appears in
-        for node in node_list:
-            not_found = True
-            for community_key in community_map:
-                if not_found and node in (community_map[community_key][0] + community_map[community_key][1]):
-                    color_list.append(community_key)
-                    not_found = False
-
-        # Find top_nodes (one of the two "groups" of nodes in a bipartite graph), which will be used to
-        # determine the graph layout
-        if model_graph.number_of_nodes() > 0 and nx.is_connected(model_graph):
-            # An index of 1 used because this tends to place constraint nodes on the left, which is
-            # consistent with the else case
-            top_nodes = nx.bipartite.sets(model_graph)[1]
-        else:
-            top_nodes = {node for node in model_graph.nodes() if node in constraint_variable_map}
-
-        if pos is None:  # The case where the user has not provided their own layout
-            pos = nx.bipartite_layout(model_graph, top_nodes)
-
-    else:  # This covers the case that type_of_community_map is 'constraint' or 'variable'
-
-        # Constraints are in the first list of the tuples in community map and variables are in the second list
-        position = 0 if type_of_graph == 'constraint' else 1
-        list_of_node_lists = list(i[position] for i in community_map.values())
-
-        # list_of_node_lists is (as it implies) a list of lists, so we will use the list comprehension
-        # below to flatten the list and get our one-dimensional node list
-        node_list = [node for sublist in list_of_node_lists for node in sublist]
-
-        # Now, we will find the first community that a node appears in and color the node based on that community
-        # In community_map, certain nodes may appear in multiple communities, and we have chosen to give preference
-        # to the first community a node appears in
-        color_list = []
-        for node in node_list:
-            not_found = True
-            for community_key in community_map:
-                if not_found and node in community_map[community_key][position]:
-                    color_list.append(community_key)
-                    not_found = False
-
-        # Note - there is no strong reason to choose spring layout; it just creates relatively clean graphs
-        if pos is None:  # The case where the user has not provided their own layout
-            pos = nx.spring_layout(model_graph)
-
-    # Define color_map
-    color_map = cm.get_cmap('viridis', len(community_map))
-
-    # Create the figure and draw the graph
-    fig = plt.figure()
-    nx.draw_networkx_nodes(model_graph, pos, nodelist=node_list, node_size=40, cmap=color_map, node_color=color_list)
-    nx.draw_networkx_edges(model_graph, pos, alpha=0.5)
-
-    # Make the main title
-    graph_type = type_of_graph.capitalize()
-    if user_provided_community_map:
-        main_graph_title = "%s graph - colored using user-provided community map" % graph_type
-    else:
-        community_map_type = type_of_community_map.capitalize()
-        main_graph_title = "%s graph - colored using %s community map" % (graph_type, community_map_type)
-
-    main_font_size = 14
-    plt.suptitle(main_graph_title, fontsize=main_font_size)
-
-    # Define a dict that will be used for the graph subtitle
-    subtitle_naming_dict = {'bipartite': 'Nodes are variables and constraints & Edges are variables in a constraint',
-                            'constraint': 'Nodes are constraints & Edges are common variables',
-                            'variable': 'Nodes are variables & Edges are shared constraints'}
-
-    # Make the subtitle
-    subtitle_font_size = 11
-    plt.title(subtitle_naming_dict[type_of_graph], fontsize=subtitle_font_size)
-
-    # Return the figure and pos, the position dictionary used for the graph layout
-    return fig, pos
-
-
-def stringify_community_map(model=None, community_map=None, type_of_community_map='constraint', with_objective=True,
-                            weighted_graph=True, random_seed=None):
-    """
-    This function takes in a community map of Pyomo components and returns the same community map but with the strings
-    of the Pyomo components. Alternatively, if the user does not provide a community map, this function can take in
-    a model and then create a community map (using the function detect_communities). Then, the same process of
-    "stringifying" the community map is performed, again resulting in a community map but with the strings
-    of the Pyomo components.
-
-    Parameters
-    ----------
-    model: Block, optional
-        a Pyomo model or block to be used for community detection (only used if community_map is None)
-    community_map: dict, optional
-        a dictionary with values that contain Pyomo components which will be converted to their strings
-    type_of_community_map: str, optional
-        (this argument is only used if no community_map is provided)
-        a string that specifies the type of community map to be returned, the default is 'constraint'.
-        'constraint' returns a dictionary (community_map) with communities based on constraint nodes,
-        'variable' returns a dictionary (community_map) with communities based on variable nodes,
-        'bipartite' returns a dictionary (community_map) with communities based on a bipartite graph (both constraint
-        and variable nodes)
-    with_objective: bool, optional
-        (this argument is only used if no community_map is provided)
-        a Boolean argument that specifies whether or not the objective function is
-        included in the graph (and thus in the community map); the default is True
-    weighted_graph: bool, optional
-        (this argument is only used if no community_map is provided)
-        a Boolean argument that specifies whether the community map is created based on a weighted model graph or an
-        unweighted model graph; the default is True (type_of_community_map='bipartite' creates an unweighted model graph
-        regardless of this parameter)
-    random_seed: int, optional
-        (this argument is only used if no community_map is provided)
-        an integer that is used as the random seed for the (heuristic) Louvain community detection
-
-    Returns
-    -------
-    str_community_map: dict
-        a Python dictionary that maps arbitrary keys (in this case, integers from zero to the number of
-        communities minus one) to two-list tuples containing the strings of the Pyomo components in the given community
-    """
-
-    # Check that arguments are of the right type
-
-    assert model is not None or community_map is not None, "Either a model or a community map must be given as an input"
-
-    assert isinstance(model, ConcreteModel) or model is None, "Invalid model: 'model=%s' - model must be " \
-                                                              "an instance of ConcreteModel or None " \
-                                                              "if a community map is given" % model
-
-    assert type_of_community_map in ('bipartite', 'constraint', 'variable'), \
-        "Invalid value for type_of_community_map: 'type_of_community_map=%s' - Valid values: " \
-        "'bipartite', 'constraint', 'variable'" % type_of_community_map
-
-    assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
-                                         "must be a Boolean" % with_objective
-
-    assert type(weighted_graph) == bool, "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph " \
-                                         "must be a Boolean" % weighted_graph
-
-    assert random_seed is None or (type(random_seed) == int and random_seed >= 0), \
-        "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed
-
-    if community_map is None:
-        # If no community map is given by the user, then a community map will be created using the given
-        # model and the detect_communities function
-        community_map = detect_communities(model, type_of_community_map=type_of_community_map,
-                                           with_objective=with_objective,
-                                           weighted_graph=weighted_graph, random_seed=random_seed)
-
-    else:  # This is the case where the user has provided their own community_map
-
-        # Check that the contents of the dictionary are of the right types
-        assert type(community_map) == dict, "community_map should be a Python dictionary"
-        # Note that the dictionary keys do not have to be anything specific
-        for community_map_value in list(community_map.values()):
-            assert len(community_map_value) == 2 and \
-                   type(community_map_value) == tuple and \
-                   type(community_map_value[0]) == list and \
-                   type(community_map_value[1]) == list, "The values of community_map should all be " \
-                                                         "tuples containing two lists"
-
-    # Create str_community_map and give it values that are the strings of the components in community_map
-    str_community_map = dict()
-    for key in community_map:
-        str_community_map[key] = ([str(component) for component in community_map[key][0]],
-                                  [str(component) for component in community_map[key][1]])
-
-    # Return str_community_map, which is identical to community_map except it has the strings of all of the Pyomo
-    # components instead of the actual components
-    return str_community_map
+        return structured_model
