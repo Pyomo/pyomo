@@ -8,4 +8,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.opt.problem.ampl import *
+from pyomo.opt.problem.ampl import AmplModel

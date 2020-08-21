@@ -19,7 +19,6 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
 
 class TestAmplbook2(unittest.TestCase): pass
 

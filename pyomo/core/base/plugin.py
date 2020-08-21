@@ -187,7 +187,8 @@ class IParamRepresentation(Interface):
 
 ParamRepresentationFactory = CreatePluginFactory(IParamRepresentation)
 
-class TransformationInfo(object): pass
+class TransformationInfo(object):
+    pass
 
 class TransformationData(object):
     """

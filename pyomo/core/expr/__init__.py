@@ -22,6 +22,7 @@ from .numvalue import (
     value, is_constant, is_fixed, is_variable_type,
     is_potentially_variable, NumericValue, ZeroConstant,
     native_numeric_types, native_types, polynomial_degree,
+    nonpyomo_leaf_types
 )
 
 from .boolean_value import BooleanValue

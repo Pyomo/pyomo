@@ -31,23 +31,15 @@ from pyomo.core.expr import boolean_value as _logicalvalue
 
 # Pyomo5
 if _mode == Mode.pyomo5_trees:
+    from pyomo.core.expr.numvalue import value
     from pyomo.core.expr import numeric_expr as _numeric_expr
-    from pyomo.core.expr.numeric_expr import *
-    from pyomo.core.expr.numeric_expr import (
-        _generate_sum_expression,
-        _generate_mul_expression,
-        _generate_other_expression,
-        _generate_intrinsic_function_expression,
-    )
+    from pyomo.core.expr.numeric_expr import (Expr_ifExpression, ProductExpression, DivisionExpression, ReciprocalExpression, PowExpression, SumExpression, MonomialTermExpression, NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression, AbsExpression, LinearExpression, ExpressionBase, NPV_SumExpression, NPV_ProductExpression, NPV_DivisionExpression, NPV_ReciprocalExpression, NPV_PowExpression, NPV_NegationExpression, NPV_AbsExpression, NPV_UnaryFunctionExpression, NPV_ExternalFunctionExpression)
+    from pyomo.core.expr.logical_expr import InequalityExpression, EqualityExpression, RangedExpression
+    from pyomo.core.expr.template_expr import GetItemExpression
+    from pyomo.core.expr.numeric_expr import _generate_intrinsic_function_expression
     from pyomo.core.expr import logical_expr as _logical_expr
-    from pyomo.core.expr.logical_expr import *
-    from pyomo.core.expr.logical_expr import (
-        _generate_relational_expression,
-        _chainedInequality,
-    )
-    from pyomo.core.expr.template_expr import *
     from pyomo.core.expr import visitor as _visitor
-    from pyomo.core.expr.visitor import *
+    from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables, ExpressionReplacementVisitor, replace_expressions, ExpressionValueVisitor
     # FIXME: we shouldn't need circular dependencies between modules
     _visitor.LinearExpression = _numeric_expr.LinearExpression
     _visitor.MonomialTermExpression = _numeric_expr.MonomialTermExpression

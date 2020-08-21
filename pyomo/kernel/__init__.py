@@ -23,7 +23,7 @@ from pyomo.opt import (SolverFactory,
 # Define the modeling namespace
 #
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.core.expr import *
+import pyomo.core.expr
 import pyomo.core.kernel
 from pyomo.kernel.util import (generate_names,
                                preorder_traversal,

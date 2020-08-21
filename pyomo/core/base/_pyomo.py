@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from six import iteritems
-from pyomo.core.base.plugin import *
+from pyomo.core.base.plugin import ModelComponentFactory
 
 def predefined_sets():
     from pyomo.core.base.set import GlobalSets

@@ -8,5 +8,5 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.opt.solver.shellcmd import *
-from pyomo.opt.solver.ilmcmd import *
+from pyomo.opt.solver.shellcmd import SystemCallSolver
+from pyomo.opt.solver.ilmcmd import ILMLicensedSystemCallSolver

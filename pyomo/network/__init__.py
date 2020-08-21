@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.network.arc import *
-from pyomo.network.port import *
-from pyomo.network.decomposition import *
+from pyomo.network.arc import (_iterable_to_dict, _ArcData,
+                               Arc, SimpleArc, IndexedArc)
+from pyomo.network.port import _PortData, Port, SimplePort, IndexedPort
+from pyomo.network.decomposition import SequentialDecomposition

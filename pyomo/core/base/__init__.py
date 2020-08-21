@@ -12,7 +12,15 @@
 # probably be removed
 from pyomo.common.collections import ComponentMap
 
-from pyomo.core.expr.numvalue import *
+from pyomo.core.expr.symbol_map import SymbolMap
+from pyomo.core.expr.numvalue import (NonNumericValue, RegisterNumericType,
+                                      RegisterIntegerType, RegisterBooleanType,
+                                      value, is_constant, is_fixed,
+                                      is_variable_type, is_potentially_variable,
+                                      is_numeric_data, polynomial_degree,
+                                      as_numeric, nonpyomo_leaf_types,
+                                      check_if_numeric_type_and_cache,
+                                      NumericValue, NumericConstant)
 from pyomo.core.expr.boolean_value import (
     as_boolean, BooleanConstant, BooleanValue,
     native_logical_values)
@@ -20,47 +28,104 @@ from pyomo.core.kernel.objective import (minimize,
                                          maximize)
 from pyomo.core.base.config import PyomoOptions
 
-from pyomo.core.base.expression import *
-from pyomo.core.base.label import *
+from pyomo.core.base.expression import Expression, SimpleExpression,\
+    IndexedExpression, _ExpressionData
+from pyomo.core.base.label import (alphanum_label_from_name, CuidLabeler,
+                                   CounterLabeler, NumericLabeler,
+                                   CNameLabeler, TextLabeler,
+                                   AlphaNumericTextLabeler, NameLabeler,
+                                   ShortNameLabeler)
 
 #
 # Components
 #
-from pyomo.core.base.component import *
+from pyomo.core.base.component import (name, cname, CloneError, Component,
+                                       ActiveComponent, ComponentData,
+                                       ActiveComponentData, ComponentUID)
 import pyomo.core.base.indexed_component
-from pyomo.core.base.action import *
-from pyomo.core.base.check import *
+from pyomo.core.base.action import BuildAction
+from pyomo.core.base.check import BuildCheck
 from pyomo.core.base.set import (
     Set, SetOf, simple_set_rule, RangeSet,
 )
-from pyomo.core.base.param import *
-from pyomo.core.base.var import *
+from pyomo.core.base.param import Param, SimpleParam, IndexedParam
+from pyomo.core.base.var import Var, VarList, SimpleVar, IndexedVar, _VarData
 from pyomo.core.base.boolean_var import (
     BooleanVar, _BooleanVarData, _GeneralBooleanVarData,
     BooleanVarList, SimpleBooleanVar)
-from pyomo.core.base.constraint import *
+from pyomo.core.base.constraint import (simple_constraint_rule,
+                                        simple_constraintlist_rule, Constraint,
+                                        SimpleConstraint, IndexedConstraint,
+                                        ConstraintList, _ConstraintData)
 from pyomo.core.base.logical_constraint import (
     LogicalConstraint, LogicalConstraintList, _LogicalConstraintData)
-from pyomo.core.base.objective import *
-from pyomo.core.base.connector import *
-from pyomo.core.base.sos import *
-from pyomo.core.base.piecewise import *
-from pyomo.core.base.suffix import *
-from pyomo.core.base.external import *
-from pyomo.core.base.symbol_map import *
+from pyomo.core.base.objective import (simple_objective_rule,
+                                       simple_objectivelist_rule, Objective,
+                                       SimpleObjective, IndexedObjective,
+                                       ObjectiveList, _ObjectiveData)
+from pyomo.core.base.connector import (ConnectorExpander, IndexedConnector,
+                                       SimpleConnector, Connector)
+from pyomo.core.base.sos import (SOSConstraint, SimpleSOSConstraint,
+                                 IndexedSOSConstraint)
+from pyomo.core.base.piecewise import (PWRepn, Bound, Piecewise,
+                                       SimplePiecewise, IndexedPiecewise)
+from pyomo.core.base.suffix import (active_export_suffix_generator,
+                                    export_suffix_generator,
+                                    active_import_suffix_generator,
+                                    import_suffix_generator,
+                                    active_local_suffix_generator,
+                                    local_suffix_generator,
+                                    active_suffix_generator, suffix_generator,
+                                    Suffix)
+from pyomo.core.base.external import (ExternalFunction, AMPLExternalFunction,
+                                      PythonCallbackFunction)
+from pyomo.core.base.symbol_map import symbol_map_from_instance
 from pyomo.core.base.reference import Reference
 #
-from pyomo.core.base.set_types import *
-from pyomo.core.base.misc import *
-from pyomo.core.base.block import *
-from pyomo.core.base.PyomoModel import *
-from pyomo.core.base.plugin import *
+from pyomo.core.base.set import (
+    Reals, PositiveReals, NonPositiveReals, NegativeReals, NonNegativeReals,
+    Integers, PositiveIntegers, NonPositiveIntegers,
+    NegativeIntegers, NonNegativeIntegers,
+    Boolean, Binary,
+    Any, AnyWithNone, EmptySet, UnitInterval, PercentFraction,
+    RealInterval, IntegerInterval,
+)
+from pyomo.core.base.misc import (display, create_name, apply_indexed_rule,
+                                  apply_parameterized_indexed_rule,
+                                  sorted_robust, tabular_writer)
+from pyomo.core.base.block import (SubclassOf, SortComponents, TraversalStrategy,
+                                   PseudoMap, Block, SimpleBlock, IndexedBlock,
+                                   generate_cuid_names, active_components,
+                                   components, active_components_data,
+                                   components_data, CustomBlock,
+                                   declare_custom_block, )
+from pyomo.core.base.PyomoModel import (global_option, PyomoConfig,
+                                        ModelSolution, ModelSolutions, Model,
+                                        ConcreteModel, AbstractModel)
+from pyomo.core.base.plugin import (pyomo_callback, IParamRepresentation, 
+                                    IPyomoScriptPreprocess,
+                                    IPyomoScriptCreateModel,
+                                    IPyomoScriptModifyInstance,
+                                    IPyomoScriptCreateDataPortal,
+                                    IPyomoScriptPrintModel,
+                                    IPyomoScriptPrintInstance,
+                                    IPyomoScriptSaveInstance,
+                                    IPyomoScriptPrintResults,
+                                    IPyomoScriptSaveResults,
+                                    IPyomoScriptPostprocess, IPyomoPresolver,
+                                    IPyomoPresolveAction, IPyomoExpression,
+                                    ExpressionRegistration, ExpressionFactory,
+                                    ModelComponentFactory,
+                                    ParamRepresentationFactory,
+                                    TransformationInfo, TransformationData,
+                                    Transformation, TransformationFactory, 
+                                    apply_transformation)
 #
 import pyomo.core.base._pyomo
 #
 import pyomo.core.base.util
 
-from pyomo.core.base.instance2dat import *
+from pyomo.core.base.instance2dat import instance2dat
 
 # These APIs are deprecated and should be removed in the near future
 from pyomo.core.base.set import (

@@ -550,7 +550,7 @@ class ModelSolutions(object):
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][cdata] = attr_value
 
-
+# TODO: Apply decorator flag.
 @ModelComponentFactory.register('Model objects can be used as a component of other models.')
 class Model(SimpleBlock):
     """

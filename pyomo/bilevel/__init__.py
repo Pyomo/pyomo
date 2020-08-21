@@ -10,4 +10,4 @@
 
 # Package files
 
-from pyomo.bilevel.components import *
+from pyomo.bilevel.components import SubModel

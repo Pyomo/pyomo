@@ -2109,6 +2109,7 @@ def generate_cuid_names(block,
 #
 # Deprecated functions.
 #
+# TODO: Apply deprecated decorator to these functions.
 def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
     """DEPRECATED: The active_components function is deprecated.
 

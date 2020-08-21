@@ -1,7 +1,6 @@
 #
 # import symbols and sub-packages
 #
-from pyomo.contrib.example.foo import *
 import pyomo.contrib.example.bar
 #
 # import the plugins directory
