@@ -10,7 +10,7 @@
 
 from pyomo.opt.results.container import (ScalarType, UndefinedData,
                                          ScalarData, ListContainer,
-                                         MapContainer)
+                                         MapContainer, undefined, ignore)
 import pyomo.opt.results.problem
 from pyomo.opt.results.solver import SolverStatus, TerminationCondition, \
     check_optimal_termination, assert_optimal_termination
