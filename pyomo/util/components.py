@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
-from pyomo.core.kernel.component_map import ComponentMap
 
 
 def rename_components(model, component_list, prefix):

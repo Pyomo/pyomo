@@ -10,7 +10,7 @@
 
 import logging
 
-from pyomo.core.base.suffix import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.expression import Expression, _ExpressionData

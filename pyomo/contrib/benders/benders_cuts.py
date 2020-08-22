@@ -2,7 +2,7 @@ from pyomo.core.base.block import _BlockData, declare_custom_block
 import pyomo.environ as pe
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.common.collections import ComponentSet
 try:
     from mpi4py import MPI
     mpi4py_available = True

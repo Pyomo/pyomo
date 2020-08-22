@@ -9,12 +9,11 @@ to variable bounds preprocessing transformation is recommended for NLP problems
 processed with this transformation.
 
 """
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt, BoundsManager
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.core.expr.current import identify_variables
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core import (Constraint, Objective,
                         TransformationFactory, maximize, minimize, value)
 from pyomo.opt import SolverFactory
