@@ -125,9 +125,9 @@ def init_rNLP(solve_data, config):
             m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut
         if main_objective.sense == minimize:
-            solve_data.LB = value(main_objective.expr)
+            solve_data.LB = results['Problem'][0]['Lower bound']
         else:
-            solve_data.UB = value(main_objective.expr)
+            solve_data.UB = results['Problem'][0]['Upper bound']
         config.logger.info(
             'NLP %s: OBJ: %s  LB: %s  UB: %s'
             % (solve_data.nlp_iter, value(main_objective.expr),
