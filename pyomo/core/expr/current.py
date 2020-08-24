@@ -77,7 +77,8 @@ if _mode == Mode.pyomo5_trees:
                                               _generate_mul_expression,
                                               _generate_other_expression,
                                               _generate_intrinsic_function_expression,
-                                              _balanced_parens)
+                                              _balanced_parens,
+                                              NPV_expression_types)
     from pyomo.core.expr import logical_expr as _logical_expr
     from pyomo.core.expr.logical_expr import (native_logical_types, BooleanValue,
                                               BooleanConstant, _lt, _le, _eq,
