@@ -1526,12 +1526,12 @@ class ScenarioTree(object):
 
             if tree_node_name not in node_stage_ids:
                 raise ValueError("No stage is assigned to tree node=%s"
-                                 % (tree_node.name))
+                                 % (tree_node_name))
 
             stage_name = value(node_stage_ids[tree_node_name])
             if stage_name not in self._stage_map:
                 raise ValueError("Unknown stage=%s assigned to tree node=%s"
-                                 % (stage_name, tree_node.name))
+                                 % (stage_name, tree_node_name))
 
             node_stage = self._stage_map[stage_name]
             new_tree_node = ScenarioTreeNode(

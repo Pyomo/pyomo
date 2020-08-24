@@ -93,7 +93,7 @@ def EXTERNAL_activate_rootnode_costs(manager,
     assert len(manager.scenario_tree.stages) == 2
     assert scenario in manager.scenario_tree.scenarios
     rootnode = manager.scenario_tree.findRootNode()
-    nodecost_var = instance.find_component(
+    nodecost_var = scenario._instance.find_component(
         rootnode._cost_variable[0])[rootnode._cost_variable[1]]
     scenario._instance.find_component(
         "PYSP_BENDERS_NODE_COST_TERM_"+rootnode.name).set_value(nodecost_var)
