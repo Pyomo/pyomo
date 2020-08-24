@@ -8,9 +8,37 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.opt.base import *
-from pyomo.opt.results import *
+import pyomo.opt.base.opt_config
 import pyomo.opt.solver
-from pyomo.opt.problem import *
-from pyomo.opt.parallel import *
+
+from pyomo.opt.base.error import ConverterError
+from pyomo.opt.base.convert import (Factory, ProblemConverterFactory,
+                                    convert_problem)
+from pyomo.opt.base.solvers import (_extract_version, UnknownSolver,
+                                    SolverFactoryClass, check_available_solvers,
+                                    _raise_ephemeral_error, OptSolver,
+                                    default_config_block)
+from pyomo.opt.base.results import ReaderFactory, AbstractResultsReader
+from pyomo.opt.base.problem import (ProblemConfigFactory, BaseProblemConfig,
+                                    AbstractProblemWriter, BranchDirection,
+                                    WriterFactory)
+from pyomo.opt.base.formats import (ProblemFormat, ResultsFormat,
+                                    guess_format)
+from pyomo.opt.results.container import (ScalarData, ScalarType,
+                                         default_print_options, strict,
+                                         ListContainer, MapContainer,
+                                         UndefinedData, undefined, ignore)
+import pyomo.opt.results.problem
+from pyomo.opt.results.solver import SolverStatus, TerminationCondition, \
+    check_optimal_termination, assert_optimal_termination
+from pyomo.opt.results.problem import ProblemSense
+from pyomo.opt.results.solution import SolutionStatus, Solution
+from pyomo.opt.results.results_ import SolverResults
+
+from pyomo.opt.problem.ampl import AmplModel
+
+from pyomo.opt.parallel.async_solver import (AsynchronousActionManager, SolverManagerFactory)
+import pyomo.opt.parallel.manager
+import pyomo.opt.parallel.pyro
+import pyomo.opt.parallel.local
 
