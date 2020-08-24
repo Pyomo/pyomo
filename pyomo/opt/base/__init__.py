@@ -13,7 +13,7 @@ import pyomo.opt.base.opt_config
 from pyomo.opt.base.error import ConverterError
 from pyomo.opt.base.convert import (Factory, ProblemConverterFactory,
                                     convert_problem)
-from pyomo.opt.base.solvers import (_extract_version, UnknownSolver,
+from pyomo.opt.base.solvers import (_extract_version, UnknownSolver, SolverFactory,
                                     SolverFactoryClass, check_available_solvers,
                                     _raise_ephemeral_error, OptSolver,
                                     default_config_block)
