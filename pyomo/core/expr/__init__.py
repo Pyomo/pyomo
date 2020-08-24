@@ -27,11 +27,9 @@ from .numvalue import (
 from .boolean_value import BooleanValue
 
 from .numeric_expr import linear_expression, nonlinear_expression
-from .logical_expr import inequality
-
-from .logical_expr import (
-    land, lor, equivalent, exactly, atleast, atmost, implies, lnot, xor
-)
+from .logical_expr import (land, lor, equivalent, exactly,
+                                          atleast, atmost, implies, lnot,
+                                          xor, inequality)
 
 from .current import (
     log, log10, sin, cos, tan, cosh, sinh, tanh,
