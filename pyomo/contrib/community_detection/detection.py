@@ -32,6 +32,7 @@ if matplotlib_available:
     import matplotlib.pyplot as plt
     from matplotlib import cm
 
+# TODO - Is active=False logically ambiguous? Should None be the default?
 
 def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
                        random_seed=None, use_only_active_components=True):
@@ -90,7 +91,7 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
     assert random_seed is None or (type(random_seed) == int and random_seed >= 0), \
         "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed
 
-    assert type(use_only_active_components) == bool, \
+    assert use_only_active_components is True or use_only_active_components is None, \
         "Invalid value for use_only_active_components: 'use_only_active_components=%s' - use_only_active_components " \
         "must be a Boolean" % use_only_active_components
 
@@ -177,8 +178,8 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
         logger.warning("Community detection found that with the given parameters, the model could not be decomposed - "
                        "only one community was found")
 
-    # Return community_map, which has integer keys that now map to a tuple of two lists
-    # containing Pyomo modeling components
+    # Return an instance of CommunityMap class which contains the community_map along with other relevant information
+    # for the community_map
     return CommunityMap(community_map, type_of_community_map, with_objective, weighted_graph, random_seed,
                         use_only_active_components, model, model_graph, number_component_map, constraint_variable_map)
 
@@ -186,24 +187,16 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
 class CommunityMap(object):
     """
     This class is used to create CommunityMap objects which are returned by the detect_communities function. Instances
-    of this class store relevant information about the given community map, such as the model used to create them,
-    their networkX representation, etc.
+    of this class allow dict-like usage and store relevant information about the given community map, such as the
+    model used to create them, their networkX representation, etc.
 
     The CommunityMap object acts as a Python dictionary, mapping integer keys to tuples containing two lists
     (which contain the components in the given community) - a constraint list and variable list.
 
     Methods
     -------
-    repr
-    str
-    iter
-    getitem
-    len
-    keys
-    values
-    items
     generate_structured_model
-    illustrate_model_graph
+    visualize_model_graph
     """
 
     def __init__(self, community_map, type_of_community_map, with_objective, weighted_graph, random_seed,
@@ -256,9 +249,20 @@ class CommunityMap(object):
         self.constraint_variable_map = constraint_variable_map
 
     def __repr__(self):
+        """
+
+        repr method changed to return the community_map with the memory locations of the Pyomo components - use str
+        method if the strings of the components are desired
+
+        """
         return str(self.community_map)
 
     def __str__(self):
+        """
+
+        str method changed to return the community_map with the strings of the Pyomo components (user-friendly output)
+
+        """
         # Create str_community_map and give it values that are the strings of the components in community_map
         str_community_map = dict()
         for key in self.community_map:
@@ -268,6 +272,14 @@ class CommunityMap(object):
         # Return str_community_map, which is identical to community_map except it has the strings of all of the Pyomo
         # components instead of the actual components
         return str(str_community_map)
+
+    def __eq__(self, other):
+        if isinstance(other, dict):
+            return self.community_map == other
+        elif isinstance(other, CommunityMap):
+            return self.community_map == other.community_map
+            # Should you check anything else for equality between instances?
+        return False
 
     def __iter__(self):
         for key in self.community_map:
@@ -288,7 +300,7 @@ class CommunityMap(object):
     def items(self):
         return self.community_map.items()
 
-    def illustrate_model_graph(self, type_of_graph='constraint', with_objective=True, pos=None):
+    def visualize_model_graph(self, type_of_graph='constraint', with_objective=True, pos=None):
         """
         This function draws a graph of the communities for a Pyomo model.
 
@@ -459,7 +471,7 @@ class CommunityMap(object):
         model, community_map = self.model, self.community_map
 
         # Initialize a new model (structured_model) which will contain variables and constraints in blocks based on
-        # their respective communitites within the CommunityMap
+        # their respective communities within the CommunityMap
         structured_model = ConcreteModel()
         structured_model.b = Block([0, len(community_map) - 1])
 
@@ -493,13 +505,13 @@ class CommunityMap(object):
                 blocked_variable_map[stored_variable] = blocked_variable_map.get(stored_variable,
                                                                                  []) + [variable_in_new_model]
 
-        # Now that we have all of our variables within the model, we can construct a dictionary that is used to
-        # replace variables within constraints to other variables (in our case, this will convert variables from the
-        # original model into variables from the new model (structured_model))
+        # # Now that we have all of our variables within the model, we can construct a dictionary that is used to
+        # # replace variables within constraints to other variables (in our case, this will convert variables from the
+        # # original model into variables from the new model (structured_model))
         replace_variables_in_expression_map = dict()
-        for variable, blocked_variable_list in blocked_variable_map.items():
-            replace_variables_in_expression_map[id(variable)] = blocked_variable_list[0]
-        # This dictionary will be used with the function replace_expressions
+        # for variable, blocked_variable_list in blocked_variable_map.items():
+        #     replace_variables_in_expression_map[id(variable)] = blocked_variable_list[0]
+        # # This dictionary will be used with the function replace_expressions
 
         # Loop through community_map again, this time to add constraints
         for community_key, community in community_map.items():
@@ -509,7 +521,7 @@ class CommunityMap(object):
             for stored_constraint in constraints_in_community:
 
                 # Now, loop through all of the variables within the given constraint expression
-                for variable in identify_variables(stored_constraint.expr):
+                for variable_in_stored_constraint in identify_variables(stored_constraint.expr):
 
                     # Loop through each of the "blocked" variables that a variable is mapped to and update
                     # replace_variables_in_expression_map if a variable has a "blocked" form in the given community
@@ -519,10 +531,29 @@ class CommunityMap(object):
                     # blocked versions of the variable x1 exist (which depends on the community map))
 
                     # TODO -  Check that this works as you expect it to!
-                    for blocked_variable in blocked_variable_map[variable]:
+                    variable_in_current_block = False
+                    for blocked_variable in blocked_variable_map[variable_in_stored_constraint]:
                         if 'b[%d]' % community_key in str(blocked_variable):
                             # Update replace_variables_in_expression_map accordingly
-                            replace_variables_in_expression_map[id(variable)] = blocked_variable
+                            replace_variables_in_expression_map[id(variable_in_stored_constraint)] = blocked_variable
+                            variable_in_current_block = True
+
+                    if not variable_in_current_block:
+                        # Create a version of the given variable outside of blocks then add it to
+                        # replace_variables_in_expression_map
+
+                        new_variable = Var(domain=variable_in_stored_constraint.domain, bounds=variable_in_stored_constraint.bounds)
+
+                        # Add the new variable just as we did above (but now it is not in any blocks)
+                        structured_model.add_component(str(variable_in_stored_constraint), new_variable)
+
+                        # Update blocked_variable_map to keep track of what equality constraints need to be made
+                        variable_in_new_model = structured_model.find_component(new_variable)
+                        blocked_variable_map[variable_in_stored_constraint] = blocked_variable_map.get(variable_in_stored_constraint,
+                                                                                         []) + [variable_in_new_model]
+
+                        # Update replace_variables_in_expression_map accordingly
+                        replace_variables_in_expression_map[id(variable_in_stored_constraint)] = variable_in_new_model
 
                 # Check to see whether 'stored_constraint' is actually an objective (since constraints and objectives
                 # grouped together)
@@ -542,30 +573,42 @@ class CommunityMap(object):
                     # constraint from the original model
                     structured_model.b[community_key].add_component(str(stored_constraint), new_constraint)
 
-        # If with_objective was set to False, that means we still need to add an objective function
+        # If with_objective was set to False, that means we might have missed an objective function within the
+        # original model
         if not community_map.with_objective:
             # Construct a new dictionary for replacing the variables (replace_variables_in_objective_map) which will
             # be specific to the variables in the objective function, since there is the possibility that the
             # objective contains variables we have not yet seen (and thus not yet added to our new model)
-            replace_variables_in_objective_map = dict()
-            for objective_function in model.component_data_objects(ctype=Objective, active=True, descend_into=True):
+            for objective_function in model.component_data_objects(ctype=Objective,
+                                                                   active=self.use_only_active_components,
+                                                                   descend_into=True):
+
                 for variable_in_objective in identify_variables(objective_function):
                     # Add all of the variables in the objective function (not within any blocks)
-                    new_variable = Var(domain=variable_in_objective.domain, bounds=variable_in_objective.bounds)
-                    structured_model.add_component(str(variable_in_objective), new_variable)
 
-                    # Again we update blocked_variable_map to keep track of what equality constraints need to be made
-                    variable_in_new_model = structured_model.find_component(new_variable)
-                    blocked_variable_map[variable_in_objective] = blocked_variable_map.get(variable_in_objective,
-                                                                                           []) + [variable_in_new_model]
+                    if id(variable_in_objective) not in replace_variables_in_expression_map:
 
-                    # Update the dictionary that we will use to replace the variables
-                    replace_variables_in_objective_map[id(variable_in_objective)] = variable_in_new_model
+                        new_variable = Var(domain=variable_in_objective.domain, bounds=variable_in_objective.bounds)
+                        structured_model.add_component(str(variable_in_objective), new_variable)
+
+                        # Again we update blocked_variable_map to keep track of what
+                        # equality constraints need to be made
+                        variable_in_new_model = structured_model.find_component(new_variable)
+                        blocked_variable_map[variable_in_objective] = blocked_variable_map.get(variable_in_objective,
+                                                                                               []) + [
+                                                                          variable_in_new_model]
+
+                        # Update the dictionary that we will use to replace the variables
+                        replace_variables_in_expression_map[id(variable_in_objective)] = variable_in_new_model
+                    else:
+                        for version_of_variable in blocked_variable_map[variable_in_objective]:
+                            if 'b[' not in str(version_of_variable):
+                                replace_variables_in_expression_map[id(variable_in_objective)] = version_of_variable
 
                 # Now we will construct a new objective function based on the one from the original model and then
                 # add it to the new model just as we have done before
                 new_objective = Objective(
-                    expr=replace_expressions(objective_function.expr, replace_variables_in_objective_map))
+                    expr=replace_expressions(objective_function.expr, replace_variables_in_expression_map))
                 structured_model.add_component(str(objective_function), new_objective)
 
         # Now, we need to create equality constraints for all of the different "versions" of a variable (such
