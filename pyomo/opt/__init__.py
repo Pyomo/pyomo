@@ -37,7 +37,7 @@ from pyomo.opt.results.results_ import SolverResults
 
 from pyomo.opt.problem.ampl import AmplModel
 
-from pyomo.opt.parallel.async_solver import (AsynchronousActionManager, SolverManagerFactory)
+from pyomo.opt.parallel.async_solver import (AsynchronousActionManager, SolverManagerFactory, AsynchronousSolverManager)
 import pyomo.opt.parallel.manager
 import pyomo.opt.parallel.pyro
 import pyomo.opt.parallel.local
