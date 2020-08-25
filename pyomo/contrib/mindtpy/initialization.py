@@ -17,6 +17,7 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_other_termination)
 from pyomo.contrib.mindtpy.util import var_bound_add
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
+import math
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -124,9 +125,9 @@ def init_rNLP(solve_data, config):
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut
-        if main_objective.sense == minimize:
+        if main_objective.sense == minimize and not math.isnan(results['Problem'][0]['Lower bound']):
             solve_data.LB = results['Problem'][0]['Lower bound']
-        else:
+        elif not math.isnan(results['Problem'][0]['Lower bound']):
             solve_data.UB = results['Problem'][0]['Upper bound']
         config.logger.info(
             'NLP %s: OBJ: %s  LB: %s  UB: %s'
