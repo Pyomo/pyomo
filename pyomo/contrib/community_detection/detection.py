@@ -11,6 +11,7 @@ from logging import getLogger
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core import ConcreteModel, ComponentMap, Block, Var, Constraint, Objective, ConstraintList
+from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
@@ -32,7 +33,6 @@ if matplotlib_available:
     import matplotlib.pyplot as plt
     from matplotlib import cm
 
-# TODO - Is active=False logically ambiguous? Should None be the default?
 
 def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
                        random_seed=None, use_only_active_components=True):
@@ -93,7 +93,7 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
 
     assert use_only_active_components is True or use_only_active_components is None, \
         "Invalid value for use_only_active_components: 'use_only_active_components=%s' - use_only_active_components " \
-        "must be a Boolean" % use_only_active_components
+        "must be True or None" % use_only_active_components
 
     # Generate model_graph (a NetworkX graph based on the given Pyomo optimization model),
     # number_component_map (a dictionary to convert the communities into lists of Pyomo components
@@ -102,6 +102,11 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
     model_graph, number_component_map, constraint_variable_map = generate_model_graph(
         model, type_of_graph=type_of_community_map, with_objective=with_objective, weighted_graph=weighted_graph,
         use_only_active_components=use_only_active_components)
+
+    # # TODO - Add option for other community detection package
+    # # Maybe something like this:
+    # if community_detection_package is not None:
+    #     partition_of_graph = community_detection_package(model_graph)
 
     # Use Louvain community detection to find the communities - this returns a dictionary mapping
     # individual nodes to their communities
@@ -300,7 +305,7 @@ class CommunityMap(object):
     def items(self):
         return self.community_map.items()
 
-    def visualize_model_graph(self, type_of_graph='constraint', with_objective=True, pos=None):
+    def visualize_model_graph(self, type_of_graph='constraint', pos=None):
         """
         This function draws a graph of the communities for a Pyomo model.
 
@@ -315,9 +320,6 @@ class CommunityMap(object):
             'constraint' draws a graph with constraint nodes,
             'variable' draws a graph with variable nodes,
             'bipartite' draws a bipartite graph (with both constraint and variable nodes)
-        with_objective: bool, optional
-            a Boolean argument that specifies whether or not the objective function is included in the graph; the
-            default is True
         pos: dict, optional
             a dictionary that maps node keys to their positions on the illustration
 
@@ -336,18 +338,16 @@ class CommunityMap(object):
             "Invalid graph type specified: 'type_of_graph=%s' - Valid values: " \
             "'bipartite', 'constraint', 'variable'" % type_of_graph
 
-        assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
-                                             "must be a Boolean" % with_objective
-
         # No assert statement for pos; the NetworkX function can handle issues with the pos argument
 
         # There is a possibility that the desired networkX graph of the model is already stored in the
         # CommunityMap object (because the networkX graph is required to create the CommunityMap object)
-        if type_of_graph != self.type_of_community_map or with_objective != self.with_objective:
+        if type_of_graph != self.type_of_community_map:
             # Use the generate_model_graph function to create a NetworkX graph of the given model (along with
             # number_component_map and constraint_variable_map, which will be used to help with drawing the graph)
             model_graph, number_component_map, constraint_variable_map = generate_model_graph(
-                self.model, type_of_graph=type_of_graph, with_objective=with_objective, weighted_graph=False)
+                self.model, type_of_graph=type_of_graph, with_objective=self.with_objective,
+                weighted_graph=self.weighted_graph, use_only_active_components=self.use_only_active_components)
         else:
             # This is the case where, as mentioned above, we can use the networkX graph that was made to create
             # the CommunityMap object
@@ -460,30 +460,32 @@ class CommunityMap(object):
 
     def generate_structured_model(self):
         """
-        Use the given model to create another model, structured_model, that will place variables into blocks based on their
-        communities
+        Using the community map and the original model used to create this community map, we will create
+        structured_model, which will be based on the original model but will place variables, constraints, and
+        objectives into or outside of various blocks (communities) based on the community map.
 
-        Mention something about how this is done by using the variables and constraints within the model
-
+        Returns
+        -------
+        structured_model: Block
+            a Pyomo model that reflects the nature of the community map
         """
-
-        # Should I just change the variable names to self.model and self.community_map instead of defining them here
-        model, community_map = self.model, self.community_map
 
         # Initialize a new model (structured_model) which will contain variables and constraints in blocks based on
         # their respective communities within the CommunityMap
         structured_model = ConcreteModel()
-        structured_model.b = Block([0, len(community_map) - 1])
+
+        # Create N blocks (where N is the number of communities found within the model)
+        structured_model.b = Block([0, len(self.community_map) - 1, 1])  # values given for (start, stop, step)
 
         # Initialize a ComponentMap that will map a variable from the model (for example, old_model.x1) used to
         # create the CommunityMap to a list of variables in various blocks that were created based on this
         # variable (for example, [structured_model.b[0].x1, structured_model.b[3].x1])
         blocked_variable_map = ComponentMap()
-        # Example entry -> {original_model.x1 : [structured_model.b[0].x1, structured_model.b[3].x1]}
+        # Example key-value pair -> {original_model.x1 : [structured_model.b[0].x1, structured_model.b[3].x1]}
 
         # First loop through community_map to add all the variables to structured_model before we add constraints
         # that use those variables
-        for community_key, community in community_map.items():
+        for community_key, community in self.community_map.items():
             _, variables_in_community = community
 
             # Loop through all of the variables (from the original model) in the given community
@@ -514,7 +516,7 @@ class CommunityMap(object):
         # # This dictionary will be used with the function replace_expressions
 
         # Loop through community_map again, this time to add constraints
-        for community_key, community in community_map.items():
+        for community_key, community in self.community_map.items():
             constraints_in_community, _ = community
 
             # Loop through all of the constraints (from the original model) in the given community
@@ -542,22 +544,26 @@ class CommunityMap(object):
                         # Create a version of the given variable outside of blocks then add it to
                         # replace_variables_in_expression_map
 
-                        new_variable = Var(domain=variable_in_stored_constraint.domain, bounds=variable_in_stored_constraint.bounds)
+                        new_variable = Var(domain=variable_in_stored_constraint.domain,
+                                           bounds=variable_in_stored_constraint.bounds)
 
                         # Add the new variable just as we did above (but now it is not in any blocks)
                         structured_model.add_component(str(variable_in_stored_constraint), new_variable)
 
                         # Update blocked_variable_map to keep track of what equality constraints need to be made
                         variable_in_new_model = structured_model.find_component(new_variable)
-                        blocked_variable_map[variable_in_stored_constraint] = blocked_variable_map.get(variable_in_stored_constraint,
-                                                                                         []) + [variable_in_new_model]
+                        blocked_variable_map[variable_in_stored_constraint] = blocked_variable_map.get(
+                            variable_in_stored_constraint,
+                            []) + [variable_in_new_model]
 
                         # Update replace_variables_in_expression_map accordingly
                         replace_variables_in_expression_map[id(variable_in_stored_constraint)] = variable_in_new_model
 
+                # TODO - Is there a better way to check whether something is actually an objective?
+
                 # Check to see whether 'stored_constraint' is actually an objective (since constraints and objectives
                 # grouped together)
-                if community_map.with_objective and isinstance(stored_constraint, Objective):
+                if self.with_objective and isinstance(stored_constraint, (_GeneralObjectiveData, Objective)):
                     # If the constraint is actually an objective, we add it to the block as an objective
                     new_objective = Objective(
                         expr=replace_expressions(stored_constraint.expr, replace_variables_in_expression_map))
@@ -575,18 +581,18 @@ class CommunityMap(object):
 
         # If with_objective was set to False, that means we might have missed an objective function within the
         # original model
-        if not community_map.with_objective:
+        if not self.with_objective:
             # Construct a new dictionary for replacing the variables (replace_variables_in_objective_map) which will
             # be specific to the variables in the objective function, since there is the possibility that the
             # objective contains variables we have not yet seen (and thus not yet added to our new model)
-            for objective_function in model.component_data_objects(ctype=Objective,
-                                                                   active=self.use_only_active_components,
-                                                                   descend_into=True):
+            for objective_function in self.model.component_data_objects(ctype=Objective,
+                                                                        active=self.use_only_active_components,
+                                                                        descend_into=True):
 
                 for variable_in_objective in identify_variables(objective_function):
                     # Add all of the variables in the objective function (not within any blocks)
 
-                    if id(variable_in_objective) not in replace_variables_in_expression_map:
+                    if structured_model.find_component(str(variable_in_objective)) is None:
 
                         new_variable = Var(domain=variable_in_objective.domain, bounds=variable_in_objective.bounds)
                         structured_model.add_component(str(variable_in_objective), new_variable)
