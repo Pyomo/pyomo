@@ -295,9 +295,9 @@ from pyomo.core.base.plugin import (pyomo_callback, registered_callback,
                                     ModelComponentFactory, Transformation,
                                     TransformationFactory,
                                     apply_transformation)
-#
+
 import pyomo.core.base._pyomo
-#
+
 import pyomo.core.base.util
 from pyomo.core import expr, base, beta, kernel, plugins
 

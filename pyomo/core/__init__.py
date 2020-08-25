@@ -37,7 +37,6 @@ from pyomo.core.expr.taylor_series import taylor_series_expansion
 import pyomo.core.kernel
 import pyomo.core.base._pyomo
 
-# from pyomo.core.base import *
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.expr import current
