@@ -483,6 +483,9 @@ class CommunityMap(object):
         blocked_variable_map = ComponentMap()
         # Example key-value pair -> {original_model.x1 : [structured_model.b[0].x1, structured_model.b[3].x1]}
 
+        # TODO - Change structure to be more efficient (maybe loop through constraints and add variables as you go)
+        #  (but note that disconnected variables would be missed with this strategy)
+
         # First loop through community_map to add all the variables to structured_model before we add constraints
         # that use those variables
         for community_key, community in self.community_map.items():
@@ -507,15 +510,12 @@ class CommunityMap(object):
                 blocked_variable_map[stored_variable] = blocked_variable_map.get(stored_variable,
                                                                                  []) + [variable_in_new_model]
 
-        # # Now that we have all of our variables within the model, we can construct a dictionary that is used to
-        # # replace variables within constraints to other variables (in our case, this will convert variables from the
-        # # original model into variables from the new model (structured_model))
+        # Now that we have all of our variables within the model, we will initialize a dictionary that used to
+        # replace variables within constraints to other variables (in our case, this will convert variables from the
+        # original model into variables from the new model (structured_model))
         replace_variables_in_expression_map = dict()
-        # for variable, blocked_variable_list in blocked_variable_map.items():
-        #     replace_variables_in_expression_map[id(variable)] = blocked_variable_list[0]
-        # # This dictionary will be used with the function replace_expressions
 
-        # Loop through community_map again, this time to add constraints
+        # Loop through community_map again, this time to add constraints (with replaced variables)
         for community_key, community in self.community_map.items():
             constraints_in_community, _ = community
 
@@ -532,7 +532,6 @@ class CommunityMap(object):
                     # best to change a variable x1 into b[0].x1 as opposed to b[2].x1 or b[5].x1 (assuming all of these
                     # blocked versions of the variable x1 exist (which depends on the community map))
 
-                    # TODO -  Check that this works as you expect it to!
                     variable_in_current_block = False
                     for blocked_variable in blocked_variable_map[variable_in_stored_constraint]:
                         if 'b[%d]' % community_key in str(blocked_variable):
@@ -553,14 +552,12 @@ class CommunityMap(object):
                         # Update blocked_variable_map to keep track of what equality constraints need to be made
                         variable_in_new_model = structured_model.find_component(new_variable)
                         blocked_variable_map[variable_in_stored_constraint] = blocked_variable_map.get(
-                            variable_in_stored_constraint,
-                            []) + [variable_in_new_model]
+                            variable_in_stored_constraint, []) + [variable_in_new_model]
 
                         # Update replace_variables_in_expression_map accordingly
                         replace_variables_in_expression_map[id(variable_in_stored_constraint)] = variable_in_new_model
 
-                # TODO - Is there a better way to check whether something is actually an objective?
-
+                # TODO - Is there a better way to check whether something is actually an objective? (as done below)
                 # Check to see whether 'stored_constraint' is actually an objective (since constraints and objectives
                 # grouped together)
                 if self.with_objective and isinstance(stored_constraint, (_GeneralObjectiveData, Objective)):
@@ -600,9 +597,8 @@ class CommunityMap(object):
                         # Again we update blocked_variable_map to keep track of what
                         # equality constraints need to be made
                         variable_in_new_model = structured_model.find_component(new_variable)
-                        blocked_variable_map[variable_in_objective] = blocked_variable_map.get(variable_in_objective,
-                                                                                               []) + [
-                                                                          variable_in_new_model]
+                        blocked_variable_map[variable_in_objective] = blocked_variable_map.get(
+                            variable_in_objective, []) + [variable_in_new_model]
 
                         # Update the dictionary that we will use to replace the variables
                         replace_variables_in_expression_map[id(variable_in_objective)] = variable_in_new_model

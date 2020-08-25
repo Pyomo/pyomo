@@ -448,13 +448,15 @@ class TestDecomposition(unittest.TestCase):
         # Test the number of blocks
         structured_model = cmo.generate_structured_model()
         self.assertIsInstance(structured_model, Block)
-        self.assertEqual(2, len(cmo.community_map), len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
+        self.assertEqual(2, len(cmo.community_map),
+                         len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
 
         # Test what components have been created
         all_components = set([str(component) for component in structured_model.component_data_objects(
             ctype=(Var, Constraint, Objective, ConstraintList), active=cmo.use_only_active_components,
             descend_into=True)])
-        correct_components = {'b[0].B[2].c', 'b[0].c2[1]', 'b[0].c1[3]', 'equality_constraint_list[1]', 'b[1].c2[2]', 'b[1].x', 'b[0].x', 'b[0].y', 'b[0].z', 'b[0].obj[2]', 'b[1].c1[2]'}
+        correct_components = {'b[0].B[2].c', 'b[0].c2[1]', 'b[0].c1[3]', 'equality_constraint_list[1]', 'b[1].c2[2]',
+                              'b[1].x', 'b[0].x', 'b[0].y', 'b[0].z', 'b[0].obj[2]', 'b[1].c1[2]'}
         self.assertEqual(correct_components, all_components)
 
         # Basic test for the replacement of variables
@@ -473,13 +475,16 @@ class TestDecomposition(unittest.TestCase):
         # Test the number of blocks
         structured_model = cmo.generate_structured_model()
         self.assertIsInstance(structured_model, Block)
-        self.assertEqual(3, len(cmo.community_map), len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
+        self.assertEqual(3, len(cmo.community_map),
+                         len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
 
         # Test what components have been created
         all_components = set([str(component) for component in structured_model.component_data_objects(
             ctype=(Var, Constraint, Objective, ConstraintList), active=cmo.use_only_active_components,
             descend_into=True)])
-        correct_components = {'b[2].B[2].c', 'b[1].y', 'z', 'b[0].c1[2]', 'b[1].c1[3]', 'obj[2]', 'equality_constraint_list[3]', 'b[0].x', 'b[1].c2[1]', 'b[2].z', 'x', 'equality_constraint_list[1]', 'b[0].c2[2]', 'y', 'equality_constraint_list[2]'}
+        correct_components = {'b[2].B[2].c', 'b[1].y', 'z', 'b[0].c1[2]', 'b[1].c1[3]', 'obj[2]',
+                              'equality_constraint_list[3]', 'b[0].x', 'b[1].c2[1]', 'b[2].z', 'x',
+                              'equality_constraint_list[1]', 'b[0].c2[2]', 'y', 'equality_constraint_list[2]'}
         self.assertEqual(correct_components, all_components)
 
         # Basic test for the replacement of variables
