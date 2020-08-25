@@ -299,7 +299,7 @@ from pyomo.core.base.plugin import (pyomo_callback, registered_callback,
 import pyomo.core.base._pyomo
 #
 import pyomo.core.base.util
-import pyomo.core.expr
+from pyomo.core import expr, base, beta, kernel, plugins
 
 from pyomo.core.base.instance2dat import instance2dat
 
