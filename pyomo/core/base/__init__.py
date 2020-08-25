@@ -88,6 +88,7 @@ from pyomo.core.base.constraint import (logical_expr,
                                         simple_constraint_rule,
                                         simple_constraintlist_rule,
                                         _ConstraintData,
+                                        ConstraintList
                                         _GeneralConstraintData, Constraint,
                                         SimpleConstraint, IndexedConstraint)
 from pyomo.core.base.logical_constraint import (
