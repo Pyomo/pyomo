@@ -47,7 +47,7 @@ from pyomo.core.base.component import Component, ComponentUID
 from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 
-from pyomo.opt.results import SolverResults, Solution,SolverStatus,  UndefinedData
+from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
 
 from six import itervalues, iteritems, StringIO, string_types
 try:
