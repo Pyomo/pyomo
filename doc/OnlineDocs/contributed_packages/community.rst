@@ -207,11 +207,11 @@ Let's try a more complicated model, taken from `Duran & Grossmann, 1986`_:
 
     As we did before, we will use the returned 'pos' to create a consistent graph layout
     >>> community_map_object = cmo = detect_communities(model, type_of_community_map='bipartite')
-    >>> middle_fig, _ = cmo.visualize_model_graph(type_of_graph='variable', pos=pos, random_seed=seed)
+    >>> middle_fig, _ = cmo.visualize_model_graph(type_of_graph='variable', pos=pos)
     >>> plt.show()
 
-    >>> community_map_object = cmo = detect_communities(model, type_of_community_map='variable', random_seed=seed)
-    >>> right_fig, _ = visualize_model_graph(model, type_of_graph='variable', pos=pos)
+    >>> community_map_object = cmo = detect_communities(model, type_of_community_map='variable')
+    >>> right_fig, _ = cmo.visualize_model_graph(type_of_graph='variable', pos=pos)
     >>> plt.show()
 
     We can see an example for the three separate graphs created by these three function calls
