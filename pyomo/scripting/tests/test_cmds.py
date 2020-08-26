@@ -48,7 +48,7 @@ class Test(unittest.TestCase):
             elif s.available():
                 self.assertTrue(
                     re.search("\n   \-%s " % solver, OUT),
-                    "'   +%s' not found in help --solvers" % solver)
+                    "'   -%s' not found in help --solvers" % solver)
             else:
                 self.assertTrue(
                     re.search("\n    %s " % solver, OUT),

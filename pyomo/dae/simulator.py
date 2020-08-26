@@ -472,33 +472,34 @@ class Simulator:
                 continue
 
             conindex = con.index_set()
-            if not hasattr(conindex, 'set_tuple'):
-                # Check if the continuous set is the indexing set
-                if conindex is not contset:
-                    continue
+            # if not hasattr(conindex, 'set_tuple'):
+            #     # Check if the continuous set is the indexing set
+            #     if conindex is not contset:
+            #         continue
+            #     else:
+            #         csidx = 0
+            #         noncsidx = (None,)
+            # else:
+            dimsum = 0
+            csidx = -1
+            noncsidx = None
+            for s in conindex.subsets():
+                if s is contset:
+                    if csidx != -1:
+                        raise DAE_Error(
+                            "Cannot simulate the constraint %s because "
+                            "it is indexed by duplicate ContinuousSets"
+                            % con.name)
+                    csidx = dimsum
+                elif noncsidx is None:
+                    noncsidx = s
                 else:
-                    csidx = 0
-                    noncsidx = (None,)
-            else:
-                temp = conindex.set_tuple
-                dimsum = 0
-                csidx = -1
-                noncsidx = None
-                for s in temp:
-                    if s is contset:
-                        if csidx != -1:
-                            raise DAE_Error(
-                                "Cannot simulate the constraint %s because "
-                                "it is indexed by duplicate ContinuousSets"
-                                % con.name)
-                        csidx = dimsum
-                    elif noncsidx is None:
-                        noncsidx = s
-                    else:
-                        noncsidx = noncsidx.cross(s)
-                    dimsum += s.dimen
-                if csidx == -1:
-                    continue
+                    noncsidx = noncsidx.cross(s)
+                dimsum += s.dimen
+            if csidx == -1:
+                continue
+            if noncsidx is None:
+                noncsidx = (None,)
 
             # Get the rule used to construct the constraint
             conrule = con.rule
@@ -512,7 +513,7 @@ class Simulator:
                     if not isinstance(i, tuple):
                         i = (i,)
                     tempidx = i[0:csidx] + (cstemplate,) + i[csidx:]
-                    tempexp = conrule(m, *tempidx)
+                    tempexp = conrule(m, tempidx)
 
                 # Check to make sure it's an EqualityExpression
                 if not type(tempexp) is EXPR.EqualityExpression:
