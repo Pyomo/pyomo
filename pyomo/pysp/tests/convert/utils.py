@@ -8,8 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import (ConcreteModel, Var, Expression, Objective,
-                        sum_product, ConstraintList)
+from pyomo.core import *
 from pyomo.pysp.scenariotree.tree_structure_model import \
     ScenarioTreeModelFromNetworkX
 from pyomo.pysp.annotations import (ConstraintStageAnnotation,
