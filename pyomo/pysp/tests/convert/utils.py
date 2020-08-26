@@ -12,6 +12,11 @@ from pyomo.core import (ConcreteModel, Var, Expression, Objective,
                         sum_product, ConstraintList)
 from pyomo.pysp.scenariotree.tree_structure_model import \
     ScenarioTreeModelFromNetworkX
+from pyomo.pysp.annotations import (ConstraintStageAnnotation,
+                                    StochasticConstraintBoundsAnnotation,
+                                    StochasticConstraintBodyAnnotation,
+                                    StochasticObjectiveAnnotation,
+                                    StochasticVariableBoundsAnnotation)
 
 def simple_twostage_scenario_tree():
     from pyomo.pysp.scenariotree.tree_structure_model \

@@ -65,8 +65,8 @@ def _import_packages():
     #
     # Import required packages
     #
-    for name in _packages:
-        pname = name+'.plugins'
+    for _package in _packages:
+        pname = _package + '.plugins'
         try:
             _do_import(pname)
         except ImportError:
@@ -87,8 +87,8 @@ def _import_packages():
     #
     # Import optional packages
     #
-    for name in _optional_packages:
-        pname = name+'.plugins'
+    for _package in _optional_packages:
+        pname = _package + '.plugins'
         try:
             _do_import(pname)
         except ImportError:
