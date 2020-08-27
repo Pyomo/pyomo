@@ -113,7 +113,7 @@ from pyomo.core import expr, base, beta, kernel, plugins, preprocess
 from pyomo.core.base import util
 import pyomo.core.preprocess
 
-from pyomo.core.expr import (numvalue, numeric_expr, boolean_value,
+from pyomo.core import (numvalue, numeric_expr, boolean_value,
                              current, symbol_map, sympy_tools, 
                              taylor_series, visitor, expr_common, expr_errors,
                              calculus, native_types,
