@@ -719,8 +719,16 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns a copy of the MPIBlockVector structure filled with zeros
         """
-        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm)
-        result._block_vector = self._block_vector.copy_structure()
+        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm, assert_correct_owners=False)
+        result._block_vector = bv = BlockVector(self.nblocks)
+        for bid in np.nonzero(self._owned_mask)[0]:
+            if self.get_block(bid) is not None:
+                if isinstance(self.get_block(bid), BlockVector):
+                    bv.set_block(bid, self.get_block(bid).copy_structure())
+                elif type(self.get_block(bid)) == np.ndarray:
+                    bv.set_block(bid, np.zeros(self.get_block(bid).size, dtype=self.get_block(bid).dtype))
+                else:
+                    raise NotImplementedError('Should never get here')
         result._brow_lengths = self._brow_lengths.copy()
         result._undefined_brows = set(self._undefined_brows)
         return result
