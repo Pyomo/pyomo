@@ -722,11 +722,12 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm, assert_correct_owners=False)
         result._block_vector = bv = BlockVector(self.nblocks)
         for bid in np.nonzero(self._owned_mask)[0]:
-            if self.get_block(bid) is not None:
-                if isinstance(self.get_block(bid), BlockVector):
+            block = self.get_block(bid)
+            if block is not None:
+                if isinstance(block, BlockVector):
                     bv.set_block(bid, self.get_block(bid).copy_structure())
-                elif type(self.get_block(bid)) == np.ndarray:
-                    bv.set_block(bid, np.zeros(self.get_block(bid).size, dtype=self.get_block(bid).dtype))
+                elif type(block) == np.ndarray:
+                    bv.set_block(bid, np.zeros(block.size))
                 else:
                     raise NotImplementedError('Should never get here')
         result._brow_lengths = self._brow_lengths.copy()
