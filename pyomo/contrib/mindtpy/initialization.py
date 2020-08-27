@@ -127,7 +127,7 @@ def init_rNLP(solve_data, config):
         # Add OA cut
         if main_objective.sense == minimize and not math.isnan(results['Problem'][0]['Lower bound']):
             solve_data.LB = results['Problem'][0]['Lower bound']
-        elif not math.isnan(results['Problem'][0]['Lower bound']):
+        elif not math.isnan(results['Problem'][0]['Upper bound']):
             solve_data.UB = results['Problem'][0]['Upper bound']
         config.logger.info(
             'NLP %s: OBJ: %s  LB: %s  UB: %s'

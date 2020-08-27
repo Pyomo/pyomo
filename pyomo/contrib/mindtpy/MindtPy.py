@@ -139,6 +139,7 @@ class MindtPySolver(object):
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
             solve_data.best_solution_found = None
+            solve_data.best_solution_found_time = None
 
             # Record solver name
             solve_data.results.solver.name = 'MindtPy' + str(config.strategy)
@@ -251,6 +252,7 @@ class MindtPySolver(object):
         solve_data.results.solver.wallclock_time = solve_data.timing.total
 
         solve_data.results.solver.iterations = solve_data.mip_iter
+        solve_data.results.solver.best_solution_found_time = solve_data.best_solution_found_time
 
         if config.single_tree:
             solve_data.results.solver.num_nodes = solve_data.nlp_iter - \
