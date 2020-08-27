@@ -861,6 +861,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
                              assert_correct_owners=False)
         for ndx in np.nonzero(res.ownership_mask)[0]:
             res.set_block(ndx, np.zeros(self.get_row_size(ndx)))
+        res.broadcast_block_sizes()
         if rank == 0:
             block_indices = self._owned_mask
         else:

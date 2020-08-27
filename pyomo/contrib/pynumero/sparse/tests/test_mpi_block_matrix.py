@@ -1197,3 +1197,4 @@ class TestMPIMatVec(unittest.TestCase):
         self.assertTrue(np.array_equal(res.get_block(rank), sub_v*2))
         self.assertTrue(np.array_equal(res.get_block(3), sub_v*4))
         self.assertTrue(np.array_equal(res.rank_ownership, np.array([0, 1, 2, -1])))
+        self.assertFalse(res.has_none)
