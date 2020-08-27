@@ -2203,7 +2203,10 @@ class Set(IndexedComponent):
 
 
 class IndexedSet(Set):
-    pass
+    def data(self):
+        "Return a dict containing the data() of each Set in this IndexedSet"
+        return {k: v.data() for k,v in iteritems(self)}
+
 
 class FiniteSimpleSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
