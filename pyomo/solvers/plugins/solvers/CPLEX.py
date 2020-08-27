@@ -928,7 +928,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                                                         TerminationCondition.globallyOptimal,
                                                         TerminationCondition.locallyOptimal,
                                                         TerminationCondition.optimal,
-                                                        #TerminationCondition.maxEvaluations,
+                                                        TerminationCondition.maxEvaluations,
                                                         TerminationCondition.other]:
                 results.solution.insert(soln)
             elif (results.solver.termination_condition is TerminationCondition.maxTimeLimit) and \
