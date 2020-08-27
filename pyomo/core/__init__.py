@@ -44,6 +44,7 @@ from pyomo.core.expr import (numvalue, numeric_expr, boolean_value,
 from pyomo.core import beta, expr, plugins, preprocess, util, kernel
 
 from pyomo.core.expr.numvalue import (nonpyomo_leaf_types,
+                                      PyomoObject,
                                       native_numeric_types,
                                       value, is_constant,
                                       is_fixed, is_variable_type,
