@@ -131,6 +131,11 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ConstantInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        with self.assertRaisesRegex(
+                RuntimeError, "Initializer ConstantInitializer does "
+                "not contain embedded indices"):
+            a.indices()
         self.assertEqual(a(None, 1), 5)
 
     def test_dict(self):
@@ -139,6 +144,8 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ItemInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [1])
         self.assertEqual(a(None, 1), 5)
 
     def test_sequence(self):
@@ -147,12 +154,15 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ItemInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [0,1])
         self.assertEqual(a(None, 1), 5)
 
         a = Initializer([0,5], treat_sequences_as_mappings=False)
         self.assertIs(type(a), ConstantInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), [0,5])
 
     def test_function(self):
@@ -163,6 +173,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ScalarCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), 0)
 
         m.x = Var([1,2,3])
@@ -172,6 +183,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), IndexedCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), 2)
 
         def x2_init(m):
@@ -180,6 +192,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ScalarCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), 0)
 
         m.y = Var([1,2,3], [4,5,6])
@@ -189,12 +202,14 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), IndexedCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, (1, 4)), 8)
 
         b = CountedCallInitializer(m.x, a)
         self.assertIs(type(b), CountedCallInitializer)
         self.assertFalse(b.constant())
         self.assertFalse(b.verified)
+        self.assertFalse(a.contains_indices())
         self.assertFalse(b._scalar)
         self.assertIs(a._fcn, b._fcn)
         c = b(None, 1)

@@ -76,13 +76,12 @@ class FileDownloader(object):
                 if not line:
                     continue
                 key,val = line.lower().split('=')
+                if val[0] == val[-1] and val[0] in '"\'':
+                    val = val[1:-1]
                 if key == 'id':
                     dist = val
                 elif key == 'version_id':
-                    if val[0] == val[-1] and val[0] in '"\'':
-                        ver = val[1:-1]
-                    else:
-                        ver = val
+                    ver = val
         return cls._map_dist(dist), ver
 
     @classmethod

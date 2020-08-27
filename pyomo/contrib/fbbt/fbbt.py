@@ -1,5 +1,4 @@
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet
 import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, identify_variables
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, value

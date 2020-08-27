@@ -33,7 +33,7 @@ from pyomo.core.expr.numeric_expr import (
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables,
 )
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.common.collections import ComponentMap
 
 logger = logging.getLogger('pyomo.contrib.mcpp')
 
