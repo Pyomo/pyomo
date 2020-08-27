@@ -16,6 +16,7 @@ import inspect
 import six
 
 from six import iteritems, iterkeys
+from six.moves import xrange
 
 if six.PY2:
     getargspec = inspect.getargspec
@@ -197,6 +198,12 @@ def Initializer(init,
         # segfault in pypy3 7.3.0).  We will immediately expand the
         # generator into a tuple and then store it as a constant.
         return ConstantInitializer(tuple(init))
+    elif type(init) is functools.partial:
+        _args = getargspec(init.func)
+        if len(_args.args) - len(init.args) == 1 and _args.varargs is None:
+            return ScalarCallInitializer(init)
+        else:
+            return IndexedCallInitializer(init)
     else:
         return ConstantInitializer(init)
 
@@ -268,7 +275,10 @@ class ItemInitializer(InitializerBase):
         return True
 
     def indices(self):
-        return iterkeys(self._dict)
+        try:
+            return iterkeys(self._dict)
+        except AttributeError:
+            return xrange(len(self._dict))
 
 
 class IndexedCallInitializer(InitializerBase):

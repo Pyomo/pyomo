@@ -499,7 +499,7 @@ class _SetData(_SetDataBase):
         return False
 
     def subsets(self, expand_all_set_operators=None):
-        return [ self ]
+        return iter((self,))
 
     def __iter__(self):
         """Iterate over the set members
