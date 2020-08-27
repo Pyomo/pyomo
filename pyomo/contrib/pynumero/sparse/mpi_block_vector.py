@@ -129,11 +129,12 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
         return obj
 
-    def __init__(self, nblocks, rank_owner, mpi_comm):
+    def __init__(self, nblocks, rank_owner, mpi_comm, assert_correct_owners=True):
         # Note: this requires communication but is disabled when assertions
         # are turned off
-        assert self._assert_correct_owners(), \
-            'rank_owner must be the same in all processors'
+        if assert_correct_owners:
+            assert self._assert_correct_owners(), \
+                'rank_owner must be the same in all processors'
 
     def __array_prepare__(self, out_arr, context=None):
         return super(MPIBlockVector, self).__array_prepare__(self, out_arr, context)

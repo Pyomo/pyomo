@@ -855,7 +855,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
         for ndx in block_indices_that_need_reduced:
             global_res_rank_owner[ndx] = -1
 
-        res = MPIBlockVector(nblocks=n_block_rows, rank_owner=global_res_rank_owner, mpi_comm=comm)
+        res = MPIBlockVector(nblocks=n_block_rows,
+                             rank_owner=global_res_rank_owner,
+                             mpi_comm=comm,
+                             assert_correct_owners=False)
         for ndx in np.nonzero(res.ownership_mask)[0]:
             res.set_block(ndx, np.zeros(self.get_row_size(ndx)))
         if rank == 0:
