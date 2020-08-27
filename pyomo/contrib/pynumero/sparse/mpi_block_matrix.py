@@ -847,13 +847,25 @@ class MPIBlockMatrix(BaseBlockMatrix):
         for i, j in zip(*np.nonzero(self._block_matrix._block_mask)):
             blocks_that_need_reduced[i] = 1
             res_rank_owner[i] = self._rank_owner[i, j]
+
+        # we need some special handling to determine the owner of empty rows
+        local_block_mask = np.array(self._block_matrix._block_mask, dtype=np.int64)
+        global_block_mask = np.empty(local_block_mask.shape, dtype=np.int64)
+        comm.Allreduce(local_block_mask, global_block_mask)
+        empty_rows = np.nonzero(global_block_mask.sum(axis=1) == 0)[0]
+
         global_blocks_that_need_reduced = np.zeros(n_block_rows, dtype=np.int64)
         comm.Allreduce(blocks_that_need_reduced, global_blocks_that_need_reduced)
         block_indices_that_need_reduced = np.nonzero(global_blocks_that_need_reduced > 1)[0]
         global_res_rank_owner = np.zeros(n_block_rows, dtype=np.int64)
         comm.Allreduce(res_rank_owner, global_res_rank_owner)
-        for ndx in block_indices_that_need_reduced:
-            global_res_rank_owner[ndx] = -1
+        global_res_rank_owner[block_indices_that_need_reduced] = -1
+        for ndx in empty_rows:
+            row_owners = set(self._rank_owner[ndx, :])
+            if len(row_owners) == 1:
+                global_res_rank_owner[ndx] = row_owners.pop()
+            else:
+                global_res_rank_owner[ndx] = -1
 
         res = MPIBlockVector(nblocks=n_block_rows,
                              rank_owner=global_res_rank_owner,
