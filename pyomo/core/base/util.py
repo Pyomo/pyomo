@@ -176,7 +176,7 @@ def Initializer(init,
         # here.
         _args = getargspec(init)
         _nargs = len(_args.args)
-        if inspect.ismethod(init) and init.im_self is not None:
+        if inspect.ismethod(init) and init.__self__ is not None:
             # Ignore 'self' for bound instance methods and 'cls' for
             # @classmethods
             _nargs -= 1
@@ -401,7 +401,7 @@ class CountedCallInitializer(InitializerBase):
         # the object is not a scalar.
         _args = getargspec(self._fcn)
         _nargs = len(_args.args)
-        if inspect.ismethod(self._fcn) and self._fcn.im_self is not None:
+        if inspect.ismethod(self._fcn) and self._fcn.__self__ is not None:
             _nargs -= 1
         _len = len(idx) if idx.__class__ is tuple else 1
         if _len + 2 == _nargs:
