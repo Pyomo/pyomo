@@ -85,7 +85,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         An MPI communicator. Tyically MPI.COMM_WORLD
     """
 
-    def __new__(cls, nblocks, rank_owner, mpi_comm):
+    def __new__(cls, nblocks, rank_owner, mpi_comm, assert_correct_owners):
 
         assert isinstance(nblocks, int)
         assert len(rank_owner) == nblocks
