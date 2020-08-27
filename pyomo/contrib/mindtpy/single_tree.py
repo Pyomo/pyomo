@@ -6,7 +6,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination, solve_NLP_feas)
-from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
+from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time
 from math import copysign
 from pyomo.environ import *
 from pyomo.core.expr import current as EXPR
