@@ -55,7 +55,7 @@ NAME_BUFFER = {}
 def do_not_tighten(m):
     return m
 
-def get_constraint_exprs(constraints, var_map):
+def _get_constraint_exprs(constraints, var_map):
     cuts = []
     for cons in constraints:
         cuts.append(clone_without_expression_components( 
@@ -63,7 +63,7 @@ def get_constraint_exprs(constraints, var_map):
                                        iteritems(var_map))))
     return cuts
 
-def constraint_tight(model, constraint):
+def _constraint_tight(model, constraint):
     val = value(constraint.body)
     ans = 0
     if constraint.lower is not None:
@@ -78,7 +78,7 @@ def constraint_tight(model, constraint):
 
     return ans
 
-def get_linear_approximation_expr(normal_vec, point):
+def _get_linear_approximation_expr(normal_vec, point):
     body = 0
     for coef, v in zip(point, normal_vec):
         body -= coef*v
@@ -125,7 +125,7 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
             active=True,
             descend_into=Block,
             sort=SortComponents.deterministic):
-        multiplier = constraint_tight(instance_rHull, constraint)
+        multiplier = _constraint_tight(instance_rHull, constraint)
         if multiplier:
             f = constraint.body
             firstDerivs = differentiate(f, wrt_list=rHull_vars)
@@ -137,7 +137,7 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
             else: 
                 # we will use the linear approximation of this constraint at
                 # x_hat
-                conslist[len(conslist)] = get_linear_approximation_expr(
+                conslist[len(conslist)] = _get_linear_approximation_expr(
                     normal_vec, rHull_vars)
         # even if it was satisfied exactly, we need to grab the
         # disaggregation constraints in order to do the projection.
@@ -199,7 +199,7 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
 
     # we created these constraints with the variables from rHull. We
     # actually need constraints for BigM and rBigM now!
-    cuts = get_constraint_exprs(projected_constraints, var_map)
+    cuts = _get_constraint_exprs(projected_constraints, var_map)
 
     # We likely have some cuts that duplicate other constraints now. We will
     # filter them to make sure that they do in fact cut off x*. If that's the
@@ -291,7 +291,7 @@ def back_off_constraint_by_fixed_tolerance(instance_rHull, transBlock_rHull,
                                 "adding cuts from convex hull to Big-M "
                                 "reformulation.")
 class CuttingPlane_Transformation(Transformation):
-    """Relax disjunctive model by forming the bigm relaxation and then
+    """Relax convex disjunctive model by forming the bigm relaxation and then
     iteratively adding cuts from the hull relaxation (or the hull relaxation
     after some basic steps) in order to strengthen the formulation.
 
@@ -299,13 +299,46 @@ class CuttingPlane_Transformation(Transformation):
     
     Parameters
     ----------
-    solver : 
-    EPS : 
-    stream_solver : 
-    TODO: callbacks: 
+    solver : Solver name (as string) to use to solve relaxed BigM and separation
+             problems
+    solver_options : dictionary of options to pass to the solver
+    stream_solver : Whether or not to display solver output
+    verbose : Enable verbose output from cuttingplanes algorithm
+    minimum_improvement_threshold : Minimum difference in relaxed BigM objective
+                                    values between consecutive iterations
+    tighten_relaxation : callback to modify the GDP model before the hull 
+                         relaxation is taken (e.g. could be used to perform 
+                         basic steps)
+    create_cuts : callback to create cuts using the solved relaxed bigM and hull
+                  problems
+    post_process_cut : callback to perform post-processing on created cuts
+    back_off_problem_tolerance : tolerance to use while post-processing
+    cut_threshold : Amount by which cut is violated at the relaxed bigM
+                    solution in order to be added to the bigM model
+    zero_tolerance : Tolerance at which a float will be considered 0 when
+                     using Fourier-Motzkin elimination to create cuts.
 
     By default, the callbacks will be set such that the algorithm performed is
-    that of the cuttingplanes paper.
+    as presented in [1], but with an additional post-processing procedure to
+    reduce numerical error, which calculates the maximum violation of the cut 
+    subject to the relaxed hull constraints, and then pads the constraint by 
+    this violation plus an additional user-specified tolerance.
+
+    In addition, the create_cuts_fme function provides an (exponential time)
+    method of generating cuts which reduces numerical error (and can eliminate 
+    it if all data is integer). It collects the hull constraints which are 
+    tight at the solution of the separation problem. It creates a cut in the 
+    extended space perpendicular to  a composite normal vector created by 
+    summing the directions normal to these constraints. It then performs 
+    fourier-motzkin elimination on the collection of constraints and the cut
+    to project out the disaggregated variables. The resulting constraint which
+    is most violated by the relaxed bigM solution is then returned.
+
+    References
+    ----------
+        [1] Sawaya, N. W., Grossmann, I. E. (2005). A cutting plane method for 
+        solving linear generalized disjunctive programming problems. Computers
+        and Chemical Engineering, 29, 1891-1913 
     """
 
     CONFIG = ConfigBlock("gdp.cuttingplane")
@@ -324,11 +357,12 @@ class CuttingPlane_Transformation(Transformation):
     CONFIG.declare('minimum_improvement_threshold', ConfigValue(
         default=0.01,
         domain=PositiveFloat,
-        description="Epsilon value used to decide when to stop adding cuts",
+        description="Threshold value used to decide when to stop adding cuts",
         doc="""
         If the difference between the objectives in two consecutive iterations is
         less than this value, the algorithm terminates without adding the cut
-        generated in the last iteration.  """
+        generated in the last iteration.  
+        """
     ))
     CONFIG.declare('verbose', ConfigValue(
         default=False,
@@ -348,9 +382,8 @@ class CuttingPlane_Transformation(Transformation):
         description="""If true, sets tee=True for every solve performed over
         "the course of the algorithm"""
     ))
-    # TODO: Why not just switch to having them give you the SolverFactory?
-    # 05/24: There are some complications with that (default gets created), but
-    # it's still the answer.
+    # TODO: I'd rather just have them pass the SolverFactory, if we can make
+    # that possible...
     CONFIG.declare('solver_options', ConfigValue(
         default={},
         description="Dictionary of solver options",
@@ -361,7 +394,7 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('tighten_relaxation', ConfigValue(
         default=do_not_tighten,
-        description="Function which takes the GDP formulation and returns a "
+        description="Callback which takes the GDP formulation and returns a "
         "GDP formulation with a tighter hull relaxation",
         doc="""
         Function which accepts the GDP formulation of the problem and returns
@@ -375,14 +408,18 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('create_cuts', ConfigValue(
         default=create_cuts_normal_vector,
-        description="Function which takes TODO",
+        description="Callback which generates a list of cuts, given the solved "
+        "relaxed bigM and relaxed hull solutions. If no cuts can be "
+        "generated, returns None",
         doc="""
         TODO
         """
     ))
     CONFIG.declare('post_process_cut', ConfigValue(
         default=back_off_constraint_with_calculated_cut_violation,
-        description="TODO John will be so happy",
+        description="Callback which takes a generated cut and post processes "
+        "it, presumably to back it off in the case of numerical error. Set to "
+        "None if not post-processing is desired.",
         doc="""
         TODO
         """
