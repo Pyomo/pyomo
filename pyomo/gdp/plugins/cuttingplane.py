@@ -55,12 +55,11 @@ NAME_BUFFER = {}
 def do_not_tighten(m):
     return m
 
-def _get_constraint_exprs(constraints, var_map):
+def _get_constraint_exprs(constraints, hull_to_bigm_map):
     cuts = []
     for cons in constraints:
         cuts.append(clone_without_expression_components( 
-            cons.expr, substitute=dict((id(v), subs) for v, subs in
-                                       iteritems(var_map))))
+            cons.expr, substitute=hull_to_bigm_map))
     return cuts
 
 def _constraint_tight(model, constraint):
@@ -85,7 +84,7 @@ def _get_linear_approximation_expr(normal_vec, point):
     return body >= -sum(normal_vec[idx]*v.value for (idx, v) in
                        enumerate(point))
 
-def create_cuts_fme(var_info, var_map, disaggregated_vars,
+def create_cuts_fme(var_info, hull_to_bigm_map, disaggregated_vars,
                      disaggregation_constraints, rHull_vars, instance_rHull,
                      rBigM_linear_constraints, transBlock_rBigm,
                      transBlock_rHull, cut_threshold, zero_tolerance):
@@ -104,7 +103,7 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
     Parameters
     -----------
     var_info: 
-    var_map: 
+    hull_to_bigm_map: 
     disaggregated_vars:
     disaggregation_constraints:
     rHull_vars:
@@ -160,7 +159,7 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
         (v,n) for v,n in zip(rHull_vars, composite_normal))
 
     composite_cutexpr_Hull = 0
-    for x_bigm, x_rbigm, x_hull, x_star in var_info:
+    for x_bigm, x_hull, x_star in var_info:
         # make the cut in the Hull space with the Hull variables. We will
         # translate it all to BigM and rBigM later when we have projected
         # out the disaggregated variables
@@ -199,7 +198,7 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
 
     # we created these constraints with the variables from rHull. We
     # actually need constraints for BigM and rBigM now!
-    cuts = _get_constraint_exprs(projected_constraints, var_map)
+    cuts = _get_constraint_exprs(projected_constraints, hull_to_bigm_map)
 
     # We likely have some cuts that duplicate other constraints now. We will
     # filter them to make sure that they do in fact cut off x*. If that's the
@@ -231,7 +230,7 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
 
     return None
 
-def create_cuts_normal_vector(var_info, var_map, disaggregated_vars,
+def create_cuts_normal_vector(var_info, hull_to_bigm_map, disaggregated_vars,
                               disaggregation_constraints, rHull_vars,
                               instance_rHull, rBigM_linear_constraints,
                               transBlock_rBigM, transBlock_rHull, TOL,
@@ -239,7 +238,7 @@ def create_cuts_normal_vector(var_info, var_map, disaggregated_vars,
     cut_number = len(transBlock_rBigM.cuts)
 
     cutexpr = 0
-    for x_bigm, x_rbigm, x_hull, x_star in var_info:
+    for x_rbigm, x_hull, x_star in var_info:
         cutexpr += (x_hull.value - x_star.value)*(x_rbigm - x_hull.value)
 
     # make sure we're cutting off x* by enough.
@@ -471,13 +470,11 @@ class CuttingPlane_Transformation(Transformation):
             logger.setLevel(logging.INFO)
 
         (instance_rBigM, instance_rHull, var_info, 
-         var_map, bigm_to_hull_map, disaggregated_vars, 
-         disaggregation_constraints, 
+         disaggregated_vars, disaggregation_constraints, 
          rBigM_linear_constraints, transBlockName) = self._setup_subproblems(
              instance, bigM, self._config.tighten_relaxation)
 
         self._generate_cuttingplanes( instance_rBigM, instance_rHull, var_info,
-                                      var_map, bigm_to_hull_map,
                                       disaggregated_vars,
                                       disaggregation_constraints,
                                       rBigM_linear_constraints, transBlockName)
@@ -585,36 +582,35 @@ class CuttingPlane_Transformation(Transformation):
         extendedSpaceCuts.deactivate()
         extendedSpaceCuts.cuts = Constraint(Any)
 
-        transBlock_rBigM = instance.component(transBlockName)
-
         #
         # Generate the mapping between the variables on all the
         # instances and the xstar parameter.
         #
         var_info = tuple(
-            (v,
-             transBlock_rBigM.all_vars[i],
+            (v, # this is the bigM variable
              transBlock_rHull.all_vars[i],
              transBlock_rHull.xstar[i])
             for i,v in enumerate(transBlock.all_vars))
-
-        # this is the map that I need to translate my projected cuts and add
-        # them to bigM and rBigM.
-        # [ESJ 5 March 2019] TODO: If I add xstar to this (or don't) can I just
-        # replace var_info?
-        var_map = ComponentMap((transBlock_rHull.all_vars[i], v)
-                               for i,v in enumerate(transBlock.all_vars))
-        bigm_to_hull_map = dict((id(var_info[i][0]), var_info[i][2]) for i in
-                                range(len(var_info)))
 
         #
         # Add the separation objective to the hull subproblem
         #
         self._add_separation_objective(var_info, transBlock_rHull)
 
-        return (instance, instance_rHull, var_info, var_map, bigm_to_hull_map,
-                disaggregated_vars, disaggregation_constraints,
-                rBigM_linear_constraints, transBlockName)
+        return (instance, instance_rHull, var_info, disaggregated_vars,
+                disaggregation_constraints, rBigM_linear_constraints,
+                transBlockName)
+
+    # this is the map that I need to translate my projected cuts and add
+    # them to bigM
+    def _create_hull_to_bigm_substitution_map(self, var_info):
+        return dict((id(var_info[i][1]), var_info[i][0]) for i in
+                    range(len(var_info)))
+
+    # this map is needed to solve the back-off problem for post-processing
+    def _create_bigm_to_hull_substition_map(self, var_info):
+        return dict((id(var_info[i][0]), var_info[i][1]) for i in
+                    range(len(var_info)))
 
     def _get_disaggregated_vars(self, hull):
         disaggregatedVars = []
@@ -636,8 +632,7 @@ class CuttingPlane_Transformation(Transformation):
         return disaggregatedVars, disaggregationConstraints
 
     def _generate_cuttingplanes( self, instance_rBigM, instance_rHull, var_info,
-                                 var_map, bigm_to_hull_map, disaggregated_vars,
-                                 disaggregation_constraints,
+                                 disaggregated_vars, disaggregation_constraints,
                                  rBigM_linear_constraints, transBlockName):
 
         opt = SolverFactory(self._config.solver)
@@ -668,6 +663,9 @@ class CuttingPlane_Transformation(Transformation):
             descend_into=Block,
             sort=SortComponents.deterministic)]
 
+        hull_to_bigm_map = self._create_hull_to_bigm_substitution_map(var_info)
+        bigm_to_hull_map = self._create_bigm_to_hull_substition_map(var_info)
+
         while (improving):
             # solve rBigM, solution is xstar
             results = opt.solve(instance_rBigM, tee=stream_solver)
@@ -683,7 +681,7 @@ class CuttingPlane_Transformation(Transformation):
 
             # copy over xstar
             logger.info("x* is:")
-            for x_bigm, x_rbigm, x_hull, x_star in var_info:
+            for x_rbigm, x_hull, x_star in var_info:
                 x_star.value = x_rbigm.value
                 # initialize the X values
                 x_hull.value = x_rbigm.value
@@ -707,7 +705,7 @@ class CuttingPlane_Transformation(Transformation):
                                "plane generation.\n\n%s" % (results,))
                 return
             logger.info("xhat is: ")
-            for x_bigm, x_rbigm, x_hull, x_star in var_info:
+            for x_rbigm, x_hull, x_star in var_info:
                 logger.info("\t%s = %s" % 
                             (x_hull.getname(fully_qualified=True,
                                             name_buffer=NAME_BUFFER), 
@@ -721,7 +719,7 @@ class CuttingPlane_Transformation(Transformation):
             if abs(value(transBlock_rHull.separation_objective)) < epsilon:
                 break
 
-            cuts = self._config.create_cuts(var_info, var_map,
+            cuts = self._config.create_cuts(var_info, hull_to_bigm_map,
                                             disaggregated_vars,
                                             disaggregation_constraints,
                                             rHull_vars, instance_rHull,
@@ -767,7 +765,7 @@ class CuttingPlane_Transformation(Transformation):
             o.deactivate()
 
         obj_expr = 0
-        for x_bigm, x_rbigm, x_hull, x_star in var_info:
+        for x_rbigm, x_hull, x_star in var_info:
             obj_expr += (x_hull - x_star)**2
         # add separation objective to transformation block
         transBlock_rHull.separation_objective = Objective(expr=obj_expr)
