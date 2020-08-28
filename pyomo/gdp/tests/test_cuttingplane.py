@@ -12,7 +12,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 from pyomo.gdp import *
-from pyomo.gdp.plugins.cuttingplane import create_cuts_fme
+from pyomo.gdp.plugins.cuttingplane import create_cuts_fme 
 
 import pyomo.opt
 import pyomo.gdp.tests.models as models
@@ -244,13 +244,15 @@ class TwoTermDisj(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(
             m, create_cuts=create_cuts_fme, post_process_cut=None, 
             zero_tolerance=0)
+        # This would also be a valid cut, it just doesn't happen to be what we
+        # choose.
+        # facet_extreme_pts = [
+        #     (1,0,3,1),
+        #     (1,0,3,2),
+        #     (0,1,1,3),
+        #     (0,1,1,4)
+        # ]
         facet_extreme_pts = [
-            (1,0,3,1),
-            (1,0,3,2),
-            (0,1,1,3),
-            (0,1,1,4)
-        ]
-        facet2_extreme_pts = [
             (0,1,1,3),
             (0,1,2,3),
             (1,0,3,1),
@@ -258,29 +260,13 @@ class TwoTermDisj(unittest.TestCase):
         ]
         
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-        # ESJ: In the FME version, we expect both facets... Or we at least don't
-        # not.
-        cuts.pprint()
-        self.assertEqual(len(cuts), 2)
+        # Here, we get just one facet
+        self.assertEqual(len(cuts), 1)
         cut = cuts[0]
         cut_expr = cut.body
         lower = cut.lower
         upper = cut.upper
         for pt in facet_extreme_pts:
-            m.d[0].indicator_var.fix(pt[0])
-            m.d[1].indicator_var.fix(pt[1])
-            m.x.fix(pt[2])
-            m.y.fix(pt[3])
-            if lower is not None:
-                self.assertEqual(value(lower), value(cut_expr))
-            if upper is not None:
-                self.assertEqual(value(upper), value(cut_expr))
-
-        cut = cuts[1]
-        cut_expr = cut.body
-        lower = cut.lower
-        upper = cut.upper
-        for pt in facet2_extreme_pts:
             m.d[0].indicator_var.fix(pt[0])
             m.d[1].indicator_var.fix(pt[1])
             m.x.fix(pt[2])
@@ -410,13 +396,13 @@ class Grossmann_TestCases(unittest.TestCase):
         self.assertEqual(len(cuts), 2)
         # similar to the two boxes example, this is on the line where two facets
         # intersect
-        facet_extreme_points = [
+        facet2_extreme_points = [
             (1,0,2,10),
             (1,0,2,7),
             (0,1,10,0),
             (0,1,10,3)
         ]
-        facet2_extreme_points = [
+        facet_extreme_points = [
             (1,0,2,10),
             (1,0,0,10),
             (0,1,8,3),
@@ -519,19 +505,24 @@ class Grossmann_TestCases(unittest.TestCase):
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         self.assertEqual(len(cuts), 1)
         
-        facet_extreme_points = [
+        # we don't get a whole facet. We get 0 <= 129y_1 + 123y_2 - x - y, which
+        # is the sum of two facets: 
+        # 0 <= 2y_1 + 120y_2 - x and 
+        # 0 <= 127y_1 + 3y_2 - y
+        # But this is valid and the only cut needed, so we won't complain.
+        cut_extreme_points = [
             (1,0,2,127),
-            (1,0,2,117),
-            (0,1,120,0),
             (0,1,120,3)
         ]
 
-        for pt in facet_extreme_points:
+        for pt in cut_extreme_points:
             m.x.fix(pt[2])
             m.y.fix(pt[3])
             m.disjunct1.indicator_var.fix(pt[0])
             m.disjunct2.indicator_var.fix(pt[1])
-            self.assertEqual(value(cuts[0].lower), value(cuts[0].body))
+            # tiny bit of numerical error
+            self.assertAlmostEqual(value(cuts[0].lower), value(cuts[0].body))
+            self.assertLessEqual(value(cuts[0].lower), value(cuts[0].body))
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cut_is_correct_facet_rescaled_projection(self):
@@ -622,7 +613,7 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
             m, bigM=1e6, create_cuts=create_cuts_fme, verbose=True)
 
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-        self.assertEqual(len(cuts), 1)# I don't know how many, but more than 1
+        self.assertEqual(len(cuts), 2)# I don't know how many, but more than 1
 
         m.x.fix(2)
         m.y.fix(7)

@@ -207,8 +207,10 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
     # We likely have some cuts that duplicate other constraints now. We will
     # filter them to make sure that they do in fact cut off x*. If that's the
     # case, we know they are not already in the BigM relaxation. Because they
-    # came from FME, they are very likely redundant, so we'll just keep the
-    # first good one we find.
+    # came from FME, they are very likely redundant, so we'll keep the best one
+    # we find
+    best = 0
+    best_cut = None
     for i in sorted(range(len(cuts)), reverse=True):
         cut = cuts[i]
         # x* is still in rBigM, so we can just remove this constraint if it
@@ -222,10 +224,13 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
         # amount and is not already in rBigM, this has to be our cut and we
         # can stop. We know cut is lb <= expr and that it's violated
         assert len(cut.args) == 2
-        if value(cut.args[0]) - value(cut.args[1]) > cut_threshold:
-            logger.info("FME:\t Cuts off x* by more than %s, returning." %
-                        cut_threshold)
-            return [cut]
+        cut_off = value(cut.args[0]) - value(cut.args[1])
+        if cut_off > cut_threshold and cut_off > best:
+            best = cut_off
+            best_cut = cut
+            logger.info("FME:\t New best cut: Cuts off x* by %s." % best)
+    if best_cut is not None:
+        return [best_cut]
 
     return None
 
