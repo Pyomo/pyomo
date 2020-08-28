@@ -50,6 +50,8 @@ import math
 import logging
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
+NAME_BUFFER = {}
+
 # DEBUG
 from nose.tools import set_trace
 
@@ -89,7 +91,7 @@ def get_linear_approximation_expr(normal_vec, point):
 def create_cuts_fme(var_info, var_map, disaggregated_vars,
                      disaggregation_constraints, rHull_vars, instance_rHull,
                      rBigM_linear_constraints, transBlock_rBigm,
-                     transBlock_rHull, cut_threshold):
+                     transBlock_rHull, cut_threshold, zero_tolerance):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
     Finds all the constraints which are tight at xhat (assumed to be the 
@@ -187,7 +189,8 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
     if do_fme:
         tight_constraints.construct()
         TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to(tight_constraints, vars_to_eliminate=vars_to_eliminate)
+            apply_to(tight_constraints, vars_to_eliminate=vars_to_eliminate,
+                     zero_tolerance=zero_tolerance)
         # I made this block, so I know they are here. Not that I won't hate
         # myself later for messing with private stuff.
         fme_results = tight_constraints._pyomo_contrib_fme_transformation.\
@@ -219,7 +222,6 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
         # amount and is not already in rBigM, this has to be our cut and we
         # can stop. We know cut is lb <= expr and that it's violated
         assert len(cut.args) == 2
-        print(value(cut.args[0]) - value(cut.args[1]))
         if value(cut.args[0]) - value(cut.args[1]) > cut_threshold:
             logger.info("FME:\t Cuts off x* by more than %s, returning." %
                         cut_threshold)
@@ -230,7 +232,8 @@ def create_cuts_fme(var_info, var_map, disaggregated_vars,
 def create_cuts_normal_vector(var_info, var_map, disaggregated_vars,
                               disaggregation_constraints, rHull_vars,
                               instance_rHull, rBigM_linear_constraints,
-                              transBlock_rBigM, transBlock_rHull, TOL):
+                              transBlock_rBigM, transBlock_rHull, TOL,
+                              zero_tolerance=None):
     cut_number = len(transBlock_rBigM.cuts)
 
     cutexpr = 0
@@ -406,11 +409,22 @@ class CuttingPlane_Transformation(Transformation):
         cut be infeasible by at least this tolerance.
         """
     ))
+    CONFIG.declare('zero_tolerance', ConfigValue(
+        default=1e-9,
+        domain=NonNegativeFloat,
+        description="Tolerance at which floats are assumed to be 0 while "
+        "performing Fourier-Motzkin elimination",
+        doc="""
+        Only relevant when create_cuts=create_cuts_fme, this sets the 
+        zero_tolerance option for the Fourier-Motzkin elimination transformation.
+        """
+    ))
 
     def __init__(self):
         super(CuttingPlane_Transformation, self).__init__()
 
     def _apply_to(self, instance, bigM=None, **kwds):
+        assert not NAME_BUFFER
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
 
@@ -432,6 +446,9 @@ class CuttingPlane_Transformation(Transformation):
         # restore integrality
         TransformationFactory('core.relax_integer_vars').apply_to(instance,
                                                                   undo=True)
+
+        # clear the global name buffer
+        NAME_BUFFER.clear()
 
     def _setup_subproblems(self, instance, bigM, tighten_relaxation_callback):
         # create transformation block
@@ -631,7 +648,10 @@ class CuttingPlane_Transformation(Transformation):
                 x_star.value = x_rbigm.value
                 # initialize the X values
                 x_hull.value = x_rbigm.value
-                logger.info("\t%s = %s" % (x_rbigm.name, x_rbigm.value))
+                logger.info("\t%s = %s" % 
+                            (x_rbigm.getname(fully_qualified=True,
+                                             name_buffer=NAME_BUFFER),
+                             x_rbigm.value))
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
@@ -649,7 +669,10 @@ class CuttingPlane_Transformation(Transformation):
                 return
             logger.info("xhat is: ")
             for x_bigm, x_rbigm, x_hull, x_star in var_info:
-                logger.info("\t%s = %s" % (x_hull.name, x_hull.value))
+                logger.info("\t%s = %s" % 
+                            (x_hull.getname(fully_qualified=True,
+                                            name_buffer=NAME_BUFFER), 
+                             x_hull.value))
 
             # [JDS 19 Dec 18] Note: we check that the separation objective was
             # significantly nonzero.  If it is too close to zero, either the
@@ -665,7 +688,8 @@ class CuttingPlane_Transformation(Transformation):
                                             rHull_vars, instance_rHull,
                                             rBigM_linear_constraints,
                                             transBlock_rBigM, transBlock_rHull,
-                                            self._config.cut_filtering_threshold)
+                                            self._config.cut_filtering_threshold,
+                                            self._config.zero_tolerance)
            
             # We are done if the cut generator couldn't return a valid cut
             if cuts is None or not improving:

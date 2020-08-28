@@ -238,15 +238,12 @@ class TwoTermDisj(unittest.TestCase):
 
         self.check_cuts_valid_on_hull_vertices(m, TOL=1e-8)
         
-    # [ESJ 15 Mar 19] This is kind of a miracle that this passes... But it is
-    # true and deserves brownie points. But I'm not sure that makes it a good
-    # test? My other idea is below... Both are a little scary because I am
-    # allowing NO numerical error. But I also don't have any!
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_cuts_are_correct_facets_fme(self):
         m = models.makeTwoTermDisj_boxes()
         TransformationFactory('gdp.cuttingplane').apply_to(
-            m, create_cuts=create_cuts_fme, post_process_cut=None)
+            m, create_cuts=create_cuts_fme, post_process_cut=None, 
+            zero_tolerance=0)
         facet_extreme_pts = [
             (1,0,3,1),
             (1,0,3,2),
@@ -263,6 +260,7 @@ class TwoTermDisj(unittest.TestCase):
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
         # ESJ: In the FME version, we expect both facets... Or we at least don't
         # not.
+        cuts.pprint()
         self.assertEqual(len(cuts), 2)
         cut = cuts[0]
         cut_expr = cut.body
