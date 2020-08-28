@@ -52,9 +52,6 @@ logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
 NAME_BUFFER = {}
 
-# DEBUG
-from nose.tools import set_trace
-
 def do_not_tighten(m):
     return m
 
