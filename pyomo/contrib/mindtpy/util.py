@@ -132,20 +132,20 @@ def add_feas_slacks(m, config):
         if constr.body.polynomial_degree() not in [0, 1]:
             if constr.has_ub():
                 if config.feasibility_norm in {'L1', 'L2'}:
-                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    MindtPy.MindtPy_feas.feas_constraints.add(
                         constr.body - constr.upper
                         <= MindtPy.MindtPy_feas.slack_var[i])
                 else:
-                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    MindtPy.MindtPy_feas.feas_constraints.add(
                         constr.body - constr.upper
                         <= MindtPy.MindtPy_feas.slack_var)
             if constr.has_lb():
                 if config.feasibility_norm in {'L1', 'L2'}:
-                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    MindtPy.MindtPy_feas.feas_constraints.add(
                         constr.body - constr.lower
                         >= -MindtPy.MindtPy_feas.slack_var[i])
                 else:
-                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    MindtPy.MindtPy_feas.feas_constraints.add(
                         constr.body - constr.lower
                         >= -MindtPy.MindtPy_feas.slack_var)
 
