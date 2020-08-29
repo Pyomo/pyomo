@@ -94,34 +94,7 @@ def solve_OA_master(solve_data, config):
                 expr=main_objective.expr +
                 (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) <= solve_data.UB,
                 doc='Objective function expression should improve on the best found dual bound')
-        '''
-            MindtPy.MindtPy_oa_obj = Objective(
-                expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
-                sense=main_objective.sense)
 
-            if main_objective.sense == minimize:
-                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=main_objective.expr + MindtPy.MindtPy_penalty_expr >= solve_data.LB,
-                    doc='Objective function expression should improve on the best found dual bound')
-            else:
-                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=main_objective.expr + MindtPy.MindtPy_penalty_expr <= solve_data.UB,
-                    doc='Objective function expression should improve on the best found dual bound')
-
-        else:
-            MindtPy.MindtPy_oa_obj = Objective(
-                expr=main_objective.expr,
-                sense=main_objective.sense)
-
-            if main_objective.sense == minimize:
-                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=main_objective.expr >= solve_data.LB,
-                    doc='Objective function expression should improve on the best found dual bound')
-            else:
-                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=main_objective.expr <= solve_data.UB,
-                    doc='Objective function expression should improve on the best found dual bound')
-        '''
     # Deactivate extraneous IMPORT/EXPORT suffixes
     if config.nlp_solver == 'ipopt':
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
