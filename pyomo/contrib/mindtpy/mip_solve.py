@@ -66,40 +66,62 @@ def solve_OA_master(solve_data, config):
     if MindtPy.MindtPy_linear_cuts.find_component('dual_bound') is not None:
         MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
 
-    if config.add_slack:
-        MindtPy.del_component('MindtPy_penalty_expr')
-
-        MindtPy.MindtPy_penalty_expr = Expression(
-            expr=sign_adjust * config.OA_penalty_factor * sum(
-                v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
-
-        MindtPy.MindtPy_oa_obj = Objective(
-            expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
-            sense=main_objective.sense)
-
-        if main_objective.sense == minimize:
-            MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                expr=main_objective.expr + MindtPy.MindtPy_penalty_expr >= solve_data.LB,
-                doc='Objective function expression should improve on the best found dual bound')
-        else:
-            MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                expr=main_objective.expr + MindtPy.MindtPy_penalty_expr <= solve_data.UB,
-                doc='Objective function expression should improve on the best found dual bound')
-
+    if config.strategy is 'feas_pump':
+        MindtPy.feas_pump_mip_obj = generate_L1_objective_function(
+            master_mip,
+            solve_data.working_model,
+            discretes_only=True)
     else:
+        if config.add_slack:
+            MindtPy.del_component('MindtPy_penalty_expr')
+
+            MindtPy.MindtPy_penalty_expr = Expression(
+                expr=sign_adjust * config.OA_penalty_factor * sum(
+                    v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
+
         MindtPy.MindtPy_oa_obj = Objective(
-            expr=main_objective.expr,
+            expr=main_objective.expr +
+            (MindtPy.MindtPy_penalty_expr if config.add_slack else 0),
             sense=main_objective.sense)
 
         if main_objective.sense == minimize:
             MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                expr=main_objective.expr >= solve_data.LB,
+                expr=main_objective.expr +
+                (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) >= solve_data.LB,
                 doc='Objective function expression should improve on the best found dual bound')
         else:
             MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                expr=main_objective.expr <= solve_data.UB,
+                expr=main_objective.expr +
+                (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) <= solve_data.UB,
                 doc='Objective function expression should improve on the best found dual bound')
+        '''
+            MindtPy.MindtPy_oa_obj = Objective(
+                expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
+                sense=main_objective.sense)
 
+            if main_objective.sense == minimize:
+                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                    expr=main_objective.expr + MindtPy.MindtPy_penalty_expr >= solve_data.LB,
+                    doc='Objective function expression should improve on the best found dual bound')
+            else:
+                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                    expr=main_objective.expr + MindtPy.MindtPy_penalty_expr <= solve_data.UB,
+                    doc='Objective function expression should improve on the best found dual bound')
+
+        else:
+            MindtPy.MindtPy_oa_obj = Objective(
+                expr=main_objective.expr,
+                sense=main_objective.sense)
+
+            if main_objective.sense == minimize:
+                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                    expr=main_objective.expr >= solve_data.LB,
+                    doc='Objective function expression should improve on the best found dual bound')
+            else:
+                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                    expr=main_objective.expr <= solve_data.UB,
+                    doc='Objective function expression should improve on the best found dual bound')
+        '''
     # Deactivate extraneous IMPORT/EXPORT suffixes
     if config.nlp_solver == 'ipopt':
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()

@@ -33,7 +33,7 @@ def _get_GDPopt_config():
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
-        domain=In(["OA", "GBD", "ECP", "PSC", "GOA"]),
+        domain=In(["OA", "GBD", "ECP", "PSC", "GOA", "feas_pump"]),
         description="Decomposition strategy",
         doc="MINLP Decomposition strategy to be applied to the method. "
             "Currently available Outer Approximation (OA), Extended Cutting "
@@ -242,5 +242,11 @@ def _get_GDPopt_config():
         domain=NonNegativeInt,
         description="Threads",
         doc="Threads used by milp solver and nlp solver."
+    ))
+    CONFIG.declare("feas_pump_delta", ConfigValue(
+        default=1E-1,
+        domain=PositiveFloat,
+        description="Objective increasing \delta",
+        doc="Will force each new feasible point to be '\delta * abs(UB)' better than the last one"
     ))
     return CONFIG

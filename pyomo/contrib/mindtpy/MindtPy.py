@@ -130,7 +130,8 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            process_objective(solve_data, config, use_mcpp=config.use_mcpp)
+            process_objective(solve_data, config,
+                              move_linear_objective=(config.strategy == 'feas_pump'), use_mcpp=config.use_mcpp)
 
             # Save model initial values.
             solve_data.initial_var_values = list(
