@@ -182,6 +182,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         super(Fourier_Motzkin_Elimination_Transformation, self).__init__()
     
     def _apply_to(self, instance, **kwds):
+        assert not NAME_BUFFER
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
         if config.verbose:
@@ -273,6 +274,9 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                        "infeasible!")
             else:
                 projected_constraints.add(lhs >= lower)
+
+        # clear the global name buffer
+        NAME_BUFFER.clear()
 
     def _process_constraint(self, constraint):
         """Transforms a pyomo Constraint object into a list of dictionaries
