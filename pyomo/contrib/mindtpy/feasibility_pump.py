@@ -1,7 +1,14 @@
 """Generates objective functions like L1, L2 and Linf distance"""
 
-from pyomo.core import (Var, Objective, Reals,
-                        RangeSet, Constraint, Block, sqrt)
+from pyomo.core import (Var, Objective, Reals, minimize,
+                        RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
+from pyomo.opt import SolverFactory
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
+from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
+                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
+                                             handle_NLP_subproblem_other_termination)
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_nogood_cuts
+from pyomo.opt import TerminationCondition as tc
 
 
 def generate_L2_objective_function(model, setpoint_model, discretes_only=False):
@@ -12,12 +19,9 @@ def generate_L2_objective_function(model, setpoint_model, discretes_only=False):
     var_filter = (lambda v: v[1].is_binary()) if discretes_only \
         else (lambda v: True)
 
-    model_vars, setpoint_vars = zip(*
-                                    filter(
-                                        var_filter,
-                                        zip(model.component_data_objects(Var),
-                                            setpoint_model.component_data_objects(Var))))
-
+    model_vars, setpoint_vars = zip(*filter(var_filter,
+                                            zip(model.component_data_objects(Var),
+                                                setpoint_model.component_data_objects(Var))))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate L1 objective function for models with different number of variables"
 
@@ -74,7 +78,7 @@ def feas_pump_converged(solve_data, config):
     return distance <= config.integer_tolerance
 
 
-def solve_feas_pump_NLP_subproblem(solve_data, config, ):
+def solve_feas_pump_NLP_subproblem(solve_data, config):
     """
     Solves the fixed NLP (with fixed binaries)
 
@@ -203,8 +207,7 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
                              solve_data.working_model.MindtPy_utils.variable_list,
                              config)
         fix_nlp, fix_nlp_results = solve_NLP_subproblem(
-            solve_data, config,
-            always_solve_fix_nlp=True)
+            solve_data, config)
         assert fix_nlp_results.solver.termination_condition is tc.optimal, 'Feasibility pump fix-nlp subproblem not optimal'
         copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
                              solve_data.working_model.MindtPy_utils.variable_list,
@@ -238,7 +241,7 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
 
         if config.add_no_good_cuts or config.strategy is 'feas_pump':
             config.logger.info('Creating no-good cut')
-            add_nogood_cut(solve_data.mip, config)
+            add_nogood_cuts(solve_data.mip, config)
     else:
         solve_data.solution_improved = False
 
@@ -288,87 +291,40 @@ def feasibility_pump_loop(solve_data, config):
 
         solve_data.mip_subiter = 0
         # solve MILP master problem
-        if config.strategy in {'OA', 'GOA', 'ECP'}:
-            master_mip, master_mip_results = solve_OA_master(
-                solve_data, config)
-            if config.single_tree is False:
-                if master_mip_results.solver.termination_condition is tc.optimal:
-                    handle_master_mip_optimal(master_mip, solve_data, config)
-                elif master_mip_results.solver.termination_condition is tc.infeasible:
-                    handle_master_mip_infeasible(
-                        master_mip, solve_data, config)
-                    last_iter_cuts = True
-                    break
-                else:
-                    handle_master_mip_other_conditions(master_mip, master_mip_results,
-                                                       solve_data, config)
-                # Call the MILP post-solve callback
-                config.call_after_master_solve(master_mip, solve_data)
-        else:
-            raise NotImplementedError()
-
-        if algorithm_should_terminate(solve_data, config, check_cycling=True):
-            last_iter_cuts = False
+        feas_mip, feas_mip_results = solve_OA_master(
+            solve_data, config)
+        if feas_mip_results.solver.termination_condition is tc.optimal:
+            handle_master_mip_optimal(feas_mip, solve_data, config)
+        elif feas_mip_results.solver.termination_condition is tc.infeasible:
+            # This basically means the incumbent is the optimal solution
+            if solve_data.best_solution_found is not None:
+                config.logger.info(
+                    'Problem became infeasible. This means the feasibility pump has converged.')
+                solve_data.results.solver.termination_condition = tc.optimal
+            else:
+                config.logger.info('No feasible solution has been found')
+                solve_data.results.solver.termination_condition = tc.infeasible
+            break
+        elif feas_mip_results.solver.termination_condition is tc.maxIterations:
+            config.logger.error('No feasible solution has been found')
+            solve_data.results.solver.termination_condition = tc.maxIterations
             break
 
-        if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
-            # Solve NLP subproblem
-            # The constraint linearization happens in the handlers
-            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
-                solve_data, config)
-            if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-                handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
-            else:
-                handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                        solve_data, config)
-            # Call the NLP post-solve callback
-            config.call_after_subproblem_solve(fixed_nlp, solve_data)
+        # Solve NLP subproblem
+        # The constraint linearization happens in the handlers
+        fixed_nlp, fixed_nlp_result = solve_feas_pump_NLP_subproblem(
+            solve_data, config)
+
+        if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
+            handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
+        elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
+            handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+        else:
+            handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                    solve_data, config)
+        # Call the NLP post-solve callback
+        config.call_after_subproblem_solve(fixed_nlp, solve_data)
 
         if algorithm_should_terminate(solve_data, config, check_cycling=False):
             last_iter_cuts = True
             break
-
-        if config.strategy == 'ECP':
-            add_ecp_cuts(solve_data.mip, solve_data, config)
-
-        # if config.strategy == 'PSC':
-        #     # If the hybrid algorithm is not making progress, switch to OA.
-        #     progress_required = 1E-6
-        #     if main_objective.sense == minimize:
-        #         log = solve_data.LB_progress
-        #         sign_adjust = 1
-        #     else:
-        #         log = solve_data.UB_progress
-        #         sign_adjust = -1
-        #     # Maximum number of iterations in which the lower (optimistic)
-        #     # bound does not improve before switching to OA
-        #     max_nonimprove_iter = 5
-        #     making_progress = True
-        #     # TODO-romeo Unneccesary for OA and LOA, right?
-        #     for i in range(1, max_nonimprove_iter + 1):
-        #         try:
-        #             if (sign_adjust * log[-i]
-        #                     <= (log[-i - 1] + progress_required)
-        #                     * sign_adjust):
-        #                 making_progress = False
-        #             else:
-        #                 making_progress = True
-        #                 break
-        #         except IndexError:
-        #             # Not enough history yet, keep going.
-        #             making_progress = True
-        #             break
-        #     if not making_progress and (
-        #             config.strategy == 'hPSC' or
-        #             config.strategy == 'PSC'):
-        #         config.logger.info(
-        #             'Not making enough progress for {} iterations. '
-        #             'Switching to OA.'.format(max_nonimprove_iter))
-        #         config.strategy = 'OA'
-
-    # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
-    # we correct it after the iteration.
-    if config.add_nogood_cuts:
-        bound_fix(solve_data, config, last_iter_cuts)
