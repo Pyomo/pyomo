@@ -469,15 +469,13 @@ class CuttingPlane_Transformation(Transformation):
         if self._config.verbose:
             logger.setLevel(logging.INFO)
 
-        (instance_rBigM, instance_rHull, var_info, 
-         disaggregated_vars, disaggregation_constraints, 
-         rBigM_linear_constraints, transBlockName) = self._setup_subproblems(
-             instance, bigM, self._config.tighten_relaxation)
+        (instance_rBigM, instance_rHull, 
+         var_info, transBlockName) = self._setup_subproblems( instance, bigM,
+                                                              self._config.\
+                                                              tighten_relaxation)
 
         self._generate_cuttingplanes( instance_rBigM, instance_rHull, var_info,
-                                      disaggregated_vars,
-                                      disaggregation_constraints,
-                                      rBigM_linear_constraints, transBlockName)
+                                      transBlockName)
 
         # restore integrality
         TransformationFactory('core.relax_integer_vars').apply_to(instance,
@@ -518,10 +516,6 @@ class CuttingPlane_Transformation(Transformation):
         #
         tighter_instance = tighten_relaxation_callback(instance)
         instance_rHull = hullRelaxation.create_using(instance)
-        # collect a list of disaggregated variables.
-        (disaggregated_vars, 
-         disaggregation_constraints) = self._get_disaggregated_vars(
-             instance_rHull)
         relaxIntegrality.apply_to(instance_rHull,
                                   transform_deactivated_blocks=True)
 
@@ -536,33 +530,6 @@ class CuttingPlane_Transformation(Transformation):
         # restore it at the end.
         #
         relaxIntegrality.apply_to(instance, transform_deactivated_blocks=True)
-
-        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        #
-        # Collect all of the linear constraints that are in the rBigM
-        # instance. We will need these so that we can compare what we get from
-        # FME to them and make sure we aren't adding redundant constraints to
-        # the model. For convenience, we will make sure they are all in the form
-        # lb <= expr (so we will break equality constraints)
-        #
-        rBigM_linear_constraints = []
-        for cons in instance.component_data_objects(
-                Constraint,
-                descend_into=Block,
-                sort=SortComponents.deterministic,
-                active=True):
-            body = cons.body
-            if body.polynomial_degree() != 1:
-                # We will never get a nonlinear constraint out of FME, so we
-                # don't risk it being identical to this one.
-                continue
-
-            # TODO: Guess this shouldn't have been private...
-            rBigM_linear_constraints.extend(fme._process_constraint(cons))
-
-        # [ESJ Aug 13 2020] NOTE: We actually don't need to worry about variable
-        # bounds here becuase the FME transformation will take care of them
-        # (i.e. convert them to constraints for the purposes of the projection.)
 
         #
         # Add the xstar parameter for the Hull problem
@@ -597,9 +564,7 @@ class CuttingPlane_Transformation(Transformation):
         #
         self._add_separation_objective(var_info, transBlock_rHull)
 
-        return (instance, instance_rHull, var_info, disaggregated_vars,
-                disaggregation_constraints, rBigM_linear_constraints,
-                transBlockName)
+        return (instance, instance_rHull, var_info, transBlockName)
 
     # this is the map that I need to translate my projected cuts and add
     # them to bigM
@@ -631,9 +596,47 @@ class CuttingPlane_Transformation(Transformation):
                 
         return disaggregatedVars, disaggregationConstraints
 
+    def _get_rBigM_obj_and_constraints(self, instance_rBigM):
+        # We try to grab the first active objective. If there is more
+        # than one, the writer will yell when we try to solve below. If
+        # there are 0, we will yell here.
+        rBigM_obj = next(instance_rBigM.component_data_objects(
+            Objective, active=True), None)
+        if rBigM_obj is None:
+            raise GDP_Error("Cannot apply cutting planes transformation "
+                            "without an active objective in the model!")
+
+        #
+        # Collect all of the linear constraints that are in the rBigM
+        # instance. We will need these so that we can compare what we get from
+        # FME to them and make sure we aren't adding redundant constraints to
+        # the model. For convenience, we will make sure they are all in the form
+        # lb <= expr (so we will break equality constraints)
+        #
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        rBigM_linear_constraints = []
+        for cons in instance_rBigM.component_data_objects(
+                Constraint,
+                descend_into=Block,
+                sort=SortComponents.deterministic,
+                active=True):
+            body = cons.body
+            if body.polynomial_degree() != 1:
+                # We will never get a nonlinear constraint out of FME, so we
+                # don't risk it being identical to this one.
+                continue
+
+            # TODO: Guess this shouldn't have been private...
+            rBigM_linear_constraints.extend(fme._process_constraint(cons))
+
+        # [ESJ Aug 13 2020] NOTE: We actually don't need to worry about variable
+        # bounds here becuase the FME transformation will take care of them
+        # (i.e. convert them to constraints for the purposes of the projection.)
+
+        return rBigM_obj, rBigM_linear_constraints
+
     def _generate_cuttingplanes( self, instance_rBigM, instance_rHull, var_info,
-                                 disaggregated_vars, disaggregation_constraints,
-                                 rBigM_linear_constraints, transBlockName):
+                                 transBlockName):
 
         opt = SolverFactory(self._config.solver)
         stream_solver = self._config.stream_solver
@@ -647,14 +650,9 @@ class CuttingPlane_Transformation(Transformation):
         transBlock_rBigM = instance_rBigM.component(transBlockName)
         transBlock_rHull = instance_rHull.component(transBlockName)
 
-        # We try to grab the first active objective. If there is more
-        # than one, the writer will yell when we try to solve below. If
-        # there are 0, we will yell here.
-        rBigM_obj = next(instance_rBigM.component_data_objects(
-            Objective, active=True), None)
-        if rBigM_obj is None:
-            raise GDP_Error("Cannot apply cutting planes transformation "
-                            "without an active objective in the model!")
+        rBigM_obj, rBigM_linear_constraints = self.\
+                                              _get_rBigM_obj_and_constraints(
+                                                  instance_rBigM)
 
         # Get list of all variables in the rHull model which we will use when
         # calculating the composite normal vector.
@@ -662,6 +660,11 @@ class CuttingPlane_Transformation(Transformation):
             Var,
             descend_into=Block,
             sort=SortComponents.deterministic)]
+
+        # collect a list of disaggregated variables.
+        (disaggregated_vars, 
+         disaggregation_constraints) = self._get_disaggregated_vars(
+             instance_rHull)
 
         hull_to_bigm_map = self._create_hull_to_bigm_substitution_map(var_info)
         bigm_to_hull_map = self._create_bigm_to_hull_substition_map(var_info)
