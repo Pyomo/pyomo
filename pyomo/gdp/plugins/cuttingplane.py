@@ -84,10 +84,10 @@ def _get_linear_approximation_expr(normal_vec, point):
     return body >= -sum(normal_vec[idx]*v.value for (idx, v) in
                        enumerate(point))
 
-def create_cuts_fme(var_info, hull_to_bigm_map, disaggregated_vars,
-                     disaggregation_constraints, rHull_vars, instance_rHull,
-                     rBigM_linear_constraints, transBlock_rBigm,
-                     transBlock_rHull, cut_threshold, zero_tolerance):
+def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
+                    hull_to_bigm_map, rBigM_linear_constraints, rHull_vars,
+                    disaggregated_vars, disaggregation_constraints,
+                    cut_threshold, zero_tolerance):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
     Finds all the constraints which are tight at xhat (assumed to be the 
@@ -113,6 +113,7 @@ def create_cuts_fme(var_info, hull_to_bigm_map, disaggregated_vars,
     transBlock_rHull:
     cut_threshold:
     """
+    instance_rHull = transBlock_rHull.model()
 
     normal_vectors = []
     tight_constraints = Block()
@@ -230,11 +231,11 @@ def create_cuts_fme(var_info, hull_to_bigm_map, disaggregated_vars,
 
     return None
 
-def create_cuts_normal_vector(var_info, hull_to_bigm_map, disaggregated_vars,
-                              disaggregation_constraints, rHull_vars,
-                              instance_rHull, rBigM_linear_constraints,
-                              transBlock_rBigM, transBlock_rHull, TOL,
-                              zero_tolerance=None):
+def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
+                              hull_to_bigm_map, rBigM_linear_constraints,
+                              rHull_vars, disaggregated_vars,
+                              disaggregation_constraints, cut_threshold,
+                              zero_tolerance):
     cut_number = len(transBlock_rBigM.cuts)
 
     cutexpr = 0
@@ -242,7 +243,7 @@ def create_cuts_normal_vector(var_info, hull_to_bigm_map, disaggregated_vars,
         cutexpr += (x_hull.value - x_star.value)*(x_rbigm - x_hull.value)
 
     # make sure we're cutting off x* by enough.
-    if value(cutexpr) < -TOL:
+    if value(cutexpr) < -cut_threshold:
         return [cutexpr >= 0]
     return None
 
@@ -679,8 +680,7 @@ class CuttingPlane_Transformation(Transformation):
                 return
 
             rBigM_objVal = value(rBigM_obj)
-            logger.warning("rBigM objective = %s"
-                           % (rBigM_objVal,))
+            logger.warning("rBigM objective = %s" % (rBigM_objVal,))
 
             # copy over xstar
             logger.info("x* is:")
@@ -722,14 +722,22 @@ class CuttingPlane_Transformation(Transformation):
             if abs(value(transBlock_rHull.separation_objective)) < epsilon:
                 break
 
-            cuts = self._config.create_cuts(var_info, hull_to_bigm_map,
-                                            disaggregated_vars,
-                                            disaggregation_constraints,
-                                            rHull_vars, instance_rHull,
+            cuts = self._config.create_cuts(transBlock_rBigM, transBlock_rHull,
+                                            var_info, hull_to_bigm_map,
                                             rBigM_linear_constraints,
-                                            transBlock_rBigM, transBlock_rHull,
+                                            rHull_vars, disaggregated_vars,
+                                            disaggregation_constraints,
                                             self._config.cut_filtering_threshold,
                                             self._config.zero_tolerance)
+
+            # cuts = self._config.create_cuts(var_info, hull_to_bigm_map,
+            #                                 disaggregated_vars,
+            #                                 disaggregation_constraints,
+            #                                 rHull_vars,
+            #                                 rBigM_linear_constraints,
+            #                                 transBlock_rBigM, transBlock_rHull,
+            #                                 self._config.cut_filtering_threshold,
+            #                                 self._config.zero_tolerance)
            
             # We are done if the cut generator couldn't return a valid cut
             if cuts is None or not improving:
