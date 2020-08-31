@@ -99,6 +99,11 @@ def solve_consistent_initial_conditions(model, time, solver, tee=False,
         time: Set whose initial conditions will remain active for solve
         solver: Something that implements a solve method that accepts
                 a model and tee keyword as arguments
+        tee: tee argument that will be sent to solver's solve method
+        allow_skip: If True, KeyErrors due to Constraint.Skip being
+                    used will be ignored
+        suppress_warnings: If True, warnings due to ignored
+                           KeyErrors will be suppressed
 
     Returns:
         The object returned by the solver's solve method
