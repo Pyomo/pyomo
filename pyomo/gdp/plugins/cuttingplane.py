@@ -32,8 +32,7 @@ from pyomo.core.expr import differentiate
 from pyomo.core.base.component import ComponentUID
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.opt import SolverFactory
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
