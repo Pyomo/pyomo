@@ -55,6 +55,9 @@ def do_not_tighten(m):
     return m
 
 def _get_constraint_exprs(constraints, hull_to_bigm_map):
+    """Returns a list of expressions which are constrain.expr translated 
+    into the bigm space, for each constraint in constraints.
+    """
     cuts = []
     for cons in constraints:
         cuts.append(clone_without_expression_components( 
@@ -62,6 +65,10 @@ def _get_constraint_exprs(constraints, hull_to_bigm_map):
     return cuts
 
 def _constraint_tight(model, constraint):
+    """Returns 0 if the constraint is not tight or if it is an exactly 
+    satisfied equality, 1 if the constraint is tight at or in violation of its UB
+    and -1 if it is tight at or in violation of its LB
+    """
     val = value(constraint.body)
     ans = 0
     if constraint.lower is not None:
@@ -77,6 +84,8 @@ def _constraint_tight(model, constraint):
     return ans
 
 def _get_linear_approximation_expr(normal_vec, point):
+    """Returns constraint linearly approximating constraint normal to normal_vec
+    at point"""
     body = 0
     for coef, v in zip(point, normal_vec):
         body -= coef*v
@@ -252,19 +261,22 @@ def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
     Parameters
     -----------
     transBlock_rBigm: transformation block on relaxed bigM instance
-    transBlock_rHull: transformation blcok on relaxed hull instance
+    transBlock_rHull: transformation blcok on relaxed hull instance. Ignored by
+                      this callback.
     var_info: List of tuples (rBigM_var, rHull_var, xstar_param)
     hull_to_bigm_map: For expression substition, maps id(hull_var) to 
-                      coresponding bigm var
-    rBigM_linear_constraints: list of linear constraints in relaxed bigM
-    rHull_vars: list of all variables in relaxed hull
-    disaggregated_vars: list of disaggregated variables in hull reformulation
+                      coresponding bigm var. Ignored by this callback
+    rBigM_linear_constraints: list of linear constraints in relaxed bigM.
+                              Ignored by this callback.
+    rHull_vars: list of all variables in relaxed hull. Ignored by this callback.
+    disaggregated_vars: list of disaggregated variables in hull reformulation.
+                        Ignored by this callback
     disaggregation_constraints: list of disaggregation constraints in hull
-                                reformulation
+                                reformulation. Ignored by this callback
     cut_threshold: Amount x* needs to be infeasible in generated cut in order
                    to consider the cut for addition to the bigM model.
     zero_tolerance: Tolerance at which a float will be treated as 0 during
-                    Fourier-Motzkin elimination
+                    Fourier-Motzkin elimination. Ignored by this callback
     """
     cut_number = len(transBlock_rBigM.cuts)
 
@@ -284,6 +296,24 @@ def _restore_objective(instance_rHull, transBlock_rHull):
 def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
                                                       bigm_to_hull_map, opt,
                                                       stream_solver, TOL):
+    """Calculates the maximum violation of cut subject to the relaxed hull
+    constraints. Increases this violation by TOL (to account for optimality 
+    tolerance in solving the problem), and, if it finds that cut can be violated
+    up to this tolerance, makes it more conservative such that it no longer can.
+
+    Parameters
+    ----------
+    cut: The cut to be made more conservative, a Constraint
+    transBlock_rHull: the relaxed hull model's transformation Block
+    bigm_to_hull_map: Dictionary mapping ids of bigM variables to the 
+                      corresponding variables on the relaxed hull instance
+    opt: SolverFactory object for solving the maximum violation problem
+    stream_solver: Whether or not to set tee=True while solving the maximum
+                   violation problem.
+    TOL: An absolute tolerance to be added to the calculated cut violation,
+         to account for optimality tolerance in the maximum violation problem
+         solve.
+    """
     instance_rHull = transBlock_rHull.model()
     logger.info("Post-processing cut: %s" % cut.expr)
     # Take a constraint. We will solve a problem maximizing its violation
@@ -304,6 +334,7 @@ def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
         _restore_objective(instance_rHull, transBlock_rHull, orig_obj)
         return
 
+    # we're minimizing, val is <= 0
     val = value(transBlock_rHull.infeasibility_objective) - TOL
     if val <= 0:
         logger.info("\tBacking off cut by %s" % val)
@@ -314,6 +345,21 @@ def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
 def back_off_constraint_by_fixed_tolerance(cut, transBlock_rHull,
                                            bigm_to_hull_map, opt, stream_solver,
                                            TOL):
+    """Makes cut more conservative by absolute tolerance TOL
+
+    Parameters
+    ----------
+    cut: the cut to be made more conservative, a Constraint
+    transBlock_rHull: the relaxed hull model's transformation Block. Ignored by
+                      this callback
+    bigm_to_hull_map: Dictionary mapping ids of bigM variables to the 
+                      corresponding variables on the relaxed hull instance.
+                      Ignored by this callback.
+    opt: SolverFactory object. Ignored by this callback
+    stream_solver: Whether or not to set tee=True while solving. Ignored by
+                   this callback
+    TOL: An absolute tolerance to be added to make cut more conservative.
+    """
     cut._body += TOL
 
 @TransformationFactory.register('gdp.cuttingplane',
@@ -442,7 +488,29 @@ class CuttingPlane_Transformation(Transformation):
         "relaxed bigM and relaxed hull solutions. If no cuts can be "
         "generated, returns None",
         doc="""
-        TODO
+        Callback to generate cuts to be added to the bigM problem based on 
+        solutions to the relaxed bigM problem and the separation problem.
+
+        Arguments
+        ---------
+        transBlock_rBigm: transformation block on relaxed bigM instance
+        transBlock_rHull: transformation blcok on relaxed hull instance
+        var_info: List of tuples (rBigM_var, rHull_var, xstar_param)
+        hull_to_bigm_map: For expression substition, maps id(hull_var) to 
+                          coresponding bigm var
+        rBigM_linear_constraints: list of linear constraints in relaxed bigM
+        rHull_vars: list of all variables in relaxed hull
+        disaggregated_vars: list of disaggregated variables in hull reformulation
+        disaggregation_constraints: list of disaggregation constraints in hull
+                                    reformulation
+        cut_threshold: Amount x* needs to be infeasible in generated cut in order
+                       to consider the cut for addition to the bigM model.
+        zero_tolerance: Tolerance at which a float will be treated as 0
+
+        Returns
+        -------
+        list of cuts to be added to bigM problem (and relaxed bigM problem),
+        represented as expressions using variables from the bigM model
         """
     ))
     CONFIG.declare('post_process_cut', ConfigValue(
@@ -451,7 +519,23 @@ class CuttingPlane_Transformation(Transformation):
         "it, presumably to back it off in the case of numerical error. Set to "
         "None if not post-processing is desired.",
         doc="""
-        TODO
+        Callback to adjust a cut returned from create_cuts before adding it to
+        the model, presumably to make it more conservative in case of numerical
+        error.
+
+        Arguments
+        ---------
+        cut: the cut to be made more conservative, a Constraint
+        transBlock_rHull: the relaxed hull model's transformation Block.
+        bigm_to_hull_map: Dictionary mapping ids of bigM variables to the 
+                          corresponding variables on the relaxed hull instance.
+        opt: SolverFactory object for subproblem solves in this procedure
+        stream_solver: Whether or not to set tee=True while solving.
+        TOL: A tolerance
+
+        Returns
+        -------
+        None, modifies the cut in place
         """
     ))
     # back off problem tolerance (on top of the solver's (sometimes))
@@ -765,21 +849,14 @@ class CuttingPlane_Transformation(Transformation):
                 break
 
             for cut in cuts:
-                cut_number = len(transBlock_rBigM.cuts)
-                logger.warning("Adding cut %s to BigM model." % (cut_number,))
-                transBlock_rBigM.cuts.add(cut_number, cut)
                 if self._config.post_process_cut is not None:
                     self._config.post_process_cut(
                         transBlock_rBigM.cuts[cut_number], transBlock_rHull,
                         bigm_to_hull_map, opt, stream_solver,
                         self._config.back_off_problem_tolerance)
-                    # self._config.post_process_cut( 
-                    #     instance_rHull,
-                    #     transBlock_rHull,
-                    #     transBlock_rBigM.cuts[cut_number],
-                    #     bigm_to_hull_map, opt,
-                    #     stream_solver,
-                    #     self._config.back_off_problem_tolerance)
+                cut_number = len(transBlock_rBigM.cuts)
+                logger.warning("Adding cut %s to BigM model." % (cut_number,))
+                transBlock_rBigM.cuts.add(cut_number, cut)
 
             prev_obj = rBigM_objVal
 
@@ -805,7 +882,3 @@ class CuttingPlane_Transformation(Transformation):
             obj_expr += (x_hull - x_star)**2
         # add separation objective to transformation block
         transBlock_rHull.separation_objective = Objective(expr=obj_expr)
-
-        
-
-
