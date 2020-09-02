@@ -571,14 +571,14 @@ class InteriorPointInterface(BaseInteriorPointInterface):
             hasattr(self._nlp, 'get_pyomo_variables')):
             pyomo_model = self._nlp.pyomo_model()
             pyomo_variables = self._nlp.get_pyomo_variables()
-            if hasattr(pyomo_model,'ipopt_zL_in'):
+            if hasattr(pyomo_model,'ipopt_zL_out'):
                 zL_suffix = pyomo_model.ipopt_zL_in
                 full_duals_primals_lb = np.empty(self._nlp.n_primals())
                 for i,v in enumerate(pyomo_variables):
                     if v in zL_suffix:
                         full_duals_primals_lb[i] = zL_suffix[v]
 
-            if hasattr(pyomo_model,'ipopt_zU_in'):
+            if hasattr(pyomo_model,'ipopt_zU_out'):
                 zU_suffix = pyomo_model.ipopt_zU_in
                 full_duals_primals_ub = np.empty(self._nlp.n_primals())
                 for i,v in enumerate(pyomo_variables):
