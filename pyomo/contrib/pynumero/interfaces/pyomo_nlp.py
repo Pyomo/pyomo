@@ -152,7 +152,7 @@ class PyomoNLP(AslNLP):
         pyomo_constraints = self.get_pyomo_constraints()
         return [v.getname() for v in pyomo_constraints]
 
-    def equality_constraint_names(self):
+    def eq_constraint_names(self):
         """
         Return an ordered list of the Pyomo ConData names in
         the order corresponding to the equality constraints.
