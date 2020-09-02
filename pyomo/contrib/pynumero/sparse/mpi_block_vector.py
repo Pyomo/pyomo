@@ -398,6 +398,22 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             # here block_length must only have one element
             self._set_block_size(i, block_length.pop())
 
+    def finalize_block_sizes(self, broadcast=True, block_sizes=None):
+        """
+        Only set broadcast=False if you know what your are doing!
+
+        Parameters
+        ----------
+        broadcast: bool
+        block_sizes: None or np.ndarray
+        """
+        if broadcast:
+            self.broadcast_block_sizes()
+        else:
+            assert np.all((block_sizes - np.asarray(self._brow_lengths))[self._owned_blocks] == 0)
+            self._undefined_brows = set()
+            self._brow_lengths = block_sizes
+
     # Note: this requires communication but is only run in __new__
     def _assert_correct_owners(self, root=0):
 
