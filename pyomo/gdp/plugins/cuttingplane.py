@@ -849,17 +849,17 @@ class CuttingPlane_Transformation(Transformation):
                 break
 
             for cut in cuts:
+                # we add the cut to the model and then post-process it in place.
+                cut_number = len(transBlock_rBigM.cuts)
+                logger.warning("Adding cut %s to BigM model." % (cut_number,))
+                transBlock_rBigM.cuts.add(cut_number, cut)
                 if self._config.post_process_cut is not None:
                     self._config.post_process_cut(
                         transBlock_rBigM.cuts[cut_number], transBlock_rHull,
                         bigm_to_hull_map, opt, stream_solver,
                         self._config.back_off_problem_tolerance)
-                cut_number = len(transBlock_rBigM.cuts)
-                logger.warning("Adding cut %s to BigM model." % (cut_number,))
-                transBlock_rBigM.cuts.add(cut_number, cut)
-
+                
             prev_obj = rBigM_objVal
-
 
     def _add_relaxation_block(self, instance, name):
         # creates transformation block with a unique name based on name, adds it
