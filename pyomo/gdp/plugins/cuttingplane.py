@@ -27,7 +27,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
                          SortComponents, Transformation, TransformationFactory,
                          value, TransformationFactory, NonNegativeIntegers,
-                         Reals )
+                         Reals, NonNegativeReals, Suffix )
 from pyomo.core.expr import differentiate
 from pyomo.core.base.component import ComponentUID
 from pyomo.core.expr.current import identify_variables
@@ -47,12 +47,19 @@ from numpy import isclose
 
 import math
 import logging
+
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
 NAME_BUFFER = {}
 
 def do_not_tighten(m):
     return m
+
+def _norm_domain(p):
+    if p in [1, 2, float('inf')]:
+        return p
+    raise ValueError("Expected 1, 2, or float('inf')."
+                     "Only L-1, L-2, and L-infinity norms are supported.")
 
 def _get_constraint_exprs(constraints, hull_to_bigm_map):
     """Returns a list of expressions which are constrain.expr translated 
@@ -94,7 +101,7 @@ def _get_linear_approximation_expr(normal_vec, point):
 
 def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
                     hull_to_bigm_map, rBigM_linear_constraints, rHull_vars,
-                    disaggregated_vars, disaggregation_constraints,
+                    disaggregated_vars, disaggregation_constraints, norm,
                     cut_threshold, zero_tolerance):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
@@ -120,6 +127,7 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
     disaggregated_vars: list of disaggregated variables in hull reformulation
     disaggregation_constraints: list of disaggregation constraints in hull
                                 reformulation
+    norm: norm used in the separation problem, ignored by this callback
     cut_threshold: Amount x* needs to be infeasible in generated cut in order
                    to consider the cut for addition to the bigM model.
     zero_tolerance: Tolerance at which a float will be treated as 0 during
@@ -197,6 +205,9 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
 
     if do_fme:
         tight_constraints.construct()
+        logger.info("Calling FME transformation on %s constraints to eliminate"
+                    " %s variables" % (len(tight_constraints.constraints),
+                                       len(vars_to_eliminate)))
         TransformationFactory('contrib.fourier_motzkin_elimination').\
             apply_to(tight_constraints, vars_to_eliminate=vars_to_eliminate,
                      zero_tolerance=zero_tolerance)
@@ -246,7 +257,7 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
 def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
                               hull_to_bigm_map, rBigM_linear_constraints,
                               rHull_vars, disaggregated_vars,
-                              disaggregation_constraints, cut_threshold,
+                              disaggregation_constraints, norm, cut_threshold,
                               zero_tolerance):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
@@ -271,6 +282,8 @@ def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
     rHull_vars: list of all variables in relaxed hull. Ignored by this callback.
     disaggregated_vars: list of disaggregated variables in hull reformulation.
                         Ignored by this callback
+    norm: The norm used in the separation problem, will be used to calculate
+          the subgradient used to generate the cut
     disaggregation_constraints: list of disaggregation constraints in hull
                                 reformulation. Ignored by this callback
     cut_threshold: Amount x* needs to be infeasible in generated cut in order
@@ -281,8 +294,27 @@ def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
     cut_number = len(transBlock_rBigM.cuts)
 
     cutexpr = 0
-    for x_rbigm, x_hull, x_star in var_info:
-        cutexpr += (x_hull.value - x_star.value)*(x_rbigm - x_hull.value)
+    if norm == 2:
+        for x_rbigm, x_hull, x_star in var_info:
+            cutexpr += (x_hull.value - x_star.value)*(x_rbigm - x_hull.value)
+    elif norm == float('inf'):
+        duals = transBlock_rHull.model().dual
+        if len(duals) == 0:
+            raise GDP_Error("No dual information in the separation problem! "
+                            "To use the infinity norm and the "
+                            "create_cuts_normal_vector method, you must use "
+                            "a solver which provides dual information.")
+        i = 0
+        for x_rbigm, x_hull, x_star in var_info:
+            # ESJ: This appears opposite the paper, but it is because the duals
+            # come back nonpostive.
+            mu_plus = -value(duals[transBlock_rHull.inf_norm_linearization[i]])
+            mu_minus = -value(
+                duals[transBlock_rHull.inf_norm_linearization[i+1]])
+            assert mu_plus >= 0
+            assert mu_minus >= 0
+            cutexpr += (mu_plus - mu_minus)*(x_rbigm - x_hull.value)
+            i += 2
 
     # make sure we're cutting off x* by enough.
     if value(cutexpr) < -cut_threshold:
@@ -382,6 +414,7 @@ class CuttingPlane_Transformation(Transformation):
     verbose : Enable verbose output from cuttingplanes algorithm
     minimum_improvement_threshold : Minimum difference in relaxed BigM objective
                                     values between consecutive iterations
+    norm : norm to use in the objective of the separation problem
     tighten_relaxation : callback to modify the GDP model before the hull 
                          relaxation is taken (e.g. could be used to perform 
                          basic steps)
@@ -438,6 +471,22 @@ class CuttingPlane_Transformation(Transformation):
         If the difference between the objectives in two consecutive iterations is
         less than this value, the algorithm terminates without adding the cut
         generated in the last iteration.  
+        """
+    ))
+    CONFIG.declare('norm', ConfigValue(
+        default=2,
+        domain=_norm_domain,
+        description="Norm to use in the separation problem: 1, 2, or "
+        "float('inf')",
+        doc="""
+        Norm used to calculate distance in the objective of the separation 
+        problem which finds the nearest point on the hull relaxation region
+        to the current solution of the relaxed bigm problem.
+
+        Supported norms are the Euclidean norm (specify 2), the L-1 norm 
+        (specify 1), and the infinity norm (specify float('inf')). Note that
+        the first makes the separation problem quadratic and the latter two 
+        make it an LP.
         """
     ))
     CONFIG.declare('verbose', ConfigValue(
@@ -601,9 +650,7 @@ class CuttingPlane_Transformation(Transformation):
 
     def _setup_subproblems(self, instance, bigM, tighten_relaxation_callback):
         # create transformation block
-        transBlockName, transBlock = self._add_relaxation_block(
-            instance,
-            '_pyomo_gdp_cuttingplane_relaxation')
+        transBlockName, transBlock = self._add_relaxation_block(instance)
 
         # We store a list of all vars so that we can efficiently
         # generate maps among the subproblems
@@ -841,6 +888,7 @@ class CuttingPlane_Transformation(Transformation):
                                             rBigM_linear_constraints,
                                             rHull_vars, disaggregated_vars,
                                             disaggregation_constraints,
+                                            self._config.norm,
                                             self._config.cut_filtering_threshold,
                                             self._config.zero_tolerance)
            
@@ -861,7 +909,7 @@ class CuttingPlane_Transformation(Transformation):
                 
             prev_obj = rBigM_objVal
 
-    def _add_relaxation_block(self, instance, name):
+    def _add_relaxation_block(self, instance):
         # creates transformation block with a unique name based on name, adds it
         # to instance, and returns it.
         transBlockName = unique_component_name(
@@ -876,9 +924,26 @@ class CuttingPlane_Transformation(Transformation):
         # Deactivate any/all other objectives
         for o in transBlock_rHull.model().component_data_objects(Objective):
             o.deactivate()
+        norm = self._config.norm
 
-        obj_expr = 0
-        for x_rbigm, x_hull, x_star in var_info:
-            obj_expr += (x_hull - x_star)**2
+        if norm == 2:
+            obj_expr = 0
+            for x_rbigm, x_hull, x_star in var_info:
+                obj_expr += (x_hull - x_star)**2
+        elif norm == float('inf'):
+            u = transBlock_rHull.u = Var(domain=NonNegativeReals)
+            inf_cons = transBlock_rHull.inf_norm_linearization = Constraint(
+                NonNegativeIntegers)
+            i = 0
+            for x_rbigm, x_hull, x_star in var_info:
+                inf_cons[i] = u >= x_hull - x_star
+                inf_cons[i+1] = u >= x_star - x_hull
+                i += 2
+            # we'll need the duals of these to get the subgradient
+            # TODO: I want this on the transBlock to avoid name conflicts, 
+            # but that doesn't seem to work, see #1611
+            transBlock_rHull.model().dual = Suffix(direction=Suffix.IMPORT)
+            obj_expr = u
+
         # add separation objective to transformation block
         transBlock_rHull.separation_objective = Objective(expr=obj_expr)
