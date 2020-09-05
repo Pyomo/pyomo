@@ -20,7 +20,7 @@ from pyomo.opt import SolverFactory
 
 
 def sipopt(instance, paramSubList, perturbList,
-           cloneModel=True, streamSoln=False, keepfiles=False):
+           cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
     """This function accepts a Pyomo ConcreteModel, a list of parameters, along
     with their corresponding perterbation list. The model is then converted
     into the design structure required to call sipopt to get an approximation
@@ -46,6 +46,8 @@ def sipopt(instance, paramSubList, perturbList,
 
     keepfiles: bool, optional
         preserve solver interface files
+    
+    optarg : solver options dictionary object (default=None)
     
     Returns
     -------
@@ -204,6 +206,9 @@ def sipopt(instance, paramSubList, perturbList,
     m.sens_sol_state_1_z_U = Suffix(direction=Suffix.IMPORT)
 
     #set sIPOPT data
+    if optarg is not None:
+        for k in optarg.keys():
+            opt.options[k] =  optarg.get(k)
     opt.options['run_sens'] = 'yes'
     
     # for reasons that are not entirely clear, 
@@ -225,11 +230,12 @@ def sipopt(instance, paramSubList, perturbList,
 
 
 
+
 def kaug(instance,paramSubList,perturbList,
          cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
     """
-    This function def ipopt() to use kaug.
-    All documents are taken from documnets in def sipopt().
+    This function modifies sipopt() to use kaug.
+    All comments are taken from comments in sipopt().
 
     This function accepts a Pyomo ConcreteModel, a list of parameters, along
     with their corresponding perterbation list. The model is then converted
