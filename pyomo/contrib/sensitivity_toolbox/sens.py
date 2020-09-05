@@ -228,8 +228,8 @@ def sipopt(instance, paramSubList, perturbList,
 def kaug(instance,paramSubList,perturbList,
          cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
     """
-    This function def ipopt() to use kaug.
-    All documents are taken from documnets in def sipopt().
+    This function modifies def ipopt() to use kaug.
+    All documents are taken from documents in def sipopt().
 
     This function accepts a Pyomo ConcreteModel, a list of parameters, along
     with their corresponding perterbation list. The model is then converted
@@ -267,7 +267,7 @@ def kaug(instance,paramSubList,perturbList,
     Returns:
         m		  : ConcreteModel
             converted model for kaug
-            contains approximated results at perturbation
+            converted model contains approximated results at perturbation
             
     """
 
