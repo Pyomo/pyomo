@@ -48,6 +48,18 @@ class XPRESS(OptSolver):
             return opt
         elif mode == 'nl':
             opt = SolverFactory('asl', **kwds)
+        elif mode in ['python', 'direct']:
+            opt = SolverFactory('xpress_direct', **kwds)
+            if opt is None:
+                logger.error('Python API for XPRESS is not installed')
+                return
+            return opt
+        elif mode == 'persistent':
+            opt = SolverFactory('xpress_persistent', **kwds)
+            if opt is None:
+                logger.error('Python API for XPRESS is not installed')
+                return
+            return opt
         else:
             logging.getLogger('pyomo.solvers').error(
                 'Unknown IO type for solver xpress: %s'

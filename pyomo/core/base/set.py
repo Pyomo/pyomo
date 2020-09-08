@@ -499,7 +499,7 @@ class _SetData(_SetDataBase):
         return False
 
     def subsets(self, expand_all_set_operators=None):
-        return [ self ]
+        return iter((self,))
 
     def __iter__(self):
         """Iterate over the set members
@@ -1758,6 +1758,7 @@ class Set(IndexedComponent):
 
     This class provides a Pyomo component that is API-compatible with
     Python `set` objects, with additional features, including:
+
         1. Member validation and filtering.  The user can declare
            domains and provide callback functions to validate set
            members and to filter (ignore) potential members.
@@ -1770,58 +1771,69 @@ class Set(IndexedComponent):
 
     Parameters
     ----------
-        name : str, optional
-            The name of the set
-        doc : str, optional
-            A text string describing this component
-        initialize : initializer(iterable), optional
-            The initial values to store in the Set when it is
-            constructed.  Values passed to `initialize` may be
-            overridden by `data` passed to the :py:meth:`construct`
-            method.
-        dimen : initializer(int), optional
-            Specify the Set's arity (the required tuple length for all
-            members of the Set), or None if no arity is enforced
-        ordered : bool or Set.InsertionOrder or Set.SortedOrder or function
-            Specifies whether the set is ordered. Possible values are:
-                False               Unordered
-                True                Ordered by insertion order
-                Set.InsertionOrder  Ordered by insertion order [default]
-                Set.SortedOrder     Ordered by sort order
-                <function>          Ordered with this comparison function
-        within : initialiser(set), optional
-            A set that defines the valid values that can be contained
-            in this set
-        domain : initializer(set), optional
-            A set that defines the valid values that can be contained
-            in this set
-        bounds : initializer(tuple), optional
-            A tuple that specifies the bounds for valid Set values
-            (accepts 1-, 2-, or 3-tuple RangeSet arguments)
-        filter : initializer(rule), optional
-            A rule for determining membership in this set. This has the
-            functional form:
+    name : str, optional
+        The name of the set
 
-                ``f: Block, *data -> bool``
+    doc : str, optional
+        A text string describing this component
 
-            and returns True if the data belongs in the set.  Set will
-            quietly ignore any values where `filter` returns False.
-        validate : initializer(rule), optional
-            A rule for validating membership in this set. This has the
-            functional form:
+    initialize : initializer(iterable), optional
+        The initial values to store in the Set when it is
+        constructed.  Values passed to ``initialize`` may be
+        overridden by ``data`` passed to the :py:meth:`construct`
+        method.
 
-                ``f: Block, *data -> bool``
+    dimen : initializer(int), optional
+        Specify the Set's arity (the required tuple length for all
+        members of the Set), or None if no arity is enforced
 
-            and returns True if the data belongs in the set.  Set will
-            raise a ``ValueError`` for any values where `validate`
-            returns False.
+    ordered : bool or Set.InsertionOrder or Set.SortedOrder or function
+        Specifies whether the set is ordered.
+        Possible values are:
+
+          ======================  =====================================
+          ``False``               Unordered
+          ``True``                Ordered by insertion order
+          ``Set.InsertionOrder``  Ordered by insertion order [default]
+          ``Set.SortedOrder``     Ordered by sort order
+          ``<function>``          Ordered with this comparison function
+          ======================  =====================================
+
+    within : initialiser(set), optional
+        A set that defines the valid values that can be contained
+        in this set
+    domain : initializer(set), optional
+        A set that defines the valid values that can be contained
+        in this set
+    bounds : initializer(tuple), optional
+        A tuple that specifies the bounds for valid Set values
+        (accepts 1-, 2-, or 3-tuple RangeSet arguments)
+    filter : initializer(rule), optional
+        A rule for determining membership in this set. This has the
+        functional form:
+
+            ``f: Block, *data -> bool``
+
+        and returns True if the data belongs in the set.  Set will
+        quietly ignore any values where `filter` returns False.
+    validate : initializer(rule), optional
+        A rule for validating membership in this set. This has the
+        functional form:
+
+            ``f: Block, *data -> bool``
+
+        and returns True if the data belongs in the set.  Set will
+        raise a ``ValueError`` for any values where `validate`
+        returns False.
 
     Notes
     -----
-        `domain`, `within`, and `bounds` all provide restrictions on the
-        valid set values.  If more than one is specified, Set values
-        will be restricted to the intersection of `domain`, `within`,
-        and `bounds`.
+      .. note::
+
+        ``domain=``, ``within=``, and ``bounds=`` all provide
+        restrictions on the valid set values.  If more than one is
+        specified, Set values will be restricted to the intersection of
+        ``domain``, ``within``, and ``bounds``.
 
     """
 
@@ -2191,7 +2203,10 @@ class Set(IndexedComponent):
 
 
 class IndexedSet(Set):
-    pass
+    def data(self):
+        "Return a dict containing the data() of each Set in this IndexedSet"
+        return {k: v.data() for k,v in iteritems(self)}
+
 
 class FiniteSimpleSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
@@ -2520,17 +2535,41 @@ class RangeSet(Component):
     unbounded). Similarly, boutique ranges (like semi-continuous
     domains) can be represented, e.g.:
 
-    ..code:
-        RangeSet(ranges=(NumericRange(0,0,0), NumericRange(1,100,0)))
+    .. doctest::
+
+       >>> from pyomo.core.base.range import NumericRange
+       >>> from pyomo.environ import RangeSet
+       >>> print(RangeSet(ranges=(NumericRange(0,0,0), NumericRange(1,100,0))))
+       ([0] | [1..100])
 
     The `RangeSet` object continues to support the notation for
     specifying discrete ranges using "[first=1], last, [step=1]" values:
 
-    ..code:
-        RangeSet(3)          # [1, 2, 3]
-        RangeSet(2,5)        # [2, 3, 4, 5]
-        RangeSet(2,5,2)      # [2, 4]
-        RangeSet(2.5,4,0.5)  # [2.5, 3, 3.5, 4]
+    .. doctest::
+
+        >>> r = RangeSet(3)
+        >>> print(r)
+        [1:3]
+        >>> print(list(r))
+        [1, 2, 3]
+
+        >>> r = RangeSet(2, 5)
+        >>> print(r)
+        [2:5]
+        >>> print(list(r))
+        [2, 3, 4, 5]
+
+        >>> r = RangeSet(2, 5, 2)
+        >>> print(r)
+        [2:4:2]
+        >>> print(list(r))
+        [2, 4]
+
+        >>> r = RangeSet(2.5, 4, 0.5)
+        >>> print(r)
+        ([2.5] | [3.0] | [3.5] | [4.0])
+        >>> print(list(r))
+        [2.5, 3.0, 3.5, 4.0]
 
     By implementing RangeSet using NumericRanges, the global Sets (like
     `Reals`, `Integers`, `PositiveReals`, etc.) are trivial

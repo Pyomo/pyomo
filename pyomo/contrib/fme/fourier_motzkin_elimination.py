@@ -19,8 +19,7 @@ from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.opt import TerminationCondition
 
 import logging

@@ -14,7 +14,7 @@ import logging
 import sys
 import types
 
-from six import itervalues
+from six import itervalues, string_types
 
 logger = logging.getLogger('pyomo.core')
 
@@ -178,11 +178,19 @@ def sorted_robust(arg):
         return sorted(arg, key=_robust_sort_keyfcn())
 
 
-def _safe_to_str(obj):
-    try:
-        return str(obj)
-    except:
-        return "None"
+def _to_ustr(obj):
+    if not isinstance(obj, string_types):
+        try:
+            obj = str(obj)
+        except:
+            return u"None"
+    # If this is a Python 2.x string, then we want to decode it to a
+    # proper unicode string so that len() counts embedded multibyte
+    # characters as a single codepoint (so the resulting tabular
+    # alignment is correct)
+    if hasattr(obj, 'decode'):
+        return obj.decode('utf-8')
+    return obj
 
 def tabular_writer(ostream, prefix, data, header, row_generator):
     """Output data in tabular form
@@ -196,12 +204,14 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
       line of the table
     """
 
+    prefix = _to_ustr(prefix)
+
     _rows = {}
     #_header = ("Key","Initial Value","Lower Bound","Upper Bound",
     #           "Current Value","Fixed","Stale")
     # NB: _width is a list because we will change these values
     if header:
-        header = ('Key',) + tuple(header)
+        header = (u"Key",) + tuple(_to_ustr(x) for x in header)
         _width = [len(x) for x in header]
     else:
         _width = None
@@ -215,13 +225,13 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
 
         if isinstance(_rowSet, types.GeneratorType):
             _rows[_key] = [
-                ((_safe_to_str("" if i else _key),) if header else ()) +
-                tuple( _safe_to_str(x) for x in _r )
+                ((_to_ustr("" if i else _key),) if header else ()) +
+                tuple( _to_ustr(x) for x in _r )
                 for i,_r in enumerate(_rowSet) ]
         else:
             _rows[_key] = [
-                ((_safe_to_str(_key),) if header else ()) +
-                tuple( _safe_to_str(x) for x in _rowSet) ]
+                ((_to_ustr(_key),) if header else ()) +
+                tuple( _to_ustr(x) for x in _rowSet) ]
 
         for _row in _rows[_key]:
             if not _width:

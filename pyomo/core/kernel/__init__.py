@@ -13,8 +13,6 @@ import pyomo.core.kernel.register_numpy_types
 import pyomo.core.kernel.base
 import pyomo.core.kernel.homogeneous_container
 import pyomo.core.kernel.heterogeneous_container
-import pyomo.core.kernel.component_map
-import pyomo.core.kernel.component_set
 import pyomo.core.kernel.variable
 import pyomo.core.kernel.constraint
 import pyomo.core.kernel.matrix_constraint
@@ -26,3 +24,9 @@ import pyomo.core.kernel.suffix
 import pyomo.core.kernel.block
 import pyomo.core.kernel.piecewise_library
 import pyomo.core.kernel.set_types
+
+# TODO: These are included for backwards compatibility.  Accessing them
+# will result in a deprecation warning
+from pyomo.common.dependencies import attempt_import
+component_map = attempt_import('pyomo.core.kernel.component_map')[0]
+component_set = attempt_import('pyomo.core.kernel.component_set')[0]

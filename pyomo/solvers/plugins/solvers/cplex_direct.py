@@ -14,14 +14,13 @@ import sys
 import pyomo.common
 from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
@@ -294,9 +293,10 @@ class CPLEXDirect(DirectSolver):
 
         return cplex_expr, referenced_vars
 
-    def _add_var(self, var, var_data=None):
-        varname = self._symbol_map.getSymbol(var, self._labeler)
-        vtype = self._cplex_vtype_from_var(var)
+    def _cplex_lb_ub_from_var(self, var):
+        if var.is_fixed():
+            val = var.value
+            return val, val
         if var.has_lb():
             lb = value(var.lb)
         else:
@@ -305,10 +305,12 @@ class CPLEXDirect(DirectSolver):
             ub = value(var.ub)
         else:
             ub = self._cplex.infinity
+        return lb, ub
 
-        if var.is_fixed():
-            lb = value(var)
-            ub = value(var)
+    def _add_var(self, var, var_data=None):
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vtype = self._cplex_vtype_from_var(var)
+        lb, ub = self._cplex_lb_ub_from_var(var)
 
         cplex_var_data = (
             _VariableData(self._solver_model) if var_data is None else var_data

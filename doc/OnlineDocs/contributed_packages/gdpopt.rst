@@ -1,3 +1,5 @@
+.. _gdpopt-main-page:
+
 GDPopt logic-based solver
 =========================
 

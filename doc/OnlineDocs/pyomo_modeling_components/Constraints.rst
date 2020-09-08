@@ -6,7 +6,7 @@ that are created using a rule, which is a Python function. For example,
 if the variable ``model.x`` has the indexes 'butter' and 'scones', then
 this constraint limits the sum over these indexes to be exactly three:
 
-.. literalinclude:: ../script_spy_files/spy4Constraints_Constraint_example.spy
+.. literalinclude:: ../tests/scripting/spy4Constraints_Constraint_example.spy
    :language: python
 
 Instead of expressions involving equality (==) or inequalities (`<=` or
@@ -16,7 +16,7 @@ lb `<=` expr `<=` ub. Variables can appear only in the middle expr. For
 example, the following two constraint declarations have the same
 meaning:
 
-.. literalinclude:: ../script_spy_files/spy4Constraints_Inequality_constraints_2expressions.spy
+.. literalinclude:: ../tests/scripting/spy4Constraints_Inequality_constraints_2expressions.spy
    :language: python
 
 For this simple example, it would also be possible to declare
@@ -30,7 +30,7 @@ interpreted as placing a budget of :math:`i` on the
 :math:`i^{\mbox{th}}` item to buy where the cost per item is given by
 the parameter ``model.a``:
 
-.. literalinclude:: ../script_spy_files/spy4Constraints_Passing_elements_crossproduct.spy
+.. literalinclude:: ../tests/scripting/spy4Constraints_Passing_elements_crossproduct.spy
    :language: python
 
 .. note::

@@ -10,9 +10,9 @@
 
 import logging
 
+from pyomo.common.collections import ComponentSet
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import Var, Expression, Objective
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 
 from pyomo.dae.misc import generate_finite_elements

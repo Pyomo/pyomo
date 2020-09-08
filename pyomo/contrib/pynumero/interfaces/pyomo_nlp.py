@@ -11,14 +11,20 @@
 This module defines the classes that provide an NLP interface based on
 the Ampl Solver Library (ASL) implementation
 """
-import pyomo
-import pyomo.environ as aml
-from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
-import pyutilib
 
-from scipy.sparse import coo_matrix
+import os
 import numpy as np
 import six
+
+from scipy.sparse import coo_matrix
+
+import pyutilib
+import pyomo
+import pyomo.environ as aml
+from pyomo.common.collections import ComponentMap
+from pyomo.common.env import CtypesEnviron
+from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
+
 
 __all__ = ['PyomoNLP']
 
@@ -38,7 +44,6 @@ class PyomoNLP(AslNLP):
             # get the temp file names for the nl file
             nl_file = pyutilib.services.TempfileManager.create_tempfile(suffix='pynumero.nl')
 
-            
             # The current AmplInterface code only supports a single objective function
             # Therefore, we throw an error if there is not one (and only one) active
             # objective function. This is better than adding a dummy objective that the
@@ -51,13 +56,14 @@ class PyomoNLP(AslNLP):
                 raise NotImplementedError('The ASL interface and PyomoNLP in PyNumero currently only support single objective'
                                           ' problems. Deactivate any extra objectives you may have, or add a dummy objective'
                                           ' (f(x)=0) if you have a square problem.')
+            self._objective = objectives[0]
 
             # write the nl file for the Pyomo model and get the symbolMap
             fname, symbolMap = pyomo.opt.WriterFactory('nl')(pyomo_model, nl_file, lambda x:True, {})
-            
+
             # create component maps from vardata to idx and condata to idx
-            self._vardata_to_idx = vdidx = pyomo.core.kernel.component_map.ComponentMap()
-            self._condata_to_idx = cdidx = pyomo.core.kernel.component_map.ComponentMap()
+            self._vardata_to_idx = vdidx = ComponentMap()
+            self._condata_to_idx = cdidx = ComponentMap()
 
             # TODO: Are these names totally consistent?
             for name, obj in six.iteritems(symbolMap.bySymbol):
@@ -66,8 +72,16 @@ class PyomoNLP(AslNLP):
                 elif name[0] == 'c':
                     cdidx[obj()] = int(name[1:])
 
-            # now call the AslNLP with the newly created nl_file
-            super(PyomoNLP, self).__init__(nl_file)
+            # The NL writer advertises the external function libraries
+            # through the PYOMO_AMPLFUNC environment variable; merge it
+            # with any preexisting AMPLFUNC definitions
+            amplfunc = "\n".join(
+                val for val in (
+                    os.environ.get('AMPLFUNC', ''),
+                    os.environ.get('PYOMO_AMPLFUNC', ''),
+                ) if val)
+            with CtypesEnviron(AMPLFUNC=amplfunc):
+                super(PyomoNLP, self).__init__(nl_file)
 
             # keep pyomo model in cache
             self._pyomo_model = pyomo_model
@@ -81,6 +95,13 @@ class PyomoNLP(AslNLP):
         Return optimization model
         """
         return self._pyomo_model
+
+    def get_pyomo_objective(self):
+        """
+        Return an instance of the active objective function on the Pyomo model.
+        (there can be only one)
+        """
+        return self._objective
 
     def get_pyomo_variables(self):
         """
@@ -158,6 +179,37 @@ class PyomoNLP(AslNLP):
                 con_indices.append(con_id)
         return con_indices
 
+    # overloaded from NLP
+    def get_obj_scaling(self):
+        obj = self.get_pyomo_objective()
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is aml.Suffix and \
+           obj in scaling_suffix:
+            return scaling_suffix[obj]
+        return None
+
+    # overloaded from NLP
+    def get_primals_scaling(self):
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+            primals_scaling = np.ones(self.n_primals())
+            for i,v in enumerate(self.get_pyomo_variables()):
+                if v in scaling_suffix:
+                    primals_scaling[i] = scaling_suffix[v]
+            return primals_scaling
+        return None
+
+    # overloaded from NLP
+    def get_constraints_scaling(self):
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+            constraints_scaling = np.ones(self.n_constraints())
+            for i,c in enumerate(self.get_pyomo_constraints()):
+                if c in scaling_suffix:
+                    constraints_scaling[i] = scaling_suffix[c]
+            return constraints_scaling
+        return None
+
     def extract_subvector_grad_objective(self, pyomo_variables):
         """Compute the gradient of the objective and return the entries
         corresponding to the given Pyomo variables
@@ -214,7 +266,7 @@ class PyomoNLP(AslNLP):
 
     def extract_submatrix_hessian_lag(self, pyomo_variables_rows, pyomo_variables_cols):
         """
-        Return the submatrix of the hessian of the lagrangian that 
+        Return the submatrix of the hessian of the lagrangian that
         corresponds to the list of Pyomo variables provided
 
         Parameters
@@ -244,5 +296,3 @@ class PyomoNLP(AslNLP):
             submatrix_jcols[i] = submatrix_map[v]
 
         return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(primal_indices_rows), len(primal_indices_cols)))
-    
-

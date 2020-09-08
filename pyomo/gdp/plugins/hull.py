@@ -12,24 +12,24 @@ import logging
 
 import pyomo.common.config as cfg
 from pyomo.common import deprecated
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 from pyomo.core.base.component import ActiveComponent, ComponentUID
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core import (
-    Block, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
+    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy,
-    Any, RangeSet, Reals, value, NonNegativeIntegers
+    Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalConstraint,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (clone_without_expression_components, target_list,
-                            is_child_of, get_src_disjunction,
-                            get_src_constraint, get_transformed_constraints,
-                            get_src_disjunct, _warn_for_active_disjunction,
-                            _warn_for_active_disjunct)
+from pyomo.gdp.util import (
+    _warn_for_active_logical_constraint, clone_without_expression_components, target_list,
+    is_child_of, get_src_disjunction,
+    get_src_constraint, get_transformed_constraints,
+    get_src_disjunct, _warn_for_active_disjunction,
+    _warn_for_active_disjunct, )
 from functools import wraps
 from six import iteritems, iterkeys
 from weakref import ref as weakref_ref
@@ -179,6 +179,7 @@ class Hull_Reformulation(Transformation):
         self.handlers = {
             Constraint : self._transform_constraint,
             Var :        False,
+            BooleanVar:  False,
             Connector :  False,
             Expression : False,
             Param :      False,
@@ -189,6 +190,7 @@ class Hull_Reformulation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
+            LogicalConstraint: self._warn_for_active_logical_statement,
             }
 
     def _add_local_vars(self, block, local_var_dict):
@@ -510,7 +512,7 @@ class Hull_Reformulation(Transformation):
         # create a relaxation block for this disjunct
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
-        
+
         relaxationBlock.localVarReferences = Block()
 
         # Put the disaggregated variables all on their own block so that we can
@@ -574,7 +576,7 @@ class Hull_Reformulation(Transformation):
                 relaxationBlock.disaggregatedVars,
                 var.getname(fully_qualified=False, name_buffer=NAME_BUFFER),
             )
-            relaxationBlock.disaggregatedVars.add_component( 
+            relaxationBlock.disaggregatedVars.add_component(
                 disaggregatedVarName, disaggregatedVar)
             # mark this as local because we won't re-disaggregate if this is a
             # nested disjunction
@@ -663,8 +665,8 @@ class Hull_Reformulation(Transformation):
         disjunctBlock = disjunct._transformation_block()
         varRefBlock = disjunctBlock.localVarReferences
         for v in block.component_objects(Var, descend_into=Block, active=None):
-            varRefBlock.add_component(unique_component_name( 
-                varRefBlock, v.getname(fully_qualified=True, 
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=True,
                                        name_buffer=NAME_BUFFER)), Reference(v))
 
         destinationBlock = disjunctBlock.parent_block()
@@ -709,7 +711,7 @@ class Hull_Reformulation(Transformation):
             newblock.localVarReferences = Block()
             newblock.localVarReferences.transfer_attributes_from(
                 disjunctBlock.localVarReferences)
-                    
+
     def _warn_for_active_disjunction( self, disjunction, disjunct,
                                       var_substitute_map, zero_substitute_map):
         _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER)
@@ -717,6 +719,11 @@ class Hull_Reformulation(Transformation):
     def _warn_for_active_disjunct( self, innerdisjunct, outerdisjunct,
                                    var_substitute_map, zero_substitute_map):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER)
+
+    def _warn_for_active_logical_statement(
+            self, logical_statment, disjunct, var_substitute_map,
+            zero_substitute_map):
+        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
 
     def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
                                       zero_substitute_map):

@@ -549,15 +549,20 @@ class Component(_ComponentBase):
         return self.name
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
-        """
-        Returns the component name associated with this object.
+        """Returns the component name associated with this object.
 
-        Arguments:
-            fully_qualified     Generate full name from nested block names
-            name_buffer         Can be used to optimize iterative name
-                                    generation (using a dictionary)
-            relative_to         When generating a fully qualified name,
-                                    stop at this block.
+        Parameters
+        ----------
+        fully_qualified: bool
+            Generate full name from nested block names
+
+        name_buffer: dict
+            A dictionary that caches encountered names and indices.
+            Providing a ``name_buffer`` can significantly speed up
+            iterative name generation
+
+        relative_to: Block
+            Generate fully_qualified names reletive to the specified block.
         """
         if fully_qualified:
             pb = self.parent_block()

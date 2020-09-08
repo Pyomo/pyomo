@@ -4,13 +4,12 @@ from __future__ import division
 import logging
 from math import fabs, floor, log
 
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
                         Objective, Reals, Suffix, Var, minimize, value)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import native_numeric_types
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt import SolverFactory
 from pyomo.opt.results import ProblemSense
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
@@ -74,26 +73,35 @@ def calc_jacobians(solve_data, config):
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
     solve_data.jacobians = ComponentMap()
+    if config.differentiate_mode == "reverse_symbolic":
+        mode = differentiate.Modes.reverse_symbolic
+    elif config.differentiate_mode == "sympy":
+        mode = differentiate.Modes.sympy
     for c in solve_data.mip.MindtPy_utils.constraint_list:
         if c.body.polynomial_degree() in (1, 0):
             continue  # skip linear constraints
         vars_in_constr = list(EXPR.identify_variables(c.body))
         jac_list = differentiate(
-            c.body, wrt_list=vars_in_constr, mode=differentiate.Modes.sympy)
+            c.body, wrt_list=vars_in_constr, mode=mode)
         solve_data.jacobians[c] = ComponentMap(
             (var, jac_wrt_var)
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))
 
 
-def add_feas_slacks(m):
+def add_feas_slacks(m, config):
     MindtPy = m.MindtPy_utils
     # generate new constraints
     for i, constr in enumerate(MindtPy.constraint_list, 1):
         if constr.body.polynomial_degree() not in [0, 1]:
             rhs = constr.upper if constr.has_ub() else constr.lower
-            c = MindtPy.MindtPy_feas.feas_constraints.add(
-                constr.body - rhs
-                <= MindtPy.MindtPy_feas.slack_var[i])
+            if config.feasibility_norm in {'L1', 'L2'}:
+                c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    constr.body - rhs
+                    <= MindtPy.MindtPy_feas.slack_var[i])
+            else:
+                c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    constr.body - rhs
+                    <= MindtPy.MindtPy_feas.slack_var)
 
 
 def var_bound_add(solve_data, config):

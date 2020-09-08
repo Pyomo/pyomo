@@ -16,7 +16,7 @@ from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData, IndexedBlock
 from pyomo.dae import ContinuousSet, DerivativeVar, DAE_Error
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.core.base.block import SortComponents
 from pyomo.common.log import LoggingIntercept
 
@@ -219,10 +219,7 @@ def update_contset_indexed_component(comp, expansion_map):
     # Extract the indexing sets. Must treat components with a single
     # index separately from components with multiple indexing sets.
     temp = comp.index_set()
-    if hasattr(temp, 'set_tuple'):
-        indexset = comp.index_set().set_tuple
-    else:
-        indexset = [temp,]
+    indexset = list(comp.index_set().subsets())
 
     for s in indexset:
         if s.ctype == ContinuousSet and s.get_changed():
@@ -280,7 +277,7 @@ def _update_constraint(con):
     for i in con.index_set():
         if i not in con:
             # Code taken from the construct() method of Constraint
-            con.add(i, apply_indexed_rule(con, _rule, _parent, i))
+            con.add(i, _rule(_parent, i))
 
 
 def _update_expression(expre):

@@ -4,11 +4,10 @@ from __future__ import division
 
 import textwrap
 
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.base import Block, Constraint, VarList, Objective, TransformationFactory
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 from pyomo.core.expr.numvalue import value
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 import logging

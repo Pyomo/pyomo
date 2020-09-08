@@ -2,7 +2,7 @@ from pyomo.core.base.block import _BlockData, declare_custom_block
 import pyomo.environ as pe
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.common.collections import ComponentSet
 try:
     from mpi4py import MPI
     mpi4py_available = True
@@ -74,6 +74,8 @@ solver_dual_sign_convention['cplexdirect'] = -1
 solver_dual_sign_convention['cplex_persistent'] = -1
 solver_dual_sign_convention['glpk'] = -1
 solver_dual_sign_convention['cbc'] = -1
+solver_dual_sign_convention['xpress_direct'] = -1
+solver_dual_sign_convention['xpress_persistent'] = -1
 
 
 def _del_con(c):
