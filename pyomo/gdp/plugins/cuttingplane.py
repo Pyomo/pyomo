@@ -127,13 +127,16 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
     disaggregated_vars: list of disaggregated variables in hull reformulation
     disaggregation_constraints: list of disaggregation constraints in hull
                                 reformulation
-    norm: norm used in the separation problem, ignored by this callback
+    norm: norm used in the separation problem
     cut_threshold: Amount x* needs to be infeasible in generated cut in order
                    to consider the cut for addition to the bigM model.
     zero_tolerance: Tolerance at which a float will be treated as 0 during
                     Fourier-Motzkin elimination
     """
     instance_rHull = transBlock_rHull.model()
+    # TODO: Is this the problem? Can I make this work?
+    if norm == float('inf'):
+        rHull_vars.append(transBlock_rHull.u)
 
     normal_vectors = []
     tight_constraints = Block()
@@ -148,6 +151,7 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
         multiplier = _constraint_tight(instance_rHull, constraint)
         if multiplier:
             f = constraint.body
+            print(f)
             firstDerivs = differentiate(f, wrt_list=rHull_vars)
             normal_vec = [multiplier*value(_) for _ in firstDerivs]
             normal_vectors.append(normal_vec)
@@ -422,8 +426,8 @@ class CuttingPlane_Transformation(Transformation):
                   problems
     post_process_cut : callback to perform post-processing on created cuts
     back_off_problem_tolerance : tolerance to use while post-processing
-    cut_threshold : Amount by which cut is violated at the relaxed bigM
-                    solution in order to be added to the bigM model
+    cut_filtering_threshold : Amount by which cut is violated at the relaxed bigM
+                              solution in order to be added to the bigM model
     zero_tolerance : Tolerance at which a float will be considered 0 when
                      using Fourier-Motzkin elimination to create cuts.
 
@@ -857,6 +861,7 @@ class CuttingPlane_Transformation(Transformation):
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
             obj_diff = prev_obj - rBigM_objVal
+            #improving = True
             improving = math.isinf(obj_diff) or \
                         ( abs(obj_diff) > epsilon if abs(rBigM_objVal) < 1 else
                           abs(obj_diff/prev_obj) > epsilon )
@@ -868,6 +873,8 @@ class CuttingPlane_Transformation(Transformation):
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
+            logger.warning("separation problem objective value: %s" %
+                           value(transBlock_rHull.separation_objective))
             logger.info("xhat is: ")
             for x_rbigm, x_hull, x_star in var_info:
                 logger.info("\t%s = %s" % 
@@ -880,7 +887,7 @@ class CuttingPlane_Transformation(Transformation):
             # rBigM solution was in the convex hull, or the separation vector is
             # so close to zero that the resulting cut is likely to have
             # numerical issues.
-            if abs(value(transBlock_rHull.separation_objective)) < epsilon:
+            if value(transBlock_rHull.separation_objective) < epsilon:
                 break
 
             cuts = self._config.create_cuts(transBlock_rBigM, transBlock_rHull,
