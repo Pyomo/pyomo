@@ -34,7 +34,7 @@ from pyomo.contrib.mindtpy.util import (
 )
 from pyomo.core import (
     Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var, value,
-    VarList, TransformationFactory)
+    VarList, TransformationFactory, Objective)
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
 from pyomo.contrib.fbbt.fbbt import fbbt
@@ -104,6 +104,11 @@ class MindtPySolver(object):
         # if ecp tolerance is not provided use bound tolerance
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.bound_tolerance
+
+        # if the objective function is a constant, dual bound constraint is not added.
+        obj = next(model.component_data_objects(ctype=Objective, active=True))
+        if obj.expr.polynomial_degree() == 0:
+            config.use_dual_bound = False
 
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
