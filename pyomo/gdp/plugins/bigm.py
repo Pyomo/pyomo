@@ -441,10 +441,10 @@ class BigM_Transformation(Transformation):
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
         # we will keep a map of constraints (hashable, ha!) to a tuple to
         # indicate where their m value came from, either (arg dict, key) if it
-        # came from args, (Suffix, key) if it came from Suffixes, or (M_lower,
-        # M_upper) if we calcualted it ourselves. I am keeping it here because I
-        # want it to move with the disjunct transformation blocks in the case of
-        # nested constraints, to make it easier to query.
+        # came from args, (Suffix, key) if it came from Suffixes, or (None,
+        # (M_lower, M_upper)) if we calculated it ourselves. I am keeping it
+        # here because I want it to move with the disjunct transformation blocks
+        # in the case of nested constraints, to make it easier to query.
         relaxationBlock.bigm_src = {}
         relaxationBlock.localVarReferences = Block()
         obj._transformation_block = weakref_ref(relaxationBlock)
@@ -654,10 +654,10 @@ class BigM_Transformation(Transformation):
 
             if c.lower is not None and M[0] is None:
                 M = (self._estimate_M(c.body, name)[0] - c.lower, M[1])
-                bigm_src[c] = M
+                bigm_src[c] = (None, M)
             if c.upper is not None and M[1] is None:
                 M = (M[0], self._estimate_M(c.body, name)[1] - c.upper)
-                bigm_src[c] = M
+                bigm_src[c] = (None, M)
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _name = obj.getname(
@@ -852,9 +852,11 @@ class BigM_Transformation(Transformation):
         If the M value came from a Suffix, returns (suffix, key) where suffix
         is the BigM suffix used and key is the key in that Suffix.
 
-        If the transformation calculated the value, returns (M_lower, M_upper),
-        where M_lower is the float we calculated for the lower bound constraint
-        and M_upper is the value calculated for the upper bound constraint.
+        If the transformation calculated the value, returns 
+        (None, (M_lower, M_upper)), where M_lower is the float we calculated 
+        for the lower bound constraint (and None if the constraints is <=)
+        and M_upper is the value calculated for the upper bound constraint 
+        (and None if the constraint is >=).
 
         Parameters
         ----------
