@@ -243,4 +243,9 @@ def _get_GDPopt_config():
         description="Threads",
         doc="Threads used by milp solver and nlp solver."
     ))
+    CONFIG.declare("use_dual_bound", ConfigValue(
+        default=True,
+        description="add dual bound constraint to enforce the objective function should improve on the best found dual bound",
+        domain=bool
+    ))
     return CONFIG
