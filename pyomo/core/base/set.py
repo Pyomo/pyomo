@@ -411,7 +411,7 @@ class TuplizeValuesInitializer(InitializerBase):
             return _val
         elif _val is Set.Skip:
             return _val
-        elif not _val:
+        elif _val is None:
             return _val
 
         if not isinstance(_val, collections_Sequence):
