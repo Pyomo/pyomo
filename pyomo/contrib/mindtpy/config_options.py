@@ -42,7 +42,7 @@ def _get_GDPopt_config():
     ))
     CONFIG.declare("init_strategy", ConfigValue(
         default=None,
-        domain=In(["rNLP", "initial_binary", "max_binary"]),
+        domain=In(["rNLP", "initial_binary", "max_binary", "feas_pump"]),
         description="Initialization strategy",
         doc="Initialization strategy used by any method. Currently the "
             "continuous relaxation of the MINLP (rNLP), solve a maximal "
@@ -248,5 +248,31 @@ def _get_GDPopt_config():
         domain=PositiveFloat,
         description="Objective increasing \delta",
         doc="Will force each new feasible point to be '\delta * abs(UB)' better than the last one"
+    ))
+    CONFIG.declare("fp_iteration_limit", ConfigValue(
+        default=20,
+        domain=PositiveInt,
+        description="Feasibility pump iteration limit",
+        doc="Number of maximum iterations in the feasibility pump methods."
+    ))
+    CONFIG.declare("fp_projcuts", ConfigValue(
+        default=True,
+        description="Whether to add cut derived from projection of MIP solution onto NLP feasible set",
+        domain=bool
+    ))
+    CONFIG.declare("fp_transfercuts", ConfigValue(
+        default=True,
+        description="Whether to transfer cuts from the Feasibility Pump MIP to the DICOPT MIP (all except from the round in which the FP MIP became infeasible)",
+        domain=bool
+    ))
+    CONFIG.declare("fp_projzerotol", ConfigValue(
+        default=1E-1,
+        domain=PositiveFloat,
+        description="Tolerance on when to consider optimal value of projection problem as zero, which may trigger the solution of a Sub-NLP"
+    ))
+    CONFIG.declare("fp_mipgap", ConfigValue(
+        default=1E-2,
+        domain=PositiveFloat,
+        description="Optimality tolerance (relative gap) to use for solving MIP projection problem"
     ))
     return CONFIG
