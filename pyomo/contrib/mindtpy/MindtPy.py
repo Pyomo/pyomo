@@ -98,6 +98,9 @@ class MindtPySolver(object):
             config.integer_to_binary = True
             config.use_dual = False
             config.use_fbbt = True
+        elif config.strategy == "feas_pump":  # feasibility pump alone
+            config.init_strategy = "feas_pump"
+            config.iteration_limit = 0
 
         if config.nlp_solver == "baron":
             config.use_dual = False
