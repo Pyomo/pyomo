@@ -64,6 +64,12 @@ from pyomo.environ import (
     Objective,
 )
 
+try:
+    import pandas as pd
+    pandas_available = True
+except:
+    pandas_available = False
+
 
 class Test_SetInitializer(unittest.TestCase):
     def test_single_set(self):
