@@ -7,6 +7,7 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
+from pyomo.contrib.mindtpy.mip_solve import solve_MIP_master
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_nogood_cuts
 from pyomo.opt import TerminationCondition as tc
 
@@ -206,10 +207,10 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
         copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
                              solve_data.working_model.MindtPy_utils.variable_list,
                              config)
-        fix_nlp, fix_nlp_results = solve_NLP_subproblem(
+        fixed_nlp, fixed_nlp_results = solve_NLP_subproblem(
             solve_data, config)
-        assert fix_nlp_results.solver.termination_condition is tc.optimal, 'Feasibility pump fix-nlp subproblem not optimal'
-        copy_var_list_values(fix_nlp.MindtPy_utils.variable_list,
+        assert fixed_nlp_results.solver.termination_condition is tc.optimal, 'Feasibility pump fixed_nlp subproblem not optimal'
+        copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.working_model.MindtPy_utils.variable_list,
                              config)
         if main_objective.sense == minimize:
@@ -254,7 +255,7 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
     if solve_data.solution_improved:
         solve_data.best_solution_found = solve_data.working_model.clone()
         assert is_feasible(solve_data.best_solution_found, config), \
-            "Best found model infeasible! There might be a problem with the precisions - the feaspump seems to have converged (error**2 <= integer_tolerance). " \
+            "Best found solution infeasible! There might be a problem with the precisions - the feaspump seems to have converged (error**2 <= integer_tolerance). " \
             "But the `is_feasible` check (error <= constraint_tolerance) doesn't work out"
 
     # Always add the oa cut
@@ -283,15 +284,15 @@ def feasibility_pump_loop(solve_data, config):
     working_model = solve_data.working_model
     main_objective = next(
         working_model.component_data_objects(Objective, active=True))
-    while solve_data.mip_iter < config.iteration_limit:
+    while solve_data.mip_iter < config.fp_iteration_limit:
 
         config.logger.info(
-            '---MindtPy Master Iteration %s---'
+            '---Feasibility Pump Iteration %s---'
             % solve_data.mip_iter)
 
         solve_data.mip_subiter = 0
         # solve MILP master problem
-        feas_mip, feas_mip_results = solve_OA_master(
+        feas_mip, feas_mip_results = solve_MIP_master(
             solve_data, config)
         if feas_mip_results.solver.termination_condition is tc.optimal:
             handle_master_mip_optimal(feas_mip, solve_data, config)

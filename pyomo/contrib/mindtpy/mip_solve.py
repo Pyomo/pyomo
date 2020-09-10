@@ -26,9 +26,9 @@ single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
 
 
-def solve_OA_master(solve_data, config):
+def solve_MIP_master(solve_data, config):
     """
-    This function solves the MIP master problem for the OA algorithm
+    This function solves the MIP master problem
 
     Parameters
     ----------
@@ -159,7 +159,7 @@ def solve_OA_master(solve_data, config):
 
 def handle_master_mip_optimal(master_mip, solve_data, config):
     """
-    This function copies the result from 'solve_OA_master' to the working model and updates the upper/lower bound. This
+    This function copies the result from 'solve_MIP_master' to the working model and updates the upper/lower bound. This
     function is called after an optimal solution is found for the master problem.
 
     Parameters
