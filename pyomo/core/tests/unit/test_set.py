@@ -1781,7 +1781,10 @@ class Test_SetOperator(unittest.TestCase):
         # ValueError: The truth value of a MultiIndex is ambiguous. 
         # Use a.empty, a.bool(), a.item(), a.any() or a.all().
         iterables = [['bar', 'baz', 'foo', 'qux'], ['one', 'two']]
-        pandas_index = pd.MultiIndex.from_product(iterables, names=['first', 'second'])
+        pandas_index = pd.MultiIndex.from_product(
+            iterables, 
+            names=['first', 'second']
+        )
 
         model = ConcreteModel()
         model.a = Set(initialize=pandas_index,
