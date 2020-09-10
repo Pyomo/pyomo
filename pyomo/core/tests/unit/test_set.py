@@ -1785,13 +1785,16 @@ class Test_SetOperator(unittest.TestCase):
         model.a = Set(initialize=pandas_index,
                       dimen=pandas_index.nlevels)
 
-        # test that dimension is inferred correctly
+        # we will confirm that dimension is inferred correctly
         model.b = Set(initialize=pandas_index)
 
-        for s in (model.a, model.b):
-            self.assertIsInstance(s, Set)
-            self.assertEquals(list(s), list(pandas_index))
-            self.assertEquals(s.dimen, pandas_index.nlevels)
+        self.assertIsInstance(model.a, Set)
+        self.assertEquals(list(model.a), list(pandas_index))
+        self.assertEquals(model.a.dimen, pandas_index.nlevels)
+
+        self.assertIsInstance(model.b, Set)
+        self.assertEquals(list(model.b), list(pandas_index))
+        self.assertEquals(model.b.dimen, pandas_index.nlevels)
 
 
 class TestSetUnion(unittest.TestCase):
