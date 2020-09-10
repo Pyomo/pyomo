@@ -1774,6 +1774,21 @@ class Test_SetOperator(unittest.TestCase):
         self.assertEqual(i.x[1].domain, i.A*i.B)
         self.assertEqual(i.x[1], [])
 
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_pandas_multiindex_set_init(self):
+        # Test that TuplizeValuesInitializer does not assume truthiness
+        # If it does, pandas will complain with the following error:
+        # ValueError: The truth value of a MultiIndex is ambiguous. 
+        # Use a.empty, a.bool(), a.item(), a.any() or a.all().
+        iterables = [['bar', 'baz', 'foo', 'qux'], ['one', 'two']]
+        pandas_index = pd.MultiIndex.from_product(iterables, names=['first', 'second'])
+
+        model = ConcreteModel()
+        model.a = Set(initialize=pandas_index,
+                      dimen=pandas_index.nlevels)
+        self.assertIsInstance(model.a, Set)
+
+
 class TestSetUnion(unittest.TestCase):
     def test_pickle(self):
         a = SetOf([1,3,5]) | SetOf([2,3,4])
