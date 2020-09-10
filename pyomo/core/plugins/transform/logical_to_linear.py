@@ -1,4 +1,5 @@
 """Transformation from BooleanVar and LogicalConstraint to Binary and Constraints."""
+from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import TransformationFactory, BooleanVar, VarList, Binary, LogicalConstraint, Block, ConstraintList, \
@@ -10,7 +11,6 @@ from pyomo.core.expr.logical_expr import AndExpression, OrExpression, NotExpress
 from pyomo.core.expr.numvalue import native_logical_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.gdp import Disjunct
 
 

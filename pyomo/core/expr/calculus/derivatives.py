@@ -1,7 +1,7 @@
+import enum
+from pyomo.common.collections import ComponentMap
 from .diff_with_sympy import differentiate as sympy_diff
 from .diff_with_pyomo import reverse_sd, reverse_ad
-import enum
-from pyomo.core.kernel.component_map import ComponentMap
 
 
 class Modes(str, enum.Enum):
