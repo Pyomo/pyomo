@@ -25,6 +25,7 @@ import pyutilib.th as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import pandas as pd, pandas_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
@@ -63,12 +64,6 @@ from pyomo.environ import (
     AbstractModel, ConcreteModel, Block, Var, Param, Suffix, Constraint,
     Objective,
 )
-
-try:
-    import pandas as pd
-    pandas_available = True
-except:
-    pandas_available = False
 
 
 class Test_SetInitializer(unittest.TestCase):
