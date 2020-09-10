@@ -1785,6 +1785,7 @@ class Test_SetOperator(unittest.TestCase):
         model.a = Set(initialize=pandas_index,
                       dimen=pandas_index.nlevels)
         self.assertIsInstance(model.a, Set)
+        self.assertEquals(list(model.a), list(pandas_index))
 
 
 class TestSetUnion(unittest.TestCase):
