@@ -3333,20 +3333,49 @@ class TestGlobalSets(unittest.TestCase):
                 RangeSet( name='foo', ranges=(NR(0,2,1),) ), NS)
 
     def test_RealSet_IntegerSet(self):
-        a = SetModule.RealSet()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.RealSet()
+        self.assertIn('DEPRECATED: The use of RealSet,', output.getvalue())
         self.assertEqual(a, Reals)
         self.assertIsNot(a, Reals)
 
-        a = SetModule.RealSet(bounds=(1,3))
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.RealSet(bounds=(1,3))
+        self.assertIn('DEPRECATED: The use of RealSet,', output.getvalue())
         self.assertEqual(a.bounds(), (1,3))
 
-        a = SetModule.IntegerSet()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.IntegerSet()
+        self.assertIn('DEPRECATED: The use of RealSet,', output.getvalue())
         self.assertEqual(a, Integers)
         self.assertIsNot(a, Integers)
 
-        a = SetModule.IntegerSet(bounds=(1,3))
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            a = SetModule.IntegerSet(bounds=(1,3))
+        self.assertIn('DEPRECATED: The use of RealSet,', output.getvalue())
         self.assertEqual(a.bounds(), (1,3))
         self.assertEqual(list(a), [1,2,3])
+
+        m = ConcreteModel()
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.x = Var(within=SetModule.RealSet)
+        self.assertIn('DEPRECATED: The use of RealSet,', output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.y = Var(within=SetModule.RealSet())
+        self.assertIn('DEPRECATED: The use of RealSet,', output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            m.z = Var(within=SetModule.RealSet(bounds=(0,None)))
+        self.assertIn('DEPRECATED: The use of RealSet,', output.getvalue())
 
         with self.assertRaisesRegex(
                 RuntimeError, "Unexpected keyword arguments: \{'foo': 5\}"):

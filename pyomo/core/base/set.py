@@ -3990,7 +3990,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
 
         global_name = None
 
-        def __new__(cls, **kwds):
+        def __new__(cls, *args, **kwds):
             """Hijack __new__ to mock up old RealSet el al. interface
 
             In the original Set implementation (Pyomo<=5.6.7), the
@@ -4003,6 +4003,17 @@ def DeclareGlobalSet(obj, caller_globals=None):
             """
             if cls is GlobalSet and GlobalSet.global_name \
                and issubclass(GlobalSet, RangeSet):
+                deprecation_warning(
+                    "The use of RealSet, IntegerSet, BinarySet and "
+                    "BooleanSet as Pyomo Set class generators is "
+                    "deprecated.  Please either use one of the pre-declared "
+                    "global Sets (e.g., Reals, NonNegativeReals, Integers, "
+                    "PositiveIntegers, Binary), or create a custom RangeSet.",
+                    version='TBD')
+                # Note: we will completely ignore any positional
+                # arguments.  In this situation, these could be the
+                # parent_block and any indices; e.g.,
+                #    Var(m.I, within=RealSet)
                 base_set = GlobalSets[GlobalSet.global_name]
                 bounds = kwds.pop('bounds', None)
                 range_init = SetInitializer(base_set)
@@ -4021,7 +4032,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
                         cls_name is not None or bounds is not None):
                     ans._name += str(ans.bounds())
             else:
-                ans = super(GlobalSet, cls).__new__(cls, **kwds)
+                ans = super(GlobalSet, cls).__new__(cls, *args, **kwds)
             if kwds:
                 raise RuntimeError("Unexpected keyword arguments: %s" % (kwds,))
             return ans
