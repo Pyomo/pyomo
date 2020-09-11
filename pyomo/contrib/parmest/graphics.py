@@ -10,6 +10,7 @@
 
 imports_available = True
 try:
+    import sys
     import numpy as np
     import pandas as pd
     from scipy import stats
@@ -93,15 +94,16 @@ def _get_data_slice(xvar,yvar,columns,data,theta_star):
     
     return X,Y,Z
     
-
-def _add_scatter(x,y,color,columns,theta_star):
+# Note: seaborn 0.11 no longer expects color and label to be passed to the 
+#       plotting functions. label is kept here for backward compatibility
+def _add_scatter(x,y,color,columns,theta_star,label=None):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax, columns)
     
     ax.scatter(theta_star[xvar], theta_star[yvar], c=color, s=35)
     
     
-def _add_rectangle_CI(x,y,color,columns,lower_bound,upper_bound):
+def _add_rectangle_CI(x,y,color,columns,lower_bound,upper_bound,label=None):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
 
@@ -116,7 +118,7 @@ def _add_rectangle_CI(x,y,color,columns,lower_bound,upper_bound):
     ax.plot([xmin, xmin], [ymax, ymin], color=color)
 
 
-def _add_scipy_dist_CI(x,y,color,columns,ncells,alpha,dist,theta_star):
+def _add_scipy_dist_CI(x,y,color,columns,ncells,alpha,dist,theta_star,label=None):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
     
@@ -152,7 +154,7 @@ def _add_scipy_dist_CI(x,y,color,columns,ncells,alpha,dist,theta_star):
     ax.contour(X,Y,Z, levels=[alpha], colors=color) 
     
     
-def _add_obj_contour(x,y,color,columns,data,theta_star):
+def _add_obj_contour(x,y,color,columns,data,theta_star,label=None):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
 
@@ -261,10 +263,11 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     g = sns.PairGrid(thetas)
     
     # Plot histogram on the diagonal
-    # Note: distplot is deprecated and will be removed in a future version of seaborn (> 0.11), use histplot instead
-    try: 
+    # Note: distplot is deprecated and will be removed in a future version of seaborn, use histplot 
+    #       distplot is kept for older versions of python
+    if sys.version_info >= (3,5):
         g.map_diag(sns.histplot)
-    except:
+    else:
         g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False) 
     
     # Plot filled contours using all theta values based on obj
