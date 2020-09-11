@@ -16,7 +16,7 @@ import textwrap
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
@@ -934,6 +934,29 @@ class BigM_Transformation(Transformation):
     @wraps(get_transformed_constraints)
     def get_transformed_constraints(self, srcConstraint):
         return get_transformed_constraints(srcConstraint)
+
+    @deprecated("The get_m_value_src function is deprecated. Use "
+                "the get_M_value_src function is you need source "
+                "information or the get_M_value function if you "
+                "only need values.", version='5.7')
+    def get_m_value_src(self, constraint):
+        transBlock = _get_constraint_transBlock(constraint)
+        ((lower_val, lower_source, lower_key),
+         (upper_val, upper_source, upper_key)) = transBlock.bigm_src[constraint]
+        
+        if constraint.lower is not None and constraint.upper is not None and \
+           (not lower_source is upper_source or not lower_key is upper_key):
+            raise GDP_Error("This is why this method is deprecated: The lower "
+                            "and upper M values came from different sources, "
+                            "please use the get_M_value_src method.")
+        # if source and key are equal for the two, this is representable in the
+        # old format.
+        if constraint.lower is not None and lower_source is not None:
+            return (lower_source, lower_key)
+        if constraint.upper is not None and upper_source is not None:
+            return (upper_source, upper_key)
+        # else it was calculated:
+        return (lower_val, upper_val)
 
     def get_M_value_src(self, constraint):
         """Return a tuple indicating how the M value used to transform

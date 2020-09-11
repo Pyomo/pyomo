@@ -1227,6 +1227,60 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertIsNone(l_val)
         self.assertEqual(u_val, 20)
 
+    def test_suffix_M_constraintKeyOnSimpleDisj_deprecated_m_src_method(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = models.add_disj_not_on_block(m)
+        m.simpledisj.BigM = Suffix(direction=Suffix.LOCAL)
+        m.simpledisj.BigM[None] = 45
+        m.simpledisj.BigM[m.simpledisj.c] = 87
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+
+        bigms = {m.b.disjunct[0].c: (-15, None)}
+        bigm = TransformationFactory('gdp.bigm')
+        
+        bigm.apply_to(m, bigM=bigms)
+
+        # check source of the m values
+        (src, key) = bigm.get_m_value_src(m.simpledisj.c)
+        self.assertIs(src, m.simpledisj.BigM)
+        self.assertIs(key, m.simpledisj.c)
+        (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
+        self.assertIs(src, m.BigM)
+        self.assertIsNone(key)
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "This is why this method is deprecated: The lower "
+            "and upper M values came from different sources, "
+            "please use the get_M_value_src method.",
+            bigm.get_m_value_src,
+            m.b.disjunct[0].c)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
+        self.assertIs(src, m.BigM)
+        self.assertIsNone(key)
+
+    def test_disjunct_M_arg_deprecated_m_src_method(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = models.add_disj_not_on_block(m)
+        bigm = TransformationFactory('gdp.bigm')
+        bigms = {m.b: 100, m.b.disjunct[1]: 13}
+        bigm.apply_to(m, bigM=bigms)
+        self.checkMs(m, -100, 100, 13, -3, 1.5)
+
+        # check the source of the values
+        (src, key) = bigm.get_m_value_src(m.simpledisj.c)
+        self.assertEqual(src, -3)
+        self.assertIsNone(key)
+        (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
+        self.assertIsNone(src)
+        self.assertEqual(key, 1.5)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[0].c)
+        self.assertIs(src, bigms)
+        self.assertIs(key, m.b)
+        (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
+        self.assertIs(src, bigms)
+        self.assertIs(key, m.b.disjunct[1])
+
     def test_block_targets_inactive(self):
         ct.check_block_targets_inactive(self, 'bigm')
 
