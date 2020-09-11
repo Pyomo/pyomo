@@ -94,14 +94,14 @@ def _get_data_slice(xvar,yvar,columns,data,theta_star):
     return X,Y,Z
     
 
-def _add_scatter(x,y,color,label,columns,theta_star):
+def _add_scatter(x,y,color,columns,theta_star):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax, columns)
     
     ax.scatter(theta_star[xvar], theta_star[yvar], c=color, s=35)
     
     
-def _add_rectangle_CI(x,y,color,label,columns,lower_bound,upper_bound):
+def _add_rectangle_CI(x,y,color,columns,lower_bound,upper_bound):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
 
@@ -116,7 +116,7 @@ def _add_rectangle_CI(x,y,color,label,columns,lower_bound,upper_bound):
     ax.plot([xmin, xmin], [ymax, ymin], color=color)
 
 
-def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
+def _add_scipy_dist_CI(x,y,color,columns,ncells,alpha,dist,theta_star):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
     
@@ -152,7 +152,7 @@ def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
     ax.contour(X,Y,Z, levels=[alpha], colors=color) 
     
     
-def _add_obj_contour(x,y,color,label,columns,data,theta_star):
+def _add_obj_contour(x,y,color,columns,data,theta_star):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
 
@@ -165,18 +165,6 @@ def _add_obj_contour(x,y,color,label,columns,data,theta_star):
         plt.tricontourf(triang,Z,cmap=cmap)
     except:
         print('Objective contour plot for', xvar, yvar,'slice failed')
-    
-    
-def _add_LR_contour(x,y,color,label,columns,data,theta_star,threshold):
-    ax = plt.gca()
-    xvar, yvar, loc = _get_variables(ax,columns)
-    
-    X, Y, Z = _get_data_slice(xvar,yvar,columns,data,theta_star)
-    
-    triang = tri.Triangulation(X, Y)
-    
-    plt.tricontour(triang,Z,[threshold], colors='r')
-
 
 def _set_axis_limits(g, axis_limits, theta_vals, theta_star):
     
@@ -273,7 +261,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     g = sns.PairGrid(thetas)
     
     # Plot histogram on the diagonal
-    g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False) 
+    g.map_diag(sns.histplot)
     
     # Plot filled contours using all theta values based on obj
     if 'obj' in theta_values.columns and add_obj_contour:
