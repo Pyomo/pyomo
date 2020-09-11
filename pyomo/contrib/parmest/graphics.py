@@ -265,7 +265,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     # Plot histogram on the diagonal
     # Note: distplot is deprecated and will be removed in a future version of seaborn, use histplot 
     #       distplot is kept for older versions of python
-    if sys.version_info > (3,5):
+    if sys.version_info >= (3,6):
         g.map_diag(sns.histplot)
     else:
         g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False) 
