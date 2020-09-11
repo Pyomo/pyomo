@@ -10,7 +10,6 @@
 
 imports_available = True
 try:
-    import sys
     import numpy as np
     import pandas as pd
     from scipy import stats
@@ -33,6 +32,7 @@ try:
 except (ImportError, RuntimeError, SyntaxError):
     imports_available = False
 
+from pyomo.common.dependencies import check_min_version
 
 def _get_variables(ax,columns):
     sps = ax.get_subplotspec()
@@ -263,9 +263,10 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     g = sns.PairGrid(thetas)
     
     # Plot histogram on the diagonal
-    # Note: distplot is deprecated and will be removed in a future version of seaborn, use histplot 
-    #       distplot is kept for older versions of python
-    if sys.version_info >= (3,6):
+    # Note: distplot is deprecated and will be removed in a future
+    #       version of seaborn, use histplot.  distplot is kept for older
+    #       versions of python.
+    if check_min_version(seaborn, "0.11"):
         g.map_diag(sns.histplot)
     else:
         g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False) 
