@@ -261,7 +261,11 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     g = sns.PairGrid(thetas)
     
     # Plot histogram on the diagonal
-    g.map_diag(sns.histplot)
+    # Note: distplot is deprecated and will be removed in a future version of seaborn (> 0.11), use histplot instead
+    try: 
+        g.map_diag(sns.histplot)
+    except:
+        g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False) 
     
     # Plot filled contours using all theta values based on obj
     if 'obj' in theta_values.columns and add_obj_contour:
