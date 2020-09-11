@@ -26,7 +26,7 @@ single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
 
 
-def solve_MIP_master(solve_data, config):
+def solve_MIP_master(solve_data, config, feas_pump=False):
     """
     This function solves the MIP master problem
 
@@ -66,7 +66,7 @@ def solve_MIP_master(solve_data, config):
     if MindtPy.MindtPy_linear_cuts.find_component('dual_bound') is not None:
         MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
 
-    if config.strategy is 'feas_pump':
+    if feas_pump:
         MindtPy.feas_pump_mip_obj = generate_L1_objective_function(
             master_mip,
             solve_data.working_model,

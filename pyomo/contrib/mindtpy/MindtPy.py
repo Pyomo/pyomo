@@ -79,6 +79,12 @@ class MindtPySolver(object):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
 
+        solve_data = MindtPySolveData()
+        solve_data.results = SolverResults()
+        solve_data.timing = Container()
+        solve_data.curr_int_sol = []
+        solve_data.prev_int_sol = []
+
         # configuration confirmation
         if config.single_tree:
             config.iteration_limit = 1
@@ -101,18 +107,13 @@ class MindtPySolver(object):
         elif config.strategy == "feas_pump":  # feasibility pump alone
             config.init_strategy = "feas_pump"
             config.iteration_limit = 0
+            solve_data.fp_iter = 0
 
         if config.nlp_solver == "baron":
             config.use_dual = False
         # if ecp tolerance is not provided use bound tolerance
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.bound_tolerance
-
-        solve_data = MindtPySolveData()
-        solve_data.results = SolverResults()
-        solve_data.timing = Container()
-        solve_data.curr_int_sol = []
-        solve_data.prev_int_sol = []
 
         if config.use_fbbt:
             fbbt(model)

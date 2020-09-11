@@ -214,11 +214,8 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
                              solve_data.working_model.MindtPy_utils.variable_list,
                              config)
         if main_objective.sense == minimize:
-            solve_data.UB = min(
-                main_objective.expr(),
-                solve_data.UB)
-            solve_data.solution_improved = \
-                solve_data.UB < solve_data.UB_progress[-1]
+            solve_data.UB = min(main_objective.expr(), solve_data.UB)
+            solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
 
             if solve_data.solution_improved and config.strategy == 'feas_pump':
@@ -227,11 +224,8 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
                         expr=solve_data.mip.MindtPy_utils.objective_value
                         <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
         else:
-            solve_data.LB = max(
-                main_objective.expr(),
-                solve_data.LB)
-            solve_data.solution_improved = \
-                solve_data.LB > solve_data.LB_progress[-1]
+            solve_data.LB = max(main_objective.expr(), solve_data.LB)
+            solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
 
             if solve_data.solution_improved and config.strategy == 'feas_pump':
@@ -240,7 +234,7 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
                         expr=solve_data.mip.MindtPy_utils.objective_value
                         >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
 
-        if config.add_no_good_cuts or config.strategy is 'feas_pump':
+        if config.add_no_good_cuts:
             config.logger.info('Creating no-good cut')
             add_nogood_cuts(solve_data.mip, config)
     else:
@@ -284,16 +278,16 @@ def feasibility_pump_loop(solve_data, config):
     working_model = solve_data.working_model
     main_objective = next(
         working_model.component_data_objects(Objective, active=True))
-    while solve_data.mip_iter < config.fp_iteration_limit:
+    while solve_data.fp_iter < config.fp_iteration_limit:
 
         config.logger.info(
             '---Feasibility Pump Iteration %s---'
-            % solve_data.mip_iter)
+            % solve_data.fp_iter)
 
         solve_data.mip_subiter = 0
         # solve MILP master problem
         feas_mip, feas_mip_results = solve_MIP_master(
-            solve_data, config)
+            solve_data, config, feas_pump=True)
         if feas_mip_results.solver.termination_condition is tc.optimal:
             handle_master_mip_optimal(feas_mip, solve_data, config)
         elif feas_mip_results.solver.termination_condition is tc.infeasible:
@@ -325,7 +319,4 @@ def feasibility_pump_loop(solve_data, config):
                                                     solve_data, config)
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fixed_nlp, solve_data)
-
-        if algorithm_should_terminate(solve_data, config, check_cycling=False):
-            last_iter_cuts = True
-            break
+        solve_data.fp_iter += 1
