@@ -266,7 +266,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     # Note: distplot is deprecated and will be removed in a future
     #       version of seaborn, use histplot.  distplot is kept for older
     #       versions of python.
-    if check_min_version(seaborn, "0.11"):
+    if check_min_version(sns, "0.11"):
         g.map_diag(sns.histplot)
     else:
         g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False) 
