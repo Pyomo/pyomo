@@ -13,7 +13,7 @@ def _get_GDPopt_config():
     ))
     CONFIG.declare("iteration_limit", ConfigValue(
         default=50,
-        domain=PositiveInt,
+        domain=NonNegativeInt,
         description="Iteration limit",
         doc="Number of maximum iterations in the decomposition methods."
     ))

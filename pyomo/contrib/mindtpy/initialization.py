@@ -86,6 +86,8 @@ def MindtPy_initialize_master(solve_data, config):
             else:
                 handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                         solve_data, config)
+    elif config.init_strategy == 'feas_pump':
+        feasibility_pump_loop(solve_data, config)
 
 
 def init_rNLP(solve_data, config):
