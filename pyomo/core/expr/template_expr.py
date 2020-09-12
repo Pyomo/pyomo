@@ -745,11 +745,9 @@ def templatize_rule(block, rule, index_set):
         builtins.sum = context.sum_template
         # Get the index templates needed for calling the rule
         if index_set is not None:
-            if not index_set.isfinite():
-                raise TemplateExpressionError(
-                    None,
-                    "Cannot templatize rule with non-finite indexing set")
-            indices = next(iter(index_set))
+            # Note, do not rely on the __iter__ overload, as non-finite
+            # Sets don't have an __iter__.
+            indices = next(iter(context.get_iter(index_set)))
             try:
                 context.cache.pop()
             except IndexError:
@@ -764,7 +762,7 @@ def templatize_rule(block, rule, index_set):
         #
         # TBD: Should this just return a "FORALL()" expression node that
         # behaves similarly to the GetItemExpression node?
-        return rule(block, *indices), indices
+        return rule(block, indices), indices
     except:
         internal_error = sys.exc_info()
         raise

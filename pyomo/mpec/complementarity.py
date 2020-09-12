@@ -147,14 +147,13 @@ class _ComplementarityData(_BlockData):
             self._args = ( as_numeric(cc.arg0), as_numeric(cc.arg1) )
         #
         elif cc.__class__ is tuple:
-            if cc is Complementarity.Skip:
-                del self.parent_component()[self.index()]
-            elif len(cc) != 2:
+            if len(cc) != 2:
                 raise ValueError(
                     "Invalid tuple for Complementarity %s (expected 2-tuple):"
                     "\n\t%s" % (self.name, cc) )
-            else:
-                self._args = tuple( as_numeric(x) for x in cc )
+            self._args = tuple( as_numeric(x) for x in cc )
+        elif cc is Complementarity.Skip:
+            del self.parent_component()[self.index()]
         elif cc.__class__ is list:
             #
             # Call set_value() recursively to apply the error same error
@@ -170,7 +169,6 @@ class _ComplementarityData(_BlockData):
 @ModelComponentFactory.register("Complementarity conditions.")
 class Complementarity(Block):
 
-    Skip = (1000,)
     _ComponentDataClass = _ComplementarityData
 
     def __new__(cls, *args, **kwds):

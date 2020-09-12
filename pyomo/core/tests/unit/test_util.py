@@ -131,7 +131,13 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ConstantInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        with self.assertRaisesRegex(
+                RuntimeError, "Initializer ConstantInitializer does "
+                "not contain embedded indices"):
+            a.indices()
         self.assertEqual(a(None, 1), 5)
+
 
     def test_dict(self):
         m = ConcreteModel()
@@ -139,7 +145,10 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ItemInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [1])
         self.assertEqual(a(None, 1), 5)
+
 
     def test_sequence(self):
         m = ConcreteModel()
@@ -147,13 +156,17 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ItemInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [0,1])
         self.assertEqual(a(None, 1), 5)
 
         a = Initializer([0,5], treat_sequences_as_mappings=False)
         self.assertIs(type(a), ConstantInitializer)
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), [0,5])
+
 
     def test_function(self):
         m = ConcreteModel()
@@ -163,6 +176,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ScalarCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), 0)
 
         m.x = Var([1,2,3])
@@ -172,6 +186,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), IndexedCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), 2)
 
         def x2_init(m):
@@ -180,6 +195,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ScalarCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), 0)
 
         m.y = Var([1,2,3], [4,5,6])
@@ -189,12 +205,201 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), IndexedCallInitializer)
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, (1, 4)), 8)
 
         b = CountedCallInitializer(m.x, a)
         self.assertIs(type(b), CountedCallInitializer)
         self.assertFalse(b.constant())
         self.assertFalse(b.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertFalse(b._scalar)
+        self.assertIs(a._fcn, b._fcn)
+        c = b(None, 1)
+        self.assertIs(type(c), CountedCallGenerator)
+        self.assertEqual(next(c), 2)
+        self.assertEqual(next(c), 3)
+        self.assertEqual(next(c), 4)
+
+
+    def test_method(self):
+        class Init(object):
+            def a_init(self, m):
+                return 0
+
+            def x_init(self, m, i):
+                return i+1
+
+            def x2_init(self, m):
+                return 0
+
+            def y_init(self, m, i, j):
+                return j*(i+1)
+
+        init = Init()
+
+        m = ConcreteModel()
+        a = Initializer(init.a_init)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, 1), 0)
+
+        m.x = Var([1,2,3])
+        a = Initializer(init.x_init)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, 1), 2)
+
+        a = Initializer(init.x2_init)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, 1), 0)
+
+        m.y = Var([1,2,3], [4,5,6])
+        a = Initializer(init.y_init)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, (1, 4)), 8)
+
+        b = CountedCallInitializer(m.x, a)
+        self.assertIs(type(b), CountedCallInitializer)
+        self.assertFalse(b.constant())
+        self.assertFalse(b.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertFalse(b._scalar)
+        self.assertIs(a._fcn, b._fcn)
+        c = b(None, 1)
+        self.assertIs(type(c), CountedCallGenerator)
+        self.assertEqual(next(c), 2)
+        self.assertEqual(next(c), 3)
+        self.assertEqual(next(c), 4)
+
+
+    def test_classmethod(self):
+        class Init(object):
+            @classmethod
+            def a_init(cls, m):
+                return 0
+
+            @classmethod
+            def x_init(cls, m, i):
+                return i+1
+
+            @classmethod
+            def x2_init(cls, m):
+                return 0
+
+            @classmethod
+            def y_init(cls, m, i, j):
+                return j*(i+1)
+
+        m = ConcreteModel()
+        a = Initializer(Init.a_init)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, 1), 0)
+
+        m.x = Var([1,2,3])
+        a = Initializer(Init.x_init)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, 1), 2)
+
+        a = Initializer(Init.x2_init)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, 1), 0)
+
+        m.y = Var([1,2,3], [4,5,6])
+        a = Initializer(Init.y_init)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, (1, 4)), 8)
+
+        b = CountedCallInitializer(m.x, a)
+        self.assertIs(type(b), CountedCallInitializer)
+        self.assertFalse(b.constant())
+        self.assertFalse(b.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertFalse(b._scalar)
+        self.assertIs(a._fcn, b._fcn)
+        c = b(None, 1)
+        self.assertIs(type(c), CountedCallGenerator)
+        self.assertEqual(next(c), 2)
+        self.assertEqual(next(c), 3)
+        self.assertEqual(next(c), 4)
+
+
+    def test_staticmethod(self):
+        class Init(object):
+            @staticmethod
+            def a_init(m):
+                return 0
+
+            @staticmethod
+            def x_init(m, i):
+                return i+1
+
+            @staticmethod
+            def x2_init(m):
+                return 0
+
+            @staticmethod
+            def y_init(m, i, j):
+                return j*(i+1)
+
+        m = ConcreteModel()
+        a = Initializer(Init.a_init)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, 1), 0)
+
+        m.x = Var([1,2,3])
+        a = Initializer(Init.x_init)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, 1), 2)
+
+        a = Initializer(Init.x2_init)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, 1), 0)
+
+        m.y = Var([1,2,3], [4,5,6])
+        a = Initializer(Init.y_init)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertFalse(a.contains_indices())
+        self.assertEqual(a(None, (1, 4)), 8)
+
+        b = CountedCallInitializer(m.x, a)
+        self.assertIs(type(b), CountedCallInitializer)
+        self.assertFalse(b.constant())
+        self.assertFalse(b.verified)
+        self.assertFalse(a.contains_indices())
         self.assertFalse(b._scalar)
         self.assertIs(a._fcn, b._fcn)
         c = b(None, 1)
@@ -239,6 +444,48 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertEqual(list(a(None, (1, 4))), [4,2])
 
+
+    def test_generator_method(self):
+        class Init(object):
+            def a_init(self, m):
+                yield 0
+                yield 3
+
+            def x_init(self, m, i):
+                yield i
+                yield i+1
+
+            def y_init(self, m, i, j):
+                yield j
+                yield i+1
+        init = Init()
+
+        m = ConcreteModel()
+        with self.assertRaisesRegexp(
+                ValueError, "Generator functions are not allowed"):
+            a = Initializer(init.a_init)
+
+        a = Initializer(init.a_init, allow_generators=True)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(list(a(None, 1)), [0,3])
+
+        m.x = Var([1,2,3])
+        a = Initializer(init.x_init, allow_generators=True)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(list(a(None, 1)), [1,2])
+
+        m.y = Var([1,2,3], [4,5,6])
+        a = Initializer(init.y_init, allow_generators=True)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(list(a(None, (1, 4))), [4,2])
+
+
     def test_generators(self):
         m = ConcreteModel()
         with self.assertRaisesRegexp(
@@ -263,6 +510,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertTrue(a.constant())
         self.assertFalse(a.verified)
         self.assertEqual(list(a(None, 1)), [0,3])
+
 
     def test_pickle(self):
         m = ConcreteModel()
