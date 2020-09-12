@@ -12,6 +12,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 from pyomo.opt.results import ProblemSense
+from pyomo.contrib.mindtpy.cut_generation import add_nogood_cuts
 
 
 def solve_NLP_subproblem(solve_data, config):
@@ -101,7 +102,7 @@ def solve_NLP_subproblem(solve_data, config):
 # The next few functions deal with handling the solution we get from the above NLP solver function
 
 
-def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
+def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
     """
     This function copies the result of the NLP solver function ('solve_NLP_subproblem') to the working model, updates
     the bounds, adds OA and integer cuts, and then stores the new solution if it is the new best solution. This
@@ -139,10 +140,9 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
         solve_data.LB = max(value(main_objective.expr), solve_data.LB)
         solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
         solve_data.LB_progress.append(solve_data.LB)
-
     config.logger.info(
         'NLP {}: OBJ: {}  LB: {}  UB: {}'
-        .format(solve_data.nlp_iter,
+        .format(solve_data.nlp_iter if not feas_pump else solve_data.fp_iter,
                 value(main_objective.expr),
                 solve_data.LB, solve_data.UB))
 
@@ -158,8 +158,20 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
                 solve_data.num_no_good_cuts_added.update(
                     {solve_data.LB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.integer_cuts)})
 
-    # Add the linear cut
-    if config.strategy == 'OA':
+        # add obj increasing constraint for feas_pump
+        if main_objective.sense == minimize:
+            solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.\
+                increasing_objective_cut.set_value(
+                    expr=solve_data.mip.MindtPy_utils.objective_value
+                    <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
+        else:
+            solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.\
+                increasing_objective_cut.set_value(
+                    expr=solve_data.mip.MindtPy_utils.objective_value
+                    >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
+
+            # Add the linear cut
+    if config.strategy == 'OA' or feas_pump:
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)

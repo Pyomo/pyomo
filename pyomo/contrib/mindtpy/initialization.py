@@ -8,7 +8,7 @@ from pyomo.contrib.mindtpy.cut_generation import (
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
 from pyomo.core import (ConstraintList, Objective,
-                        TransformationFactory, maximize, minimize, value, Var)
+                        TransformationFactory, maximize, minimize, value, Var, Constraint)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
@@ -19,6 +19,7 @@ from pyomo.contrib.mindtpy.util import var_bound_add
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
 import math
 from pyomo.contrib.mindtpy.feasibility_pump import feasibility_pump_loop
+
 
 def MindtPy_initialize_master(solve_data, config):
     """
@@ -43,7 +44,7 @@ def MindtPy_initialize_master(solve_data, config):
     if config.use_dual:
         m.dual.deactivate()
 
-    if config.strategy == 'OA':
+    if config.strategy == 'OA' or config.init_strategy == 'feas_pump':
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts')
@@ -87,6 +88,9 @@ def MindtPy_initialize_master(solve_data, config):
                 handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                         solve_data, config)
     elif config.init_strategy == 'feas_pump':
+        init_rNLP(solve_data, config)
+        MindtPy.MindtPy_linear_cuts.increasing_objective_cut = Constraint(
+            expr=MindtPy.objective_value <= config.obj_bound)
         feasibility_pump_loop(solve_data, config)
 
 
