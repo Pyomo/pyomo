@@ -117,49 +117,6 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
         else:
             config.logger.error("Feasibility pump fixed nlp is infeasible, something might be wrong. "
                                 "There might be a problem with the precisions - the feaspump seems to have converged")
-    #         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
-    #                              solve_data.working_model.MindtPy_utils.variable_list,
-    #                              config)
-    #         if main_objective.sense == minimize:
-    #             solve_data.UB = min(main_objective.expr(), solve_data.UB)
-    #             solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
-    #             solve_data.UB_progress.append(solve_data.UB)
-
-    #             if solve_data.solution_improved:
-    #                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.\
-    #                     increasing_objective_cut.set_value(
-    #                         expr=solve_data.mip.MindtPy_utils.objective_value
-    #                         <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
-    #         else:
-    #             solve_data.LB = max(main_objective.expr(), solve_data.LB)
-    #             solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
-    #             solve_data.LB_progress.append(solve_data.LB)
-
-    #             if solve_data.solution_improved:
-    #                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.\
-    #                     increasing_objective_cut.set_value(
-    #                         expr=solve_data.mip.MindtPy_utils.objective_value
-    #                         >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
-
-    #         if config.add_no_good_cuts:
-    #             config.logger.info('Creating no-good cut')
-    #             add_nogood_cuts(solve_data.mip, config)
-    # else:
-    #     solve_data.solution_improved = False
-
-    # config.logger.info(
-    #     'NLP {}: OBJ: {}  LB: {}  UB: {}'
-    #     .format(solve_data.fp_iter,
-    #             main_objective.expr(),
-    #             solve_data.LB, solve_data.UB))
-
-    # # Always add the oa cut
-    # copy_var_list_values(sub_nlp.MindtPy_utils.variable_list,
-    #                      solve_data.mip.MindtPy_utils.variable_list,
-    #                      config, ignore_integrality=True)
-    # add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
-
-    # config.call_after_subproblem_feasible(sub_nlp, solve_data)
 
     if solve_data.solution_improved:
         # why do we need clone the model here? Can we just check the feasibility of the working_model?
