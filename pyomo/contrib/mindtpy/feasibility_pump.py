@@ -53,7 +53,7 @@ def solve_feas_pump_NLP_subproblem(solve_data, config):
                        % (solve_data.nlp_iter,))
 
     # Set up NLP
-    TransformationFactory('core.relax_integrality').apply_to(sub_nlp)
+    TransformationFactory('core.relax_integer_vars').apply_to(sub_nlp)
     main_objective = next(
         sub_nlp.component_data_objects(Objective, active=True))
     main_objective.deactivate()
