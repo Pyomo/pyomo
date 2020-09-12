@@ -17,10 +17,9 @@ from pyomo.environ import *
 from pyomo.core import Constraint, minimize, value
 from pyomo.core.expr import current as EXPR
 from math import fabs
-
 from pyomo.repn import generate_standard_repn
-
 from pyomo.common.dependencies import attempt_import
+from pyomo.contrib.mindtpy.util import generate_L1_objective_function
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
@@ -68,7 +67,7 @@ def solve_MIP_master(solve_data, config, feas_pump=False):
 
     if feas_pump:
         MindtPy.feas_pump_mip_obj = generate_L1_objective_function(
-            master_mip,
+            solve_data.mip,
             solve_data.working_model,
             discretes_only=True)
     else:

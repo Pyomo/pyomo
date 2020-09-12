@@ -18,7 +18,7 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
 from pyomo.contrib.mindtpy.util import var_bound_add
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
 import math
-
+from pyomo.contrib.mindtpy.feasibility_pump import feasibility_pump_loop
 
 def MindtPy_initialize_master(solve_data, config):
     """
