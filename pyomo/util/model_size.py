@@ -1,9 +1,9 @@
 """This module contains functions to interrogate the size of a Pyomo model."""
 import logging
 
+from pyomo.common.collections import ComponentSet
 from pyomo.core import Block, Constraint, Var
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyutilib.misc import Container
 

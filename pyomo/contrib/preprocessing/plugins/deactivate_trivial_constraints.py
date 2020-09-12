@@ -3,12 +3,12 @@
 import logging
 import textwrap
 
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.common.collections import ComponentSet
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.expr.numvalue import value
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
 

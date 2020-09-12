@@ -8,11 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+# TODO: this import is for historical backwards compatibility and should
+# probably be removed
+from pyomo.common.collections import ComponentMap
+
 from pyomo.core.expr.numvalue import *
 from pyomo.core.expr.boolean_value import (
     as_boolean, BooleanConstant, BooleanValue,
     native_logical_values)
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.objective import (minimize,
                                          maximize)
 from pyomo.core.base.config import PyomoOptions

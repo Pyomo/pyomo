@@ -22,13 +22,12 @@ from pyomo.opt import (SolverFactory,
 #
 # Define the modeling namespace
 #
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.expr import *
 import pyomo.core.kernel
 from pyomo.kernel.util import (generate_names,
                                preorder_traversal,
                                pprint)
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.variable import \
     (variable,
      variable_tuple,

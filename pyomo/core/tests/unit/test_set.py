@@ -3828,12 +3828,15 @@ class TestSet(unittest.TestCase):
         m = ConcreteModel()
         m.I = Set([1,2,3], ordered=False)
         self.assertEqual(len(m.I), 0)
+        self.assertEqual(m.I.data(), {})
         m.I[1]
         self.assertEqual(len(m.I), 1)
         self.assertEqual(m.I[1], [])
+        self.assertEqual(m.I.data(), {1:()})
 
         self.assertEqual(m.I[2], [])
         self.assertEqual(len(m.I), 2)
+        self.assertEqual(m.I.data(), {1:(), 2:()})
 
         m.I[1].add(1)
         m.I[2].add(2)
@@ -3851,6 +3854,7 @@ class TestSet(unittest.TestCase):
         self.assertIs(type(m.I[1]), _FiniteSetData)
         self.assertIs(type(m.I[2]), _FiniteSetData)
         self.assertIs(type(m.I[3]), _FiniteSetData)
+        self.assertEqual(m.I.data(), {1:(1,), 2:(2,), 3:(4,)})
 
         # Explicit (constant) construction
         m = ConcreteModel()
@@ -3868,6 +3872,7 @@ class TestSet(unittest.TestCase):
         self.assertIs(type(m.I[1]), _InsertionOrderSetData)
         self.assertIs(type(m.I[2]), _InsertionOrderSetData)
         self.assertIs(type(m.I[3]), _InsertionOrderSetData)
+        self.assertEqual(m.I.data(), {1:(4,2,5), 2:(4,2,5), 3:(4,2,5)})
 
         # Explicit (constant) construction
         m = ConcreteModel()
@@ -3885,6 +3890,7 @@ class TestSet(unittest.TestCase):
         self.assertIs(type(m.I[1]), _SortedSetData)
         self.assertIs(type(m.I[2]), _SortedSetData)
         self.assertIs(type(m.I[3]), _SortedSetData)
+        self.assertEqual(m.I.data(), {1:(2,4,5), 2:(2,4,5), 3:(2,4,5)})
 
         # Explicit (procedural) construction
         m = ConcreteModel()
@@ -3896,6 +3902,7 @@ class TestSet(unittest.TestCase):
         self.assertEqual(sorted(m.I._data.keys()), [1,2])
         self.assertEqual(list(m.I[1]), [1,2,3])
         self.assertEqual(list(m.I[2]), [4,5,6])
+        self.assertEqual(m.I.data(), {1:(1,2,3), 2:(4,5,6)})
 
 
     def test_naming(self):
