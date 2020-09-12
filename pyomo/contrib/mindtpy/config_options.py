@@ -5,12 +5,7 @@ from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
 
 def _get_GDPopt_config():
     CONFIG = ConfigBlock("MindtPy")
-    CONFIG.declare("bound_tolerance", ConfigValue(
-        default=1E-4,
-        domain=PositiveFloat,
-        description="Bound tolerance",
-        doc="Relative tolerance for bound feasibility checks."
-    ))
+
     CONFIG.declare("iteration_limit", ConfigValue(
         default=50,
         domain=NonNegativeInt,
@@ -64,41 +59,6 @@ def _get_GDPopt_config():
             "slack variables corresponding to all the constraints get "
             "multiplied by this number and added to the objective."
     ))
-    CONFIG.declare("ecp_tolerance", ConfigValue(
-        default=None,
-        domain=PositiveFloat,
-        description="ECP tolerance",
-        doc="Feasibility tolerance used to determine the stopping criterion in"
-            "the ECP method. As long as nonlinear constraint are violated for "
-            "more than this tolerance, the method will keep iterating."
-    ))
-    CONFIG.declare("nlp_solver", ConfigValue(
-        default="ipopt",
-        domain=In(["ipopt", "gams", "baron"]),
-        description="NLP subsolver name",
-        doc="Which NLP subsolver is going to be used for solving the nonlinear"
-            "subproblems."
-    ))
-    CONFIG.declare("nlp_solver_args", ConfigBlock(
-        implicit=True,
-        description="NLP subsolver options",
-        doc="Which NLP subsolver options to be passed to the solver while "
-            "solving the nonlinear subproblems."
-    ))
-    CONFIG.declare("mip_solver", ConfigValue(
-        default="glpk",
-        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams",
-                   "gurobi_persistent", "cplex_persistent"]),
-        description="MIP subsolver name",
-        doc="Which MIP subsolver is going to be used for solving the mixed-"
-            "integer master problems."
-    ))
-    CONFIG.declare("mip_solver_args", ConfigBlock(
-        implicit=True,
-        description="MIP subsolver options",
-        doc="Which MIP subsolver options to be passed to the solver while "
-            "solving the mixed-integer master problems."
-    ))
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing(),
         domain=None,
@@ -123,47 +83,15 @@ def _get_GDPopt_config():
         description="Stream output to terminal.",
         domain=bool
     ))
-    CONFIG.declare("solver_tee", ConfigValue(
-        default=False,
-        description="Stream the output of mip solver and nlp solver to terminal.",
-        domain=bool
-    ))
     CONFIG.declare("logger", ConfigValue(
         default='pyomo.contrib.mindtpy',
         description="The logger object or name to use for reporting.",
         domain=a_logger
     ))
-    CONFIG.declare("small_dual_tolerance", ConfigValue(
-        default=1E-8,
-        description="When generating cuts, small duals multiplied "
-                    "by expressions can cause problems. Exclude all duals "
-                    "smaller in absolute value than the following."
-    ))
-    CONFIG.declare("integer_tolerance", ConfigValue(
-        default=1E-5,
-        description="Tolerance on integral values."
-    ))
-    CONFIG.declare("constraint_tolerance", ConfigValue(
-        default=1E-6,
-        description="Tolerance on constraint satisfaction."
-    ))
-    CONFIG.declare("variable_tolerance", ConfigValue(
-        default=1E-8,
-        description="Tolerance on variable bounds."
-    ))
-    CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-8,
-        description="Tolerance on variable equal to zero."
-    ))
     CONFIG.declare("initial_feas", ConfigValue(
         default=True,
         description="Apply an initial feasibility step.",
         domain=bool
-    ))
-    CONFIG.declare("obj_bound", ConfigValue(
-        default=1E15,
-        domain=PositiveFloat,
-        description="Bound applied to the linearization of the objective function if master MILP is unbounded."
     ))
     CONFIG.declare("integer_to_binary", ConfigValue(
         default=False,
@@ -191,16 +119,6 @@ def _get_GDPopt_config():
         description="whether add slack variable here."
                     "slack variables here are used to deal with nonconvex MINLP.",
         domain=bool
-    ))
-    CONFIG.declare("continuous_var_bound", ConfigValue(
-        default=1e10,
-        description="default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.",
-        domain=PositiveFloat
-    ))
-    CONFIG.declare("integer_var_bound", ConfigValue(
-        default=1e9,
-        description="default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.",
-        domain=PositiveFloat
     ))
     CONFIG.declare("cycling_check", ConfigValue(
         default=True,
@@ -237,12 +155,113 @@ def _get_GDPopt_config():
         description="use fbbt to tighten the feasible region of the problem",
         domain=bool
     ))
+
+    _add_subsolver_configs(CONFIG)
+    _add_tolerance_configs(CONFIG)
+    _add_FP_configs(CONFIG)
+    _add_bound_configs(CONFIG)
+    return CONFIG
+
+
+def _add_subsolver_configs(CONFIG):
+    CONFIG.declare("nlp_solver", ConfigValue(
+        default="ipopt",
+        domain=In(["ipopt", "gams", "baron"]),
+        description="NLP subsolver name",
+        doc="Which NLP subsolver is going to be used for solving the nonlinear"
+            "subproblems."
+    ))
+    CONFIG.declare("nlp_solver_args", ConfigBlock(
+        implicit=True,
+        description="NLP subsolver options",
+        doc="Which NLP subsolver options to be passed to the solver while "
+            "solving the nonlinear subproblems."
+    ))
+    CONFIG.declare("mip_solver", ConfigValue(
+        default="glpk",
+        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams",
+                   "gurobi_persistent", "cplex_persistent"]),
+        description="MIP subsolver name",
+        doc="Which MIP subsolver is going to be used for solving the mixed-"
+            "integer master problems."
+    ))
+    CONFIG.declare("mip_solver_args", ConfigBlock(
+        implicit=True,
+        description="MIP subsolver options",
+        doc="Which MIP subsolver options to be passed to the solver while "
+            "solving the mixed-integer master problems."
+    ))
     CONFIG.declare("threads", ConfigValue(
         default=0,
         domain=NonNegativeInt,
         description="Threads",
         doc="Threads used by milp solver and nlp solver."
     ))
+    CONFIG.declare("solver_tee", ConfigValue(
+        default=False,
+        description="Stream the output of mip solver and nlp solver to terminal.",
+        domain=bool
+    ))
+
+
+def _add_tolerance_configs(CONFIG):
+    CONFIG.declare("bound_tolerance", ConfigValue(
+        default=1E-4,
+        domain=PositiveFloat,
+        description="Bound tolerance",
+        doc="Relative tolerance for bound feasibility checks."
+    ))
+    CONFIG.declare("small_dual_tolerance", ConfigValue(
+        default=1E-8,
+        description="When generating cuts, small duals multiplied "
+                    "by expressions can cause problems. Exclude all duals "
+                    "smaller in absolute value than the following."
+    ))
+    CONFIG.declare("integer_tolerance", ConfigValue(
+        default=1E-5,
+        description="Tolerance on integral values."
+    ))
+    CONFIG.declare("constraint_tolerance", ConfigValue(
+        default=1E-6,
+        description="Tolerance on constraint satisfaction."
+    ))
+    CONFIG.declare("variable_tolerance", ConfigValue(
+        default=1E-8,
+        description="Tolerance on variable bounds."
+    ))
+    CONFIG.declare("zero_tolerance", ConfigValue(
+        default=1E-8,
+        description="Tolerance on variable equal to zero."
+    ))
+    CONFIG.declare("ecp_tolerance", ConfigValue(
+        default=None,
+        domain=PositiveFloat,
+        description="ECP tolerance",
+        doc="Feasibility tolerance used to determine the stopping criterion in"
+            "the ECP method. As long as nonlinear constraint are violated for "
+            "more than this tolerance, the method will keep iterating."
+    ))
+
+
+def _add_bound_configs(CONFIG):
+    CONFIG.declare("obj_bound", ConfigValue(
+        default=1E15,
+        domain=PositiveFloat,
+        description="Bound applied to the linearization of the objective function if master MILP is unbounded."
+    ))
+    CONFIG.declare("continuous_var_bound", ConfigValue(
+        default=1e10,
+        description="default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
+    CONFIG.declare("integer_var_bound", ConfigValue(
+        default=1e9,
+        description="default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.",
+        domain=PositiveFloat
+    ))
+
+
+def _add_FP_configs(CONFIG):
     CONFIG.declare("feas_pump_delta", ConfigValue(
         default=1E-1,
         domain=PositiveFloat,
@@ -275,4 +294,3 @@ def _get_GDPopt_config():
         domain=PositiveFloat,
         description="Optimality tolerance (relative gap) to use for solving MIP projection problem"
     ))
-    return CONFIG

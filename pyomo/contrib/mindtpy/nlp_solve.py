@@ -159,15 +159,16 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False
                     {solve_data.LB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.integer_cuts)})
 
         # add obj increasing constraint for feas_pump
-        if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('increasing_objective_cut') is not None:
-            solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
-                'increasing_objective_cut')
-        if main_objective.sense == minimize:
-            solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.increasing_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
-                                                                                                   <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
-        else:
-            solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.increasing_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
-                                                                                                   >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
+        if feas_pump:
+            if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('increasing_objective_cut') is not None:
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
+                    'increasing_objective_cut')
+            if main_objective.sense == minimize:
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.increasing_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
+                                                                                                       <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
+            else:
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.increasing_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
+                                                                                                       >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
 
             # Add the linear cut
     if config.strategy == 'OA' or feas_pump:
