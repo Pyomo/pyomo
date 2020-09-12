@@ -66,6 +66,8 @@ def solve_MIP_master(solve_data, config, feas_pump=False):
         MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
 
     if feas_pump:
+        if MindtPy.find_component('feas_pump_mip_obj') is not None:
+            MindtPy.del_component('feas_pump_mip_obj')
         MindtPy.feas_pump_mip_obj = generate_L1_objective_function(
             solve_data.mip,
             solve_data.working_model,

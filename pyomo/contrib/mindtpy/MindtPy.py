@@ -107,6 +107,7 @@ class MindtPySolver(object):
         elif config.strategy == "feas_pump":  # feasibility pump alone
             config.init_strategy = "feas_pump"
             config.iteration_limit = 0
+            config.add_nogood_cuts = True
             solve_data.fp_iter = 0
 
         if config.nlp_solver == "baron":

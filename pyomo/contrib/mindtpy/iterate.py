@@ -123,7 +123,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_nogood_cuts:
+    if config.add_nogood_cuts and config.strategy is not 'feas_pump':
         bound_fix(solve_data, config, last_iter_cuts)
 
 

@@ -89,8 +89,6 @@ def MindtPy_initialize_master(solve_data, config):
                                                         solve_data, config)
     elif config.init_strategy == 'feas_pump':
         init_rNLP(solve_data, config)
-        MindtPy.MindtPy_linear_cuts.increasing_objective_cut = Constraint(
-            expr=MindtPy.objective_value <= config.obj_bound)
         feasibility_pump_loop(solve_data, config)
 
 

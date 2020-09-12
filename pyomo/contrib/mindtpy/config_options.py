@@ -140,7 +140,7 @@ def _get_GDPopt_config():
                     "smaller in absolute value than the following."
     ))
     CONFIG.declare("integer_tolerance", ConfigValue(
-        default=1E-8,
+        default=1E-5,
         description="Tolerance on integral values."
     ))
     CONFIG.declare("constraint_tolerance", ConfigValue(

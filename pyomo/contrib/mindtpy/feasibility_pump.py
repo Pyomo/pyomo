@@ -48,23 +48,24 @@ def solve_feas_pump_NLP_subproblem(solve_data, config):
 
     sub_nlp = solve_data.working_model.clone()
     MindtPy = sub_nlp.MindtPy_utils
-    solve_data.nlp_iter += 1
-    config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
-                       % (solve_data.nlp_iter,))
+    config.logger.info('NLP %s: Solve feasibility pump NLP subproblem.'
+                       % (solve_data.fp_iter,))
 
     # Set up NLP
     TransformationFactory('core.relax_integer_vars').apply_to(sub_nlp)
     main_objective = next(
         sub_nlp.component_data_objects(Objective, active=True))
     main_objective.deactivate()
-    if main_objective.sense == 'minimize':
-        sub_nlp.increasing_objective_cut = Constraint(
-            expr=sub_nlp.MindtPy_utils.objective_value
-            <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
-    else:
-        sub_nlp.increasing_objective_cut = Constraint(
-            expr=sub_nlp.MindtPy_utils.objective_value
-            >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
+
+    # TODO: need to comfirm with David, whether to add increasing_objective_cut for FP-NLP
+    # if main_objective.sense == 'minimize':
+    #     sub_nlp.increasing_objective_cut = Constraint(
+    #         expr=sub_nlp.MindtPy_utils.objective_value
+    #         <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
+    # else:
+    #     sub_nlp.increasing_objective_cut = Constraint(
+    #         expr=sub_nlp.MindtPy_utils.objective_value
+    #         >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
     MindtPy.feas_pump_nlp_obj = generate_L2_objective_function(
         sub_nlp,
         solve_data.mip,
@@ -119,8 +120,7 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
                                 "There might be a problem with the precisions - the feaspump seems to have converged")
 
     if solve_data.solution_improved:
-        # why do we need clone the model here? Can we just check the feasibility of the working_model?
-        # solve_data.best_solution_found = solve_data.working_model.clone()
+        solve_data.best_solution_found = solve_data.working_model.clone()
         assert is_feasible(solve_data.best_solution_found, config), \
             "Best found solution infeasible! There might be a problem with the precisions - the feaspump seems to have converged (error**2 <= integer_tolerance). " \
             "But the `is_feasible` check (error <= constraint_tolerance) doesn't work out"
