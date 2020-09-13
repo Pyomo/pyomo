@@ -47,8 +47,8 @@ merged.
 
 The Pyomo master branch provides a Github Action workflow (configured 
 in the ``.github/`` directory) that will test any changes pushed to 
-a branch with multiple virtual machines (mac-os, windows, ubuntu) 
-and multiple python versions. For existing forks, fetch and merge 
+a branch on multiple virtual machines (ubuntu, mac-os, windows) 
+and with multiple python versions. For existing forks, fetch and merge 
 your fork (and branches) with Pyomo's master. For new forks, you will 
 need to enable Github Actions in the 'Actions' tab on your fork. 
 Then the test will begin to run automatically with each push to your fork.
