@@ -3,7 +3,7 @@ from pyomo.common.config import (
 from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
 
 
-def _get_GDPopt_config():
+def _get_MindtPy_config():
     CONFIG = ConfigBlock("MindtPy")
 
     CONFIG.declare("iteration_limit", ConfigValue(
@@ -88,11 +88,6 @@ def _get_GDPopt_config():
         description="The logger object or name to use for reporting.",
         domain=a_logger
     ))
-    CONFIG.declare("initial_feas", ConfigValue(
-        default=True,
-        description="Apply an initial feasibility step.",
-        domain=bool
-    ))
     CONFIG.declare("integer_to_binary", ConfigValue(
         default=False,
         description="Convert integer variables to binaries (for integer cuts).",
@@ -158,7 +153,7 @@ def _get_GDPopt_config():
 
     _add_subsolver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
-    _add_FP_configs(CONFIG)
+    _add_feas_pump_configs(CONFIG)
     _add_bound_configs(CONFIG)
     return CONFIG
 
@@ -261,7 +256,7 @@ def _add_bound_configs(CONFIG):
     ))
 
 
-def _add_FP_configs(CONFIG):
+def _add_feas_pump_configs(CONFIG):
     CONFIG.declare("feas_pump_delta", ConfigValue(
         default=1E-1,
         domain=PositiveFloat,
@@ -282,6 +277,11 @@ def _add_FP_configs(CONFIG):
     CONFIG.declare("fp_transfercuts", ConfigValue(
         default=True,
         description="Whether to transfer cuts from the Feasibility Pump MIP to the DICOPT MIP (all except from the round in which the FP MIP became infeasible)",
+        domain=bool
+    ))
+    CONFIG.declare("fp_softcuts", ConfigValue(
+        default=False,
+        description="whether to add linearization cuts as soft constraints (penalized slack variable) to MIP relaxation",
         domain=bool
     ))
     CONFIG.declare("fp_projzerotol", ConfigValue(

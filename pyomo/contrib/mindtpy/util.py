@@ -183,7 +183,7 @@ def var_bound_add(solve_data, config):
                         var.setub(config.continuous_var_bound)
 
 
-def generate_L2_objective_function(model, setpoint_model, discretes_only=False):
+def generate_Norm2sq_objective_function(model, setpoint_model, discretes_only=False):
     """Generate objective for minimum euclidean distance to setpoint_model
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}
     discretes_only -- only optimize on distance between the discrete variables
@@ -203,7 +203,7 @@ def generate_L2_objective_function(model, setpoint_model, discretes_only=False):
              zip(model_vars, setpoint_vars)])))
 
 
-def generate_L1_objective_function(model, setpoint_model, discretes_only=False):
+def generate_Norm1_objective_function(model, setpoint_model, discretes_only=False):
     """Generate objective for minimum L1 distance to setpoint model
     L1 distance of (x,y) = \sum_i |x_i - y_i|
     discretes_only -- only optimize on distance between the discrete variables

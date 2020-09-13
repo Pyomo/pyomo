@@ -440,24 +440,22 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             dual_values = None
 
         config.logger.info('Solving feasibility problem')
-        if config.initial_feas:
-            # config.initial_feas = False
-            feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
-            # In OA algorithm, OA cuts are generated based on the solution of the subproblem
-            # We need to first copy the value of variables from the subproblem and then add cuts
-            copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
-                                 solve_data.mip.MindtPy_utils.variable_list,
-                                 config)
-            if config.strategy == 'OA':
-                self.add_lazy_oa_cuts(
-                    solve_data.mip, dual_values, solve_data, config, opt)
-            elif config.strategy == 'GOA':
-                self.add_lazy_affine_cuts(solve_data, config, opt)
-            if config.add_nogood_cuts:
-                var_values = list(
-                    v.value for v in fixed_nlp.MindtPy_utils.variable_list)
-                self.add_lazy_nogood_cuts(
-                    var_values, solve_data, config, opt)
+        feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
+        # In OA algorithm, OA cuts are generated based on the solution of the subproblem
+        # We need to first copy the value of variables from the subproblem and then add cuts
+        copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
+                             solve_data.mip.MindtPy_utils.variable_list,
+                             config)
+        if config.strategy == 'OA':
+            self.add_lazy_oa_cuts(
+                solve_data.mip, dual_values, solve_data, config, opt)
+        elif config.strategy == 'GOA':
+            self.add_lazy_affine_cuts(solve_data, config, opt)
+        if config.add_nogood_cuts:
+            var_values = list(
+                v.value for v in fixed_nlp.MindtPy_utils.variable_list)
+            self.add_lazy_nogood_cuts(
+                var_values, solve_data, config, opt)
 
     def handle_lazy_NLP_subproblem_other_termination(self, fixed_nlp, termination_condition,
                                                      solve_data, config):

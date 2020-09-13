@@ -160,15 +160,14 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False
 
         # add obj increasing constraint for feas_pump
         if feas_pump:
-            if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('increasing_objective_cut') is not None:
-                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
-                    'increasing_objective_cut')
+            if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut) is not None:
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component('improving_objective_cut)
             if main_objective.sense == minimize:
-                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.increasing_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
-                                                                                                       <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
+                                                                                                      <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
             else:
-                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.increasing_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
-                                                                                                       >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
+                                                                                                      >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
 
             # Add the linear cut
     if config.strategy == 'OA' or feas_pump:
@@ -236,17 +235,14 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
 
     if config.strategy in {'OA', 'GOA'}:
         config.logger.info('Solving feasibility problem')
-        if config.initial_feas:
-            # add_feas_slacks(fixed_nlp, solve_data)
-            # config.initial_feas = False
-            feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
-            copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
-                                 solve_data.mip.MindtPy_utils.variable_list,
-                                 config)
-            if config.strategy == "OA":
-                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
-            elif config.strategy == "GOA":
-                add_affine_cuts(solve_data, config)
+        feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
+        copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
+                             solve_data.mip.MindtPy_utils.variable_list,
+                             config)
+        if config.strategy == "OA":
+            add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+        elif config.strategy == "GOA":
+            add_affine_cuts(solve_data, config)
     # Add an integer cut to exclude this discrete option
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_nogood_cuts:

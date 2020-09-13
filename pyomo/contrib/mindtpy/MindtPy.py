@@ -38,7 +38,7 @@ from pyomo.core import (
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.mindtpy.config_options import _get_GDPopt_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -51,7 +51,7 @@ __version__ = (0, 1, 0)
 class MindtPySolver(object):
     """A decomposition-based MINLP solver.
     """
-    CONFIG = _get_GDPopt_config()
+    CONFIG = _get_MindtPy_config()
 
     def available(self, exception_flag=True):
         """Check if solver is available.
