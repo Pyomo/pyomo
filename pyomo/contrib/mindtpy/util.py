@@ -195,7 +195,7 @@ def generate_Norm2sq_objective_function(model, setpoint_model, discretes_only=Fa
                                             zip(model.component_data_objects(Var),
                                                 setpoint_model.component_data_objects(Var))))
     assert len(model_vars) == len(
-        setpoint_vars), "Trying to generate L1 objective function for models with different number of variables"
+        setpoint_vars), "Trying to generate Norm2 objective function for models with different number of variables"
 
     return Objective(expr=(
         sum([(model_var - setpoint_var.value)**2
@@ -204,8 +204,8 @@ def generate_Norm2sq_objective_function(model, setpoint_model, discretes_only=Fa
 
 
 def generate_Norm1_objective_function(model, setpoint_model, discretes_only=False):
-    """Generate objective for minimum L1 distance to setpoint model
-    L1 distance of (x,y) = \sum_i |x_i - y_i|
+    """Generate objective for minimum Norm1 distance to setpoint model
+    Norm1 distance of (x,y) = \sum_i |x_i - y_i|
     discretes_only -- only optimize on distance between the discrete variables
     """
 
@@ -215,7 +215,7 @@ def generate_Norm1_objective_function(model, setpoint_model, discretes_only=Fals
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
-        setpoint_vars), "Trying to generate L1 objective function for models with different number of variables"
+        setpoint_vars), "Trying to generate Norm1 objective function for models with different number of variables"
     if model.find_component('L1_objective_function') is not None:
         model.del_component('L1_objective_function')
     obj_blk = model.L1_objective_function = Block()
