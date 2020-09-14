@@ -908,7 +908,7 @@ def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadrat
 
 def _collect_external_fn(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if compute_values and exp.is_fixed():
-        return Results(nonl=multiplier*value(exp))
+        return Results(constant=multiplier*value(exp))
     return Results(nonl=multiplier*exp)
 
 
