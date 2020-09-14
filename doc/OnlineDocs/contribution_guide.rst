@@ -45,10 +45,10 @@ at least 70% coverage of the lines modified in the PR and prefer coverage
 closer to 90%. We also require that all tests pass before a PR will be 
 merged.
 
-The Pyomo master branch provides a Github Action workflow (configured 
+The Pyomo master branch provides a Github Actions workflow (configured 
 in the ``.github/`` directory) that will test any changes pushed to 
 a branch on multiple virtual machines (ubuntu, mac-os, windows) 
-and with multiple python versions. For existing forks, fetch and merge 
+and with multiple Python versions. For existing forks, fetch and merge 
 your fork (and branches) with Pyomo's master. For new forks, you will 
 need to enable Github Actions in the 'Actions' tab on your fork. 
 Then the test will begin to run automatically with each push to your fork.
