@@ -67,11 +67,13 @@ The LP/NLP algorithm in MindtPy is implemeted based on the LazyCallback function
 .. _Quesada & Grossmann: https://www.sciencedirect.com/science/article/abs/pii/0098135492800288
 
 
-.. Note::
+.. note::
 
-The single tree implementation currently only works with CPLEX.
-To use LazyCallback function of CPLEX from Pyomo, the `CPLEX Python API`_ is required.
-This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be installed on your computer.
+   The single tree implementation currently only works with CPLEX.  To
+   use LazyCallback function of CPLEX from Pyomo, the `CPLEX Python
+   API`_ is required.  This means both IBM ILOG CPLEX Optimization
+   Studio and the CPLEX-Python modules should be installed on your
+   computer.
 
 
 .. _CPLEX Python API: https://www.ibm.com/support/knowledgecenter/SSSA5P_12.7.1/ilog.odms.cplex.help/CPLEX/GettingStarted/topics/set_up/Python_setup.html

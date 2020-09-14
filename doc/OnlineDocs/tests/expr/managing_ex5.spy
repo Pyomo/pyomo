@@ -1,5 +1,0 @@
-M = ConcreteModel()
-M.x = Var()
-M.x.value = math.pi/2.0
-val = value(M.x)
-assert(isclose(val, math.pi/2.0))

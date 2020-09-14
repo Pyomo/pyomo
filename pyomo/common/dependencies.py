@@ -162,16 +162,23 @@ class _DeferredOr(_DeferredImportIndicatorBase):
         return bool(self._a) or bool(self._b)
 
 
-try:
-    from packaging import version as _version
-    _parser = _version.parse
-except ImportError:
-    # pkg_resources is an order of magnitude slower to import than
-    # packaging.  Only use it if the preferred (but optional) packaging
-    # library is not present
-    from pkg_resources import parse_version as _parser
+def check_min_version(module, min_version):
+    if isinstance(module, DeferredImportModule):
+        indicator = module._indicator_flag
+        indicator.resolve()
+        if indicator._available:
+            module = indicator._module
+        else:
+            return False
+    try:
+        from packaging import version as _version
+        _parser = _version.parse
+    except ImportError:
+        # pkg_resources is an order of magnitude slower to import than
+        # packaging.  Only use it if the preferred (but optional)
+        # packaging library is not present
+        from pkg_resources import parse_version as _parser
 
-def _check_version(module, min_version):
     version = getattr(module, '__version__', '0.0.0')
     return _parser(min_version) <= _parser(version)
 
@@ -275,7 +282,8 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
             module = importlib.import_module(name)
         else:
             module = importer()
-        if minimum_version is None or _check_version(module, minimum_version):
+        if ( minimum_version is None
+             or check_min_version(module, minimum_version) ):
             if callback is not None:
                 callback(module, True)
             return module, True
@@ -332,5 +340,5 @@ pympler, pympler_available = attempt_import(
 numpy, numpy_available = attempt_import('numpy', alt_names=['np'])
 scipy, scipy_available = attempt_import('scipy', callback=_finalize_scipy)
 networkx, networkx_available = attempt_import('networkx', alt_names=['nx'])
-pandas, pandas_available = attempt_import('pandas')
+pandas, pandas_available = attempt_import('pandas', alt_names=['pd'])
 dill, dill_available = attempt_import('dill')

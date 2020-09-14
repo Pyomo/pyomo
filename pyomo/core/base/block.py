@@ -31,6 +31,7 @@ else:
 
 from pyutilib.misc.indent_io import StreamIndenter
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import *  # ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
@@ -38,7 +39,6 @@ from pyomo.core.base.component import Component, ActiveComponentData, \
 from pyomo.core.base.set import Set, RangeSet, GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.indexed_component import IndexedComponent, \
     ActiveIndexedComponent, UnindexedComponent_set
 
@@ -1270,22 +1270,37 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return None
 
     def component_map(self, ctype=None, active=None, sort=False):
-        """
-        Returns a PseudoMap of the components in this block.
+        """Returns a PseudoMap of the components in this block.
 
-            ctype
-                None            - All components
-                ComponentType   - A single ComponentType
-                Iterable        - Iterate to generate ComponentTypes
+        Parameters
+        ----------
+        ctype:  None or type or iterable
+            Specifies the component types (`ctypes`) to include in the
+            resulting PseudoMap
 
-            active is None, True, False
-                None  - All
-                True  - Active
-                False - Inactive
+                =============   ===================
+                None            All components
+                type            A single component type
+                iterable        All component types in the iterable
+                =============   ===================
 
-            sort is True, False
-                True - Maps to Block.alphabetizeComponentAndIndex
-                False - Maps to Block.declarationOrder
+        active: None or bool
+            Filter components by the active flag
+
+                =====  ===============================
+                None   Return all components
+                True   Return only active components
+                False  Return only inactive components
+                =====  ===============================
+
+        sort: bool
+            Iterate over the components in a sorted otder
+
+                =====  ================================================
+                True   Iterate using Block.alphabetizeComponentAndIndex
+                False  Iterate using Block.declarationOrder
+                =====  ================================================
+
         """
         return PseudoMap(self, ctype, active, sort)
 

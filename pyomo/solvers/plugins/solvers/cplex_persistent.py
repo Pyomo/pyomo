@@ -97,16 +97,8 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
             raise ValueError('The Var provided to compile_var needs to be added first: {0}'.format(var))
         cplex_var = self._pyomo_var_to_solver_var_map[var]
         vtype = self._cplex_vtype_from_var(var)
-        if var.is_fixed():
-            lb = var.value
-            ub = var.value
-        else:
-            lb = -self._cplex.infinity
-            ub = self._cplex.infinity
-            if var.has_lb():
-                lb = value(var.lb)
-            if var.has_ub():
-                ub = value(var.ub)
+        lb, ub = self._cplex_lb_ub_from_var(var)
+
         self._solver_model.variables.set_lower_bounds(cplex_var, lb)
         self._solver_model.variables.set_upper_bounds(cplex_var, ub)
         self._solver_model.variables.set_types(cplex_var, vtype)
@@ -123,3 +115,35 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
             The file type (e.g., lp).
         """
         self._solver_model.write(filename, filetype=filetype)
+
+    def _add_column(self, var, obj_coef, constraints, coefficients):
+        """Add a column to the solver's model
+
+        This will add the Pyomo variable var to the solver's
+        model, and put the coefficients on the associated 
+        constraints in the solver model. If the obj_coef is
+        not zero, it will add obj_coef*var to the objective 
+        of the solver's model.
+
+        Parameters
+        ----------
+        var: Var (scalar Var or single _VarData)
+        obj_coef: float
+        constraints: list of solver constraints
+        coefficients: list of coefficients to put on var in the associated constraint
+        """
+
+        ## set-up add var
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vtype = self._cplex_vtype_from_var(var)
+        lb, ub = self._cplex_lb_ub_from_var(var)
+
+        ## do column addition
+        self._solver_model.variables.add(obj=[obj_coef], lb=[lb], ub=[ub], types=[vtype], names=[varname],
+                            columns=[self._cplex.SparsePair(ind=constraints, val=coefficients)])
+
+        self._pyomo_var_to_solver_var_map[var] = varname
+        self._solver_var_to_pyomo_var_map[varname] = var
+        self._pyomo_var_to_ndx_map[var] = self._ndx_count
+        self._ndx_count += 1
+        self._referenced_variables[var] = len(coefficients)

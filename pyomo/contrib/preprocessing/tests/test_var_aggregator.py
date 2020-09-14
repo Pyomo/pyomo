@@ -1,10 +1,12 @@
 """Tests the variable aggregation module."""
 import pyutilib.th as unittest
-from pyomo.contrib.preprocessing.plugins.var_aggregator import (_build_equality_set,
-                                                                _get_equality_linked_variables,
-                                                                max_if_not_None,
-                                                                min_if_not_None)
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.common.collections import ComponentSet
+from pyomo.contrib.preprocessing.plugins.var_aggregator import (
+    _build_equality_set,
+    _get_equality_linked_variables,
+    max_if_not_None,
+    min_if_not_None
+)
 from pyomo.environ import (ConcreteModel, Constraint, ConstraintList,
                            Objective, RangeSet, SolverFactory,
                            TransformationFactory, Var)

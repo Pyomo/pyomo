@@ -15,9 +15,8 @@ from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 import pyutilib.common
 import pyomo.common
+from pyomo.common.collections import ComponentMap, ComponentSet
 import pyomo.opt.base.solvers
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.base.formats import ResultsFormat
 from pyutilib.misc import Options
 

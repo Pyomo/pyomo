@@ -17,7 +17,7 @@ from pyomo.core.base.units_container import units, UnitsError, UnitExtractionVis
 from pyomo.core.base import (Objective, Constraint, Var, Param,
                              Suffix, Set, RangeSet, Block,
                              ExternalFunction, Expression,
-                             value)
+                             value, BooleanVar)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.network import Port, Arc
 from pyomo.mpec import Complementarity
@@ -159,7 +159,7 @@ def _assert_units_consistent_block(obj):
     and checks if the units are consistent on each of them
     """
     # check all the component objects
-    for component in obj.component_objects(descend_into=True, active=True):
+    for component in obj.component_objects(descend_into=False, active=True):
         assert_units_consistent(component)
 
 _component_data_handlers = {
@@ -174,8 +174,9 @@ _component_data_handlers = {
     Param: _assert_units_consistent_expression,
     Set: None,
     RangeSet: None,
-    Disjunct:_assert_units_consistent_block,
+    Disjunct: _assert_units_consistent_block,
     Disjunction: None,
+    BooleanVar: None,
     Block: _assert_units_consistent_block,
     ExternalFunction: None,
     ContinuousSet: None, # ToDo: change this when continuous sets have units assigned
