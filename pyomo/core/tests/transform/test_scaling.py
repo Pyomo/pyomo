@@ -127,7 +127,7 @@ class TestScaleModelTransformation(unittest.TestCase):
                 self.assertEqual((mk in model.dual), (umk in unscaled_model.dual)) 
                 if mk in model.dual:
                     self.assertAlmostEqual(pe.value(model.dual[mk]), pe.value(unscaled_model.dual[umk]), 4)
-     
+
     def test_scaling_without_rename(self):
         m = pe.ConcreteModel()
         m.scaling_factor = pe.Suffix(direction=pe.Suffix.EXPORT)
@@ -155,6 +155,7 @@ class TestScaleModelTransformation(unittest.TestCase):
         values[id(m.c1)] = (pe.value(m.c1.body), m.scaling_factor[m.c1])
         values[id(m.c2)] = (pe.value(m.c2.body), m.scaling_factor[m.c2])
 
+        m.c2_ref = pe.Reference(m.c2)
         m.v3_ref = pe.Reference(m.v3)
 
         scale = pe.TransformationFactory('core.scale_model')
@@ -196,6 +197,15 @@ class TestScaleModelTransformation(unittest.TestCase):
                 )
         # Note that because the model was not renamed,
         # v3_ref is still intact.
+
+        lhs = m.c2.expr.arg(0)
+        monom_factor = lhs.arg(0)
+        scale_factor = (m.scaling_factor[m.c2]/
+                        m.scaling_factor[m.v2])
+        self.assertAlmostEqual(
+                monom_factor,
+                scale_factor,
+                )
 
 if __name__ == "__main__":
     unittest.main()
