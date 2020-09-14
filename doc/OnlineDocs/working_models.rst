@@ -301,8 +301,8 @@ Note that
 
 is equivalent to
 
-   >>> instance.y.value = 2
-   >>> instance.y.fixed = True
+   >>> instance.x.value = 2
+   >>> instance.x.fixed = True
 
 and
    >>> instance.x.fix()
