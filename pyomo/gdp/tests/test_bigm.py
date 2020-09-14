@@ -1251,8 +1251,9 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertRaisesRegexp(
             GDP_Error,
             "This is why this method is deprecated: The lower "
-            "and upper M values came from different sources, "
-            "please use the get_M_value_src method.",
+            "and upper M values for constraint b.disjunct\[0\].c "
+            "came from different sources, please use the "
+            "get_M_value_src method.",
             bigm.get_m_value_src,
             m.b.disjunct[0].c)
         (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)

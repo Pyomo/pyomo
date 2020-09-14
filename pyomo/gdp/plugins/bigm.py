@@ -656,8 +656,8 @@ class BigM_Transformation(Transformation):
                                                          stopping_block=disjunct)
                 # prepend that to what we already collected for the disjunct.
                 suffix_list.extend(disjunct_suffix_list)
-                lower, upper = self._get_M_from_suffixes(c, suffix_list, lower,
-                                                         upper)
+                lower, upper = self._update_M_from_suffixes(c, suffix_list,
+                                                            lower, upper)
                 M = (lower[0], upper[0])
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -807,7 +807,7 @@ class BigM_Transformation(Transformation):
 
         return lower, upper
 
-    def _get_M_from_suffixes(self, constraint, suffix_list, lower, upper):
+    def _update_M_from_suffixes(self, constraint, suffix_list, lower, upper):
         # It's possible we found half the answer in args, but we are still
         # looking for half the answer.
         need_lower = constraint.lower is not None and lower[0] is None
@@ -947,8 +947,9 @@ class BigM_Transformation(Transformation):
         if constraint.lower is not None and constraint.upper is not None and \
            (not lower_source is upper_source or not lower_key is upper_key):
             raise GDP_Error("This is why this method is deprecated: The lower "
-                            "and upper M values came from different sources, "
-                            "please use the get_M_value_src method.")
+                            "and upper M values for constraint %s came from "
+                            "different sources, please use the get_M_value_src "
+                            "method." % constraint.name)
         # if source and key are equal for the two, this is representable in the
         # old format.
         if constraint.lower is not None and lower_source is not None:
