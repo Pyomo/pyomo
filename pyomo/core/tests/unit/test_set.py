@@ -25,6 +25,7 @@ import pyutilib.th as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import pandas as pd, pandas_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
@@ -1767,6 +1768,34 @@ class Test_SetOperator(unittest.TestCase):
         self.assertEqual(i.x[1].dimen, 2)
         self.assertEqual(i.x[1].domain, i.A*i.B)
         self.assertEqual(i.x[1], [])
+
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    def test_pandas_multiindex_set_init(self):
+        # Test that TuplizeValuesInitializer does not assume truthiness
+        # If it does, pandas will complain with the following error:
+        # ValueError: The truth value of a MultiIndex is ambiguous. 
+        # Use a.empty, a.bool(), a.item(), a.any() or a.all().
+        iterables = [['bar', 'baz', 'foo', 'qux'], ['one', 'two']]
+        pandas_index = pd.MultiIndex.from_product(
+            iterables, 
+            names=['first', 'second']
+        )
+
+        model = ConcreteModel()
+        model.a = Set(initialize=pandas_index,
+                      dimen=pandas_index.nlevels)
+
+        # we will confirm that dimension is inferred correctly
+        model.b = Set(initialize=pandas_index)
+
+        self.assertIsInstance(model.a, Set)
+        self.assertEquals(list(model.a), list(pandas_index))
+        self.assertEquals(model.a.dimen, pandas_index.nlevels)
+
+        self.assertIsInstance(model.b, Set)
+        self.assertEquals(list(model.b), list(pandas_index))
+        self.assertEquals(model.b.dimen, pandas_index.nlevels)
+
 
 class TestSetUnion(unittest.TestCase):
     def test_pickle(self):
