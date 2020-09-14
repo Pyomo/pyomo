@@ -1,6 +1,6 @@
 from pyomo.core import (Var, Objective, Reals, minimize,
                         RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, SolutionStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
@@ -54,21 +54,16 @@ def solve_feas_pump_NLP_subproblem(solve_data, config):
     main_objective = next(
         sub_nlp.component_data_objects(Objective, active=True))
     main_objective.deactivate()
-
-    # TODO: need to comfirm with David, whether to add improving_objective_cut for FP-NLP
+    # TODO: need to comfirm with David, whether to add increasing_objective_cut for FP-NLP
+    # sub_nlp may don't have MindtPy_utils.objective_value
     # if main_objective.sense == 'minimize':
     #     sub_nlp.improving_objective_cut = Constraint(
-    #         expr=sub_nlp.MindtPy_utils.objective_value
-    #         <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
+    #         expr=sub_nlp.MindtPy_utils.objective_value <= solve_data.UB)
     # else:
     #     sub_nlp.improving_objective_cut = Constraint(
-    #         expr=sub_nlp.MindtPy_utils.objective_value
-    #         >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
+    #         expr=sub_nlp.MindtPy_utils.objective_value >= solve_data.LB)
     MindtPy.feas_pump_nlp_obj = generate_Norm2sq_objective_function(
-        sub_nlp,
-        solve_data.mip,
-        discretes_only=True
-    )
+        sub_nlp, solve_data.mip, discretes_only=True)
 
     MindtPy.MindtPy_linear_cuts.deactivate()
     TransformationFactory('contrib.deactivate_trivial_constraints')\
@@ -154,16 +149,24 @@ def feas_pump_loop(solve_data, config):
             config.logger.info(
                 'FP-MIP %s: Distance-OBJ: %s'
                 % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.feas_pump_mip_obj)))
+        elif feas_mip_results.solver.termination_condition is tc.maxTimeLimit:
+            config.logger.warning('FP-MIP reaches max TimeLimit')
         elif feas_mip_results.solver.termination_condition is tc.infeasible:
-            config.logger.info('FP-MIP infeasible')
+            config.logger.warning('FP-MIP infeasible')
             break
-        # elif feas_mip_results.solver.termination_condition is tc.maxIterations:
-        #     config.logger.error('No feasible solution has been found')
-        #     solve_data.results.solver.termination_condition = tc.maxIterations
-        #     break
+        elif feas_mip_results.solver.termination_condition is tc.unbounded:
+            config.logger.warning('FP-MIP unbounded')
+            break
+        elif (feas_mip_results.solver.termination_condition is tc.other and
+              feas_mip_results.solution.status is SolutionStatus.feasible):
+            config.logger.warning('MILP solver reported feasible solution of FP-MIP, '
+                                  'but not guaranteed to be optimal.')
+        else:
+            config.logger.warning('Unexpected result of FP-MIP')
+            break
 
-        # Solve NLP subproblem
-        # The constraint linearization happens in the handlers
+            # Solve NLP subproblem
+            # The constraint linearization happens in the handlers
         fp_nlp, fp_nlp_result = solve_feas_pump_NLP_subproblem(
             solve_data, config)
 

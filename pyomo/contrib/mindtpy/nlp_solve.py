@@ -165,10 +165,10 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False
                     'improving_objective_cut')
             if main_objective.sense == minimize:
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
-                                                                                                      <= solve_data.UB - config.feas_pump_delta*min(1e-4, abs(solve_data.UB)))
+                                                                                                      <= solve_data.UB - config.ft_cotoffeccrax(1, abs(solve_data.UB)))
             else:
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
-                                                                                                      >= solve_data.LB + config.feas_pump_delta*min(1e-4, abs(solve_data.LB)))
+                                                                                                      >= solve_data.LB + config.ft_cotoffeccrax(1, abs(solve_data.LB)))
 
             # Add the linear cut
     if config.strategy == 'OA' or feas_pump:

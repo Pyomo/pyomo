@@ -195,7 +195,7 @@ def generate_Norm2sq_objective_function(model, setpoint_model, discretes_only=Fa
                                             zip(model.component_data_objects(Var),
                                                 setpoint_model.component_data_objects(Var))))
     assert len(model_vars) == len(
-        setpoint_vars), "Trying to generate Norm2 objective function for models with different number of variables"
+        setpoint_vars), "Trying to generate Squared Norm2 objective function for models with different number of variables"
 
     return Objective(expr=(
         sum([(model_var - setpoint_var.value)**2

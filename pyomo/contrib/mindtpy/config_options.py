@@ -257,11 +257,10 @@ def _add_bound_configs(CONFIG):
 
 
 def _add_feas_pump_configs(CONFIG):
-    CONFIG.declare("feas_pump_delta", ConfigValue(
+    CONFIG.declare("fp_cutoffdecr", ConfigValue(
         default=1E-1,
         domain=PositiveFloat,
-        description="Objective increasing \delta",
-        doc="Will force each new feasible point to be '\delta * abs(UB)' better than the last one"
+        description="Additional relative decrement of cutoff value for the original objective function"
     ))
     CONFIG.declare("fp_iteration_limit", ConfigValue(
         default=20,
