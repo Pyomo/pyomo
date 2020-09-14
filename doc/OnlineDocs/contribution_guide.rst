@@ -51,7 +51,7 @@ a branch on multiple virtual machines (ubuntu, mac-os, windows)
 and with multiple Python versions. For existing forks, fetch and merge 
 your fork (and branches) with Pyomo's master. For new forks, you will 
 need to enable Github Actions in the 'Actions' tab on your fork. 
-Then the test will begin to run automatically with each push to your fork.
+Then the tests will begin to run automatically with each push to your fork.
 
 At any point in the development cycle, a "work in progress" pull request
 may be opened by including '[WIP]' at the beginning of the PR
