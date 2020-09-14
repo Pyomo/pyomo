@@ -27,7 +27,7 @@ import logging
 from six import iteritems
 import inspect
 
-logger = logging.getLogger('pyomo.contrib.fourier_motzkin_elimination')
+logger = logging.getLogger('pyomo.contrib.fme')
 NAME_BUFFER = {}
 
 def _check_var_bounds_filter(constraint):
@@ -180,14 +180,30 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
     def __init__(self):
         """Initialize transformation object"""
         super(Fourier_Motzkin_Elimination_Transformation, self).__init__()
-    
-    def _apply_to(self, instance, **kwds):
-        assert not NAME_BUFFER
-        config = self.CONFIG(kwds.pop('options', {}))
-        config.set_value(kwds)
-        if config.verbose:
-            logger.setLevel(logging.INFO)
 
+    def _apply_to(self, instance, **kwds):
+        log_level = logger.getEffectiveLevel()
+        try:
+            assert not NAME_BUFFER
+            config = self.CONFIG(kwds.pop('options', {}))
+            config.set_value(kwds)
+            # lower logging values emit more
+            if config.verbose and log_level > logging.INFO:
+                logger.setLevel(logging.INFO)
+                self.verbose = True
+            # if the user used the logger to ask for info level messages
+            elif log_level <= logging.INFO:
+                self.verbose = True
+            else:
+                self.verbose = False
+            self._apply_to_impl(instance, config)
+        finally:
+            # clear the global name buffer
+            NAME_BUFFER.clear()
+            # restore logging level
+            logger.setLevel(log_level)
+    
+    def _apply_to_impl(self, instance, config):
         vars_to_eliminate = config.vars_to_eliminate
         self.constraint_filter = config.constraint_filtering_callback
         self.do_integer_arithmetic = config.do_integer_arithmetic
@@ -245,8 +261,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                                                     obj.ctype))
 
         new_constraints = self._fourier_motzkin_elimination( constraints,
-                                                             vars_to_eliminate,
-                                                             config.verbose)
+                                                             vars_to_eliminate)
 
         # put the new constraints on the transformation block
         for cons in new_constraints:
@@ -274,9 +289,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                        "infeasible!")
             else:
                 projected_constraints.add(lhs >= lower)
-
-        # clear the global name buffer
-        NAME_BUFFER.clear()
 
     def _process_constraint(self, constraint):
         """Transforms a pyomo Constraint object into a list of dictionaries
@@ -332,8 +344,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                             [value(coef) for coef in
                                              body.linear_coefs]))
 
-    def _fourier_motzkin_elimination(self, constraints, vars_to_eliminate,
-                                     verbose):
+    def _fourier_motzkin_elimination(self, constraints, vars_to_eliminate):
         """Performs FME on the constraint list in the argument 
         (which is assumed to be all >= constraints and stored in the 
         dictionary representation), projecting out each of the variables in 
@@ -370,7 +381,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         while vars_that_appear:
             # first var we will project out
             the_var = vars_that_appear.pop()
-            if verbose:
+            if self.verbose:
                 logger.info("Projecting out %s" %
                             the_var.getname(fully_qualified=True,
                                             name_buffer=NAME_BUFFER))
@@ -388,7 +399,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 leaving_var_coef = cons['map'].get(the_var)
                 if leaving_var_coef is None or leaving_var_coef == 0:
                     waiting_list.append(cons)
-                    if verbose:
+                    if self.verbose:
                         logger.info("\t%s <= %s" 
                                     % (cons['lower'], 
                                        cons['body'].to_expression()))
@@ -433,7 +444,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             for leq in leq_list:
                 for geq in geq_list:
                     constraints.append( self._add_linear_constraints( leq, geq))
-                    if verbose:
+                    if self.verbose:
                         cons = constraints[len(constraints)-1]
                         logger.info("\t%s <= %s" % 
                                     (cons['lower'], 
