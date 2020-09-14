@@ -166,6 +166,8 @@ class IndexedComponent(Component):
                                 sets that are transfered to the model
     """
 
+    class Skip(object): pass
+
     #
     # If an index is supplied for which there is not a _data entry
     # (specifically, in a get call), then this flag determines whether
@@ -734,7 +736,11 @@ value() function.""" % ( self.name, i ))
         dict.
 
         """
-        obj.set_value(value)
+        if value is IndexedComponent.Skip:
+            del self[index]
+            return None
+        else:
+            obj.set_value(value)
         return obj
 
     def _setitem_when_not_present(self, index, value=_NotSpecified):
@@ -746,6 +752,9 @@ value() function.""" % ( self.name, i ))
         Implementations may assume that the index has already been
         validated and is a legitimate entry in the _data dict.
         """
+        # If the value is "Skip" do not add anything
+        if value is IndexedComponent.Skip:
+            return None
         #
         # If we are a scalar, then idx will be None (_validate_index ensures
         # this)

@@ -162,7 +162,14 @@ class _DeferredOr(_DeferredImportIndicatorBase):
         return bool(self._a) or bool(self._b)
 
 
-def _check_version(module, min_version):
+def check_min_version(module, min_version):
+    if isinstance(module, DeferredImportModule):
+        indicator = module._indicator_flag
+        indicator.resolve()
+        if indicator._available:
+            module = indicator._module
+        else:
+            return False
     try:
         from packaging import version as _version
         _parser = _version.parse
@@ -275,7 +282,8 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
             module = importlib.import_module(name)
         else:
             module = importer()
-        if minimum_version is None or _check_version(module, minimum_version):
+        if ( minimum_version is None
+             or check_min_version(module, minimum_version) ):
             if callback is not None:
                 callback(module, True)
             return module, True
