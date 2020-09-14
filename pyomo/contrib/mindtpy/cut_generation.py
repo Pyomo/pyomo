@@ -332,6 +332,8 @@ def add_ecp_cuts(target_model, solve_data, config,
 def add_nogood_cuts(var_values, solve_data, config, feasible=False):
     """
     Adds integer cuts; modifies the model to include integer cuts
+    This adds an integer cut to the feasible_integer_cuts ConstraintList, which is not activated by default.
+    However, it may be activated as needed in certain situations or for certain values of option flags.
 
     Parameters
     ----------

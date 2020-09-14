@@ -186,10 +186,6 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False
     elif config.strategy == 'GBD':
         add_gbd_cut(solve_data, config)
 
-    # This adds an integer cut to the feasible_integer_cuts
-    # ConstraintList, which is not activated by default. However, it
-    # may be activated as needed in certain situations or for certain
-    # values of option flags.
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_nogood_cuts:
         add_nogood_cuts(var_values, solve_data, config, feasible=True)
