@@ -57,6 +57,9 @@ class _UnindexedComponent_set(GlobalSetBase):
         return self is other
     def __ne__(self, other):
         return self is not other
+    @property
+    def dimen(self):
+        return 0
     def isdiscrete(self):
         return True
     def isfinite(self):
