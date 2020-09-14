@@ -14,6 +14,10 @@ separated from functional changes. This simplifies the review process
 and ensures that functional changes aren't obscured by large amounts of
 non-functional changes.
 
+We do not squash and merge PRs so all commits in your branch will appear 
+in the master history. In addition to well-documented PR descriptions, 
+we encourage modular/targeted commits with descriptive commit messages.
+
 Coding Standards
 ++++++++++++++++
     
