@@ -63,7 +63,7 @@ def solve_feas_pump_NLP_subproblem(solve_data, config):
     #     sub_nlp.improving_objective_cut = Constraint(
     #         expr=sub_nlp.MindtPy_utils.objective_value >= solve_data.LB)
     MindtPy.feas_pump_nlp_obj = generate_Norm2sq_objective_function(
-        sub_nlp, solve_data.mip, discretes_only=True)
+        sub_nlp, solve_data.mip, discrete_only=True)
 
     MindtPy.MindtPy_linear_cuts.deactivate()
     TransformationFactory('contrib.deactivate_trivial_constraints')\

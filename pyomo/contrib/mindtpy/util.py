@@ -6,7 +6,7 @@ from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_nogood_cuts, add_affine_cuts)
 
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
-                        Objective, Reals, Suffix, Var, minimize, value, RangeSet)
+                        Objective, Reals, Suffix, Var, minimize, value, RangeSet, ConstraintList)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import native_numeric_types
@@ -183,12 +183,12 @@ def var_bound_add(solve_data, config):
                         var.setub(config.continuous_var_bound)
 
 
-def generate_Norm2sq_objective_function(model, setpoint_model, discretes_only=False):
-    """Generate objective for minimum euclidean distance to setpoint_model
+def generate_Norm2sq_objective_function(model, setpoint_model, discrete_only=False):
+    """Generate objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}
-    discretes_only -- only optimize on distance between the discrete variables
+    discrete_only -- only optimize on distance between the discrete variables
     """
-    var_filter = (lambda v: v[1].is_binary()) if discretes_only \
+    var_filter = (lambda v: v[1].is_binary()) if discrete_only \
         else (lambda v: True)
 
     model_vars, setpoint_vars = zip(*filter(var_filter,
@@ -203,38 +203,59 @@ def generate_Norm2sq_objective_function(model, setpoint_model, discretes_only=Fa
              zip(model_vars, setpoint_vars)])))
 
 
-def generate_Norm1_objective_function(model, setpoint_model, discretes_only=False):
-    """Generate objective for minimum Norm1 distance to setpoint model
+def generate_Norm1_objective_function(model, setpoint_model, discrete_only=False):
+    """Generate objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
-    discretes_only -- only optimize on distance between the discrete variables
+    discrete_only -- only optimize on distance between the discrete variables
     """
 
-    var_filter = (lambda v: v.is_binary()) if discretes_only \
+    var_filter = (lambda v: v.is_binary()) if discrete_only \
         else (lambda v: True)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm1 objective function for models with different number of variables"
-    if model.find_component('L1_objective_function') is not None:
-        model.del_component('L1_objective_function')
-    obj_blk = model.L1_objective_function = Block()
+    if model.MindtPy_utils.find_component('L1_objective_function') is not None:
+        model.MindtPy_utils.del_component('L1_objective_function')
+    obj_blk = model.MindtPy_utils.L1_objective_function = Block()
+    obj_blk.L1_obj_idx = RangeSet(len(model_vars))
+    obj_blk.L1_obj_var = Var(
+        obj_blk.L1_obj_idx, domain=Reals, bounds=(0, None))
+    obj_blk.abs_reformulation = ConstraintList()
+    for idx, v_model, v_setpoint in zip(obj_blk.L1_obj_idx, model_vars,
+                                        setpoint_vars):
+        obj_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value >= -obj_blk.L1_obj_var[idx])
+        obj_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value <= obj_blk.L1_obj_var[idx])
 
-    obj_blk.L1_obj_var = Var(domain=Reals, bounds=(0, None))
-    obj_blk.L1_obj_ub_idx = RangeSet(len(model_vars))
-    obj_blk.L1_obj_ub_constr = Constraint(
-        obj_blk.L1_obj_ub_idx, rule=lambda i: obj_blk.L1_obj_var >= 0)
-    obj_blk.L1_obj_lb_idx = RangeSet(len(model_vars))
-    obj_blk.L1_obj_lb_constr = Constraint(
-        obj_blk.L1_obj_lb_idx, rule=lambda i: obj_blk.L1_obj_var >= 0)  # 'empty' constraint (will be set later)
+    return Objective(expr=sum(obj_blk.L1_obj_var[idx] for idx in obj_blk.L1_obj_idx))
 
-    for (c_lb, c_ub, v_model, v_setpoint) in zip(obj_blk.L1_obj_lb_idx,
-                                                 obj_blk.L1_obj_ub_idx,
-                                                 model_vars,
-                                                 setpoint_vars):
-        obj_blk.L1_obj_lb_constr[c_lb].set_value(
-            expr=v_model - v_setpoint.value >= -obj_blk.L1_obj_var)
-        obj_blk.L1_obj_ub_constr[c_ub].set_value(
-            expr=v_model - v_setpoint.value <= obj_blk.L1_obj_var)
 
-    return Objective(expr=obj_blk.L1_obj_var)
+def generate_NormInf_objective_function(model, setpoint_model, discrete_only=False):
+    """Generate objective (PF-OA master problem) for minimum Norm Infinity distance to setpoint_model
+    Norm1 distance of (x,y) = \max_i |x_i - y_i|
+    discrete_only -- only optimize on distance between the discrete variables
+    """
+
+    var_filter = (lambda v: v.is_binary()) if discrete_only \
+        else (lambda v: True)
+    model_vars = list(filter(var_filter, model.component_data_objects(Var)))
+    setpoint_vars = list(
+        filter(var_filter, setpoint_model.component_data_objects(Var)))
+    assert len(model_vars) == len(
+        setpoint_vars), "Trying to generate Norm Infinity objective function for models with different number of variables"
+    if model.MindtPy_utils.find_component('L_infinity_objective_function') is not None:
+        model.MindtPy_utils.del_component('L_infinity_objective_function')
+    obj_blk = model.MindtPy_utils.L_infinity_objective_function = Block()
+    obj_blk.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
+    obj_blk.abs_reformulation = ConstraintList()
+    for v_model, v_setpoint in zip(model_vars,
+                                   setpoint_vars):
+        obj_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value >= -obj_blk.L_infinity_obj_var)
+        obj_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value <= obj_blk.L_infinity_obj_var)
+
+    return Objective(expr=obj_blk.L_infinity_obj_var)
