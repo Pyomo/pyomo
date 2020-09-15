@@ -213,8 +213,13 @@ texinfo_documents = [
 
 doctest_global_setup = '''
 
-import pyomo.opt
+from pyomo.common.dependencies import (
+    attempt_import, numpy_available, scipy_available, pandas_available,
+    yaml_available, networkx_available
+)
+pint_available = attempt_import('pint', defer_check=False)[1]
 
+import pyomo.opt
 # Not using SolverFactory to check solver availability because
 # as of June 2020 there is no way to supress warnings when 
 # solvers are not available
