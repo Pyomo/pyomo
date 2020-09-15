@@ -40,7 +40,7 @@ def solve_NLP_subproblem(solve_data, config):
     fixed_nlp = solve_data.working_model.clone()
     MindtPy = fixed_nlp.MindtPy_utils
     solve_data.nlp_iter += 1
-    config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
+    config.logger.info('Fixed-NLP %s: Solve subproblem for fixed binaries.'
                        % (solve_data.nlp_iter,))
 
     # Set up NLP
