@@ -10,7 +10,7 @@
 #### Using mpi-sppy instead of PySP; May 2020
 #### Adding option for "local" EF starting Sept 2020
 
-use_mpisspy_ef = True  # this is for testing only as Sept 2020
+use_mpisppy_ef = True  # this is for testing only as Sept 2020
 
 import re
 import importlib as im
@@ -445,13 +445,14 @@ class Estimator(object):
 
         options = {"solver": "ipopt"}
         scenario_creator_options = {"cb_data": outer_cb_data}
-        if use_mpisspy_ef:
+        if use_mpisppy_ef:
             EF = st.ExtensiveForm(options,
                                   scen_names,
                                   _pysp_instance_creation_callback,
                                   model_name = "_Q_opt",
                                   scenario_creator_options\
-                                  =scenario_creator_options)
+                                  =scenario_creator_options,
+                                  suppress_warnings=True)
             ef = EF.ef
         else:
             ef = local_ef.create_EF(scen_names,
