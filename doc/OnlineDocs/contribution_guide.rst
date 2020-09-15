@@ -14,6 +14,10 @@ separated from functional changes. This simplifies the review process
 and ensures that functional changes aren't obscured by large amounts of
 non-functional changes.
 
+We do not squash and merge PRs so all commits in your branch will appear 
+in the master history. In addition to well-documented PR descriptions, 
+we encourage modular/targeted commits with descriptive commit messages.
+
 Coding Standards
 ++++++++++++++++
     
@@ -36,20 +40,22 @@ and contributions to ``pyomo.contrib``.
 Testing
 +++++++
 
-Pyomo uses ``unittest``, TravisCI, and Appveyor for testing and
-continuous integration. Submitted code should include tests to establish
-the validity of its results and/or effects. Unit tests are preferred but
-we also accept integration tests. When test are run on a PR, we require
-at least 70% coverage of the lines modified in the PR and prefer
-coverage closer to 90%. We also require that all tests pass before a PR
-will be merged.
+Pyomo uses ``unittest``, TravisCI, and 
+`GitHub workflows <https://docs.github.com/en/actions/configuring-and-managing-workflows/configuring-a-workflow>`_ 
+for testing and continuous integration. Submitted code should include 
+tests to establish the validity of its results and/or effects. Unit 
+tests are preferred but we also accept integration tests. We require 
+at least 70% coverage of the lines modified in the PR and prefer coverage 
+closer to 90%. We also require that all tests pass before a PR will be 
+merged.
 
-The Pyomo master branch (as of `this commit <https://github.com/Pyomo/pyomo/commit/49e2ff171ddcd083c62ac28379afcf33af2549ae>`) provides a Github Action
-workflow that will test any changes pushed to a branch using Ubuntu with
-Python 3.7. For existing forks, fetch and merge your fork (and branches) with
-Pyomo's master. For new forks, you will need to enable Github Actions
-in the 'Actions' tab on your fork. Then the test will begin to run
-automatically with each push to your fork.
+The Pyomo master branch provides a Github Actions workflow (configured 
+in the ``.github/`` directory) that will test any changes pushed to 
+a branch on multiple virtual machines (ubuntu, mac-os, windows) 
+and with multiple Python versions. For existing forks, fetch and merge 
+your fork (and branches) with Pyomo's master. For new forks, you will 
+need to enable Github Actions in the 'Actions' tab on your fork. 
+Then the tests will begin to run automatically with each push to your fork.
 
 At any point in the development cycle, a "work in progress" pull request
 may be opened by including '[WIP]' at the beginning of the PR

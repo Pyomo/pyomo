@@ -19,7 +19,6 @@ from copy import deepcopy
 from pyomo.core.base.component import _ComponentBase, ComponentUID
 from pyomo.core import Block, TraversalStrategy
 from pyomo.opt import TerminationCondition, SolverStatus
-from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys
 import sys
 from weakref import ref as weakref_ref
