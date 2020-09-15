@@ -22,8 +22,8 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('ipopt', 'cplex')
-if all(SolverFactory(s).available() for s in required_solvers):
+required_solvers = ('ipopt', 'cplex_persistent')
+if all(SolverFactory(s).available(False) for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False
