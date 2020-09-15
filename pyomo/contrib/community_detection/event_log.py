@@ -60,7 +60,8 @@ def _event_log(model, model_graph, constraint_set, type_of_graph, with_objective
     logger.info("%s nodes found in the graph created from the model" % number_of_nodes)
     logger.info("%s edges found in the graph created from the model" % number_of_edges)
 
-    # Log information on connectivity and density
+    # Log information on connectivity and density (if density is 1 then that means the nodes are connected
+    # to every other node)
     if number_of_nodes > 0:
         if nx.is_connected(model_graph):
             logger.info("The graph created from the model is connected.")
@@ -69,18 +70,21 @@ def _event_log(model, model_graph, constraint_set, type_of_graph, with_objective
             logger.info("The graph created from the model is disconnected.")
             graph_is_connected = False
 
-        if type_of_graph == 'b':
+        if type_of_graph == 'bipartite':
             if graph_is_connected:
                 top_nodes, bottom_nodes = nx.bipartite.sets(model_graph)
+
+                # The purpose of the next few lines is to ensure that (1) top_nodes is not an empty set (as this causes
+                # errors) and that (2) the node sets are properly identified as either constraints or variables
                 if len(top_nodes) == 0:
                     top_nodes, bottom_nodes = bottom_nodes, top_nodes
-                if list(top_nodes)[0] in constraint_set:
-                    constraint_nodes = top_nodes
-                    variable_nodes = bottom_nodes
+                if top_nodes == constraint_set:
+                    constraint_nodes, variable_nodes = top_nodes, bottom_nodes
                 else:
-                    constraint_nodes = bottom_nodes
-                    variable_nodes = top_nodes
+                    constraint_nodes, variable_nodes = bottom_nodes, top_nodes
             else:
+                # If the graph is not connected then we must construct the constraint node set
+                # and variable node set manually
                 constraint_nodes = {node for node in model_graph.nodes() if node in constraint_set}
                 variable_nodes = set(model_graph) - constraint_nodes
 

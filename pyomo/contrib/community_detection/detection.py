@@ -198,8 +198,7 @@ class CommunityMap(object):
     The CommunityMap object acts as a Python dictionary, mapping integer keys to tuples containing two lists
     (which contain the components in the given community) - a constraint list and variable list.
 
-    Methods
-    -------
+    Methods:
     generate_structured_model
     visualize_model_graph
     """
