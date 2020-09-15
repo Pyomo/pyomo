@@ -8,6 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #### Using mpi-sppy instead of PySP; May 2020
+#### Adding option for "local" EF starting Sept 2020
+
+use_mpisspy_ef = True  # this is for testing only as Sept 2020
 
 import re
 import importlib as im
@@ -15,6 +18,7 @@ import types
 import json
 from itertools import combinations
 import mpisppy.utils.sputils as sputils
+import pyomo.contrib.parmest.create_ef as local_ef
 
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
@@ -35,7 +39,7 @@ import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
     fit_rect_dist, fit_mvn_dist, fit_kde_dist
 
-__version__ = 0.2999999
+__version__ = 0.3
 
 if numpy_available and scipy_available:
     from pyomo.contrib.pynumero.asl import AmplInterface
@@ -441,12 +445,20 @@ class Estimator(object):
 
         options = {"solver": "ipopt"}
         scenario_creator_options = {"cb_data": outer_cb_data}
-        EF = st.ExtensiveForm(options,
-                              scen_names,
-                              _pysp_instance_creation_callback,
-                              model_name = "_Q_opt",
-                              scenario_creator_options=scenario_creator_options)
-
+        if use_mpisspy_ef:
+            EF = st.ExtensiveForm(options,
+                                  scen_names,
+                                  _pysp_instance_creation_callback,
+                                  model_name = "_Q_opt",
+                                  scenario_creator_options\
+                                  =scenario_creator_options)
+            ef = EF.ef
+        else:
+            ef = local_ef.create_EF(scen_names,
+                                    _pysp_instance_creation_callback,
+                                    EF_name = "_Q_opt",
+                                    creator_options=scenario_creator_options)
+                                    
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
         
@@ -458,17 +470,17 @@ class Estimator(object):
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
 
-                solve_result = solver.solve(EF.ef, tee = self.tee)
+                solve_result = solver.solve(ef, tee = self.tee)
 
             elif not asl_available:
                 raise ImportError("parmest requires ASL to calculate the covariance matrix with solver 'ipopt'")
             else:
                 # parmest makes the fitted parameters stage 1 variables
                 ind_vars = []
-                for ndname, Var, solval in sputils.ef_nonants(EF.ef):
+                for ndname, Var, solval in sputils.ef_nonants(ef):
                     ind_vars.append(Var)
                 # calculate the reduced hessian
-                solve_result, inv_red_hes = inv_reduced_hessian_barrier(EF.ef, 
+                solve_result, inv_red_hes = inv_reduced_hessian_barrier(ef, 
                     independent_variables= ind_vars,
                     solver_options=self.solver_options,
                     tee=self.tee)
@@ -479,13 +491,13 @@ class Estimator(object):
 
             # assume all first stage are thetas...
             thetavals = {}
-            for ndname, Var, solval in sputils.ef_nonants(EF.ef):
+            for ndname, Var, solval in sputils.ef_nonants(ef):
                 # process the name
                 # the scenarios are blocks, so strip the scenario name
                 vname  = Var.name[Var.name.find(".")+1:]
                 thetavals[vname] = solval
 
-            objval = pyo.value(EF.ef.EF_Obj)
+            objval = pyo.value(ef.EF_Obj)
             
             if calc_cov:
                 # Calculate the covariance matrix
@@ -514,8 +526,8 @@ class Estimator(object):
             
             if len(return_values) > 0:
                 var_values = []
-                # DLW, June 2020: changed with mpi-sppy? (delete this comment)
-                for exp_i in EF.component_objects(Block, descend_into=False):
+                # assumes we solved using mpi-sppy
+                for exp_i in ef.component_objects(Block, descend_into=False):
                     vals = {}
                     for var in return_values:
                         exp_i_var = eval('exp_i.'+ str(var))
