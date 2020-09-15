@@ -482,8 +482,9 @@ class CommunityMap(object):
         blocked_variable_map = ComponentMap()
         # Example key-value pair -> {original_model.x1 : [structured_model.b[0].x1, structured_model.b[3].x1]}
 
-        # TODO - Change structure to be more efficient (maybe loop through constraints and add variables as you go)
-        #  (but note that disconnected variables would be missed with this strategy)
+        # TODO - Consider changing structure of the next two for loops to be more efficient (maybe loop through
+        #  constraints and add variables as you go) (but note that disconnected variables would be
+        #  missed with this strategy)
 
         # First loop through community_map to add all the variables to structured_model before we add constraints
         # that use those variables
@@ -588,6 +589,7 @@ class CommunityMap(object):
                 for variable_in_objective in identify_variables(objective_function):
                     # Add all of the variables in the objective function (not within any blocks)
 
+                    # Check to make sure a form of the variable has not already been made outside of the blocks
                     if structured_model.find_component(str(variable_in_objective)) is None:
 
                         new_variable = Var(domain=variable_in_objective.domain, bounds=variable_in_objective.bounds)
@@ -601,6 +603,7 @@ class CommunityMap(object):
 
                         # Update the dictionary that we will use to replace the variables
                         replace_variables_in_expression_map[id(variable_in_objective)] = variable_in_new_model
+
                     else:
                         for version_of_variable in blocked_variable_map[variable_in_objective]:
                             if 'b[' not in str(version_of_variable):
