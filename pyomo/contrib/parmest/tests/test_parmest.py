@@ -315,11 +315,18 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
                                       theta_names, SSE, solver_options)
 
     def test_theta_est(self):
+        # used in data reconciliation
         objval, thetavals = self.pest.theta_est()
         
         self.assertAlmostEqual(thetavals['k1'], 5.0/6.0, places=4) 
         self.assertAlmostEqual(thetavals['k2'], 5.0/3.0, places=4) 
         self.assertAlmostEqual(thetavals['k3'], 1.0/6000.0, places=7) 
+        
+    def test_return_values(self):
+        objval, thetavals, data_rec =\
+            self.pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd', 'caf'])
+        self.assertAlmostEqual(data_rec["cc"].loc[18], 893.84924, places=3)
+
         
 @unittest.skipIf(not parmest.parmest_available,
                  "Cannot test parmest: required dependencies are missing")
