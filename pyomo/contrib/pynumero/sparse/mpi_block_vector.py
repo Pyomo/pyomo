@@ -400,7 +400,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def finalize_block_sizes(self, broadcast=True, block_sizes=None):
         """
-        Only set broadcast=False if you know what your are doing!
+        Only set broadcast=False if you know what you are doing!
 
         Parameters
         ----------
