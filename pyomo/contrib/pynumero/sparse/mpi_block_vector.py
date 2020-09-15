@@ -209,7 +209,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         if isinstance(x1, MPIBlockVector) and isinstance(x2, MPIBlockVector):
 
             msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(x1._rank_owner, x2._rank_owner), msg
+            assert np.array_equal(x1._rank_owner, x2._rank_owner) or self._mpiw.Get_size() == 1, msg
             assert x1._mpiw == x2._mpiw, 'Need to have same communicator'
 
             res = x1.copy_structure()
@@ -969,7 +969,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
             if isinstance(other, MPIBlockVector):
-                assert np.array_equal(self._rank_owner, other._rank_owner), \
+                assert np.array_equal(self._rank_owner, other._rank_owner) or self._mpiw.Get_size() == 1, \
                     'MPIBlockVectors must be distributed in same processors'
                 assert self._mpiw == other._mpiw, 'Need to have same communicator'
             for i in self._owned_blocks:
@@ -1006,7 +1006,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
             if isinstance(other, MPIBlockVector):
-                assert np.array_equal(self._rank_owner, other._rank_owner), \
+                assert np.array_equal(self._rank_owner, other._rank_owner) or self._mpiw.Get_size() == 1, \
                     'MPIBlockVectors must be distributed in same processors'
                 assert self._mpiw == other._mpiw, 'Need to have same communicator'
                 assert_block_structure(other)
@@ -1096,7 +1096,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert_block_structure(other)
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
+            assert np.array_equal(self._rank_owner, other._rank_owner) or self._mpiw.Get_size() == 1, \
                 'MPIBlockVectors must be distributed in same processors'
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
@@ -1165,7 +1165,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         if self.nblocks != other.nblocks:
             return False
         if isinstance(other, MPIBlockVector):
-            if (self.owned_blocks != other.owned_blocks).any():
+            if (self.owned_blocks != other.owned_blocks).any() and self._mpiw.Get_size() != 1:
                 return False
         for ndx in self.owned_blocks:
             block1 = self.get_block(ndx)
