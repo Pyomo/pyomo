@@ -33,5 +33,5 @@ class Feasibility_Pump2(ConcreteModel):
 
         m.objective = Objective(expr=- m.y, sense=minimize)
 
-        m.c1 = Constraint(expr=m.y - sin(m.x * pi * 5 / 3) <= 0)
-        m.c2 = Constraint(expr=- m.y - sin(m.x * pi * 5 / 3) <= 0)
+        m.c1 = Constraint(expr=m.y - sin(m.x * pi * (5 / 3)) <= 0)
+        m.c2 = Constraint(expr=- m.y - sin(m.x * pi * (5 / 3)) <= 0)
