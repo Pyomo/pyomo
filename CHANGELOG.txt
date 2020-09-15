@@ -16,11 +16,10 @@ Pyomo 5.7.1   15 Sep 2020
   - Add test to monitor 'import pyomo.environ' time (#1577)
   - Move ComponentMap and ComponentSet to pyomo.common.collections (#1593)
   - Fix issue when parsing /etc/os-release (#1603)
-  - Fix standard repn of external functions with fixed arguments (#1623)
 - Core
+  - Add a logical expression system (#1507)
   - Resolve table formatting with unicode character data (#1530)
   - Fix Model.compute_statistics method (#1553)
-  - Add a logical expression system (#1507)
   - Deprecate CUID targets in add_slack_variables transformation (#1563)
   - Defer import of sympy in the cnf_walker (#1576)
   - Minor fixes to units (#1582, #1584)
@@ -29,15 +28,15 @@ Pyomo 5.7.1   15 Sep 2020
   - Rework constraint initialization (#1592)
   - Remove truthiness assumption for sequence in TuplizeValuesInitializer (#1620)
   - Add deprecated support for Var(within=RealSet) (#1619)
+  - Fix standard repn of external functions with fixed arguments (#1623)
 - Solver Interfaces
   - Use Baron option to more consistently return duals (#1538)
   - Add direct and persistent interfaces to Xpress (#1443)
   - Augment persistent solver interfaces to support column generation (#1568)
 - DAE Updates
-  - Add 'tee' keyword to solve_consistent_initial_conditions (#1534)
+  - Add options to solve_consistent_initial_conditions (#1534, #1606)
   - Add find_nearest_index method to ContinuousSet (#1559)
   - Allow flattening of ctypes other than Var (#1583)
-  - Add options to solve_consistent_initial_conditions (#1606)
 - GDP Updates
   - Fix a couple bugs in GDP basic steps (#1532)
   - Make key for calculated M values in bigM dictionary consistent (#1618)
