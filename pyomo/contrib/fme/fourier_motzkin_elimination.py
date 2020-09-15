@@ -68,11 +68,6 @@ def vars_to_eliminate_list(x):
             "Expected Var or list of Vars."
             "\n\tRecieved %s" % type(x))
 
-def _is_integer(x, TOL):
-    if abs(int(x) - x) <= TOL:
-        return True
-    return False
-
 def gcd(a,b):
     while b != 0:
         a, b = b, a % b
@@ -420,10 +415,11 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                             self._nonneg_scalar_multiply_linear_constraint(
                                 cons, 1.0/leaving_var_coef))
                 else:
-                    if not _is_integer(leaving_var_coef, self.integer_tolerance):
-                        raise ValueError(self._get_noninteger_coef_error_message(
-                            the_var.name, leaving_var_coef))
-                    coefs.append(int(leaving_var_coef))
+                    coefs.append(self._as_integer(
+                        leaving_var_coef,
+                        self._get_noninteger_coef_error_message,
+                        (the_var.name, leaving_var_coef)
+                    ))
             if self.do_integer_arithmetic and len(coefs) > 0:
                 least_common_mult = lcm(coefs)
                 for cons in constraints:
@@ -461,30 +457,40 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 "False, increase integer_tolerance, "
                 "or make your data integer." % (varname, coef))
 
-    def _multiply(self, scalar, coef, error_message):
+    def _as_integer(self, x, error_message, error_args):
+        if abs(int(x) - x) <= self.integer_tolerance:
+            return int(round(x))
+        raise ValueError(error_message if error_args is None
+                         else error_message(*error_args))
+
+    def _multiply(self, scalar, coef, error_message, error_args):
         if self.do_integer_arithmetic:
-            if _is_integer(coef, self.integer_tolerance):
-                assert type(scalar) is int
-                return scalar*int(coef)
-            else:
-                raise ValueError(error_message)
+            assert type(scalar) is int
+            return scalar * self._as_integer(coef, error_message, error_args)
         elif abs(scalar*coef) > self.zero_tolerance:
             return scalar*coef
         else:
             return 0
 
-    def _add(self, a, b, error_message):
+    def _add(self, a, b, error_message, error_args):
         if self.do_integer_arithmetic:
-            if _is_integer(a, self.integer_tolerance) and \
-               _is_integer(b, self.integer_tolerance):
-                return a + b
-            else:
-                raise ValueError(error_message)
+            return self._as_integer(a, error_message, error_args) \
+                + self._as_integer(b, error_message, error_args)
         elif abs(a + b) > self.zero_tolerance:
             return a + b
         else:
             return 0
-        
+
+    def _nonneg_scalar_multiply_linear_constraint_error_msg(self, cons, coef):
+        return (
+            "The do_integer_arithmetic flag was set to True, but the "
+            "lower bound of %s is non-integer within the specified "
+            "tolerance, with value %s. \n"
+            "Please set do_integer_arithmetic=False, increase "
+            "integer_tolerance, or make your data integer." %
+            (cons['body'].to_expression() >= cons['lower'], coef)
+        )
+
     def _nonneg_scalar_multiply_linear_constraint(self, cons, scalar):
         """Multiplies all coefficients and the RHS of a >= constraint by scalar.
         There is no logic for flipping the equality, so this is just the 
@@ -498,10 +504,10 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         new_coefs = []
         for i, coef in enumerate(body.linear_coefs):
             v = body.linear_vars[i]
-            new_coefs.append( 
-                self._multiply(scalar, coef,
-                               self._get_noninteger_coef_error_message(v.name,
-                                                                       coef)))
+            new_coefs.append(self._multiply(
+                scalar, coef, self._get_noninteger_coef_error_message,
+                (v.name, coef)
+            ))
             # update the map
             cons['map'][v] = new_coefs[i]
         body.linear_coefs = new_coefs
@@ -513,17 +519,23 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         # assume scalar >= 0 and constraint only has lower bound
         lb = cons['lower']
         if lb is not None:
-            cons['lower'] = self._multiply(scalar, lb, 
-                                           "The do_integer_arithmetic flag was "
-                                           "set to True, but the lower bound of "
-                                           "%s is non-integer within the "
-                                           "specified tolerance, with value %s. "
-                                           "\nPlease set do_integer_arithmetic="
-                                           "False, increase integer_tolerance, "
-                                           "or make your data integer." % 
-                                           (cons['body'].to_expression() >= \
-                                            cons['lower'], coef))
+            cons['lower'] = self._multiply(
+                scalar, lb,
+                self._nonneg_scalar_multiply_linear_constraint_error_msg,
+                (cons, coef)
+            )
         return cons
+
+    def _add_linear_constraints_error_msg(self, cons1, cons2):
+        return (
+            "The do_integer_arithmetic flag was set to True, but while "
+            "adding %s and %s, encountered a coefficient that is "
+            "non-integer within the specified tolerance\n"
+            "Please set do_integer_arithmetic=False, increase "
+            "integer_tolerance, or make your data integer." %
+            (cons1['body'].to_expression() >= cons1['lower'],
+             cons2['body'].to_expression() >= cons2['lower'])
+        )
 
     def _add_linear_constraints(self, cons1, cons2):
         """Adds two >= constraints
@@ -544,20 +556,11 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             if v not in seen:
                 all_vars.append(v)
                 
-        err_msg = ("The do_integer_arithmetic flag was "
-                   "set to True, but while adding %s and %s, "
-                   "encountered a coefficient that is non-integer "
-                   "within the specified tolerance\n"
-                   "Please set do_integer_arithmetic="
-                   "False, increase integer_tolerance, "
-                   "or make your data integer." % 
-                   (cons1_body.to_expression() >= cons1['lower'], 
-                    cons2_body.to_expression() >= cons2['lower']))
-        
         expr = 0
         for var in all_vars:
-            coef = self._add(cons1['map'].get(var, 0), cons2['map'].get(var, 0),
-                             err_msg)
+            coef = self._add(
+                cons1['map'].get(var, 0), cons2['map'].get(var, 0),
+                self._add_linear_constraints_error_msg, (cons1, cons2))
             ans['map'][var] = coef
             expr += coef*var
                 
@@ -571,7 +574,9 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         ans['body'] = generate_standard_repn(expr)
 
         # upper is None and lower exists, so this gets the constant
-        ans['lower'] = self._add(cons1['lower'], cons2['lower'], err_msg)
+        ans['lower'] = self._add(
+            cons1['lower'], cons2['lower'],
+            self._add_linear_constraints_error_msg, (cons1, cons2))
 
         return ans
 
