@@ -187,6 +187,7 @@ def generate_Norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     """Generate objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}
     discrete_only -- only optimize on distance between the discrete variables
+    TODO: remove setpoint_model
     """
     var_filter = (lambda v: v[1].is_binary()) if discrete_only \
         else (lambda v: True)
@@ -207,6 +208,7 @@ def generate_Norm1_objective_function(model, setpoint_model, discrete_only=False
     """Generate objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
     discrete_only -- only optimize on distance between the discrete variables
+    TODO: remove setpoint_model
     """
 
     var_filter = (lambda v: v.is_binary()) if discrete_only \
@@ -237,6 +239,7 @@ def generate_NormInf_objective_function(model, setpoint_model, discrete_only=Fal
     """Generate objective (PF-OA master problem) for minimum Norm Infinity distance to setpoint_model
     Norm1 distance of (x,y) = \max_i |x_i - y_i|
     discrete_only -- only optimize on distance between the discrete variables
+    TODO: remove setpoint_model
     """
 
     var_filter = (lambda v: v.is_binary()) if discrete_only \
