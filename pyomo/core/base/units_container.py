@@ -24,7 +24,7 @@ PyomoUnitsContainer. You can use the module level instance already defined as
 this module using common notation.
 
     .. doctest::
-        :skipif: not pint_available
+       :skipif: not pint_available
 
        >>> from pyomo.environ import units as u
        >>> print(3.0*u.kg)
@@ -38,7 +38,7 @@ like the objective function, constraint, or expression using
 There are other methods there that may be helpful for verifying correct units on a model.
 
     .. doctest::
-        :skipif: not pint_available
+       :skipif: not pint_available
 
        >>> from pyomo.environ import ConcreteModel, Var, Objective
        >>> from pyomo.environ import units as u
