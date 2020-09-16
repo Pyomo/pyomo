@@ -16,6 +16,7 @@ Pyomo 5.7.1   15 Sep 2020
   - Add test to monitor 'import pyomo.environ' time (#1577)
   - Move ComponentMap and ComponentSet to pyomo.common.collections (#1593)
   - Fix issue when parsing /etc/os-release (#1603)
+  - Fix deprecation decorator tests (#1629)
 - Core
   - Add a logical expression system (#1507)
   - Resolve table formatting with unicode character data (#1530)
