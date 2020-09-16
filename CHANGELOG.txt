@@ -16,6 +16,7 @@ Pyomo 5.7.1   15 Sep 2020
   - Add test to monitor 'import pyomo.environ' time (#1577)
   - Move ComponentMap and ComponentSet to pyomo.common.collections (#1593)
   - Fix issue when parsing /etc/os-release (#1603)
+  - Fix deprecation decorator tests (#1629)
 - Core
   - Add a logical expression system (#1507)
   - Resolve table formatting with unicode character data (#1530)
@@ -59,7 +60,7 @@ Pyomo 5.7.1   15 Sep 2020
   - MindtPy: add configuration arguments, bug fixes (#1500)
   - Parmest: fix solver options typo, update graphics module (#1531, #1622) 
   - PyNumero: Add scaling to Cyipopt interface, set AMPLFUNC before loading NL 
-    files (#1554, #1546)
+    files, improve MPI matvec performance (#1554, #1546, #1610)
   - Fix bugs in sensitivity toolbox (#1536, #1574)
   - Add integer arithmetic option to FME transformation (#1594)
 
