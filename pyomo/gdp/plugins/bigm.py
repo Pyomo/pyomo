@@ -16,7 +16,7 @@ import textwrap
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.fbbt.interval import inf
 from pyomo.core import (
@@ -440,11 +440,15 @@ class BigM_Transformation(Transformation):
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
         # we will keep a map of constraints (hashable, ha!) to a tuple to
-        # indicate where their m value came from, either (arg dict, key) if it
-        # came from args, (Suffix, key) if it came from Suffixes, or (M_lower,
-        # M_upper) if we calcualted it ourselves. I am keeping it here because I
-        # want it to move with the disjunct transformation blocks in the case of
-        # nested constraints, to make it easier to query.
+        # indicate what their M value is and where it came from, of the form:
+        # ((lower_value, lower_source, lower_key), (upper_value, upper_source,
+        # upper_key)), where the first tuple is the information for the lower M,
+        # the second tuple is the info for the upper M, source is the Suffix or
+        # argument dictionary and None if the value was calculated, and key is
+        # the key in the Suffix or argument dictionary, and None if it was
+        # calculated. (Note that it is possible the lower or upper is
+        # user-specified and the other is not, hence the need to store
+        # information for both.)
         relaxationBlock.bigm_src = {}
         relaxationBlock.localVarReferences = Block()
         obj._transformation_block = weakref_ref(relaxationBlock)
@@ -574,6 +578,27 @@ class BigM_Transformation(Transformation):
                 'transformedConstraints': ComponentMap()}
         return transBlock._constraintMap
 
+    def _convert_M_to_tuple(self, M, constraint_name):
+        if not isinstance(M, (tuple, list)):
+            if M is None:
+                M = (None, None)
+            else:
+                try:
+                    M = (-M, M)
+                except:
+                    logger.error("Error converting scalar M-value %s "
+                                 "to (-M,M).  Is %s not a numeric type?"
+                                 % (M, type(M)))
+                    raise
+        if len(M) != 2:
+            raise GDP_Error("Big-M %s for constraint %s is not of "
+                            "length two. "
+                            "Expected either a single value or "
+                            "tuple or list of length two for M."
+                            % (str(M), constraint_name))
+
+        return M
+
     def _transform_constraint(self, obj, disjunct, bigMargs, arg_list,
                               disjunct_suffix_list):
         # add constraint to the transformation block, we'll transform it there.
@@ -607,10 +632,15 @@ class BigM_Transformation(Transformation):
             if not c.active:
                 continue
 
+            lower = (None, None, None)
+            upper = (None, None, None)
+
             # first, we see if an M value was specified in the arguments.
             # (This returns None if not)
-            M = self._get_M_from_args(c, bigMargs, arg_list, bigm_src)
-
+            lower, upper = self._get_M_from_args(c, bigMargs, arg_list, lower,
+                                                 upper)
+            M = (lower[0], upper[0])
+            
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _name = obj.getname(
                     fully_qualified=True, name_buffer=NAME_BUFFER)
@@ -618,14 +648,17 @@ class BigM_Transformation(Transformation):
                              "from the BigM argument is %s." % (cons_name,
                                                                 str(M)))
 
-            # if we didn't get something from args, try suffixes:
-            if M is None:
+            # if we didn't get something we need from args, try suffixes:
+            if (M[0] is None and c.lower is not None) or \
+               (M[1] is None and c.upper is not None):
                 # first get anything parent to c but below disjunct
                 suffix_list = self._get_bigm_suffix_list(c.parent_block(),
                                                          stopping_block=disjunct)
                 # prepend that to what we already collected for the disjunct.
                 suffix_list.extend(disjunct_suffix_list)
-                M = self._get_M_from_suffixes(c, suffix_list, bigm_src)
+                lower, upper = self._update_M_from_suffixes(c, suffix_list,
+                                                            lower, upper)
+                M = (lower[0], upper[0])
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _name = obj.getname(
@@ -634,30 +667,12 @@ class BigM_Transformation(Transformation):
                              "after checking suffixes is %s." % (cons_name,
                                                                  str(M)))
 
-            if not isinstance(M, (tuple, list)):
-                if M is None:
-                    M = (None, None)
-                else:
-                    try:
-                        M = (-M, M)
-                    except:
-                        logger.error("Error converting scalar M-value %s "
-                                     "to (-M,M).  Is %s not a numeric type?"
-                                     % (M, type(M)))
-                        raise
-            if len(M) != 2:
-                raise GDP_Error("Big-M %s for constraint %s is not of "
-                                "length two. "
-                                "Expected either a single value or "
-                                "tuple or list of length two for M."
-                                % (str(M), name))
-
             if c.lower is not None and M[0] is None:
                 M = (self._estimate_M(c.body, name)[0] - c.lower, M[1])
-                bigm_src[c] = M
+                lower = (M[0], None, None)
             if c.upper is not None and M[1] is None:
                 M = (M[0], self._estimate_M(c.body, name)[1] - c.upper)
-                bigm_src[c] = M
+                upper = (M[1], None, None)
 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 _name = obj.getname(
@@ -665,6 +680,9 @@ class BigM_Transformation(Transformation):
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
                              "after estimating (if needed) is %s." %
                              (cons_name, str(M)))
+
+            # save the source information
+            bigm_src[c] = (lower, upper)
 
             # Handle indices for both SimpleConstraint and IndexedConstraint
             if i.__class__ is tuple:
@@ -704,56 +722,128 @@ class BigM_Transformation(Transformation):
             # deactivate because we relaxed
             c.deactivate()
 
-    def _get_M_from_args(self, constraint, bigMargs, arg_list, bigm_src):
+    def _process_M_value(self, m, lower, upper, need_lower, need_upper, src,
+                         key, constraint_name, from_args=False):
+        m = self._convert_M_to_tuple(m, constraint_name)
+        if need_lower and m[0] is not None:
+            if from_args:
+                self.used_args[key] = m
+            lower = (m[0], src, key)
+            need_lower = False
+        if need_upper and m[1] is not None:
+            if from_args:
+                self.used_args[key] = m
+            upper = (m[1], src, key)
+            need_upper = False
+        return lower, upper, need_lower, need_upper
+
+    def _get_M_from_args(self, constraint, bigMargs, arg_list, lower, upper):
         # check args: we first look in the keys for constraint and
         # constraintdata. In the absence of those, we traverse up the blocks,
         # and as a last resort check for a value for None
         if bigMargs is None:
-            return None
+            return (lower, upper)
+
+        # since we check for args first, we know lower[0] and upper[0] are both
+        # None
+        need_lower = constraint.lower is not None
+        need_upper = constraint.upper is not None
+        constraint_name = constraint.getname(fully_qualified=True,
+                                             name_buffer=NAME_BUFFER)
 
         # check for the constraint itself and its container
         parent = constraint.parent_component()
         if constraint in bigMargs:
             m = bigMargs[constraint]
-            self.used_args[constraint] = m
-            bigm_src[constraint] = (bigMargs, constraint)
-            return m
+            (lower, upper, 
+             need_lower, need_upper) = self._process_M_value(m, lower, upper,
+                                                             need_lower,
+                                                             need_upper,
+                                                             bigMargs,
+                                                             constraint,
+                                                             constraint_name,
+                                                             from_args=True)
+            if not need_lower and not need_upper:
+                return lower, upper
         elif parent in bigMargs:
             m = bigMargs[parent]
-            self.used_args[parent] = m
-            bigm_src[constraint] = (bigMargs, parent)
-            return m
+            (lower, upper, 
+             need_lower, need_upper) = self._process_M_value(m, lower, upper,
+                                                             need_lower,
+                                                             need_upper,
+                                                             bigMargs, parent,
+                                                             constraint_name,
+                                                             from_args=True)
+            if not need_lower and not need_upper:
+                return lower, upper
 
         # use the precomputed traversal up the blocks
         for arg in arg_list:
             for block, val in iteritems(arg):
-                self.used_args[block] = val
-                bigm_src[constraint] = (bigMargs, block)
-                return val
+                (lower, upper, 
+                 need_lower, need_upper) = self._process_M_value(val, lower,
+                                                                 upper,
+                                                                 need_lower,
+                                                                 need_upper,
+                                                                 bigMargs,
+                                                                 block,
+                                                                 constraint_name,
+                                                                 from_args=True)
+                if not need_lower and not need_upper:
+                    return lower, upper
 
         # last check for value for None!
         if None in bigMargs:
             m = bigMargs[None]
-            self.used_args[None] = m
-            bigm_src[constraint] = (bigMargs, None)
-            return m
-        return None
+            (lower, upper, 
+             need_lower, need_upper) = self._process_M_value(m, lower, upper,
+                                                             need_lower,
+                                                             need_upper,
+                                                             bigMargs, None,
+                                                             constraint_name,
+                                                             from_args=True)
+            if not need_lower and not need_upper:
+                return lower, upper
 
-    def _get_M_from_suffixes(self, constraint, suffix_list, bigm_src):
+        return lower, upper
+
+    def _update_M_from_suffixes(self, constraint, suffix_list, lower, upper):
+        # It's possible we found half the answer in args, but we are still
+        # looking for half the answer.
+        need_lower = constraint.lower is not None and lower[0] is None
+        need_upper = constraint.upper is not None and upper[0] is None
+        constraint_name = constraint.getname(fully_qualified=True,
+                                             name_buffer=NAME_BUFFER)
         M = None
         # first we check if the constraint or its parent is a key in any of the
         # suffix lists
         for bigm in suffix_list:
             if constraint in bigm:
                 M = bigm[constraint]
-                bigm_src[constraint] = (bigm, constraint)
-                break
+                (lower, upper, 
+                 need_lower, need_upper) = self._process_M_value(M, lower,
+                                                                 upper,
+                                                                 need_lower,
+                                                                 need_upper,
+                                                                 bigm,
+                                                                 constraint,
+                                                                 constraint_name)
+                if not need_lower and not need_upper:
+                    return lower, upper
 
             # if c is indexed, check for the parent component
             if constraint.parent_component() in bigm:
-                M = bigm[constraint.parent_component()]
-                bigm_src[constraint] = (bigm, constraint.parent_component())
-                break
+                parent = constraint.parent_component()
+                M = bigm[parent]
+                (lower, upper, 
+                 need_lower, need_upper) = self._process_M_value(M, lower,
+                                                                 upper,
+                                                                 need_lower,
+                                                                 need_upper,
+                                                                 bigm, parent,
+                                                                 constraint_name)
+                if not need_lower and not need_upper:
+                    return lower, upper
 
         # if we didn't get an M that way, traverse upwards through the blocks
         # and see if None has a value on any of them.
@@ -761,9 +851,15 @@ class BigM_Transformation(Transformation):
             for bigm in suffix_list:
                 if None in bigm:
                     M = bigm[None]
-                    bigm_src[constraint] = (bigm, None)
-                    break
-        return M
+                    (lower, upper, 
+                     need_lower, 
+                     need_upper) = self._process_M_value(M, lower, upper,
+                                                         need_lower, need_upper,
+                                                         bigm, None,
+                                                         constraint_name)
+                if not need_lower and not need_upper:
+                    return lower, upper
+        return lower, upper
 
     def _estimate_M(self, expr, name):
         # If there are fixed variables here, unfix them for this calculation,
@@ -839,22 +935,52 @@ class BigM_Transformation(Transformation):
     def get_transformed_constraints(self, srcConstraint):
         return get_transformed_constraints(srcConstraint)
 
+    @deprecated("The get_m_value_src function is deprecated. Use "
+                "the get_M_value_src function is you need source "
+                "information or the get_M_value function if you "
+                "only need values.", version='5.7.1')
     def get_m_value_src(self, constraint):
+        transBlock = _get_constraint_transBlock(constraint)
+        ((lower_val, lower_source, lower_key),
+         (upper_val, upper_source, upper_key)) = transBlock.bigm_src[constraint]
+        
+        if constraint.lower is not None and constraint.upper is not None and \
+           (not lower_source is upper_source or not lower_key is upper_key):
+            raise GDP_Error("This is why this method is deprecated: The lower "
+                            "and upper M values for constraint %s came from "
+                            "different sources, please use the get_M_value_src "
+                            "method." % constraint.name)
+        # if source and key are equal for the two, this is representable in the
+        # old format.
+        if constraint.lower is not None and lower_source is not None:
+            return (lower_source, lower_key)
+        if constraint.upper is not None and upper_source is not None:
+            return (upper_source, upper_key)
+        # else it was calculated:
+        return (lower_val, upper_val)
+
+    def get_M_value_src(self, constraint):
         """Return a tuple indicating how the M value used to transform
         constraint was specified. (In particular, this can be used to
         verify which BigM Suffixes were actually necessary to the
         transformation.)
 
-        If the M value came from an arg, returns (bigm_arg_dict, key), where
-        bigm_arg_dict is the dictionary itself and key is the key in that
-        dictionary which gave us the M value.
+        Return is of the form: ((lower_M_val, lower_M_source, lower_M_key),
+                                (upper_M_val, upper_M_source, upper_M_key))
 
-        If the M value came from a Suffix, returns (suffix, key) where suffix
-        is the BigM suffix used and key is the key in that Suffix.
+        If the constraint does not have a lower bound (or an upper bound), 
+        the first (second) element will be (None, None, None). Note that if
+        a constraint is of the form a <= expr <= b or is an equality constraint,
+        it is not necessarily true that the source of lower_M and upper_M
+        are the same.
 
-        If the transformation calculated the value, returns (M_lower, M_upper),
-        where M_lower is the float we calculated for the lower bound constraint
-        and M_upper is the value calculated for the upper bound constraint.
+        If the M value came from an arg, source is the  dictionary itself and 
+        key is the key in that dictionary which gave us the M value.
+
+        If the M value came from a Suffix, source is the BigM suffix used and 
+        key is the key in that Suffix.
+
+        If the transformation calculated the value, both source and key are None.
 
         Parameters
         ----------
@@ -865,3 +991,19 @@ class BigM_Transformation(Transformation):
         # This is a KeyError if it fails, but it is also my fault if it
         # fails... (That is, it's a bug in the mapping.)
         return transBlock.bigm_src[constraint]
+
+    def get_M_value(self, constraint):
+        """Returns the M values used to transform constraint. Return is a tuple:
+        (lower_M_value, upper_M_value). Either can be None if constraint does 
+        not have a lower or upper bound, respectively.
+
+        Parameters
+        ----------
+        constraint: Constraint, which must be in the subtree of a transformed
+                    Disjunct
+        """
+        transBlock = _get_constraint_transBlock(constraint)
+        # This is a KeyError if it fails, but it is also my fault if it
+        # fails... (That is, it's a bug in the mapping.)
+        lower, upper = transBlock.bigm_src[constraint]
+        return (lower[0], upper[0])

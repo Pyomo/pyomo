@@ -43,7 +43,7 @@ class TestDeprecated(unittest.TestCase):
         # Note: No docstring, else nose replaces the function name with
         # the docstring in output.
         #"""Test for deprecated function decorator."""
-        @deprecated(version='')
+        @deprecated(version='test')
         def foo(bar='yeah'):
             logger.warning(bar)
 
@@ -79,7 +79,7 @@ class TestDeprecated(unittest.TestCase):
 
 
     def test_with_doc_string(self):
-        @deprecated(version='')
+        @deprecated(version='test')
         def foo(bar='yeah'):
             """Show that I am a good person.
 
@@ -121,7 +121,7 @@ class TestDeprecated(unittest.TestCase):
 
 
     def test_with_custom_message(self):
-        @deprecated('This is a custom message, too.', version='')
+        @deprecated('This is a custom message, too.', version='test')
         def foo(bar='yeah'):
             """Show that I am a good person.
 
@@ -163,7 +163,7 @@ class TestDeprecated(unittest.TestCase):
 
     def test_with_custom_logger(self):
         @deprecated('This is a custom message', logger='pyomo.common',
-                    version='')
+                    version='test')
         def foo(bar='yeah'):
             """Show that I am a good person.
 
@@ -205,7 +205,7 @@ class TestDeprecated(unittest.TestCase):
         self.assertNotIn('DEPRECATED:', DEP_OUT.getvalue())
 
     def test_with_class(self):
-        @deprecated(version='')
+        @deprecated(version='test')
         class foo(object):
             def __init__(self):
                 logger.warning('yeah')
@@ -231,7 +231,7 @@ class TestDeprecated(unittest.TestCase):
         class foo(object):
             def __init__(self):
                 pass
-            @deprecated(version='')
+            @deprecated(version='test')
             def bar(self):
                 logger.warning('yeah')
 
