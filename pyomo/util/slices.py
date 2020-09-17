@@ -167,9 +167,11 @@ def replace_indices(index, location_set_map, sets):
     index = tuple_from_possible_scalar(index)
     new_index = []
     loc = 0
-    while loc < len(index):
+    len_index = len(index)
+    while loc < len_index:
         val = index[loc]
         _set = location_set_map[loc]
+        print(loc, _set.name)
         dimen = _set.dimen
         if _set not in sets:
             new_index.append(val)
@@ -178,11 +180,15 @@ def replace_indices(index, location_set_map, sets):
         else:
             dimen_none_set = _set
             new_index.append(Ellipsis)
-            while _set is dimen_none_set:
+            loc += 1
+            while loc < len_index:
                 # Skip all adjacent locations belonging to the same
                 # set. These are covered by the Ellipsis.
-                loc += 1
+                print(loc, _set.name)
                 _set = location_set_map[loc]
+                if _set is not dimen_none_set:
+                    break
+                loc += 1
             continue
         loc += 1
     return tuple(new_index)
