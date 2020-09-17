@@ -171,7 +171,6 @@ def replace_indices(index, location_set_map, sets):
     while loc < len_index:
         val = index[loc]
         _set = location_set_map[loc]
-        print(loc, _set.name)
         dimen = _set.dimen
         if _set not in sets:
             new_index.append(val)
@@ -184,7 +183,6 @@ def replace_indices(index, location_set_map, sets):
             while loc < len_index:
                 # Skip all adjacent locations belonging to the same
                 # set. These are covered by the Ellipsis.
-                print(loc, _set.name)
                 _set = location_set_map[loc]
                 if _set is not dimen_none_set:
                     break
