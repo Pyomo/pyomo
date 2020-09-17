@@ -9,6 +9,7 @@ from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_nogood_cuts
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_Norm2sq_objective_function
 from pyomo.contrib.mindtpy.mip_solve import solve_MIP_master, handle_master_mip_optimal
+from pyomo.util.infeasible import log_infeasible_constraints
 
 
 def feas_pump_converged(solve_data, config, discrete_only=True):
@@ -113,9 +114,7 @@ def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
 
     if solve_data.solution_improved:
         solve_data.best_solution_found = solve_data.working_model.clone()
-        assert is_feasible(solve_data.best_solution_found, config), \
-            "Best found solution infeasible! There might be a problem with the precisions - the feasibility pump seems to have converged (error**2 <= integer_tolerance). " \
-            "But the `is_feasible` check (error <= constraint_tolerance) doesn't work out"
+        # log_infeasible_constraints(solve_data.working_model)
 
 
 def feas_pump_loop(solve_data, config):
