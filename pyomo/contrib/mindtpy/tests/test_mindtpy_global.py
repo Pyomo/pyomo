@@ -1,4 +1,4 @@
-"""Tests for the MindtPy solver plugin."""
+"""Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
@@ -21,8 +21,7 @@ from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 
 from pyomo.opt import TerminationCondition
-
-required_solvers = ('ipopt', 'cplex')
+required_solvers = ('baron', 'cplex')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -34,6 +33,8 @@ else:
                  % (required_solvers,))
 @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
                  "Symbolic differentiation is not available")
+@unittest.skipIf(not pyomo.contrib.mcpp.pyomo_mcpp.mcpp_available(),
+                 "MC++ is not available")
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
@@ -246,18 +247,18 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.objective.expr), 7.667, places=2)
 
-    def test_GOA_Nonconvex2(self):
-        with SolverFactory('mindtpy') as opt:
-            model = Nonconvex2()
-            print('\n Solving Nonconvex2 with global Outer Approximation')
-            results = opt.solve(model, strategy='GOA',
-                                mip_solver=required_solvers[1],
-                                nlp_solver='baron',
-                                )
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
-            self.assertAlmostEqual(
-                value(model.objective.expr), -0.94347, places=2)
+    # def test_GOA_Nonconvex2(self):
+    #     with SolverFactory('mindtpy') as opt:
+    #         model = Nonconvex2()
+    #         print('\n Solving Nonconvex2 with global Outer Approximation')
+    #         results = opt.solve(model, strategy='GOA',
+    #                             mip_solver=required_solvers[1],
+    #                             nlp_solver='baron',
+    #                             )
+    #         self.assertIs(results.solver.termination_condition,
+    #                       TerminationCondition.optimal)
+    #         self.assertAlmostEqual(
+    #             value(model.objective.expr), -0.94347, places=2)
 
     def test_GOA_Nonconvex3(self):
         with SolverFactory('mindtpy') as opt:

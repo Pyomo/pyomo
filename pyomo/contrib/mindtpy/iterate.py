@@ -308,7 +308,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
                                                         solve_data, config)
 
         MindtPy = solve_data.mip.MindtPy_utils
-        # TODO: only deactivate the last integer cut.
+        # only deactivate the last integer cut.
         if config.strategy == 'GOA':
             if solve_data.results.problem.sense == ProblemSense.minimize:
                 valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
