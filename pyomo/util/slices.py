@@ -163,23 +163,23 @@ def slice_component_along_sets(comp, sets, context=None):
     
     return sliced_comp
 
-def replace_indices(index, location_map):
-    if type(index) is not list:
-        # For mutability
-        index_list = list(index)
-    for _set, locations in location_map.items():
-        for loc in locations:
-            start = loc
-            dimen = _set.dimen
-            if dimen is None:
-                # if dimen is None, len(locations) == 1
-                index_list[loc] = Ellipsis
-            for i in range(dimen):
-                # Some additional information will be necessary
-                # here if start/stop/step slices are to be
-                # supported.
-                index_list[loc+i] = slice(None, None, None)
-    return tuple(index_list)
+#def replace_indices(index, location_map):
+#    if type(index) is not list:
+#        # For mutability
+#        index_list = list(index)
+#    for _set, locations in location_map.items():
+#        for loc in locations:
+#            start = loc
+#            dimen = _set.dimen
+#            if dimen is None:
+#                # if dimen is None, len(locations) == 1
+#                index_list[loc] = Ellipsis
+#            for i in range(dimen):
+#                # Some additional information will be necessary
+#                # here if start/stop/step slices are to be
+#                # supported.
+#                index_list[loc+i] = slice(None, None, None)
+#    return tuple(index_list)
 
 def get_location_set_map(index, index_set):
     """
