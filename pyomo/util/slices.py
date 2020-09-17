@@ -163,6 +163,30 @@ def slice_component_along_sets(comp, sets, context=None):
     
     return sliced_comp
 
+def replace_indices(index, location_set_map, sets):
+    index = tuple_from_possible_scalar(index)
+    new_index = []
+    loc = 0
+    while loc < len(index):
+        val = index[loc]
+        _set = location_set_map[loc]
+        dimen = _set.dimen
+        if _set not in sets:
+            new_index.append(val)
+        elif dimen is not None:
+            new_index.append(slice(None, None, None))
+        else:
+            dimen_none_set = _set
+            new_index.append(Ellipsis)
+            while _set is dimen_none_set:
+                # Skip all adjacent locations belonging to the same
+                # set. These are covered by the Ellipsis.
+                loc += 1
+                _set = location_set_map[loc]
+            continue
+        loc += 1
+    return tuple(new_index)
+
 #def replace_indices(index, location_map):
 #    if type(index) is not list:
 #        # For mutability
@@ -195,7 +219,7 @@ def get_location_set_map(index, index_set):
         # so without this catch, the function would return
         # {0: None}, which is not what we want for an
         # unindexed component.
-        return {}
+        return {0: UnindexedComponent_set}
     elif not normalize_index.flatten:
         raise RuntimeError(
             'get_location_set_map does not support the case where '
