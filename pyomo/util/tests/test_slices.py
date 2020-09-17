@@ -11,6 +11,7 @@ import pyutilib.th as unittest
 
 from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.global_set import UnindexedComponent_set
 import pyomo.environ as pyo
 import pyomo.dae as dae
 from pyomo.common.collections import ComponentSet, ComponentMap
@@ -224,7 +225,7 @@ class TestGetComponentCallStack(unittest.TestCase):
         act_stack = get_component_call_stack(comp, context=context)
         self.assertEqual(len(act_stack), 0)
 
-class TestGetLocationSetMap(unittest.TestCase):
+class TestGetLocationAndReplacement(unittest.TestCase):
 
     def model(self):
 
@@ -267,7 +268,7 @@ class TestGetLocationSetMap(unittest.TestCase):
 
         index_set = m.b0.index_set()
         index = None
-        pred_map = {}
+        pred_map = {0: UnindexedComponent_set}
         location_set_map = get_location_set_map(index, index_set)
         self.assertEqual(pred_map, location_set_map)
 
@@ -287,6 +288,51 @@ class TestGetLocationSetMap(unittest.TestCase):
                 }
         location_set_map = get_location_set_map(index, index_set)
         self.assertSameMap(pred_map, location_set_map)
+
+    def test_1d_replacement(self):
+        m = self.model()
+
+        # Unindexed
+        index_set = m.b0.index_set()
+        index = None
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet()
+        pred_index = (None,)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(pred_index, new_index)
+
+        # One one-d set
+        index_set = m.b1.index_set()
+        index = 1
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet()
+        pred_index = (1,)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(pred_index, new_index)
+
+        sets = ComponentSet((m.time,))
+        pred_index = (slice(None),)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(pred_index, new_index)
+
+        # Two one-d sets
+        index_set = m.b2.index_set()
+        index = (1,2)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet()
+        pred_index = (1,2)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(pred_index, new_index)
+
+        sets = ComponentSet((m.space,))
+        pred_index = (1, slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(pred_index, new_index)
+
+        sets = ComponentSet((m.space, m.time))
+        pred_index = (slice(None), slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(pred_index, new_index)
 
     def test_multi_dim(self):
         m = self.model()
@@ -347,6 +393,60 @@ class TestGetLocationSetMap(unittest.TestCase):
                 }
         location_set_map = get_location_set_map(index, index_set)
         self.assertSameMap(pred_map, location_set_map)
+
+    def test_multi_dim_replacement(self):
+        m = self.model()
+
+        # One two-dimen set
+        index_set = m.b0d2.index_set()
+        index = ('a',1)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet()
+        pred_index = ('a', 1)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        sets = ComponentSet((m.d_2,))
+        pred_index = (slice(None), slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        # One two-dimen, one one-dimen
+        index_set = m.b1d2.index_set()
+        index = (1, 'a', 1)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet()
+        pred_index = (1, 'a', 1)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        sets = ComponentSet((m.d_2,))
+        pred_index = (1, slice(None), slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        # One two-dimen, two one-dimen
+        index_set = m.b2d2.index_set()
+        index = (1, 'a', 1, 2)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet((m.d_2, m.time))
+        pred_index = (slice(None), slice(None), slice(None), 2)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        sets = ComponentSet((m.space,))
+        pred_index = (1, 'a', 1, slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        # One two-dimen, three one-dimen
+        index_set = m.b3d2.index_set()
+        index = (1, 'a', 1, 2, 1)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet((m.time,))
+        pred_index = (slice(None), 'a', 1, 2, slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
 
     def test_dimen_none(self):
         m = self.model()
@@ -442,6 +542,105 @@ class TestGetLocationSetMap(unittest.TestCase):
         with self.assertRaises(RuntimeError) as cm:
             location_set_map = get_location_set_map(index, index_set)
         self.assertIn('multiple sets of dimen==None', str(cm.exception))
+
+    def test_dimen_none_replacement(self):
+        m = self.model()
+
+        # Single set of dimen None
+        index_set = m.b0dn.index_set()
+        index = ('c',1,10)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet((m.d_none,))
+        pred_index = (Ellipsis,)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        sets = ComponentSet()
+        pred_index = ('c', 1, 10)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        # One None-dimen, one one-dimen
+        index_set = m.b1dn.index_set()
+        index = (1, 'c', 1, 10)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet((m.d_none,))
+        pred_index = (1, Ellipsis)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        sets = ComponentSet((m.d_none, m.time))
+        pred_index = (slice(None), Ellipsis)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        # One None-dimen, one one-dimen, one two-dimen
+        index_set = m.b1dnd2.index_set()
+        index = (1, 'c', 1, 10, 'a', 1)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet((m.d_none, m.time, m.d_2))
+        pred_index = (slice(None), Ellipsis, slice(None), slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        sets = ComponentSet((m.time, m.d_2))
+        pred_index = (slice(None), 'c', 1, 10, slice(None), slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        sets = ComponentSet((m.d_2,))
+        pred_index = (1, 'c', 1, 10, slice(None), slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        # One None-dimen, one two-dimen
+        index_set = m.b2dn.index_set()
+        index = (1, 0, 'd', 3)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet()
+        pred_index = (1, 0, 'd', 3)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        sets = ComponentSet((m.d_none,))
+        pred_index = (1, 0, Ellipsis)
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        # One None-dimen, one two-dimen, two one-dimen
+        index_set = m.b2dnd2.index_set()
+        index = (1, 'c', 1, 10, 'b', 2, 0)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet((m.d_none, m.space))
+        pred_index = (1, Ellipsis, 'b', 2, slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        # None-dimen set comes first
+        index_set = m.dnd2b1.index_set()
+        index = ('d', 3, 'b', 2, 1)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet((m.d_none, m.time))
+        pred_index = (Ellipsis, 'b', 2, slice(None))
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+
+        # None-dimen, plus 2-d set shows up twice
+        index_set = m.b3dn.index_set()
+        index = (1, 'a', 1, 'd', 3, 0, 'b', 2)
+        location_set_map = get_location_set_map(index, index_set)
+        sets = ComponentSet((m.d_none, m.d_2))
+        pred_index = (
+                1,
+                slice(None),
+                slice(None),
+                Ellipsis,
+                0,
+                slice(None),
+                slice(None),
+                )
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
 
 if __name__ == '__main__':
     unittest.main()
