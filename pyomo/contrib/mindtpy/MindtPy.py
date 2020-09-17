@@ -34,7 +34,7 @@ from pyomo.contrib.mindtpy.util import (
 )
 from pyomo.core import (
     Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var, value,
-    VarList, TransformationFactory)
+    VarList, TransformationFactory, Objective)
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
 from pyomo.contrib.fbbt.fbbt import fbbt
@@ -105,6 +105,11 @@ class MindtPySolver(object):
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.bound_tolerance
 
+        # if the objective function is a constant, dual bound constraint is not added.
+        obj = next(model.component_data_objects(ctype=Objective, active=True))
+        if obj.expr.polynomial_degree() == 0:
+            config.use_dual_bound = False
+
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()
@@ -139,6 +144,7 @@ class MindtPySolver(object):
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
             solve_data.best_solution_found = None
+            solve_data.best_solution_found_time = None
 
             # Record solver name
             solve_data.results.solver.name = 'MindtPy' + str(config.strategy)
@@ -251,6 +257,7 @@ class MindtPySolver(object):
         solve_data.results.solver.wallclock_time = solve_data.timing.total
 
         solve_data.results.solver.iterations = solve_data.mip_iter
+        solve_data.results.solver.best_solution_found_time = solve_data.best_solution_found_time
 
         if config.single_tree:
             solve_data.results.solver.num_nodes = solve_data.nlp_iter - \

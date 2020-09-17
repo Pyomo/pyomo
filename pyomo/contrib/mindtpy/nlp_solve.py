@@ -148,6 +148,8 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
 
     if solve_data.solution_improved:
         solve_data.best_solution_found = fixed_nlp.clone()
+        solve_data.best_solution_found_time = get_main_elapsed_time(
+            solve_data.timing)
         if config.strategy == 'GOA':
             if solve_data.results.problem.sense == ProblemSense.minimize:
                 solve_data.num_no_good_cuts_added.update(
