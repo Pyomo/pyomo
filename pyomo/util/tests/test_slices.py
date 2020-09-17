@@ -642,5 +642,25 @@ class TestGetLocationAndReplacement(unittest.TestCase):
         new_index = replace_indices(index, location_set_map, sets)
         self.assertEqual(new_index, pred_index)
 
+    def test_replacement_normalize_flatten_false(self):
+        m = self.model()
+
+        # index of m.b2d2
+        index = (1, 0, ('a', 1))
+        location_set_map = {
+                0: m.time,
+                1: m.space,
+                2: m.d_2,
+                }
+        sets = ComponentSet((m.d_2,))
+        pred_index = (1, 0, slice(None))
+        # If you can assemble the proper location_set_map 
+        # (get_location_set_map will not work), this function
+        # should work when normalize_index.flatten is False.
+        normalize_index.flatten = False
+        new_index = replace_indices(index, location_set_map, sets)
+        self.assertEqual(new_index, pred_index)
+        normalize_index.flatten = True
+
 if __name__ == '__main__':
     unittest.main()
