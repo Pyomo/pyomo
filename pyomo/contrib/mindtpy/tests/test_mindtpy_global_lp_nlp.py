@@ -23,7 +23,7 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 
 required_solvers = ('baron', 'cplex_persistent')
-if all(SolverFactory(s).available(False) for s in required_solvers):
+if all(SolverFactory(s).available(False) and SolverFactory(s).license_is_valid() for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False
@@ -39,70 +39,70 @@ else:
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
-    # def test_GOA_8PP(self):
-    #     """Test the global outer approximation decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
-    #         print('\n Solving 8PP problem with Outer Approximation')
-    #         results = opt.solve(model, strategy='GOA',
-    #                             init_strategy='rNLP',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver=required_solvers[0],
-    #                             add_nogood_cuts=True,
-    #                             bound_tolerance=1E-5,
-    #                             single_tree=True)
+    def test_GOA_8PP(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with Outer Approximation')
+            results = opt.solve(model, strategy='GOA',
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_nogood_cuts=True,
+                                bound_tolerance=1E-5,
+                                single_tree=True)
 
-    #         self.assertIs(results.solver.termination_condition,
-    #                       TerminationCondition.optimal)
-    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    # def test_GOA_8PP_init_max_binary(self):
-    #     """Test the outer approximation decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
-    #         print('\n Solving 8PP problem with Outer Approximation(max_binary)')
-    #         results = opt.solve(model, strategy='GOA',
-    #                             init_strategy='max_binary',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver=required_solvers[0],
-    #                             add_nogood_cuts=True,
-    #                             single_tree=True)
+    def test_GOA_8PP_init_max_binary(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with Outer Approximation(max_binary)')
+            results = opt.solve(model, strategy='GOA',
+                                init_strategy='max_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_nogood_cuts=True,
+                                single_tree=True)
 
-    #         self.assertIs(results.solver.termination_condition,
-    #                       TerminationCondition.optimal)
-    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    # def test_GOA_8PP_L2_norm(self):
-    #     """Test the global outer approximation decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
-    #         print('\n Solving 8PP problem with Outer Approximation(L2_norm)')
-    #         results = opt.solve(model, strategy='GOA',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver=required_solvers[0],
-    #                             feasibility_norm='L2',
-    #                             add_nogood_cuts=True,
-    #                             single_tree=True)
+    def test_GOA_8PP_L2_norm(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with Outer Approximation(L2_norm)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                feasibility_norm='L2',
+                                add_nogood_cuts=True,
+                                single_tree=True)
 
-    #         self.assertIs(results.solver.termination_condition,
-    #                       TerminationCondition.optimal)
-    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    # def test_GOA_8PP_sympy(self):
-    #     """Test the global outer approximation decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
-    #         print('\n Solving 8PP problem with Outer Approximation(sympy)')
-    #         results = opt.solve(model, strategy='GOA',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver=required_solvers[0],
-    #                             differentiate_mode='sympy',
-    #                             add_nogood_cuts=True,
-    #                             single_tree=True)
+    def test_GOA_8PP_sympy(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print('\n Solving 8PP problem with Outer Approximation(sympy)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                differentiate_mode='sympy',
+                                add_nogood_cuts=True,
+                                single_tree=True)
 
-    #         self.assertIs(results.solver.termination_condition,
-    #                       TerminationCondition.optimal)
-    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_MINLP_simple(self):
         """Test the global outer approximation decomposition algorithm."""
@@ -262,19 +262,19 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.objective.expr), 7.667, places=2)
 
-    # def test_GOA_Nonconvex2(self):
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = Nonconvex2()
-    #         print('\n Solving Nonconvex2 with global Outer Approximation')
-    #         results = opt.solve(model, strategy='GOA',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver='baron',
-    #                             single_tree=True,
-    #                             )
-    #         self.assertIs(results.solver.termination_condition,
-    #                       TerminationCondition.optimal)
-    #         self.assertAlmostEqual(
-    #             value(model.objective.expr), -0.94347, places=2)
+    def test_GOA_Nonconvex2(self):
+        with SolverFactory('mindtpy') as opt:
+            model = Nonconvex2()
+            print('\n Solving Nonconvex2 with global Outer Approximation')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver='baron',
+                                single_tree=True,
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), -0.94347, places=2)
 
     def test_GOA_Nonconvex3(self):
         with SolverFactory('mindtpy') as opt:
