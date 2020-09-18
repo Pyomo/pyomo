@@ -4009,7 +4009,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
                     "deprecated.  Please either use one of the pre-declared "
                     "global Sets (e.g., Reals, NonNegativeReals, Integers, "
                     "PositiveIntegers, Binary), or create a custom RangeSet.",
-                    version='TBD')
+                    version='5.7.1')
                 # Note: we will completely ignore any positional
                 # arguments.  In this situation, these could be the
                 # parent_block and any indices; e.g.,

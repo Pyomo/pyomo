@@ -76,7 +76,7 @@ def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
             removed from the code.
 
     """
-    if version is None:  # or version in ('','tbd','TBD'):
+    if version is None: # or version in ('','tbd','TBD'):
         raise DeveloperError("@deprecated missing initial version")
 
     def wrap(func):
