@@ -26,12 +26,21 @@ logger = getLogger('pyomo.contrib.community_detection')
 community_louvain, community_louvain_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
-# Attempt import of matplotlib
-matplotlib, matplotlib_available = attempt_import('matplotlib', error_message="Could not import 'matplotlib'")
+# Attempt import of matplotlib (adapted from pyomo.contrib.parmest.graphics)
+try:
+    # matplotlib.pyplot can generate a runtime error on OSX when not
+    # installed as a Framework (as is the case in the CI systems)
+    #
+    # occasionally dependent conda packages for older distributions
+    # (e.g. python 3.5) get released that are either broken not
+    # compatible, resulting in a SyntaxError
+    matplotlib, matplotlib_available = attempt_import('matplotlib', error_message="Could not import 'matplotlib'")
+    if matplotlib_available:
+        import matplotlib.pyplot as plt
+        from matplotlib import cm
 
-if matplotlib_available:
-    import matplotlib.pyplot as plt
-    from matplotlib import cm
+except (ImportError, RuntimeError, SyntaxError):
+    matplotlib_available = False
 
 
 def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
