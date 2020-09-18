@@ -34,10 +34,11 @@ try:
     # occasionally dependent conda packages for older distributions
     # (e.g. python 3.5) get released that are either broken not
     # compatible, resulting in a SyntaxError
-    matplotlib, matplotlib_available = attempt_import('matplotlib', error_message="Could not import 'matplotlib'")
-    if matplotlib_available:
-        import matplotlib.pyplot as plt
-        from matplotlib import cm
+
+    # matplotlib, matplotlib_available = attempt_import('matplotlib', error_message="Could not import 'matplotlib'")
+    # if matplotlib_available:
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
 
 except (ImportError, RuntimeError, SyntaxError):
     matplotlib_available = False
