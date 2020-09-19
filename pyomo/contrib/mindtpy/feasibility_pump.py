@@ -27,7 +27,7 @@ def solve_feas_pump_NLP_subproblem(solve_data, config):
     """
     Solves the fixed NLP (with fixed binaries)
 
-    This function sets up the 'sub_nlp' by fixing binaries, sets continuous variables to their intial var values,
+    This function sets up the 'fp_nlp' by relax integer varibales.
     precomputes dual values, deactivates trivial constraints, and then solves NLP model.
 
     Parameters
@@ -39,36 +39,36 @@ def solve_feas_pump_NLP_subproblem(solve_data, config):
 
     Returns
     -------
-    sub_nlp: Pyomo model
+    fp_nlp: Pyomo model
         fixed NLP from the model
     results: Pyomo results object
         result from solving the fixed NLP
     """
 
-    sub_nlp = solve_data.working_model.clone()
-    MindtPy = sub_nlp.MindtPy_utils
+    fp_nlp = solve_data.working_model.clone()
+    MindtPy = fp_nlp.MindtPy_utils
     config.logger.info('FP-NLP %s: Solve feasibility pump NLP subproblem.'
                        % (solve_data.fp_iter,))
 
     # Set up NLP
-    TransformationFactory('core.relax_integer_vars').apply_to(sub_nlp)
+    TransformationFactory('core.relax_integer_vars').apply_to(fp_nlp)
     main_objective = next(
-        sub_nlp.component_data_objects(Objective, active=True))
+        fp_nlp.component_data_objects(Objective, active=True))
     main_objective.deactivate()
     # TODO: need to comfirm with David, whether to add increasing_objective_cut for FP-NLP
-    # sub_nlp may don't have MindtPy_utils.objective_value
-    # if main_objective.sense == 'minimize':
-    #     sub_nlp.improving_objective_cut = Constraint(
-    #         expr=sub_nlp.MindtPy_utils.objective_value <= solve_data.UB)
-    # else:
-    #     sub_nlp.improving_objective_cut = Constraint(
-    #         expr=sub_nlp.MindtPy_utils.objective_value >= solve_data.LB)
+    # fp_nlp may don't have MindtPy_utils.objective_value
+    if main_objective.sense == 'minimize':
+        fp_nlp.improving_objective_cut = Constraint(
+            expr=fp_nlp.MindtPy_utils.objective_value <= solve_data.UB)
+    else:
+        fp_nlp.improving_objective_cut = Constraint(
+            expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
     MindtPy.feas_pump_nlp_obj = generate_Norm2sq_objective_function(
-        sub_nlp, solve_data.mip, discrete_only=True)
+        fp_nlp, solve_data.mip, discrete_only=True)
 
     MindtPy.MindtPy_linear_cuts.deactivate()
     TransformationFactory('contrib.deactivate_trivial_constraints')\
-        .apply_to(sub_nlp, tmp=True, ignore_infeasible=True)
+        .apply_to(fp_nlp, tmp=True, ignore_infeasible=True)
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
@@ -79,17 +79,17 @@ def solve_feas_pump_NLP_subproblem(solve_data, config):
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
     with SuppressInfeasibleWarning():
         results = nlpopt.solve(
-            sub_nlp, tee=config.solver_tee, **nlp_args)
-    return sub_nlp, results
+            fp_nlp, tee=config.solver_tee, **nlp_args)
+    return fp_nlp, results
 
 
-def handle_feas_pump_NLP_subproblem_optimal(sub_nlp, solve_data, config):
+def handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config):
     """Copies result to working model, updates bound, adds OA cut, no_good cut
     and increasing objective cut and stores best solution if new one is best
     Also calculates the duals
     """
     copy_var_list_values(
-        sub_nlp.MindtPy_utils.variable_list,
+        fp_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config,
         ignore_integrality=config.strategy == 'feas_pump')
