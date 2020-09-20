@@ -108,6 +108,7 @@ class MindtPySolver(object):
             config.init_strategy = "feas_pump"
             config.iteration_limit = 0
             config.add_nogood_cuts = True
+        if config.init_strategy == "feas_pump":
             solve_data.fp_iter = 0
 
         if config.nlp_solver == "baron":
@@ -136,7 +137,7 @@ class MindtPySolver(object):
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
             process_objective(solve_data, config,
-                              move_linear_objective=(config.strategy == 'feas_pump'), use_mcpp=config.use_mcpp)
+                              move_linear_objective=(config.init_strategy == 'feas_pump'), use_mcpp=config.use_mcpp)
 
             # Save model initial values.
             solve_data.initial_var_values = list(

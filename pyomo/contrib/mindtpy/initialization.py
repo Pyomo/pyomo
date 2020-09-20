@@ -141,7 +141,7 @@ def init_rNLP(solve_data, config):
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
-            if config.strategy == 'feas_pump':
+            if config.init_strategy == 'feas_pump':
                 # TODO：remove here
                 copy_var_list_values(m.MindtPy_utils.variable_list,
                                      solve_data.working_model.MindtPy_utils.variable_list,

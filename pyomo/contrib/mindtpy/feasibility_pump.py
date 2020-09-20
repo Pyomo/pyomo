@@ -55,8 +55,6 @@ def solve_feas_pump_NLP_subproblem(solve_data, config):
     main_objective = next(
         fp_nlp.component_data_objects(Objective, active=True))
     main_objective.deactivate()
-    # TODO: need to comfirm with David, whether to add increasing_objective_cut for FP-NLP
-    # fp_nlp may don't have MindtPy_utils.objective_value
     if main_objective.sense == 'minimize':
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value <= solve_data.UB)

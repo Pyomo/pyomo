@@ -41,18 +41,18 @@ class TestMindtPy(unittest.TestCase):
         config = solver.CONFIG
         return config
 
-    def test_FP_8PP(self):
-        """Test the extended cutting plane decomposition algorithm."""
-        with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
-            print('\n Solving 8PP problem with extended cutting plane')
-            results = opt.solve(model, strategy='feas_pump',
-                                mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0],
-                                bound_tolerance=1E-5,
-                                tee=True)
-            log_infeasible_constraints(model)
-            self.assertTrue(is_feasible(model, self.get_config(opt)))
+    # def test_FP_8PP(self):
+    #     """Test the extended cutting plane decomposition algorithm."""
+    #     with SolverFactory('mindtpy') as opt:
+    #         model = EightProcessFlowsheet()
+    #         print('\n Solving 8PP problem with extended cutting plane')
+    #         results = opt.solve(model, strategy='feas_pump',
+    #                             mip_solver=required_solvers[1],
+    #                             nlp_solver=required_solvers[0],
+    #                             bound_tolerance=1E-5,
+    #                             tee=True)
+    #         log_infeasible_constraints(model)
+    #         self.assertTrue(is_feasible(model, self.get_config(opt)))
 
     # def test_FP_simpleMINLP(self):
     #     """Test the extended cutting plane decomposition algorithm."""
@@ -67,12 +67,26 @@ class TestMindtPy(unittest.TestCase):
     #         log_infeasible_constraints(model)
     #         self.assertTrue(is_feasible(model, self.get_config(opt)))
 
-    def test_FP_Feasibility_Pump1(self):
+    # def test_FP_Feasibility_Pump1(self):
+    #     """Test the extended cutting plane decomposition algorithm."""
+    #     with SolverFactory('mindtpy') as opt:
+    #         model = Feasibility_Pump1()
+    #         print('\n Solving Feasibility_Pump1 with feasibility pump')
+    #         results = opt.solve(model, strategy='feas_pump',
+    #                             mip_solver=required_solvers[1],
+    #                             nlp_solver=required_solvers[0],
+    #                             bound_tolerance=1E-5,
+    #                             tee=True)
+    #         log_infeasible_constraints(model)
+    #         self.assertTrue(is_feasible(model, self.get_config(opt)))
+
+    def test_FP_OA_Feasibility_Pump1(self):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = Feasibility_Pump1()
             print('\n Solving Feasibility_Pump1 with feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='feas_pump',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5,
