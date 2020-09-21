@@ -20,7 +20,7 @@ from pyomo.util.slices import (
         list_from_possible_scalar,
         tuple_from_possible_scalar,
         get_component_call_stack,
-        slice_component_data_along_sets,
+        slice_component_along_sets,
         replace_indices,
         get_location_set_map,
         )
@@ -698,38 +698,38 @@ class SliceComponentDataAlongSets(unittest.TestCase):
         
         comp = m.b.v0
         sets = ComponentSet((m.time, m.space))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         # Use `assertIs` when the "slice" is actually just a component.
         self.assertIs(_slice, m.b.v0)
 
         comp = m.b.v1[1]
         sets = ComponentSet((m.time, m.space))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.v1[:])
 
         comp = m.b.v2[1,0]
         sets = ComponentSet((m.time, m.space))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.v2[:,:])
 
         comp = m.b.b2[1,0].v1['a']
         sets = ComponentSet((m.time, m.space))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.b2[:,:].v1['a'])
 
         comp = m.b.b2[1,0].v1
         sets = ComponentSet((m.time, m.space))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.b2[:,:].v1)
 
         comp = m.b.b2[1,0].v2[1,'a']
         sets = ComponentSet((m.time,))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.b2[:,0].v2[:,'a'])
 
         comp = m.b.bn['c',1,10,'a',1].v3[1,0,1]
         sets = ComponentSet((m.time,))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.bn['c',1,10,'a',1].v3[:,0,:])
 
     def test_context(self):
@@ -738,30 +738,30 @@ class SliceComponentDataAlongSets(unittest.TestCase):
         comp = m.b.v2[1,0]
         context = m.b
         sets = ComponentSet((m.time,))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         # Context makes no difference in resulting slice here.
         self.assertEqual(_slice, m.b.v2[:,0])
 
         comp = m.b.b2[1,0].v2[1,'a']
         context = m.b.b2[1,0]
         sets = ComponentSet((m.time,))
-        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        _slice = slice_component_along_sets(comp, sets, context=context)
         # Here, context does make a difference
         self.assertEqual(_slice, m.b.b2[1,0].v2[:,'a'])
 
         comp = m.b.b2[1,0].v1['a']
         context = m.b.b2[1,0]
         sets = ComponentSet((m.time,))
-        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        _slice = slice_component_along_sets(comp, sets, context=context)
         self.assertIs(_slice, m.b.b2[1,0].v1['a'])
 
         sets = ComponentSet((m.comp,))
-        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        _slice = slice_component_along_sets(comp, sets, context=context)
         self.assertEqual(_slice, m.b.b2[1,0].v1[:])
 
         context = m.b.b2
         sets = ComponentSet((m.time, m.comp))
-        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        _slice = slice_component_along_sets(comp, sets, context=context)
         self.assertEqual(_slice, m.b.b2[:,0].v1[:])
 
     def test_none_dimen(self):
@@ -769,45 +769,45 @@ class SliceComponentDataAlongSets(unittest.TestCase):
 
         comp = m.b.b2[1,0].vn
         sets = ComponentSet((m.d_none,))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertIs(_slice, m.b.b2[1,0].vn)
 
         comp = m.b.b2[1,0].vn[1,'d',3,'a',1]
         sets = ComponentSet((m.d_2, m.time))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.b2[:,0].vn[:,'d',3,:,:])
 
         sets = ComponentSet((m.d_none, m.d_2))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.b2[1,0].vn[1,...,:,:])
 
         comp = m.b.bn['c',1,10,'a',1].v3[1,0,1]
         sets = ComponentSet((m.d_none, m.time))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.bn[...,'a',1].v3[:,0,:])
 
         comp = m.b.bn['c',1,10,'a',1].vn[1,'d',3,'b',2]
         sets = ComponentSet((m.d_none,))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.bn[...,'a',1].vn[1,...,'b',2])
 
         sets = ComponentSet((m.d_none, m.d_2))
-        _slice = slice_component_data_along_sets(comp, sets)
+        _slice = slice_component_along_sets(comp, sets)
         self.assertEqual(_slice, m.b.bn[...,:,:].vn[1,...,:,:])
         
         comp = m.b.bn['c',1,10,'a',1].vn[1,'d',3,'b',2]
         context = m.b.bn['c',1,10,'a',1]
         sets = ComponentSet((m.d_none,))
-        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        _slice = slice_component_along_sets(comp, sets, context=context)
         self.assertEqual(_slice, m.b.bn['c',1,10,'a',1].vn[1,...,'b',2])
 
         sets = ComponentSet((m.d_none, m.d_2))
-        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        _slice = slice_component_along_sets(comp, sets, context=context)
         self.assertEqual(_slice, m.b.bn['c',1,10,'a',1].vn[1,...,:,:])
 
         context = m.b.bn
         sets = ComponentSet((m.d_none,))
-        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        _slice = slice_component_along_sets(comp, sets, context=context)
         self.assertEqual(_slice, m.b.bn[...,'a',1].vn[1,...,'b',2])
 
 
