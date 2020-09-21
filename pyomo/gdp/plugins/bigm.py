@@ -938,7 +938,7 @@ class BigM_Transformation(Transformation):
     @deprecated("The get_m_value_src function is deprecated. Use "
                 "the get_M_value_src function is you need source "
                 "information or the get_M_value function if you "
-                "only need values.", version='5.7')
+                "only need values.", version='5.7.1')
     def get_m_value_src(self, constraint):
         transBlock = _get_constraint_transBlock(constraint)
         ((lower_val, lower_source, lower_key),

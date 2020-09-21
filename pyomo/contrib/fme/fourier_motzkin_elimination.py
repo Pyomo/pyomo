@@ -16,7 +16,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import _ConstraintData
 from pyomo.core.plugins.transform.hierarchy import Transformation
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.common.modeling import unique_component_name
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -27,7 +27,8 @@ import logging
 from six import iteritems
 import inspect
 
-logger = logging.getLogger('pyomo.contrib.fourier_motzkin_elimination')
+logger = logging.getLogger('pyomo.contrib.fme')
+NAME_BUFFER = {}
 
 def _check_var_bounds_filter(constraint):
     """Check if the constraint is already implied by the variable bounds"""
@@ -67,6 +68,17 @@ def vars_to_eliminate_list(x):
             "Expected Var or list of Vars."
             "\n\tRecieved %s" % type(x))
 
+def gcd(a,b):
+    while b != 0:
+        a, b = b, a % b
+    return abs(a)
+
+def lcm(ints):
+    a = ints[0]
+    for b in ints[1:]:
+        a = abs(a*b) // gcd(a,b)
+    return a
+
 @TransformationFactory.register('contrib.fourier_motzkin_elimination',
                                 doc="Project out specified (continuous) "
                                 "variables from a linear model.")
@@ -74,13 +86,13 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
     """Project out specified variables from a linear model.
 
     This transformation requires the following keyword argument:
-        vars_to_eliminate: A user-specified list of continuous variables to 
+        vars_to_eliminate: A user-specified list of continuous variables to
                            project out of the model
 
     The transformation will deactivate the original constraints of the model
-    and create a new block named "_pyomo_contrib_fme_transformation" with the 
-    projected constraints. Note that this transformation will flatten the 
-    structure of the original model since there is no obvious mapping between 
+    and create a new block named "_pyomo_contrib_fme_transformation" with the
+    projected constraints. Note that this transformation will flatten the
+    structure of the original model since there is no obvious mapping between
     the original model and the transformed one.
 
     """
@@ -90,10 +102,10 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         default=None,
         domain=vars_to_eliminate_list,
         description="Continuous variable or list of continuous variables to "
-        "project out of the model", 
+        "project out of the model",
         doc="""
         This specifies the list of variables to project out of the model.
-        Note that these variables must all be continuous and the model must be 
+        Note that these variables must all be continuous and the model must be
         linear."""
     ))
     CONFIG.declare('constraint_filtering_callback', ConfigValue(
@@ -105,26 +117,98 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         Specify None in order for no constraint filtering to occur during the
         transformation.
 
-        Specify a function that accepts a constraint (represented in the >= 
+        Specify a function that accepts a constraint (represented in the >=
         dictionary form used in this transformation) and returns a Boolean
         indicating whether or not to add it to the model.
+        """
+    ))
+    CONFIG.declare('do_integer_arithmetic', ConfigValue(
+        default=False,
+        domain=bool,
+        description="A Boolean flag to decide whether Fourier-Motzkin "
+        "elimination will be performed with only integer arithmetic.",
+        doc="""
+        If True, only integer arithmetic will be performed during Fourier-
+        Motzkin elimination. This should result in no numerical error.
+        If True and there is non-integer data in the constraints being
+        projected, an error will be raised.
+
+        If False, the algorithm will not check whether data is integer, and will
+        perform division operations. Use this setting when not all data is
+        integer, or when you are willing to sacrifice some numeric accuracy.
+        """
+    ))
+    CONFIG.declare('verbose', ConfigValue(
+        default=False,
+        domain=bool,
+        description="A Boolean flag to enable verbose output.",
+        doc="""
+        If True, logs the steps of the projection.
+        """
+    ))
+    CONFIG.declare('zero_tolerance', ConfigValue(
+        default=0,
+        domain=NonNegativeFloat,
+        description="Absolute tolerance at which a float will be considered 0.",
+        doc="""
+        Whenever fourier-motzkin elimination is used with non-integer data,
+        there is a chance of numeric trouble, the most obvious of which is
+        that 'eliminated' variables will remain in the constraints with very
+        small coefficients. Set this tolerance so that floating points smaller
+        than this will be treated as 0 (and reported that way in the final
+        constraints).
+        """
+    ))
+    CONFIG.declare('integer_tolerance', ConfigValue(
+        default=0,
+        domain=NonNegativeFloat,
+        description="Absolute tolerance at which a float will be considered "
+        "(and cast to) an integer, when do_integer_arithmetic is True",
+        doc="""
+        Tolerance at which a number x will be considered an integer, when we
+        are performing fourier-motzkin elimination with only integer_arithmetic.
+        That is, x will be cast to an integer if
+        abs(int(x) - x) <= integer_tolerance.
         """
     ))
 
     def __init__(self):
         """Initialize transformation object"""
         super(Fourier_Motzkin_Elimination_Transformation, self).__init__()
-    
+
     def _apply_to(self, instance, **kwds):
-        config = self.CONFIG(kwds.pop('options', {}))
-        config.set_value(kwds)
+        log_level = logger.getEffectiveLevel()
+        try:
+            assert not NAME_BUFFER
+            config = self.CONFIG(kwds.pop('options', {}))
+            config.set_value(kwds)
+            # lower logging values emit more
+            if config.verbose and log_level > logging.INFO:
+                logger.setLevel(logging.INFO)
+                self.verbose = True
+            # if the user used the logger to ask for info level messages
+            elif log_level <= logging.INFO:
+                self.verbose = True
+            else:
+                self.verbose = False
+            self._apply_to_impl(instance, config)
+        finally:
+            # clear the global name buffer
+            NAME_BUFFER.clear()
+            # restore logging level
+            logger.setLevel(log_level)
+
+    def _apply_to_impl(self, instance, config):
         vars_to_eliminate = config.vars_to_eliminate
         self.constraint_filter = config.constraint_filtering_callback
+        self.do_integer_arithmetic = config.do_integer_arithmetic
+        self.integer_tolerance = config.integer_tolerance
+        self.zero_tolerance = config.zero_tolerance
         if vars_to_eliminate is None:
             raise RuntimeError("The Fourier-Motzkin Elimination transformation "
                                "requires the argument vars_to_eliminate, a "
                                "list of Vars to be projected out of the model.")
-        
+
         # make transformation block
         transBlockName = unique_component_name(
             instance,
@@ -168,11 +252,11 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                     "Fourier-Motzkin Elimination transformation can only "
                     "handle purely algebraic models. That is, only "
                     "Sets, Params, Vars, Constraints, Expressions, Blocks, "
-                    "and Objectives may be active on the model." % (obj.name, 
+                    "and Objectives may be active on the model." % (obj.name,
                                                                     obj.ctype))
 
-        new_constraints = self._fourier_motzkin_elimination(constraints,
-                                                            vars_to_eliminate)
+        new_constraints = self._fourier_motzkin_elimination( constraints,
+                                                             vars_to_eliminate)
 
         # put the new constraints on the transformation block
         for cons in new_constraints:
@@ -182,18 +266,14 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 except:
                     logger.error("Problem calling constraint filter callback "
                                  "on constraint with right-hand side %s and "
-                                 "body:\n%s" % (cons['lower'], cons['body']))
+                                 "body:\n%s" % (cons['lower'],
+                                                cons['body'].to_expression()))
                     raise
                 if not keep:
                     continue
-            body = cons['body']
-            lhs = sum(coef*var for (coef, var) in zip(body.linear_coefs,
-                                                      body.linear_vars)) + \
-                sum(coef*v1*v2 for (coef, (v1, v2)) in zip(body.quadratic_coefs,
-                                                           body.quadratic_vars))
-            if body.nonlinear_expr is not None:
-                lhs += body.nonlinear_expr
+            lhs = cons['body'].to_expression(sort=True)
             lower = cons['lower']
+            assert type(lower) is int or type(lower) is float
             if type(lhs >= lower) is bool:
                 if lhs >= lower:
                     continue
@@ -210,8 +290,8 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         representing only >= constraints. That is, if the constraint has both an
         ub and a lb, it is transformed into two constraints. Otherwise it is
         flipped if it is <=. Each dictionary contains the keys 'lower',
-        and 'body' where, after the process, 'lower' will be a constant, and 
-        'body' will be the standard repn of the body. (The constant will be 
+        and 'body' where, after the process, 'lower' will be a constant, and
+        'body' will be the standard repn of the body. (The constant will be
         moved to the RHS and we know that the upper bound is None after this).
         """
         body = constraint.body
@@ -242,7 +322,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         return constraints_to_add
 
     def _move_constant_and_add_map(self, cons_dict):
-        """Takes constraint in dicionary form already in >= form, 
+        """Takes constraint in dicionary form already in >= form,
         and moves the constant to the RHS
         """
         body = cons_dict['body']
@@ -255,25 +335,26 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         # time searches later. Note also that we will take the value of the
         # coeficient here so that we never have to worry about it again during
         # the transformation.
-        cons_dict['map'] = ComponentMap(zip(body.linear_vars, 
+        cons_dict['map'] = ComponentMap(zip(body.linear_vars,
                                             [value(coef) for coef in
                                              body.linear_coefs]))
 
     def _fourier_motzkin_elimination(self, constraints, vars_to_eliminate):
-        """Performs FME on the constraint list in the argument 
-        (which is assumed to be all >= constraints and stored in the 
-        dictionary representation), projecting out each of the variables in 
+        """Performs FME on the constraint list in the argument
+        (which is assumed to be all >= constraints and stored in the
+        dictionary representation), projecting out each of the variables in
         vars_to_eliminate"""
 
         # We only need to eliminate variables that actually appear in
         # this set of constraints... Revise our list.
         vars_that_appear = []
+        vars_that_appear_set = ComponentSet()
         for cons in constraints:
             std_repn = cons['body']
             if not std_repn.is_linear():
                 # as long as none of vars_that_appear are in the nonlinear part,
                 # we are actually okay.
-                nonlinear_vars = ComponentSet(v for two_tuple in 
+                nonlinear_vars = ComponentSet(v for two_tuple in
                                         std_repn.quadratic_vars for
                                         v in two_tuple)
                 nonlinear_vars.update(v for v in std_repn.nonlinear_vars)
@@ -283,16 +364,23 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                            "constraint. The Fourier-Motzkin "
                                            "Elimination transformation can only "
                                            "be used to eliminate variables "
-                                           "which only appear linearly." % 
+                                           "which only appear linearly." %
                                            var.name)
             for var in std_repn.linear_vars:
                 if var in vars_to_eliminate:
-                    vars_that_appear.append(var)
+                    if not var in vars_that_appear_set:
+                        vars_that_appear.append(var)
+                        vars_that_appear_set.add(var)
 
         # we actually begin the recursion here
         while vars_that_appear:
             # first var we will project out
             the_var = vars_that_appear.pop()
+            if self.verbose:
+                logger.info("Projecting out %s" %
+                            the_var.getname(fully_qualified=True,
+                                            name_buffer=NAME_BUFFER))
+                logger.info("New constraints are:")
 
             # we are 'reorganizing' the constraints, we sort based on the sign
             # of the coefficient of the_var: This tells us whether we have
@@ -301,10 +389,15 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             geq_list = []
             waiting_list = []
 
+            coefs = []
             for cons in constraints:
                 leaving_var_coef = cons['map'].get(the_var)
                 if leaving_var_coef is None or leaving_var_coef == 0:
                     waiting_list.append(cons)
+                    if self.verbose:
+                        logger.info("\t%s <= %s"
+                                    % (cons['lower'],
+                                       cons['body'].to_expression()))
                     continue
 
                 # we know the constraint is a >= constraint, using that
@@ -312,45 +405,145 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 # NOTE: neither of the scalar multiplications below flip the
                 # constraint. So we are sure to have only geq constraints
                 # forever, which is exactly what we want.
-                if leaving_var_coef < 0:
-                    leq_list.append(
-                        self._nonneg_scalar_multiply_linear_constraint(
-                            cons, -1.0/leaving_var_coef))
+                if not self.do_integer_arithmetic:
+                    if leaving_var_coef < 0:
+                        leq_list.append(
+                            self._nonneg_scalar_multiply_linear_constraint(
+                                cons, -1.0/leaving_var_coef))
+                    else:
+                        geq_list.append(
+                            self._nonneg_scalar_multiply_linear_constraint(
+                                cons, 1.0/leaving_var_coef))
                 else:
-                    geq_list.append(
-                        self._nonneg_scalar_multiply_linear_constraint(
-                            cons, 1.0/leaving_var_coef))
+                    coefs.append(self._as_integer(
+                        leaving_var_coef,
+                        self._get_noninteger_coef_error_message,
+                        (the_var.name, leaving_var_coef)
+                    ))
+            if self.do_integer_arithmetic and len(coefs) > 0:
+                least_common_mult = lcm(coefs)
+                for cons in constraints:
+                    leaving_var_coef = cons['map'].get(the_var)
+                    if leaving_var_coef is None or leaving_var_coef == 0:
+                        continue
+                    to_lcm = least_common_mult // abs(int(leaving_var_coef))
+                    if leaving_var_coef < 0:
+                        leq_list.append(
+                            self._nonneg_scalar_multiply_linear_constraint(
+                                cons, to_lcm))
+                    else:
+                        geq_list.append(
+                            self._nonneg_scalar_multiply_linear_constraint(
+                                cons, to_lcm))
 
             constraints = waiting_list
             for leq in leq_list:
                 for geq in geq_list:
-                    constraints.append(self._add_linear_constraints(leq, geq))
+                    constraints.append( self._add_linear_constraints( leq, geq))
+                    if self.verbose:
+                        cons = constraints[len(constraints)-1]
+                        logger.info("\t%s <= %s" %
+                                    (cons['lower'],
+                                     cons['body'].to_expression()))
 
         return constraints
 
+    def _get_noninteger_coef_error_message(self, varname, coef):
+        return ("The do_integer_arithmetic flag was "
+                "set to True, but the coefficient of "
+                "%s is non-integer within the specified "
+                "tolerance, with value %s. \n"
+                "Please set do_integer_arithmetic="
+                "False, increase integer_tolerance, "
+                "or make your data integer." % (varname, coef))
+
+    def _as_integer(self, x, error_message, error_args):
+        if abs(int(x) - x) <= self.integer_tolerance:
+            return int(round(x))
+        raise ValueError(error_message if error_args is None
+                         else error_message(*error_args))
+
+    def _multiply(self, scalar, coef, error_message, error_args):
+        if self.do_integer_arithmetic:
+            assert type(scalar) is int
+            return scalar * self._as_integer(coef, error_message, error_args)
+        elif abs(scalar*coef) > self.zero_tolerance:
+            return scalar*coef
+        else:
+            return 0
+
+    def _add(self, a, b, error_message, error_args):
+        if self.do_integer_arithmetic:
+            return self._as_integer(a, error_message, error_args) \
+                + self._as_integer(b, error_message, error_args)
+        elif abs(a + b) > self.zero_tolerance:
+            return a + b
+        else:
+            return 0
+
+    def _nonneg_scalar_multiply_linear_constraint_error_msg(self, cons, coef):
+        return (
+            "The do_integer_arithmetic flag was set to True, but the "
+            "lower bound of %s is non-integer within the specified "
+            "tolerance, with value %s. \n"
+            "Please set do_integer_arithmetic=False, increase "
+            "integer_tolerance, or make your data integer." %
+            (cons['body'].to_expression() >= cons['lower'], coef)
+        )
+
     def _nonneg_scalar_multiply_linear_constraint(self, cons, scalar):
         """Multiplies all coefficients and the RHS of a >= constraint by scalar.
-        There is no logic for flipping the equality, so this is just the 
+        There is no logic for flipping the equality, so this is just the
         special case with a nonnegative scalar, which is all we need.
+
+        If self.do_integer_arithmetic is True, this assumes that scalar is an
+        int. It also will throw an error if any data is non-integer (within
+        tolerance)
         """
         body = cons['body']
-        body.linear_coefs = [scalar*coef for coef in body.linear_coefs]
+        new_coefs = []
+        for i, coef in enumerate(body.linear_coefs):
+            v = body.linear_vars[i]
+            new_coefs.append(self._multiply(
+                scalar, coef, self._get_noninteger_coef_error_message,
+                (v.name, coef)
+            ))
+            # update the map
+            cons['map'][v] = new_coefs[i]
+        body.linear_coefs = new_coefs
+
         body.quadratic_coefs = [scalar*coef for coef in body.quadratic_coefs]
         body.nonlinear_expr = scalar*body.nonlinear_expr if \
                               body.nonlinear_expr is not None else None
-        # and update the map... (It isn't lovely that I am storing this in two
-        # places...)
-        for var, coef in cons['map'].items():
-            cons['map'][var] = coef*scalar
 
         # assume scalar >= 0 and constraint only has lower bound
-        if cons['lower'] is not None:
-            cons['lower'] *= scalar
-        
+        lb = cons['lower']
+        if lb is not None:
+            cons['lower'] = self._multiply(
+                scalar, lb,
+                self._nonneg_scalar_multiply_linear_constraint_error_msg,
+                (cons, coef)
+            )
         return cons
 
+    def _add_linear_constraints_error_msg(self, cons1, cons2):
+        return (
+            "The do_integer_arithmetic flag was set to True, but while "
+            "adding %s and %s, encountered a coefficient that is "
+            "non-integer within the specified tolerance\n"
+            "Please set do_integer_arithmetic=False, increase "
+            "integer_tolerance, or make your data integer." %
+            (cons1['body'].to_expression() >= cons1['lower'],
+             cons2['body'].to_expression() >= cons2['lower'])
+        )
+
     def _add_linear_constraints(self, cons1, cons2):
-        """Adds two >= constraints"""
+        """Adds two >= constraints
+
+        Because this is always called after
+        _nonneg_scalar_multiply_linear_constraint, though it is implemented
+        more generally.
+        """
         ans = {'lower': None, 'body': None, 'map': ComponentMap()}
         cons1_body = cons1['body']
         cons2_body = cons2['body']
@@ -362,23 +555,28 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         for v in cons2_body.linear_vars:
             if v not in seen:
                 all_vars.append(v)
-        
+
         expr = 0
         for var in all_vars:
-            coef = cons1['map'].get(var, 0) + cons2['map'].get(var, 0)
+            coef = self._add(
+                cons1['map'].get(var, 0), cons2['map'].get(var, 0),
+                self._add_linear_constraints_error_msg, (cons1, cons2))
             ans['map'][var] = coef
             expr += coef*var
+
         # deal with nonlinear stuff if there is any
         for cons in [cons1_body, cons2_body]:
             if cons.nonlinear_expr is not None:
                 expr += cons.nonlinear_expr
             expr += sum(coef*v1*v2 for (coef, (v1, v2)) in
-                        zip(cons.quadratic_coefs, cons.quadratic_vars)) 
-        
+                        zip(cons.quadratic_coefs, cons.quadratic_vars))
+
         ans['body'] = generate_standard_repn(expr)
 
         # upper is None and lower exists, so this gets the constant
-        ans['lower'] = cons1['lower'] + cons2['lower']
+        ans['lower'] = self._add(
+            cons1['lower'], cons2['lower'],
+            self._add_linear_constraints_error_msg, (cons1, cons2))
 
         return ans
 
@@ -388,22 +586,22 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
 
         Parameters
         ----------------
-        m: A model, already transformed with FME. Note that if constraints 
-           have been added, activated, or deactivated, we will check for 
-           redundancy against the whole active part of the model. If you call 
-           this straight after FME, you are only checking within the projected 
+        m: A model, already transformed with FME. Note that if constraints
+           have been added, activated, or deactivated, we will check for
+           redundancy against the whole active part of the model. If you call
+           this straight after FME, you are only checking within the projected
            constraints, but otherwise it is up to the user.
-        solver_factory: A SolverFactory object (constructed with a solver 
-                        which can solve the continuous relaxation of the 
-                        active constraints on the model. That is, if you 
-                        had nonlinear constraints unrelated to the variables 
-                        being projected, you need to either deactivate them or 
+        solver_factory: A SolverFactory object (constructed with a solver
+                        which can solve the continuous relaxation of the
+                        active constraints on the model. That is, if you
+                        had nonlinear constraints unrelated to the variables
+                        being projected, you need to either deactivate them or
                         provide a solver which will do the right thing.)
         tolerance: Tolerance at which we decide a constraint is implied by the
-                   others. Default is 0, meaning we remove the constraint if 
-                   the LP solve finds the constraint can be tight but not 
+                   others. Default is 0, meaning we remove the constraint if
+                   the LP solve finds the constraint can be tight but not
                    violated. Setting this to a small positive value would
-                   remove constraints more conservatively. Setting it to a 
+                   remove constraints more conservatively. Setting it to a
                    negative value would result in a relaxed problem.
         """
         # make sure m looks like what we expect
@@ -414,7 +612,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                % m.name)
         transBlock = m._pyomo_contrib_fme_transformation
         constraints = transBlock.projected_constraints
-    
+
         # relax integrality so that we can do this with LP solves.
         TransformationFactory('core.relax_integer_vars').apply_to(
             m, transform_deactivated_blocks=True)
@@ -449,7 +647,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 raise RuntimeError("Unsuccessful subproblem solve when checking"
                                    "constraint %s.\n\t"
                                    "Termination Condition: %s" %
-                                   (constraints[i].name, 
+                                   (constraints[i].name,
                                     results.solver.termination_condition))
             else:
                 obj_val = value(obj)
