@@ -8,12 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.common.errors import DeveloperError
 
 def get_index_if_present(comp):
     try:
