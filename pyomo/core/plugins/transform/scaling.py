@@ -10,7 +10,6 @@
 
 from pyomo.common.collections import ComponentMap
 from pyomo.core.base import Var, Constraint, Objective, _ConstraintData, _ObjectiveData, Suffix, value
-from pyomo.core.base.reference import _ReferenceDict
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import replace_expressions
@@ -128,10 +127,6 @@ class ScaleModel(Transformation):
         # for scaling vars in constraints
         variable_substitution_map = ComponentMap()
         for variable in [var for var in model.component_objects(ctype=Var, descend_into=True)]:
-            # Do not attempt to access reference variables.
-            # They have been broken by rename_components
-            if type(variable._data) is _ReferenceDict:
-                continue
             # set the bounds/value for the scaled variable
             for k in variable:
                 v = variable[k]
@@ -162,10 +157,6 @@ class ScaleModel(Transformation):
                                       for k in variable_substitution_map}
 
         for component in model.component_objects(ctype=(Constraint, Objective), descend_into=True):
-            # Do not attempt to access reference components.
-            # They have been broken by rename_components
-            if type(component._data) is _ReferenceDict:
-                continue
             for k in component:
                 c = component[k]
                 # perform the constraint/objective scaling and variable sub
