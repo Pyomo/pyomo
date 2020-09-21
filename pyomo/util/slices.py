@@ -45,11 +45,6 @@ def tuple_from_possible_scalar(source):
     except TypeError:
         return (source,)
 
-CALL_DICT = {
-        IndexedComponent_slice.get_attribute: '__getattr__',
-        IndexedComponent_slice.get_item: '__getitem__',
-        }
-
 def get_component_call_stack(comp, context=None):
     """Get the call stack necessary to locate a `Component`
 
@@ -102,8 +97,31 @@ def get_component_call_stack(comp, context=None):
         comp = comp.parent_block()
     return call_stack
 
-def slice_component_data_along_sets(comp, sets, context=None):
-    """
+def slice_component_along_sets(comp, sets, context=None):
+    """Slice a component along the indices corresponding to some sets,
+    wherever they appear in the component's block hierarchy.
+
+    Given a component or component data object, for all parent components
+    and parent blocks between the object and the `context` block, replace
+    any index corresponding to a set in `sets` with slices or an 
+    ellipsis.
+
+    Parameters:
+    -----------
+    comp: `pyomo.core.base.component.Component` or 
+    `pyomo.core.base.component.ComponentData`
+        Component whose parent structure to search and replace
+    sets: `pyomo.common.collections.ComponentSet`
+        Contains the sets to replace with slices
+    context: `pyomo.core.base.block.Block` or
+    `pyomo.core.base.block._BlockData`
+        Block below which to search for sets
+
+    Returns:
+    --------
+    `pyomo.core.base.indexed_component_slice.IndexedComponent_slice`:
+        Slice of `comp` with wildcards replacing the indices of `sets`    
+
     """
     if context is None:
         context = comp.model()
@@ -116,11 +134,9 @@ def slice_component_data_along_sets(comp, sets, context=None):
     while call_stack:
         call, arg = call_stack.pop()
         if call is IndexedComponent_slice.get_attribute:
-            print(arg)
             comp = getattr(comp, arg)
             sliced_comp = getattr(sliced_comp, arg)
         elif call is IndexedComponent_slice.get_item:
-            print(arg)
             index_set = comp.index_set()
             comp = comp[arg]
             # Process arg to replace desired indices with slices.
@@ -131,7 +147,23 @@ def slice_component_data_along_sets(comp, sets, context=None):
     return sliced_comp
 
 def replace_indices(index, location_set_map, sets):
-    """
+    """Use `location_set_map` to replace values in `index` with slices
+    or an Ellipsis.
+
+    Parameters:
+    -----------
+    index: `tuple` or scalar
+        Index whose values to replace
+    location_set_map: `dict`
+        Maps locations ("indices") within the index to their
+        corresponding set
+    sets: `pyomo.common.collections.ComponentSet`
+        Contains the sets to replace with slices
+
+    Returns:
+    --------
+    `tuple`: Index with values replaced by slices
+
     """
     index = tuple_from_possible_scalar(index)
     new_index = []
@@ -160,26 +192,29 @@ def replace_indices(index, location_set_map, sets):
         loc += 1
     return tuple(new_index)
 
-#def replace_indices(index, location_map):
-#    if type(index) is not list:
-#        # For mutability
-#        index_list = list(index)
-#    for _set, locations in location_map.items():
-#        for loc in locations:
-#            start = loc
-#            dimen = _set.dimen
-#            if dimen is None:
-#                # if dimen is None, len(locations) == 1
-#                index_list[loc] = Ellipsis
-#            for i in range(dimen):
-#                # Some additional information will be necessary
-#                # here if start/stop/step slices are to be
-#                # supported.
-#                index_list[loc+i] = slice(None, None, None)
-#    return tuple(index_list)
-
 def get_location_set_map(index, index_set):
-    """
+    """Map each value in an index to the set from which it originates
+
+    This function iterates over the "subsets" of `index_set` in the
+    forward direction, assigning sets to each value in `index`, until
+    it finds a set of dimension `None`. Then it iterates over the
+    reversed list of subsets, assigning sets, until it encounters
+    the same set of dimension `None`. All remaining values are assigned
+    to the set of dimension `None`. If a second such set is found,
+    an error is raised.
+
+    Parameters:
+    -----------
+    index: `tuple` or hashable scalar
+        The index whose values will be assigned to sets
+    index_set: `pyomo.core.base.set.SetProduct` or `pyomo.core.base.set.Set`
+        The index set from which `index` originates
+
+    Returns:
+    --------
+    `dict`: Maps the "locations" (indices) within the index to the set
+        from which it originates.
+
     """
     index = tuple_from_possible_scalar(index)
     len_index = len(index)
@@ -260,63 +295,3 @@ def get_location_set_map(index, index_set):
         location_set_map[loc] = dimen_none_set
 
     return location_set_map
-
-def get_sets_of_locations(index, setprod, sets):
-    # Make sure index is a tuple
-    # get subsets of setprod
-    # for each subset, incrementing pointer into index
-    # if subset in sets, add pointer from location to that set
-    #                    for next dimen locations
-    # When a set of dimen None is encountered, point first location
-    # to this set (if in sets). break. (still break if not in sets)
-    # now iterate backwards over subsets,
-
-    pass
-
-def get_locations_of_sets(setprod, sets):
-    """
-    Returns
-    -------
-    """
-    set_location_map = ComponentMap((s, []) for s in sets)
-
-    if hasattr(setprod, 'subsets'):
-        subsets = setprod.subsets()
-    else:
-        subsets = [setprod]
-
-    n_subsets = len(subsets)
-
-    location = 0
-    dimen_none_set = None
-    dimen_none_set_coord = None
-    for coord, _set in enumerate(subsets):
-        if _set in sets:
-            set_location_map[_set].append(location)
-        if _set.dimen is None:
-            dimen_none_set = _set
-            dimen_none_set_coord = coord
-            break
-        location += _set.dimen
-
-    if coord == n_subsets - 1:
-        return set_location_map
-
-    location = 0
-    for i, _set in reversed(enumerate(subsets)):
-        coord = n_subsets - i
-        if _set.dimen is None:
-            if (dimen_none_set is not _set and
-                    dimen_none_set_coord != coord):
-                raise RuntimeError(
-                'Cannot get locations when multiple sets of dimen==None '
-                'are present. Found %s at position %s and %s at position %s.'
-                '\nLocation is ambiguous in this case.'
-                % (dimen_none_set, dimen_none_set_coord, _set, coord)
-                )
-            break
-        location -= _set.dimen
-        if _set in sets:
-            set_location_map[_set].append(location)
-
-    return set_location_map
