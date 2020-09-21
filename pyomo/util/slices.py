@@ -30,12 +30,16 @@ def get_subsets_list(setprod):
         return [setprod]
 
 def list_from_possible_scalar(source):
+    if type(source) is str:
+        return [source]
     try:
         return list(source)
     except TypeError:
         return [source]
 
 def tuple_from_possible_scalar(source):
+    if type(source) is str:
+        return (source,)
     try:
         return tuple(source)
     except TypeError:
