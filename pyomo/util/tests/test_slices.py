@@ -20,11 +20,9 @@ from pyomo.util.slices import (
         list_from_possible_scalar,
         tuple_from_possible_scalar,
         get_component_call_stack,
-        slice_component_along_sets,
+        slice_component_data_along_sets,
         replace_indices,
         get_location_set_map,
-#        get_locations_of_sets,
-#        get_sets_of_locations,
         )
 
 def model():
@@ -356,7 +354,7 @@ class TestGetLocationAndReplacement(unittest.TestCase):
                 0: m.d_2,
                 1: m.d_2,
                 }
-        with self.assertRaises(RuntimeError) as cm:
+        with self.assertRaises(ValueError) as cm:
             location_set_map = get_location_set_map(index, index_set)
         self.assertIn('normalize_index.flatten', str(cm.exception))
         normalize_index.flatten = True
@@ -661,6 +659,111 @@ class TestGetLocationAndReplacement(unittest.TestCase):
         new_index = replace_indices(index, location_set_map, sets)
         self.assertEqual(new_index, pred_index)
         normalize_index.flatten = True
+
+
+class SliceComponentDataAlongSets(unittest.TestCase):
+    def model(self):
+        m = pyo.ConcreteModel()
+
+        m.time = pyo.Set(initialize=[1,2,3])
+        m.space = dae.ContinuousSet(initialize=[0,2])
+        m.comp = pyo.Set(initialize=['a','b'])
+        m.d_2 = pyo.Set(initialize=[('a',1),('b',2)])
+        m.d_none = pyo.Set(initialize=[('c',1,10), ('d',3)], dimen=None)
+
+        @m.Block()
+        def b(b):
+            b.v0 = pyo.Var()
+            b.v1 = pyo.Var(m.time)
+            b.v2 = pyo.Var(m.time, m.space)
+
+            @m.Block(m.time, m.space)
+            def b2(b2):
+                b2.v0 = pyo.Var()
+                b2.v1 = pyo.Var(m.comp)
+                b2.v2 = pyo.Var(m.time, m.comp)
+                b2.vn = pyo.Var(m.time, m.d_none, m.d_2)
+    
+            @m.Block(m.d_none, m.d_2)
+            def bn(bn):
+                bn.v0 = pyo.Var()
+                bn.v2 = pyo.Var(m.time, m.space)
+                bn.v3 = pyo.Var(m.time, m.space, m.time)
+                bn.vn = pyo.Var(m.time, m.d_none, m.d_2)
+        
+        return m
+
+    def test_no_context(self):
+        m = self.model()
+        
+        comp = m.b.v0
+        sets = ComponentSet((m.time, m.space))
+        _slice = slice_component_data_along_sets(comp, sets)
+        # Use `assertIs` when the "slice" is actually just a component.
+        self.assertIs(_slice, m.b.v0)
+
+        comp = m.b.v1[1]
+        sets = ComponentSet((m.time, m.space))
+        _slice = slice_component_data_along_sets(comp, sets)
+        self.assertEqual(_slice, m.b.v1[:])
+
+        comp = m.b.v2[1,0]
+        sets = ComponentSet((m.time, m.space))
+        _slice = slice_component_data_along_sets(comp, sets)
+        self.assertEqual(_slice, m.b.v2[:,:])
+
+        comp = m.b2[1,0].v1['a']
+        sets = ComponentSet((m.time, m.space))
+        _slice = slice_component_data_along_sets(comp, sets)
+        self.assertEqual(_slice, m.b2[:,:].v1['a'])
+
+        comp = m.b2[1,0].v1
+        sets = ComponentSet((m.time, m.space))
+        _slice = slice_component_data_along_sets(comp, sets)
+        self.assertEqual(_slice, m.b2[:,:].v1)
+
+        comp = m.b2[1,0].v2[1,'a']
+        sets = ComponentSet((m.time,))
+        _slice = slice_component_data_along_sets(comp, sets)
+        self.assertEqual(_slice, m.b2[:,0].v2[:,'a'])
+
+        comp = m.bn['c',1,10,'a',1].v3[1,0,1]
+        sets = ComponentSet((m.time,))
+        _slice = slice_component_data_along_sets(comp, sets)
+        self.assertEqual(_slice, m.bn['c',1,10,'a',1].v3[:,0,:])
+
+    def test_context(self):
+        m = self.model()
+
+        comp = m.b.v2[1,0]
+        context = m.b
+        sets = ComponentSet((m.time,))
+        _slice = slice_component_data_along_sets(comp, sets)
+        # Context makes no difference in resulting slice here.
+        self.assertEqual(_slice, m.b.v2[:,0])
+
+        comp = m.b2[1,0].v2[1,'a']
+        context = m.b2[1,0]
+        sets = ComponentSet((m.time,))
+        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        # Here, context does make a difference
+        self.assertEqual(_slice, m.b2[1,0].v2[:,'a'])
+
+        comp = m.b2[1,0].v1['a']
+        context = m.b2[1,0]
+        sets = ComponentSet((m.time,))
+        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        self.assertIs(_slice, m.b2[1,0].v1['a'])
+
+        sets = ComponentSet((m.comp,))
+        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        self.assertEqual(_slice, m.b2[1,0].v1[:])
+
+        context = m.b2
+        sets = ComponentSet((m.time, m.comp))
+        _slice = slice_component_data_along_sets(comp, sets, context=context)
+        self.assertEqual(_slice, m.b2[:,0].v1[:])
+
 
 if __name__ == '__main__':
     unittest.main()
