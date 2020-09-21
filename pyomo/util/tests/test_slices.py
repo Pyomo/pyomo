@@ -764,6 +764,9 @@ class SliceComponentDataAlongSets(unittest.TestCase):
         _slice = slice_component_data_along_sets(comp, sets, context=context)
         self.assertEqual(_slice, m.b2[:,0].v1[:])
 
+    def test_none_dimen(self):
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()
