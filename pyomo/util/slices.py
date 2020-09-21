@@ -21,6 +21,14 @@ def get_index_if_present(comp):
     except AttributeError:
         return None
 
+def get_subsets_list(setprod):
+    try:
+        return list(setprod.subsets())
+    except AttributeError:
+        # Intended to catch the case where
+        # setprod is not actually a product.
+        return [setprod]
+
 def list_from_possible_scalar(source):
     try:
         return list(source)
@@ -41,7 +49,7 @@ CALL_DICT = {
 def get_component_call_stack(comp, context=None):
     """Get the call stack necessary to locate a `Component`
 
-    The call stack is a list of `tuple`s where the first entry is a 
+    The call stack is a `list` of `tuple`s where the first entry is a 
     code for `__getattr__` or  `__getitem__`, using the same convention
     as `IndexedComponent_slice`. The second entry is the argument of
     the corresponding function. Following this sequence of calls from
@@ -90,80 +98,37 @@ def get_component_call_stack(comp, context=None):
         comp = comp.parent_block()
     return call_stack
 
-def slice_component_along_sets(comp, sets, context=None):
+def slice_component_data_along_sets(comp, sets, context=None):
     """
     """
     if context is None:
         context = comp.model()
     call_stack = get_component_call_stack(comp, context)
 
+    # Maintain a pointer to the component so we can get
+    # the index set and know which locations to slice.
     comp = context
     sliced_comp = context
     while call_stack:
         call, arg = call_stack.pop()
-        # What is the right way to get attr/item here?
         if call is IndexedComponent_slice.get_attribute:
+            print(arg)
             comp = getattr(comp, arg)
             sliced_comp = getattr(sliced_comp, arg)
         elif call is IndexedComponent_slice.get_item:
+            print(arg)
+            index_set = comp.index_set()
             comp = comp[arg]
-            # Process arg to replace desired indices with
-            # slices.
+            # Process arg to replace desired indices with slices.
+            location_set_map = get_location_set_map(arg, index_set)
+            arg = replace_indices(arg, location_set_map, sets)
             sliced_comp = sliced_comp[arg]
 
-    # TODO: Need to process this index.
-    while len(component_stack) > 1:
-        comp, index = component_stack.pop()
-        index_set = comp.index_set()
-        location_map = get_location_of_sets(index_set, sets)
-        if not location_map:
-            # Check if location map is nonempty so we don't
-            # do all the work of replacing the index if there
-            # is nothing to replace.
-            #
-            # Is there a better way to do this replacement?
-            # Build the new index constructively?
-            # Assemble a map: indices -> value?
-            slice_index = replace_indices(index, location_map)
-        else:
-            slice_index = index
-        sliced_comp = getattr(sliced_comp, comp.local_name)
-        # No need to check if index is None. comp will not
-        # be an indexed component unless it is the leaf
-        # component.
-        sliced_comp = sliced_comp[index]
-
-    if component_stack:
-        comp, index = component_stack.pop()
-        sliced_comp = getattr(sliced_comp, comp.local_name)
-        if index is not None:
-            # Need to process index
-            sliced_comp = sliced_comp[index]
-        
-
-    # Walk up component hierarchy.
-    # When I encounter an index, get the index_set of the component.
-    # Get the locations of sets within index_set
-    location_map = get_location_of_sets(index_set, sets)
-    slice_index = replace_indices(index, location_map)
-    sliced_comp = sliced_comp[slice_index]
-    # Construct tuple corresponding to index?
-    # Or construct fixed, sliced, ellipsis dict?
-    # Depends on how I want to construct the slice.
-    # Will generate indices in reverse order.
-    # Creating slice from "bottom up" seems difficult/impossible.
-    # So have to create slice in forward order. Can do with
-    # IndexedComponent_slice copy constructor or getitem/attr calls
-    # Either way the right path seems to be to construct the tuple
-    # of indices.
-
-    # now map locations to sets
-    # Really need to map locations to values/slices/ellipses
-    # Don't need to know the numebr of indices because I have the index
-    
     return sliced_comp
 
 def replace_indices(index, location_set_map, sets):
+    """
+    """
     index = tuple_from_possible_scalar(index)
     new_index = []
     loc = 0
@@ -225,7 +190,7 @@ def get_location_set_map(index, index_set):
         # unindexed component.
         return {0: UnindexedComponent_set}
     elif not normalize_index.flatten:
-        raise RuntimeError(
+        raise ValueError(
             'get_location_set_map does not support the case where '
             'normalize_index.flatten is False.'
             # Although in this case, the location of an index should
@@ -234,7 +199,6 @@ def get_location_set_map(index, index_set):
             )
 
     if hasattr(index_set, 'subsets'):
-        # Maybe this block should be its own function...
         subsets = list(index_set.subsets())
     else:
         subsets = [index_set]
