@@ -25,24 +25,6 @@ from pyomo.util.slices import (
         get_location_set_map,
         )
 
-def model():
-    m = pyo.ConcreteModel()
-    m.time = pyo.Set(initialize=[1,2,3])
-    m.space = dae.ContinuousSet(initialize=[0,2])
-    m.comp = pyo.Set(initialize=['a','b'])
-    m.d_2 = pyo.Set(initialize=[('a',1),('b',2)])
-    m.d_none = pyo.Set(initialize=[('c',1,10), ('d',3)], dimen=None)
-
-    @m.Block()
-    def b(b):
-
-        @b.Block(m.time)
-        def bb1(bb1, t):
-            bb1.v0 = pyo.Var(initialize=1.)
-
-        @b.Block(m.time, m.space)
-        def bb2(bb2, t, x):
-            bb2.v1 = pyo.Var(initialize=1.)
 
 class TestGetComponentCallStack(unittest.TestCase):
 
