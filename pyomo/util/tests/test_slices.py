@@ -16,9 +16,6 @@ import pyomo.environ as pyo
 import pyomo.dae as dae
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.util.slices import (
-        get_index_if_present,
-        list_from_possible_scalar,
-        tuple_from_possible_scalar,
         get_component_call_stack,
         slice_component_along_sets,
         replace_indices,
