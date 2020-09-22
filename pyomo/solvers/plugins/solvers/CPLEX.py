@@ -877,7 +877,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 elif solution_status in ["infeasible"]:
                     soln.status = SolutionStatus.infeasible
                     soln.gap = None
-                elif solution_status in ["time limit exceeded", "solution limit exceeded"]:
+                elif solution_status in {
+                    "time limit exceeded",
+                    "solution limit exceeded",
+                    "deterministic time limit exceeded"
+                }:
                     # we need to know if the solution is primal feasible, and if it is, set the solution status accordingly.
                     # for now, just set the flag so we can trigger the logic when we see the primalFeasible keyword.
                     user_defined_limit_exceeded = True
