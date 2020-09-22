@@ -8,41 +8,39 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import six
+
 from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common.collections import ComponentSet, ComponentMap
 
-def get_index_if_present(comp):
+def _get_index_if_present(comp):
     try:
         return comp.index()
     except AttributeError:
         return None
 
-def get_subsets_list(setprod):
-    try:
-        return list(setprod.subsets())
-    except AttributeError:
-        # Intended to catch the case where
-        # setprod is not actually a product.
-        return [setprod]
+def _generate_subsets(setprod):
+    if hasattr(setprod, 'subsets'):
+        for sub in setprod.subsets():
+            yield sub
+    else:
+        # setprod is not a SetProduct. 
+        # Its only "subset" is itself
+        yield setprod
 
-def list_from_possible_scalar(source):
-    if type(source) is str:
-        return [source]
-    try:
-        return list(source)
-    except TypeError:
-        return [source]
-
-def tuple_from_possible_scalar(source):
-    if type(source) is str:
-        return (source,)
-    try:
-        return tuple(source)
-    except TypeError:
-        return (source,)
-
+# TODO: to_iterable, six.string_types, binary_type, text_type
+def _to_iterable(source):
+    iterable_scalars = six.string_types + (six.binary_type, six.text_type)
+    if isinstance(source, iterable_scalars):
+        yield source
+    elif hasattr(source, '__iter__'):
+        for obj in source:
+            yield obj
+    else:
+        yield source
+    
 def get_component_call_stack(comp, context=None):
     """Get the call stack necessary to locate a `Component`
 
@@ -78,7 +76,7 @@ def get_component_call_stack(comp, context=None):
             break
 
         # Add (get_item, index) to the call stack
-        index = get_index_if_present(comp)
+        index = _get_index_if_present(comp)
         if index is not None:
             call_stack.append((IndexedComponent_slice.get_item, index))
         parent_component = comp.parent_component()
@@ -163,7 +161,7 @@ def replace_indices(index, location_set_map, sets):
     `tuple`: Index with values replaced by slices
 
     """
-    index = tuple_from_possible_scalar(index)
+    index = tuple(_to_iterable(index))
     new_index = []
     loc = 0
     len_index = len(index)
@@ -214,7 +212,7 @@ def get_location_set_map(index, index_set):
         from which it originates.
 
     """
-    index = tuple_from_possible_scalar(index)
+    index = tuple(_to_iterable(index))
     len_index = len(index)
     locations_left = set(range(len_index))
     location_set_map = {}
@@ -235,10 +233,7 @@ def get_location_set_map(index, index_set):
             # the info we need is actually more simple to obtain.
             )
 
-    if hasattr(index_set, 'subsets'):
-        subsets = list(index_set.subsets())
-    else:
-        subsets = [index_set]
+    subsets = list(_generate_subsets(index_set))
 
     n_subsets = len(subsets)
 
