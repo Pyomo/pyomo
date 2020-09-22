@@ -16,9 +16,9 @@ from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common.collections import ComponentSet, ComponentMap
 
 def _get_index_if_present(comp):
-    try:
+    if hasattr(comp, 'index'):
         return comp.index()
-    except AttributeError:
+    else:
         return None
 
 def _generate_subsets(setprod):
@@ -30,7 +30,6 @@ def _generate_subsets(setprod):
         # Its only "subset" is itself
         yield setprod
 
-# TODO: to_iterable, six.string_types, binary_type, text_type
 def _to_iterable(source):
     iterable_scalars = six.string_types + (six.binary_type, six.text_type)
     if isinstance(source, iterable_scalars):
