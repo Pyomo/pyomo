@@ -90,7 +90,7 @@ def handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config):
         fp_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config,
-        ignore_integrality=config.strategy == 'feas_pump')
+        ignore_integrality=config.init_strategy == 'feas_pump')
 
     # if OA-like or feas_pump converged, update Upper bound,
     # add no_good cuts and increasing objective cuts (feas_pump)
