@@ -554,11 +554,11 @@ class Estimator(object):
             
             if len(return_values) > 0:
                 var_values = []
-                for exp_i in stsolver.ef_instance.component_objects(Block, descend_into=False):
+                for exp_i in self.ef_instance.component_objects(Block, descend_into=False):
                     vals = {}
                     for var in return_values:
                         exp_i_var = eval('exp_i.'+ str(var))
-                        temp = [_.value for _ in exp_i_var.itervalues()]
+                        temp = [pyo.value(_) for _ in exp_i_var.itervalues()]
                         if len(temp) == 1:
                             vals[var] = temp[0]
                         else:
