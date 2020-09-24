@@ -236,7 +236,7 @@ jobs:
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
-            URL=https://github.com/IDAES/idaes-ext/releases/download/2.0.0
+            URL=https://github.com/IDAES/idaes-ext/releases/download/2.2.1
             if test "${{matrix.TARGET}}" == osx; then
                 echo "IDAES Ipopt not available on OSX"
                 exit 0
