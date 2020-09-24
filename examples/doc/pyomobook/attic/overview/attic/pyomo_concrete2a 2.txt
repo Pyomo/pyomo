@@ -1,0 +1,52 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+WARNING: No construction rule or expression specified for 'constraint 'con'
+[    0.01] Creating model
+[    0.01] Applying solver
+WARNING: Empty constraint block written in LP format - solver may error
+[    0.22] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+      Function Value: 0
+    Solver results file: results.yml
+[    0.23] Applying Pyomo postprocessing actions
+[    0.23] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: 0
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 1
+  Number of variables: 3
+  Number of nonzeros: 1
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    obj: 
+      Id: 0
+      Value: 0
+  Variable: No nonzero values

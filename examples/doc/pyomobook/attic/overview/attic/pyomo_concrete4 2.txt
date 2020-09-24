@@ -1,0 +1,53 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+[    0.05] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+      Function Value: 0.8
+    Solver results file: results.yml
+[    0.05] Applying Pyomo postprocessing actions
+[    0.05] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: 0.8
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 3
+  Number of variables: 3
+  Number of nonzeros: 5
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    obj: 
+      Id: 0
+      Value: 0.8
+  Variable: 
+    x[2]: 
+      Id: 1
+      Value: 0.4
