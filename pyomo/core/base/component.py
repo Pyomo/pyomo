@@ -24,6 +24,7 @@ import pyomo.common
 from pyomo.common import deprecated
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 
 logger = logging.getLogger('pyomo.core')
 
@@ -1032,8 +1033,8 @@ class ComponentUID(object):
     """
 
     __slots__ = ( '_cids', )
-    tList = [ int, str ]
-    tKeys = '#$'
+    tList = [ int, str, slice, type(Ellipsis) ]
+    tKeys = '#$*@'
     tDict = {} # ...initialized below
 
     def __init__(self, component, cuid_buffer=None, context=None):
@@ -1044,6 +1045,11 @@ class ComponentUID(object):
                 raise ValueError("Context is not allowed when initializing a "
                                  "ComponentUID object from a string type")
             self._cids = tuple(self.parse_cuid(component))
+        elif type(component) is IndexedComponent_slice:
+            self._cids = tuple(self._generate_cids_from_slice(
+                component,
+                context=context,
+                ))
         else:
             self._cids = tuple(self._generate_cuid(component,
                                                    cuid_buffer=cuid_buffer,
@@ -1157,15 +1163,185 @@ class ComponentUID(object):
         except AttributeError:
             return self._cids.__ne__(other)
 
+    def _generate_validated_index(self, idx):
+        encountered_fixed = False
+        encountered_ellipsis = False
+        for v in idx:
+            if v == slice(None):
+                # The convention for single wildcards is to
+                # use an empty string for the index value.
+                # Note that this will not behave rationally
+                # if a slice with start/stop/step values
+                # somehow makes it here.
+                yield ''
+            elif v == Ellipsis:
+                if encountered_ellipsis:
+                    raise NotImplementedError(
+                        "Got invalid index %s when creating CUID. "
+                        "Multiple ellipses are not supported." % (idx,)
+                        )
+                if encountered_fixed:
+                    raise NotImplementedError(
+                        "Got invalid index %s when creating CUID. "
+                        "Fixed indices are not supported in the same "
+                        "index as an ellipsis." % (idx,)
+                        )
+                yield '**'
+                encountered_ellipsis = True
+            else:
+                if encountered_ellipsis:
+                    raise NotImplementedError(
+                        "Got invalid index %s when creating CUID. "
+                        "Fixed indices are not supported in the same "
+                        "index as an ellipsis." % (idx,)
+                        )
+                yield v
+                encountered_fixed = True
+
     def _partial_cuid_from_index(self, idx):
         """
         TODO
         """
         tDict = ComponentUID.tDict
-        if idx.__class__ is tuple:
-            return ( idx, ''.join(tDict.get(type(x), '?') for x in idx) )
+        if idx.__class__ is not tuple:
+            idx = (idx,)
+        return ( 
+                tuple(self._generate_validated_index(idx)),
+                ''.join(tDict.get(type(x), '?') for x in idx)
+                )
+# Trying to get around needing this if tree by adding a type char for
+# Ellipses and slices. This changes the convention from ** <-> None
+# to ** <-> '@'
+# ^Likely no reason to do this if I enforce that '**' indices only appear
+# in tuples of length 1. I think the code is cleaner if I don't need
+# to enforce this, but I'm not sure what implications this has for the
+# rest of the methods.
+#        else:
+#            if idx == slice(None):
+#                return ( ('',), tDict.get(type(idx), '?') )
+#            elif idx == Ellipsis:
+#                # Unclear if type of None matters for blank check
+#                # index.
+#                return ( ('**',), None )
+#            else:
+#                return ( (idx,), tDict.get(type(idx), '?') )
+
+    def _partial_cuid_from_slice_info(self, slice_info):
+        """
+        TODO
+        """
+        tDict = ComponentUID.tDict
+        # slice_info: 
+        # ( {fixed: val}, {sliced: slice(start, stop, step)}, ellipsis )
+        fixed = slice_info[0]
+        sliced = slice_info[1]
+        ellipsis = slice_info[2]
+
+        # Or, just construct index, then send to _partial_cuid_from_index
+        # TODO
+        if ellipsis is not None:
+            if fixed:
+                raise NotImplementedError(
+                    "Cannot create a CUID from a 'partial slice' containing "
+                    "an ellipsis (in position %s). Fixed indices are %s"
+                    % ( ellipsis, tuple(fixed.keys()) )
+                    )
+            else:
+                # This is the _cid convention for a "blank check"
+                return ( ('**',), None )
         else:
-            return ( (idx,), tDict.get(type(idx), '?') )
+            # ellipsis is None
+            value_map = {}
+            value_map.update(fixed)
+            value_map.update(sliced)
+            # Here we assume that exactly all positions in the index are
+            # accounted for in the fixed and sliced dicts:
+            values = tuple( value_map[i] for i in range(len(value_map)) )
+            partial_cuid = []
+            return ( 
+                    # Index with index, with slices replaced by empty string:
+                    tuple(v if v != slice(None) else '' for v in values),
+
+                    # String of types, with wildcard '*' for the slices:
+                    ''.join(tDict.get(type(v), '?') if type(v) is not slice
+                        else '*' for v in values)
+                    )
+
+    def _generate_cids_from_slice(self, _slice, context=None):
+        """
+        TODO
+        """
+        call_stack = _slice._call_stack
+        index = ()
+        name = None
+        count = 0
+        while call_stack:
+            call, arg = call_stack.pop()
+            count += 1
+
+            if call & 0b10:
+                # Least significant bits in `set` and `del` calls
+                # are 0b10 and 0b11. These are hardcoded into the
+                # IndexedComponent_slice class.
+                raise ValueError(
+                    "Cannot create a CUID from a slice that "
+                    "contains `set` or `del` calls. Got call %s "
+                    "with argument '%s'" % (call, arg)
+                    )
+            elif call == IndexedComponent_slice.slice_info:
+                # This should be the base of the stack.
+                comp = arg[0]
+                slice_info = arg[1:]
+                yield (
+                        (comp.local_name,) + 
+                        self._partial_cuid_from_slice_info(slice_info)
+                        )
+                parent = comp.parent_block()
+                for cid in self._generate_cuid(parent, context=context):
+                    yield cid
+            elif call == IndexedComponent_slice.get_item:
+                # Need to parse index to get potential slice
+                index = arg
+                # Note that this assumes we will never have two get_item
+                # calls in a row.
+            elif call == IndexedComponent_slice.call:
+                # Cache argument of a potential call to `component`
+                name = arg
+            elif call == IndexedComponent_slice.get_attribute:
+                if name is not None:
+                    # This only happens if IndexedComponent_slice.call
+                    # was encountered.
+                    if arg is not 'component':
+                        raise NotImplementedError(
+                            "Cannot create a CUID from a slice with a "
+                            "call to any method other than `component`. "
+                            "Got %s." % arg
+                            )
+                    else:
+                        # name is the attr we actually want to get
+                        arg = name
+                        # Reset name to None
+                        name = None
+                if count == 1:
+                    # We have encountered a get_attr at the top
+                    # of our stack. If this is an IndexedComponent,
+                    # need to treat it as a wildcard, as is the
+                    # convention for CUID.
+                    #
+                    # From the perspective of the slice, however,
+                    # we cannot distinguish a simple component
+                    # from an indexed component with no index.
+                    #
+                    # Should we yield this wildcard, or just yield
+                    # the name? Depends on whether just yielding the
+                    # name breaks the CUID
+                    yield (arg, '**', None)
+                else:
+                    # What sort of preprocessing does index need here?
+                    yield (arg,) + self._partial_cuid_from_index(index)
+                # Reset index to empty tuple (the CUID convention for a
+                # simple component)
+                index = ()
 
     def _generate_cuid(self, component, cuid_buffer=None, context=None):
         """
