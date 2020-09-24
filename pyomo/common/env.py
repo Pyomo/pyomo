@@ -42,7 +42,7 @@ def _attempt_ctypes_cdll(name):
         return False
 
 
-def _load_dll(name, timeout=1):
+def _load_dll(name, timeout=10):
     """Load a DLL with a timeout
 
     On some platforms and some DLLs (notably Windows GitHub Actions with
@@ -57,6 +57,11 @@ def _load_dll(name, timeout=1):
     interface only spawns the subprocess if ctypes.util.find_library
     actually locates the target library.  This will have a measurable
     impact on Windows (where the DLLs exist), but not on other platforms.
+
+    The default timeout of 10 is arbitrary.  For simeple situations, 1
+    seems adequate.  However, more complex examples have been observed
+    that needed timeout==5.  Using a default of 10 is simply doubling
+    that observed case.
 
     """
     if not ctypes.util.find_library(name):
