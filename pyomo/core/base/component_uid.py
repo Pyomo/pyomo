@@ -171,6 +171,41 @@ class ComponentUID(object):
         except AttributeError:
             return self._cids.__ne__(other)
 
+    def _generate_validated_index(self, idx):
+        encountered_fixed = False
+        encountered_ellipsis = False
+        for v in idx:
+            if v == slice(None):
+                # The convention for single wildcards is to
+                # use an empty string for the index value.
+                # Note that this will not behave rationally
+                # if a slice with start/stop/step values
+                # somehow makes it here.
+                yield ''
+            elif v == Ellipsis:
+                if encountered_ellipsis:
+                    raise NotImplementedError(
+                        "Got invalid index %s when creating CUID. "
+                        "Multiple ellipses are not supported." % idx
+                        )
+                if encountered_fixed:
+                    raise NotImplementedError(
+                        "Got invalid index %s when creating CUID. "
+                        "Fixed indices are not supported in the same "
+                        "index as an ellipsis." % idx
+                        )
+                yield '**'
+                encountered_ellipsis = True
+            else:
+                if encountered_ellipsis:
+                    raise NotImplementedError(
+                        "Got invalid index %s when creating CUID. "
+                        "Fixed indices are not supported in the same "
+                        "index as an ellipsis." % idx
+                        )
+                yield v
+                encountered_fixed = True
+
     def _partial_cuid_from_index(self, idx):
         """
         TODO
@@ -178,17 +213,14 @@ class ComponentUID(object):
         tDict = ComponentUID.tDict
         if idx.__class__ is tuple:
             return ( 
-                    # The convention for single wildcards is to
-                    # use an empty string for the index value.
-                    # Note that this will not behave rationally
-                    # if a slice with start/stop/step values
-                    # somehow makes it here.
-                    (v if v != slice(None) else '' for v in idx),
+                    tuple(self._generate_validated_index(idx)),
                     ''.join(tDict.get(type(x), '?') for x in idx)
                     )
         else:
             if idx == slice(None):
                 return ( ('',), tDict.get(type(idx), '?') )
+            elif idx == Ellipsis:
+                return ( ('**',), None )
             else:
                 return ( (idx,), tDict.get(type(idx), '?') )
 
@@ -196,6 +228,7 @@ class ComponentUID(object):
         """
         TODO
         """
+        tDict = ComponentUID.tDict
         # slice_info: 
         # ( {fixed: val}, {sliced: slice(start, stop, step)}, ellipsis )
         fixed = slice_info[0]
@@ -219,11 +252,11 @@ class ComponentUID(object):
             value_map.update(sliced)
             # Here we assume that exactly all positions in the index are
             # accounted for in the fixed and sliced dicts:
-            values = ( value_map[i] for i in range(len(value_map)) )
+            values = tuple( value_map[i] for i in range(len(value_map)) )
             partial_cuid = []
             return ( 
                     # Index with index, with slices replaced by empty string:
-                    (v if v != slice(None) else '' for v in values),
+                    tuple(v if v != slice(None) else '' for v in values),
 
                     # String of types, with wildcard '*' for the slices:
                     ''.join(tDict.get(type(v), '?') if type(v) is not slice
