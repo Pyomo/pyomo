@@ -360,7 +360,7 @@ def kaug(instance,paramSubList,perturbList,
                     substitute=variableSubMap,
                     remove_named_expressions=True).dfs_postorder_stack(cc.expr))
         else:
-            raise Exception('k_aug doesn’t support inequalities. e.g: f(x) <= rhs. Need to replace it to f(x) + s == rhs, s >= 0.')
+            raise Exception('kaug does not support inequalities. Need to replace inequalities to equalities with slack variables')
         cc.deactivate()
 
     #paramData to varData constraint list
