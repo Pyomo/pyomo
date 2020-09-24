@@ -1033,8 +1033,8 @@ class ComponentUID(object):
     """
 
     __slots__ = ( '_cids', )
-    tList = [ int, str, slice, type(Ellipsis) ]
-    tKeys = '#$*@'
+    tList = [ int, str ]
+    tKeys = '#$'
     tDict = {} # ...initialized below
 
     def __init__(self, component, cuid_buffer=None, context=None):
@@ -1163,40 +1163,49 @@ class ComponentUID(object):
         except AttributeError:
             return self._cids.__ne__(other)
 
-    def _generate_validated_index(self, idx):
-        encountered_fixed = False
-        encountered_ellipsis = False
+    def _validate_slice_index(self, idx):
+        if idx.__class__ is not tuple:
+            idx = (idx,)
+        ellipsis_count = 0
+        slice_count = 0
+        fixed_count = 0
+        validated_index = []
         for v in idx:
-            if v == slice(None):
-                # The convention for single wildcards is to
-                # use an empty string for the index value.
-                # Note that this will not behave rationally
-                # if a slice with start/stop/step values
-                # somehow makes it here.
-                yield ''
+            if type(v) == slice:
+                validated_index.append(v)
+                slice_count += 1
             elif v == Ellipsis:
-                if encountered_ellipsis:
+                if ellipsis_count:
                     raise NotImplementedError(
                         "Got invalid index %s when creating CUID. "
                         "Multiple ellipses are not supported." % (idx,)
                         )
-                if encountered_fixed:
+                if fixed_count:
                     raise NotImplementedError(
                         "Got invalid index %s when creating CUID. "
                         "Fixed indices are not supported in the same "
                         "index as an ellipsis." % (idx,)
                         )
-                yield '**'
-                encountered_ellipsis = True
+                validated_index.append('**')
+                ellipsis_count += 1
             else:
-                if encountered_ellipsis:
+                if ellipsis_count:
                     raise NotImplementedError(
                         "Got invalid index %s when creating CUID. "
                         "Fixed indices are not supported in the same "
                         "index as an ellipsis." % (idx,)
                         )
-                yield v
-                encountered_fixed = True
+                validated_index.append(v)
+                fixed_count += 1
+        if ellipsis_count:
+            # Only ellipses and slices should be present.
+            # CUIDs expect a "blank-check" wildcard to be
+            # present by itself.
+            return (Ellipsis,)
+        else:
+            # Fixed and sliced indices can be followed by
+            # _partial_cuid_from_index.
+            return tuple(validated_index)
 
     def _partial_cuid_from_index(self, idx):
         """
@@ -1205,67 +1214,54 @@ class ComponentUID(object):
         tDict = ComponentUID.tDict
         if idx.__class__ is not tuple:
             idx = (idx,)
+        if idx == (Ellipsis,):
+            # We assume a possible slice index has been validated 
+            # so that this is the only way an ellipsis can be present.
+            return ( ('**',), None )
         return ( 
-                tuple(self._generate_validated_index(idx)),
-                ''.join(tDict.get(type(x), '?') for x in idx)
+                # CUID convention for a wildcard:
+
+                # Empty string in the index tuple
+                tuple(
+                    x if type(x) is not slice else ''
+                    for x in idx
+                    ),
+
+                # '*' in the type string
+                ''.join(
+                    tDict.get(type(x), '?')
+                    if type(x) is not slice else '*'
+                    for x in idx
+                    ),
                 )
-# Trying to get around needing this if tree by adding a type char for
-# Ellipses and slices. This changes the convention from ** <-> None
-# to ** <-> '@'
-# ^Likely no reason to do this if I enforce that '**' indices only appear
-# in tuples of length 1. I think the code is cleaner if I don't need
-# to enforce this, but I'm not sure what implications this has for the
-# rest of the methods.
-#        else:
-#            if idx == slice(None):
-#                return ( ('',), tDict.get(type(idx), '?') )
-#            elif idx == Ellipsis:
-#                # Unclear if type of None matters for blank check
-#                # index.
-#                return ( ('**',), None )
-#            else:
-#                return ( (idx,), tDict.get(type(idx), '?') )
+
+    def _index_from_slice_info(self, slice_info):
+        """
+        TODO
+        """
+        fixed, sliced, ellipsis = slice_info
+        
+        if ellipsis is None:
+            ellipsis = {}
+        else:
+            ellipsis = {ellipsis: Ellipsis}
+
+        value_map = {}
+        value_map.update(fixed)
+        value_map.update(sliced)
+        value_map.update(ellipsis)
+
+        # Assume that the keys of fixed, sliced, and ellipsis
+        # partition the index we're describing.
+        return tuple( value_map[i] for i in range(len(value_map)) )
 
     def _partial_cuid_from_slice_info(self, slice_info):
         """
         TODO
         """
-        tDict = ComponentUID.tDict
-        # slice_info: 
-        # ( {fixed: val}, {sliced: slice(start, stop, step)}, ellipsis )
-        fixed = slice_info[0]
-        sliced = slice_info[1]
-        ellipsis = slice_info[2]
-
-        # Or, just construct index, then send to _partial_cuid_from_index
-        # TODO
-        if ellipsis is not None:
-            if fixed:
-                raise NotImplementedError(
-                    "Cannot create a CUID from a 'partial slice' containing "
-                    "an ellipsis (in position %s). Fixed indices are %s"
-                    % ( ellipsis, tuple(fixed.keys()) )
-                    )
-            else:
-                # This is the _cid convention for a "blank check"
-                return ( ('**',), None )
-        else:
-            # ellipsis is None
-            value_map = {}
-            value_map.update(fixed)
-            value_map.update(sliced)
-            # Here we assume that exactly all positions in the index are
-            # accounted for in the fixed and sliced dicts:
-            values = tuple( value_map[i] for i in range(len(value_map)) )
-            partial_cuid = []
-            return ( 
-                    # Index with index, with slices replaced by empty string:
-                    tuple(v if v != slice(None) else '' for v in values),
-
-                    # String of types, with wildcard '*' for the slices:
-                    ''.join(tDict.get(type(v), '?') if type(v) is not slice
-                        else '*' for v in values)
-                    )
+        index = self._index_from_slice_info(slice_info)
+        validated_index = self._validate_slice_index(index)
+        return self._partial_cuid_from_index(validated_index)
 
     def _generate_cids_from_slice(self, _slice, context=None):
         """
@@ -1322,23 +1318,30 @@ class ComponentUID(object):
                         arg = name
                         # Reset name to None
                         name = None
-                if count == 1:
-                    # We have encountered a get_attr at the top
-                    # of our stack. If this is an IndexedComponent,
-                    # need to treat it as a wildcard, as is the
-                    # convention for CUID.
-                    #
-                    # From the perspective of the slice, however,
-                    # we cannot distinguish a simple component
-                    # from an indexed component with no index.
-                    #
-                    # Should we yield this wildcard, or just yield
-                    # the name? Depends on whether just yielding the
-                    # name breaks the CUID
-                    yield (arg, '**', None)
-                else:
-                    # What sort of preprocessing does index need here?
-                    yield (arg,) + self._partial_cuid_from_index(index)
+                #if count == 1:
+                     # We have encountered a get_attr at the top
+                     # of our stack. This has been handled differently
+                     # depending on how the CUID was constructed:
+                     # - Constructing a CUID from an indexed component
+                     #   will treat its indices as wildcards.
+                     # - Constructing from a string will yield a valid
+                     #   CUID that will treat the indexed component as
+                     #   itself (rather than a slice over its data).
+                     # This is an issue with CUID that should be
+                     # addressed.
+                     #
+                     # The slice has no way to know whether the
+                     # component is indexed, so we follow the same
+                     # convention as constructing from a string to
+                     # avoid attaching a wildcard to an unindexed
+                     # component.
+                     # This also simplifies the code and removes the
+                     # need for an if tree.
+                #     yield (arg, '**', None)
+
+                # Preprocess and validate potential slice/Ellipsis index
+                index = self._validate_slice_index(index)
+                yield (arg,) + self._partial_cuid_from_index(index)
                 # Reset index to empty tuple (the CUID convention for a
                 # simple component)
                 index = ()
