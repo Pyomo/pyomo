@@ -24,6 +24,7 @@ import pyomo.common
 from pyomo.common import deprecated
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 
 class ComponentUID(object):
     """
@@ -46,8 +47,8 @@ class ComponentUID(object):
     """
 
     __slots__ = ( '_cids', )
-    tList = [ int, str, slice]
-    tKeys = '#$*'
+    tList = [ int, str, slice, type(Ellipsis)]
+    tKeys = '#$*@'
     tDict = {} # ...initialized below
 
     def __init__(self, component, cuid_buffer=None, context=None):
@@ -58,6 +59,11 @@ class ComponentUID(object):
                 raise ValueError("Context is not allowed when initializing a "
                                  "ComponentUID object from a string type")
             self._cids = tuple(self.parse_cuid(component))
+        elif type(component) is IndexedComponent_slice:
+            self._cids = tuple(self._generate_cids_from_slice(
+                component,
+                context=context,
+                ))
         else:
             self._cids = tuple(self._generate_cuid(component,
                                                    cuid_buffer=cuid_buffer,
@@ -211,18 +217,24 @@ class ComponentUID(object):
         TODO
         """
         tDict = ComponentUID.tDict
-        if idx.__class__ is tuple:
-            return ( 
-                    tuple(self._generate_validated_index(idx)),
-                    ''.join(tDict.get(type(x), '?') for x in idx)
-                    )
-        else:
-            if idx == slice(None):
-                return ( ('',), tDict.get(type(idx), '?') )
-            elif idx == Ellipsis:
-                return ( ('**',), None )
-            else:
-                return ( (idx,), tDict.get(type(idx), '?') )
+        if idx.__class__ is not tuple:
+            idx = (idx,)
+        return ( 
+                tuple(self._generate_validated_index(idx)),
+                ''.join(tDict.get(type(x), '?') for x in idx)
+                )
+# Trying to get around needing this if tree by adding a type char for
+# Ellipses and slices. This changes the convention from ** <-> None
+# to ** <-> '@'
+#        else:
+#            if idx == slice(None):
+#                return ( ('',), tDict.get(type(idx), '?') )
+#            elif idx == Ellipsis:
+#                # Unclear if type of None matters for blank check
+#                # index.
+#                return ( ('**',), None )
+#            else:
+#                return ( (idx,), tDict.get(type(idx), '?') )
 
     def _partial_cuid_from_slice_info(self, slice_info):
         """
@@ -235,6 +247,8 @@ class ComponentUID(object):
         sliced = slice_info[1]
         ellipsis = slice_info[2]
 
+        # Or, just construct index, then send to _partial_cuid_from_index
+        # TODO
         if ellipsis is not None:
             if fixed:
                 raise NotImplementedError(
@@ -303,7 +317,7 @@ class ComponentUID(object):
             elif call == IndexedComponent_slice.call:
                 # Cache argument of a potential call to `component`
                 name = arg
-            elif call == IndexedComponent_slice.get_attr:
+            elif call == IndexedComponent_slice.get_attribute:
                 if name is not None:
                     # This only happens if IndexedComponent_slice.call
                     # was encountered.
