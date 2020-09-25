@@ -34,7 +34,7 @@ Here's a full program that can be run to see returned values (in this case it
 is the response function that is defined in the model file):
 
 .. doctest::
-   :skipif: not ipopt_available
+   :skipif: not ipopt_available or not pandas_available
    
    >>> import pandas as pd   
    >>> import pyomo.contrib.parmest.parmest as parmest
