@@ -34,8 +34,7 @@ Here's a full program that can be run to see returned values (in this case it
 is the response function that is defined in the model file):
 
 .. doctest::
-    :skipif: True
-   
+   >>> import pandas as pd   
    >>> import pyomo.contrib.parmest.parmest as parmest
    >>> from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
 
