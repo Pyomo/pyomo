@@ -259,8 +259,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
             raise RuntimeError("I don't know how to do my job.")
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         log = StringIO()
-        with LoggingIntercept(log, 'pyomo.contrib.fourier_motzkin_elimination',
-                              logging.ERROR):
+        with LoggingIntercept(log, 'pyomo.contrib.fme', logging.ERROR):
             self.assertRaisesRegexp(
                 RuntimeError,
                 "I don't know how to do my job.",
@@ -277,8 +276,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m = self.makeModel()
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         log = StringIO()
-        with LoggingIntercept(log, 'pyomo.contrib.fourier_motzkin_elimination',
-                              logging.ERROR):
+        with LoggingIntercept(log, 'pyomo.contrib.fme', logging.ERROR):
             self.assertRaisesRegexp(
                 TypeError,
                 "'int' object is not callable",
