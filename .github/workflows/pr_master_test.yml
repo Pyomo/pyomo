@@ -96,6 +96,7 @@ jobs:
 
     - name: OS package cache
       uses: actions/cache@v1
+      if: matrix.TARGET != 'osx'
       id: os-cache
       with:
         path: cache/os

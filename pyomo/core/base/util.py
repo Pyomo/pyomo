@@ -167,7 +167,7 @@ def Initializer(init,
         if init is arg_not_specified:
             return None
         return ConstantInitializer(init)
-    elif inspect.isfunction(init):
+    elif inspect.isfunction(init) or inspect.ismethod(init):
         if not allow_generators and inspect.isgeneratorfunction(init):
             raise ValueError("Generator functions are not allowed")
         # Historically pyomo.core.base.misc.apply_indexed_rule
@@ -175,7 +175,12 @@ def Initializer(init,
         # indexed components).  We will preserve that functionality
         # here.
         _args = getargspec(init)
-        if len(_args.args) == 1 and _args.varargs is None:
+        _nargs = len(_args.args)
+        if inspect.ismethod(init) and init.__self__ is not None:
+            # Ignore 'self' for bound instance methods and 'cls' for
+            # @classmethods
+            _nargs -= 1
+        if _nargs == 1 and _args.varargs is None:
             return ScalarCallInitializer(init)
         else:
             return IndexedCallInitializer(init)
@@ -395,8 +400,11 @@ class CountedCallInitializer(InitializerBase):
         # Note that this code will only be called once, and only if
         # the object is not a scalar.
         _args = getargspec(self._fcn)
+        _nargs = len(_args.args)
+        if inspect.ismethod(self._fcn) and self._fcn.__self__ is not None:
+            _nargs -= 1
         _len = len(idx) if idx.__class__ is tuple else 1
-        if _len + 2 == len(_args.args):
+        if _len + 2 == _nargs:
             self._is_counted_rule = True
         else:
             self._is_counted_rule = False

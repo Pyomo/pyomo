@@ -4147,14 +4147,21 @@ class Test(unittest.TestCase):
         e = 100*m.g(1,2.0,'3')
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "300")
+        self.assertEqual(rep.polynomial_degree(), 0)
         rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(rep.polynomial_degree(), 0)
         # The function ID is inconsistent, so we don't do a test
         #self.assertEqual(str(rep.to_expression()), "100*g(0, 1, 2.0, '3')")
 
         e = 100*m.g(1,2.0,'3',m.v)
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "400")
+        self.assertEqual(rep.polynomial_degree(), 0)
         rep = generate_standard_repn(e, compute_values=False)
+        # FIXME: this is a lie: the degree should be 0, but because
+        # compute_falues=False creates a "structural" standard repn, the
+        # computed degree appears to be general nonlinear.
+        self.assertEqual(rep.polynomial_degree(), None)
         # The function ID is inconsistent, so we don't do a test
         #self.assertEqual(str(rep.to_expression()), "100*g(0, 1, 2.0, '3', v)")
 

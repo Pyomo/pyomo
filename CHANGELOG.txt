@@ -3,6 +3,68 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 5.7.1   15 Sep 2020
+-------------------------------------------------------------------------------
+
+- General
+  - Add functions for checking the solver termination condition to environ (#1540)
+  - Remove appdirs dependency (#1558)
+  - Setting version number for new deprecation warnings (#1524)
+  - Add generic tarball creation to GitHub Actions Workflow for creating Wheels 
+    (#1522)
+  - Deprecate pyomo install-extras (#1521)
+  - Add test to monitor 'import pyomo.environ' time (#1577)
+  - Move ComponentMap and ComponentSet to pyomo.common.collections (#1593)
+  - Fix issue when parsing /etc/os-release (#1603)
+  - Fix deprecation decorator tests (#1629)
+- Core
+  - Add a logical expression system (#1507)
+  - Resolve table formatting with unicode character data (#1530)
+  - Fix Model.compute_statistics method (#1553)
+  - Deprecate CUID targets in add_slack_variables transformation (#1563)
+  - Defer import of sympy in the cnf_walker (#1576)
+  - Minor fixes to units (#1582, #1584)
+  - Add IndexedSet.data method that was mistakenly removed (#1609)
+  - Add support for class method initializers (#1608)
+  - Rework constraint initialization (#1592)
+  - Remove truthiness assumption for sequence in TuplizeValuesInitializer (#1620)
+  - Add deprecated support for Var(within=RealSet) (#1619)
+  - Fix standard repn of external functions with fixed arguments (#1623)
+- Solver Interfaces
+  - Use Baron option to more consistently return duals (#1538)
+  - Add direct and persistent interfaces to Xpress (#1443)
+  - Augment persistent solver interfaces to support column generation (#1568)
+- DAE Updates
+  - Add options to solve_consistent_initial_conditions (#1534, #1606)
+  - Add find_nearest_index method to ContinuousSet (#1559)
+  - Allow flattening of ctypes other than Var (#1583)
+- GDP Updates
+  - Fix a couple bugs in GDP basic steps (#1532)
+  - Make key for calculated M values in bigM dictionary consistent (#1618)
+- Testing
+  - Fix to retry codecov upload if codecov.sh script fails (#1539)
+  - Update to GitHub Actions tests to fix an OSX Python environment failure (#1555)
+  - Allow failing codecov uploads on GitHub Actions tests (#1561)
+  - Add doctests to the GitHub Actions builds (#1542)
+  - Add manual job trigger for GitHub Actions Workflows (#1578)
+  - Rebuild GitHub Actions download caches (#1598)
+  - Disable OS package cache for OSX (#1625)
+- Documentation
+  - Clean up some old documentation on sparse sets (#1545)
+  - Remove OnlineDocs spy files from the repository (#1549)
+  - Resolve RTD documentation build warnings (#1552)
+  - Fix typo in code snippet (#1624)
+  - Update contribution guide (#1621)
+- Contributed Packages
+  - Defer the Z3 availability check in the satsolver (#1529)
+  - MindtPy: add configuration arguments, bug fixes (#1500)
+  - Parmest: fix solver options typo, update graphics module (#1531, #1622) 
+  - PyNumero: Add scaling to Cyipopt interface, set AMPLFUNC before loading NL 
+    files, improve MPI matvec performance (#1554, #1546, #1610)
+  - Fix bugs in sensitivity toolbox (#1536, #1574)
+  - Add integer arithmetic option to FME transformation (#1594)
+
+-------------------------------------------------------------------------------
 Pyomo 5.7.0   19 Jun 2020
 -------------------------------------------------------------------------------
 

@@ -1,13 +1,15 @@
-We are pleased to announce the release of Pyomo 5.7.0. Pyomo is a collection
+We are pleased to announce the release of Pyomo 5.7.1. Pyomo is a collection
 of Python software packages that supports a diverse set of optimization
 capabilities for formulating and analyzing optimization models.
 
 
 The following are highlights of the 5.7 release series:
 
+ - Adding a logical expression system
  - Standardizing component initialization
  - Distribution of Cythonized wheels
  - Reimplementation of the core Set component
+ - Deprecating pyomo-extras
  - Numerous bug fixes
 
 A full list of updates and changes is available in the CHANGELOG.txt

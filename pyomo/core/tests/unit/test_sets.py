@@ -939,13 +939,10 @@ class ArraySet(PyomoModel):
 
     def test_data(self):
         """Check that we can access the underlying set data"""
-        # try:
-        #     self.instance.A.data()
-        # except:
-        #     self.fail("Expected data() method to pass")
-        with self.assertRaisesRegexp(
-                AttributeError, ".*no attribute 'data'"):
+        try:
             self.instance.A.data()
+        except:
+            self.fail("Expected data() method to pass")
 
     def test_dim(self):
         """Check that a simple set has dimension zero for its indexing"""
