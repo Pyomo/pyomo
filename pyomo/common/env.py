@@ -47,7 +47,7 @@ def _load_dll(name, timeout=10):
 
     On some platforms and some DLLs (notably Windows GitHub Actions with
     Python 3.5, 3.6, and 3.7 and the msvcr90.dll) we have observed
-    behavior where the ctypes.CDLL() call hangs indefinitely.  This uses
+    behavior where the ctypes.CDLL() call hangs indefinitely. This uses
     multiprocessing to attempt the import in a subprocess (with a
     timeout) and then only calls the import in the main process if the
     subprocess succeeded.
@@ -55,12 +55,12 @@ def _load_dll(name, timeout=10):
     Performance note: CtypesEnviron only ever attempts to load a DLL
     once (the DLL reference is then held in a class attribute), and this
     interface only spawns the subprocess if ctypes.util.find_library
-    actually locates the target library.  This will have a measurable
+    actually locates the target library. This will have a measurable
     impact on Windows (where the DLLs exist), but not on other platforms.
 
-    The default timeout of 10 is arbitrary.  For simeple situations, 1
-    seems adequate.  However, more complex examples have been observed
-    that needed timeout==5.  Using a default of 10 is simply doubling
+    The default timeout of 10 is arbitrary. For simple situations, 1
+    seems adequate. However, more complex examples have been observed
+    that needed timeout==5. Using a default of 10 is simply doubling
     that observed case.
 
     """
