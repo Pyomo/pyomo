@@ -255,7 +255,6 @@ class MindtPySolver(object):
         solve_data.results.solver.timing = solve_data.timing
         solve_data.results.solver.user_time = solve_data.timing.total
         solve_data.results.solver.wallclock_time = solve_data.timing.total
-
         solve_data.results.solver.iterations = solve_data.mip_iter
         solve_data.results.solver.best_solution_found_time = solve_data.best_solution_found_time
 

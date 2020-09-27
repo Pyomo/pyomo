@@ -5,7 +5,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, time_code
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
@@ -122,8 +122,9 @@ def solve_OA_master(solve_data, config):
         mip_args['add_options'].append('option reslim=%s;' % remaining)
     # elif config.mip_solver == 'glpk':
     #     masteropt.options['timelimit'] = remaining
-    master_mip_results = masteropt.solve(
-        solve_data.mip, tee=config.solver_tee, **mip_args)
+    with time_code(solve_data.timing, 'mip'):
+        master_mip_results = masteropt.solve(
+            solve_data.mip, tee=config.solver_tee, **mip_args)
 
     # if config.single_tree is False and config.add_nogood_cuts is False:
 
