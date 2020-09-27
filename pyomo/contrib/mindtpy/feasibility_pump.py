@@ -18,7 +18,7 @@ def feas_pump_converged(solve_data, config, discrete_only=True):
                     for (nlp_var, milp_var) in
                     zip(solve_data.working_model.MindtPy_utils.variable_list,
                         solve_data.mip.MindtPy_utils.variable_list)
-                    if (not discrete_only) or milp_var.is_binary()))
+                    if (not discrete_only) or milp_var.is_integer()))
 
     return distance <= config.integer_tolerance
 

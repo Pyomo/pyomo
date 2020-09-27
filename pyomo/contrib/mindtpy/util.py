@@ -189,7 +189,7 @@ def generate_Norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     discrete_only -- only optimize on distance between the discrete variables
     TODO: remove setpoint_model
     """
-    var_filter = (lambda v: v[1].is_binary()) if discrete_only \
+    var_filter = (lambda v: v[1].is_integer()) if discrete_only \
         else (lambda v: True)
 
     model_vars, setpoint_vars = zip(*filter(var_filter,
@@ -211,7 +211,7 @@ def generate_Norm1_objective_function(model, setpoint_model, discrete_only=False
     TODO: remove setpoint_model
     """
 
-    var_filter = (lambda v: v.is_binary()) if discrete_only \
+    var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: True)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
@@ -242,7 +242,7 @@ def generate_NormInf_objective_function(model, setpoint_model, discrete_only=Fal
     TODO: remove setpoint_model
     """
 
-    var_filter = (lambda v: v.is_binary()) if discrete_only \
+    var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: True)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
