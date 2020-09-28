@@ -17,6 +17,7 @@ from pyomo.environ import Var, Constraint, value
 from pyomo.core.base.var import _VarData
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base.block import _BlockData, declare_custom_block
+import pyomo.environ as pyo
 
 """
 This module is used for interfacing an external model (e.g., compiled code)
@@ -87,7 +88,26 @@ class ExternalGreyBoxModel(object):
         evaluate_derivatives.
         """
         pass
+
+    def get_equality_constraint_scaling_factors(self):
+        """
+        This method is called by the solver interface to get desired
+        values for scaling the equality constraints. None means no
+        scaling is desired. Note that, depending on the solver,
+        one may need to set solver options so these factors are used
+        """
+        return None
     
+    def get_output_constraint_scaling_factors(self):
+        """
+        This method is called by the solver interface to get desired
+        values for scaling the constraints with output variables. Returning
+        None means that no scaling of the output constraints is desired.
+        Note that, depending on the solver, one may need to set solver options
+        so these factors are used
+        """
+        return None
+
     @abc.abstractmethod
     def evaluate_equality_constraints(self):
         """
@@ -164,8 +184,8 @@ class ExternalGreyBoxBlockData(_BlockData):
         return _ExternalGreyBoxHelper(self, pyomo_nlp)
 
 
-class _ExternalGreyBoxHelper(object):
-    def __init__(self, ex_grey_box_block, pyomo_nlp, debug_check_structure=False):
+class _ExternalGreyBoxModelHelper(object):
+    def __init__(self, ex_grey_box_block, pyomo_nlp):
         """
         This helper takes an ExternalGreyBoxModel and provides the residual
         and Jacobian computation.
