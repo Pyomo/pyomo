@@ -160,7 +160,7 @@ class CPLEXDirect(DirectSolver):
                 for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=False, active=True, sort=False):
                     var.stale = True
         _log_file = self._log_file
-        if self.version() >= (12, 10):
+        if self.version() >= (12, 9):
             _log_file = open(self._log_file, 'w')
         try:
             if self._tee:
@@ -240,7 +240,7 @@ class CPLEXDirect(DirectSolver):
             t1 = time.time()
             self._wallclock_time = t1 - t0
         finally:
-            if self.version() >= (12, 10):
+            if self.version() >= (12, 9):
                 _log_file.close()
 
         # FIXME: can we get a return code indicating if CPLEX had a significant failure?
