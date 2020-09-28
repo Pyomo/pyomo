@@ -161,7 +161,26 @@ class ExternalGreyBoxBlockData(_BlockData):
         return self._output_names is not None
 
 class _ExternalGreyBoxHelper(object):
-    def __init__(self, ex_grey_box_block, pyomo_nlp):
+    def __init__(self, ex_grey_box_block, pyomo_nlp, debug_check_structure=False):
+        """
+        This helper takes an ExternalGreyBoxModel and provides the residual
+        and Jacobian computation.
+
+        The ExternalGreyBoxModel provides an interface that supports equality
+        constraints (pure residuals) and output equations. Let u be the inputs,
+        o be the outputs, and x be the full set of primal variables
+        from the entire pyomo_nlp.
+
+        With this, the ExternalGreyBoxModel provides the residual computations
+        w_eq(u), and w_o(u), as well as the Jacobians, Jw_eq(u), and Jw_o(u). This
+        helper provides h(x)=0, where h(x) = [h_eq(x); h_o(x)-o] and 
+        h_eq(x)=w_eq(Pu*x), and h_o(x)=w_o(Pu*x), and Pu is a mapping from the full primal 
+        variables "x" to the inputs "u".
+
+        It also provides the Jacobian of h w.r.t. x.
+           J_h(x) = [Jw_eq(Pu*x); Jw_o(Pu*x)-Po*x]
+        where Po is a mapping from the full primal variables "x" to the outputs "o".
+        """
         self._block = ex_grey_box_block
         self._ex_model = ex_grey_box_block.get_external_model()
         n_inputs = len(self._block.inputs)
@@ -210,50 +229,65 @@ class _ExternalGreyBoxHelper(object):
             -1.0*np.ones(n_outputs)
         
     def set_primals(self, primals):
-        # split the full primal vector into the "inputs" vector
-        # get a numpy vector of the input values
-        # to send to the external model
+        # map the full primals "x" to the inputs "u" and set
+        # the values on the external model 
         input_values = primals[self._inputs_to_primals_map]
         self._ex_model.set_input_values(input_values)
 
+        # map the full primals "x" to the outputs "o" and
         # store a vector of the current output values to
         # use when evaluating residuals
         self._output_values = primals[self._outputs_to_primals_map]
 
     def evaluate_residuals(self):
-        # evalute the equality constraints and the outputs
-        # return a single vector of residuals
+        # evalute the equality constraints and the output equations
+        # and return a single vector of residuals
+        # returns residual for h(x)=0, where h(x) = [h_eq(x); h_o(x)-o]
         eq_con_resid = self._ex_model.evaluate_equality_constraints()
         computed_output_values = self._ex_model.evaluate_outputs()
         output_resid = computed_output_values - self._output_values
         return np.concatenate(eq_con_resid, output_resid)
         
     def evaluate_jacobian(self):
+        # compute the jacobian of h(x) w.r.t. x
+        # J_h(x) = [Jw_eq(Pu*x); Jw_o(Pu*x)-Po*x]
+
+        # Jw_eq(x)
         eq_jac = None
         if self._ex_model.has_equality_constraints():
             eq_jac = self._ex_model.evaluate_jacobian_equality_constraints()
+            # map the columns from the inputs "u" back to the full primals "x"
             eq_jac.col = self._eq_jac_jcol_for_primals
 
         outputs_jac = None
         if self._ex_model.has_outputs():
             outputs_jac = evaluate_jacobian_outputs()
             row = outputs_jac.row
+            # map the columns from the inputs "u" back to the full primals "x"
             col = self._outputs_jac_jcol_for_primals
             data = outputs_jac.data
+            # add the additional entries for the -Po*x portion of the jacobian
             row = np.concatenate(row, self._additional_output_entries_irow)
             col = np.concatenate(col, self._additional_output_entries_jcol)
             data  = np.concatenate(data, self._additional_output_entries_data)
 
         jac = None
         if eq_jac is not None and outputs_jac is not None:
+            # create a jacobian with both Jw_eq and Jw_o
             jac = BlockMatrix(2,1)
             jac.name = 'external model jacobian'
             jac.set_block(0,0,eq_jac)
             jac.set_block(1,0,outputs_jac)
         elif eq_jac is not None:
+            assert self._ex_model.has_outputs() == False
+            assert self._ex_model.has_equality_constraints() == True
+            # only need the Jacobian with Jw_eq (there are not output equations)
             jac = eq_jac
         else:
+            assert self._ex_model.has_outputs() == False
+            assert self._ex_model.has_equality_constraints() == True
             assert outputs_jac is not None
+            # only need the Jacobian with Jw_o (there are no equalities)
             jac = outputs_jac
 
         return jac
