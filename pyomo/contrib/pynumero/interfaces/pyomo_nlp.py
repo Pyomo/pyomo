@@ -363,12 +363,28 @@ class PyomoGreyboxNLP(PyomoNLP):
         self._greybox_primals_ub.flags.writable = False
         self._init_greybox_primals.flags.writable = False
 
+        # FIXME: calculate the number of external constraints
+        # FIXME: calculate the Jacobian NNZ
+
+        # FIXME: do something with the duals for the external function
+        # constraints
+
+        # TODO: initialize these to zero so that we don't have to
+        # recreate the object each time.  This would require
+        # re-implementing the _evaluate* methods
+        self._cached_greybox_cons = None
+        self._cached_greybox_jac = None
+
+        self._invalidate_greybox_primals_cache()
         # Now that we know the total number of columns, create the
         # necessary greybox helper objects
         self._external_greybox_helpers.extend(
             data.get_nlp_interface_helper(self) for data in greybox_data)
 
 
+    def _invalidate_greybox_primals_cache(self):
+        self._greybox_cons_cached = False
+        self._greybox_jac_cached = False
 
     # overloaded from AslNLP
     def n_primals(self):
@@ -453,7 +469,10 @@ class PyomoGreyboxNLP(PyomoNLP):
         super(PyomoGreyboxNLP, self).set_primals(
             primals[:-self._n_greybox_primals])
         np.copyto(self._greybox_primals, primals[-self._n_greybox_primals:])
-        self._distribute_primals(primals) # invalidates output caches
+
+        self._invalidate_greybox_primals_cache()
+        for external in self._external_greybox_helpers:
+            external.set_primals(primals)
 
     # overloaded from AslNLP
     def get_primals(self):
@@ -505,6 +524,15 @@ class PyomoGreyboxNLP(PyomoNLP):
 
     """
 
+    def _evaluate_greybox_constraints_and_cache_if_necessary(self):
+        if self._greybox_cons_cached:
+            return
+
+        self._cached_greybox_cons = np.concatenate(tuple(
+            external.evaluate_residuals()
+            for external in self._external_greybox_helpers))
+        self._greybox_cons_cached = True
+
     # overloaded from AslNLP
     def evaluate_constraints(self, out=None):
         self._evaluate_greybox_constraints_and_cache_if_necessary()
@@ -518,12 +546,12 @@ class PyomoGreyboxNLP(PyomoNLP):
                     'size {}'.format(self.n_constraints()))
             super(PyomoGreyboxNLP, self).evaluate_constraints(
                 out[:-self._n_greybox_cons])
-            np.copyto(out[-self._n_greybox_cons:], self._cached_greybox_con)
+            np.copyto(out[-self._n_greybox_cons:], self._cached_greybox_cons)
             return out
         else:
             return np.concatenate((
                 super(PyomoGreyboxNLP, self).evaluate_constraints(),
-                self._cached_greybox_con,
+                self._cached_greybox_cons,
             ))
 
     # overloaded from AslNLP
@@ -539,10 +567,83 @@ class PyomoGreyboxNLP(PyomoNLP):
                     'size {}'.format(self.n_eq_constraints()))
             super(PyomoGreyboxNLP, self).evaluate_eq_constraints(
                 out[:-self._n_greybox_cons])
-            np.copyto(out[-self._n_greybox_cons:], self._cached_greybox_con)
+            np.copyto(out[-self._n_greybox_cons:], self._cached_greybox_cons)
             return out
         else:
             return np.concatenate((
                 super(PyomoGreyboxNLP, self).evaluate_eq_constraints(),
-                self._cached_greybox_con,
+                self._cached_greybox_cons,
+            ))
+
+
+    def _evaluate_greybox_jacobians_and_cache_if_necessary(self):
+        if self._greybox_jac_cached:
+            return
+
+        jac = BlockMatrix(len(self._external_greybox_helpers), 1)
+        for i, external in enumerate(self._external_greybox_helpers):
+            jac.set_block(i, 0, external.evaluate_jacobian())
+        self._cached_greybox_jac = jaac.tocoo()
+        self._greybox_jac_cached = True
+
+    # overloaded from AslNLP
+    def evaluate_jacobian(self, out=None):
+        self._evaluate_greybox_jacobians_and_cache_if_necessary()
+
+        if out is not None:
+            if ( not isinstance(out, coo_matrix)
+                 or out.shape[0] != self.n_constraints()
+                 or out.shape[1] != self.n_primals()
+                 or out.nnz != self.nnz_jacobian() ):
+                raise RuntimeError(
+                    'evaluate_jacobian called with an "out" argument'
+                    ' that is invalid. This should be a coo_matrix with'
+                    ' shape=({},{}) and nnz={}'
+                    .format(self.n_constraints(), self.n_primals(),
+                            self.nnz_jacobian()))
+            super(PyomoGreyboxNLP, self).evaluate_jacobian(
+                coo_matrix((out.data[:-self._nnz_greybox_jac],
+                            (out.row[:-self._nnz_greybox_jac],
+                             out.col[:-self._nnz_greybox_jac])))
+            )
+            np.copyto(out.data[-self._nnz_greybox_jac],
+                      self._cached_greybox_jac.data)
+            return out
+        else:
+            base = super(PyomoGreyboxNLP, self).evaluate_jacobian()
+            return coo_matrix((
+                np.concatenate((base.data, self._cached_greybox_jac.data)),
+                ( np.concatenate((base.row, self._cached_greybox_jac.row)),
+                  np.concatenate((base.col, self._cached_greybox_jac.col)) )
+            ))
+
+    # overloaded from AslNLP
+    def evaluate_jacobian_eq(self, out=None):
+        self._evaluate_greybox_jacobians_and_cache_if_necessary()
+
+        if out is not None:
+            if ( not isinstance(out, coo_matrix)
+                 or out.shape[0] != self.n_eq_constraints()
+                 or out.shape[1] != self.n_primals()
+                 or out.nnz != self.nnz_jacobian_eq() ):
+                raise RuntimeError(
+                    'evaluate_jacobian called with an "out" argument'
+                    ' that is invalid. This should be a coo_matrix with'
+                    ' shape=({},{}) and nnz={}'
+                    .format(self.n_eq_constraints(), self.n_primals(),
+                            self.nnz_jacobian_eq()))
+            super(PyomoGreyboxNLP, self).evaluate_jacobian_eq(
+                coo_matrix((out.data[:-self._nnz_greybox_jac],
+                            (out.row[:-self._nnz_greybox_jac],
+                             out.col[:-self._nnz_greybox_jac])))
+            )
+            np.copyto(out.data[-self._nnz_greybox_jac],
+                      self._cached_greybox_jac.data)
+            return out
+        else:
+            base = super(PyomoGreyboxNLP, self).evaluate_jacobian_eq()
+            return coo_matrix((
+                np.concatenate((base.data, self._cached_greybox_jac.data)),
+                ( np.concatenate((base.row, self._cached_greybox_jac.row)),
+                  np.concatenate((base.col, self._cached_greybox_jac.col)) )
             ))
