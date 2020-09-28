@@ -129,7 +129,7 @@ class ExternalGreyBoxModel(object):
     # ToDo: Hessians not yet handled
 
 
-@declare_custom_block(name='ExternalGreyBoxBlock')
+@declare_custom_block(name='ExternalGreyBoxBlock', new_ctype=True)
 class ExternalGreyBoxBlockData(_BlockData):
 
     # TODO CHANGE THE CTYPE
@@ -159,6 +159,10 @@ class ExternalGreyBoxBlockData(_BlockData):
 
     def has_outputs(self):
         return self._output_names is not None
+
+    def get_nlp_interface_helper(self, pyomo_nlp):
+        return _ExternalGreyBoxHelper(self, pyomo_nlp)
+
 
 class _ExternalGreyBoxHelper(object):
     def __init__(self, ex_grey_box_block, pyomo_nlp, debug_check_structure=False):
@@ -272,27 +276,29 @@ class _ExternalGreyBoxHelper(object):
             data  = np.concatenate(data, self._additional_output_entries_data)
 
         jac = None
-        if eq_jac is not None and outputs_jac is not None:
-            # create a jacobian with both Jw_eq and Jw_o
-            jac = BlockMatrix(2,1)
-            jac.name = 'external model jacobian'
-            jac.set_block(0,0,eq_jac)
-            jac.set_block(1,0,outputs_jac)
-        elif eq_jac is not None:
-            assert self._ex_model.has_outputs() == False
-            assert self._ex_model.has_equality_constraints() == True
-            # only need the Jacobian with Jw_eq (there are not output equations)
-            jac = eq_jac
+        if eq_jac is not None:
+            if outputs_jac is not None:
+                # create a jacobian with both Jw_eq and Jw_o
+                jac = BlockMatrix(2,1)
+                jac.name = 'external model jacobian'
+                jac.set_block(0,0,eq_jac)
+                jac.set_block(1,0,outputs_jac)
+            else:
+                assert not self._ex_model.has_outputs()
+                assert self._ex_model.has_equality_constraints()
+                # only need the Jacobian with Jw_eq (there are not
+                # output equations)
+                jac = eq_jac
         else:
-            assert self._ex_model.has_outputs() == False
-            assert self._ex_model.has_equality_constraints() == True
             assert outputs_jac is not None
+            assert self._ex_model.has_outputs()
+            assert not self._ex_model.has_equality_constraints()
             # only need the Jacobian with Jw_o (there are no equalities)
             jac = outputs_jac
 
         return jac
 
-"""
+'''
 class PyomoExternalCyIpoptCompositeProblem(CyIpoptProblemInterface):
     def __init__(self, pyomo_model):
         """
@@ -548,4 +554,4 @@ class PyomoExternalCyIpoptCompositeProblem(CyIpoptProblemInterface):
     def _ex_io_outputs_from_full_primals(self, primals):
         return primals[self._output_columns]
         #return  np.compress(self._output_x_mask, primals)
-"""
+'''

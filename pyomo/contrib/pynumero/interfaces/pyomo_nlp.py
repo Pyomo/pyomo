@@ -42,24 +42,33 @@ class PyomoNLP(AslNLP):
         pyutilib.services.TempfileManager.push()
         try:
             # get the temp file names for the nl file
-            nl_file = pyutilib.services.TempfileManager.create_tempfile(suffix='pynumero.nl')
+            nl_file = pyutilib.services.TempfileManager.create_tempfile(
+                suffix='pynumero.nl')
 
-            # The current AmplInterface code only supports a single objective function
-            # Therefore, we throw an error if there is not one (and only one) active
-            # objective function. This is better than adding a dummy objective that the
-            # user does not know about (since we do nnot have a good place to remove
-            # this objective later
-            # TODO: extend the AmplInterface and the AslNLP to correctly handle this
+            # The current AmplInterface code only supports a single
+            # objective function Therefore, we throw an error if there
+            # is not one (and only one) active objective function. This
+            # is better than adding a dummy objective that the user does
+            # not know about (since we do nnot have a good place to
+            # remove this objective later
+            #
+            # TODO: extend the AmplInterface and the AslNLP to correctly
+            # handle this
+            #
             # This currently addresses issue #1217
-            objectives = list(pyomo_model.component_data_objects(ctype=aml.Objective, active=True, descend_into=True))
+            objectives = list(pyomo_model.component_data_objects(
+                ctype=aml.Objective, active=True, descend_into=True))
             if len(objectives) != 1:
-                raise NotImplementedError('The ASL interface and PyomoNLP in PyNumero currently only support single objective'
-                                          ' problems. Deactivate any extra objectives you may have, or add a dummy objective'
-                                          ' (f(x)=0) if you have a square problem.')
+                raise NotImplementedError(
+                    'The ASL interface and PyomoNLP in PyNumero currently '
+                    'only support single objective problems. Deactivate '
+                    'any extra objectives you may have, or add a dummy '
+                    'objective (f(x)=0) if you have a square problem.')
             self._objective = objectives[0]
 
             # write the nl file for the Pyomo model and get the symbolMap
-            fname, symbolMap = pyomo.opt.WriterFactory('nl')(pyomo_model, nl_file, lambda x:True, {})
+            fname, symbolMap = pyomo.opt.WriterFactory('nl')(
+                pyomo_model, nl_file, lambda x:True, {})
 
             # create component maps from vardata to idx and condata to idx
             self._vardata_to_idx = vdidx = ComponentMap()
@@ -89,6 +98,7 @@ class PyomoNLP(AslNLP):
         finally:
             # delete the nl file
             pyutilib.services.TempfileManager.pop()
+
 
     def pyomo_model(self):
         """
@@ -296,3 +306,34 @@ class PyomoNLP(AslNLP):
             submatrix_jcols[i] = submatrix_map[v]
 
         return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(primal_indices_rows), len(primal_indices_cols)))
+
+
+
+class PyomoGreyboxNLP(PyomoNLP):
+    def __init__(self, pyomo_model):
+        self._external_greybox_helpers = []
+        greybox_components = []
+        try:
+            # We support Pynumero's ExternalGreyBoxBlock modeling
+            # objects.  We need to find them and convert them to Blocks
+            # before calling the NL writer so that the attached Vars get
+            # picked up by the writer.
+            for greybox in pyomo_model.component_objects(
+                    ExternalGreyBoxBlock, descend_into=True):
+                greybox.parent_block().reclassify_component_type(greybox, Block)
+                greybox_components.append(greybox)
+
+            super(PyomoGreyboxNLP, self).__init__(pyomo_model)
+
+            for greybox in greybox_components:
+                for greybox_data in greybox.values():
+                    if not greybox_data.active:
+                        continue
+                    self._external_greybox_helpers.append(
+                        greybox_data.get_nlp_interface_helper(pyomo_model))
+
+        finally:
+            # Restore the ctypes of the ExternalGreyBoxBlock components
+            for greybox in greybox_components:
+                greybox.parent_block().reclassify_component_type(
+                    greybox, ExternalGreyBoxBlock)
