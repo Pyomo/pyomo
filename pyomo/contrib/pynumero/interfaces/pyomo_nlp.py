@@ -20,10 +20,11 @@ from scipy.sparse import coo_matrix
 
 import pyutilib
 import pyomo
-import pyomo.environ as aml
+import pyomo.core.base as aml
 from pyomo.common.collections import ComponentMap
 from pyomo.common.env import CtypesEnviron
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
+from .external_grey_box import ExternalGreyBoxBlock
 
 
 __all__ = ['PyomoNLP']
@@ -49,8 +50,8 @@ class PyomoNLP(AslNLP):
             # objective function Therefore, we throw an error if there
             # is not one (and only one) active objective function. This
             # is better than adding a dummy objective that the user does
-            # not know about (since we do nnot have a good place to
-            # remove this objective later
+            # not know about (since we do not have a good place to
+            # remove this objective later)
             #
             # TODO: extend the AmplInterface and the AslNLP to correctly
             # handle this
@@ -311,6 +312,7 @@ class PyomoNLP(AslNLP):
 
 class PyomoGreyboxNLP(PyomoNLP):
     def __init__(self, pyomo_model):
+        self._n_greybox_primals = 0
         self._external_greybox_helpers = []
         greybox_components = []
         try:
@@ -325,15 +327,222 @@ class PyomoGreyboxNLP(PyomoNLP):
 
             super(PyomoGreyboxNLP, self).__init__(pyomo_model)
 
-            for greybox in greybox_components:
-                for greybox_data in greybox.values():
-                    if not greybox_data.active:
-                        continue
-                    self._external_greybox_helpers.append(
-                        greybox_data.get_nlp_interface_helper(pyomo_model))
-
         finally:
             # Restore the ctypes of the ExternalGreyBoxBlock components
             for greybox in greybox_components:
                 greybox.parent_block().reclassify_component_type(
                     greybox, ExternalGreyBoxBlock)
+
+        # Update the primal index map with any variables in the grey
+        # box interfaces that do not otherwise appear in the NL
+        greybox_data = []
+        for greybox in greybox_components:
+            greybox_data.extend(data for data in greybox.values()
+                                if data.active)
+        nPrimals = self.n_primals()
+        greybox_primals = []
+        for data in greybox_data:
+            for var in data.component_data_objects(Var):
+                if var not in self._vardata_to_idx:
+                    self._vardata_to_idx[var] = nPrimals
+                    self._n_greybox_primals += 1
+                    nPrimals += 1
+                    greybox_primals.append(var)
+
+        # Configure the primal data caches
+        self._greybox_primals_lb = np.zeros(self._n_greybox_primals)
+        self._greybox_primals_ub = np.zeros(self._n_greybox_primals)
+        self._init_greybox_primals = np.zeros(self._n_greybox_primals)
+        for i, var in enumerate(greybox_primals):
+            if var.value is not None:
+                self._init_greybox_primals[i] = var.value
+            self._greybox_primals_lb[i] = -np.inf if var.lb is None else var.lb
+            self._greybox_primals_ub[i] = np.inf if var.ub is None else var.ub
+        self._greybox_primals = self._init_greybox_primals.copy()
+        self._greybox_primals_lb.flags.writable = False
+        self._greybox_primals_ub.flags.writable = False
+        self._init_greybox_primals.flags.writable = False
+
+        # Now that we know the total number of columns, create the
+        # necessary greybox helper objects
+        self._external_greybox_helpers.extend(
+            data.get_nlp_interface_helper(self) for data in greybox_data)
+
+
+
+    # overloaded from AslNLP
+    def n_primals(self):
+        super(PyomoGreyboxNLP, self).n_primals() \
+            + self._n_greybox_primals
+
+    # overloaded from AslNLP
+    def n_constraints(self):
+        return super(PyomoGreyboxNLP, self).n_constraints() \
+            + self._n_greybox_cons
+
+    # overloaded from AslNLP
+    def n_eq_constraints(self):
+        return super(PyomoGreyboxNLP, self).n_eq_constraints() \
+            + self._n_greybox_cons
+
+    # overloaded from AslNLP
+    def nnz_jacobian(self):
+        return super(PyomoGreyboxNLP, self).nnz_jacobian() \
+            + self._nnz_greybox_jac
+
+    # overloaded from AslNLP
+    def nnz_jacobian_eq(self):
+        return super(PyomoGreyboxNLP, self).nnz_jacobian_eq() \
+            + self._nnz_greybox_jac
+
+    # overloaded from AslNLP
+    def nnz_hessian_lag(self):
+        raise NotImplementedError()
+
+    # overloaded from AslNLP
+    def primals_lb(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).primals_lb(),
+            self._greybox_primals_lb,
+        ))
+
+    # overloaded from AslNLP
+    def primals_ub(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).primals_ub(),
+            self._greybox_primals_ub,
+        ))
+
+    # overloaded from AslNLP
+    def constraints_lb(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).constraints_lb(),
+            np.zeros(self._n_greybox_cons, dtype=np.float64),
+        ))
+
+    # overloaded from AslNLP
+    def constraints_ub(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).constraints_ub(),
+            np.zeros(self._n_greybox_cons, dtype=np.float64),
+        ))
+
+    # overloaded from AslNLP
+    def init_primals(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).init_primals(),
+            self._init_greybox_primals,
+        ))
+
+    # overloaded from AslNLP
+    def init_duals(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).init_duals(),
+            self._init_greybox_duals,
+        ))
+
+    # overloaded from AslNLP
+    def init_duals_eq(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).init_duals(),
+            self._init_greybox_duals,
+        ))
+
+    # overloaded from AslNLP
+    def set_primals(self, primals):
+        super(PyomoGreyboxNLP, self).set_primals(
+            primals[:-self._n_greybox_primals])
+        np.copyto(self._greybox_primals, primals[-self._n_greybox_primals:])
+        self._distribute_primals(primals) # invalidates output caches
+
+    # overloaded from AslNLP
+    def get_primals(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).get_primals(),
+            self._greybox_primals,
+        ))
+
+    # overloaded from AslNLP
+    def set_duals(self, duals):
+        self._invalidate_greybox_duals_cache()
+        super(PyomoGreyboxNLP, self).set_duals(
+            duals[:-self._n_greybox_cons])
+        np.copyto(self._greybox_duals, duals[-self._n_greybox_cons:])
+
+    # overloaded from AslNLP
+    def get_duals(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).get_duals(),
+            self._greybox_duals,
+        ))
+
+    # overloaded from AslNLP
+    def set_duals_eq(self, duals):
+        self._invalidate_greybox_duals_cache()
+        super(PyomoGreyboxNLP, self).set_duals_eq(
+            duals[:-self._n_greybox_cons])
+        np.copyto(self._greybox_duals, duals[-self._n_greybox_cons:])
+
+    # overloaded from AslNLP
+    def get_duals_eq(self):
+        return np.concatenate((
+            super(PyomoGreyboxNLP, self).get_duals_eq(),
+            self._greybox_duals,
+        ))
+
+    """
+    # overloaded from AslNLP
+    def get_primals_scaling(self):
+        raise NotImplementedError()
+
+    # overloaded from AslNLP
+    def get_constraints_scaling(self):
+        raise NotImplementedError()
+
+    # overloaded from AslNLP
+    def get_eq_constraints_scaling(self):
+        raise NotImplementedError()
+
+    """
+
+    # overloaded from AslNLP
+    def evaluate_constraints(self, out=None):
+        self._evaluate_greybox_constraints_and_cache_if_necessary()
+
+        if out is not None:
+            if not isinstance(out, np.ndarray) \
+               or out.size != self.n_constraints():
+                raise RuntimeError(
+                    'Called evaluate_constraints with an invalid'
+                    ' "out" argument - should take an ndarray of '
+                    'size {}'.format(self.n_constraints()))
+            super(PyomoGreyboxNLP, self).evaluate_constraints(
+                out[:-self._n_greybox_cons])
+            np.copyto(out[-self._n_greybox_cons:], self._cached_greybox_con)
+            return out
+        else:
+            return np.concatenate((
+                super(PyomoGreyboxNLP, self).evaluate_constraints(),
+                self._cached_greybox_con,
+            ))
+
+    # overloaded from AslNLP
+    def evaluate_eq_constraints(self, out=None):
+        self._evaluate_greybox_constraints_and_cache_if_necessary()
+
+        if out is not None:
+            if not isinstance(out, np.ndarray) \
+               or out.size != self.n_eq_constraints():
+                raise RuntimeError(
+                    'Called evaluate_eq_constraints with an invalid'
+                    ' "out" argument - should take an ndarray of '
+                    'size {}'.format(self.n_eq_constraints()))
+            super(PyomoGreyboxNLP, self).evaluate_eq_constraints(
+                out[:-self._n_greybox_cons])
+            np.copyto(out[-self._n_greybox_cons:], self._cached_greybox_con)
+            return out
+        else:
+            return np.concatenate((
+                super(PyomoGreyboxNLP, self).evaluate_eq_constraints(),
+                self._cached_greybox_con,
+            ))
