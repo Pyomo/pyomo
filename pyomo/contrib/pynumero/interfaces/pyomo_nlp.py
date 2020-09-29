@@ -313,11 +313,11 @@ class PyomoNLP(AslNLP):
 
 class PyomoGreyBoxNLP(PyomoNLP):
     def __init__(self, pyomo_model):
-        # number of additional variables required - they are in the greybox models
-        # but not included in the NL file
+        # number of additional variables required - they are in the
+        # greybox models but not included in the NL file
         self._n_greybox_primals = 0
-        # number of residuals (equality constraints + output constraints coming from
-        # the grey box models
+        # number of residuals (equality constraints + output constraints
+        # coming from the grey box models
         self._n_greybox_constraints = 0
         self._external_greybox_helpers = []
 
@@ -330,7 +330,8 @@ class PyomoGreyBoxNLP(PyomoNLP):
             # picked up by the writer.
             for greybox in pyomo_model.component_objects(
                     ExternalGreyBoxBlock, descend_into=True):
-                greybox.parent_block().reclassify_component_type(greybox, aml.Block)
+                greybox.parent_block().reclassify_component_type(
+                    greybox, aml.Block)
                 greybox_components.append(greybox)
 
             super(PyomoGreyBoxNLP, self).__init__(pyomo_model)
@@ -349,9 +350,10 @@ class PyomoGreyBoxNLP(PyomoNLP):
                                 if data.active)
 
         if self.n_primals() == 0:
-            raise ValueError("No variables were found in the Pyomo part of the model."
-                             " PyomoGreyBoxModel requires at least one variable"
-                             " to be active in a Pyomo objective or constraint")
+            raise ValueError(
+                "No variables were found in the Pyomo part of the model."
+                " PyomoGreyBoxModel requires at least one variable"
+                " to be active in a Pyomo objective or constraint")
         
         # Update the primal index map with any variables in the
         # greybox models that do not otherwise appear in the NL
@@ -440,7 +442,8 @@ class PyomoGreyBoxNLP(PyomoNLP):
 
     # overloaded from AslNLP
     def nnz_hessian_lag(self):
-        raise NotImplementedError("PyomoGreyBoxNLP does not currently supports Hessians")
+        raise NotImplementedError(
+            "PyomoGreyBoxNLP does not currently supports Hessians")
 
     # overloaded from AslNLP
     def primals_lb(self):

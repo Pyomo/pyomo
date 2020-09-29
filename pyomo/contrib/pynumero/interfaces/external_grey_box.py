@@ -14,26 +14,33 @@ from pyomo.environ import Var, Constraint, value
 from pyomo.core.base.block import _BlockData, declare_custom_block
 import pyomo.environ as pyo
 
-"""
-This module is used for interfacing an external model (e.g., compiled code)
-with a Pyomo model and then solve the composite model with CyIpopt.
+"""This module is used for interfacing an external model (e.g., compiled
+code) with a Pyomo model and then solve the composite model with
+CyIpopt.
 
 To use this interface:
    * inherit from ExternalGreyBoxModel and implement the necessary methods
-   * create a CyIpoptCompositeExtProblemInterface object, giving it your pyomo model, an
-     instance of the derived ExternalGreyBoxModel, a list of the Pyomo variables
-     that map to the inputs of the external model, and a list of the Pyomo variables
-     that map to any outputs from the external model.
+
+   * create a CyIpoptCompositeExtProblemInterface object, giving it your
+     pyomo model, an instance of the derived ExternalGreyBoxModel, a
+     list of the Pyomo variables that map to the inputs of the external
+     model, and a list of the Pyomo variables that map to any outputs
+     from the external model.
+
    * The standard CyIpopt solver interface can be called using the 
      CyIpoptCompositeExtProblemInterface.
 
 See the PyNumero tests for this interface to see an example of use.
 
 Todo:
-   * Currently, you cannot "fix" a pyomo variable that corresponds to an input or output
-     and you must use a constraint instead (this is because Pyomo removes fixed variables
-     before sending them to the solver)
+
+   * Currently, you cannot "fix" a pyomo variable that corresponds to an
+     input or output and you must use a constraint instead (this is
+     because Pyomo removes fixed variables before sending them to the
+     solver)
+
    * Remove the dummy variable and constraint if possible
+
 """
 
 @six.add_metaclass(abc.ABCMeta)
@@ -163,13 +170,16 @@ class ExternalGreyBoxBlockData(_BlockData):
 
         self._input_names = ex_model.input_names()
         if self._input_names is None or len(self._input_names) == 0:
-            raise ValueError('No input_names specified for external_grey_box_model.'
-                             ' Must specify at least one input.')
+            raise ValueError(
+                'No input_names specified for external_grey_box_model.'
+                ' Must specify at least one input.')
         self.inputs = pyo.Var(self._input_names)
 
         self._equality_constraint_names = ex_model.equality_constraint_names()
         self._output_names = ex_model.output_names()
-        self.outputs = pyo.Var(self._output_names) # Note, this works even if output_names is an empty list
+
+        # Note, this works even if output_names is an empty list
+        self.outputs = pyo.Var(self._output_names)
 
     def get_external_model(self):
         return self._ex_model
@@ -180,24 +190,26 @@ class ExternalGreyBoxBlockData(_BlockData):
 
 class _ExternalGreyBoxModelHelper(object):
     def __init__(self, ex_grey_box_block, pyomo_nlp):
-        """
-        This helper takes an ExternalGreyBoxModel and provides the residual
+        """This helper takes an ExternalGreyBoxModel and provides the residual
         and Jacobian computation.
 
-        The ExternalGreyBoxModel provides an interface that supports equality
-        constraints (pure residuals) and output equations. Let u be the inputs,
-        o be the outputs, and x be the full set of primal variables
-        from the entire pyomo_nlp.
+        The ExternalGreyBoxModel provides an interface that supports
+        equality constraints (pure residuals) and output equations. Let
+        u be the inputs, o be the outputs, and x be the full set of
+        primal variables from the entire pyomo_nlp.
 
-        With this, the ExternalGreyBoxModel provides the residual computations
-        w_eq(u), and w_o(u), as well as the Jacobians, Jw_eq(u), and Jw_o(u). This
-        helper provides h(x)=0, where h(x) = [h_eq(x); h_o(x)-o] and 
-        h_eq(x)=w_eq(Pu*x), and h_o(x)=w_o(Pu*x), and Pu is a mapping from the full primal 
+        With this, the ExternalGreyBoxModel provides the residual
+        computations w_eq(u), and w_o(u), as well as the Jacobians,
+        Jw_eq(u), and Jw_o(u). This helper provides h(x)=0, where h(x) =
+        [h_eq(x); h_o(x)-o] and h_eq(x)=w_eq(Pu*x), and
+        h_o(x)=w_o(Pu*x), and Pu is a mapping from the full primal
         variables "x" to the inputs "u".
 
         It also provides the Jacobian of h w.r.t. x.
            J_h(x) = [Jw_eq(Pu*x); Jw_o(Pu*x)-Po*x]
-        where Po is a mapping from the full primal variables "x" to the outputs "o".
+        where Po is a mapping from the full primal variables "x" to the
+        outputs "o".
+
         """
         self._block = ex_grey_box_block
         self._ex_model = ex_grey_box_block.get_external_model()
@@ -221,7 +233,9 @@ class _ExternalGreyBoxModelHelper(object):
 
         if self._ex_model.n_outputs() == 0 and \
            self._ex_model.n_equality_constraints() == 0:
-            raise ValueError('ExternalGreyBoxModel has no equality constraints or outputs. It must have at least one or both.')
+            raise ValueError(
+                'ExternalGreyBoxModel has no equality constraints '
+                'or outputs. It must have at least one or both.')
 
         # we need to change the column indices in the jacobian
         # from the 0..n_inputs provided by the external model
@@ -230,19 +244,24 @@ class _ExternalGreyBoxModelHelper(object):
         self._eq_jac_jcol_for_primals = None
         if self._ex_model.n_equality_constraints() > 0:
             jac = self._ex_model.evaluate_jacobian_equality_constraints()
-            self._eq_jac_jcol_for_primals = np.asarray([self._inputs_to_primals_map[j] for j in jac.col], dtype=np.int64)
+            self._eq_jac_jcol_for_primals = np.asarray(
+                [self._inputs_to_primals_map[j] for j in jac.col],
+                dtype=np.int64)
 
         self._outputs_jac_jcol_for_primals = None
         if self._ex_model.n_outputs() > 0:
             jac = self._ex_model.evaluate_jacobian_outputs()
-            self._outputs_jac_jcol_for_primals = np.asarray([self._inputs_to_primals_map[j] for j in jac.col], dtype=np.int64)
+            self._outputs_jac_jcol_for_primals = np.asarray(
+                [self._inputs_to_primals_map[j] for j in jac.col],
+                dtype=np.int64)
 
         # create the irow, jcol, nnz structure for the
         # output variable portion of h(u)-o=0
         self._additional_output_entries_irow = \
             np.asarray([i for i in range(n_outputs)])
         self._additional_output_entries_jcol = \
-            np.asarray([self._outputs_to_primals_map[j] for j in range(n_outputs)])
+            np.asarray([self._outputs_to_primals_map[j]
+                        for j in range(n_outputs)])
         self._additional_output_entries_data = \
             -1.0*np.ones(n_outputs)
 
@@ -258,7 +277,8 @@ class _ExternalGreyBoxModelHelper(object):
         self._output_values = primals[self._outputs_to_primals_map]
 
     def n_residuals(self):
-        return self._ex_model.n_equality_constraints() + self._ex_model.n_outputs()
+        return self._ex_model.n_equality_constraints() \
+            + self._ex_model.n_outputs()
 
     def evaluate_residuals(self):
         # evalute the equality constraints and the output equations
