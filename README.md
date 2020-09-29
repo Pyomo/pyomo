@@ -12,7 +12,6 @@
 [![a COIN-OR project](https://www.coin-or.org/GitHub/coin-or-badge.png)](https://www.coin-or.org)
 
 ## Pyomo Overview
-
 Pyomo is a Python-based open-source software package that supports a diverse set of optimization capabilities for formulating and analyzing optimization models. Pyomo can be used to define symbolic problems, create concrete problem instances, and solve these instances with standard solvers. Pyomo supports a wide range of problem types, including:
 
  -  Linear programming
