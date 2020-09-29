@@ -184,12 +184,8 @@ class ExternalGreyBoxBlockData(_BlockData):
     def get_external_model(self):
         return self._ex_model
 
-    def get_nlp_interface_helper(self, pyomo_nlp):
-        return _ExternalGreyBoxModelHelper(self, pyomo_nlp)
-
-
 class _ExternalGreyBoxModelHelper(object):
-    def __init__(self, ex_grey_box_block, pyomo_nlp):
+    def __init__(self, ex_grey_box_block, vardata_to_idx, initial_primal_values):
         """This helper takes an ExternalGreyBoxModel and provides the residual
         and Jacobian computation.
 
@@ -218,17 +214,18 @@ class _ExternalGreyBoxModelHelper(object):
 
         # store the map of input indices (0 .. n_inputs) to
         # the indices in the full primals vector
-        self._inputs_to_primals_map = \
-            pyomo_nlp.get_primal_indices([self._block.inputs])
+        self._inputs_to_primals_map = []
+        for k in self._block.inputs:
+            self._inputs_to_primals_map.append(vardata_to_idx[self._block.inputs[k]])
 
         # store the map of output indices (0 .. n_outputs) to
         # the indices in the full primals vector
-        self._outputs_to_primals_map = \
-            pyomo_nlp.get_primal_indices([self._block.outputs])
+        self._outputs_to_primals_map = []
+        for k in self._block.outputs:
+            self._outputs_to_primals_map.append(vardata_to_idx[self._block.outputs[k]])
         
         # setup some structures for the jacobians
-        primal_values = pyomo_nlp.get_primals()
-        input_values = primal_values[self._inputs_to_primals_map]
+        input_values = initial_primal_values[self._inputs_to_primals_map]
         self._ex_model.set_input_values(input_values)
 
         if self._ex_model.n_outputs() == 0 and \

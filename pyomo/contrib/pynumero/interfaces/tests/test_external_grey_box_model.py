@@ -500,12 +500,59 @@ class Test_ExternalGreyBoxModelHelper(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(PressureDropSingleOutput())
+        m.egb.inputs['Pin'].value = 100
+        m.egb.inputs['Pin'].setlb(50)
+        m.egb.inputs['Pin'].setub(150)
+        m.egb.inputs['c'].value = 2
+        m.egb.inputs['c'].setlb(1)
+        m.egb.inputs['c'].setub(5)
+        m.egb.inputs['F'].value = 3
+        m.egb.inputs['F'].setlb(1)
+        m.egb.inputs['F'].setub(5)
+        m.egb.outputs['Pout'].value = 50
+        m.egb.outputs['Pout'].setlb(0)
+        m.egb.outputs['Pout'].setub(100)
         #m.dummy = pyo.Constraint(expr=sum(m.egb.inputs[i] for i in m.egb.inputs) + sum(m.egb.outputs[i] for i in m.egb.outputs) <= 1e6)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
         pyomo_nlp = PyomoGreyBoxNLP(m)
-        n_primals = pyomo_nlp.n_primals()
-        self.assertEqual(n_primals, 4)
-        
+
+        self.assertEqual(4, pyomo_nlp.n_primals())
+        self.assertEqual(1, pyomo_nlp.n_constraints())
+        self.assertEqual(3, pyomo_nlp.nnz_jacobian())
+        with self.assertRaises(NotImplementedError):
+            tmp = pyomo_nlp.nnz_hessian_lag()
+
+        comparison_x_order = ['inputs[Pin]', 'inputs[c]', 'inputs[F]', 'outputs[Pout]']
+        x_order = pyomo_nlp.variable_names()
+        xlb = pyomo_nlp.primals_lb()
+        comparison_xlb = np.asarray([50, 1, 1, 0], dtype=np.float64)
+        check_vectors_specific_order(self, xlb, x_order, comparison_xlb, comparison_x_order)
+        xub = pyomo_nlp.primals_ub()
+        comparison_xub = np.asarray([150, 5, 5, 100], dtype=np.float64)
+        check_vectors_specific_order(self, xub, x_order, comparison_xub, comparison_x_order)
+        comparison_c_order = ['egb.Pout_con']
+        c_order = pyomo_nlp.constraint_names()
+        clb = pyomo_nlp.constraints_lb()
+        comparison_clb = np.asarray([0], dtype=np.float64)
+        check_vectors_specific_order(self, clb, c_order, comparison_clb, comparison_c_order)
+        cub = pyomo_nlp.constraints_ub()
+        comparison_cub = np.asarray([0], dtype=np.float64)
+
+        xinit = pyomo_nlp.init_primals()
+        comparison_xinit = np.asarray([100, 2, 3, 50], dtype=np.float64)
+        check_vectors_specific_order(self, xinit, x_order, comparison_xinit, comparison_x_order)
+        assert False
+
+        # WORKING HERE
+
+def check_vectors_specific_order(tst, v1, v1order, v2, v2order):
+    tst.assertEqual(len(v1), len(v1order))
+    tst.assertEqual(len(v2), len(v2order))
+    tst.assertEqual(len(v1), len(v2))
+    v2map = {s:i for i,s in enumerate(v2order)}
+    for i,s in enumerate(v1order):
+        tst.assertEqual(v1[i], v2[v2map[s]])
+    
 """
     def test_interface(self):
         # weird, this is really a test of the test class above
