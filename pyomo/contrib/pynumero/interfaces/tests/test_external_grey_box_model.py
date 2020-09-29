@@ -495,6 +495,23 @@ class Test_ExternalGreyBoxModelHelper(unittest.TestCase):
         with self.assertRaises(ValueError):
             pyomo_nlp = PyomoGreyBoxNLP(m)
 
+    def test_error_fixed_inputs_outputs(self):
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        m.egb.set_external_model(PressureDropSingleOutput())
+        m.egb.inputs['Pin'].fix(100)
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
+        with self.assertRaises(NotImplementedError):
+            pyomo_nlp = PyomoGreyBoxNLP(m)
+
+        m = pyo.ConcreteModel()
+        m.egb = ExternalGreyBoxBlock()
+        m.egb.set_external_model(PressureDropTwoOutputs())
+        m.egb.outputs['P2'].fix(50)
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
+        with self.assertRaises(NotImplementedError):
+            pyomo_nlp = PyomoGreyBoxNLP(m)
+
     def test_pressure_drop_single_output(self):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()

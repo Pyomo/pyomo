@@ -364,6 +364,20 @@ class PyomoGreyBoxNLP(NLP):
         greybox_primals = []
         self._vardata_to_idx = ComponentMap(self._pyomo_nlp._vardata_to_idx)
         for data in greybox_data:
+            # check that none of the inputs / outputs are fixed
+            for v in six.itervalues(data.inputs):
+                if v.fixed:
+                    raise NotImplementedError('Found a grey box model input that is fixed: {}.'
+                                              ' This interface does not currently support fixed'
+                                              ' variables. Please add a constraint instead.'
+                                              ''.format(v.getname(fully_qualified=True)))
+            for v in six.itervalues(data.outputs):
+                if v.fixed:
+                    raise NotImplementedError('Found a grey box model output that is fixed: {}.'
+                                              ' This interface does not currently support fixed'
+                                              ' variables. Please add a constraint instead.'
+                                              ''.format(v.getname(fully_qualified=True)))
+
             block_name = data.getname()
             for nm in data._ex_model.equality_constraint_names():
                 self._greybox_constraints_names.append('{}.{}'.format(block_name, nm))
