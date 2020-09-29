@@ -12,6 +12,7 @@ import six
 import abc
 from pyomo.environ import Var, Constraint, value
 from pyomo.core.base.block import _BlockData, declare_custom_block
+from scipy.sparse import coo_matrix
 import pyomo.environ as pyo
 
 """This module is used for interfacing an external model (e.g., compiled
@@ -209,6 +210,7 @@ class _ExternalGreyBoxModelHelper(object):
         """
         self._block = ex_grey_box_block
         self._ex_model = ex_grey_box_block.get_external_model()
+        self._n_primals = len(initial_primal_values)
         n_inputs = len(self._block.inputs)
         n_outputs = len(self._block.outputs)
 
@@ -302,10 +304,12 @@ class _ExternalGreyBoxModelHelper(object):
             eq_jac = self._ex_model.evaluate_jacobian_equality_constraints()
             # map the columns from the inputs "u" back to the full primals "x"
             eq_jac.col = self._eq_jac_jcol_for_primals
+            eq_jac = coo_matrix((eq_jac.data, (eq_jac.row, eq_jac.col)), shape=(eq_jac.shape[0], self._n_primals))
 
         outputs_jac = None
         if self._ex_model.n_outputs() > 0:
             outputs_jac = self._ex_model.evaluate_jacobian_outputs()
+
             row = outputs_jac.row
             # map the columns from the inputs "u" back to the full primals "x"
             col = self._outputs_jac_jcol_for_primals
@@ -315,6 +319,7 @@ class _ExternalGreyBoxModelHelper(object):
             row = np.concatenate((row, self._additional_output_entries_irow))
             col = np.concatenate((col, self._additional_output_entries_jcol))
             data  = np.concatenate((data, self._additional_output_entries_data))
+            outputs_jac = coo_matrix((data, (row, col)), shape=(outputs_jac.shape[0], self._n_primals))
 
         jac = None
         if eq_jac is not None:

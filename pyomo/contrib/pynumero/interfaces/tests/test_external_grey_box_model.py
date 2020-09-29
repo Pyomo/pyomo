@@ -517,7 +517,7 @@ class Test_ExternalGreyBoxModelHelper(unittest.TestCase):
 
         self.assertEqual(4, pyomo_nlp.n_primals())
         self.assertEqual(1, pyomo_nlp.n_constraints())
-        self.assertEqual(3, pyomo_nlp.nnz_jacobian())
+        self.assertEqual(4, pyomo_nlp.nnz_jacobian())
         with self.assertRaises(NotImplementedError):
             tmp = pyomo_nlp.nnz_hessian_lag()
 
@@ -587,8 +587,11 @@ class Test_ExternalGreyBoxModelHelper(unittest.TestCase):
         
 
         j = pyomo_nlp.evaluate_jacobian()
-        comparison_j = np.asarray([[1, 2, 3, 4]])
+        comparison_j = np.asarray([[1, -36, -48, -1]])
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
+
+        with self.assertRaises(NotImplementedError):
+            h = pyomo_nlp.evaluate_hessian_lag()
         
         assert False
 
@@ -611,15 +614,16 @@ def check_sparse_matrix_specific_order(tst, m1, m1rows, m1cols, m2, m2rows, m2co
     tst.assertEqual(len(m1cols), len(m2cols))
 
     m1c = m1.todense()
-    m2c = np.zeros(len(m2rows), len(m2cols))
-    rowmap = [m1rows.index(x) for x in m2rows]
-    colmap = [m1cols.index(x) for x in m2cols]
-    m2d = m2.todense()
+    m2c = np.zeros((len(m2rows), len(m2cols)))
+    rowmap = [m2rows.index(x) for x in m1rows]
+    colmap = [m2cols.index(x) for x in m1cols]
     for i in range(len(m1rows)):
         for j in range(len(m1cols)):
-            m2c[i,j] = m2d[rowmap[i], colmap[j]]
-    print(m1c)
-    print(m2c)
+            m2c[i,j] = m2[rowmap[i], colmap[j]]
+
+    #print(m1c)
+    #print(m2c)
+    tst.assertTrue(np.array_equal(m1c, m2c))
 
 """
     def test_interface(self):
