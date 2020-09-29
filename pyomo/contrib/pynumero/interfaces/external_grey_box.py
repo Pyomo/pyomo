@@ -45,6 +45,15 @@ class ExternalGreyBoxModel(object):
     def __init__(self):
         pass
 
+    def n_inputs(self):
+        return len(self.input_names())
+
+    def n_equality_constraints(self):
+        return len(self.equality_constraint_names())
+
+    def n_outputs(self):
+        return len(self.output_names())
+
     @abc.abstractmethod
     def input_names(self):
         """
@@ -59,20 +68,20 @@ class ExternalGreyBoxModel(object):
         """
         Provide the list of string names corresponding to any residuals 
         for this external model. These should be in the order corresponding
-        to values returned from evaluate_residuals.
+        to values returned from evaluate_residuals. Return an empty list
+        if there are no equality constraints.
         """
-        pass
+        return []
 
     @abc.abstractmethod
     def output_names(self):
         """
         Provide the list of string names corresponding to the outputs
         of this external model. These should be in the order corresponding
-        to values returned from evaluate_outputs.
-
-        If there are no outputs, return None
+        to values returned from evaluate_outputs. Return an empty list if there
+        are no computed outputs.
         """
-        pass
+        return []
 
     @abc.abstractmethod
     def set_input_values(self, input_values):
@@ -153,30 +162,20 @@ class ExternalGreyBoxBlockData(_BlockData):
         self._ex_model = ex_model = external_grey_box_model
 
         self._input_names = ex_model.input_names()
-        if self._input_names is None:
-            raise ValueError('input_names() returned None on external_grey_box_model.'
+        if self._input_names is None or len(self._input_names) == 0:
+            raise ValueError('No input_names specified for external_grey_box_model.'
                              ' Must specify at least one input.')
         self.inputs = pyo.Var(self._input_names)
 
         self._equality_constraint_names = ex_model.equality_constraint_names()
-        
         self._output_names = ex_model.output_names()
-        # note, output_names may be None, indicating no output variables
-        # in the model
-        if self._output_names is not None:
-            self.outputs = pyo.Var(self._output_names)
+        self.outputs = pyo.Var(self._output_names) # Note, this works even if output_names is an empty list
 
     def get_external_model(self):
         return self._ex_model
 
-    def has_equality_constraints(self):
-        return self._equality_constraint_names is not None
-
-    def has_outputs(self):
-        return self._output_names is not None
-
     def get_nlp_interface_helper(self, pyomo_nlp):
-        return _ExternalGreyBoxHelper(self, pyomo_nlp)
+        return _ExternalGreyBoxModelHelper(self, pyomo_nlp)
 
 
 class _ExternalGreyBoxModelHelper(object):
@@ -208,35 +207,35 @@ class _ExternalGreyBoxModelHelper(object):
         # store the map of input indices (0 .. n_inputs) to
         # the indices in the full primals vector
         self._inputs_to_primals_map = \
-            pyomo_nlp.get_primals_indices(self._block.inputs)
+            pyomo_nlp.get_primal_indices([self._block.inputs])
 
         # store the map of output indices (0 .. n_outputs) to
         # the indices in the full primals vector
         self._outputs_to_primals_map = \
-            pyomo_nlp.get_primals_indices(self._block.outputs)
+            pyomo_nlp.get_primal_indices([self._block.outputs])
         
         # setup some structures for the jacobians
         primal_values = pyomo_nlp.get_primals()
         input_values = primal_values[self._inputs_to_primals_map]
         self._ex_model.set_input_values(input_values)
 
-        if not self._ex_model.has_outputs() and \
-           not self._ex_model.has_equality_constraints():
-            raise ValueError('ExternalGreyBoxModel has no equality constraints or outputs. It must have one or both.')
+        if self._ex_model.n_outputs() == 0 and \
+           self._ex_model.n_equality_constraints() == 0:
+            raise ValueError('ExternalGreyBoxModel has no equality constraints or outputs. It must have at least one or both.')
 
         # we need to change the column indices in the jacobian
         # from the 0..n_inputs provided by the external model
         # to the indices corresponding to the full Pyomo model
         # so we create that here
         self._eq_jac_jcol_for_primals = None
-        if self._ex_model.has_equality_constraints():
+        if self._ex_model.n_equality_constraints() > 0:
             jac = self._ex_model.evaluate_jacobian_equality_constraints()
-            self._eq_jac_jcol_for_primals = [self._inputs_to_primals_map[j] for j in jac.col]
+            self._eq_jac_jcol_for_primals = np.asarray([self._inputs_to_primals_map[j] for j in jac.col], dtype=np.int64)
 
         self._outputs_jac_jcol_for_primals = None
-        if self._ex_model.has_outputs():
+        if self._ex_model.n_outputs() > 0:
             jac = self._ex_model.evaluate_jacobian_outputs()
-            self._outputs_jac_jcol_for_primals = [self._inputs_to_primals_map[j] for j in jac.col]
+            self._outputs_jac_jcol_for_primals = np.asarray([self._inputs_to_primals_map[j] for j in jac.col], dtype=np.int64)
 
         # create the irow, jcol, nnz structure for the
         # output variable portion of h(u)-o=0
@@ -246,7 +245,7 @@ class _ExternalGreyBoxModelHelper(object):
             np.asarray([self._outputs_to_primals_map[j] for j in range(n_outputs)])
         self._additional_output_entries_data = \
             -1.0*np.ones(n_outputs)
-        
+
     def set_primals(self, primals):
         # map the full primals "x" to the inputs "u" and set
         # the values on the external model 
@@ -258,6 +257,9 @@ class _ExternalGreyBoxModelHelper(object):
         # use when evaluating residuals
         self._output_values = primals[self._outputs_to_primals_map]
 
+    def n_residuals(self):
+        return self._ex_model.n_equality_constraints() + self._ex_model.n_outputs()
+
     def evaluate_residuals(self):
         # evalute the equality constraints and the output equations
         # and return a single vector of residuals
@@ -265,7 +267,7 @@ class _ExternalGreyBoxModelHelper(object):
         eq_con_resid = self._ex_model.evaluate_equality_constraints()
         computed_output_values = self._ex_model.evaluate_outputs()
         output_resid = computed_output_values - self._output_values
-        return np.concatenate(eq_con_resid, output_resid)
+        return np.concatenate((eq_con_resid, output_resid))
         
     def evaluate_jacobian(self):
         # compute the jacobian of h(x) w.r.t. x
@@ -273,22 +275,23 @@ class _ExternalGreyBoxModelHelper(object):
 
         # Jw_eq(x)
         eq_jac = None
-        if self._ex_model.has_equality_constraints():
+        if self._ex_model.n_equality_constraints() > 0:
             eq_jac = self._ex_model.evaluate_jacobian_equality_constraints()
             # map the columns from the inputs "u" back to the full primals "x"
             eq_jac.col = self._eq_jac_jcol_for_primals
 
         outputs_jac = None
-        if self._ex_model.has_outputs():
-            outputs_jac = evaluate_jacobian_outputs()
+        if self._ex_model.n_outputs() > 0:
+            outputs_jac = self._ex_model.evaluate_jacobian_outputs()
             row = outputs_jac.row
             # map the columns from the inputs "u" back to the full primals "x"
             col = self._outputs_jac_jcol_for_primals
             data = outputs_jac.data
+
             # add the additional entries for the -Po*x portion of the jacobian
-            row = np.concatenate(row, self._additional_output_entries_irow)
-            col = np.concatenate(col, self._additional_output_entries_jcol)
-            data  = np.concatenate(data, self._additional_output_entries_data)
+            row = np.concatenate((row, self._additional_output_entries_irow))
+            col = np.concatenate((col, self._additional_output_entries_jcol))
+            data  = np.concatenate((data, self._additional_output_entries_data))
 
         jac = None
         if eq_jac is not None:
@@ -299,15 +302,15 @@ class _ExternalGreyBoxModelHelper(object):
                 jac.set_block(0,0,eq_jac)
                 jac.set_block(1,0,outputs_jac)
             else:
-                assert not self._ex_model.has_outputs()
-                assert self._ex_model.has_equality_constraints()
+                assert self._ex_model.n_outputs() == 0
+                assert self._ex_model.n_equality_constraints() > 0
                 # only need the Jacobian with Jw_eq (there are not
                 # output equations)
                 jac = eq_jac
         else:
             assert outputs_jac is not None
-            assert self._ex_model.has_outputs()
-            assert not self._ex_model.has_equality_constraints()
+            assert self._ex_model.n_outputs() > 0
+            assert self._ex_model.n_equality_constraints() == 0
             # only need the Jacobian with Jw_o (there are no equalities)
             jac = outputs_jac
 
