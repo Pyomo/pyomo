@@ -360,7 +360,7 @@ class PyomoGreyBoxNLP(NLP):
         # Update the primal index map with any variables in the
         # greybox models that do not otherwise appear in the NL
         # and capture some other book keeping items
-        n_primals = self.n_primals()
+        n_primals = self._pyomo_nlp.n_primals()
         greybox_primals = []
         self._vardata_to_idx = ComponentMap(self._pyomo_nlp._vardata_to_idx)
         for data in greybox_data:
@@ -720,15 +720,23 @@ class PyomoGreyBoxNLP(NLP):
             return out
         else:
             base = self._pyomo_nlp.evaluate_jacobian()
+            base = coo_matrix((base.data, (base.row, base.col)), shape=(base.shape[0], self.n_primals()))
+            
+            jac = BlockMatrix(2,1)
+            jac.set_block(0, 0, base)
+            jac.set_block(1, 0, self._cached_greybox_jac)
+            return jac.tocoo()
+
             # TODO: Doesn't this need a "shape" specification?
-            return coo_matrix((
-                np.concatenate((base.data, self._cached_greybox_jac.data)),
-                ( np.concatenate((base.row, self._cached_greybox_jac.row)),
-                  np.concatenate((base.col, self._cached_greybox_jac.col)) )
-            ))
+            #return coo_matrix((
+            #    np.concatenate((base.data, self._cached_greybox_jac.data)),
+            #    ( np.concatenate((base.row, self._cached_greybox_jac.row)),
+            #      np.concatenate((base.col, self._cached_greybox_jac.col)) )
+            #))
 
     # overloaded from ExtendedNLP
     def evaluate_jacobian_eq(self, out=None):
+        raise NotImplementedError()
         self._evaluate_greybox_jacobians_and_cache_if_necessary()
 
         if out is not None:
