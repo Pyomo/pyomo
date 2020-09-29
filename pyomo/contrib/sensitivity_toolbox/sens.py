@@ -22,8 +22,8 @@ from pyomo.opt import SolverFactory
 def sipopt(instance, paramSubList, perturbList,
            cloneModel=True, streamSoln=False, keepfiles=False):
     """This function accepts a Pyomo ConcreteModel, a list of parameters, along
-    with their corresponding perterbation list. The model is then converted
-    into the design structure required to call sipopt to get an approximation
+    with their corresponding perturbation list. The model is then converted
+    into the design structure required to call sipopt to get an approximate
     perturbed solution with updated bounds on the decision variable. 
     
     Parameters
@@ -69,7 +69,7 @@ def sipopt(instance, paramSubList, perturbList,
 
     """
 
-    #Verify User Inputs    
+    # Verify User Inputs    
     if len(paramSubList)!=len(perturbList):
         raise ValueError("Length of paramSubList argument does not equal "
                         "length of perturbList")
@@ -86,12 +86,12 @@ def sipopt(instance, paramSubList, perturbList,
     for pp in perturbList:
         if pp.ctype is not Param:
             raise ValueError("perturbList argument is expecting a list of Params")
-    #Add model block to compartmentalize all sipopt data
+    # Add model block to compartmentalize all sipopt data
     b=Block()
     block_name = unique_component_name(instance, '_sipopt_data')
     instance.add_component(block_name, b)
 
-    #Based on user input clone model or use orignal model for anlaysis
+    # Based on user input clone model or use orignal model for analysis
     if cloneModel:
         b.tmp_lists = (paramSubList, perturbList)
         m = instance.clone()
@@ -102,7 +102,7 @@ def sipopt(instance, paramSubList, perturbList,
     else:
         m = instance
     
-    #Generate component maps for associating Variables to perturbations
+    # Generate component maps for associating Variables to perturbations
     varSubList = []
     for parameter in paramSubList:
         tempName = unique_component_name(b,parameter.local_name)
@@ -110,14 +110,14 @@ def sipopt(instance, paramSubList, perturbList,
         myVar = b.component(tempName)
         varSubList.append(myVar)
  
-    #Note: substitutions are not currently compatible with 
+    # Note: substitutions are not currently compatible with 
     #      ComponentMap [ECSA 2018/11/23], this relates to Issue #755
     paramCompMap = ComponentMap(zip(paramSubList, varSubList))
     variableSubMap = {}
-    #variableSubMap = ComponentMap()
+    # variableSubMap = ComponentMap()
     paramPerturbMap = ComponentMap(zip(paramSubList,perturbList))
     perturbSubMap = {}
-    #perturbSubMap = ComponentMap()
+    # perturbSubMap = ComponentMap()
    
     paramDataList = [] 
     for parameter in paramSubList:
@@ -132,7 +132,7 @@ def sipopt(instance, paramSubList, perturbList,
             perturbSubMap[id(parameter[kk])]=paramPerturbMap[parameter][kk]
             paramDataList.append(parameter[kk])
 
-    #clone Objective, add to Block, and update any Expressions
+    # clone Objective, add to Block, and update any Expressions
     for cc in list(m.component_data_objects(Objective,
                                             active=True,
                                             descend_into=True)):
@@ -143,7 +143,7 @@ def sipopt(instance, paramSubList, perturbList,
                   remove_named_expressions=True).dfs_postorder_stack(cc.expr)))
         cc.deactivate()
     
-    #clone Constraints, add to Block, and update any Expressions
+    # clone Constraints, add to Block, and update any Expressions
     b.constList = ConstraintList()
     for cc in list(m.component_data_objects(Constraint, 
                                    active=True,
@@ -180,20 +180,20 @@ def sipopt(instance, paramSubList, perturbList,
                     )
         cc.deactivate()
 
-    #paramData to varData constraint list
+    # paramData to varData constraint list
     b.paramConst = ConstraintList()
     for ii in paramDataList:
         jj=variableSubMap[id(ii)]
         b.paramConst.add(ii==jj)
 
     
-    #Create the ipopt_sens (aka sIPOPT) solver plugin using the ASL interface
+    # Create the ipopt_sens (aka sIPOPT) solver plugin using the ASL interface
     opt = SolverFactory('ipopt_sens', solver_io='nl')
 
     if not opt.available(False):
         raise ImportError('ipopt_sens is not available')
     
-    #Declare Suffixes
+    # Declare Suffixes
     m.sens_state_0 = Suffix(direction=Suffix.EXPORT)
     m.sens_state_1 = Suffix(direction=Suffix.EXPORT)
     m.sens_state_value_1 = Suffix(direction=Suffix.EXPORT)
@@ -203,7 +203,7 @@ def sipopt(instance, paramSubList, perturbList,
     m.sens_sol_state_1_z_L = Suffix(direction=Suffix.IMPORT)
     m.sens_sol_state_1_z_U = Suffix(direction=Suffix.IMPORT)
 
-    #set sIPOPT data
+    # set sIPOPT data
     opt.options['run_sens'] = 'yes'
     
     # for reasons that are not entirely clear, 
@@ -218,7 +218,7 @@ def sipopt(instance, paramSubList, perturbList,
         kk += 1    
     
     
-    #Send the model to the ipopt_sens and collect the solution
+    # Send the model to the ipopt_sens and collect the solution
     results = opt.solve(m, keepfiles=keepfiles, tee=streamSoln)
 
     return m
@@ -232,8 +232,8 @@ def kaug(instance,paramSubList,perturbList,
     All documents are taken from documents in def sipopt().
 
     This function accepts a Pyomo ConcreteModel, a list of parameters, along
-    with their corresponding perterbation list. The model is then converted
-    into the design structure required to call kaug dsdp mode to get an approximation
+    with their corresponding perturbation list. The model is then converted
+    into the design structure required to call kaug dsdp mode to get an approximate
     perturbed solution with updated bounds on the decision variable. 
     
     Arguments:
@@ -271,7 +271,7 @@ def kaug(instance,paramSubList,perturbList,
             
     """
 
-    #Verify User Inputs    
+    # Verify User Inputs    
     if len(paramSubList)!=len(perturbList):
         raise ValueError("Length of paramSubList argument does not equal "
                         "length of perturbList")
@@ -288,12 +288,12 @@ def kaug(instance,paramSubList,perturbList,
     for pp in perturbList:
         if pp.ctype is not Param:
             raise ValueError("perturbList argument is expecting a list of Params")
-    #Add model block to compartmentalize all kaug data
+    # Add model block to compartmentalize all kaug data
     b=Block()
     block_name = unique_component_name(instance, '_kaug_data')
     instance.add_component(block_name, b)
 
-    #Based on user input clone model or use orignal model for anlaysis
+    # Based on user input clone model or use orignal model for analysis
     if cloneModel:
         b.tmp_lists = (paramSubList, perturbList)
         m = instance.clone()
@@ -304,7 +304,7 @@ def kaug(instance,paramSubList,perturbList,
     else:
         m = instance
     
-    #Generate component maps for associating Variables to perturbations
+    # Generate component maps for associating Variables to perturbations
     varSubList = []
     for parameter in paramSubList:
         tempName = unique_component_name(b,parameter.local_name)
@@ -317,14 +317,14 @@ def kaug(instance,paramSubList,perturbList,
         myVar = b.component(tempName)
         varSubList.append(myVar)
  
-    #Note: substitutions are not currently compatible with 
+    # Note: substitutions are not currently compatible with 
     #      ComponentMap [ECSA 2018/11/23], this relates to Issue #755
     paramCompMap = ComponentMap(zip(paramSubList, varSubList))
     variableSubMap = {}
-    #variableSubMap = ComponentMap()
+    # variableSubMap = ComponentMap()
     paramPerturbMap = ComponentMap(zip(paramSubList,perturbList))
     perturbSubMap = {}
-    #perturbSubMap = ComponentMap()
+    # perturbSubMap = ComponentMap()
    
     paramDataList = [] 
     for parameter in paramSubList:
@@ -339,7 +339,7 @@ def kaug(instance,paramSubList,perturbList,
             perturbSubMap[id(parameter[kk])]=paramPerturbMap[parameter][kk]
             paramDataList.append(parameter[kk])
 
-    #clone Objective, add to Block, and update any Expressions
+    # clone Objective, add to Block, and update any Expressions
     for cc in list(m.component_data_objects(Objective,
                                             active=True,
                                             descend_into=True)):
@@ -350,7 +350,7 @@ def kaug(instance,paramSubList,perturbList,
                   remove_named_expressions=True).dfs_postorder_stack(cc.expr)))
         cc.deactivate()
     
-    #clone Constraints, add to Block, and update any Expressions
+    # clone Constraints, add to Block, and update any Expressions
     b.constList = ConstraintList()
     for cc in list(m.component_data_objects(Constraint, 
                                    active=True,
@@ -363,14 +363,14 @@ def kaug(instance,paramSubList,perturbList,
             raise Exception('kaug does not support inequalities. Need to replace inequalities to equalities with slack variables')
         cc.deactivate()
 
-    #paramData to varData constraint list
+    # paramData to varData constraint list
     b.paramConst = ConstraintList()
     for ii in paramDataList:
         jj=variableSubMap[id(ii)]
         b.paramConst.add(ii==jj)
 
     
-    #Create the solver plugin using the ASL interface
+    # Create the solver plugin using the ASL interface
     ipopt = SolverFactory('ipopt',solver_io='nl')
     if optarg is not None:
         ipopt.options = optarg
@@ -383,7 +383,7 @@ def kaug(instance,paramSubList,perturbList,
     if not dotsens.available(False):
         raise ImportError('dotsens is not available')
    
-    #Declare Suffixesi
+    # Declare Suffixesi
     m.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
     m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
     m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
