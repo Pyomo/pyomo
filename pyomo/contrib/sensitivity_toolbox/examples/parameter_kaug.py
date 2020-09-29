@@ -10,7 +10,7 @@
 #
 # The parametric.mod example from sIPOPT
 #
-# Original implmentation by Hans Pirany is in pyomo/examples/pyomo/suffixes
+# Original implementation by Hans Pirnay is in pyomo/examples/pyomo/suffixes
 #
 
 
@@ -82,7 +82,7 @@ def example(print_flag=True):
     
     # Save the results in a dictionary.
     # This is optional and makes automated testing convenient.
-    # This code is not important for a Minimum Working Example (MWE) of sipopt
+    # This code is not required for a Minimum Working Example (MWE)
     d = dict()
     d['eta1'] = m.eta1()
     d['eta2'] = m.eta2()
