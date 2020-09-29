@@ -140,7 +140,7 @@ class PyomoNLP(AslNLP):
         names in the order corresponding to the primals
         """
         pyomo_variables = self.get_pyomo_variables()
-        return [v.getname() for v in pyomo_variables]
+        return [v.getname(fully_qualified=True) for v in pyomo_variables]
 
     def constraint_names(self):
         """
@@ -148,7 +148,7 @@ class PyomoNLP(AslNLP):
         names in the order corresponding to internal constraint order
         """
         pyomo_constraints = self.get_pyomo_constraints()
-        return [v.getname() for v in pyomo_constraints]
+        return [v.getname(fully_qualified=True) for v in pyomo_constraints]
 
     def get_primal_indices(self, pyomo_variables):
         """
@@ -377,7 +377,7 @@ class PyomoGreyBoxNLP(NLP):
                     self._vardata_to_idx[var] = n_primals
                     n_primals += 1
                     greybox_primals.append(var)
-                    self._greybox_primals_names.append(var.getname())
+                    self._greybox_primals_names.append(var.getname(fully_qualified=True))
         self._n_greybox_primals = len(greybox_primals)
 
         # Configure the primal and dual data caches

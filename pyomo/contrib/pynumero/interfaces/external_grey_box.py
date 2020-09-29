@@ -12,6 +12,7 @@ import six
 import abc
 from pyomo.environ import Var, Constraint, value
 from pyomo.core.base.block import _BlockData, declare_custom_block
+from ..sparse.block_matrix import BlockMatrix
 from scipy.sparse import coo_matrix
 import pyomo.environ as pyo
 
