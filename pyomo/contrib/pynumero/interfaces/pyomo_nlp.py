@@ -354,7 +354,6 @@ class PyomoGreyBoxNLP(NLP):
         
         # number of residuals (equality constraints + output constraints
         # coming from the grey box models
-        self._n_greybox_constraints = 0
         self._greybox_primals_names = []
         self._greybox_constraints_names = []
 
@@ -393,11 +392,6 @@ class PyomoGreyBoxNLP(NLP):
         self._greybox_primals_lb.flags.writeable = False
         self._greybox_primals_ub.flags.writeable = False
 
-        # might want the user to be able to specify these at some point
-        self._init_greybox_duals = np.ones(self._n_greybox_constraints)
-        self._init_greybox_primals.flags.writeable = False
-        self._init_greybox_duals.flags.writeable = False
-
         self._greybox_primals = self._init_greybox_primals.copy()
 
         # data member to store the cached greybox constraints and jacobian
@@ -412,9 +406,15 @@ class PyomoGreyBoxNLP(NLP):
         # make sure the primal values get to the greybox models
         self.set_primals(self.get_primals())
 
+        self._n_greybox_constraints = 0
         for h in self._external_greybox_helpers:
             self._n_greybox_constraints += h.n_residuals()
+        assert len(self._greybox_constraints_names) == self._n_greybox_constraints
                     
+        # might want the user to be able to specify these at some point
+        self._init_greybox_duals = np.ones(self._n_greybox_constraints)
+        self._init_greybox_primals.flags.writeable = False
+        self._init_greybox_duals.flags.writeable = False
         self._greybox_duals = self._init_greybox_duals.copy()
 
         # compute the jacobian for the external greybox models
@@ -546,10 +546,10 @@ class PyomoGreyBoxNLP(NLP):
 
         # set the duals for the pyomo part of the nlp
         self._pyomo_nlp.set_duals(
-            duals[:-self._n_greybox_cons])
+            duals[:-self._n_greybox_constraints])
 
         # set the duals for the greybox part of the nlp
-        np.copyto(self._greybox_duals, duals[-self._n_greybox_cons:])
+        np.copyto(self._greybox_duals, duals[-self._n_greybox_constraints:])
 
     # overloaded from NLP
     def get_duals(self):
@@ -610,7 +610,9 @@ class PyomoGreyBoxNLP(NLP):
     # overloaded from NLP
     def evaluate_grad_objective(self, out=None):
         # objective is owned by the pyomo model
-        return self._pyomo_nlp.evaluate_grad_objective(out)
+        return np.concatenate((
+            self._pyomo_nlp.evaluate_grad_objective(out),
+            np.zeros(self._n_greybox_primals)))
 
     def _evaluate_greybox_constraints_and_cache_if_necessary(self):
         if self._greybox_constraints_cached:
@@ -638,14 +640,14 @@ class PyomoGreyBoxNLP(NLP):
                 out[:-self._n_greybox_constraints])
             
             # call on the greybox part of the nlp
-            np.copyto(out[-self._n_greybox_constraints:], self._cached_greybox_cons)
+            np.copyto(out[-self._n_greybox_constraints:], self._cached_greybox_constraints)
             return out
 
         else:
             # concatenate the 
             return np.concatenate((
                 self._pyomo_nlp.evaluate_constraints(),
-                self._cached_greybox_cons,
+                self._cached_greybox_constraints,
             ))
 
     # overloaded from ExtendedNLP
@@ -661,7 +663,7 @@ class PyomoGreyBoxNLP(NLP):
                     'size {}'.format(self.n_eq_constraints()))
             self._pyomo_nlp.evaluate_eq_constraints(
                 out[:-self._n_greybox_cons])
-            np.copyto(out[-self._n_greybox_constraints:], self._cached_greybox_cons)
+            np.copyto(out[-self._n_greybox_constraints:], self._cached_greybox_constraints)
             return out
         else:
             return np.concatenate((

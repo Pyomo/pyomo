@@ -281,10 +281,16 @@ class _ExternalGreyBoxModelHelper(object):
         # evalute the equality constraints and the output equations
         # and return a single vector of residuals
         # returns residual for h(x)=0, where h(x) = [h_eq(x); h_o(x)-o]
-        eq_con_resid = self._ex_model.evaluate_equality_constraints()
-        computed_output_values = self._ex_model.evaluate_outputs()
-        output_resid = computed_output_values - self._output_values
-        return np.concatenate((eq_con_resid, output_resid))
+        resid_list = []
+        if self._ex_model.n_equality_constraints() > 0:
+            resid_list.append(self._ex_model.evaluate_equality_constraints())
+
+        if self._ex_model.n_outputs() > 0:
+            computed_output_values = self._ex_model.evaluate_outputs()
+            output_resid = computed_output_values - self._output_values
+            resid_list.append(output_resid)
+            
+        return np.concatenate(resid_list)
         
     def evaluate_jacobian(self):
         # compute the jacobian of h(x) w.r.t. x

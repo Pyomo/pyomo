@@ -478,7 +478,6 @@ class TestExternalGreyBoxModel(unittest.TestCase):
         self.assertTrue(np.array_equal(jac_eq.data, np.asarray([-1, 9, 12, 1, 18, 24, -1, 1], dtype=np.float64)))
 
         jac_o = egbm.evaluate_jacobian_outputs()
-        print(jac_o)
         self.assertTrue(np.array_equal(jac_o.row, np.asarray([0,0,0,1,1,1], dtype=np.int64)))
         self.assertTrue(np.array_equal(jac_o.col, np.asarray([1,2,3,0,1,2], dtype=np.int64)))
         self.assertTrue(np.array_equal(jac_o.data, np.asarray([-9, -12, 1, 1, -36, -48], dtype=np.float64)))
@@ -524,23 +523,73 @@ class Test_ExternalGreyBoxModelHelper(unittest.TestCase):
 
         comparison_x_order = ['inputs[Pin]', 'inputs[c]', 'inputs[F]', 'outputs[Pout]']
         x_order = pyomo_nlp.variable_names()
+        comparison_c_order = ['egb.Pout_con']
+        c_order = pyomo_nlp.constraint_names()
+
         xlb = pyomo_nlp.primals_lb()
         comparison_xlb = np.asarray([50, 1, 1, 0], dtype=np.float64)
         check_vectors_specific_order(self, xlb, x_order, comparison_xlb, comparison_x_order)
         xub = pyomo_nlp.primals_ub()
         comparison_xub = np.asarray([150, 5, 5, 100], dtype=np.float64)
         check_vectors_specific_order(self, xub, x_order, comparison_xub, comparison_x_order)
-        comparison_c_order = ['egb.Pout_con']
-        c_order = pyomo_nlp.constraint_names()
         clb = pyomo_nlp.constraints_lb()
         comparison_clb = np.asarray([0], dtype=np.float64)
         check_vectors_specific_order(self, clb, c_order, comparison_clb, comparison_c_order)
         cub = pyomo_nlp.constraints_ub()
         comparison_cub = np.asarray([0], dtype=np.float64)
+        check_vectors_specific_order(self, cub, c_order, comparison_cub, comparison_c_order)
 
         xinit = pyomo_nlp.init_primals()
         comparison_xinit = np.asarray([100, 2, 3, 50], dtype=np.float64)
         check_vectors_specific_order(self, xinit, x_order, comparison_xinit, comparison_x_order)
+        duals_init = pyomo_nlp.init_duals()
+        comparison_duals_init = np.asarray([1], dtype=np.float64)
+        check_vectors_specific_order(self, duals_init, c_order, comparison_duals_init, comparison_c_order)
+
+        self.assertEqual(4, len(pyomo_nlp.create_new_vector('primals')))
+        self.assertEqual(1, len(pyomo_nlp.create_new_vector('constraints')))
+        self.assertEqual(1, len(pyomo_nlp.create_new_vector('duals')))
+        self.assertEqual(1, len(pyomo_nlp.create_new_vector('eq_constraints')))
+        self.assertEqual(0, len(pyomo_nlp.create_new_vector('ineq_constraints')))
+        self.assertEqual(1, len(pyomo_nlp.create_new_vector('duals_eq')))
+        self.assertEqual(0, len(pyomo_nlp.create_new_vector('duals_ineq')))
+
+        pyomo_nlp.set_primals(np.asarray([1, 2, 3, 4], dtype=np.float64))
+        x = pyomo_nlp.get_primals()
+        self.assertTrue(np.array_equal(x, np.asarray([1,2,3,4], dtype=np.float64)))
+        pyomo_nlp.set_primals(pyomo_nlp.init_primals())
+
+        pyomo_nlp.set_duals(np.asarray([42], dtype=np.float64))
+        y = pyomo_nlp.get_duals()
+        self.assertTrue(np.array_equal(y, np.asarray([42], dtype=np.float64)))
+        pyomo_nlp.set_duals(np.asarray([1], dtype=np.float64))
+        y = pyomo_nlp.get_duals()
+        self.assertTrue(np.array_equal(y, np.asarray([1], dtype=np.float64)))
+
+        fac = pyomo_nlp.get_obj_factor()
+        self.assertEqual(fac, 1)
+        pyomo_nlp.set_obj_factor(42)
+        self.assertEqual(pyomo_nlp.get_obj_factor(), 42)
+        pyomo_nlp.set_obj_factor(1)
+
+        f = pyomo_nlp.evaluate_objective()
+        self.assertEqual(f, 900)
+
+        gradf = pyomo_nlp.evaluate_grad_objective()
+        comparison_gradf = np.asarray([0, 0, 0, 60], dtype=np.float64)
+        check_vectors_specific_order(self, gradf, x_order, comparison_gradf, comparison_x_order)
+        c = pyomo_nlp.evaluate_constraints()
+        comparison_c = np.asarray([-22], dtype=np.float64)
+        check_vectors_specific_order(self, c, c_order, comparison_c, comparison_c_order)
+        c = np.zeros(1)
+        pyomo_nlp.evaluate_constraints(out=c)
+        check_vectors_specific_order(self, c, c_order, comparison_c, comparison_c_order)
+        
+
+        j = pyomo_nlp.evaluate_jacobian()
+        comparison_j = np.asarray([[1, 2, 3, 4]])
+        check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
+        
         assert False
 
         # WORKING HERE
@@ -552,7 +601,26 @@ def check_vectors_specific_order(tst, v1, v1order, v2, v2order):
     v2map = {s:i for i,s in enumerate(v2order)}
     for i,s in enumerate(v1order):
         tst.assertEqual(v1[i], v2[v2map[s]])
-    
+
+def check_sparse_matrix_specific_order(tst, m1, m1rows, m1cols, m2, m2rows, m2cols):
+    tst.assertEqual(m1.shape[0], len(m1rows))
+    tst.assertEqual(m1.shape[1], len(m1cols))
+    tst.assertEqual(m2.shape[0], len(m2rows))
+    tst.assertEqual(m2.shape[1], len(m2cols))
+    tst.assertEqual(len(m1rows), len(m2rows))
+    tst.assertEqual(len(m1cols), len(m2cols))
+
+    m1c = m1.todense()
+    m2c = np.zeros(len(m2rows), len(m2cols))
+    rowmap = [m1rows.index(x) for x in m2rows]
+    colmap = [m1cols.index(x) for x in m2cols]
+    m2d = m2.todense()
+    for i in range(len(m1rows)):
+        for j in range(len(m1cols)):
+            m2c[i,j] = m2d[rowmap[i], colmap[j]]
+    print(m1c)
+    print(m2c)
+
 """
     def test_interface(self):
         # weird, this is really a test of the test class above
