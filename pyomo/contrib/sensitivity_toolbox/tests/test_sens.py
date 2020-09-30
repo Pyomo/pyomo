@@ -17,7 +17,7 @@ import pyutilib.th as unittest
 from pyomo.environ import * 
 from pyomo.opt import SolverFactory
 from pyomo.dae import ContinuousSet
-from pyomo.dae.simulator import scipy_available
+from pyomo.common.dependencies import scipy_available
 from pyomo.core.expr.current import identify_variables
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt
 from pyomo.contrib.sensitivity_toolbox.sens import kaug
