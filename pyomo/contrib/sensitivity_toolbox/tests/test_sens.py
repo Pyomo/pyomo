@@ -9,7 +9,7 @@
 # ____________________________________________________________________________
 
 """
-Unit Tests for interfacing with sIPOPT 
+Unit Tests for interfacing with sIPOPT and k_aug
 """
 
 import pyutilib.th as unittest
@@ -30,8 +30,8 @@ opt_dotsens = SolverFactory('dot_sens',solver_io='nl')
 
 class TestSensitivityToolbox(unittest.TestCase):
 
-    #test arguments
-    @unittest.skipIf(not opt.available(False), "ipopt_sense is not available")
+    # test arguments
+    @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_bad_arg(self):
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0,1))
@@ -47,29 +47,29 @@ class TestSensitivityToolbox(unittest.TestCase):
         list_three = [m.a, m.x]
         list_four = [m.a,m.c]
 
-        #verify ValueError thrown when param and perturb list are different
-        #  lengths
+        # verify ValueError thrown when param and perturb list are different
+        # lengths
         try:
             Result = sipopt(m,list_one,list_two)
             self.fail("Expected ValueError: for different length lists")
         except ValueError:
             pass
 
-        #verify ValueError thrown when param list has a Var in it
+        # verify ValueError thrown when param list has a Var in it
         try:
             Result = sipopt(m,list_three,list_two)
             self.fail("Expected ValueError: variable sent through paramSubList")
         except ValueError:
             pass
 
-        #verify ValueError thrown when perturb list has Var in it
+        # verify ValueError thrown when perturb list has Var in it
         try:
             Result = sipopt(m,list_one,list_three)
             self.fail("Expected ValueError: variable sent through perturbList")
         except ValueError:
             pass
 
-        #verify ValueError thrown when param list has an unmutable param
+        # verify ValueError thrown when param list has an unmutable param
         try:
             Result = sipopt(m,list_four,list_one)
             self.fail("Expected ValueError:" 
@@ -79,7 +79,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 
 
 
-    #test feedbackController Solution when the model gets cloned
+    # test feedbackController Solution when the model gets cloned
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_clonedModel_soln(self):
@@ -94,8 +94,8 @@ class TestSensitivityToolbox(unittest.TestCase):
                             [m_orig.perturbed_a,m_orig.perturbed_H],
                             cloneModel=True)        
   
-        #verify cloned model has _sipopt_data block
-        #    and original model is untouched
+        # verify cloned model has _sipopt_data block
+        # and original model is untouched
         self.assertFalse(m_sipopt == m_orig)
 
         self.assertTrue(hasattr(m_sipopt,'_sipopt_data') and
@@ -104,13 +104,13 @@ class TestSensitivityToolbox(unittest.TestCase):
         self.assertFalse(hasattr(m_orig,'_sipopt_data'))
         self.assertFalse(hasattr(m_orig,'b'))
 
-        #verify variable declaration
+        # verify variable declaration
         self.assertTrue(hasattr(m_sipopt._sipopt_data,'a') and 
                         m_sipopt._sipopt_data.a.ctype is Var)
         self.assertTrue(hasattr(m_sipopt._sipopt_data,'H') and 
                         m_sipopt._sipopt_data.H.ctype is Var)
    
-        #verify suffixes
+        # verify suffixes
         self.assertTrue(hasattr(m_sipopt,'sens_state_0') and
                         m_sipopt.sens_state_0.ctype is Suffix and
                         m_sipopt.sens_state_0[m_sipopt._sipopt_data.H]==2 and
@@ -153,7 +153,7 @@ class TestSensitivityToolbox(unittest.TestCase):
                         m_sipopt.sens_sol_state_1_z_U[
                            m_sipopt.u[15]],6.580899e-09,13)
 
-        #verify deactivated constraints for cloned model
+        # verify deactivated constraints for cloned model
         self.assertFalse(m_sipopt.FDiffCon[0].active and
                          m_sipopt.FDiffCon[7.5].active and
                          m_sipopt.FDiffCon[15].active )
@@ -162,7 +162,7 @@ class TestSensitivityToolbox(unittest.TestCase):
                          m_sipopt.x_dot[7.5].active and
                          m_sipopt.x_dot[15].active )
 
-        #verify constraints on original model are still active
+        # verify constraints on original model are still active
         self.assertTrue(m_orig.FDiffCon[0].active and
                         m_orig.FDiffCon[7.5].active and
                         m_orig.FDiffCon[15].active )
@@ -171,7 +171,7 @@ class TestSensitivityToolbox(unittest.TestCase):
                         m_orig.x_dot[7.5].active and
                         m_orig.x_dot[15].active )
 
-        #verify solution
+        # verify solution
         self.assertAlmostEqual(value(m_sipopt.J),0.0048956783,8)
          
 
@@ -191,17 +191,17 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         self.assertTrue(m_sipopt == m_orig)
 
-        #test _sipopt_data block exists
+        # test _sipopt_data block exists
         self.assertTrue(hasattr(m_orig,'_sipopt_data') and
                         m_orig._sipopt_data.ctype is Block)
         
-        #test variable declaration
+        # test variable declaration
         self.assertTrue(hasattr(m_sipopt._sipopt_data,'a') and 
                         m_sipopt._sipopt_data.a.ctype is Var)
         self.assertTrue(hasattr(m_sipopt._sipopt_data,'H') and 
                         m_sipopt._sipopt_data.H.ctype is Var)
 
-        #test for suffixes
+        # test for suffixes
         self.assertTrue(hasattr(m_sipopt,'sens_state_0') and
                         m_sipopt.sens_state_0.ctype is Suffix and
                         m_sipopt.sens_state_0[m_sipopt._sipopt_data.H]==2 and  
@@ -244,7 +244,7 @@ class TestSensitivityToolbox(unittest.TestCase):
                         m_sipopt.sens_sol_state_1_z_U[
                            m_sipopt.u[15]],6.580899e-09,13)
 
-        #verify deactivated constraints on model
+        # verify deactivated constraints on model
         self.assertFalse(m_sipopt.FDiffCon[0].active and
                          m_sipopt.FDiffCon[7.5].active and
                          m_sipopt.FDiffCon[15].active )
@@ -253,13 +253,13 @@ class TestSensitivityToolbox(unittest.TestCase):
                          m_sipopt.x_dot[7.5].active and
                          m_sipopt.x_dot[15].active )
 
-        #test model solution
+        # test model solution
         self.assertAlmostEqual(value(m_sipopt.J),0.0048956783,8)
 
 
 
 
-    #test indexed param mapping to var and perturbed values
+    # test indexed param mapping to var and perturbed values
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_indexedParamsMapping(self):
@@ -285,7 +285,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_sipopt = sipopt(m, [m.eps,m.qq,m.aa],
                              [m.epsDelta,m.qqDelta,m.aaDelta])
 
-        #param to var data
+        # param to var data
         self.assertEqual(
             m_sipopt._sipopt_data.paramConst[1].lower.local_name, 'eps')
         self.assertEqual(
@@ -307,7 +307,7 @@ class TestSensitivityToolbox(unittest.TestCase):
     
 
 
-    #test Constraint substitution
+    # test Constraint substitution
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_constraintSub(self):
         
@@ -318,7 +318,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         m_sipopt = sipopt(m,[m.a,m.b], [m.pert_a,m.pert_b])
 
-        #verify substitutions in equality constraint
+        # verify substitutions in equality constraint
         self.assertTrue(m_sipopt.C_equal.lower.ctype is Param and
                         m_sipopt.C_equal.upper.ctype is Param)
         self.assertFalse(m_sipopt.C_equal.active)
@@ -328,7 +328,7 @@ class TestSensitivityToolbox(unittest.TestCase):
                        len(list(identify_variables(
                                 m_sipopt._sipopt_data.constList[3].body))) == 2)
 
-        #verify substitutions in one-sided bounded constraint
+        # verify substitutions in one-sided bounded constraint
         self.assertTrue(m_sipopt.C_singleBnd.lower is None and
                         m_sipopt.C_singleBnd.upper.ctype is Param)
         self.assertFalse(m_sipopt.C_singleBnd.active)
@@ -338,7 +338,7 @@ class TestSensitivityToolbox(unittest.TestCase):
                         len(list(identify_variables(
                                  m_sipopt._sipopt_data.constList[4].body))) == 2)
        
-        #verify substitutions in ranged inequality constraint
+        # verify substitutions in ranged inequality constraint
         self.assertTrue(m_sipopt.C_rangedIn.lower.ctype is Param and
                         m_sipopt.C_rangedIn.upper.ctype is Param)
         self.assertFalse(m_sipopt.C_rangedIn.active)
@@ -372,8 +372,8 @@ class TestSensitivityToolbox(unittest.TestCase):
     
     
     # Test kaug
-    # Perform the same tests as ipop_sens 
-    #test arguments
+    # Perform the same tests as ipopt_sens 
+    # test arguments
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
     def test_kaug_bad_arg_kaug(self):
@@ -391,29 +391,29 @@ class TestSensitivityToolbox(unittest.TestCase):
         list_three = [m.a, m.x]
         list_four = [m.a,m.c]
 
-        #verify ValueError thrown when param and perturb list are different
-        #  lengths
+        # verify ValueError thrown when param and perturb list are different
+        # lengths
         try:
             Result = kaug(m,list_one,list_two)
             self.fail("Expected ValueError: for different length lists")
         except ValueError:
             pass
 
-        #verify ValueError thrown when param list has a Var in it
+        # verify ValueError thrown when param list has a Var in it
         try:
             Result = kaug(m,list_three,list_two)
             self.fail("Expected ValueError: variable sent through paramSubList")
         except ValueError:
             pass
 
-        #verify ValueError thrown when perturb list has Var in it
+        # verify ValueError thrown when perturb list has Var in it
         try:
             Result = kaug(m,list_one,list_three)
             self.fail("Expected ValueError: variable sent through perturbList")
         except ValueError:
             pass
 
-        #verify ValueError thrown when param list has an unmutable param
+        # verify ValueError thrown when param list has an unmutable param
         try:
             Result = kaug(m,list_four,list_one)
             self.fail("Expected ValueError:"
@@ -422,7 +422,7 @@ class TestSensitivityToolbox(unittest.TestCase):
             pass
 
 
-    #test feedbackController Solution when the model gets cloned
+    # test feedbackController Solution when the model gets cloned
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
@@ -437,8 +437,8 @@ class TestSensitivityToolbox(unittest.TestCase):
                                [m_orig.perturbed_a,m_orig.perturbed_H],
                                 cloneModel=True)
 
-        #verify cloned model has _kaug_data block
-        #    and original model is untouched
+        # verify cloned model has _kaug_data block
+        # and original model is untouched
         self.assertFalse(m_kaug == m_orig)
 
         self.assertTrue(hasattr(m_kaug,'_kaug_data') and
@@ -447,13 +447,13 @@ class TestSensitivityToolbox(unittest.TestCase):
         self.assertFalse(hasattr(m_orig,'_kaug_data'))
         self.assertFalse(hasattr(m_orig,'b'))
 
-        #verify variable declaration
+        # verify variable declaration
         self.assertTrue(hasattr(m_kaug._kaug_data,'a') and
                         m_kaug._kaug_data.a.ctype is Var)
         self.assertTrue(hasattr(m_kaug._kaug_data,'H') and
                         m_kaug._kaug_data.H.ctype is Var)
 
-        #verify suffixes
+        # verify suffixes
         self.assertTrue(hasattr(m_kaug,'sens_state_0') and
                         m_kaug.sens_state_0.ctype is Suffix and
                         m_kaug.sens_state_0[m_kaug._kaug_data.H]==2 and
@@ -496,7 +496,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         self.assertAlmostEqual(
                         m_kaug.ipopt_zU_in[
                            m_kaug.u[15]],-1.2439730261288605e-08,13)
-        #verify deactivated constraints for cloned model
+        # verify deactivated constraints for cloned model
         self.assertFalse(m_kaug.FDiffCon[0].active and
                          m_kaug.FDiffCon[7.5].active and
                          m_kaug.FDiffCon[15].active )
@@ -505,7 +505,7 @@ class TestSensitivityToolbox(unittest.TestCase):
                          m_kaug.x_dot[7.5].active and
                          m_kaug.x_dot[15].active )
 
-        #verify constraints on original model are still active
+        # verify constraints on original model are still active
         self.assertTrue(m_orig.FDiffCon[0].active and
                         m_orig.FDiffCon[7.5].active and
                         m_orig.FDiffCon[15].active )
@@ -514,7 +514,7 @@ class TestSensitivityToolbox(unittest.TestCase):
                         m_orig.x_dot[7.5].active and
                         m_orig.x_dot[15].active )
 
-        #verify solution
+        # verify solution
         self.assertAlmostEqual(value(m_kaug.J),0.002633263921107476,8)
 
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
@@ -534,7 +534,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         self.assertTrue(m_kaug == m_orig)
         
-        #verify suffixes
+        # verify suffixes
         self.assertTrue(hasattr(m_kaug,'sens_state_0') and
                         m_kaug.sens_state_0.ctype is Suffix and
                         m_kaug.sens_state_0[m_kaug._kaug_data.H]==2 and
@@ -577,7 +577,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         self.assertAlmostEqual(
                         m_kaug.ipopt_zU_in[
                            m_kaug.u[15]],-1.2439730261288605e-08,13)
-        #verify deactivated constraints for cloned model
+        # verify deactivated constraints for cloned model
         self.assertFalse(m_kaug.FDiffCon[0].active and
                          m_kaug.FDiffCon[7.5].active and
                          m_kaug.FDiffCon[15].active )
@@ -587,11 +587,11 @@ class TestSensitivityToolbox(unittest.TestCase):
                          m_kaug.x_dot[15].active )
 
 
-        #verify solution
+        # verify solution
         self.assertAlmostEqual(value(m_kaug.J),0.002633263921107476,8)
 
 
-    #test indexed param mapping to var and perturbed values
+    # test indexed param mapping to var and perturbed values
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
@@ -618,7 +618,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_kaug = kaug(m, [m.eps,m.qq,m.aa],
                          [m.epsDelta,m.qqDelta,m.aaDelta])
 
-        #param to var data
+        # param to var data
         self.assertEqual(
             m_kaug._kaug_data.paramConst[1].lower.local_name, 'eps')
         self.assertEqual(
@@ -639,7 +639,7 @@ class TestSensitivityToolbox(unittest.TestCase):
             m_kaug._kaug_data.paramConst[10].upper.local_name, 'aa')
 
 
-    #test Constraint substitution 
+    # test Constraint substitution 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
     def test_constraintSub_kaug(self):
@@ -648,8 +648,8 @@ class TestSensitivityToolbox(unittest.TestCase):
         m.pert_a = Param(initialize=0.01)
         m.pert_b = Param(initialize=1.01)
 
-        #m_kaug = kaug(m,[m.a,m.b], [m.pert_a,m.pert_b])
-        #verify ValueError thrown when param list has an unmutable param
+        # m_kaug = kaug(m,[m.a,m.b], [m.pert_a,m.pert_b])
+        # verify ValueError thrown when param list has an unmutable param
         with self.assertRaises(Exception) as context:
             m_kaug = kaug(m,[m.a,m.b], [m.pert_a,m.pert_b])
         self.assertTrue('kaug does not support inequalities. Need to replace inequalities to equalities with slack variables' in str(context.exception))
