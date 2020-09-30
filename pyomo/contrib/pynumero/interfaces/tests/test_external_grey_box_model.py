@@ -23,18 +23,17 @@ if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run CyIpoptSolver tests")
 
-ipopt_available = True
+cyipopt_available = True
 try:
     import ipopt
+    from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+        CyIpoptSolver, CyIpoptNLP
+    )
 except ImportError:
-    ipopt_available = False
+    cyipopt_available = False
 
 from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock, _ExternalGreyBoxModelHelper
 from ..pyomo_nlp import PyomoGreyBoxNLP
-
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver, CyIpoptNLP
-)
 
 # set of external models for testing
 # basic model is a simple pipe sequence with nonlinear pressure drop
@@ -1179,7 +1178,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             h = pyomo_nlp.evaluate_hessian_lag()
             
-    @unittest.skipIf(ipopt_available == False, "CyIpopt needed to run tests with solve")
+    @unittest.skipIf(cyipopt_available == False, "CyIpopt needed to run tests with solve")
     def test_external_greybox_solve(self):
         m = pyo.ConcreteModel()
         m.mu = pyo.Var(bounds=(0,None), initialize=1)
@@ -1382,7 +1381,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_cs = np.asarray([3.1, 3.2, 4.1, 4.2, 1, 2.2], dtype=np.float64)
         check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
 
-    @unittest.skipIf(ipopt_available == False, "CyIpopt needed to run tests with solve")
+    @unittest.skipIf(cyipopt_available == False, "CyIpopt needed to run tests with solve")
     def test_external_greybox_solve_scaling(self):
         m = pyo.ConcreteModel()
         m.mu = pyo.Var(bounds=(0,None), initialize=1)
