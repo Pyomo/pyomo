@@ -44,19 +44,24 @@ def MindtPy_iteration_loop(solve_data, config):
         if config.strategy in {'OA', 'GOA', 'ECP'}:
             master_mip, master_mip_results = solve_OA_master(
                 solve_data, config)
-            if config.single_tree is False:
-                if master_mip_results.solver.termination_condition is tc.optimal:
-                    handle_master_mip_optimal(master_mip, solve_data, config)
-                elif master_mip_results.solver.termination_condition is tc.infeasible:
-                    handle_master_mip_infeasible(
-                        master_mip, solve_data, config)
-                    last_iter_cuts = True
-                    break
+            if master_mip_results is not None:
+                if config.single_tree is False:
+                    if master_mip_results.solver.termination_condition is tc.optimal:
+                        handle_master_mip_optimal(
+                            master_mip, solve_data, config)
+                    elif master_mip_results.solver.termination_condition is tc.infeasible:
+                        handle_master_mip_infeasible(
+                            master_mip, solve_data, config)
+                        last_iter_cuts = True
+                        break
+                    else:
+                        handle_master_mip_other_conditions(master_mip, master_mip_results,
+                                                           solve_data, config)
+                    # Call the MILP post-solve callback
+                    config.call_after_master_solve(master_mip, solve_data)
                 else:
-                    handle_master_mip_other_conditions(master_mip, master_mip_results,
-                                                       solve_data, config)
-                # Call the MILP post-solve callback
-                config.call_after_master_solve(master_mip, solve_data)
+                    config.logger.info('Algorithm should terminate here.')
+                    break
         else:
             raise NotImplementedError()
 
@@ -123,7 +128,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_nogood_cuts:
+    if config.add_nogood_cuts and not config.single_tree:
         bound_fix(solve_data, config, last_iter_cuts)
 
 
