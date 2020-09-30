@@ -467,7 +467,7 @@ class PyomoGreyBoxNLP(NLP):
     # overloaded from NLP
     def nnz_hessian_lag(self):
         raise NotImplementedError(
-            "PyomoGreyBoxNLP does not currently supports Hessians")
+            "PyomoGreyBoxNLP does not currently support Hessians")
 
     # overloaded from NLP
     def primals_lb(self):
@@ -769,8 +769,9 @@ class PyomoGreyBoxNLP(NLP):
 
     # overloaded from NLP
     def evaluate_hessian_lag(self, out=None):
+        # return coo_matrix(([], ([],[])), shape=(self.n_primals(), self.n_primals()))
         raise NotImplementedError(
-            "PyomoGreyBoxNLP does not currently supports Hessians")
+            "PyomoGreyBoxNLP does not currently support Hessians")
 
     # overloaded from NLP
     def report_solver_status(self, status_code, status_message):

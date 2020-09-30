@@ -143,7 +143,7 @@ class CyIpoptProblemInterface(object):
 
 
 class CyIpoptNLP(CyIpoptProblemInterface):
-    def __init__(self, nlp):
+    def __init__(self, nlp, hessian_available=True):
         """This class provides a CyIpoptProblemInterface for use
         with the CyIpoptSolver class that can take in an NLP 
         as long as it provides vectors as numpy ndarrays and 
@@ -167,8 +167,13 @@ class CyIpoptNLP(CyIpoptProblemInterface):
 
         # get jacobian and hessian structures
         self._jac_g = nlp.evaluate_jacobian()
-        self._hess_lag = nlp.evaluate_hessian_lag()
-        self._hess_lower_mask = self._hess_lag.row >= self._hess_lag.col
+        self._hessian_available = hessian_available
+        if hessian_available:
+            self._hess_lag = nlp.evaluate_hessian_lag()
+            self._hess_lower_mask = self._hess_lag.row >= self._hess_lag.col
+        else:
+            self._hess_lag = None
+            self._hess_lower_mask = None
 
     def _set_primals_if_necessary(self, x):
         if not np.array_equal(x, self._cached_x):
@@ -227,11 +232,18 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         return self._jac_g.data
 
     def hessianstructure(self):
+        if not self._hessian_available:
+            return np.zeros(0), np.zeros(0)
+
         row = np.compress(self._hess_lower_mask, self._hess_lag.row)
         col = np.compress(self._hess_lower_mask, self._hess_lag.col)
         return row, col
 
+
     def hessian(self, x, y, obj_factor):
+        if not self._hessian_available:
+            raise ValueError("Hessian requested, but not supported by the NLP")
+        
         self._set_primals_if_necessary(x)
         self._set_duals_if_necessary(y)
         self._set_obj_factor_if_necessary(obj_factor)

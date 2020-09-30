@@ -31,6 +31,10 @@ except ImportError:
 from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock, _ExternalGreyBoxModelHelper
 from ..pyomo_nlp import PyomoGreyBoxNLP
 
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+    CyIpoptSolver, CyIpoptNLP
+)
+
 # set of external models for testing
 # basic model is a simple pipe sequence with nonlinear pressure drop
 # Pin -> P1 -> P2 -> P3 -> Pout
@@ -485,7 +489,7 @@ class TestExternalGreyBoxModel(unittest.TestCase):
 
 
 # TODO: make this work even if there is only external and no variables anywhere in pyomo part
-class Test_ExternalGreyBoxModelHelper(unittest.TestCase):
+class TestPyomoGreyBoxNLP(unittest.TestCase):
     @unittest.skip("It looks like ASL exits when there are no variables")
     def test_error_no_variables(self):
         m = pyo.ConcreteModel()
@@ -1136,6 +1140,44 @@ class Test_ExternalGreyBoxModelHelper(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             h = pyomo_nlp.evaluate_hessian_lag()
 
+    def test_external_greybox_solve(self):
+        m = pyo.ConcreteModel()
+        m.hin = pyo.Var(bounds=(0,None), initialize=10)
+        m.hout = pyo.Var(bounds=(0,None))
+        m.egb = ExternalGreyBoxBlock()
+        m.egb.set_external_model(PressureDropTwoEqualitiesTwoOutputs())
+        m.incon = pyo.Constraint(expr= 0 <= m.egb.inputs['Pin'] - 10*m.hin)
+        m.outcon = pyo.Constraint(expr= 0 == m.egb.outputs['Pout'] - 10*m.hout)
+        m.egb.inputs['Pin'].value = 100
+        m.egb.inputs['Pin'].setlb(50)
+        m.egb.inputs['Pin'].setub(150)
+        m.egb.inputs['c'].value = 2
+        m.egb.inputs['c'].setlb(1)
+        m.egb.inputs['c'].setub(5)
+        m.egb.inputs['F'].value = 3
+        m.egb.inputs['F'].setlb(1)
+        m.egb.inputs['F'].setub(5)
+        m.egb.inputs['P1'].value = 80
+        m.egb.inputs['P1'].setlb(10)
+        m.egb.inputs['P1'].setub(90)
+        m.egb.inputs['P3'].value = 70
+        m.egb.inputs['P3'].setlb(20)
+        m.egb.inputs['P3'].setub(80)
+        m.egb.outputs['P2'].value = 75
+        m.egb.outputs['P2'].setlb(15)
+        m.egb.outputs['P2'].setub(85)
+        m.egb.outputs['Pout'].value = 50
+        m.egb.outputs['Pout'].setlb(30)
+        m.egb.outputs['Pout'].setub(70)
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
+        pyomo_nlp = PyomoGreyBoxNLP(m)
+
+        options = {'hessian_approximation':'limited-memory'}
+        solver = CyIpoptSolver(CyIpoptNLP(pyomo_nlp, hessian_available=False), options)
+        x, info = solver.solve(tee=True)
+
+        assert False
+
 
 def check_vectors_specific_order(tst, v1, v1order, v2, v2order):
     tst.assertEqual(len(v1), len(v1order))
@@ -1395,3 +1437,5 @@ def check_sparse_matrix_specific_order(tst, m1, m1rows, m1cols, m2, m2rows, m2co
         self.assertAlmostEqual(pyo.value(m.c2), 0.5, places=5)
 
 """
+if __name__ == '__main__':
+    TestPyomoGreyBoxNLP().test_external_greybox_solve(self)
