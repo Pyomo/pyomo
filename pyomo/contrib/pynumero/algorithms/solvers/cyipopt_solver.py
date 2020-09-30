@@ -143,7 +143,7 @@ class CyIpoptProblemInterface(object):
 
 
 class CyIpoptNLP(CyIpoptProblemInterface):
-    def __init__(self, nlp, hessian_available=True):
+    def __init__(self, nlp):
         """This class provides a CyIpoptProblemInterface for use
         with the CyIpoptSolver class that can take in an NLP 
         as long as it provides vectors as numpy ndarrays and 
@@ -167,11 +167,12 @@ class CyIpoptNLP(CyIpoptProblemInterface):
 
         # get jacobian and hessian structures
         self._jac_g = nlp.evaluate_jacobian()
-        self._hessian_available = hessian_available
-        if hessian_available:
+        try:
             self._hess_lag = nlp.evaluate_hessian_lag()
             self._hess_lower_mask = self._hess_lag.row >= self._hess_lag.col
-        else:
+            self._hessian_available = True
+        except NotImplementedError:
+            self._hessian_available = False
             self._hess_lag = None
             self._hess_lower_mask = None
 

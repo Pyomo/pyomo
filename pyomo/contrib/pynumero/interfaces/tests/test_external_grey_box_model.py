@@ -1173,7 +1173,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         pyomo_nlp = PyomoGreyBoxNLP(m)
 
         options = {'hessian_approximation':'limited-memory'}
-        solver = CyIpoptSolver(CyIpoptNLP(pyomo_nlp, hessian_available=False), options)
+        solver = CyIpoptSolver(CyIpoptNLP(pyomo_nlp), options)
         x, info = solver.solve(tee=True)
 
         assert False
