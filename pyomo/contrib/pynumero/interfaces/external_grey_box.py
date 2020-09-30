@@ -280,6 +280,20 @@ class _ExternalGreyBoxModelHelper(object):
         return self._ex_model.n_equality_constraints() \
             + self._ex_model.n_outputs()
 
+    def get_residual_scaling(self):
+        eq_scaling = self._ex_model.get_equality_constraint_scaling_factors()
+        output_con_scaling = self._ex_model.get_output_constraint_scaling_factors()
+        if eq_scaling is None and output_con_scaling is None:
+            return None
+        if eq_scaling is None:
+            eq_scaling = np.ones(self._ex_model.n_equality_constraints())
+        if output_con_scaling is None:
+            output_con_scaling = np.ones(self._ex_model.n_outputs())
+
+        return np.concatenate((
+            eq_scaling,
+            output_con_scaling))
+
     def evaluate_residuals(self):
         # evalute the equality constraints and the output equations
         # and return a single vector of residuals

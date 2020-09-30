@@ -23,10 +23,11 @@ if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run CyIpoptSolver tests")
 
+ipopt_available = True
 try:
     import ipopt
 except ImportError:
-    raise unittest.SkipTest("Pynumero needs cyipopt to run CyIpoptSolver tests")
+    ipopt_available = False
 
 from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock, _ExternalGreyBoxModelHelper
 from ..pyomo_nlp import PyomoGreyBoxNLP
@@ -341,6 +342,22 @@ class PressureDropTwoEqualitiesTwoOutputs(ExternalGreyBoxModel):
         jac = spa.coo_matrix((nonzeros, (irow, jcol)), shape=(2,5))
         return jac
 
+class PressureDropTwoEqualitiesTwoOutputsScaleBoth(PressureDropTwoEqualitiesTwoOutputs):
+    def get_equality_constraint_scaling_factors(self):
+        return np.asarray([3.1, 3.2], dtype=np.float64)
+    
+    def get_output_constraint_scaling_factors(self):
+        return np.asarray([4.1, 4.2])
+
+class PressureDropTwoEqualitiesTwoOutputsScaleEqualities(PressureDropTwoEqualitiesTwoOutputs):
+    def get_equality_constraint_scaling_factors(self):
+        return np.asarray([3.1, 3.2], dtype=np.float64)
+
+class PressureDropTwoEqualitiesTwoOutputsScaleOutputs(PressureDropTwoEqualitiesTwoOutputs):
+    def get_output_constraint_scaling_factors(self):
+        return np.asarray([4.1, 4.2])
+
+
 class TestExternalGreyBoxModel(unittest.TestCase):
 
     def test_pressure_drop_single_output(self):
@@ -486,8 +503,6 @@ class TestExternalGreyBoxModel(unittest.TestCase):
         self.assertTrue(np.array_equal(jac_o.col, np.asarray([1,2,3,0,1,2], dtype=np.int64)))
         self.assertTrue(np.array_equal(jac_o.data, np.asarray([-9, -12, 1, 1, -36, -48], dtype=np.float64)))
 
-
-
 # TODO: make this work even if there is only external and no variables anywhere in pyomo part
 class TestPyomoGreyBoxNLP(unittest.TestCase):
     @unittest.skip("It looks like ASL exits when there are no variables")
@@ -611,6 +626,10 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_j = np.asarray([[1, -36, -48, -1]])
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
+        j = 2.0*j
+        pyomo_nlp.evaluate_jacobian(out=j)
+        check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
+
         with self.assertRaises(NotImplementedError):
             h = pyomo_nlp.evaluate_hessian_lag()
 
@@ -706,6 +725,10 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
 
         j = pyomo_nlp.evaluate_jacobian()
         comparison_j = np.asarray([[-1, 36, 48, 1]])
+        check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
+
+        j = 2.0*j
+        pyomo_nlp.evaluate_jacobian(out=j)
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
         with self.assertRaises(NotImplementedError):
@@ -808,6 +831,10 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_j = np.asarray([[1, -18, -24, -1, 0], [1, -36, -48, 0, -1]])
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
+        j = 2.0*j
+        pyomo_nlp.evaluate_jacobian(out=j)
+        check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
+
         with self.assertRaises(NotImplementedError):
             h = pyomo_nlp.evaluate_hessian_lag()
 
@@ -906,6 +933,10 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
 
         j = pyomo_nlp.evaluate_jacobian()
         comparison_j = np.asarray([[-1, 18, 24, 1, 0], [0, 18, 24, -1, 1]])
+        check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
+
+        j = 2.0*j
+        pyomo_nlp.evaluate_jacobian(out=j)
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
         with self.assertRaises(NotImplementedError):
@@ -1017,6 +1048,10 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
                                    [ 0,  18,  24, -1, 1,  0,  0],
                                    [ 0,  -9, -12,  1, 0, -1,  0],
                                    [ 1, -36, -48,  0, 0,  0, -1]])
+        check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
+
+        j = 2.0*j
+        pyomo_nlp.evaluate_jacobian(out=j)
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
         with self.assertRaises(NotImplementedError):
@@ -1137,15 +1172,68 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
+        j = 2.0*j
+        pyomo_nlp.evaluate_jacobian(out=j)
+        check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
+
         with self.assertRaises(NotImplementedError):
             h = pyomo_nlp.evaluate_hessian_lag()
-
+            
+    @unittest.skipIf(ipopt_available == False, "CyIpopt needed to run tests with solve")
     def test_external_greybox_solve(self):
+        m = pyo.ConcreteModel()
+        m.mu = pyo.Var(bounds=(0,None), initialize=1)
+        m.egb = ExternalGreyBoxBlock()
+        m.egb.set_external_model(PressureDropTwoEqualitiesTwoOutputs())
+        m.ccon = pyo.Constraint(expr = m.egb.inputs['c'] == 128/(3.14*1e-4)*m.mu*m.egb.inputs['F'])
+        m.pcon = pyo.Constraint(expr = m.egb.inputs['Pin'] - m.egb.outputs['Pout'] <= 72)
+        m.pincon = pyo.Constraint(expr = m.egb.inputs['Pin'] == 100.0)
+        m.egb.inputs['Pin'].value = 100
+        m.egb.inputs['Pin'].setlb(50)
+        m.egb.inputs['Pin'].setub(150)
+        m.egb.inputs['c'].value = 2
+        m.egb.inputs['c'].setlb(1)
+        m.egb.inputs['c'].setub(5)
+        m.egb.inputs['F'].value = 3
+        m.egb.inputs['F'].setlb(1)
+        m.egb.inputs['F'].setub(5)
+        m.egb.inputs['P1'].value = 80
+        m.egb.inputs['P1'].setlb(10)
+        m.egb.inputs['P1'].setub(90)
+        m.egb.inputs['P3'].value = 70
+        m.egb.inputs['P3'].setlb(20)
+        m.egb.inputs['P3'].setub(80)
+        m.egb.outputs['P2'].value = 75
+        m.egb.outputs['P2'].setlb(15)
+        m.egb.outputs['P2'].setub(85)
+        m.egb.outputs['Pout'].value = 50
+        m.egb.outputs['Pout'].setlb(10)
+        m.egb.outputs['Pout'].setub(70)
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2 + (m.egb.inputs['F']-3)**2)
+        pyomo_nlp = PyomoGreyBoxNLP(m)
+
+        options = {'hessian_approximation':'limited-memory'}
+        cyipopt_problem = CyIpoptNLP(pyomo_nlp)
+        solver = CyIpoptSolver(cyipopt_problem, options)
+        x, info = solver.solve(tee=False)
+        pyomo_nlp.load_x_into_pyomo(x)
+
+        self.assertAlmostEqual(pyo.value(m.egb.inputs['F']), 3.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.mu), 1.63542e-6, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.outputs['Pout']), 28.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.inputs['Pin']), 100.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.inputs['c']), 2.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.inputs['P1']), 82.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.inputs['P3']), 46.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.outputs['P2']), 64.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.inputs['F']), 3.0, places=3)
+
+    def create_model_two_equalities_two_outputs(self, external_model):
         m = pyo.ConcreteModel()
         m.hin = pyo.Var(bounds=(0,None), initialize=10)
         m.hout = pyo.Var(bounds=(0,None))
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(PressureDropTwoEqualitiesTwoOutputs())
+        m.egb.set_external_model(external_model)
         m.incon = pyo.Constraint(expr= 0 <= m.egb.inputs['Pin'] - 10*m.hin)
         m.outcon = pyo.Constraint(expr= 0 == m.egb.outputs['Pout'] - 10*m.hout)
         m.egb.inputs['Pin'].value = 100
@@ -1169,14 +1257,134 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m.egb.outputs['Pout'].value = 50
         m.egb.outputs['Pout'].setlb(30)
         m.egb.outputs['Pout'].setub(70)
+        return m
+
+    def test_scaling_all_missing(self):
+        m = self.create_model_two_equalities_two_outputs(PressureDropTwoEqualitiesTwoOutputs())
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
+        pyomo_nlp = PyomoGreyBoxNLP(m)
+        fs = pyomo_nlp.get_obj_scaling()
+        xs = pyomo_nlp.get_primals_scaling()
+        cs = pyomo_nlp.get_constraints_scaling()
+        self.assertIsNone(fs)
+        self.assertIsNone(xs)
+        self.assertIsNone(cs)
+
+    def test_scaling_pyomo_model_only(self):
+        m = self.create_model_two_equalities_two_outputs(PressureDropTwoEqualitiesTwoOutputs())
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        #m.scaling_factor[m.obj] = 0.1 # scale the objective
+        m.scaling_factor[m.egb.inputs['Pin']] = 1.1 # scale the variable
+        m.scaling_factor[m.egb.inputs['c']] = 1.2 # scale the variable
+        m.scaling_factor[m.egb.inputs['F']] = 1.3 # scale the variable
+        #m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
+        m.scaling_factor[m.egb.inputs['P3']] = 1.5 # scale the variable
+        m.scaling_factor[m.egb.outputs['P2']] = 1.6 # scale the variable
+        m.scaling_factor[m.egb.outputs['Pout']] = 1.7 # scale the variable
+        #m.scaling_factor[m.hin] = 1.8
+        m.scaling_factor[m.hout] = 1.9
+        #m.scaling_factor[m.incon] = 2.1
+        m.scaling_factor[m.outcon] = 2.2
+        pyomo_nlp = PyomoGreyBoxNLP(m)
+
+        comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]',
+                              'egb.inputs[P1]', 'egb.inputs[P3]',
+                              'egb.outputs[P2]', 'egb.outputs[Pout]',
+                              'hin', 'hout']
+        x_order = pyomo_nlp.variable_names()
+        comparison_c_order = ['egb.pdrop1', 'egb.pdrop3', 'egb.P2_con', 'egb.Pout_con', 'incon', 'outcon']
+        c_order = pyomo_nlp.constraint_names()
+
+        fs = pyomo_nlp.get_obj_scaling()
+        self.assertEqual(fs, 1.0)
+        
+        xs = pyomo_nlp.get_primals_scaling()
+        comparison_xs = np.asarray([1.1, 1.2, 1.3, 1.0, 1.5, 1.6, 1.7, 1.0, 1.9], dtype=np.float64)
+        check_vectors_specific_order(self, xs, x_order, comparison_xs, comparison_x_order)
+
+        cs = pyomo_nlp.get_constraints_scaling()
+        comparison_cs = np.asarray([1, 1, 1, 1, 1, 2.2], dtype=np.float64)
+        check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
+
+    def test_scaling_greybox_only(self):
+        m = self.create_model_two_equalities_two_outputs(PressureDropTwoEqualitiesTwoOutputsScaleBoth())
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
         pyomo_nlp = PyomoGreyBoxNLP(m)
 
-        options = {'hessian_approximation':'limited-memory'}
-        solver = CyIpoptSolver(CyIpoptNLP(pyomo_nlp), options)
-        x, info = solver.solve(tee=True)
+        comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]',
+                              'egb.inputs[P1]', 'egb.inputs[P3]',
+                              'egb.outputs[P2]', 'egb.outputs[Pout]',
+                              'hin', 'hout']
+        x_order = pyomo_nlp.variable_names()
+        comparison_c_order = ['egb.pdrop1', 'egb.pdrop3', 'egb.P2_con', 'egb.Pout_con', 'incon', 'outcon']
+        c_order = pyomo_nlp.constraint_names()
 
-        assert False
+        fs = pyomo_nlp.get_obj_scaling()
+        self.assertEqual(fs, 1.0)
+        
+        xs = pyomo_nlp.get_primals_scaling()
+        comparison_xs = np.asarray([1, 1, 1, 1, 1, 1, 1, 1, 1], dtype=np.float64)
+        check_vectors_specific_order(self, xs, x_order, comparison_xs, comparison_x_order)
+
+        cs = pyomo_nlp.get_constraints_scaling()
+        comparison_cs = np.asarray([3.1, 3.2, 4.1, 4.2, 1, 1], dtype=np.float64)
+        check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
+
+        m = self.create_model_two_equalities_two_outputs(PressureDropTwoEqualitiesTwoOutputsScaleEqualities())
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
+        pyomo_nlp = PyomoGreyBoxNLP(m)
+        cs = pyomo_nlp.get_constraints_scaling()
+        comparison_cs = np.asarray([3.1, 3.2, 1, 1, 1, 1], dtype=np.float64)
+        check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
+
+        m = self.create_model_two_equalities_two_outputs(PressureDropTwoEqualitiesTwoOutputsScaleOutputs())
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
+        pyomo_nlp = PyomoGreyBoxNLP(m)
+        cs = pyomo_nlp.get_constraints_scaling()
+        comparison_cs = np.asarray([1, 1, 4.1, 4.2, 1, 1], dtype=np.float64)
+        check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
+
+    def test_scaling_pyomo_model_and_greybox(self):
+        m = self.create_model_two_equalities_two_outputs(PressureDropTwoEqualitiesTwoOutputsScaleBoth())
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        #m.scaling_factor[m.obj] = 0.1 # scale the objective
+        m.scaling_factor[m.egb.inputs['Pin']] = 1.1 # scale the variable
+        m.scaling_factor[m.egb.inputs['c']] = 1.2 # scale the variable
+        m.scaling_factor[m.egb.inputs['F']] = 1.3 # scale the variable
+        #m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
+        m.scaling_factor[m.egb.inputs['P3']] = 1.5 # scale the variable
+        m.scaling_factor[m.egb.outputs['P2']] = 1.6 # scale the variable
+        m.scaling_factor[m.egb.outputs['Pout']] = 1.7 # scale the variable
+        #m.scaling_factor[m.hin] = 1.8
+        m.scaling_factor[m.hout] = 1.9
+        #m.scaling_factor[m.incon] = 2.1
+        m.scaling_factor[m.outcon] = 2.2
+        pyomo_nlp = PyomoGreyBoxNLP(m)
+
+        comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]',
+                              'egb.inputs[P1]', 'egb.inputs[P3]',
+                              'egb.outputs[P2]', 'egb.outputs[Pout]',
+                              'hin', 'hout']
+        x_order = pyomo_nlp.variable_names()
+        comparison_c_order = ['egb.pdrop1', 'egb.pdrop3', 'egb.P2_con', 'egb.Pout_con', 'incon', 'outcon']
+        c_order = pyomo_nlp.constraint_names()
+
+        fs = pyomo_nlp.get_obj_scaling()
+        self.assertEqual(fs, 1.0)
+        
+        xs = pyomo_nlp.get_primals_scaling()
+        comparison_xs = np.asarray([1.1, 1.2, 1.3, 1.0, 1.5, 1.6, 1.7, 1.0, 1.9], dtype=np.float64)
+        check_vectors_specific_order(self, xs, x_order, comparison_xs, comparison_x_order)
+
+        cs = pyomo_nlp.get_constraints_scaling()
+        comparison_cs = np.asarray([3.1, 3.2, 4.1, 4.2, 1, 2.2], dtype=np.float64)
+        check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
+
+    def test_scaling_solve(self):
+        pass
+    
 
 
 def check_vectors_specific_order(tst, v1, v1order, v2, v2order):

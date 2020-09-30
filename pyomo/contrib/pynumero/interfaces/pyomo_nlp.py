@@ -196,9 +196,10 @@ class PyomoNLP(AslNLP):
     def get_obj_scaling(self):
         obj = self.get_pyomo_objective()
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix and \
-           obj in scaling_suffix:
-            return scaling_suffix[obj]
+        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+            if obj in scaling_suffix:
+                return scaling_suffix[obj]
+            return 1.0
         return None
 
     # overloaded from NLP
@@ -393,6 +394,8 @@ class PyomoGreyBoxNLP(NLP):
                     greybox_primals.append(var)
                     self._greybox_primals_names.append(var.getname(fully_qualified=True))
         self._n_greybox_primals = len(greybox_primals)
+        self._ordered_primal_variables = list(self._pyomo_nlp.get_pyomo_variables())
+        self._ordered_primal_variables.extend(greybox_primals)
 
         # Configure the primal and dual data caches
         self._greybox_primals_lb = np.zeros(self._n_greybox_primals)
@@ -424,7 +427,52 @@ class PyomoGreyBoxNLP(NLP):
         for h in self._external_greybox_helpers:
             self._n_greybox_constraints += h.n_residuals()
         assert len(self._greybox_constraints_names) == self._n_greybox_constraints
-                    
+
+        # If any part of the problem is scaled (i.e., obj, primals,
+        # or any of the constraints for any of the external grey boxes),
+        # then we want scaling factors for everything (defaulting to
+        # ones for any of the missing factors).
+        # This code builds all the scaling factors, with the defaults,
+        # but then sets them all to None if *no* scaling factors are provided
+        # for any of the pieces. (inefficient, but only done once)
+        need_scaling = False
+        self._obj_scaling = self._pyomo_nlp.get_obj_scaling()
+        if self._obj_scaling is None:
+            self._obj_scaling = 1.0
+        else:
+            need_scaling = True
+        
+        self._primals_scaling = np.ones(self.n_primals())
+        scaling_suffix = self._pyomo_nlp._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+            need_scaling = True
+            for i,v in enumerate(self._ordered_primal_variables):
+                if v in scaling_suffix:
+                    self._primals_scaling[i] = scaling_suffix[v]
+
+        self._constraints_scaling = []
+        pyomo_nlp_scaling = self._pyomo_nlp.get_constraints_scaling()
+        if pyomo_nlp_scaling is None:
+            pyomo_nlp_scaling = np.ones(self._pyomo_nlp.n_constraints())
+        else:
+            need_scaling = True
+        self._constraints_scaling.append(pyomo_nlp_scaling)
+            
+        for h in self._external_greybox_helpers:
+            tmp_scaling = h.get_residual_scaling()
+            if tmp_scaling is None:
+                tmp_scaling = np.ones(h.n_residuals())
+            else:
+                need_scaling = True
+            self._constraints_scaling.append(tmp_scaling)
+
+        if need_scaling:
+            self._constraints_scaling = np.concatenate(self._constraints_scaling)
+        else:
+            self._obj_scaling = None
+            self._primals_scaling = None
+            self._constraints_scaling = None
+            
         # might want the user to be able to specify these at some point
         self._init_greybox_duals = np.ones(self._n_greybox_constraints)
         self._init_greybox_primals.flags.writeable = False
@@ -606,15 +654,15 @@ class PyomoGreyBoxNLP(NLP):
 
     # overloaded from NLP
     def get_obj_scaling(self):
-        raise NotImplementedError()
+        return self._obj_scaling
     
     # overloaded from NLP
     def get_primals_scaling(self):
-        raise NotImplementedError()
-
+        return self._primals_scaling
+    
     # overloaded from NLP
     def get_constraints_scaling(self):
-        raise NotImplementedError()
+        return self._constraints_scaling
 
     # overloaded from NLP
     def evaluate_objective(self):
@@ -710,12 +758,13 @@ class PyomoGreyBoxNLP(NLP):
                     ' shape=({},{}) and nnz={}'
                     .format(self.n_constraints(), self.n_primals(),
                             self.nnz_jacobian()))
+            n_pyomo_constraints = self.n_constraints() - self._n_greybox_constraints
             self._pyomo_nlp.evaluate_jacobian(
-                coo_matrix((out.data[:-self._nnz_greybox_jac],
-                            (out.row[:-self._nnz_greybox_jac],
-                             out.col[:-self._nnz_greybox_jac])))
-            )
-            np.copyto(out.data[-self._nnz_greybox_jac],
+                out=coo_matrix((out.data[:-self._nnz_greybox_jac],
+                                (out.row[:-self._nnz_greybox_jac],
+                                 out.col[:-self._nnz_greybox_jac])),
+                               shape=(n_pyomo_constraints, self._pyomo_nlp.n_primals())))
+            np.copyto(out.data[-self._nnz_greybox_jac:],
                       self._cached_greybox_jac.data)
             return out
         else:
@@ -735,6 +784,7 @@ class PyomoGreyBoxNLP(NLP):
             #))
 
     # overloaded from ExtendedNLP
+    """
     def evaluate_jacobian_eq(self, out=None):
         raise NotImplementedError()
         self._evaluate_greybox_jacobians_and_cache_if_necessary()
@@ -766,7 +816,7 @@ class PyomoGreyBoxNLP(NLP):
                 ( np.concatenate((base.row, self._cached_greybox_jac.row)),
                   np.concatenate((base.col, self._cached_greybox_jac.col)) )
             ))
-
+    """
     # overloaded from NLP
     def evaluate_hessian_lag(self, out=None):
         # return coo_matrix(([], ([],[])), shape=(self.n_primals(), self.n_primals()))
@@ -786,3 +836,8 @@ class PyomoGreyBoxNLP(NLP):
         names = list(self._pyomo_nlp.constraint_names())
         names.extend(self._greybox_constraints_names)
         return names
+
+    def load_x_into_pyomo(self, primals):
+        for i,v in enumerate(self._ordered_primal_variables):
+            v.set_value(primals[i])
+
