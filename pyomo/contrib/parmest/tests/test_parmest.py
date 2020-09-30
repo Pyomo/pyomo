@@ -272,7 +272,7 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
         
 
 @unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
-@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 class parmest_object_Tester_reactor_design(unittest.TestCase):
     
     def setUp(self):
@@ -320,6 +320,13 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
         self.assertAlmostEqual(thetavals['k1'], 5.0/6.0, places=4) 
         self.assertAlmostEqual(thetavals['k2'], 5.0/3.0, places=4) 
         self.assertAlmostEqual(thetavals['k3'], 1.0/6000.0, places=7) 
+
+    def test_return_values(self):
+        objval, thetavals, data_rec =\
+            self.pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd', 'caf'])
+        self.assertAlmostEqual(data_rec["cc"].loc[18], 893.84924, places=3)
+
+        
         
 @unittest.skipIf(not parmest.parmest_available,
                  "Cannot test parmest: required dependencies are missing")

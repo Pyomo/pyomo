@@ -19,6 +19,7 @@ env:
   PYTHON_BASE_PKGS: >
       coverage cython dill ipython networkx nose openpyxl pathos
       pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd wheel
+      python-louvain
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn
   CACHE_VER: v2
