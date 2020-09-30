@@ -1227,7 +1227,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.inputs['P3']), 46.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.outputs['P2']), 64.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.inputs['F']), 3.0, places=3)
-
+        
     def create_model_two_equalities_two_outputs(self, external_model):
         m = pyo.ConcreteModel()
         m.hin = pyo.Var(bounds=(0,None), initialize=10)
@@ -1382,10 +1382,90 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_cs = np.asarray([3.1, 3.2, 4.1, 4.2, 1, 2.2], dtype=np.float64)
         check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
 
-    def test_scaling_solve(self):
-        pass
-    
+    @unittest.skipIf(ipopt_available == False, "CyIpopt needed to run tests with solve")
+    def test_external_greybox_solve_scaling(self):
+        m = pyo.ConcreteModel()
+        m.mu = pyo.Var(bounds=(0,None), initialize=1)
+        m.egb = ExternalGreyBoxBlock()
+        m.egb.set_external_model(PressureDropTwoEqualitiesTwoOutputsScaleBoth())
+        m.ccon = pyo.Constraint(expr = m.egb.inputs['c'] == 128/(3.14*1e-4)*m.mu*m.egb.inputs['F'])
+        m.pcon = pyo.Constraint(expr = m.egb.inputs['Pin'] - m.egb.outputs['Pout'] <= 72)
+        m.pincon = pyo.Constraint(expr = m.egb.inputs['Pin'] == 100.0)
+        m.egb.inputs['Pin'].value = 100
+        m.egb.inputs['Pin'].setlb(50)
+        m.egb.inputs['Pin'].setub(150)
+        m.egb.inputs['c'].value = 2
+        m.egb.inputs['c'].setlb(1)
+        m.egb.inputs['c'].setub(5)
+        m.egb.inputs['F'].value = 3
+        m.egb.inputs['F'].setlb(1)
+        m.egb.inputs['F'].setub(5)
+        m.egb.inputs['P1'].value = 80
+        m.egb.inputs['P1'].setlb(10)
+        m.egb.inputs['P1'].setub(90)
+        m.egb.inputs['P3'].value = 70
+        m.egb.inputs['P3'].setlb(20)
+        m.egb.inputs['P3'].setub(80)
+        m.egb.outputs['P2'].value = 75
+        m.egb.outputs['P2'].setlb(15)
+        m.egb.outputs['P2'].setub(85)
+        m.egb.outputs['Pout'].value = 50
+        m.egb.outputs['Pout'].setlb(10)
+        m.egb.outputs['Pout'].setub(70)
+        m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2 + (m.egb.inputs['F']-3)**2)
 
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.obj] = 0.1 # scale the objective
+        m.scaling_factor[m.egb.inputs['Pin']] = 1.1 # scale the variable
+        m.scaling_factor[m.egb.inputs['c']] = 1.2 # scale the variable
+        m.scaling_factor[m.egb.inputs['F']] = 1.3 # scale the variable
+        #m.scaling_factor[m.egb.inputs['P1']] = 1.4 # scale the variable
+        m.scaling_factor[m.egb.inputs['P3']] = 1.5 # scale the variable
+        m.scaling_factor[m.egb.outputs['P2']] = 1.6 # scale the variable
+        m.scaling_factor[m.egb.outputs['Pout']] = 1.7 # scale the variable
+        m.scaling_factor[m.mu] = 1.9
+        m.scaling_factor[m.pincon] = 2.2
+        pyomo_nlp = PyomoGreyBoxNLP(m)
+
+        options={'hessian_approximation':'limited-memory',
+                 'nlp_scaling_method': 'user-scaling',
+                 'output_file': '_cyipopt-external-greybox-scaling.log',
+                 'file_print_level':10,
+                 'max_iter': 0}
+        cyipopt_problem = CyIpoptNLP(pyomo_nlp)
+        solver = CyIpoptSolver(cyipopt_problem, options)
+        x, info = solver.solve(tee=False)
+
+        with open('_cyipopt-external-greybox-scaling.log', 'r') as fd:
+            solver_trace = fd.read()
+        #os.remove('_cyipopt-external-greybox-scaling.log')
+
+        self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
+        self.assertIn('output_file = _cyipopt-external-greybox-scaling.log', solver_trace)
+        self.assertIn('objective scaling factor = 0.1', solver_trace)
+        self.assertIn('x scaling provided', solver_trace)
+        self.assertIn('c scaling provided', solver_trace)
+        self.assertIn('d scaling provided', solver_trace)
+        # x order: ['egb.inputs[F]', 'mu', 'egb.outputs[Pout]', 'egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[P1]', 'egb.inputs[P3]', 'egb.outputs[P2]']
+        # c order: ['ccon', 'pcon', 'pincon', 'egb.pdrop1', 'egb.pdrop3', 'egb.P2_con', 'egb.Pout_con']
+        self.assertIn('DenseVector "x scaling vector" with 8 elements:', solver_trace)
+        self.assertIn('x scaling vector[    1]= 1.3000000000000000e+00', solver_trace) # F
+        self.assertIn('x scaling vector[    2]= 1.8999999999999999e+00', solver_trace) # mu
+        self.assertIn('x scaling vector[    3]= 1.7000000000000000e+00', solver_trace) # Pout
+        self.assertIn('x scaling vector[    4]= 1.1000000000000001e+00', solver_trace) # Pin
+        self.assertIn('x scaling vector[    5]= 1.2000000000000000e+00', solver_trace) # c
+        self.assertIn('x scaling vector[    6]= 1.0000000000000000e+00', solver_trace) # P1
+        self.assertIn('x scaling vector[    7]= 1.5000000000000000e+00', solver_trace) # P3
+        self.assertIn('x scaling vector[    8]= 1.6000000000000001e+00', solver_trace) # P2 
+        self.assertIn('DenseVector "c scaling vector" with 6 elements:', solver_trace) 
+        self.assertIn('c scaling vector[    1]= 1.0000000000000000e+00', solver_trace) # ccon
+        self.assertIn('c scaling vector[    2]= 2.2000000000000002e+00', solver_trace) # pincon
+        self.assertIn('c scaling vector[    3]= 3.1000000000000001e+00', solver_trace) # pdrop1
+        self.assertIn('c scaling vector[    4]= 3.2000000000000002e+00', solver_trace) # pdrop3
+        self.assertIn('c scaling vector[    5]= 4.0999999999999996e+00', solver_trace) # P2_con
+        self.assertIn('c scaling vector[    6]= 4.2000000000000002e+00', solver_trace) # Pout_con
+        self.assertIn('DenseVector "d scaling vector" with 1 elements:', solver_trace)
+        self.assertIn('d scaling vector[    1]= 1.0000000000000000e+00', solver_trace) # pcon
 
 def check_vectors_specific_order(tst, v1, v1order, v2, v2order):
     tst.assertEqual(len(v1), len(v1order))
@@ -1415,235 +1495,5 @@ def check_sparse_matrix_specific_order(tst, m1, m1rows, m1cols, m2, m2rows, m2co
     #print(m2c)
     tst.assertTrue(np.array_equal(m1c, m2c))
 
-"""
-    def test_interface(self):
-        # weird, this is really a test of the test class above
-        # but we could add code later, so...
-        iom = PressureDropModel()
-        iom.set_inputs(np.ones(4))
-        o = iom.evaluate_outputs()
-        expected_o = np.asarray([0.0, -1.0], dtype=np.float64)
-        self.assertTrue(np.array_equal(o, expected_o))
-
-        jac = iom.evaluate_derivatives()
-        expected_jac = np.asarray([[1, -1, 0, -2], [1, -1, -1, -4]], dtype=np.float64)
-        self.assertTrue(np.array_equal(jac.todense(), expected_jac))
-
-    def test_pyomo_external_model(self):
-        m = pyo.ConcreteModel()
-        m.Pin = pyo.Var(initialize=100, bounds=(0,None))
-        m.c1 = pyo.Var(initialize=1.0, bounds=(0,None))
-        m.c2 = pyo.Var(initialize=1.0, bounds=(0,None))
-        m.F = pyo.Var(initialize=10, bounds=(0,None))
-
-        m.P1 = pyo.Var()
-        m.P2 = pyo.Var()
-
-        m.F_con = pyo.Constraint(expr = m.F == 10)
-        m.Pin_con = pyo.Constraint(expr = m.Pin == 100)
-
-        # simple parameter estimation test
-        m.obj = pyo.Objective(expr= (m.P1 - 90)**2 + (m.P2 - 40)**2)
-
-        cyipopt_problem = \
-            PyomoExternalCyIpoptProblem(m,
-                                        PressureDropModel(),
-                                        [m.Pin, m.c1, m.c2, m.F],
-                                        [m.P1, m.P2]
-                                        )
-
-        # check that the dummy variable is initialized
-        expected_dummy_var_value = pyo.value(m.Pin) + pyo.value(m.c1) + pyo.value(m.c2) + pyo.value(m.F) \
-            + 0 + 0
-            # + pyo.value(m.P1) + pyo.value(m.P2) # not initialized - therefore should use zero
-        self.assertAlmostEqual(pyo.value(m._dummy_variable_CyIpoptPyomoExNLP), expected_dummy_var_value)
-
-        # solve the problem
-        solver = CyIpoptSolver(cyipopt_problem, {'hessian_approximation':'limited-memory'})
-        x, info = solver.solve(tee=False)
-        cyipopt_problem.load_x_into_pyomo(x)
-        self.assertAlmostEqual(pyo.value(m.c1), 0.1, places=5)
-        self.assertAlmostEqual(pyo.value(m.c2), 0.5, places=5)
-
-    def test_pyomo_external_model_scaling(self):
-        m = pyo.ConcreteModel()
-        m.Pin = pyo.Var(initialize=100, bounds=(0,None))
-        m.c1 = pyo.Var(initialize=1.0, bounds=(0,None))
-        m.c2 = pyo.Var(initialize=1.0, bounds=(0,None))
-        m.F = pyo.Var(initialize=10, bounds=(0,None))
-
-        m.P1 = pyo.Var()
-        m.P2 = pyo.Var()
-
-        m.F_con = pyo.Constraint(expr = m.F == 10)
-        m.Pin_con = pyo.Constraint(expr = m.Pin == 100)
-
-        # simple parameter estimation test
-        m.obj = pyo.Objective(expr= (m.P1 - 90)**2 + (m.P2 - 40)**2)
-
-        # set scaling parameters for the pyomo variables and constraints
-        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        m.scaling_factor[m.obj] = 0.1 # scale the objective
-        m.scaling_factor[m.Pin] = 2.0 # scale the variable
-        m.scaling_factor[m.c1] = 3.0 # scale the variable
-        m.scaling_factor[m.c2] = 4.0 # scale the variable
-        m.scaling_factor[m.F] = 5.0 # scale the variable
-        m.scaling_factor[m.P1] = 6.0 # scale the variable
-        m.scaling_factor[m.P2] = 7.0 # scale the variable
-        m.scaling_factor[m.F_con] = 8.0 # scale the pyomo constraint
-        m.scaling_factor[m.Pin_con] = 9.0 # scale the pyomo constraint
-
-        cyipopt_problem = \
-            PyomoExternalCyIpoptProblem(pyomo_model=m,
-                                        ex_input_output_model=PressureDropModel(),
-                                        inputs=[m.Pin, m.c1, m.c2, m.F],
-                                        outputs=[m.P1, m.P2],
-                                        outputs_eqn_scaling=[10.0, 11.0]
-                                        )
-
-        # solve the problem
-        options={'hessian_approximation':'limited-memory',
-                 'nlp_scaling_method': 'user-scaling',
-                 'output_file': '_cyipopt-pyomo-ext-scaling.log',
-                 'file_print_level':10,
-                 'max_iter': 0}
-        solver = CyIpoptSolver(cyipopt_problem, options=options)
-        x, info = solver.solve(tee=False)
-
-        with open('_cyipopt-pyomo-ext-scaling.log', 'r') as fd:
-            solver_trace = fd.read()
-        os.remove('_cyipopt-pyomo-ext-scaling.log')
-
-        self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
-        self.assertIn('output_file = _cyipopt-pyomo-ext-scaling.log', solver_trace)
-        self.assertIn('objective scaling factor = 0.1', solver_trace)
-        self.assertIn('x scaling provided', solver_trace)
-        self.assertIn('c scaling provided', solver_trace)
-        self.assertIn('d scaling provided', solver_trace)
-        self.assertIn('DenseVector "x scaling vector" with 7 elements:', solver_trace)
-        self.assertIn('x scaling vector[    1]= 6.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    2]= 7.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    3]= 2.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    4]= 3.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    5]= 4.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    6]= 5.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    7]= 1.0000000000000000e+00', solver_trace)
-        self.assertIn('DenseVector "c scaling vector" with 5 elements:', solver_trace)
-        self.assertIn('c scaling vector[    1]= 8.0000000000000000e+00', solver_trace)
-        self.assertIn('c scaling vector[    2]= 9.0000000000000000e+00', solver_trace)
-        self.assertIn('c scaling vector[    3]= 1.0000000000000000e+00', solver_trace)
-        self.assertIn('c scaling vector[    4]= 1.0000000000000000e+01', solver_trace)
-        self.assertIn('c scaling vector[    5]= 1.1000000000000000e+01', solver_trace)
-
-    def test_pyomo_external_model_ndarray_scaling(self):
-        m = pyo.ConcreteModel()
-        m.Pin = pyo.Var(initialize=100, bounds=(0,None))
-        m.c1 = pyo.Var(initialize=1.0, bounds=(0,None))
-        m.c2 = pyo.Var(initialize=1.0, bounds=(0,None))
-        m.F = pyo.Var(initialize=10, bounds=(0,None))
-
-        m.P1 = pyo.Var()
-        m.P2 = pyo.Var()
-
-        m.F_con = pyo.Constraint(expr = m.F == 10)
-        m.Pin_con = pyo.Constraint(expr = m.Pin == 100)
-
-        # simple parameter estimation test
-        m.obj = pyo.Objective(expr= (m.P1 - 90)**2 + (m.P2 - 40)**2)
-
-        # set scaling parameters for the pyomo variables and constraints
-        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-        m.scaling_factor[m.obj] = 0.1 # scale the objective
-        m.scaling_factor[m.Pin] = 2.0 # scale the variable
-        m.scaling_factor[m.c1] = 3.0 # scale the variable
-        m.scaling_factor[m.c2] = 4.0 # scale the variable
-        m.scaling_factor[m.F] = 5.0 # scale the variable
-        m.scaling_factor[m.P1] = 6.0 # scale the variable
-        m.scaling_factor[m.P2] = 7.0 # scale the variable
-        m.scaling_factor[m.F_con] = 8.0 # scale the pyomo constraint
-        m.scaling_factor[m.Pin_con] = 9.0 # scale the pyomo constraint
-
-        # test that this all works with ndarray input as well
-        cyipopt_problem = \
-            PyomoExternalCyIpoptProblem(pyomo_model=m,
-                                        ex_input_output_model=PressureDropModel(),
-                                        inputs=[m.Pin, m.c1, m.c2, m.F],
-                                        outputs=[m.P1, m.P2],
-                                        outputs_eqn_scaling=np.asarray([10.0, 11.0], dtype=np.float64)
-                                        )
-
-        # solve the problem
-        options={'hessian_approximation':'limited-memory',
-                 'nlp_scaling_method': 'user-scaling',
-                 'output_file': '_cyipopt-pyomo-ext-scaling-ndarray.log',
-                 'file_print_level':10,
-                 'max_iter': 0}
-        solver = CyIpoptSolver(cyipopt_problem, options=options)
-        x, info = solver.solve(tee=False)
-
-        with open('_cyipopt-pyomo-ext-scaling-ndarray.log', 'r') as fd:
-            solver_trace = fd.read()
-        os.remove('_cyipopt-pyomo-ext-scaling-ndarray.log')
-
-        self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
-        self.assertIn('output_file = _cyipopt-pyomo-ext-scaling-ndarray.log', solver_trace)
-        self.assertIn('objective scaling factor = 0.1', solver_trace)
-        self.assertIn('x scaling provided', solver_trace)
-        self.assertIn('c scaling provided', solver_trace)
-        self.assertIn('d scaling provided', solver_trace)
-        self.assertIn('DenseVector "x scaling vector" with 7 elements:', solver_trace)
-        self.assertIn('x scaling vector[    1]= 6.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    2]= 7.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    3]= 2.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    4]= 3.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    5]= 4.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    6]= 5.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    7]= 1.0000000000000000e+00', solver_trace)
-        self.assertIn('DenseVector "c scaling vector" with 5 elements:', solver_trace)
-        self.assertIn('c scaling vector[    1]= 8.0000000000000000e+00', solver_trace)
-        self.assertIn('c scaling vector[    2]= 9.0000000000000000e+00', solver_trace)
-        self.assertIn('c scaling vector[    3]= 1.0000000000000000e+00', solver_trace)
-        self.assertIn('c scaling vector[    4]= 1.0000000000000000e+01', solver_trace)
-        self.assertIn('c scaling vector[    5]= 1.1000000000000000e+01', solver_trace)
-
-    def test_pyomo_external_model_dummy_var_initialization(self):
-        m = pyo.ConcreteModel()
-        m.Pin = pyo.Var(initialize=100, bounds=(0,None))
-        m.c1 = pyo.Var(initialize=1.0, bounds=(0,None))
-        m.c2 = pyo.Var(initialize=1.0, bounds=(0,None))
-        m.F = pyo.Var(initialize=10, bounds=(0,None))
-
-        m.P1 = pyo.Var(initialize=75.0)
-        m.P2 = pyo.Var(initialize=50.0)
-
-        m.F_con = pyo.Constraint(expr = m.F == 10)
-        m.Pin_con = pyo.Constraint(expr = m.Pin == 100)
-
-        # simple parameter estimation test
-        m.obj = pyo.Objective(expr= (m.P1 - 90)**2 + (m.P2 - 40)**2)
-
-        cyipopt_problem = \
-            PyomoExternalCyIpoptProblem(m,
-                                        PressureDropModel(),
-                                        [m.Pin, m.c1, m.c2, m.F],
-                                        [m.P1, m.P2]
-                                        )
-
-        # check that the dummy variable is initialized
-        expected_dummy_var_value = pyo.value(m.Pin) + pyo.value(m.c1) + pyo.value(m.c2) + pyo.value(m.F) \
-            + pyo.value(m.P1) + pyo.value(m.P2)
-        self.assertAlmostEqual(pyo.value(m._dummy_variable_CyIpoptPyomoExNLP), expected_dummy_var_value)
-        # check that the dummy constraint is satisfied
-        self.assertAlmostEqual(pyo.value(m._dummy_constraint_CyIpoptPyomoExNLP.body),pyo.value(m._dummy_constraint_CyIpoptPyomoExNLP.lower))
-        self.assertAlmostEqual(pyo.value(m._dummy_constraint_CyIpoptPyomoExNLP.body),pyo.value(m._dummy_constraint_CyIpoptPyomoExNLP.upper))
-
-        # solve the problem
-        solver = CyIpoptSolver(cyipopt_problem, {'hessian_approximation':'limited-memory'})
-        x, info = solver.solve(tee=False)
-        cyipopt_problem.load_x_into_pyomo(x)
-        self.assertAlmostEqual(pyo.value(m.c1), 0.1, places=5)
-        self.assertAlmostEqual(pyo.value(m.c2), 0.5, places=5)
-
-"""
 if __name__ == '__main__':
     TestPyomoGreyBoxNLP().test_external_greybox_solve(self)
