@@ -4,12 +4,12 @@ from __future__ import division
 from math import floor, log
 import logging
 
+from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.core import TransformationFactory, Var, Block, Constraint, Any, Binary, value, RangeSet, \
     Reals
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.gdp import Disjunct
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.expr.current import identify_variables
 from pyomo.common.modeling import unique_component_name
 

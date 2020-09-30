@@ -1,13 +1,13 @@
 """Solution of NLP subproblems."""
 from __future__ import division
 
+from pyomo.common.collections import ComponentMap
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_nogood_cuts, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
                         minimize, value)
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning

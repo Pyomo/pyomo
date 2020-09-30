@@ -1,4 +1,4 @@
-"""Tests for the MindtPy solver plugin."""
+"""Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest

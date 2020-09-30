@@ -22,7 +22,7 @@ from pyomo.core.kernel.base import \
 from pyomo.core.kernel.heterogeneous_container import \
     (heterogeneous_containers,
      IHeterogeneousContainer)
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.core.kernel.suffix import suffix
 from pyomo.core.kernel.constraint import (IConstraint,
                                           constraint,

@@ -71,7 +71,7 @@ MindtPy also supports setting options for mip solver and nlp solver.
                                      nlp_solver='ipopt',
                                      tee=True)
 
-There are three initialization strategies in MindtPy, rNLP, initial_binary, max_binary. In OA and GOA strategies, the default initialization strategy is rNLP. In ECP strategy, the default initialization strategy is max_binary.
+There are three initialization strategies in MindtPy: rNLP, initial_binary, max_binary. In OA and GOA strategies, the default initialization strategy is rNLP. In ECP strategy, the default initialization strategy is max_binary.
 
 Single tree implementation
 ---------------------------------------------

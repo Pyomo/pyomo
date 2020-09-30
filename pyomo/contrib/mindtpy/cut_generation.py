@@ -302,13 +302,6 @@ def add_nogood_cuts(var_values, solve_data, config, feasible=False):
 
         MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
 
-    # TODO need to handle theoretical implications of backtracking
-    # if not feasible:
-    #     # Add the integer cut
-    #     MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
-    # else:
-    #     MindtPy.MindtPy_linear_cuts.feasible_integer_cuts.add(expr=int_cut)
-
 
 def add_affine_cuts(solve_data, config):
     """

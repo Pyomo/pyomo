@@ -1,4 +1,4 @@
-"""Tests for the MindtPy solver plugin."""
+"""Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
@@ -22,8 +22,8 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('ipopt', 'cplex')
-if all(SolverFactory(s).available() for s in required_solvers):
+required_solvers = ('baron', 'cplex_persistent')
+if all(SolverFactory(s).available(False) and SolverFactory(s).license_is_valid() for s in required_solvers):
     subsolvers_available = True
 else:
     subsolvers_available = False
@@ -34,6 +34,8 @@ else:
                  % (required_solvers,))
 @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
                  "Symbolic differentiation is not available")
+@unittest.skipIf(not pyomo.contrib.mcpp.pyomo_mcpp.mcpp_available(),
+                 "MC++ is not available")
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 

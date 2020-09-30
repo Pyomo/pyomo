@@ -499,7 +499,7 @@ class _SetData(_SetDataBase):
         return False
 
     def subsets(self, expand_all_set_operators=None):
-        return [ self ]
+        return iter((self,))
 
     def __iter__(self):
         """Iterate over the set members
@@ -2203,7 +2203,10 @@ class Set(IndexedComponent):
 
 
 class IndexedSet(Set):
-    pass
+    def data(self):
+        "Return a dict containing the data() of each Set in this IndexedSet"
+        return {k: v.data() for k,v in iteritems(self)}
+
 
 class FiniteSimpleSet(_FiniteSetData, Set):
     def __init__(self, **kwds):

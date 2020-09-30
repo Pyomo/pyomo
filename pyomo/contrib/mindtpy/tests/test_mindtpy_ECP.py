@@ -1,4 +1,4 @@
-"""Tests for the MindtPy solver plugin."""
+"""Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
@@ -56,7 +56,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='ECP',
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0], obj_bound = 5500)
+                                nlp_solver=required_solvers[0], obj_bound=5500)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -69,7 +69,7 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving 8PP problem with extended cutting plane(max_binary)')
             results = opt.solve(model, strategy='ECP',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0], obj_bound = 5500,
+                                nlp_solver=required_solvers[0], obj_bound=5500,
                                 feasibility_norm='L2')
 
             self.assertIs(results.solver.termination_condition,
@@ -83,7 +83,7 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving 8PP problem with extended cutting plane(max_binary)')
             results = opt.solve(model, strategy='ECP',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0], obj_bound = 5500,
+                                nlp_solver=required_solvers[0], obj_bound=5500,
                                 differentiate_mode='sympy')
 
             self.assertIs(results.solver.termination_condition,
@@ -147,10 +147,11 @@ class TestMindtPy(unittest.TestCase):
     def test_ECP_ConstraintQualificationExample(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            print('\n Solving Constraint Qualification Example with extended cutting plane')
+            print(
+                '\n Solving Constraint Qualification Example with extended cutting plane')
             results = opt.solve(model, strategy='ECP',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0], bound_tolerance = 1e-5
+                                nlp_solver=required_solvers[0], bound_tolerance=1e-5
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -282,6 +283,7 @@ class TestMindtPy(unittest.TestCase):
                       nlp_solver=required_solvers[0]
                       )
             self.assertAlmostEqual(value(model.obj.expr), 14.83, places=1)
+
 
 if __name__ == "__main__":
     unittest.main()
