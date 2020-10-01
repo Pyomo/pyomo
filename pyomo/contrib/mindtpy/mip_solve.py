@@ -148,10 +148,10 @@ def solve_OA_master(solve_data, config):
                 solve_data.mip, config)
         return solve_data.mip, master_mip_results
     except ValueError:
-        config.logger.warning("ValueError: Cannot load a SolverResults object with bad status: error"
-                              "MIP solver failed. This usually happens in the single-tree GOA algorithm."
-                              "Nogood cuts are added and GOA algorithm doesn't converge within the time limit."
-                              "No integer solution is found, so the cplex solver will report an error status.")
+        config.logger.warning("ValueError: Cannot load a SolverResults object with bad status: error. "
+                              "MIP solver failed. This usually happens in the single-tree GOA algorithm. "
+                              "Nogood cuts are added and GOA algorithm doesn't converge within the time limit. "
+                              "No integer solution is found, so the cplex solver will report an error status. ")
         return None, None
 
 
