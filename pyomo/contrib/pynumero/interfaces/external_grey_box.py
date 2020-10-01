@@ -16,32 +16,54 @@ from ..sparse.block_matrix import BlockMatrix
 from scipy.sparse import coo_matrix
 import pyomo.environ as pyo
 
-"""This module is used for interfacing an external model (e.g., compiled
-code) with a Pyomo model and then solve the composite model with
-CyIpopt.
+"""
+This module is used for interfacing an external model as
+a block in a Pyomo model.
+
+An ExternalGreyBoxModel is model is a model that does not 
+provide constraints explicitly as algebraic expressions, but
+instead provides a set of methods that can compute the residuals
+of the constraints (or outputs) and their derivatives.
+
+This allows one to interface external codes (e.g., compiled
+external models) with a Pyomo model. 
+
+Note: To solve a Pyomo model that contains these external models
+      we have a specialized interface built on PyNumero that provides
+      an interface to the CyIpopt solver.
 
 To use this interface:
-   * inherit from ExternalGreyBoxModel and implement the necessary methods
+   * Create a class that is derived from ExternalGreyBoxModel and 
+     implement the necessary methods. This derived class must provide
+     a list of names for: the inputs to your model, the equality constraints
+     (or residuals) that need to be converged, and any outputs that 
+     are computed from your model. It will also need to provide methods to 
+     compute the residuals, outputs, and the jacobian of these with respect to
+     the inputs. See the documentation on ExternalGreyBoxModel for more details.
 
-   * create a CyIpoptCompositeExtProblemInterface object, giving it your
-     pyomo model, an instance of the derived ExternalGreyBoxModel, a
-     list of the Pyomo variables that map to the inputs of the external
-     model, and a list of the Pyomo variables that map to any outputs
-     from the external model.
+   * Create a Pyomo model and make use of the ExternalGreyBoxBlock
+     to produce a Pyomo modeling component that represents your
+     external model. This block is a Pyomo component, and when you 
+     call set_external_model() and provide an instance of your derived
+     ExternalGreyBoxModel, it will automatically create pyomo variables to
+     represent the inputs and the outputs from the external model. You
+     can implement 
 
-   * The standard CyIpopt solver interface can be called using the 
-     CyIpoptCompositeExtProblemInterface.
+   * Create a PyomoGreyBoxNLP and provide it with the Pyomo model
+     that contains the ExternalGreyBoxBlocks. This class presents
+     an NLP interface (i.e., the PyNumero NLP abstract class), and
+     can be used with any solver that makes use of this interface
+     (e.g., the CyIpopt solver interface provided in PyNumero)
 
-See the PyNumero tests for this interface to see an example of use.
+See pyomo/contrib/pynumero/interfaces/tests/test_external_grey_box_solve.py for
+an example of the use of this interface.
 
-Todo:
+Note:
 
    * Currently, you cannot "fix" a pyomo variable that corresponds to an
      input or output and you must use a constraint instead (this is
      because Pyomo removes fixed variables before sending them to the
      solver)
-
-   * Remove the dummy variable and constraint if possible
 
 """
 
@@ -72,7 +94,6 @@ class ExternalGreyBoxModel(object):
         """
         pass
 
-    @abc.abstractmethod
     def equality_constraint_names(self):
         """
         Provide the list of string names corresponding to any residuals 
@@ -82,7 +103,6 @@ class ExternalGreyBoxModel(object):
         """
         return []
 
-    @abc.abstractmethod
     def output_names(self):
         """
         Provide the list of string names corresponding to the outputs
@@ -92,6 +112,18 @@ class ExternalGreyBoxModel(object):
         """
         return []
 
+    def finalize_block_construction(self, pyomo_block):
+        """
+        Implement this callback to provide any additional 
+        specifications to the Pyomo block that is created
+        to represent this external grey box model.
+
+        Note that pyomo_block.inputs and pyomo_block.outputs
+        have been created, and this callback provides an
+        opportunity to set initial values, bounds, etc.
+        """
+        pass
+    
     @abc.abstractmethod
     def set_input_values(self, input_values):
         """
@@ -121,23 +153,20 @@ class ExternalGreyBoxModel(object):
         """
         return None
 
-    @abc.abstractmethod
     def evaluate_equality_constraints(self):
         """
         Compute the residuals from the model (using the values
         set in input_values) and return as a numpy array
         """
-        pass
+        raise NotImplementedError()
 
-    @abc.abstractmethod
     def evaluate_outputs(self):
         """
         Compute the outputs from the model (using the values
         set in input_values) and return as a numpy array
         """
-        pass
+        raise NotImplementedError()
 
-    @abc.abstractmethod
     def evaluate_jacobian_equality_constraints(self):
         """
         Compute the derivatives of the residuals with respect
@@ -146,9 +175,8 @@ class ExternalGreyBoxModel(object):
         the order of the residual names and the cols in
         the order of the input variables.
         """
-        pass
+        raise NotImplementedError()
 
-    @abc.abstractmethod
     def evaluate_jacobian_outputs(self):
         """
         Compute the derivatives of the outputs with respect
@@ -157,7 +185,7 @@ class ExternalGreyBoxModel(object):
         the order of the output variables and the cols in
         the order of the input variables.
         """
-        pass
+        raise NotImplementedError()
 
     # ToDo: Hessians not yet handled
 
@@ -182,6 +210,9 @@ class ExternalGreyBoxBlockData(_BlockData):
 
         # Note, this works even if output_names is an empty list
         self.outputs = pyo.Var(self._output_names)
+
+        # call the callback so the model can set initialization, bounds, etc.
+        external_grey_box_model.finalize_block_construction(self)
 
     def get_external_model(self):
         return self._ex_model

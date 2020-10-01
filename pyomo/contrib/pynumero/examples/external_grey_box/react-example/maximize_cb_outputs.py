@@ -14,16 +14,6 @@ def maximize_cb_outputs(show_solver_log=False):
     m.reactor = ExternalGreyBoxBlock()
     m.reactor.set_external_model(ReactorConcentrationsOutputModel())
 
-    # reactor block will automatically get the input and output variables
-    # inputs: sv, caf, k1, k2, k3
-    # outputs: ca, cb, cc, cd
-    # let's set reasonable bounds on some of the variables
-    m.reactor.inputs['sv'].setlb(0)
-    m.reactor.outputs['ca'].setlb(0)
-    m.reactor.outputs['cb'].setlb(0)
-    m.reactor.outputs['cc'].setlb(0)
-    m.reactor.outputs['cd'].setlb(0)
-
     # The reaction rate constants and the feed concentration will
     # be fixed for this example
     m.k1con = pyo.Constraint(expr=m.reactor.inputs['k1'] == 5/6)
@@ -34,17 +24,6 @@ def maximize_cb_outputs(show_solver_log=False):
     # add an objective function that maximizes the concentration
     # of cb coming out of the reactor
     m.obj = pyo.Objective(expr=m.reactor.outputs['cb'], sense=pyo.maximize)
-
-    # initialize the variables
-    m.reactor.inputs['sv'].value = 5
-    m.reactor.inputs['caf'].value = 10000
-    m.reactor.inputs['k1'].value = 5/6
-    m.reactor.inputs['k2'].value = 5/3
-    m.reactor.inputs['k3'].value = 1/6000
-    m.reactor.outputs['ca'].value = 1
-    m.reactor.outputs['cb'].value = 1
-    m.reactor.outputs['cc'].value = 1
-    m.reactor.outputs['cd'].value = 1
 
     pyomo_nlp = PyomoGreyBoxNLP(m)
 

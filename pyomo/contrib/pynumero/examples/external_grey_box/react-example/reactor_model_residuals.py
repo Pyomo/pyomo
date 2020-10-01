@@ -23,6 +23,23 @@ class ReactorModel(ExternalGreyBoxModel):
     def output_names(self):
         return ['cb_ratio']
 
+    def finalize_block_construction(self, pyomo_block):
+        # set lower bounds on the variables
+        pyomo_block.inputs['sv'].setlb(0)
+        pyomo_block.inputs['ca'].setlb(0)
+        pyomo_block.inputs['cb'].setlb(0)
+        pyomo_block.inputs['cc'].setlb(0)
+        pyomo_block.inputs['cd'].setlb(0)
+
+        # initialize the variables
+        pyomo_block.inputs['sv'].value = 1
+        pyomo_block.inputs['caf'].value = 1
+        pyomo_block.inputs['ca'].value = 1
+        pyomo_block.inputs['cb'].value = 1
+        pyomo_block.inputs['cc'].value = 1
+        pyomo_block.inputs['cd'].value = 1
+        pyomo_block.outputs['cb_ratio'].value = 1
+
     def set_input_values(self, input_values):
         self._input_values = list(input_values)
 
@@ -120,10 +137,10 @@ class ReactorModel(ExternalGreyBoxModel):
         row = np.zeros(4)
         col = np.zeros(4)
         data = np.zeros(4)
-        row[0], col[0], data[0] = (0, 2, -cb/(ca+cc+cd))
+        row[0], col[0], data[0] = (0, 2, -cb/(ca+cc+cd)**2)
         row[1], col[1], data[1] = (0, 3, 1/(ca+cc+cd))
-        row[2], col[2], data[2] = (0, 4, -cb/(ca+cc+cd))
-        row[3], col[3], data[3] = (0, 5, -cb/(ca+cc+cd))
+        row[2], col[2], data[2] = (0, 4, -cb/(ca+cc+cd)**2)
+        row[3], col[3], data[3] = (0, 5, -cb/(ca+cc+cd)**2)
         return coo_matrix((data, (row, col)), shape=(1,6))
 
 
@@ -136,6 +153,22 @@ class ReactorModelNoOutputs(ExternalGreyBoxModel):
     
     def output_names(self):
         return []
+
+    def finalize_block_construction(self, pyomo_block):
+        # set lower bounds on the variables
+        pyomo_block.inputs['sv'].setlb(0)
+        pyomo_block.inputs['ca'].setlb(0)
+        pyomo_block.inputs['cb'].setlb(0)
+        pyomo_block.inputs['cc'].setlb(0)
+        pyomo_block.inputs['cd'].setlb(0)
+
+        # initialize the variables
+        pyomo_block.inputs['sv'].value = 1
+        pyomo_block.inputs['caf'].value = 1
+        pyomo_block.inputs['ca'].value = 1
+        pyomo_block.inputs['cb'].value = 1
+        pyomo_block.inputs['cc'].value = 1
+        pyomo_block.inputs['cd'].value = 1
 
     def set_input_values(self, input_values):
         self._input_values = list(input_values)

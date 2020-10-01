@@ -584,10 +584,10 @@ class PyomoGreyBoxNLP(NLP):
 
         # set the primals on the "pyomo" part of the nlp
         self._pyomo_nlp.set_primals(
-            primals[:-self._n_greybox_primals])
+            primals[:self._pyomo_nlp.n_primals()])
         
         # copy the values for the greybox primals 
-        np.copyto(self._greybox_primals, primals[-self._n_greybox_primals:])
+        np.copyto(self._greybox_primals, primals[self._pyomo_nlp.n_primals():])
 
         for external in self._external_greybox_helpers:
             external.set_primals(primals)
@@ -724,7 +724,7 @@ class PyomoGreyBoxNLP(NLP):
                     ' "out" argument - should take an ndarray of '
                     'size {}'.format(self.n_eq_constraints()))
             self._pyomo_nlp.evaluate_eq_constraints(
-                out[:-self._n_greybox_cons])
+                out[:-self._n_greybox_constraints])
             np.copyto(out[-self._n_greybox_constraints:], self._cached_greybox_constraints)
             return out
         else:

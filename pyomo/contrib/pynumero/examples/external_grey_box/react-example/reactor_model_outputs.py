@@ -35,18 +35,31 @@ class ReactorConcentrationsOutputModel(ExternalGreyBoxModel):
     def input_names(self):
         return ['sv', 'caf', 'k1', 'k2', 'k3']
 
-    def equality_constraint_names(self):
-        return []
-    
     def output_names(self):
         return ['ca', 'cb', 'cc', 'cd']
 
     def set_input_values(self, input_values):
         self._input_values = list(input_values)
 
-    def evaluate_equality_constraints(self):
-        raise NotImplementedError()
-    
+    def finalize_block_construction(self, pyomo_block):
+        # set lower bounds on the inputs and outputs
+        pyomo_block.inputs['sv'].setlb(0)
+        pyomo_block.outputs['ca'].setlb(0)
+        pyomo_block.outputs['cb'].setlb(0)
+        pyomo_block.outputs['cc'].setlb(0)
+        pyomo_block.outputs['cd'].setlb(0)
+
+        # initialize the variables
+        pyomo_block.inputs['sv'].value = 5
+        pyomo_block.inputs['caf'].value = 10000
+        pyomo_block.inputs['k1'].value = 5/6
+        pyomo_block.inputs['k2'].value = 5/3
+        pyomo_block.inputs['k3'].value = 1/6000
+        pyomo_block.outputs['ca'].value = 1
+        pyomo_block.outputs['cb'].value = 1
+        pyomo_block.outputs['cc'].value = 1
+        pyomo_block.outputs['cd'].value = 1
+        
     def evaluate_outputs(self):
         sv = self._input_values[0]
         caf = self._input_values[1]
@@ -56,9 +69,6 @@ class ReactorConcentrationsOutputModel(ExternalGreyBoxModel):
         ret = reactor_outlet_concentrations(sv, caf, k1, k2, k3)
         return np.asarray(ret, dtype=np.float64)
 
-    def evaluate_jacobian_equality_constraints(self):
-        raise NotImplementedError()
-    
     def evaluate_jacobian_outputs(self):
         # here, we compute the derivatives using finite difference
         # however, this would be better with analytical derivatives

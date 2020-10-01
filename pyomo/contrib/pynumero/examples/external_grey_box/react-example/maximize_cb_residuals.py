@@ -16,32 +16,15 @@ def maximize_cb_residuals_with_output(show_solver_log=False):
     m.reactor = ExternalGreyBoxBlock()
     m.reactor.set_external_model(ReactorModel())
 
-    # reactor block will automatically get the input and output variables
-    # inputs: sv, caf, k1, k2, k3
-    # outputs: ca, cb, cc, cd
-    # let's set reasonable bounds on some of the variables
-    m.reactor.inputs['sv'].setlb(0)
-    m.reactor.inputs['ca'].setlb(0)
-    m.reactor.inputs['cb'].setlb(0)
-    m.reactor.inputs['cc'].setlb(0)
-    m.reactor.inputs['cd'].setlb(0)
-
     # The feed concentration will be fixed for this example
     m.cafcon = pyo.Constraint(expr=m.reactor.inputs['caf'] == 10000)
-
+    #m.con = pyo.Constraint(expr=m.reactor.inputs['sv'] ==  1.2654199648056441)
+    
     # add an objective function that maximizes the concentration
     # of cb coming out of the reactor
     #m.obj = pyo.Objective(expr=m.reactor.inputs['cb'], sense=pyo.maximize)
     m.obj = pyo.Objective(expr=m.reactor.outputs['cb_ratio'], sense=pyo.maximize)
 
-    # initialize the variables
-    m.reactor.inputs['sv'].value = 1
-    m.reactor.inputs['caf'].value = 1
-    m.reactor.inputs['ca'].value = 1
-    m.reactor.inputs['cb'].value = 1
-    m.reactor.inputs['cc'].value = 1
-    m.reactor.inputs['cd'].value = 1
-    m.reactor.outputs['cb_ratio'].value = 1
     pyomo_nlp = PyomoGreyBoxNLP(m)
 
     options = {'hessian_approximation':'limited-memory'}
@@ -65,37 +48,20 @@ def maximize_cb_residuals_with_pyomo_variables(show_solver_log=False):
     m.reactor.set_external_model(ReactorModelNoOutputs())
 
     # add a variable and constraint for the cb ratio
-    m.cb_ratio = pyo.Var(bounds=(0,None), initialize=1)
+    m.cb_ratio = pyo.Var(initialize=1)
     u = m.reactor.inputs
     m.cb_ratio_con = pyo.Constraint(expr = \
-        m.cb_ratio == u['cb']/(u['ca']+u['cc']+u['cd']))
-
-    # reactor block will automatically get the input and output variables
-    # inputs: sv, caf, k1, k2, k3
-    # outputs: ca, cb, cc, cd
-    # let's set reasonable bounds on some of the variables
-    m.reactor.inputs['sv'].setlb(0)
-    m.reactor.inputs['ca'].setlb(0)
-    m.reactor.inputs['cb'].setlb(0)
-    m.reactor.inputs['cc'].setlb(0)
-    m.reactor.inputs['cd'].setlb(0)
+                                    u['cb']/(u['ca']+u['cc']+u['cd']) - m.cb_ratio == 0)
 
     # The feed concentration will be fixed for this example
     m.cafcon = pyo.Constraint(expr=m.reactor.inputs['caf'] == 10000)
-    m.con = pyo.Constraint(expr=m.reactor.inputs['sv'] ==  1.04312815332151)
+    #m.con = pyo.Constraint(expr=m.reactor.inputs['sv'] ==  1.04312815332151)
 
     # add an objective function that maximizes the concentration
     # of cb coming out of the reactor
     #m.obj = pyo.Objective(expr=m.reactor.inputs['cb'], sense=pyo.maximize)
     m.obj = pyo.Objective(expr=m.cb_ratio, sense=pyo.maximize)
 
-    # initialize the variables
-    m.reactor.inputs['sv'].value = 1
-    m.reactor.inputs['caf'].value = 1
-    m.reactor.inputs['ca'].value = 1
-    m.reactor.inputs['cb'].value = 1
-    m.reactor.inputs['cc'].value = 1
-    m.reactor.inputs['cd'].value = 1
     pyomo_nlp = PyomoGreyBoxNLP(m)
 
     options = {'hessian_approximation':'limited-memory'}
@@ -107,7 +73,7 @@ def maximize_cb_residuals_with_pyomo_variables(show_solver_log=False):
 
 if __name__ == '__main__':
     m = maximize_cb_residuals_with_output(show_solver_log=True)
-    m.pprint()
+    #m.pprint()
     m = maximize_cb_residuals_with_pyomo_variables(show_solver_log=True)
     m.pprint()
     
