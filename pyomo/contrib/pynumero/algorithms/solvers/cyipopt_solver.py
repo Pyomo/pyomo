@@ -327,7 +327,7 @@ class CyIpoptSolver(object):
     CONFIG.declare("options", ConfigBlock(implicit=True))
 
 
-    def __init__(self, model, options=None, **kwds):
+    def __init__(self, model=None, options=None, **kwds):
         """Create an instance of the CyIpoptSolver. You must
         provide a problem_interface that corresponds to 
         the abstract class CyIpoptProblemInterface
@@ -335,7 +335,31 @@ class CyIpoptSolver(object):
         options can be provided as a dictionary of key value
         pairs
         """
-        if isinstance(model, CyIpoptProblemInterface):
+        # Backwards compatibility: previous versions allowed sending the
+        # model to the constructor instead of to the solve() call
+        # [standard solvers should be able to be constructed with no
+        # arguments, and recieve the model during the call to solve()]
+        #
+        # [1 Oct 20; JDS]: should we deprecate specifying the model when
+        # constructing the solver?
+        self._set_model(model)
+
+        # Backwards compatibility: previous versions allowed specifying
+        # cyipopt options as a positional argument
+        #
+        # [1 Oct 20; JDS]: should we deprecate specifying the cyipopt
+        # options as a positional argument?
+        if options is not None:
+            if 'options' in kwds:
+                kwds['options'].update(options)
+            else:
+                kwds['options'] = options
+
+        self.config = self.CONFIG(kwds)
+
+
+    def _set_model(self, model):
+        if model is None or isinstance(model, CyIpoptProblemInterface):
             # If model is already a CyIpoptNLP, then there is nothing to do
             self._problem = model
         elif isinstance(model, Block):
@@ -353,15 +377,6 @@ class CyIpoptSolver(object):
             # to CyIpoptNLP
             self._problem = CyIpoptNLP(model)
 
-        # Backwards compatibility: previous versions allowed specifying
-        # cyipopt options as a positional argument
-        if options is not None:
-            if 'options' in kwds:
-                kwds['options'].update(options)
-            else:
-                kwds['options'] = options
-        self.config = self.CONFIG(kwds)
-
 
     def available(self, exception_flag=False):
         return numpy_available and cyipopt_available
@@ -371,8 +386,10 @@ class CyIpoptSolver(object):
         return tuple(int(_) for _ in cyipopt.__version__.split('.'))
 
 
-    def solve(self, **kwds):
+    def solve(self, model=None, **kwds):
         config = self.config(kwds, preserve_implicit=True)
+        if model is not None:
+            self._set_model(model)
 
         xl = self._problem.x_lb()
         xu = self._problem.x_ub()
@@ -420,3 +437,12 @@ class CyIpoptSolver(object):
             os.dup2(newstdout, 1)
 
         return x, info
+
+    #
+    # Support "with" statements.
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
