@@ -225,8 +225,11 @@ class Param(IndexedComponent):
         initialize  
             A dictionary or rule for setting up this parameter with existing 
             model data
-        unit: pyomo unit expression                                                                                            
+        unit: pyomo unit expression
             An expression containing the units for the parameter
+        mutable: `boolean`
+            Flag indicating if the value of the parameter may change between
+            calls to a solver. Defaults to `False`
     """
 
     DefaultMutable = False
@@ -248,8 +251,8 @@ class Param(IndexedComponent):
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
         self._default_val   = kwd.pop('default', _NotValid )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
-        self._units         = kwd.pop('units', None)                                                                           
-        if self._units is not None:                                                                                            
+        self._units         = kwd.pop('units', None)
+        if self._units is not None:
             self._mutable = True
         #
         if 'repn' in kwd:
@@ -289,6 +292,10 @@ class Param(IndexedComponent):
         if self._default_val is _NotValid:
             return self._data.__iter__()
         return self._index.__iter__()
+
+    @property
+    def mutable(self):
+        return self._mutable
 
     #
     # These are "sparse equivalent" access / iteration methods that
