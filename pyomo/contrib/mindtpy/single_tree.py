@@ -6,7 +6,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination, solve_NLP_feas)
-from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
 from math import copysign
 from pyomo.environ import *
 from pyomo.core.expr import current as EXPR
@@ -153,93 +153,94 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         opt: SolverFactory
             the mip solver
         """
-        m = solve_data.mip
-        config.logger.info("Adding affine cuts")
-        counter = 0
+        with time_code(solve_data.timing, 'Affine cut generation'):
+            m = solve_data.mip
+            config.logger.info("Adding affine cuts")
+            counter = 0
 
-        for constr in m.MindtPy_utils.constraint_list:
-            if constr.body.polynomial_degree() in (1, 0):
-                continue
+            for constr in m.MindtPy_utils.constraint_list:
+                if constr.body.polynomial_degree() in (1, 0):
+                    continue
 
-            vars_in_constr = list(
-                identify_variables(constr.body))
-            if any(var.value is None for var in vars_in_constr):
-                continue  # a variable has no values
+                vars_in_constr = list(
+                    identify_variables(constr.body))
+                if any(var.value is None for var in vars_in_constr):
+                    continue  # a variable has no values
 
-            # mcpp stuff
-            try:
-                mc_eqn = mc(constr.body)
-            except MCPP_Error as e:
-                config.logger.debug(
-                    "Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
-                continue  # skip to the next constraint
-            # TODO: check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
-            ccSlope = mc_eqn.subcc()
-            cvSlope = mc_eqn.subcv()
-            ccStart = mc_eqn.concave()
-            cvStart = mc_eqn.convex()
+                # mcpp stuff
+                try:
+                    mc_eqn = mc(constr.body)
+                except MCPP_Error as e:
+                    config.logger.debug(
+                        "Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
+                    continue  # skip to the next constraint
+                # TODO: check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
+                ccSlope = mc_eqn.subcc()
+                cvSlope = mc_eqn.subcv()
+                ccStart = mc_eqn.concave()
+                cvStart = mc_eqn.convex()
 
-            concave_cut_valid = True
-            convex_cut_valid = True
-            for var in vars_in_constr:
-                if not var.fixed:
-                    if ccSlope[var] == float('nan') or ccSlope[var] == float('inf'):
-                        concave_cut_valid = False
-                    if cvSlope[var] == float('nan') or cvSlope[var] == float('inf'):
-                        convex_cut_valid = False
-            if ccStart == float('nan') or ccStart == float('inf'):
-                concave_cut_valid = False
-            if cvStart == float('nan') or cvStart == float('inf'):
-                convex_cut_valid = False
-            # check if the value of ccSlope and cvSlope all equals zero. if so, we skip this.
-            if not any(list(ccSlope.values())):
-                concave_cut_valid = False
-            if not any(list(cvSlope.values())):
-                convex_cut_valid = False
-            if (concave_cut_valid or convex_cut_valid) is False:
-                continue
+                concave_cut_valid = True
+                convex_cut_valid = True
+                for var in vars_in_constr:
+                    if not var.fixed:
+                        if ccSlope[var] == float('nan') or ccSlope[var] == float('inf'):
+                            concave_cut_valid = False
+                        if cvSlope[var] == float('nan') or cvSlope[var] == float('inf'):
+                            convex_cut_valid = False
+                if ccStart == float('nan') or ccStart == float('inf'):
+                    concave_cut_valid = False
+                if cvStart == float('nan') or cvStart == float('inf'):
+                    convex_cut_valid = False
+                # check if the value of ccSlope and cvSlope all equals zero. if so, we skip this.
+                if not any(list(ccSlope.values())):
+                    concave_cut_valid = False
+                if not any(list(cvSlope.values())):
+                    convex_cut_valid = False
+                if (concave_cut_valid or convex_cut_valid) is False:
+                    continue
 
-            ub_int = min(constr.upper, mc_eqn.upper()
-                         ) if constr.has_ub() else mc_eqn.upper()
-            lb_int = max(constr.lower, mc_eqn.lower()
-                         ) if constr.has_lb() else mc_eqn.lower()
+                ub_int = min(constr.upper, mc_eqn.upper()
+                             ) if constr.has_ub() else mc_eqn.upper()
+                lb_int = max(constr.lower, mc_eqn.lower()
+                             ) if constr.has_lb() else mc_eqn.lower()
 
-            parent_block = constr.parent_block()
-            # Create a block on which to put outer approximation cuts.
-            # TODO: create it at the beginning.
-            aff_utils = parent_block.component('MindtPy_aff')
-            if aff_utils is None:
-                aff_utils = parent_block.MindtPy_aff = Block(
-                    doc="Block holding affine constraints")
-                aff_utils.MindtPy_aff_cons = ConstraintList()
-            aff_cuts = aff_utils.MindtPy_aff_cons
-            if concave_cut_valid:
-                pyomo_concave_cut = sum(ccSlope[var] * (var - var.value)
-                                        for var in vars_in_constr
-                                        if not var.fixed) + ccStart
-                cplex_concave_rhs = generate_standard_repn(
-                    pyomo_concave_cut).constant
-                cplex_concave_cut, _ = opt._get_expr_from_pyomo_expr(
-                    pyomo_concave_cut)
-                self.add(constraint=cplex.SparsePair(ind=cplex_concave_cut.variables, val=cplex_concave_cut.coefficients),
-                         sense="G",
-                         rhs=lb_int - cplex_concave_rhs)
-                counter += 1
-            if convex_cut_valid:
-                pyomo_convex_cut = sum(cvSlope[var] * (var - var.value)
-                                       for var in vars_in_constr
-                                       if not var.fixed) + cvStart
-                cplex_convex_rhs = generate_standard_repn(
-                    pyomo_convex_cut).constant
-                cplex_convex_cut, _ = opt._get_expr_from_pyomo_expr(
-                    pyomo_convex_cut)
-                self.add(constraint=cplex.SparsePair(ind=cplex_convex_cut.variables, val=cplex_convex_cut.coefficients),
-                         sense="L",
-                         rhs=ub_int - cplex_convex_rhs)
-                # aff_cuts.add(expr=convex_cut)
-                counter += 1
+                parent_block = constr.parent_block()
+                # Create a block on which to put outer approximation cuts.
+                # TODO: create it at the beginning.
+                aff_utils = parent_block.component('MindtPy_aff')
+                if aff_utils is None:
+                    aff_utils = parent_block.MindtPy_aff = Block(
+                        doc="Block holding affine constraints")
+                    aff_utils.MindtPy_aff_cons = ConstraintList()
+                aff_cuts = aff_utils.MindtPy_aff_cons
+                if concave_cut_valid:
+                    pyomo_concave_cut = sum(ccSlope[var] * (var - var.value)
+                                            for var in vars_in_constr
+                                            if not var.fixed) + ccStart
+                    cplex_concave_rhs = generate_standard_repn(
+                        pyomo_concave_cut).constant
+                    cplex_concave_cut, _ = opt._get_expr_from_pyomo_expr(
+                        pyomo_concave_cut)
+                    self.add(constraint=cplex.SparsePair(ind=cplex_concave_cut.variables, val=cplex_concave_cut.coefficients),
+                             sense="G",
+                             rhs=lb_int - cplex_concave_rhs)
+                    counter += 1
+                if convex_cut_valid:
+                    pyomo_convex_cut = sum(cvSlope[var] * (var - var.value)
+                                           for var in vars_in_constr
+                                           if not var.fixed) + cvStart
+                    cplex_convex_rhs = generate_standard_repn(
+                        pyomo_convex_cut).constant
+                    cplex_convex_cut, _ = opt._get_expr_from_pyomo_expr(
+                        pyomo_convex_cut)
+                    self.add(constraint=cplex.SparsePair(ind=cplex_convex_cut.variables, val=cplex_convex_cut.coefficients),
+                             sense="L",
+                             rhs=ub_int - cplex_convex_rhs)
+                    # aff_cuts.add(expr=convex_cut)
+                    counter += 1
 
-        config.logger.info("Added %s affine cuts" % counter)
+            config.logger.info("Added %s affine cuts" % counter)
 
     def add_lazy_nogood_cuts(self, var_values, solve_data, config, opt, feasible=False):
         """
@@ -505,7 +506,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 'LB: {} + (tol {}) >= UB: {}\n'.format(
                     solve_data.LB, config.bound_tolerance, solve_data.UB))
             solve_data.results.solver.termination_condition = tc.optimal
-            return
+            self.abort()
         # else:
         # solve subproblem
         # Solve NLP subproblem
@@ -523,7 +524,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     'LB: {} + (tol {}) >= UB: {}\n'.format(
                         solve_data.LB, config.bound_tolerance, solve_data.UB))
                 solve_data.results.solver.termination_condition = tc.optimal
-                return
+                self.abort()
         elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
             self.handle_lazy_NLP_subproblem_infeasible(
                 fixed_nlp, solve_data, config, opt)

@@ -33,6 +33,7 @@ def MindtPy_iteration_loop(solve_data, config):
     working_model = solve_data.working_model
     main_objective = next(
         working_model.component_data_objects(Objective, active=True))
+    last_iter_cuts = False
     while solve_data.mip_iter < config.iteration_limit:
 
         config.logger.info(
@@ -128,7 +129,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_nogood_cuts and not config.single_tree:
+    if config.add_nogood_cuts:
         bound_fix(solve_data, config, last_iter_cuts)
 
 
