@@ -34,6 +34,36 @@ def maximize_cb_ratio_residuals_with_output(show_solver_log=False):
     pyomo_nlp.load_x_into_pyomo(x)
     return m
 
+def maximize_cb_ratio_residuals_with_obj(show_solver_log=False):
+    # in this simple example, we will use an external grey box model representing
+    # a steady-state reactor, and solve for the space velocity that maximizes
+    # the ratio of B to the other components coming out of the reactor
+    # This example illustrates the use of "equality constraints" or residuals
+    # in the external grey box example as well as additional pyomo variables
+    # and constraints
+    m = pyo.ConcreteModel()
+
+    # create a block to store the external reactor model
+    m.reactor = ExternalGreyBoxBlock()
+    m.reactor.set_external_model(ReactorModelNoOutputs())
+
+    # The feed concentration will be fixed for this example
+    m.cafcon = pyo.Constraint(expr=m.reactor.inputs['caf'] == 10000)
+
+    # add an objective function that maximizes the concentration
+    # of cb coming out of the reactor
+    u = m.reactor.inputs
+    m.obj = pyo.Objective(expr=u['cb']/(u['ca']+u['cc']+u['cd']), sense=pyo.maximize)
+
+    pyomo_nlp = PyomoGreyBoxNLP(m)
+
+    options = {'hessian_approximation':'limited-memory'}
+    cyipopt_problem = CyIpoptNLP(pyomo_nlp)
+    solver = CyIpoptSolver(cyipopt_problem, options)
+    x, info = solver.solve(tee=show_solver_log)
+    pyomo_nlp.load_x_into_pyomo(x)
+    return m
+
 def maximize_cb_ratio_residuals_with_pyomo_variables(show_solver_log=False):
     # in this simple example, we will use an external grey box model representing
     # a steady-state reactor, and solve for the space velocity that maximizes
@@ -72,9 +102,11 @@ def maximize_cb_ratio_residuals_with_pyomo_variables(show_solver_log=False):
     return m
 
 if __name__ == '__main__':
-    m = maximize_cb_ratio_residuals_with_output(show_solver_log=True)
+    #m = maximize_cb_ratio_residuals_with_output(show_solver_log=True)
     #m.pprint()
-    m = maximize_cb_ratio_residuals_with_pyomo_variables(show_solver_log=True)
+    m = maximize_cb_ratio_residuals_with_obj(show_solver_log=True)
     m.pprint()
+    #m = maximize_cb_ratio_residuals_with_pyomo_variables(show_solver_log=True)
+    #m.pprint()
     
 
