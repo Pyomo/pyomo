@@ -59,9 +59,9 @@ def MindtPy_iteration_loop(solve_data, config):
                                                            solve_data, config)
                     # Call the MILP post-solve callback
                     config.call_after_master_solve(master_mip, solve_data)
-                else:
-                    config.logger.info('Algorithm should terminate here.')
-                    break
+            else:
+                config.logger.info('Algorithm should terminate here.')
+                break
         else:
             raise NotImplementedError()
 
