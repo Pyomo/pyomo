@@ -7,16 +7,22 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import numpy as np
 import abc
-from pyomo.environ import Var, Constraint, value
-from pyomo.core.base.block import _BlockData, declare_custom_block
-from ..sparse.block_matrix import BlockMatrix
+import logging
+import numpy as np
 from scipy.sparse import coo_matrix
-import pyomo.environ as pyo
 
-from six import add_metaclass, itervalues
+from pyomo.common.timing import ConstructionTimer
+from pyomo.core.base import Var, Constraint, value
+from pyomo.core.base.block import _BlockData, Block, declare_custom_block
+from pyomo.core.base.util import Initializer
+
+from ..sparse.block_matrix import BlockMatrix
+
+from six import add_metaclass, itervalues, iteritems
 from six.moves import xrange
+
+logger = logging.getLogger('pyomo.contrib.pynumero')
 
 """
 This module is used for interfacing an external model as
@@ -201,29 +207,82 @@ class ExternalGreyBoxModel(object):
     # ToDo: Hessians not yet handled
 
 
-@declare_custom_block(name='ExternalGreyBoxBlock', new_ctype=True)
 class ExternalGreyBoxBlockData(_BlockData):
+
     def set_external_model(self, external_grey_box_model):
         self._ex_model = ex_model = external_grey_box_model
+        if ex_model is None:
+            self._input_names = self._output_names = None
+            self.inputs = self.outputs = None
+            return
 
         self._input_names = ex_model.input_names()
         if self._input_names is None or len(self._input_names) == 0:
             raise ValueError(
                 'No input_names specified for external_grey_box_model.'
                 ' Must specify at least one input.')
-        self.inputs = pyo.Var(self._input_names)
+        self.inputs = Var(self._input_names)
 
         self._equality_constraint_names = ex_model.equality_constraint_names()
         self._output_names = ex_model.output_names()
 
         # Note, this works even if output_names is an empty list
-        self.outputs = pyo.Var(self._output_names)
+        self.outputs = Var(self._output_names)
 
         # call the callback so the model can set initialization, bounds, etc.
         external_grey_box_model.finalize_block_construction(self)
 
     def get_external_model(self):
         return self._ex_model
+
+
+class ExternalGreyBoxBlock(Block):
+    def __new__(cls, *args, **kwds):
+        if cls != ExternalGreyBoxBlock:
+            target_cls = cls
+        elif not args or (args[0] is UnindexedComponent_set and len(args) == 1):
+            target_cls = SimpleExternalGreyBoxBlock
+        else:
+            target_cls = IndexedExternalGreyBoxBlock
+        return super(ExternalGreyBoxBlock, cls).__new__(target_cls)
+
+    def __init__(self, *args, **kwds):
+        kwds.setdefault('ctype', ExternalGreyBoxBlock)
+        self._init_model = Initializer(kwds.pop('external_model', None))
+        Block.__init__(self, *args, **kwds)
+
+    def construct(self, data=None):
+        """
+        Construct the ExternalGreyBoxBlockDatas
+        """
+        if self._constructed:
+            return
+        # Do not set the constructed flag - Block.construct() will do that
+
+        timer = ConstructionTimer(self)
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Constructing external grey box model %s"
+                         % (self.name))
+
+        super(ExternalGreyBoxBlock, self).construct(data)
+
+        if self._init_model is not None:
+            block = self.parent_block()
+            for index, data in iteritems(self):
+                data.set_external_model(self._init_model(block, index))
+
+
+class SimpleExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock):
+    def __init__(self, *args, **kwds):
+        ExternalGreyBoxBlockData.__init__(self, component=self)
+        ExternalGreyBoxBlock.__init__(self, *args, **kwds)
+
+    # Pick up the display() from Block and not BlockData
+    display = ExternalGreyBoxBlock.display
+
+
+class IndexedExternalGreyBoxBlock(Block):
+    pass
 
 
 class _ExternalGreyBoxModelHelper(object):
