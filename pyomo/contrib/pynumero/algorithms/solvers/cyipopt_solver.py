@@ -19,18 +19,29 @@ that works with problems derived from AslNLP as long as those
 classes return numpy ndarray objects for the vectors and coo_matrix
 objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
-try:
-    import ipopt
-except ImportError:
-    raise ImportError('ipopt solver relies on cyipopt. Install cyipopt'
-                      ' https://github.com/matthias-k/cyipopt.git')
-import numpy as np
-from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+
 import six
 import sys
 import os
 import abc
 
+from pyomo.common.dependencies import (
+    attempt_import,
+    numpy as np, numpy_available,
+)
+cyipopt, cyipopt_available = attempt_import(
+    'ipopt',
+    'cyipopt solver relies on cyipopt. Install cyipopt '
+    'https://github.com/matthias-k/cyipopt.git'
+)
+# Because pynumero.interfaces requires numpy, we will leverage deferred
+# imports here so that the solver can be registered even when numpy is
+# not available.
+pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
+egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
+
+from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.core.base import Block
 
 @six.add_metaclass(abc.ABCMeta)
 class CyIpoptProblemInterface(object):
@@ -269,7 +280,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         pass
 
 
-def redirect_stdout():
+def _redirect_stdout():
     sys.stdout.flush() # <--- important when redirecting to files
 
     # Duplicate stdout (file descriptor 1)
@@ -292,8 +303,31 @@ def redirect_stdout():
     return newstdout
 
 
+def _numpy_vector(val):
+    ans = np.array(val, np.float64)
+    if len(ans.shape) != 1:
+        raise ValueError("expected a vector, but recieved a matrix "
+                         "with shape %s" % (ans.shape,))
+    return ans
+
+
 class CyIpoptSolver(object):
-    def __init__(self, problem_interface, options=None):
+
+    CONFIG = ConfigBlock("cyipopt")
+    CONFIG.declare("tee", ConfigValue(
+        default=False,
+        domain=bool,
+        description="Stream solver output to console",
+    ))
+    CONFIG.declare("x0", ConfigValue(
+        default=None,
+        domain=_numpy_vector,
+        description="Stream solver output to console",
+    ))
+    CONFIG.declare("options", ConfigBlock(implicit=True))
+
+
+    def __init__(self, model, options=None, **kwds):
         """Create an instance of the CyIpoptSolver. You must
         provide a problem_interface that corresponds to 
         the abstract class CyIpoptProblemInterface
@@ -301,39 +335,69 @@ class CyIpoptSolver(object):
         options can be provided as a dictionary of key value
         pairs
         """
-        self._problem = problem_interface
-
-        self._options = options
-        if options is not None:
-            assert isinstance(options, dict)
+        if isinstance(model, CyIpoptProblemInterface):
+            # If model is already a CyIpoptNLP, then there is nothing to do
+            self._problem = model
+        elif isinstance(model, Block):
+            # If this is a Pyomo model / block, then we need to create
+            # the appropriate PyomoNLP, then wrap it in a CyIpoptNLP
+            grey_box_blocks = list(model.component_data_objects(
+                egb.ExternalGreyBoxBlock, active=True))
+            if grey_box_blocks:
+                nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+            else:
+                nlp = pyomo_nlp.PyomoNLP(model)
+            self._problem = CyIpoptNLP(nlp)
         else:
-            self._options = dict()
+            # Assume that model is some form of NLP that can be passed
+            # to CyIpoptNLP
+            self._problem = CyIpoptNLP(model)
 
-    def solve(self, x0=None, tee=False):
+        # Backwards compatibility: previous versions allowed specifying
+        # cyipopt options as a positional argument
+        if options is not None:
+            if 'options' in kwds:
+                kwds['options'].update(options)
+            else:
+                kwds['options'] = options
+        self.config = self.CONFIG(kwds)
+
+
+    def available(self, exception_flag=False):
+        return numpy_available and cyipopt_available
+
+
+    def version(self):
+        return tuple(int(_) for _ in cyipopt.__version__.split('.'))
+
+
+    def solve(self, **kwds):
+        config = self.config(kwds, preserve_implicit=True)
+
         xl = self._problem.x_lb()
         xu = self._problem.x_ub()
         gl = self._problem.g_lb()
         gu = self._problem.g_ub()
 
-        if x0 is None:
-            x0 = self._problem.x_init()
-        xstart = x0
+        if config.x0 is None:
+            config.x0 = self._problem.x_init()
         
-        nx = len(xstart)
+        nx = len(config.x0)
         ng = len(gl)
 
-        cyipopt_solver = ipopt.problem(n=nx,
-                                       m=ng,
-                                       problem_obj=self._problem,
-                                       lb=xl,
-                                       ub=xu,
-                                       cl=gl,
-                                       cu=gu
+        cyipopt_solver = cyipopt.problem(
+            n=nx,
+            m=ng,
+            problem_obj=self._problem,
+            lb=xl,
+            ub=xu,
+            cl=gl,
+            cu=gu
         )
 
         # check if we need scaling
         obj_scaling, x_scaling, g_scaling = self._problem.scaling_factors()
-        if obj_scaling is not None or x_scaling is not None or g_scaling is not None:
+        if any((obj_scaling, x_scaling, g_scaling)):
             # need to set scaling factors
             if obj_scaling is None:
                 obj_scaling = 1.0
@@ -345,14 +409,14 @@ class CyIpoptSolver(object):
             cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
-        for k, v in self._options.items():
+        for k, v in config.options.items():
             cyipopt_solver.addOption(k, v)
 
-        if tee:
-            x, info = cyipopt_solver.solve(xstart)
+        if config.tee:
+            x, info = cyipopt_solver.solve(config.x0)
         else:
-            newstdout = redirect_stdout()
-            x, info = cyipopt_solver.solve(xstart)
+            newstdout = _redirect_stdout()
+            x, info = cyipopt_solver.solve(config.x0)
             os.dup2(newstdout, 1)
 
         return x, info
