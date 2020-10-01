@@ -20,34 +20,36 @@ import pyomo.environ as pyo
 This module is used for interfacing an external model as
 a block in a Pyomo model.
 
-An ExternalGreyBoxModel is model is a model that does not 
+An ExternalGreyBoxModel is model is a model that does not
 provide constraints explicitly as algebraic expressions, but
 instead provides a set of methods that can compute the residuals
 of the constraints (or outputs) and their derivatives.
 
 This allows one to interface external codes (e.g., compiled
-external models) with a Pyomo model. 
+external models) with a Pyomo model.
 
 Note: To solve a Pyomo model that contains these external models
       we have a specialized interface built on PyNumero that provides
       an interface to the CyIpopt solver.
 
 To use this interface:
-   * Create a class that is derived from ExternalGreyBoxModel and 
+   * Create a class that is derived from ExternalGreyBoxModel and
      implement the necessary methods. This derived class must provide
      a list of names for: the inputs to your model, the equality constraints
-     (or residuals) that need to be converged, and any outputs that 
-     are computed from your model. It will also need to provide methods to 
+     (or residuals) that need to be converged, and any outputs that
+     are computed from your model. It will also need to provide methods to
      compute the residuals, outputs, and the jacobian of these with respect to
      the inputs. See the documentation on ExternalGreyBoxModel for more details.
 
    * Create a Pyomo model and make use of the ExternalGreyBoxBlock
      to produce a Pyomo modeling component that represents your
-     external model. This block is a Pyomo component, and when you 
+     external model. This block is a Pyomo component, and when you
      call set_external_model() and provide an instance of your derived
      ExternalGreyBoxModel, it will automatically create pyomo variables to
      represent the inputs and the outputs from the external model. You
-     can implement 
+     can implement a callback to modify the Pyomo block after it is
+     constructed. This also provides a mechanism to initalize variables,
+     etc.
 
    * Create a PyomoGreyBoxNLP and provide it with the Pyomo model
      that contains the ExternalGreyBoxBlocks. This class presents
@@ -103,7 +105,7 @@ class ExternalGreyBoxModel(object):
 
     def equality_constraint_names(self):
         """
-        Provide the list of string names corresponding to any residuals 
+        Provide the list of string names corresponding to any residuals
         for this external model. These should be in the order corresponding
         to values returned from evaluate_residuals. Return an empty list
         if there are no equality constraints.
@@ -121,7 +123,7 @@ class ExternalGreyBoxModel(object):
 
     def finalize_block_construction(self, pyomo_block):
         """
-        Implement this callback to provide any additional 
+        Implement this callback to provide any additional
         specifications to the Pyomo block that is created
         to represent this external grey box model.
 
@@ -130,7 +132,7 @@ class ExternalGreyBoxModel(object):
         opportunity to set initial values, bounds, etc.
         """
         pass
-    
+
     @abc.abstractmethod
     def set_input_values(self, input_values):
         """
@@ -149,7 +151,7 @@ class ExternalGreyBoxModel(object):
         one may need to set solver options so these factors are used
         """
         return None
-    
+
     def get_output_constraint_scaling_factors(self):
         """
         This method is called by the solver interface to get desired
@@ -261,7 +263,7 @@ class _ExternalGreyBoxModelHelper(object):
         self._outputs_to_primals_map = []
         for k in self._block.outputs:
             self._outputs_to_primals_map.append(vardata_to_idx[self._block.outputs[k]])
-        
+
         # setup some structures for the jacobians
         input_values = initial_primal_values[self._inputs_to_primals_map]
         self._ex_model.set_input_values(input_values)
@@ -302,7 +304,7 @@ class _ExternalGreyBoxModelHelper(object):
 
     def set_primals(self, primals):
         # map the full primals "x" to the inputs "u" and set
-        # the values on the external model 
+        # the values on the external model
         input_values = primals[self._inputs_to_primals_map]
         self._ex_model.set_input_values(input_values)
 
@@ -341,9 +343,9 @@ class _ExternalGreyBoxModelHelper(object):
             computed_output_values = self._ex_model.evaluate_outputs()
             output_resid = computed_output_values - self._output_values
             resid_list.append(output_resid)
-            
+
         return np.concatenate(resid_list)
-        
+
     def evaluate_jacobian(self):
         # compute the jacobian of h(x) w.r.t. x
         # J_h(x) = [Jw_eq(Pu*x); Jw_o(Pu*x)-Po*x]
