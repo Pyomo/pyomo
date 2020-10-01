@@ -55,8 +55,8 @@ To use this interface:
      can be used with any solver that makes use of this interface
      (e.g., the CyIpopt solver interface provided in PyNumero)
 
-See pyomo/contrib/pynumero/interfaces/tests/test_external_grey_box_solve.py for
-an example of the use of this interface.
+See pyomo/contrib/pynumero/examples/external_grey_box for examples
+of the use of this interface.
 
 Note:
 
@@ -71,25 +71,32 @@ Note:
 class ExternalGreyBoxModel(object):
     """
     This is the base class for building external input output models
-    for use with Pyomo and CyIpopt
+    for use with Pyomo and CyIpopt. See the module documentation above,
+    and documentation of individual methods as well as examples.
     """
-    def __init__(self):
-        pass
-
     def n_inputs(self):
+        """ This method returns the number of inputs. You do not
+        need to overload this method in derived classes.
+        """
         return len(self.input_names())
 
     def n_equality_constraints(self):
+        """ This method returns the number of equality constraints.
+        You do not need to overload this method in derived classes.
+        """
         return len(self.equality_constraint_names())
 
     def n_outputs(self):
+        """ This method returns the number of outputs. You do not
+        need to overload this method in derived classes.
+        """
         return len(self.output_names())
 
     @abc.abstractmethod
     def input_names(self):
         """
         Provide the list of string names to corresponding to the inputs
-        of this external model. These should be returned in the order
+        of this external model. These should be returned in the same order
         that they are to be used in set_input_values.
         """
         pass
@@ -192,9 +199,6 @@ class ExternalGreyBoxModel(object):
 
 @declare_custom_block(name='ExternalGreyBoxBlock', new_ctype=True)
 class ExternalGreyBoxBlockData(_BlockData):
-
-    # TODO CHANGE THE CTYPE
-    
     def set_external_model(self, external_grey_box_model):
         self._ex_model = ex_model = external_grey_box_model
 
