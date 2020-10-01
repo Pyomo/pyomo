@@ -1,3 +1,4 @@
+from __future__ import division
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoGreyBoxNLP
