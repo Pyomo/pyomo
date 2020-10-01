@@ -4,7 +4,7 @@ from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoGreyBoxNLP
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptNLP, CyIpoptSolver
 from reactor_model_residuals import ReactorModel, ReactorModelNoOutputs
 
-def maximize_cb_residuals_with_output(show_solver_log=False):
+def maximize_cb_ratio_residuals_with_output(show_solver_log=False):
     # in this simple example, we will use an external grey box model representing
     # a steady-state reactor, and solve for the space velocity that maximizes
     # the ratio of B to the other components coming out of the reactor
@@ -34,7 +34,7 @@ def maximize_cb_residuals_with_output(show_solver_log=False):
     pyomo_nlp.load_x_into_pyomo(x)
     return m
 
-def maximize_cb_residuals_with_pyomo_variables(show_solver_log=False):
+def maximize_cb_ratio_residuals_with_pyomo_variables(show_solver_log=False):
     # in this simple example, we will use an external grey box model representing
     # a steady-state reactor, and solve for the space velocity that maximizes
     # the ratio of B to the other components coming out of the reactor
@@ -72,9 +72,9 @@ def maximize_cb_residuals_with_pyomo_variables(show_solver_log=False):
     return m
 
 if __name__ == '__main__':
-    m = maximize_cb_residuals_with_output(show_solver_log=True)
+    m = maximize_cb_ratio_residuals_with_output(show_solver_log=True)
     #m.pprint()
-    m = maximize_cb_residuals_with_pyomo_variables(show_solver_log=True)
+    m = maximize_cb_ratio_residuals_with_pyomo_variables(show_solver_log=True)
     m.pprint()
     
 
