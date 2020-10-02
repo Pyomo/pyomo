@@ -8,14 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 """
-The cyipopt_solver module includes the python interface to the 
-Cythonized ipopt solver cyipopt (see more: 
-https://github.com/matthias-k/cyipopt.git). To use the solver, 
+The cyipopt_solver module includes the python interface to the
+Cythonized ipopt solver cyipopt (see more:
+https://github.com/matthias-k/cyipopt.git). To use the solver,
 you can create a derived implementation from the abstract base class
 CyIpoptProblemInterface that provides the necessary methods.
 
 Note: This module also includes a default implementation CyIpopt
-that works with problems derived from AslNLP as long as those 
+that works with problems derived from AslNLP as long as those
 classes return numpy ndarray objects for the vectors and coo_matrix
 objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
@@ -51,7 +51,7 @@ class CyIpoptProblemInterface(object):
         """Return the initial values for x as a numpy ndarray
         """
         pass
-    
+
     @abc.abstractmethod
     def x_lb(self):
         """Return the lower bounds on x as a numpy ndarray
@@ -109,7 +109,7 @@ class CyIpoptProblemInterface(object):
     def jacobianstructure(self):
         """Return the structure of the jacobian
         in coordinate format. That is, return (rows,cols)
-        where rows and cols are both numpy ndarray 
+        where rows and cols are both numpy ndarray
         objects that contain the row and column indices
         for each of the nonzeros in the jacobian.
         """
@@ -127,7 +127,7 @@ class CyIpoptProblemInterface(object):
     def hessianstructure(self):
         """Return the structure of the hessian
         in coordinate format. That is, return (rows,cols)
-        where rows and cols are both numpy ndarray 
+        where rows and cols are both numpy ndarray
         objects that contain the row and column indices
         for each of the nonzeros in the hessian.
         Note: return ONLY the lower diagonal of this symmetric matrix.
@@ -143,7 +143,7 @@ class CyIpoptProblemInterface(object):
         Note: return ONLY the lower diagonal of this symmetric matrix.
         """
         pass
-    
+
     def intermediate(self, alg_mod, iter_count, obj_value,
             inf_pr, inf_du, mu, d_norm, regularization_size,
             alpha_du, alpha_pr, ls_trials):
@@ -157,8 +157,8 @@ class CyIpoptProblemInterface(object):
 class CyIpoptNLP(CyIpoptProblemInterface):
     def __init__(self, nlp):
         """This class provides a CyIpoptProblemInterface for use
-        with the CyIpoptSolver class that can take in an NLP 
-        as long as it provides vectors as numpy ndarrays and 
+        with the CyIpoptSolver class that can take in an NLP
+        as long as it provides vectors as numpy ndarrays and
         matrices as scipy.sparse.coo_matrix objects. This class
         provides the interface between AmplNLP or PyomoNLP objects
         and the CyIpoptSolver
@@ -208,7 +208,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
 
     def x_lb(self):
         return self._nlp.primals_lb()
-    
+
     def x_ub(self):
         return self._nlp.primals_ub()
 
@@ -217,7 +217,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
 
     def g_ub(self):
         return self._nlp.constraints_ub()
-    
+
     def scaling_factors(self):
         obj_scaling = self._nlp.get_obj_scaling()
         x_scaling = self._nlp.get_primals_scaling()
@@ -238,7 +238,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
 
     def jacobianstructure(self):
         return self._jac_g.row, self._jac_g.col
-        
+
     def jacobian(self, x):
         self._set_primals_if_necessary(x)
         self._nlp.evaluate_jacobian(out=self._jac_g)
@@ -256,7 +256,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
     def hessian(self, x, y, obj_factor):
         if not self._hessian_available:
             raise ValueError("Hessian requested, but not supported by the NLP")
-        
+
         self._set_primals_if_necessary(x)
         self._set_duals_if_necessary(y)
         self._set_obj_factor_if_necessary(obj_factor)
@@ -304,6 +304,71 @@ def _redirect_stdout():
     return newstdout
 
 
+class CyIpoptSolver(object):
+    def __init__(self, problem_interface, options=None):
+        """Create an instance of the CyIpoptSolver. You must
+        provide a problem_interface that corresponds to
+        the abstract class CyIpoptProblemInterface
+        options can be provided as a dictionary of key value
+        pairs
+        """
+        self._problem = problem_interface
+
+        self._options = options
+        if options is not None:
+            assert isinstance(options, dict)
+        else:
+            self._options = dict()
+
+    def solve(self, x0=None, tee=False):
+        xl = self._problem.x_lb()
+        xu = self._problem.x_ub()
+        gl = self._problem.g_lb()
+        gu = self._problem.g_ub()
+
+        if x0 is None:
+            x0 = self._problem.x_init()
+        xstart = x0
+
+        nx = len(xstart)
+        ng = len(gl)
+
+        cyipopt_solver = cyipopt.problem(
+            n=nx,
+            m=ng,
+            problem_obj=self._problem,
+            lb=xl,
+            ub=xu,
+            cl=gl,
+            cu=gu
+        )
+
+        # check if we need scaling
+        obj_scaling, x_scaling, g_scaling = self._problem.scaling_factors()
+        if any(_ is not None for _ in (obj_scaling, x_scaling, g_scaling)):
+            # need to set scaling factors
+            if obj_scaling is None:
+                obj_scaling = 1.0
+            if x_scaling is None:
+                x_scaling = np.ones(nx)
+            if g_scaling is None:
+                g_scaling = np.ones(ng)
+            cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
+
+        # add options
+        for k, v in self._options.items():
+            cyipopt_solver.addOption(k, v)
+
+        if tee:
+            x, info = cyipopt_solver.solve(xstart)
+        else:
+            newstdout = _redirect_stdout()
+            x, info = cyipopt_solver.solve(xstart)
+            os.dup2(newstdout, 1)
+
+        return x, info
+
+
 def _numpy_vector(val):
     ans = np.array(val, np.float64)
     if len(ans.shape) != 1:
@@ -312,7 +377,7 @@ def _numpy_vector(val):
     return ans
 
 
-class CyIpoptSolver(object):
+class PyomoCyIpoptSolver(object):
 
     CONFIG = ConfigBlock("cyipopt")
     CONFIG.declare("tee", ConfigValue(
@@ -325,93 +390,51 @@ class CyIpoptSolver(object):
         domain=bool,
         description="Store the final solution into the original Pyomo model",
     ))
-    CONFIG.declare("x0", ConfigValue(
-        default=None,
-        domain=_numpy_vector,
-        description="Stream solver output to console",
-    ))
     CONFIG.declare("options", ConfigBlock(implicit=True))
 
 
-    def __init__(self, model=None, options=None, **kwds):
+    def __init__(self, **kwds):
         """Create an instance of the CyIpoptSolver. You must
-        provide a problem_interface that corresponds to 
+        provide a problem_interface that corresponds to
         the abstract class CyIpoptProblemInterface
 
         options can be provided as a dictionary of key value
         pairs
         """
-        # Backwards compatibility: previous versions allowed sending the
-        # model to the constructor instead of to the solve() call
-        # [standard solvers should be able to be constructed with no
-        # arguments, and recieve the model during the call to solve()]
-        #
-        # [1 Oct 20; JDS]: should we deprecate specifying the model when
-        # constructing the solver?
-        self._set_model(model)
-
-        # Backwards compatibility: previous versions allowed specifying
-        # cyipopt options as a positional argument
-        #
-        # [1 Oct 20; JDS]: should we deprecate specifying the cyipopt
-        # options as a positional argument?
-        if options is not None:
-            if 'options' in kwds:
-                kwds['options'].update(options)
-            else:
-                kwds['options'] = options
-
         self.config = self.CONFIG(kwds)
-
 
     def _set_model(self, model):
         self._model = model
 
-
     def available(self, exception_flag=False):
         return numpy_available and cyipopt_available
-
 
     def version(self):
         return tuple(int(_) for _ in cyipopt.__version__.split('.'))
 
-
-    def solve(self, model=None, **kwds):
+    def solve(self, model, **kwds):
         config = self.config(kwds, preserve_implicit=True)
-        if model is None:
-            model = self._model
 
-        if model is None or isinstance(model, CyIpoptProblemInterface):
-            # If model is already a CyIpoptNLP, then there is nothing to do
-            problem = model
-        elif isinstance(model, Block):
-            # If this is a Pyomo model / block, then we need to create
-            # the appropriate PyomoNLP, then wrap it in a CyIpoptNLP
-            grey_box_blocks = list(model.component_data_objects(
-                egb.ExternalGreyBoxBlock, active=True))
-            if grey_box_blocks:
-                nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
-            else:
-                nlp = pyomo_nlp.PyomoNLP(model)
-            problem = CyIpoptNLP(nlp)
+        if not isinstance(model, Block):
+            raise ValueError("PyomoCyIpoptSolver.solve(model): model "
+                             "must be a Pyomo Block")
+
+        # If this is a Pyomo model / block, then we need to create
+        # the appropriate PyomoNLP, then wrap it in a CyIpoptNLP
+        grey_box_blocks = list(model.component_data_objects(
+            egb.ExternalGreyBoxBlock, active=True))
+        if grey_box_blocks:
+            nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
         else:
-            # Assume that model is some form of NLP that can be passed
-            # to CyIpoptNLP
-            problem = CyIpoptNLP(model)
-
-        if problem is None:
-            raise ValueError(
-                "No problem specified!  Nothing for cyipopt to solve")
+            nlp = pyomo_nlp.PyomoNLP(model)
+        problem = CyIpoptNLP(nlp)
 
         xl = problem.x_lb()
         xu = problem.x_ub()
         gl = problem.g_lb()
         gu = problem.g_ub()
 
-        if config.x0 is None:
-            config.x0 = problem.x_init()
-        
-        nx = len(config.x0)
+        nx = len(xl)
         ng = len(gl)
 
         cyipopt_solver = cyipopt.problem(
@@ -426,7 +449,7 @@ class CyIpoptSolver(object):
 
         # check if we need scaling
         obj_scaling, x_scaling, g_scaling = problem.scaling_factors()
-        if any((obj_scaling, x_scaling, g_scaling)):
+        if any(_ is not None for _ in (obj_scaling, x_scaling, g_scaling)):
             # need to set scaling factors
             if obj_scaling is None:
                 obj_scaling = 1.0
@@ -434,7 +457,6 @@ class CyIpoptSolver(object):
                 x_scaling = np.ones(nx)
             if g_scaling is None:
                 g_scaling = np.ones(ng)
-
             cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
@@ -442,19 +464,14 @@ class CyIpoptSolver(object):
             cyipopt_solver.addOption(k, v)
 
         if config.tee:
-            x, info = cyipopt_solver.solve(config.x0)
+            x, info = cyipopt_solver.solve(problem.x_init())
         else:
             newstdout = _redirect_stdout()
-            x, info = cyipopt_solver.solve(config.x0)
+            x, info = cyipopt_solver.solve(problem.x_init())
             os.dup2(newstdout, 1)
 
-        # I don't like this, but until we decide if this interface is
-        # for high-level (Pyomo) or low-level (CyIpoptNLP) models, we
-        # have ambiguity as to if there is anything to load things back
-        # in to.
-        if ( config.load_solutions and hasattr(problem, '_nlp') \
-             and hasattr(problem._nlp, 'load_x_into_pyomo') ):
-            problem._nlp.load_x_into_pyomo(x)
+        if config.load_solutions:
+            nlp.load_x_into_pyomo(x)
 
         return x, info
 

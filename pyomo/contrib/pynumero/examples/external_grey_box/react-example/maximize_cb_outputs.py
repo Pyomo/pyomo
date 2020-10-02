@@ -27,15 +27,6 @@ def maximize_cb_outputs(show_solver_log=False):
     # of cb coming out of the reactor
     m.obj = pyo.Objective(expr=m.reactor.outputs['cb'], sense=pyo.maximize)
 
-    # pyomo_nlp = PyomoGreyBoxNLP(m)
-
-    # options = {'hessian_approximation':'limited-memory',
-    #            'print_level': 10}
-    # cyipopt_problem = CyIpoptNLP(pyomo_nlp)
-    # solver = CyIpoptSolver(cyipopt_problem, options)
-    # x, info = solver.solve(tee=show_solver_log)
-    # pyomo_nlp.load_x_into_pyomo(x)
-
     solver = pyo.SolverFactory('cyipopt')
     solver.config.options['hessian_approximation'] = 'limited-memory'
     solver.solve(m, tee=show_solver_log)
