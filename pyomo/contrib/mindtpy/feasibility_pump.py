@@ -90,7 +90,8 @@ def handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config):
         fp_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config,
-        ignore_integrality=config.init_strategy == 'feas_pump')
+        ignore_integrality=True)
+    add_cycling_cuts(solve_data, config)
 
     # if OA-like or feas_pump converged, update Upper bound,
     # add no_good cuts and increasing objective cuts (feas_pump)
@@ -168,10 +169,9 @@ def feas_pump_loop(solve_data, config):
             solve_data, config)
 
         if fp_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
+            config.logger.info('FP-NLP %s: Distance-OBJ: %s'
+                               % (solve_data.fp_iter, value(fp_nlp.MindtPy_utils.feas_pump_nlp_obj)))
             handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config)
-            config.logger.info(
-                'FP-NLP %s: Distance-OBJ: %s'
-                % (solve_data.fp_iter, value(fp_nlp.MindtPy_utils.feas_pump_nlp_obj)))
         elif fp_nlp_result.solver.termination_condition is tc.infeasible:
             config.logger.error("Feasibility pump NLP subproblem infeasible")
         elif termination_condition is tc.maxIterations:
@@ -184,3 +184,19 @@ def feas_pump_loop(solve_data, config):
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
+    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_cycling_cuts.deactivate()
+
+
+def add_cycling_cuts(solve_data, config):
+    """
+    add cuts to avoid cycling when the independence constraint qualification is not satisfied.
+    """
+    m = solve_data.mip
+    mip_MindtPy = solve_data.mip.MindtPy_utils
+    nlp_MindtPy = solve_data.working_model.MindtPy_utils
+    mip_integer_vars = [v for v in mip_MindtPy.variable_list if v.is_integer()]
+    nlp_integer_vars = [v for v in nlp_MindtPy.variable_list if v.is_integer()]
+    cycling_cut = sum((nlp_v.value-mip_v.value)*(mip_v-nlp_v.value)
+                      for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
+    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_cycling_cuts.add(
+        cycling_cut)

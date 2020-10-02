@@ -1,6 +1,7 @@
 """Tests for the MindtPy solver plugin."""
 from math import fabs
 import pyomo.core.base.symbolic
+from pyomo.core.expr import template_expr
 import pyutilib.th as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \
     EightProcessFlowsheet
@@ -130,32 +131,31 @@ class TestMindtPy(unittest.TestCase):
 
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
-    # def test_feas_pump_OnlineDocExample(self):
-    #     """Test the feasibility pump algorithm."""
-    #     """TODO: bug fix"""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = OnlineDocExample()
-    #         print('\n Solving OnlineDocExample using feasibility pump')
-    #         results = opt.solve(model, strategy='feas_pump',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver=required_solvers[0],
-    #                             iteration_limit=30)
+    def test_feas_pump_OnlineDocExample(self):
+        """Test the feasibility pump algorithm."""
+        """TODO: bug fix"""
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print('\n Solving OnlineDocExample using feasibility pump')
+            results = opt.solve(model, strategy='feas_pump',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                iteration_limit=0)
+            # model.pprint()
+            self.assertTrue(is_feasible(model, self.get_config(opt)))
 
-    #         self.assertTrue(is_feasible(model, self.get_config(opt)))
+    def test_feas_pump_ConstraintQualificationExample(self):
+        """Test the feasibility pump algorithm."""
+        # TODO: bug fix
+        with SolverFactory('mindtpy') as opt:
+            model = ConstraintQualificationExample()
+            print('\n Solving ProposalModel using feasibility pump')
+            results = opt.solve(model, strategy='feas_pump',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                iteration_limit=30)
 
-    # def test_feas_pump_ConstraintQualificationExample(self):
-    #     """Test the feasibility pump algorithm."""
-    #     # TODO: bug fix
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = ConstraintQualificationExample()
-    #         print('\n Solving ProposalModel using feasibility pump')
-    #         results = opt.solve(model, strategy='feas_pump',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver=required_solvers[0],
-    #                             iteration_limit=30,
-    #                             tee=True)
-
-    #         self.assertTrue(is_feasible(model, self.get_config(opt)))
+            self.assertTrue(is_feasible(model, self.get_config(opt)))
     """Test FP-OA"""
 
     def test_FP_OA_8PP(self):

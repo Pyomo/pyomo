@@ -43,11 +43,17 @@ def solve_MIP_master(solve_data, config, feas_pump=False):
     master_mip_results: Pyomo results object
         result from solving the master MIP
     """
-    solve_data.mip_iter += 1
+    if feas_pump:
+        solve_data.mip_iter += 1
+        config.logger.info('FP-MIP %s: Solve master problem.' %
+                           (solve_data.fp_iter,))
+    else:
+        solve_data.mip_iter += 1
+        config.logger.info('MIP %s: Solve master problem.' %
+                           (solve_data.mip_iter,))
+
     MindtPy = solve_data.mip.MindtPy_utils
-    config.logger.info(
-        'MIP %s: Solve master problem.' %
-        (solve_data.mip_iter,))
+
     # Set up MILP
     for c in MindtPy.constraint_list:
         if c.body.polynomial_degree() not in (1, 0):
