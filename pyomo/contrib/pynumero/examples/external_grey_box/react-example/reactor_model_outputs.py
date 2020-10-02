@@ -1,12 +1,25 @@
-# This file contains a black box model representing a simple
-# reactor design problem described in the Pyomo book.
-# It is part of the external_grey_box example with PyNumero.
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-# These functions solve a reactor model using scipy
-# Note: In this case, this model can be solved using
-# standard Pyomo constructs (see the Pyomo book), but
-# this is included as an example of the external grey
-# box model interface.
+"""
+This file contains a black box model representing a simple
+reactor design problem described in the Pyomo book.
+It is part of the external_grey_box example with PyNumero.
+
+These functions solve a reactor model using scipy
+Note: In this case, this model can be solved using
+standard Pyomo constructs (see the Pyomo book), but
+this is included as an example of the external grey
+box model interface.
+"""
+
 from __future__ import division
 
 import numpy as np
