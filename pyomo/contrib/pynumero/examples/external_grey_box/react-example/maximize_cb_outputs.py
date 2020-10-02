@@ -1,8 +1,17 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from __future__ import division
 import pyomo.environ as pyo
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
-from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoGreyBoxNLP
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptNLP, CyIpoptSolver
+from pyomo.contrib.pynumero.interfaces.external_grey_box import \
+    ExternalGreyBoxBlock
 from reactor_model_outputs import ReactorConcentrationsOutputModel
 
 def maximize_cb_outputs(show_solver_log=False):
