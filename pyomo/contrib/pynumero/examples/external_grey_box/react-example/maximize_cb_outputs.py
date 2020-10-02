@@ -29,7 +29,8 @@ def maximize_cb_outputs(show_solver_log=False):
 
     solver = pyo.SolverFactory('cyipopt')
     solver.config.options['hessian_approximation'] = 'limited-memory'
-    solver.solve(m, tee=show_solver_log)
+    results = solver.solve(m, tee=show_solver_log)
+    pyo.assert_optimal_termination(results)
     return m
 
 if __name__ == '__main__':

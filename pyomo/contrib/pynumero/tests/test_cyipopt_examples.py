@@ -15,16 +15,24 @@ if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run CyIpopt tests")
 
-cyipopt_available = True
-try:
-    import ipopt
-    from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-        CyIpoptSolver, CyIpoptNLP
-    )
-except ImportError:
+import pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver as cyipopt_solver
+if not cyipopt_solver.cyipopt_available:
     raise unittest.SkipTest("PyNumero needs CyIpopt installed to run CyIpopt tests")
+import cyipopt as cyipopt_core
 
 example_dir = os.path.join(this_file_dir(), '..', 'examples')
+
+class TestPyomoCyIpoptSolver(unittest.TestCase):
+    def test_status_maps(self):
+        self.assertEqual(len(cyipopt_core.STATUS_MESSAGES),
+                         len(cyipopt_solver._cyipopt_status_enum))
+        self.assertEqual(len(cyipopt_core.STATUS_MESSAGES),
+                         len(cyipopt_solver._ipopt_term_cond))
+        for msg in cyipopt_core.STATUS_MESSAGES.values():
+            self.assertIn(msg, cyipopt_solver._cyipopt_status_enum)
+        for status in cyipopt_solver._cyipopt_status_enum.values():
+            self.assertIn(status, cyipopt_solver._ipopt_term_cond)
+
 
 class TestExamples(unittest.TestCase):
     def test_external_grey_box_react_example_maximize_cb_outputs(self):

@@ -42,7 +42,63 @@ pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
 from pyomo.common.config import ConfigBlock, ConfigValue
-from pyomo.core.base import Block
+from pyomo.common.timing import TicTocTimer
+from pyomo.core.base import Block, Objective, minimize
+from pyomo.opt import (
+    SolverStatus, SolverResults, TerminationCondition, ProblemSense
+)
+
+# This maps the cyipopt STATUS_MESSAGES back to string representations
+# of the Ipopt ApplicationReturnStatus enum
+_cyipopt_status_enum = [
+    'Solve_Succeeded', b'Algorithm terminated successfully at a locally optimal point, satisfying the convergence tolerances (can be specified by options).',
+    'Solved_To_Acceptable_Level', b'Algorithm stopped at a point that was converged, not to "desired" tolerances, but to "acceptable" tolerances (see the acceptable-... options).',
+    'Infeasible_Problem_Detected', b'Algorithm converged to a point of local infeasibility. Problem may be infeasible.',
+    'Search_Direction_Becomes_Too_Small', b'Algorithm proceeds with very little progress.',
+    'Diverging_Iterates', b'It seems that the iterates diverge.',
+    'User_Requested_Stop', b'The user call-back function intermediate_callback (see Section 3.3.4 in the documentation) returned false, i.e., the user code requested a premature termination of the optimization.',
+    'Feasible_Point_Found', b'Feasible point for square problem found.',
+    'Maximum_Iterations_Exceeded', b'Maximum number of iterations exceeded (can be specified by an option).',
+    'Restoration_Failed', b'Restoration phase failed, algorithm doesn\'t know how to proceed.',
+    'Error_In_Step_Computation', b'An unrecoverable error occurred while Ipopt tried to compute the search direction.',
+    'Maximum_CpuTime_Exceeded', b'Maximum CPU time exceeded.',
+    'Not_Enough_Degrees_Of_Freedom', b'Problem has too few degrees of freedom.',
+    'Invalid_Problem_Definition', b'Invalid problem definition.',
+    'Invalid_Option', b'Invalid option encountered.',
+    'Invalid_Number_Detected', b'Algorithm received an invalid number (such as NaN or Inf) from the NLP; see also option check_derivatives_for_naninf',
+    'Unrecoverable_Exception', b'Some uncaught Ipopt exception encountered.',
+    'NonIpopt_Exception_Thrown', b'Unknown Exception caught in Ipopt',
+    'Insufficient_Memory', b'Not enough memory.',
+    'Internal_Error', b'An unknown internal error occurred. Please contact the Ipopt authors through the mailing list.'
+]
+_cyipopt_status_enum = {
+    _cyipopt_status_enum[i+1]: _cyipopt_status_enum[i]
+    for i in range(0, len(_cyipopt_status_enum), 2)
+}
+
+# This maps Ipopt ApplicationReturnStatus enum strings to an appropriate
+# Pyomo TerminationCondition
+_ipopt_term_cond = {
+    'Solve_Succeeded': TerminationCondition.optimal,
+    'Solved_To_Acceptable_Level': TerminationCondition.feasible,
+    'Infeasible_Problem_Detected': TerminationCondition.infeasible,
+    'Search_Direction_Becomes_Too_Small': TerminationCondition.minStepLength,
+    'Diverging_Iterates': TerminationCondition.unbounded,
+    'User_Requested_Stop': TerminationCondition.userInterrupt,
+    'Feasible_Point_Found': TerminationCondition.feasible,
+    'Maximum_Iterations_Exceeded': TerminationCondition.maxIterations,
+    'Restoration_Failed': TerminationCondition.noSolution,
+    'Error_In_Step_Computation': TerminationCondition.solverFailure,
+    'Maximum_CpuTime_Exceeded': TerminationCondition.maxTimeLimit,
+    'Not_Enough_Degrees_Of_Freedom': TerminationCondition.invalidProblem,
+    'Invalid_Problem_Definition': TerminationCondition.invalidProblem,
+    'Invalid_Option': TerminationCondition.error,
+    'Invalid_Number_Detected': TerminationCondition.internalSolverError,
+    'Unrecoverable_Exception': TerminationCondition.internalSolverError,
+    'NonIpopt_Exception_Thrown': TerminationCondition.error,
+    'Insufficient_Memory': TerminationCondition.resourceInterrupt,
+    'Internal_Error': TerminationCondition.internalSolverError,
+}
 
 @six.add_metaclass(abc.ABCMeta)
 class CyIpoptProblemInterface(object):
@@ -463,17 +519,48 @@ class PyomoCyIpoptSolver(object):
         for k, v in config.options.items():
             cyipopt_solver.addOption(k, v)
 
-        if config.tee:
-            x, info = cyipopt_solver.solve(problem.x_init())
-        else:
-            newstdout = _redirect_stdout()
-            x, info = cyipopt_solver.solve(problem.x_init())
-            os.dup2(newstdout, 1)
+        timer = TicTocTimer()
+        try:
+            if config.tee:
+                x, info = cyipopt_solver.solve(problem.x_init())
+            else:
+                newstdout = _redirect_stdout()
+                x, info = cyipopt_solver.solve(problem.x_init())
+                os.dup2(newstdout, 1)
+            solverStatus = SolverStatus.ok
+        except:
+            solverStatus = SolverStatus.unknown
+        wall_time = timer.toc("")
 
         if config.load_solutions:
             nlp.load_x_into_pyomo(x)
 
-        return x, info
+        results = SolverResults()
+        results.problem.name = model.name
+        obj = next(model.component_data_objects(Objective, active=True))
+        if obj.sense == minimize:
+            results.problem.sense = ProblemSense.minimize
+            results.problem.upper_bound = info['obj_val']
+        else:
+            results.problem.sense = ProblemSense.maximize
+            results.problem.lower_bound = info['obj_val']
+        results.problem.number_of_objectives = 1
+        results.problem.number_of_constraints = ng
+        results.problem.number_of_variables = nx
+        results.problem.number_of_binary_variables = 0
+        results.problem.number_of_integer_variables = 0
+        results.problem.number_of_continuous_variables = nx
+        # TODO: results.problem.number_of_nonzeros
+
+        results.solver.name = 'cyipopt'
+        results.solver.return_code = info['status']
+        results.solver.message = info['status_msg']
+        results.solver.wallclock_time = wall_time
+        status_enum = _cyipopt_status_enum[info['status_msg']]
+        results.solver.termination_condition = _ipopt_term_cond[status_enum]
+        results.solver.status = TerminationCondition.to_solver_status(
+            results.solver.termination_condition)
+        return results
 
     #
     # Support "with" statements.
