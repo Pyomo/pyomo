@@ -27,7 +27,8 @@ def maximize_cb_outputs(show_solver_log=False):
 
     pyomo_nlp = PyomoGreyBoxNLP(m)
 
-    options = {'hessian_approximation':'limited-memory'}
+    options = {'hessian_approximation':'limited-memory',
+               'print_level': 10}
     cyipopt_problem = CyIpoptNLP(pyomo_nlp)
     solver = CyIpoptSolver(cyipopt_problem, options)
     x, info = solver.solve(tee=show_solver_log)
