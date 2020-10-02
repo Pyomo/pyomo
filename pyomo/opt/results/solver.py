@@ -81,6 +81,39 @@ class TerminationCondition(str, enum.Enum):
     def __str__(self):
         return self.value
 
+    @staticmethod
+    def to_solver_status(val):
+        if val in {
+                TerminationCondition.maxTimeLimit,
+                TerminationCondition.maxIterations,
+                TerminationCondition.minFunctionValue,
+                TerminationCondition.minStepLength,
+                TerminationCondition.globallyOptimal,
+                TerminationCondition.locallyOptimal,
+                TerminationCondition.feasible,
+                TerminationCondition.optimal,
+                TerminationCondition.maxEvaluations,
+                TerminationCondition.other }:
+            return SolverStatus.ok
+        if val in {
+                TerminationCondition.unbounded,
+                TerminationCondition.infeasible,
+                TerminationCondition.infeasibleOrUnbounded,
+                TerminationCondition.invalidProblem,
+                TerminationCondition.intermediateNonInteger,
+                TerminationCondition.noSolution }:
+            return SolverStatus.warning
+        if val in {
+                TerminationCondition.solverFailure,
+                TerminationCondition.internalSolverError,
+                TerminationCondition.error }:
+            return SolverStatus.error
+        if val in {
+                TerminationCondition.userInterrupt,
+                TerminationCondition.resourceInterrupt,
+                TerminationCondition.licensingProblems }:
+            return SolverStatus.aborted
+        return SolverStatus.unknown
 
 def check_optimal_termination(results):
     """
