@@ -30,9 +30,10 @@ from pyomo.common.dependencies import (
     numpy as np, numpy_available,
 )
 cyipopt, cyipopt_available = attempt_import(
-    'ipopt',
-    'cyipopt solver relies on cyipopt. Install cyipopt '
-    'https://github.com/matthias-k/cyipopt.git'
+    'ipopt', alt_names=['cyipopt'],
+    error_message='cyipopt solver relies on cyipopt. '
+    'See https://github.com/matthias-k/cyipopt.git for cyipopt '
+    'installation instructions.'
 )
 # Because pynumero.interfaces requires numpy, we will leverage deferred
 # imports here so that the solver can be registered even when numpy is
@@ -319,6 +320,11 @@ class CyIpoptSolver(object):
         domain=bool,
         description="Stream solver output to console",
     ))
+    CONFIG.declare("load_solutions", ConfigValue(
+        default=True,
+        domain=bool,
+        description="Store the final solution into the original Pyomo model",
+    ))
     CONFIG.declare("x0", ConfigValue(
         default=None,
         domain=_numpy_vector,
@@ -359,23 +365,7 @@ class CyIpoptSolver(object):
 
 
     def _set_model(self, model):
-        if model is None or isinstance(model, CyIpoptProblemInterface):
-            # If model is already a CyIpoptNLP, then there is nothing to do
-            self._problem = model
-        elif isinstance(model, Block):
-            # If this is a Pyomo model / block, then we need to create
-            # the appropriate PyomoNLP, then wrap it in a CyIpoptNLP
-            grey_box_blocks = list(model.component_data_objects(
-                egb.ExternalGreyBoxBlock, active=True))
-            if grey_box_blocks:
-                nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
-            else:
-                nlp = pyomo_nlp.PyomoNLP(model)
-            self._problem = CyIpoptNLP(nlp)
-        else:
-            # Assume that model is some form of NLP that can be passed
-            # to CyIpoptNLP
-            self._problem = CyIpoptNLP(model)
+        self._model = model
 
 
     def available(self, exception_flag=False):
@@ -388,16 +378,38 @@ class CyIpoptSolver(object):
 
     def solve(self, model=None, **kwds):
         config = self.config(kwds, preserve_implicit=True)
-        if model is not None:
-            self._set_model(model)
+        if model is None:
+            model = self._model
 
-        xl = self._problem.x_lb()
-        xu = self._problem.x_ub()
-        gl = self._problem.g_lb()
-        gu = self._problem.g_ub()
+        if model is None or isinstance(model, CyIpoptProblemInterface):
+            # If model is already a CyIpoptNLP, then there is nothing to do
+            problem = model
+        elif isinstance(model, Block):
+            # If this is a Pyomo model / block, then we need to create
+            # the appropriate PyomoNLP, then wrap it in a CyIpoptNLP
+            grey_box_blocks = list(model.component_data_objects(
+                egb.ExternalGreyBoxBlock, active=True))
+            if grey_box_blocks:
+                nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+            else:
+                nlp = pyomo_nlp.PyomoNLP(model)
+            problem = CyIpoptNLP(nlp)
+        else:
+            # Assume that model is some form of NLP that can be passed
+            # to CyIpoptNLP
+            problem = CyIpoptNLP(model)
+
+        if problem is None:
+            raise ValueError(
+                "No problem specified!  Nothing for cyipopt to solve")
+
+        xl = problem.x_lb()
+        xu = problem.x_ub()
+        gl = problem.g_lb()
+        gu = problem.g_ub()
 
         if config.x0 is None:
-            config.x0 = self._problem.x_init()
+            config.x0 = problem.x_init()
         
         nx = len(config.x0)
         ng = len(gl)
@@ -405,7 +417,7 @@ class CyIpoptSolver(object):
         cyipopt_solver = cyipopt.problem(
             n=nx,
             m=ng,
-            problem_obj=self._problem,
+            problem_obj=problem,
             lb=xl,
             ub=xu,
             cl=gl,
@@ -413,7 +425,7 @@ class CyIpoptSolver(object):
         )
 
         # check if we need scaling
-        obj_scaling, x_scaling, g_scaling = self._problem.scaling_factors()
+        obj_scaling, x_scaling, g_scaling = problem.scaling_factors()
         if any((obj_scaling, x_scaling, g_scaling)):
             # need to set scaling factors
             if obj_scaling is None:
@@ -435,6 +447,14 @@ class CyIpoptSolver(object):
             newstdout = _redirect_stdout()
             x, info = cyipopt_solver.solve(config.x0)
             os.dup2(newstdout, 1)
+
+        # I don't like this, but until we decide if this interface is
+        # for high-level (Pyomo) or low-level (CyIpoptNLP) models, we
+        # have ambiguity as to if there is anything to load things back
+        # in to.
+        if ( config.load_solutions and hasattr(problem, '_nlp') \
+             and hasattr(problem._nlp, 'load_x_into_pyomo') ):
+            problem._nlp.load_x_into_pyomo(x)
 
         return x, info
 

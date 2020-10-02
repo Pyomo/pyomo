@@ -12,8 +12,9 @@ def maximize_cb_outputs(show_solver_log=False):
     m = pyo.ConcreteModel()
 
     # create a block to store the external reactor model
-    m.reactor = ExternalGreyBoxBlock()
-    m.reactor.set_external_model(ReactorConcentrationsOutputModel())
+    m.reactor = ExternalGreyBoxBlock(
+        external_model=ReactorConcentrationsOutputModel()
+    )
 
     # The reaction rate constants and the feed concentration will
     # be fixed for this example
@@ -26,14 +27,18 @@ def maximize_cb_outputs(show_solver_log=False):
     # of cb coming out of the reactor
     m.obj = pyo.Objective(expr=m.reactor.outputs['cb'], sense=pyo.maximize)
 
-    pyomo_nlp = PyomoGreyBoxNLP(m)
+    # pyomo_nlp = PyomoGreyBoxNLP(m)
 
-    options = {'hessian_approximation':'limited-memory',
-               'print_level': 10}
-    cyipopt_problem = CyIpoptNLP(pyomo_nlp)
-    solver = CyIpoptSolver(cyipopt_problem, options)
-    x, info = solver.solve(tee=show_solver_log)
-    pyomo_nlp.load_x_into_pyomo(x)
+    # options = {'hessian_approximation':'limited-memory',
+    #            'print_level': 10}
+    # cyipopt_problem = CyIpoptNLP(pyomo_nlp)
+    # solver = CyIpoptSolver(cyipopt_problem, options)
+    # x, info = solver.solve(tee=show_solver_log)
+    # pyomo_nlp.load_x_into_pyomo(x)
+
+    solver = pyo.SolverFactory('cyipopt')
+    solver.config.options['hessian_approximation'] = 'limited-memory'
+    solver.solve(m, tee=show_solver_log)
     return m
 
 if __name__ == '__main__':
