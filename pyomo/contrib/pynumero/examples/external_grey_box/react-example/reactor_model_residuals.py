@@ -6,6 +6,8 @@
 # standard Pyomo constructs (see the Pyomo book), but
 # this is included as an example of the external grey
 # box model interface.
+from __future__ import division
+
 import numpy as np
 from scipy.sparse import coo_matrix
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel

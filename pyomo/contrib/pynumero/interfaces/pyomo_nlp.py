@@ -769,7 +769,8 @@ class PyomoGreyBoxNLP(NLP):
             return out
         else:
             base = self._pyomo_nlp.evaluate_jacobian()
-            base = coo_matrix((base.data, (base.row, base.col)), shape=(base.shape[0], self.n_primals()))
+            base = coo_matrix((base.data, (base.row, base.col)),
+                              shape=(base.shape[0], self.n_primals()))
             
             jac = BlockMatrix(2,1)
             jac.set_block(0, 0, base)

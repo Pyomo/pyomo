@@ -8,13 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import numpy as np
-import six
 import abc
 from pyomo.environ import Var, Constraint, value
 from pyomo.core.base.block import _BlockData, declare_custom_block
 from ..sparse.block_matrix import BlockMatrix
 from scipy.sparse import coo_matrix
 import pyomo.environ as pyo
+
+from six import add_metaclass, itervalues
+from six.moves import xrange
 
 """
 This module is used for interfacing an external model as
@@ -69,7 +71,7 @@ Note:
 
 """
 
-@six.add_metaclass(abc.ABCMeta)
+@add_metaclass(abc.ABCMeta)
 class ExternalGreyBoxModel(object):
     """
     This is the base class for building external input output models
@@ -223,6 +225,7 @@ class ExternalGreyBoxBlockData(_BlockData):
     def get_external_model(self):
         return self._ex_model
 
+
 class _ExternalGreyBoxModelHelper(object):
     def __init__(self, ex_grey_box_block, vardata_to_idx, initial_primal_values):
         """This helper takes an ExternalGreyBoxModel and provides the residual
@@ -254,15 +257,15 @@ class _ExternalGreyBoxModelHelper(object):
 
         # store the map of input indices (0 .. n_inputs) to
         # the indices in the full primals vector
-        self._inputs_to_primals_map = []
-        for k in self._block.inputs:
-            self._inputs_to_primals_map.append(vardata_to_idx[self._block.inputs[k]])
+        self._inputs_to_primals_map = np.fromiter(
+            (vardata_to_idx[v] for v in itervalues(self._block.inputs)),
+            dtype=np.int64, count=n_inputs)
 
         # store the map of output indices (0 .. n_outputs) to
         # the indices in the full primals vector
-        self._outputs_to_primals_map = []
-        for k in self._block.outputs:
-            self._outputs_to_primals_map.append(vardata_to_idx[self._block.outputs[k]])
+        self._outputs_to_primals_map = np.fromiter(
+            (vardata_to_idx[v] for v in itervalues(self._block.outputs)),
+            dtype=np.int64, count=n_outputs)
 
         # setup some structures for the jacobians
         input_values = initial_primal_values[self._inputs_to_primals_map]
@@ -278,29 +281,21 @@ class _ExternalGreyBoxModelHelper(object):
         # from the 0..n_inputs provided by the external model
         # to the indices corresponding to the full Pyomo model
         # so we create that here
-        self._eq_jac_jcol_for_primals = None
+        self._eq_jac_primal_jcol = None
         if self._ex_model.n_equality_constraints() > 0:
             jac = self._ex_model.evaluate_jacobian_equality_constraints()
-            self._eq_jac_jcol_for_primals = np.asarray(
-                [self._inputs_to_primals_map[j] for j in jac.col],
-                dtype=np.int64)
+            self._eq_jac_primal_jcol = self._inputs_to_primals_map[jac.col]
 
-        self._outputs_jac_jcol_for_primals = None
+        self._outputs_jac_primal_jcol = None
         if self._ex_model.n_outputs() > 0:
             jac = self._ex_model.evaluate_jacobian_outputs()
-            self._outputs_jac_jcol_for_primals = np.asarray(
-                [self._inputs_to_primals_map[j] for j in jac.col],
-                dtype=np.int64)
+            self._outputs_jac_primal_jcol = self._inputs_to_primals_map[jac.col]
 
         # create the irow, jcol, nnz structure for the
         # output variable portion of h(u)-o=0
-        self._additional_output_entries_irow = \
-            np.asarray([i for i in range(n_outputs)])
-        self._additional_output_entries_jcol = \
-            np.asarray([self._outputs_to_primals_map[j]
-                        for j in range(n_outputs)])
-        self._additional_output_entries_data = \
-            -1.0*np.ones(n_outputs)
+        self._additional_output_entries_irow = np.asarray(xrange(n_outputs))
+        self._additional_output_entries_jcol = self._outputs_to_primals_map
+        self._additional_output_entries_data = -1.0*np.ones(n_outputs)
 
     def set_primals(self, primals):
         # map the full primals "x" to the inputs "u" and set
@@ -355,8 +350,9 @@ class _ExternalGreyBoxModelHelper(object):
         if self._ex_model.n_equality_constraints() > 0:
             eq_jac = self._ex_model.evaluate_jacobian_equality_constraints()
             # map the columns from the inputs "u" back to the full primals "x"
-            eq_jac.col = self._eq_jac_jcol_for_primals
-            eq_jac = coo_matrix((eq_jac.data, (eq_jac.row, eq_jac.col)), shape=(eq_jac.shape[0], self._n_primals))
+            eq_jac = coo_matrix(
+                (eq_jac.data, (eq_jac.row, self._eq_jac_primal_jcol)),
+                (eq_jac.shape[0], self._n_primals))
 
         outputs_jac = None
         if self._ex_model.n_outputs() > 0:
@@ -364,14 +360,16 @@ class _ExternalGreyBoxModelHelper(object):
 
             row = outputs_jac.row
             # map the columns from the inputs "u" back to the full primals "x"
-            col = self._outputs_jac_jcol_for_primals
+            col = self._outputs_jac_primal_jcol
             data = outputs_jac.data
 
             # add the additional entries for the -Po*x portion of the jacobian
             row = np.concatenate((row, self._additional_output_entries_irow))
             col = np.concatenate((col, self._additional_output_entries_jcol))
             data  = np.concatenate((data, self._additional_output_entries_data))
-            outputs_jac = coo_matrix((data, (row, col)), shape=(outputs_jac.shape[0], self._n_primals))
+            outputs_jac = coo_matrix(
+                (data, (row, col)),
+                shape=(outputs_jac.shape[0], self._n_primals))
 
         jac = None
         if eq_jac is not None:
