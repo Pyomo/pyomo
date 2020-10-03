@@ -33,7 +33,7 @@ def _get_GDPopt_config():
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
-        domain=In(["OA", "GBD", "ECP", "PSC", "GOA"]),
+        domain=In(["OA", "GBD", "ECP", "PSC", "GOA", "LOA"]),
         description="Decomposition strategy",
         doc="MINLP Decomposition strategy to be applied to the method. "
             "Currently available Outer Approximation (OA), Extended Cutting "
