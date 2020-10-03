@@ -278,11 +278,6 @@ def _add_feas_pump_configs(CONFIG):
         description="Whether to transfer cuts from the Feasibility Pump MIP to the DICOPT MIP (all except from the round in which the FP MIP became infeasible)",
         domain=bool
     ))
-    CONFIG.declare("fp_softcuts", ConfigValue(
-        default=False,
-        description="whether to add linearization cuts as soft constraints (penalized slack variable) to MIP relaxation",
-        domain=bool
-    ))
     CONFIG.declare("fp_projzerotol", ConfigValue(
         default=1E-1,
         domain=PositiveFloat,

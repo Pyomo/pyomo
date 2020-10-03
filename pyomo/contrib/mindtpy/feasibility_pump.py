@@ -184,7 +184,14 @@ def feas_pump_loop(solve_data, config):
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
+    # TODO: need to be checked here about the cuts transfer from FP-MIP to OA-MIP
     solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_cycling_cuts.deactivate()
+    if not config.fp_transfercuts:
+        for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts:
+            c.deactivate()
+        for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.integer_cuts:
+            c.deactivate()
+        solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut.deactivate()
 
 
 def add_cycling_cuts(solve_data, config):
