@@ -315,11 +315,11 @@ def bound_fix(solve_data, config, last_iter_cuts):
             else:
                 valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
             for i in range(valid_no_good_cuts_num+1, len(
-                    MindtPy.MindtPy_linear_cuts.integer_cuts)+1):
-                MindtPy.MindtPy_linear_cuts.integer_cuts[i].deactivate()
+                    MindtPy.MindtPy_linear_cuts.nogood_cuts)+1):
+                MindtPy.MindtPy_linear_cuts.nogood_cuts[i].deactivate()
         elif config.strategy == 'OA':
-            MindtPy.MindtPy_linear_cuts.integer_cuts[len(
-                MindtPy.MindtPy_linear_cuts.integer_cuts)].deactivate()
+            MindtPy.MindtPy_linear_cuts.nogood_cuts[len(
+                MindtPy.MindtPy_linear_cuts.nogood_cuts)].deactivate()
         # MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.

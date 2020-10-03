@@ -168,7 +168,7 @@ class MindtPySolver(object):
             lin.deactivate()
 
             # Integer cuts exclude particular discrete decisions
-            lin.integer_cuts = ConstraintList(doc='integer cuts')
+            lin.nogood_cuts = ConstraintList(doc='integer cuts')
             # Feasible integer cuts exclude discrete realizations that have
             # been explored via an NLP subproblem. Depending on model
             # characteristics, the user may wish to revisit NLP subproblems
@@ -176,10 +176,10 @@ class MindtPySolver(object):
             # cuts are not enabled by default.
             #
             # Note: these cuts will only exclude integer realizations that are
-            # not already in the primary integer_cuts ConstraintList.
-            lin.feasible_integer_cuts = ConstraintList(
+            # not already in the primary nogood_cuts ConstraintList.
+            lin.feasible_nogood_cuts = ConstraintList(
                 doc='explored integer cuts')
-            lin.feasible_integer_cuts.deactivate()
+            lin.feasible_nogood_cuts.deactivate()
 
             # Set up iteration counters
             solve_data.nlp_iter = 0

@@ -153,10 +153,10 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False
         if config.strategy == 'GOA':
             if solve_data.results.problem.sense == ProblemSense.minimize:
                 solve_data.num_no_good_cuts_added.update(
-                    {solve_data.UB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.integer_cuts)})
+                    {solve_data.UB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts)})
             else:
                 solve_data.num_no_good_cuts_added.update(
-                    {solve_data.LB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.integer_cuts)})
+                    {solve_data.LB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts)})
 
         # add obj increasing constraint for feas_pump
         if feas_pump:
