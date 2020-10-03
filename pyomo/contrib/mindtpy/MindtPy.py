@@ -109,7 +109,7 @@ class MindtPySolver(object):
             config.iteration_limit = 0
             config.add_nogood_cuts = True
         if config.init_strategy == "feas_pump":
-            solve_data.fp_iter = 0
+            solve_data.fp_iter = 1
 
         if config.nlp_solver == "baron":
             config.use_dual = False

@@ -107,10 +107,9 @@ def init_rNLP(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
-    solve_data.nlp_iter += 1
     m = solve_data.working_model.clone()
     config.logger.info(
-        "NLP %s: Solve relaxed integrality" % (solve_data.nlp_iter,))
+        "Relaxed NLP: Solve relaxed integrality")
     MindtPy = m.MindtPy_utils
     TransformationFactory('core.relax_integer_vars').apply_to(m)
     nlp_args = dict(config.nlp_solver_args)
@@ -137,9 +136,8 @@ def init_rNLP(solve_data, config):
         elif not math.isnan(results['Problem'][0]['Upper bound']):
             solve_data.UB = results['Problem'][0]['Upper bound']
         config.logger.info(
-            'NLP %s: OBJ: %s  LB: %s  UB: %s'
-            % (solve_data.nlp_iter, value(main_objective.expr),
-               solve_data.LB, solve_data.UB))
+            'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
+            % (value(main_objective.expr), solve_data.LB, solve_data.UB))
         if config.strategy in {'OA', 'GOA', 'feas_pump'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,

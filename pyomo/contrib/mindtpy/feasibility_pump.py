@@ -151,6 +151,10 @@ def feas_pump_loop(solve_data, config):
             config.logger.warning('FP-MIP reaches max TimeLimit')
         elif feas_mip_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
+            # TODO: needs to be checked here.
+            nogood_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts
+            if nogood_cuts.__len__() > 0:
+                nogood_cuts[nogood_cuts.__len__()].deactivate()
             break
         elif feas_mip_results.solver.termination_condition is tc.unbounded:
             config.logger.warning('FP-MIP unbounded')

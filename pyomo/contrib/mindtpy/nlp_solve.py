@@ -141,7 +141,7 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False
         solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
         solve_data.LB_progress.append(solve_data.LB)
     config.logger.info(
-        'NLP {}: OBJ: {}  LB: {}  UB: {}'
+        'Fixed NLP {}: OBJ: {}  LB: {}  UB: {}'
         .format(solve_data.nlp_iter if not feas_pump else solve_data.fp_iter,
                 value(main_objective.expr),
                 solve_data.LB, solve_data.UB))

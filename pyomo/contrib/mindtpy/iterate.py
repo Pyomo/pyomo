@@ -37,7 +37,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
         config.logger.info(
             '---MindtPy Master Iteration %s---'
-            % solve_data.mip_iter)
+            % (solve_data.mip_iter+1))
 
         solve_data.mip_subiter = 0
         # solve MILP master problem

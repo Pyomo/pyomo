@@ -44,7 +44,7 @@ def solve_MIP_master(solve_data, config, feas_pump=False):
         result from solving the master MIP
     """
     if feas_pump:
-        solve_data.mip_iter += 1
+        # solve_data.mip_iter += 1
         config.logger.info('FP-MIP %s: Solve master problem.' %
                            (solve_data.fp_iter,))
     else:
