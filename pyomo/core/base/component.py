@@ -1217,7 +1217,10 @@ class ComponentUID(object):
         if idx == (Ellipsis,):
             # We assume a possible slice index has been validated 
             # so that this is the only way an ellipsis can be present.
-            return ( ('**',), None )
+            #
+            # The CUID convention is to not store '**' in a tuple.
+            # I.e. the _cid entry contains '**' rather than ('**',).
+            return ( '**', None )
         return ( 
                 # CUID convention for a wildcard:
 
