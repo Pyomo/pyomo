@@ -108,6 +108,19 @@ class TestComponentUID(unittest.TestCase):
         m.b[1,'2'].c = Block()
         m.b[1,'2'].c.a = Param(m.s, initialize=3, mutable=True)
 
+    def slice_model(self):
+        self.setUp()
+        m = self.m
+        m.s_none = Set(initialize=[('c', 3), ('d', 4, 5)])
+        m.s_2 = Set(initialize=[('a',1), ('b',2)])
+
+        for b in m.b.values():
+            pass
+
+        @m.Block(m.s_2)
+        def b_2(b):
+            b.v0 = 
+
     def tearDown(self):
         self.m = None
 
@@ -532,6 +545,76 @@ class TestComponentUID(unittest.TestCase):
             assert repr(ComponentUID(obj)) == cuids[obj]
             del cuids[obj]
         self.assertEqual(len(cuids), 0)
+
+    def _slice_model(self)
+        m = ConcreteModel()
+
+        m.d1_1 = Set(initialize=[1,2,3])
+        m.d1_2 = Set(initialize=['a','b','c'])
+        m.d1_3 = Set(initialize=[1.1,1.2,1.3])
+        m.d2 = Set(initialize=[('a',1), ('b',2)])
+        m.dn = Set(initialize=[('c',3), ('d',4,5)])
+
+        @m.Block()
+        def b(b):
+
+            b.b = Block()
+            
+            @b.Block(m.d1_1)
+            def b1(b1):
+                b1.v = Var()
+                b1.v1 = Var(m.d1_3)
+                b1.v2 = Var(m.d1_1, m.d1_2)
+                b1.vn = Var(m.dn_2, m.d1_2)
+
+            @b.Block(m.d1_1, m.d1_2)
+            def b2(b2):
+                b2.v = Var()
+                b2.v1 = Var(m.d1_3)
+                b2.v2 = Var(m.d1_1, m.d1_2)
+                b2.vn = Var(m.d1_1, m.dn_2, m.d1_2)
+
+            @b.Block(m.d1_1, m.d1_2)
+            def b2(b2):
+                b2.v = Var()
+                b2.v1 = Var(m.d1_3)
+                b2.v2 = Var(m.d1_1, m.d1_2)
+                b2.vn = Var(m.d1_1, m.dn_2, m.d1_2)
+
+            @b.Block(m.d1_3, m.d2)
+            def b3(b3):
+                b3.v = Var()
+                b3.v1 = Var(m.d1_3)
+                b3.v2 = Var(m.d1_1, m.d1_2)
+                b3.vn = Var(m.d1_1, m.dn_2, m.d1_2)
+
+            @b.Block(m.d1_3, m.dn, m.d2)
+            def bn(bn):
+                bn.v = Var()
+                bn.v1 = Var(m.d1_3)
+                bn.v2 = Var(m.d1_1, m.d1_2)
+                bn.vn = Var(m.d1_1, m.dn_2, m.d1_2)
+
+        return m
+
+    def test_cuid_from_slice_1(self):
+        m = self._slice_model()
+
+        _slice = m.b[:]
+        cuid_str = 'b[*]'
+        cuid = ComponentUID(_slice)
+        self.assertEqual(str(cuid), cuid_str)
+
+    # CUID from slices tests
+    # 0d leaf slice
+    # 1d leaf slice
+    # 2d leaf slice
+    # None-d leaf slice
+    # 
+    # 1d block slice: 0d, 1d leaf; 1d, 2d slice leaf
+    # ^ Same for 2d slice, None-d slice
+    #
+    # Need to cover NotImplementedErrors
 
 class TestEnviron(unittest.TestCase):
 
