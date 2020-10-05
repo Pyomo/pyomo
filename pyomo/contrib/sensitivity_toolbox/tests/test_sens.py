@@ -393,11 +393,8 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         # verify ValueError thrown when param and perturb list are different
         # lengths
-        try:
-            Result = kaug(m,list_one,list_two)
-            self.fail("Expected ValueError: for different length lists")
-        except ValueError:
-            pass
+        with self.assertRaises(ValueError):
+            Result = kaug(m, list_one, list_two)
 
         # verify ValueError thrown when param list has a Var in it
         try:

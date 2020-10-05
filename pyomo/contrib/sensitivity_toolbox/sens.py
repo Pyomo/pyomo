@@ -225,50 +225,61 @@ def sipopt(instance, paramSubList, perturbList,
 
 
 
-def kaug(instance,paramSubList,perturbList,
+def kaug(instance, paramSubList, perturbList,
          cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
-    """
-    This function modifies def ipopt() to use kaug.
-    All documents are taken from documents in def sipopt().
-
-    This function accepts a Pyomo ConcreteModel, a list of parameters, along
-    with their corresponding perturbation list. The model is then converted
-    into the design structure required to call kaug dsdp mode to get an approximate
+    """This function modifies def ipopt() to use kaug. All documents are taken 
+    from documents in def sipopt(). This function accepts a Pyomo 
+    ConcreteModel, a list of parameters, along with their corresponding 
+    perturbation list. The model is then converted into the design 
+    structure required to call kaug dsdp mode to get an approximate 
     perturbed solution with updated bounds on the decision variable. 
     
-    Arguments:
-        instance     : ConcreteModel: Expectation No Exceptions
-            pyomo model object
+    Parameters
+    ----------
+    instance: ConcreteModel
+        pyomo model object
 
-        paramSubList : Param         
-            list of mutable parameters
-            Exception : "paramSubList argument is expecting a List of Params"	    
+    paramSubList: list
+        list of mutable parameters
 
-        perturbList  : Param	    
-            list of perturbed parameter values
-            Exception : "perturbList argument is expecting a List of Params"
+    perturbList: list
+        list of perturbed parameter values
 
-            length(paramSubList) must equal length(perturbList)
-            Exception : "paramSubList will not map to perturbList"  
+    cloneModel: bool, optional
+        indicator to clone the model. If set to False, the original
+        model will be altered
 
+    streamSoln: bool, optional
+        indicator to stream IPOPT solution
 
-        cloneModel   : boolean      : default=True	    
-            indicator to clone the model
-                -if set to False, the original model will be altered
-
-        streamSoln   : boolean      : default=False	    
-            indicator to stream IPOPT solution
-
-        keepfiles    : boolean	    : default=False 
-            indicator to print intermediate file names
+    keepfiles: bool, optional
+        preserve solver interface files
             
-        optarg : solver options dictionary object (default=None)
+    optarg : dictionary, optional
+        solver options dictionary object (default=None)
     
-    Returns:
-        m		  : ConcreteModel
-            converted model for kaug
-            converted model contains approximated results at perturbation
-            
+    Returns
+    -------
+    model: ConcreteModel
+        The model modified for use with kaug.  
+        The model contains the approximated results at the perturbation point
+        
+    Raises
+    ------
+    ValueError
+        perturbList argument is expecting a List of Params
+    ValueError
+        length(paramSubList) must equal length(perturbList)
+    ValueError
+        paramSubList will not map to perturbList
+    ImportError
+        ipopt binary must be available
+    ImportError
+        k_aug binary must be available
+    ImportError
+        dotsens binary must be available
+    Exception
+        kaug does not support inequality constraints
     """
 
     # Verify User Inputs    
@@ -288,6 +299,20 @@ def kaug(instance,paramSubList,perturbList,
     for pp in perturbList:
         if pp.ctype is not Param:
             raise ValueError("perturbList argument is expecting a list of Params")
+        
+    # Create the solver plugin using the ASL interface and Verify Binaries
+    ipopt = SolverFactory('ipopt',solver_io='nl')
+    if optarg is not None:
+        ipopt.options = optarg
+    kaug = SolverFactory('k_aug',solver_io='nl')
+    dotsens = SolverFactory('dot_sens',solver_io='nl')
+    if not ipopt.available(False):
+        raise ImportError('ipopt is not available')
+    if not kaug.available(False):
+        raise ImportError('k_aug is not available')
+    if not dotsens.available(False):
+        raise ImportError('dotsens is not available')    
+    
     # Add model block to compartmentalize all kaug data
     b=Block()
     block_name = unique_component_name(instance, '_kaug_data')
@@ -360,7 +385,7 @@ def kaug(instance,paramSubList,perturbList,
                     substitute=variableSubMap,
                     remove_named_expressions=True).dfs_postorder_stack(cc.expr))
         else:
-            raise Exception('kaug does not support inequalities. Need to replace inequalities to equalities with slack variables')
+            raise Exception('kaug does not support inequality constraints.')
         cc.deactivate()
 
     # paramData to varData constraint list
@@ -368,22 +393,8 @@ def kaug(instance,paramSubList,perturbList,
     for ii in paramDataList:
         jj=variableSubMap[id(ii)]
         b.paramConst.add(ii==jj)
-
-    
-    # Create the solver plugin using the ASL interface
-    ipopt = SolverFactory('ipopt',solver_io='nl')
-    if optarg is not None:
-        ipopt.options = optarg
-    kaug = SolverFactory('k_aug',solver_io='nl')
-    dotsens = SolverFactory('dot_sens',solver_io='nl')
-    if not ipopt.available(False):
-        raise ImportError('ipopt is not available')
-    if not kaug.available(False):
-        raise ImportError('k_aug is not available')
-    if not dotsens.available(False):
-        raise ImportError('dotsens is not available')
    
-    # Declare Suffixesi
+    # Declare SUFFIXES
     m.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
     m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
     m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
@@ -397,9 +408,9 @@ def kaug(instance,paramSubList,perturbList,
     m.sens_sol_state_1 = Suffix(direction=Suffix.IMPORT)
 
 
-   #: K_AUG SUFFIXES
-    m.dcdp = Suffix(direction=Suffix.EXPORT)  #: the dummy constraints tag (integer >0) (do not duplicate value)
-    m.DeltaP = Suffix(direction=Suffix.EXPORT)  #: the parameter change (float)
+   #: K_AUG SUFFIXES 
+    m.dcdp = Suffix(direction=Suffix.EXPORT)  #: the constraint "order"  (integer >0)
+    m.DeltaP = Suffix(direction=Suffix.EXPORT)  #: the parameter values difference (float)
   
     kk = 1
     for ii in paramDataList:
