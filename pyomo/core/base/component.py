@@ -1270,12 +1270,21 @@ class ComponentUID(object):
         """
         TODO
         """
-        call_stack = _slice._call_stack
+        call_stack = list(_slice._call_stack)
         index = ()
         name = None
         count = 0
         while call_stack:
-            call, arg = call_stack.pop()
+            call_stack_entry = call_stack.pop()
+            try:
+                call, arg = call_stack_entry
+            except ValueError as err:
+                if 'too many values to unpack' in str(err):
+                    # This is the case when a __call__ is encountered.
+                    # The entry in the _call_stack is a len-3 tuple.
+                    call, arg, kwds = call_stack_entry
+                else:
+                    raise
             count += 1
 
             if call & 0b10:
@@ -1304,13 +1313,25 @@ class ComponentUID(object):
                 # Note that this assumes we will never have two get_item
                 # calls in a row.
             elif call == IndexedComponent_slice.call:
-                # Cache argument of a potential call to `component`
-                name = arg
+                if len(arg) != 1:
+                    raise NotImplementedError(
+                            "Cannot create a CUID from a slice with a "
+                            "call that has multiple arguments. Got "
+                            "arguments %s." % (arg,)
+                            )
+                # Cache argument of a call to `component`
+                name = arg[0]
+                if kwds != {}:
+                    raise NotImplementedError(
+                            "Cannot create a CUID from a slice with a "
+                            "call that contains keywords. Got keyword "
+                            "dict %s." % (kwds,)
+                            )
             elif call == IndexedComponent_slice.get_attribute:
                 if name is not None:
                     # This only happens if IndexedComponent_slice.call
                     # was encountered.
-                    if arg is not 'component':
+                    if arg != 'component':
                         raise NotImplementedError(
                             "Cannot create a CUID from a slice with a "
                             "call to any method other than `component`. "
@@ -1387,6 +1408,8 @@ class ComponentUID(object):
         TODO
         """
         cList = label.split('.')
+        # NOTE: This split is not safe for labels that include
+        # decimal indices.
         tKeys = ComponentUID.tKeys
         tDict = ComponentUID.tDict
         for c in reversed(cList):
