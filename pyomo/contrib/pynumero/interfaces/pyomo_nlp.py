@@ -469,7 +469,7 @@ class PyomoGreyBoxNLP(NLP):
         scaling_suffix = self._pyomo_nlp._pyomo_model.component('scaling_factor')
         if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
             need_scaling = True
-            for i,v in enumerate(self._ordered_primal_variables):
+            for i,v in enumerate(self.get_pyomo_variables()):
                 if v in scaling_suffix:
                     self._primals_scaling[i] = scaling_suffix[v]
 
