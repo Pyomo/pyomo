@@ -535,7 +535,10 @@ class PyomoCyIpoptSolver(object):
         results = SolverResults()
 
         if config.load_solutions:
-            nlp.load_x_into_pyomo(x)
+            nlp.set_primals(x)
+            nlp.set_duals(info['mult_g'])
+            nlp.load_state_into_pyomo(
+                bound_multipliers=(info['mult_x_L'], info['mult_x_U']))
         else:
             soln = results.solution.add()
             soln.variable.update(
