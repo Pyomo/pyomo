@@ -66,7 +66,6 @@ jobs:
         - {os: windows-latest, python: pypy2}
         - {os: windows-latest, python: pypy3}
 
-
     steps:
     - uses: actions/checkout@v2
 
@@ -263,8 +262,8 @@ jobs:
       run: |
         $GAMS_DIR="${env:TPL_DIR}/gams"
         echo "$GAMS_DIR" >> $GITHUB_PATH
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR" >> $GITHUB_ENV
-        echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
+        echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
         $INSTALLER="${env:DOWNLOAD_DIR}/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -292,7 +291,7 @@ jobs:
 
     - name: Install GAMS Python bindings
       run: |
-        GAMS_DIR="$TPL_DIR/gams"
+        GAMS_DIR="${env:TPL_DIR}/gams"
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then

@@ -300,8 +300,6 @@ jobs:
             $PYTHON_EXE setup.py install
             popd
         fi
-        echo $LD_LIBRARY_PATH
-        echo $DYLD_LIBRARY_PATH
 
     - name: Install BARON
       shell: pwsh
