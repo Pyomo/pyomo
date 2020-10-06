@@ -72,7 +72,7 @@ jobs:
     - name: Configure job parameters
       run: |
         JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}"
-        echo "GHA_JOBNAME=$JOB" >> $GITHUB_ENV | sed 's|/|_|g'
+        echo "GHA_JOBNAME=$JOB" | sed 's|/|_|g' >> $GITHUB_ENV
 
     # Ideally we would cache the conda downloads; however, each cache is
     # over 850MB, and with 5 python versions, that would consume 4.2 of
