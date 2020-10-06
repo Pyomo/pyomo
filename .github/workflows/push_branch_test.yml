@@ -198,6 +198,7 @@ jobs:
         python -c 'import sys; print("PYTHON_EXE=%s >> $GITHUB_ENV" \
             % (sys.executable,))'
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
+        echo $CURL_HOME
 
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
