@@ -24,7 +24,7 @@ from pyomo.opt import TerminationCondition
 required_solvers = ('baron', 'cplex')
 if not all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = False
-elif not SolverFactory('baron').license_is_valid()
+elif not SolverFactory('baron').license_is_valid():
     subsolvers_available = False
 else:
     subsolvers_available = True
