@@ -1299,12 +1299,7 @@ class ComponentUID(object):
             try:
                 call, arg = call_stack_entry
             except ValueError as err:
-                if 'too many values to unpack' in str(err):
-                    # This is the case when a __call__ is encountered.
-                    # The entry in the _call_stack is a len-3 tuple.
-                    call, arg, kwds = call_stack_entry
-                else:
-                    raise
+                call, arg, kwds = call_stack_entry
             count += 1
 
             if call & 0b10:
