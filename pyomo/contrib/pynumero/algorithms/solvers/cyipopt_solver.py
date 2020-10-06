@@ -29,9 +29,9 @@ from pyomo.common.dependencies import (
     attempt_import,
     numpy as np, numpy_available,
 )
-cyipopt, cyipopt_available = attempt_import(
-    'ipopt', alt_names=['cyipopt'],
-    error_message='cyipopt solver relies on cyipopt. '
+ipopt, ipopt_available = attempt_import(
+    'ipopt',
+    error_message='cyipopt solver relies on the ipopt module from cyipopt. '
     'See https://github.com/matthias-k/cyipopt.git for cyipopt '
     'installation instructions.'
 )
@@ -389,7 +389,7 @@ class CyIpoptSolver(object):
         nx = len(xstart)
         ng = len(gl)
 
-        cyipopt_solver = cyipopt.problem(
+        cyipopt_solver = ipopt.problem(
             n=nx,
             m=ng,
             problem_obj=self._problem,
@@ -463,10 +463,10 @@ class PyomoCyIpoptSolver(object):
         self._model = model
 
     def available(self, exception_flag=False):
-        return numpy_available and cyipopt_available
+        return numpy_available and ipopt_available
 
     def version(self):
-        return tuple(int(_) for _ in cyipopt.__version__.split('.'))
+        return tuple(int(_) for _ in ipopt.__version__.split('.'))
 
     def solve(self, model, **kwds):
         config = self.config(kwds, preserve_implicit=True)
@@ -493,7 +493,7 @@ class PyomoCyIpoptSolver(object):
         nx = len(xl)
         ng = len(gl)
 
-        cyipopt_solver = cyipopt.problem(
+        cyipopt_solver = ipopt.problem(
             n=nx,
             m=ng,
             problem_obj=problem,
