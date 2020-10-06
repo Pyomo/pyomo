@@ -262,8 +262,8 @@ jobs:
       run: |
         $GAMS_DIR="${env:TPL_DIR}/gams"
         echo "$GAMS_DIR" >> $GITHUB_PATH
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMS_DIR" >> $GITHUB_ENV
-        echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$GAMS_DIR" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
+        echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
         $INSTALLER="${env:DOWNLOAD_DIR}/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
