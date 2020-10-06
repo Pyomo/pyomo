@@ -1287,6 +1287,14 @@ class ComponentUID(object):
         name = None
         count = 0
         while call_stack:
+            # Pop the call stack, then do one of the following depending
+            # on the call that was just popped:
+            # - slice_info: generate cids by walking up model hierarchy
+            # - call or get_item: cache arguments, which will be yielded
+            #                     the next time a get_attribute is 
+            #                     encountered
+            # - get_attribute: yield a cid with the attribute and the
+            #                  cached index value
             call_stack_entry = call_stack.pop()
             try:
                 call, arg = call_stack_entry
