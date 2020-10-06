@@ -1164,6 +1164,12 @@ class ComponentUID(object):
             return self._cids.__ne__(other)
 
     def _validate_slice_index(self, idx):
+        """
+        Slices support a wider range of indices than CUIDs.
+        This method makes sure the index can be used to
+        construct a valid CUID, and returns an index in
+        the form expected by _partial_cuid_from_index.
+        """
         if idx.__class__ is not tuple:
             idx = (idx,)
         ellipsis_count = 0
@@ -1209,7 +1215,9 @@ class ComponentUID(object):
 
     def _partial_cuid_from_index(self, idx):
         """
-        TODO
+        Converts an index into an (index, type-string) tuple
+        as required by _cid entries. Slices and ellipses are
+        converted to wildcard notation.
         """
         tDict = ComponentUID.tDict
         if idx.__class__ is not tuple:
@@ -1240,7 +1248,10 @@ class ComponentUID(object):
 
     def _index_from_slice_info(self, slice_info):
         """
-        TODO
+        Constructs an index from the slice_info entry in a slice's
+        call stack. The index may then be processed just as any
+        other slice index, e.g. from a __getitem__ call in a slice's
+        call stack.
         """
         fixed, sliced, ellipsis = slice_info
         
@@ -1268,7 +1279,8 @@ class ComponentUID(object):
 
     def _generate_cids_from_slice(self, _slice, context=None):
         """
-        TODO
+        Pops the slice's call stack, generating a _cid entry whenever
+        a __getattr__ call is encountered.
         """
         call_stack = list(_slice._call_stack)
         index = ()
@@ -1306,6 +1318,10 @@ class ComponentUID(object):
                         )
                 parent = comp.parent_block()
                 for cid in self._generate_cuid(parent, context=context):
+                    # Generate _cid entries for parent (non-slice)
+                    # components. This is the only place `context` gets
+                    # used, as the slice does not access any "components"
+                    # in its call call stack.
                     yield cid
             elif call == IndexedComponent_slice.get_item:
                 # Need to parse index to get potential slice
