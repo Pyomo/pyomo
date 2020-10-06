@@ -343,6 +343,12 @@ class PyomoGreyBoxNLP(NLP):
             greybox_data.extend(data for data in greybox.values()
                                 if data.active)
 
+        if len(greybox_data) > 1:
+            raise NotImplementedError("The PyomoGreyBoxModel interface has not"
+                                      " been tested with Pyomo models that contain"
+                                      " more than one ExternalGreyBoxBlock. Currently,"
+                                      " only a single block is supported.")
+
         if self._pyomo_nlp.n_primals() == 0:
             raise ValueError(
                 "No variables were found in the Pyomo part of the model."
