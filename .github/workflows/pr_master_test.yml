@@ -218,8 +218,8 @@ jobs:
             || echo "WARNING: CPLEX Community Edition is not available"
         conda install -q -y -c fico-xpress xpress \
             || echo "WARNING: Xpress Community Edition is not available"
-        python -c 'import sys; print("PYTHON_EXE=%s >> $GITHUB_ENV" \
-            % (sys.executable,))'
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
 
     - name: Setup TPL package directories
