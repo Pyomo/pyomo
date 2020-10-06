@@ -291,7 +291,7 @@ jobs:
 
     - name: Install GAMS Python bindings
       run: |
-        GAMS_DIR="$TPL_DIR/gams"
+        GAMS_DIR="${env:TPL_DIR}/gams"
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
@@ -300,6 +300,8 @@ jobs:
             $PYTHON_EXE setup.py install
             popd
         fi
+        echo $LD_LIBRARY_PATH
+        echo $DYLD_LIBRARY_PATH
 
     - name: Install BARON
       shell: pwsh
