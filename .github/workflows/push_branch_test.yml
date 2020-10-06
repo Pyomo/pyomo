@@ -195,10 +195,9 @@ jobs:
             || echo "WARNING: CPLEX Community Edition is not available"
         pip install --cache-dir cache/pip xpress \
             || echo "WARNING: Xpress Community Edition is not available"
-        python -c 'import sys; print("PYTHON_EXE=%s >> $GITHUB_ENV" \
-            % (sys.executable,))'
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
-        echo $CURL_HOME
 
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
