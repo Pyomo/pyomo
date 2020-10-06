@@ -532,10 +532,27 @@ class PyomoCyIpoptSolver(object):
             solverStatus = SolverStatus.unknown
         wall_time = timer.toc("")
 
-        if config.load_solutions:
-            nlp.load_x_into_pyomo(x)
-
         results = SolverResults()
+
+        if config.load_solutions:
+            nlp.set_primals(x)
+            nlp.set_duals(info['mult_g'])
+            nlp.load_state_into_pyomo(
+                bound_multipliers=(info['mult_x_L'], info['mult_x_U']))
+        else:
+            soln = results.solution.add()
+            soln.variable.update(
+                (i, {'Value':j, 'ipopt_zL_out': zl, 'ipopt_zU_out': zu})
+                for i,j,zl,zu in zip( nlp.variable_names(),
+                                      x,
+                                      info['mult_x_L'],
+                                      info['mult_x_U'] )
+            )
+            soln.constraint.update(
+                (i, {'Dual':j}) for i,j in zip(
+                    nlp.constraint_names(), info['mult_g']))
+
+
         results.problem.name = model.name
         obj = next(model.component_data_objects(Objective, active=True))
         if obj.sense == minimize:

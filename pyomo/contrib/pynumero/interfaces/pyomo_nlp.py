@@ -311,6 +311,30 @@ class PyomoNLP(AslNLP):
 
         return coo_matrix((submatrix_data, (submatrix_irows, submatrix_jcols)), shape=(len(primal_indices_rows), len(primal_indices_cols)))
 
+    def load_state_into_pyomo(self, bound_multipliers=None):
+        primals = self.get_primals()
+        variables = self.get_pyomo_variables()
+        for var, val in zip(variables, primals):
+            var.set_value(val)
+        m = self.pyomo_model()
+        model_suffixes = dict(
+            pyomo.core.base.suffix.active_import_suffix_generator(m))
+        if 'dual' in model_suffixes:
+            duals = self.get_duals()
+            constraints = self.get_pyomo_constraints()
+            model_suffixes['dual'].clear()
+            model_suffixes['dual'].update(
+                zip(constraints, duals))
+        if 'ipopt_zL_out' in model_suffixes:
+            model_suffixes['ipopt_zL_out'].clear()
+            if bound_multipliers is not None:
+                model_suffixes['ipopt_zL_out'].update(
+                    zip(variables, bound_multipliers[0]))
+        if 'ipopt_zU_out' in model_suffixes:
+            model_suffixes['ipopt_zU_out'].clear()
+            if bound_multipliers is not None:
+                model_suffixes['ipopt_zU_out'].update(
+                    zip(variables, bound_multipliers[1]))
 
 
 class PyomoGreyBoxNLP(NLP):
@@ -354,11 +378,11 @@ class PyomoGreyBoxNLP(NLP):
                 "No variables were found in the Pyomo part of the model."
                 " PyomoGreyBoxModel requires at least one variable"
                 " to be active in a Pyomo objective or constraint")
-        
+
         # number of additional variables required - they are in the
         # greybox models but not included in the NL file
         self._n_greybox_primals = 0
-        
+
         # number of residuals (equality constraints + output constraints
         # coming from the grey box models
         self._greybox_primals_names = []
@@ -390,7 +414,7 @@ class PyomoGreyBoxNLP(NLP):
                 self._greybox_constraints_names.append('{}.{}'.format(block_name, nm))
             for nm in data._ex_model.output_names():
                 self._greybox_constraints_names.append('{}.{}_con'.format(block_name, nm))
-            
+
             for var in data.component_data_objects(aml.Var):
                 if var not in self._vardata_to_idx:
                     # there is a variable in the greybox block that
@@ -400,8 +424,7 @@ class PyomoGreyBoxNLP(NLP):
                     greybox_primals.append(var)
                     self._greybox_primals_names.append(var.getname(fully_qualified=True))
         self._n_greybox_primals = len(greybox_primals)
-        self._ordered_primal_variables = list(self._pyomo_nlp.get_pyomo_variables())
-        self._ordered_primal_variables.extend(greybox_primals)
+        self._greybox_primal_variables = greybox_primals
 
         # Configure the primal and dual data caches
         self._greybox_primals_lb = np.zeros(self._n_greybox_primals)
@@ -447,12 +470,12 @@ class PyomoGreyBoxNLP(NLP):
             self._obj_scaling = 1.0
         else:
             need_scaling = True
-        
+
         self._primals_scaling = np.ones(self.n_primals())
         scaling_suffix = self._pyomo_nlp._pyomo_model.component('scaling_factor')
         if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
             need_scaling = True
-            for i,v in enumerate(self._ordered_primal_variables):
+            for i,v in enumerate(self.get_pyomo_variables()):
                 if v in scaling_suffix:
                     self._primals_scaling[i] = scaling_suffix[v]
 
@@ -463,7 +486,7 @@ class PyomoGreyBoxNLP(NLP):
         else:
             need_scaling = True
         self._constraints_scaling.append(pyomo_nlp_scaling)
-            
+
         for h in self._external_greybox_helpers:
             tmp_scaling = h.get_residual_scaling()
             if tmp_scaling is None:
@@ -478,7 +501,7 @@ class PyomoGreyBoxNLP(NLP):
             self._obj_scaling = None
             self._primals_scaling = None
             self._constraints_scaling = None
-            
+
         # might want the user to be able to specify these at some point
         self._init_greybox_duals = np.ones(self._n_greybox_constraints)
         self._init_greybox_primals.flags.writeable = False
@@ -509,7 +532,7 @@ class PyomoGreyBoxNLP(NLP):
     # overloaded from ExtendedNLP
     def n_ineq_constraints(self):
         return self._pyomo_nlp.n_ineq_constraints()
-    
+
     # overloaded from NLP
     def nnz_jacobian(self):
         return self._pyomo_nlp.nnz_jacobian() + self._nnz_greybox_jac
@@ -591,8 +614,8 @@ class PyomoGreyBoxNLP(NLP):
         # set the primals on the "pyomo" part of the nlp
         self._pyomo_nlp.set_primals(
             primals[:self._pyomo_nlp.n_primals()])
-        
-        # copy the values for the greybox primals 
+
+        # copy the values for the greybox primals
         np.copyto(self._greybox_primals, primals[self._pyomo_nlp.n_primals():])
 
         for external in self._external_greybox_helpers:
@@ -661,11 +684,11 @@ class PyomoGreyBoxNLP(NLP):
     # overloaded from NLP
     def get_obj_scaling(self):
         return self._obj_scaling
-    
+
     # overloaded from NLP
     def get_primals_scaling(self):
         return self._primals_scaling
-    
+
     # overloaded from NLP
     def get_constraints_scaling(self):
         return self._constraints_scaling
@@ -706,13 +729,14 @@ class PyomoGreyBoxNLP(NLP):
             # call on the pyomo part of the nlp
             self._pyomo_nlp.evaluate_constraints(
                 out[:-self._n_greybox_constraints])
-            
+
             # call on the greybox part of the nlp
-            np.copyto(out[-self._n_greybox_constraints:], self._cached_greybox_constraints)
+            np.copyto(out[-self._n_greybox_constraints:],
+                      self._cached_greybox_constraints)
             return out
 
         else:
-            # concatenate the 
+            # concatenate the pyomo and external constraint residuals
             return np.concatenate((
                 self._pyomo_nlp.evaluate_constraints(),
                 self._cached_greybox_constraints,
@@ -777,7 +801,7 @@ class PyomoGreyBoxNLP(NLP):
             base = self._pyomo_nlp.evaluate_jacobian()
             base = coo_matrix((base.data, (base.row, base.col)),
                               shape=(base.shape[0], self.n_primals()))
-            
+
             jac = BlockMatrix(2,1)
             jac.set_block(0, 0, base)
             jac.set_block(1, 0, self._cached_greybox_jac)
@@ -844,7 +868,62 @@ class PyomoGreyBoxNLP(NLP):
         names.extend(self._greybox_constraints_names)
         return names
 
-    def load_x_into_pyomo(self, primals):
-        for i,v in enumerate(self._ordered_primal_variables):
-            v.set_value(primals[i])
+    def pyomo_model(self):
+        """
+        Return optimization model
+        """
+        return self._pyomo_model
 
+    def get_pyomo_objective(self):
+        """
+        Return an instance of the active objective function on the Pyomo model.
+        (there can be only one)
+        """
+        return self._pyomo_nlp.get_pyomo_objective()
+
+    def get_pyomo_variables(self):
+        """
+        Return an ordered list of the Pyomo VarData objects in
+        the order corresponding to the primals
+        """
+        return self._pyomo_nlp.get_pyomo_variables() + \
+            self._greybox_primal_variables
+
+    def get_pyomo_constraints(self):
+        """
+        Return an ordered list of the Pyomo ConData objects in
+        the order corresponding to the primals
+        """
+        # FIXME: what do we return for the external block constraints?
+        # return self._pyomo_nlp.get_pyomo_constraints()
+        raise NotImplementedError(
+            "returning list of all constraints when using an external "
+            "model is TBD")
+
+    def load_state_into_pyomo(self, bound_multipliers=None):
+        primals = self.get_primals()
+        variables = self.get_pyomo_variables()
+        for var, val in zip(variables, primals):
+            var.set_value(val)
+        m = self.pyomo_model()
+        model_suffixes = dict(
+            pyomo.core.base.suffix.active_import_suffix_generator(m))
+        if 'dual' in model_suffixes:
+            model_suffixes['dual'].clear()
+            # Until we sort out how to return the duals for the external
+            # block (implied) constraints, I am disabling *all* duals
+            #
+            # duals = self.get_duals()
+            # constraints = self.get_pyomo_constraints()
+            # model_suffixes['dual'].update(
+            #     zip(constraints, duals))
+        if 'ipopt_zL_out' in model_suffixes:
+            model_suffixes['ipopt_zL_out'].clear()
+            if bound_multipliers is not None:
+                model_suffixes['ipopt_zL_out'].update(
+                    zip(variables, bound_multipliers[0]))
+        if 'ipopt_zU_out' in model_suffixes:
+            model_suffixes['ipopt_zU_out'].clear()
+            if bound_multipliers is not None:
+                model_suffixes['ipopt_zU_out'].update(
+                    zip(variables, bound_multipliers[1]))

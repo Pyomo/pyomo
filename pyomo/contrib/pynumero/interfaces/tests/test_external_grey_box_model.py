@@ -1215,7 +1215,8 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         cyipopt_problem = CyIpoptNLP(pyomo_nlp)
         solver = CyIpoptSolver(cyipopt_problem, options)
         x, info = solver.solve(tee=False)
-        pyomo_nlp.load_x_into_pyomo(x)
+        pyomo_nlp.set_primals(x)
+        pyomo_nlp.load_state_into_pyomo()
 
         self.assertAlmostEqual(pyo.value(m.egb.inputs['F']), 3.0, places=3)
         self.assertAlmostEqual(pyo.value(m.mu), 1.63542e-6, places=3)
