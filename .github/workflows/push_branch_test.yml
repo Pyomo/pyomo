@@ -156,7 +156,7 @@ jobs:
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
-      uses: goanpeca/setup-miniconda@v1
+      uses: conda-incubator/setup-miniconda@v1
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
