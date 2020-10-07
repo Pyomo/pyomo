@@ -252,7 +252,7 @@ class CPLEXDirect(DirectSolver):
         finally:
             self._solver_model.set_results_stream(None)
             if _close_log_file:
-                _log_file.close()
+                _log_file[0].close()
 
         # FIXME: can we get a return code indicating if CPLEX had a significant failure?
         return Bunch(rc=None, log=None)
