@@ -10,6 +10,7 @@
 
 import logging
 import re
+import six
 import sys
 import pyomo.common
 from pyutilib.misc import Bunch
