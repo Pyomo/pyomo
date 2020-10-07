@@ -94,51 +94,56 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         """
 
         config.logger.info("Adding OA cuts")
-        for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
-                                        dual_values):
-            if constr.body.polynomial_degree() in (0, 1):
-                continue
+        with time_code(solve_data.timing, 'OA cut generation'):
+            for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
+                                            dual_values):
+                if constr.body.polynomial_degree() in (0, 1):
+                    continue
 
-            constr_vars = list(identify_variables(constr.body))
-            jacs = solve_data.jacobians
+                constr_vars = list(identify_variables(constr.body))
+                jacs = solve_data.jacobians
 
-            # Equality constraint (makes the problem nonconvex)
-            if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
-                sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-                rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+                # Equality constraint (makes the problem nonconvex)
+                if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
+                    sign_adjust = -1 if solve_data.objective_sense == minimize else 1
+                    rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
 
-                # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
-                pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (
-                    var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
-                cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
-                cplex_rhs = -generate_standard_repn(pyomo_expr).constant
-                self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                         sense="L",
-                         rhs=cplex_rhs)
-            else:  # Inequality constraint (possibly two-sided)
-                if constr.has_ub() \
-                    and (linearize_active and abs(constr.uslack()) < config.bound_tolerance) \
-                        or (linearize_violated and constr.uslack() < 0) \
-                        or (config.linearize_inactive and constr.uslack() > 0):
-
-                    pyomo_expr = sum(
-                        value(jacs[constr][var])*(var - var.value) for var in constr_vars) + value(constr.body)
-                    cplex_rhs = -generate_standard_repn(pyomo_expr).constant
+                    # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
+                    pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (
+                        var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
+                    cplex_rhs = -generate_standard_repn(pyomo_expr).constant
                     self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                              sense="L",
-                             rhs=constr.upper.value + cplex_rhs)
-                if constr.has_lb() \
-                    and (linearize_active and abs(constr.lslack()) < config.bound_tolerance) \
-                        or (linearize_violated and constr.lslack() < 0) \
-                        or (config.linearize_inactive and constr.lslack() > 0):
-                    pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
-                        opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) + value(constr.body)
-                    cplex_rhs = -generate_standard_repn(pyomo_expr).constant
-                    cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
-                    self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                             sense="G",
-                             rhs=constr.lower.value + cplex_rhs)
+                             rhs=cplex_rhs)
+                else:  # Inequality constraint (possibly two-sided)
+                    if constr.has_ub() \
+                        and (linearize_active and abs(constr.uslack()) < config.bound_tolerance) \
+                            or (linearize_violated and constr.uslack() < 0) \
+                            or (config.linearize_inactive and constr.uslack() > 0):
+
+                        pyomo_expr = sum(
+                            value(jacs[constr][var])*(var - var.value) for var in constr_vars) + value(constr.body)
+                        cplex_rhs = - \
+                            generate_standard_repn(pyomo_expr).constant
+                        cplex_expr, _ = opt._get_expr_from_pyomo_expr(
+                            pyomo_expr)
+                        self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
+                                 sense="L",
+                                 rhs=constr.upper.value + cplex_rhs)
+                    if constr.has_lb() \
+                        and (linearize_active and abs(constr.lslack()) < config.bound_tolerance) \
+                            or (linearize_violated and constr.lslack() < 0) \
+                            or (config.linearize_inactive and constr.lslack() > 0):
+                        pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
+                            opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) + value(constr.body)
+                        cplex_rhs = - \
+                            generate_standard_repn(pyomo_expr).constant
+                        cplex_expr, _ = opt._get_expr_from_pyomo_expr(
+                            pyomo_expr)
+                        self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
+                                 sense="G",
+                                 rhs=constr.lower.value + cplex_rhs)
 
     def add_lazy_affine_cuts(self, solve_data, config, opt):
         """
@@ -263,43 +268,45 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             return
 
         config.logger.info("Adding nogood cuts")
+        with time_code(solve_data.timing, 'Nogood cut generation'):
+            m = solve_data.mip
+            MindtPy = m.MindtPy_utils
+            int_tol = config.integer_tolerance
 
-        m = solve_data.mip
-        MindtPy = m.MindtPy_utils
-        int_tol = config.integer_tolerance
+            binary_vars = [v for v in MindtPy.variable_list if v.is_binary()]
 
-        binary_vars = [v for v in MindtPy.variable_list if v.is_binary()]
+            # copy variable values over
+            for var, val in zip(MindtPy.variable_list, var_values):
+                if not var.is_binary():
+                    continue
+                var.value = val
 
-        # copy variable values over
-        for var, val in zip(MindtPy.variable_list, var_values):
-            if not var.is_binary():
-                continue
-            var.value = val
+            # check to make sure that binary variables are all 0 or 1
+            for v in binary_vars:
+                if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
+                    raise ValueError('Binary {} = {} is not 0 or 1'.format(
+                        v.name, value(v)))
 
-        # check to make sure that binary variables are all 0 or 1
-        for v in binary_vars:
-            if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
-                raise ValueError('Binary {} = {} is not 0 or 1'.format(
-                    v.name, value(v)))
+            if not binary_vars:  # if no binary variables, skip
+                return
 
-        if not binary_vars:  # if no binary variables, skip
-            return
+            # int_cut = (sum(1 - v for v in binary_vars
+            #                if value(abs(v - 1)) <= int_tol) +
+            #            sum(v for v in binary_vars
+            #                if value(abs(v)) <= int_tol) >= 1)
 
-        # int_cut = (sum(1 - v for v in binary_vars
-        #                if value(abs(v - 1)) <= int_tol) +
-        #            sum(v for v in binary_vars
-        #                if value(abs(v)) <= int_tol) >= 1)
+            # MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
 
-        # MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
+            pyomo_nogood_cut = sum(1 - v for v in binary_vars if value(abs(v - 1))
+                                   <= int_tol) + sum(v for v in binary_vars if value(abs(v)) <= int_tol)
+            cplex_nogood_rhs = generate_standard_repn(
+                pyomo_nogood_cut).constant
+            cplex_nogood_cut, _ = opt._get_expr_from_pyomo_expr(
+                pyomo_nogood_cut)
 
-        pyomo_nogood_cut = sum(1 - v for v in binary_vars if value(abs(v - 1))
-                               <= int_tol) + sum(v for v in binary_vars if value(abs(v)) <= int_tol)
-        cplex_nogood_rhs = generate_standard_repn(pyomo_nogood_cut).constant
-        cplex_nogood_cut, _ = opt._get_expr_from_pyomo_expr(pyomo_nogood_cut)
-
-        self.add(constraint=cplex.SparsePair(ind=cplex_nogood_cut.variables, val=cplex_nogood_cut.coefficients),
-                 sense="G",
-                 rhs=1 - cplex_nogood_rhs)
+            self.add(constraint=cplex.SparsePair(ind=cplex_nogood_cut.variables, val=cplex_nogood_cut.coefficients),
+                     sense="G",
+                     rhs=1 - cplex_nogood_rhs)
 
     def handle_lazy_master_mip_feasible_sol(self, master_mip, solve_data, config, opt):
         """ This function is called during the branch and bound of master mip, more exactly when a feasible solution is found and LazyCallback is activated.
