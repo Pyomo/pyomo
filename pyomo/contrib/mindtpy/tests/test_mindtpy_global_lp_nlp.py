@@ -23,10 +23,12 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 
 required_solvers = ('baron', 'cplex_persistent')
-if all(SolverFactory(s).available(False) and SolverFactory(s).license_is_valid() for s in required_solvers):
-    subsolvers_available = True
-else:
+if not all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = False
+elif not SolverFactory('baron').license_is_valid():
+    subsolvers_available = False
+else:
+    subsolvers_available = True
 
 
 @unittest.skipIf(not subsolvers_available,
