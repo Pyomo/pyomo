@@ -324,6 +324,7 @@ class _slice_generator(object):
 
         self.explicit_index_count = len(fixed) + len(sliced)
         if iter_over_index:
+            # What is the significance of this if tree?
             self.component_iter = component.index_set().__iter__()
         else:
             self.component_iter = component.__iter__()
@@ -362,28 +363,46 @@ class _slice_generator(object):
                     continue
             elif len(_idx) != self.explicit_index_count:
                 continue
+            # Per discussion in issue #1492, should the above
+            # cases raise exceptions?
 
             valid = True
             for key, val in iteritems(self.fixed):
+                # If this index of the component does not match all
+                # the specified fixed indices, don't return anything.
+                #
+                # Would `match` be a better name for this flag?
                 if not val == _idx[key]:
                     valid = False
                     break
             if valid:
                 # Remember the index tuple corresponding to the last
                 # component data returned by this iterator
+                #
+                # last_index is the latest index encountered, not the
+                # last index that will ever be encountered.
                 self.last_index = _idx
+                # last_index is a way to cache the index in case it is
+                # needed later, e.g. when a ellipsis error occurs...
+                # Not sure exactly why it is needed in this case...
+                #
                 # Note: it is important to use __getitem__, as the
                 # derived class may implement a non-standard storage
                 # mechanism (e.g., Param)
                 if (not self.iter_over_index) or index in self.component:
+                    # What if self.component is a reference?
+                    # Will this be slow?
                     return self.component[index]
                 else:
+                    # How does returning None here correspond to iter_over_index?
                     return None
 
 # Backwards compatibility
 _IndexedComponent_slice = IndexedComponent_slice
 
 # Mock up a callable object with a "check_complete" method
+# This is necessary because of the API defined by
+# _fill_in_known_wildcards?
 def _advance_iter(_iter):
     return advance_iterator(_iter)
 def _advance_iter_check_complete():
@@ -410,10 +429,13 @@ class _IndexedComponent_slice_iter(object):
         if call_stack[0][0] == IndexedComponent_slice.slice_info:
             self._iter_stack[0] = _slice_generator(
                 *call_stack[0][1], iter_over_index=self._iter_over_index)
+            # call_stack[0][1] is a (fixed, sliced, ellipsis) tuple, where
+            # fixed and sliced are dicts.
         elif call_stack[0][0] == IndexedComponent_slice.set_item:
             assert call_stack_len == 1
             # defer creating the iterator until later
             self._iter_stack[0] = _NotIterable # Something not None
+            # What is going on here? -RBP
         else:
             raise DeveloperError("Unexpected call_stack flag encountered: %s"
                                  % call_stack[0][0])
@@ -429,6 +451,7 @@ class _IndexedComponent_slice_iter(object):
     def __next__(self):
         """Return the next element in the slice."""
         idx = len(self._iter_stack)-1
+        # Top of the stack
         while True:
             # Flush out any non-slice levels.  Since we initialize
             # _iter_stack with None, in the first call this will
@@ -436,11 +459,28 @@ class _IndexedComponent_slice_iter(object):
             while self._iter_stack[idx] is None:
                 idx -= 1
             # Get the next element in the deepest active slice
+            #
+            # How do we determine which slices are active?
+            # ^ Those which are not None. iter_stack seems intended
+            # to keep track of which slices in the call stack we are
+            # currently iterating over.
+            # Why are there more than one slice? Different levels of the
+            # iter/call stack.
             try:
                 if self._iter_stack[idx] is _NotIterable:
+                    # When does this happen?
+                    # If we have "deferred creation of the iterator"
+                    # because the _call_stack consists only of a
+                    # set_attr.
                     _comp = self._slice._call_stack[0][1][0]
+                    # _comp is the component in the slice_info entry
+                    # of the call stack
                 else:
                     _comp = self.advance_iter(self._iter_stack[idx])
+                    # advance_iter knows which wildcard indices
+                    # we're looking for, if any
+                    #
+                    # _comp is part of the component we're looking for
                     idx += 1
             except StopIteration:
                 if not idx:
@@ -649,6 +689,7 @@ class _IndexedComponent_slice_iter(object):
                 # (i.e._fill_in_known_wildcards) is complete
                 self.advance_iter.check_complete()
                 # We have a concrete object at the end of the chain. Return it
+                #print('__next__', idx, _comp)
                 return _comp
 
     def get_last_index(self):
@@ -662,8 +703,15 @@ class _IndexedComponent_slice_iter(object):
             return ans
 
     def get_last_index_wildcards(self):
+        """
+        Get a tuple of the values in the wildcard positions for 
+        the most recent indices checked by each _slice_generator
+        in the iter stack.
+        """
         ans = sum(
             ( tuple( x.last_index[i]
+                # last_index is the most recent recent index checked
+                # by a certain _slice_generator.
                      for i in range(len(x.last_index))
                      if i not in x.fixed )
               for x in self._iter_stack if x is not None ),
