@@ -660,5 +660,4 @@ def Reference(reference, ctype=_NotSpecified):
     obj = ctype(index, ctype=ctype)
     obj._constructed = True
     obj._data = _data
-    obj.referent = reference
     return obj
