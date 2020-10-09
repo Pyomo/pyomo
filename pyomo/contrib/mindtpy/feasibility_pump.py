@@ -2,9 +2,9 @@ from pyomo.core import (Var, Objective, Reals, minimize,
                         RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
 from pyomo.opt import SolverFactory, SolutionStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination)
+from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
+                                             handle_subproblem_optimal, handle_subproblem_infeasible,
+                                             handle_subproblem_other_termination)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_nogood_cuts
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_Norm2sq_objective_function
@@ -23,7 +23,7 @@ def feas_pump_converged(solve_data, config, discrete_only=True):
     return distance <= config.integer_tolerance
 
 
-def solve_feas_pump_NLP_subproblem(solve_data, config):
+def solve_feas_pump_subproblem(solve_data, config):
     """
     Solves the feasibility pump NLP
 
@@ -81,7 +81,7 @@ def solve_feas_pump_NLP_subproblem(solve_data, config):
     return fp_nlp, results
 
 
-def handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config):
+def handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config):
     """Copies result to working model, updates bound, adds OA cut, no_good cut
     and increasing objective cut and stores best solution if new one is best
     Also calculates the duals
@@ -99,12 +99,12 @@ def handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config):
         copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
                              solve_data.working_model.MindtPy_utils.variable_list,
                              config)
-        fixed_nlp, fixed_nlp_results = solve_NLP_subproblem(
+        fixed_nlp, fixed_nlp_results = solve_subproblem(
             solve_data, config)
         main_objective = next(
             fixed_nlp.component_data_objects(Objective, active=True))
         if fixed_nlp_results.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-            handle_NLP_subproblem_optimal(
+            handle_subproblem_optimal(
                 fixed_nlp, solve_data, config, feas_pump=True)
         else:
             config.logger.error("Feasibility pump fixed nlp is infeasible, something might be wrong. "
@@ -168,13 +168,13 @@ def feas_pump_loop(solve_data, config):
 
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
-        fp_nlp, fp_nlp_result = solve_feas_pump_NLP_subproblem(
+        fp_nlp, fp_nlp_result = solve_feas_pump_subproblem(
             solve_data, config)
 
         if fp_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             config.logger.info('FP-NLP %s: Distance-OBJ: %s'
                                % (solve_data.fp_iter, value(fp_nlp.MindtPy_utils.feas_pump_nlp_obj)))
-            handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config)
+            handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config)
         elif fp_nlp_result.solver.termination_condition is tc.infeasible:
             config.logger.error("Feasibility pump NLP subproblem infeasible")
         elif termination_condition is tc.maxIterations:

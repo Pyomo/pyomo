@@ -15,7 +15,7 @@ from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mindtpy.cut_generation import add_nogood_cuts
 
 
-def solve_NLP_subproblem(solve_data, config):
+def solve_subproblem(solve_data, config):
     """
     Solves the fixed NLP (with fixed binaries)
 
@@ -102,9 +102,9 @@ def solve_NLP_subproblem(solve_data, config):
 # The next few functions deal with handling the solution we get from the above NLP solver function
 
 
-def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
+def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
     """
-    This function copies the result of the NLP solver function ('solve_NLP_subproblem') to the working model, updates
+    This function copies the result of the NLP solver function ('solve_subproblem') to the working model, updates
     the bounds, adds OA and no good cuts, and then stores the new solution if it is the new best solution. This
     function handles the result of the latest iteration of solving the NLP subproblem given an optimal solution.
 
@@ -193,7 +193,7 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
 
-def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
+def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
     """
     Solves feasibility problem and adds cut according to the specified strategy
 
@@ -232,7 +232,8 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
 
     if config.strategy in {'OA', 'GOA'}:
         config.logger.info('Solving feasibility problem')
-        feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
+        feas_NLP, feas_NLP_results = solve_feasibility_subproblem(
+            solve_data, config)
         copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
@@ -247,8 +248,8 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
         add_nogood_cuts(var_values, solve_data, config)
 
 
-def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
-                                            solve_data, config):
+def handle_subproblem_other_termination(fixed_nlp, termination_condition,
+                                        solve_data, config):
     """
     Handles the result of the latest iteration of solving the NLP subproblem given a solution that is neither optimal
     nor infeasible.
@@ -277,7 +278,7 @@ def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
             'condition of {}'.format(termination_condition))
 
 
-def solve_NLP_feas(solve_data, config):
+def solve_feasibility_subproblem(solve_data, config):
     """
     Solves a feasibility NLP if the fixed_nlp problem is infeasible
 

@@ -8,9 +8,9 @@ from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination, solve_NLP_feas)
+from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
+                                             handle_subproblem_optimal, handle_subproblem_infeasible,
+                                             handle_subproblem_other_termination, solve_feasibility_subproblem)
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
 from math import copysign
 from pyomo.environ import *
@@ -227,9 +227,9 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
     if master_mip_results.solver.termination_condition is tc.infeasible:
         handle_master_infeasible(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.unbounded:
-        handle_master_mip_unbounded(master_mip, solve_data, config)
+        handle_master_unbounded(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
-        handle_master_mip_max_timelimit(master_mip, solve_data, config)
+        handle_master_max_timelimit(master_mip, solve_data, config)
     elif (master_mip_results.solver.termination_condition is tc.other and
           master_mip_results.solution.status is SolutionStatus.feasible):
         # load the solution and suppress the warning message by setting
@@ -299,7 +299,7 @@ def handle_master_infeasible(master_mip, solve_data, config):
             solve_data.results.solver.termination_condition = tc.feasible
 
 
-def handle_master_mip_max_timelimit(master_mip, solve_data, config):
+def handle_master_max_timelimit(master_mip, solve_data, config):
     """
     This function handles the result of the latest iteration of solving the MIP problem given that solving the
     MIP takes too long.
@@ -337,7 +337,7 @@ def handle_master_mip_max_timelimit(master_mip, solve_data, config):
            solve_data.LB, solve_data.UB))
 
 
-def handle_master_mip_unbounded(master_mip, solve_data, config):
+def handle_master_unbounded(master_mip, solve_data, config):
     """
     This function handles the result of the latest iteration of solving the MIP problem given an unbounded solution
     due to the relaxation.

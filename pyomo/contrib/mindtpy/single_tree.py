@@ -3,9 +3,9 @@ from __future__ import division
 
 from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination, solve_NLP_feas)
+from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
+                                             handle_subproblem_optimal, handle_subproblem_infeasible,
+                                             handle_subproblem_other_termination, solve_feasibility_subproblem)
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time
 from math import copysign
 from pyomo.environ import *
@@ -300,7 +300,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                  sense="G",
                  rhs=1 - cplex_nogood_rhs)
 
-    def handle_lazy_master_mip_feasible_sol(self, master_mip, solve_data, config, opt):
+    def handle_lazy_master_feasible_solution(self, master_mip, solve_data, config, opt):
         """ This function is called during the branch and bound of master mip, more exactly when a feasible solution is found and LazyCallback is activated.
         Copy the result to working model and update upper or lower bound.
         In LP-NLP, upper or lower bound are updated during solving the master problem
@@ -341,7 +341,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr), self.get_best_objective_value(),
                solve_data.LB, solve_data.UB))
 
-    def handle_lazy_NLP_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
+    def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """
         This function copies  result to mip(explaination see below), updates bound, adds OA and no good cuts,
         stores best solution if new one is best
@@ -411,7 +411,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 v.value for v in fixed_nlp.MindtPy_utils.variable_list)
             self.add_lazy_nogood_cuts(var_values, solve_data, config, opt)
 
-    def handle_lazy_NLP_subproblem_infeasible(self, fixed_nlp, solve_data, config, opt):
+    def handle_lazy_subproblem_infeasible(self, fixed_nlp, solve_data, config, opt):
         """
         Solves feasibility problem and adds cut according to the specified strategy
 
@@ -440,7 +440,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             dual_values = None
 
         config.logger.info('Solving feasibility problem')
-        feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
+        feas_NLP, feas_NLP_results = solve_feasibility_subproblem(
+            solve_data, config)
         # In OA algorithm, OA cuts are generated based on the solution of the subproblem
         # We need to first copy the value of variables from the subproblem and then add cuts
         copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
@@ -457,8 +458,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             self.add_lazy_nogood_cuts(
                 var_values, solve_data, config, opt)
 
-    def handle_lazy_NLP_subproblem_other_termination(self, fixed_nlp, termination_condition,
-                                                     solve_data, config):
+    def handle_lazy_subproblem_other_termination(self, fixed_nlp, termination_condition,
+                                                 solve_data, config):
         """
         Handles the result of the latest iteration of solving the NLP subproblem given a solution that is neither optimal
         nor infeasible.
@@ -494,7 +495,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         master_mip = self.master_mip
         cpx = opt._solver_model  # Cplex model
 
-        self.handle_lazy_master_mip_feasible_sol(
+        self.handle_lazy_master_feasible_solution(
             master_mip, solve_data, config, opt)
 
         if solve_data.LB + config.bound_tolerance >= solve_data.UB:
@@ -508,12 +509,12 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         # solve subproblem
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
-        fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
+        fixed_nlp, fixed_nlp_result = solve_subproblem(
             solve_data, config)
 
         # add oa cuts
         if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-            self.handle_lazy_NLP_subproblem_optimal(
+            self.handle_lazy_subproblem_optimal(
                 fixed_nlp, solve_data, config, opt)
             if solve_data.LB + config.bound_tolerance >= solve_data.UB:
                 config.logger.info(
@@ -523,8 +524,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 solve_data.results.solver.termination_condition = tc.optimal
                 return
         elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-            self.handle_lazy_NLP_subproblem_infeasible(
+            self.handle_lazy_subproblem_infeasible(
                 fixed_nlp, solve_data, config, opt)
         else:
-            self.handle_lazy_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                              solve_data, config)
+            self.handle_lazy_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                          solve_data, config)

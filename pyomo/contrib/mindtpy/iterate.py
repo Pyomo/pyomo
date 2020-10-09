@@ -5,9 +5,9 @@ from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_master,
                                              handle_master_optimal, handle_master_infeasible, handle_master_other_conditions)
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination)
+from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
+                                             handle_subproblem_optimal, handle_subproblem_infeasible,
+                                             handle_subproblem_other_termination)
 from pyomo.core import minimize, Objective, Var
 from pyomo.opt.results import ProblemSense
 from pyomo.opt import TerminationCondition as tc
@@ -68,15 +68,15 @@ def MindtPy_iteration_loop(solve_data, config):
         if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
-            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
+            fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
+                handle_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-                handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+                handle_subproblem_infeasible(fixed_nlp, solve_data, config)
             else:
-                handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                        solve_data, config)
+                handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                    solve_data, config)
             # Call the NLP post-solve callback
             with time_code(solve_data.timing, 'Call after subproblem solve'):
                 config.call_after_subproblem_solve(fixed_nlp, solve_data)
@@ -299,15 +299,15 @@ def bound_fix(solve_data, config, last_iter_cuts):
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
         if last_iter_cuts is False:
-            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
+            fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
+                handle_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-                handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+                handle_subproblem_infeasible(fixed_nlp, solve_data, config)
             else:
-                handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                        solve_data, config)
+                handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                    solve_data, config)
 
         MindtPy = solve_data.mip.MindtPy_utils
         # TODO: only deactivate the last no good cuts.

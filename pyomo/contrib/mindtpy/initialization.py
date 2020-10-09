@@ -5,16 +5,16 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, cop
 from pyomo.contrib.mindtpy.cut_generation import (
     add_oa_cuts, add_affine_cuts, add_objective_linearization,
 )
-from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
+from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
 from pyomo.core import (ConstraintList, Objective,
                         TransformationFactory, maximize, minimize, value, Var, Constraint)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination)
+from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
+                                             handle_subproblem_optimal, handle_subproblem_infeasible,
+                                             handle_subproblem_other_termination)
 from pyomo.contrib.mindtpy.util import var_bound_add
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
 import math
@@ -81,15 +81,15 @@ def MindtPy_initialize_master(solve_data, config):
         init_max_binaries(solve_data, config)
     elif config.init_strategy == 'initial_binary':
         if config.strategy != 'ECP':
-            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
+            fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
+                handle_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-                handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+                handle_subproblem_infeasible(fixed_nlp, solve_data, config)
             else:
-                handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                        solve_data, config)
+                handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                    solve_data, config)
     elif config.init_strategy == 'feas_pump':
         init_rNLP(solve_data, config)
         feas_pump_loop(solve_data, config)
@@ -178,7 +178,7 @@ def init_max_binaries(solve_data, config):
     """
     Modifies model by maximizing the number of activated binary variables
 
-    Note - The user would usually want to call solve_NLP_subproblem after an
+    Note - The user would usually want to call solve_subproblem after an
     invocation of this function.
 
     Parameters
