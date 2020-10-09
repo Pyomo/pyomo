@@ -284,13 +284,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         if not binary_vars:  # if no binary variables, skip
             return
 
-        # int_cut = (sum(1 - v for v in binary_vars
-        #                if value(abs(v - 1)) <= int_tol) +
-        #            sum(v for v in binary_vars
-        #                if value(abs(v)) <= int_tol) >= 1)
-
-        # MindtPy.MindtPy_linear_cuts.nogood_cuts.add(expr=int_cut)
-
         pyomo_nogood_cut = sum(1 - v for v in binary_vars if value(abs(v - 1))
                                <= int_tol) + sum(v for v in binary_vars if value(abs(v)) <= int_tol)
         cplex_nogood_rhs = generate_standard_repn(pyomo_nogood_cut).constant
