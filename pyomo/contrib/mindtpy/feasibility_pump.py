@@ -7,7 +7,7 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
                                              handle_subproblem_other_termination)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_nogood_cuts
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.mindtpy.util import generate_Norm2sq_objective_function
+from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function
 from pyomo.contrib.mindtpy.mip_solve import solve_master, handle_master_optimal
 from pyomo.util.infeasible import log_infeasible_constraints
 
@@ -61,7 +61,7 @@ def solve_feas_pump_subproblem(solve_data, config):
     else:
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
-    MindtPy.feas_pump_nlp_obj = generate_Norm2sq_objective_function(
+    MindtPy.feas_pump_nlp_obj = generate_norm2sq_objective_function(
         fp_nlp, solve_data.mip, discrete_only=True)
 
     MindtPy.MindtPy_linear_cuts.deactivate()

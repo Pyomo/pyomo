@@ -183,7 +183,7 @@ def var_bound_add(solve_data, config):
                         var.setub(config.continuous_var_bound)
 
 
-def generate_Norm2sq_objective_function(model, setpoint_model, discrete_only=False):
+def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
     """Generate objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}
     discrete_only -- only optimize on distance between the discrete variables
@@ -204,7 +204,7 @@ def generate_Norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
              zip(model_vars, setpoint_vars)])))
 
 
-def generate_Norm1_objective_function(model, setpoint_model, discrete_only=False):
+def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
     """Generate objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
     discrete_only -- only optimize on distance between the discrete variables
@@ -235,7 +235,7 @@ def generate_Norm1_objective_function(model, setpoint_model, discrete_only=False
     return Objective(expr=sum(obj_blk.L1_obj_var[idx] for idx in obj_blk.L1_obj_idx))
 
 
-def generate_NormInf_objective_function(model, setpoint_model, discrete_only=False):
+def generate_normInf_objective_function(model, setpoint_model, discrete_only=False):
     """Generate objective (PF-OA master problem) for minimum Norm Infinity distance to setpoint_model
     Norm1 distance of (x,y) = \max_i |x_i - y_i|
     discrete_only -- only optimize on distance between the discrete variables
