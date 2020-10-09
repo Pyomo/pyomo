@@ -25,7 +25,7 @@ def feas_pump_converged(solve_data, config, discrete_only=True):
 
 def solve_feas_pump_NLP_subproblem(solve_data, config):
     """
-    Solves the fixed NLP (with fixed binaries)
+    Solves the feasibility pump NLP
 
     This function sets up the 'fp_nlp' by relax integer varibales.
     precomputes dual values, deactivates trivial constraints, and then solves NLP model.
@@ -103,7 +103,6 @@ def handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config):
             solve_data, config)
         main_objective = next(
             fixed_nlp.component_data_objects(Objective, active=True))
-        # assert fixed_nlp_results.solver.termination_condition is tc.optimal, 'Feasibility pump fixed_nlp subproblem not optimal'
         if fixed_nlp_results.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             handle_NLP_subproblem_optimal(
                 fixed_nlp, solve_data, config, feas_pump=True)
@@ -118,7 +117,7 @@ def handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config):
 
 def feas_pump_loop(solve_data, config):
     """
-    Main loop for MindtPy Algorithms
+    Feasibility pump loop 
 
     This is the outermost function for the algorithms in this package; this function controls the progression of
     solving the model.
@@ -200,7 +199,16 @@ def feas_pump_loop(solve_data, config):
 
 def add_cycling_cuts(solve_data, config):
     """
-    add cuts to avoid cycling when the independence constraint qualification is not satisfied.
+    Add cycling cuts
+
+    This function adds cuts to avoid cycling when the independence constraint qualification is not satisfied.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
     """
     m = solve_data.mip
     mip_MindtPy = solve_data.mip.MindtPy_utils
