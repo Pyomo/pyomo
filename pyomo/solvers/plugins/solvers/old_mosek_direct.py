@@ -13,29 +13,39 @@ import re
 import sys
 import itertools
 import operator
-import pyomo.core.base.var
-import pyomo.core.base.constraint
 from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
-from pyomo.core.expr.numvalue import (is_fixed,value)
-from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.core.expr.numvalue import is_fixed
+from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
-from pyomo.core.base.suffix import Suffix
-from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
+from pyomo.solvers.plugins.solvers.direct_solver import \
+    DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import \
-        DirectOrPersistentSolver
-from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.opt import SolverFactory
-from pyomo.core.kernel.conic import (_ConicBase,quadratic,rotated_quadratic,
-                                     primal_exponential,primal_power,
-                                     dual_exponential,dual_power)
+    DirectOrPersistentSolver
+from pyomo.core.kernel.conic import (_ConicBase,
+                                     quadratic,
+                                     rotated_quadratic,
+                                     primal_exponential,
+                                     primal_power,
+                                     dual_exponential,
+                                     dual_power)
+from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
+from pyomo.opt.base import SolverFactory
+from pyomo.core.base.suffix import Suffix
+import pyomo.core.base.var
+
+import time
+
 logger = logging.getLogger('pyomo.solvers')
+
 
 class DegreeError(ValueError):
     pass
+
 
 def _is_numeric(x):
     try:
@@ -44,33 +54,19 @@ def _is_numeric(x):
         return False
     return True
 
-@SolverFactory.register('mosek_direct',doc='Direct python interface to MOSEK')
-class MOSEKDirect(DirectSolver):
-    
-    def __init__(self,**kwds):
-        kwds['type'] = 'mosek_direct'
+@SolverFactory.register('mosek', doc='Direct python interface to Mosek')
+class MosekDirect(DirectSolver):
+
+    def __init__(self, **kwds):
+        kwds['type'] = 'mosek'
         DirectSolver.__init__(self, **kwds)
+        self._pyomo_var_to_solver_var_map = ComponentMap()
+        self._solver_var_to_pyomo_var_map = ComponentMap()
+        self._pyomo_con_to_solver_con_map = dict()
+        self._solver_con_to_pyomo_con_map = ComponentMap()
         self._pyomo_cone_to_solver_cone_map = dict()
         self._solver_cone_to_pyomo_cone_map = ComponentMap()
-        self._name = None
-        try:
-            import mosek
-            self._mosek = mosek
-            self._mosek_env = self._mosek.Env()
-            self._python_api_exists = True
-            self._version = self._mosek_env.getversion()
-            self._version_major = self._version[0]
-            self._name = "MOSEK " + ".".join([str(i) for i in self._version])
-        except ImportError:
-            self._python_api_exists = False
-        except Exception as e:
-            print("Import of MOSEK failed - MOSEK message = "+ str(e) + "\n")
-            self._python_api_exists = False
-
-        self._range_constraint = set()
-        self._max_obj_degree = 2
-        self._max_constraint_degree = 2
-        self._termcode = None
+        self._init()
 
         self._bound_type_map = {0: self._mosek.boundkey.fr, 
                                 1: self._mosek.boundkey.lo,
@@ -80,342 +76,473 @@ class MOSEKDirect(DirectSolver):
         self._vars_append_offset = 0
         self._cons_append_offset = 0
         self._cones_append_offset = 0
-        
-        # Undefined capabilities default to None.
+
+    def _init(self):
+        self._name = None
+        try:
+            import mosek
+            self._mosek = mosek
+            self._mosek_env = self._mosek.Env()
+            self._python_api_exists = True
+            self._version = self._mosek_env.getversion()
+            if self._version[0] > 8:
+                self._name = "Mosek %s.%s.%s" % self._version
+                while len(self._version) < 3:
+                    self._version += (0,)
+            else:
+                self._name = "Mosek %s.%s.%s.%s" % self._version
+                while len(self._version) < 4:
+                    self._version += (0,)
+
+            self._version_major = self._version[0]
+        except ImportError:
+            self._python_api_exists = False
+        except Exception as e:
+            print("Import of mosek failed - mosek message=" + str(e) + "\n")
+            self._python_api_exists = False
+
+        self._range_constraints = set()
+
+        self._max_obj_degree = 2
+        self._max_constraint_degree = 2
+        self._termcode = None
+
+        # Note: Undefined capabilites default to None
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
         self._capabilities.integer = True
-        self._capabilities.conic_constraints = True
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
+    @staticmethod
+    def license_is_valid():
+        """
+        Runs a check for a valid Mosek license. Returns False
+        if Mosek fails to run on a trivial test case.
+        """
+        try:
+            import mosek
+        except ImportError:
+            return False
+        try:
+            mosek.Env().Task(0,0).optimize()
+        except mosek.Error:
+            return False
+        return True
+
     def _apply_solver(self):
-        try:
-            if not self._save_results:
-                for block in self._pyomo_model.block_data_objects(descend_into=True,active=True):
-                    for var in block.component_data_objects(ctype=pyomo.core.base.var.Var,
-                                                            descend_into=False,
-                                                            active=True,sort=False):
-                        var.stale = True
+        if not self._save_results:
+            for block in self._pyomo_model.block_data_objects(descend_into=True,
+                                                              active=True):
+                for var in block.component_data_objects(ctype=pyomo.core.base.var.Var,
+                                                        descend_into=False,
+                                                        active=True,
+                                                        sort=False):
+                    var.stale = True
+        if self._tee:
+            def _process_stream(msg):
+                sys.stdout.write(msg)
+                sys.stdout.flush()
+            self._solver_model.set_Stream(
+                self._mosek.streamtype.log, _process_stream)
 
-            if self._tee:
-                def _process_stream(msg):
-                    sys.stdout.write(msg)
-                    sys.stdout.flush()
-                self._solver_model.set_Stream(self._mosek.streamtype.log,_process_stream)
+        if self._keepfiles:
+            print("Solver log file: "+self._log_file)
 
-            if self._keepfiles:
-                print("Solver log file : " + self._log_file)
+        for key, option in self.options.items():
 
-            for key, option in self.options.items():
-                try:
-                    param = ".".join(("mosek",key))
-                    if 'sparam' in key.split('.'):
-                        self._solver_model.putstrparam(eval(param),option)
-                    elif 'dparam' in key.split('.'):
-                        self._solver_model.putdouparam(eval(param),option)
-                    elif 'iparam' in key.split('.'):
-                        if isinstance(option, str):
-                            if 'mosek' in option.split('.'):
-                                self._solver_model.putintparam(eval(param),eval(option))
-                            else:
-                                option = ".".join(("mosek",option))
-                                self._solver_model.putintparam(eval(param),eval(option))
-                        else:
-                            self._solver_model.putintparam(eval(param),option)
-                except (TypeError,AttributeError):
-                    raise
-            self._termcode = self._solver_model.optimize()
-            self._solver_model.solutionsummary(self._mosek.streamtype.msg)
-        except self._mosek.Error as e:
-            # Catching any expressions thrown by MOSEK:
-            print("ERROR : "+str(e.errno))
-            if e.msg is not None:
-                print("\t"+e.msg)
-                sys.exit(1)
-        return Bunch(rc=None,log=None)
-        
-    def _set_instance(self,model,kwds={}):
-        self._range_constraints = set()
-        DirectOrPersistentSolver._set_instance(self,model,kwds)
-        self._pyomo_cone_to_solver_cone_map = dict()
-        self._solver_cone_to_pyomo_cone_map = ComponentMap()
-        self._whichsol = getattr(self._mosek.soltype,kwds.pop('soltype','bas'))
-        try:
-            self._solver_model = self._mosek.Env().Task()
-        except Exception:
-            e = sys.exc_info()[1]
-            msg = ("MOSEK task creation failed. Make sure that MOSEK's "
-                   "python bindings are installed correctly.\n\n\t"+
-                   "Error message: {}".format(e))
-            raise Exception(msg)
-        self._add_block(model)
+            param = self._mosek
+
+            try:
+                for sub_key in key.split('.'):
+                    param = getattr(param, sub_key)
+            except (TypeError, AttributeError):
+                raise
+
+            if 'sparam' in key.split('.'):
+                self._solver_model.putstrparam(param, option)
+            else:
+                if 'iparam' in key.split('.'):
+                    self._solver_model.putintparam(param, option)
+                elif 'dparam' in key.split('.'):
+                    self._solver_model.putdouparam(param, option)
+                else:
+                    raise AttributeError(
+                        "Unknown parameter type. Type sparam, iparam or dparam expected.")
+
+        self._termcode = self._solver_model.optimize()
+        self._solver_model.solutionsummary(self._mosek.streamtype.msg)
+
+        # FIXME: can we get a return code indicating if Mosek had a significant failure?
+        return Bunch(rc=None, log=None)
 
     def _get_cone_data(self, con):
-        assert con.check_convexity_conditions(relax = True)
-        cone_type, cone_param, cone_members = None, 0, None
+        # if the cone is not recognized, this function
+        # will return None for cone_type and cone_members
+        cone_type = None
+        cone_param = 0
+        cone_members = None
         if isinstance(con, quadratic):
+            assert con.has_ub() and \
+                (con.ub == 0) and (not con.has_lb())
+            assert con.check_convexity_conditions(relax=True)
             cone_type = self._mosek.conetype.quad
             cone_members = [con.r] + list(con.x)
         elif isinstance(con, rotated_quadratic):
+            assert con.has_ub() and \
+                (con.ub == 0) and (not con.has_lb())
+            assert con.check_convexity_conditions(relax=True)
             cone_type = self._mosek.conetype.rquad
             cone_members = [con.r1, con.r2] + list(con.x)
-        elif self._version_major>=9:
+        elif self._version >= (9, 0, 0):
             if isinstance(con, primal_exponential):
+                assert con.has_ub() and \
+                    (con.ub == 0) and (not con.has_lb())
+                assert con.check_convexity_conditions(
+                    relax=False)
                 cone_type = self._mosek.conetype.pexp
                 cone_members = [con.r, con.x1, con.x2]
             elif isinstance(con, primal_power):
+                assert con.has_ub() and \
+                    (con.ub == 0) and (not con.has_lb())
+                assert con.check_convexity_conditions(
+                    relax=False)
                 cone_type = self._mosek.conetype.ppow
-                cone_param = con.alpha
+                cone_param = value(con.alpha)
                 cone_members = [con.r1, con.r2] + list(con.x)
             elif isinstance(con, dual_exponential):
+                assert con.has_ub() and \
+                    (con.ub == 0) and (not con.has_lb())
+                assert con.check_convexity_conditions(
+                    relax=False)
                 cone_type = self._mosek.conetype.dexp
                 cone_members = [con.r, con.x1, con.x2]
             elif isinstance(con, dual_power):
+                assert con.has_ub() and \
+                    (con.ub == 0) and (not con.has_lb())
+                assert con.check_convexity_conditions(
+                    relax=False)
                 cone_type = self._mosek.conetype.dpow
-                cone_param = con.alpha
+                cone_param = value(con.alpha)
                 cone_members = [con.r1, con.r2] + list(con.x)
-        return(cone_type, cone_param, cone_members)
 
-    def _get_expr_from_pyomo_repn(self,repn,max_degree=2):
-        degree = repn.polynomial_degree()
-        if (degree is None) or degree>max_degree:
-            raise DegreeError('MOSEK does not support expressions of degree {}.'.format(degree))
+        return cone_type, cone_param, cone_members
         
-        referenced_vars = ComponentSet(repn.linear_vars)
-        indices = [self._pyomo_var_to_solver_var_map[i] for i in repn.linear_vars]
-        mosek_arow = [indices,list(repn.linear_coefs),repn.constant]
 
-        if len(repn.quadratic_vars)==0:
-            mosek_qexp = [[],[],[]]
-            return mosek_arow, mosek_qexp, referenced_vars    
+    def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
+        degree = repn.polynomial_degree()
+        if (degree is None) or (degree > max_degree):
+            raise DegreeError(
+                'Mosek does not support expressions of degree {0}.'.format(degree))
+        
+        referenced_vars = ComponentSet()
+        referenced_vars.update(repn.linear_vars)
+        indexes = [self._pyomo_var_to_solver_var_map[i] for i in repn.linear_vars]
+        new_expr = [list(repn.linear_coefs), indexes, repn.constant]
+
+        qsub = repn.quadratic_vars
+        qval = [(lambda i,v: v*((qsubi[i]==qsubj[i])+1))(i,v) 
+                for (i,v) in enumerate(repn.quadratic_coefs)]
+        referenced_vars.update(list(itertools.chain.from_iterable(
+                                            repn.quadratic_vars)))
+        new_expr.extend([qval, qsubi, qsubj])
+        return new_expr, referenced_vars
+
+    def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
+        if max_degree == 2:
+            repn = generate_standard_repn(expr, quadratic=True)
         else:
-            referenced_vars.update(repn.quadratic_vars)
-            qsubi, qsubj = zip(*[[self._pyomo_var_to_solver_var_map[xi],self._pyomo_var_to_solver_var_map[xj]] 
-                                for xi,xj in repn.quadratic_vars])
-            qval = list(map(lambda v,i,j: v*((i==j)+1),repn.quadratic_coefs,qsubi,qsubj))
-            mosek_qexp = [qsubi,qsubj,qval]
-        return mosek_arow, mosek_qexp, referenced_vars
-    
-    def _get_expr_from_pyomo_expr(self,expr,max_degree=2):
-        repn = generate_standard_repn(expr,quadratic=(max_degree==2))
+            repn = generate_standard_repn(expr, quadratic=False)
         try:
-            mosek_arow, mosek_qexp, referenced_vars = self._get_expr_from_pyomo_repn(repn,max_degree)
+            mosek_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                repn, max_degree)
         except DegreeError as e:
             msg = e.args[0]
-            msg += '\nexpr: {}'.format(expr)
+            msg += '\nexpr: {0}'.format(expr)
             raise DegreeError(msg)
-        return mosek_arow, mosek_qexp, referenced_vars
+        return mosek_expr, referenced_vars
     
-    def _mosek_vartype_from_var(self, var):
-        """
-        This function takes a pyomo variable and returns the mosek variable type
-        :param var: pyomo.core.base.var.Var
-        :return: mosek.variabletype.type_int or mosek.variabletype.type_cont
-        """
-        if var.is_integer():
-            return self._mosek.variabletype.type_int
-        return self._mosek.variabletype.type_cont
-    
-    def _mosek_bounds(self, lb, ub, constant = 0.0):
-        if lb is None:
-            lb = -float('inf')
-        if ub is None:
-            ub = float('inf')
-        lb -= constant
-        ub -= constant
-        bound_key = (lb!=-float('inf')) + 2*(ub!=float('inf')) + (lb==ub)
-        return lb, ub, self._bound_type_map[bound_key]
+    def _add_var(self, var):
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vtype = self._mosek_vtype_from_var(var)
+        if var.has_lb():
+            lb = value(var.lb)
+        else:
+            lb = '0'
+        if var.has_ub():
+            ub = value(var.ub)
+        else:
+            ub = '0'
 
-    def _add_var(self,var):
-        vname = self._symbol_map.getSymbol(var,self._labeler)
-        vtype = self._mosek_vartype_from_var(var)
-        lb, ub, bound_type = self._mosek_bounds(*var.bounds)
-        
+        bound_type = self.set_var_boundtype(var, ub, lb)
         self._solver_model.appendvars(1)
-        index = self._solver_model.getnumvar() - 1
-        self._solver_model.putvarname(index,vname)
-        self._solver_model.putvartype(index,vtype)
-        self._solver_model.putvarbound(index,bound_type,lb,ub)
+        index = self._solver_model.getnumvar()-1
+        self._solver_model.putvarbound(index, bound_type, float(lb), float(ub))
+        self._solver_model.putvartype(index, vtype)
+        self._solver_model.putvarname(index, varname)
 
         self._pyomo_var_to_solver_var_map[var] = index
         self._solver_var_to_pyomo_var_map[index] = var
         self._referenced_variables[var] = 0
-        self._vars_append_offset += 1
 
-    def _add_vars(self, var_list):
-        """ 
-        Prepare a batch of variables and pass it to the MOSEK task.
-        :param var_list: list of pyomo.core.base.var.Var
+    def _msk_var_bound_type(self, lb, ub):
+        if lb is None:
+            lb = -float('inf')
+        if ub is None:
+            ub = float('inf')
+        bound_key = (lb!=-float('inf')) + 2*(ub!=float('inf')) + (lb==ub)
+        return lb, ub, self._bound_type_map[bound_key]
+        
+    def _add_vars(self, pvars):
+        """ Adds a batch of variables to the MOSEK task at once. The _vars_append_offset, 
+        which defaults to zero is used if some variables are added using the 
+        _add_var method, i.e. individually.
         """
-        vtypes = [self._mosek_vartype_from_var(p) for p in var_list]
-        lbs, ubs, bound_types = zip(*[self._mosek_bounds(*p.bounds)
-                                        for p in var_list])
+        vtypes = [self._mosek_vtype_from_var(p) for p in pvars]
+        lbs, ubs, bound_types = zip(*[self._msk_var_bound_type(*p.bounds)
+                                        for p in pvars])
         var_ids = range(self._vars_append_offset, 
-                        self._vars_append_offset + len(var_list))
-        self._solver_model.appendvars(len(var_list))
+                        self._vars_append_offset + len(pvars))
+        self._solver_model.appendvars(len(pvars))
         self._solver_model.putvarboundlist(var_ids,bound_types,lbs,ubs)
         self._solver_model.putvartypelist(var_ids,vtypes)
-        self._pyomo_var_to_solver_var_map.update(zip(var_list,var_ids))
-        self._solver_var_to_pyomo_var_map.update(zip(var_ids,var_list))
-        self._referenced_variables.update(zip(var_list,[0]*len(var_list)))
-        self._vars_append_offset += len(var_list)
+        self._pyomo_var_to_solver_var_map.update(zip(pvars,var_ids))
+        self._solver_var_to_pyomo_var_map.update(zip(var_ids,pvars))
+        self._referenced_variables.update(zip(pvars,[0]*len(pvars)))
+        self._vars_append_offset += len(pvars)
 
-    def _add_constraint(self,con):
-        if not con.active or (is_fixed(con.body) and
-                              self._skip_trivial_constraints):
+    def _set_instance(self, model, kwds={}):
+        self._range_constraints = set()
+        DirectOrPersistentSolver._set_instance(self, model, kwds)
+        self._pyomo_cone_to_solver_cone_map = dict()
+        self._solver_cone_to_pyomo_cone_map = ComponentMap()
+        self._whichsol = getattr(
+            self._mosek.soltype, kwds.pop('soltype', 'bas'))
+        try:
+            self._solver_model = self._mosek_env.Task(0, 0)
+        except Exception:
+            e = sys.exc_info()[1]
+            msg = ("Unable to create Mosek Task. "
+                   "Have you installed the Python "
+                   "bindings for Mosek?\n\n\t" +
+                   "Error message: {0}".format(e))
+            raise Exception(msg)
+        self._add_block(model)
+        
+    def _add_constraint(self, con):
+        if not con.active:
             return None
-            
-        con_name = self._symbol_map.getSymbol(con,self._labeler)
 
-        mosek_arow, mosek_qexp = None, None
+        if is_fixed(con.body):
+            if self._skip_trivial_constraints:
+                return None
+
+        conname = self._symbol_map.getSymbol(con, self._labeler)
+
+        mosek_expr = None
         referenced_vars = None
-        cone_type, cone_param, cone_members = None, 0, None
+        cone_type = None
+        cone_param = 0
+        cone_members = None
         if con._linear_canonical_form:
-            mosek_arow, mosek_qexp, referenced_vars = self._get_expr_from_pyomo_repn(
-                con.canonical_form(),self._max_constraint_degree)
-        elif isinstance(con,_ConicBase):
-            cone_type, cone_param, cone_members = self._get_cone_data(con)
-            if cone_type is None:
-                logger.warning("Cone {0} was not recognized by MOSEK v{1}.\n".format(
-                               str(con),self._version_major))
-                assert mosek_arow is None
-            else:
+            mosek_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                con.canonical_form(),
+                self._max_constraint_degree)
+        elif isinstance(con, _ConicBase):
+            cone_type, cone_param, cone_members = \
+                self._get_cone_data(con)
+            if cone_type is not None:
                 assert cone_members is not None
                 referenced_vars = ComponentSet(cone_members)
-        if (mosek_arow is None) and (cone_type is None):
-            mosek_arow, mosek_qexp, referenced_vars = self._get_expr_from_pyomo_expr(
-                con.body,self._max_constraint_degree)
-        
+            else:
+                logger.warning("Cone %s was not recognized by Mosek"
+                               % (str(con)))
+                # the cone was not recognized, treat
+                # it like a standard constraint, which
+                # will in all likelihood lead to Mosek
+                # reporting a helpful error message
+                assert mosek_expr is None
+        if (mosek_expr is None) and (cone_type is None):
+            mosek_expr, referenced_vars = \
+                self._get_expr_from_pyomo_expr(
+                    con.body,
+                    self._max_constraint_degree)
+
         assert referenced_vars is not None
-        if mosek_arow is not None:
+        if mosek_expr is not None:
             assert cone_type is None
             self._solver_model.appendcons(1)
-            con_index = self._solver_model.getnumcon() - 1
-            lb, ub, bound_type = self._mosek_bounds(con.lower(), con.upper(),
-                                                    constant = mosek_arow[2])
-            self._solver_model.putarow(con_index,mosek_arow[0],mosek_arow[1])
-            self._solver_model.putqconk(con_index,mosek_qexp[0],
-                                        mosek_qexp[1],mosek_qexp[2])
-            self._solver_model.putconbound(con_index,bound_type,lb,ub)
-            self._solver_model.putconname(con_index,con_name)
+            con_index = self._solver_model.getnumcon()-1
+            con_type, ub, lb = self.set_con_bounds(con, mosek_expr[2])
+
+            if con.has_lb():
+                if not is_fixed(con.lower):
+                    raise ValueError("Lower bound of constraint {0} "
+                                     "is not constant.".format(con))
+            if con.has_ub():
+                if not is_fixed(con.upper):
+                    raise ValueError("Upper bound of constraint {0} "
+                                     "is not constant.".format(con))
+
+            self._solver_model.putarow(con_index, mosek_expr[1], mosek_expr[0])
+            self._solver_model.putqconk(
+                con_index, mosek_expr[4], mosek_expr[5], mosek_expr[3])
+            self._solver_model.putconbound(con_index, con_type, lb, ub)
+            self._solver_model.putconname(con_index, conname)
             self._pyomo_con_to_solver_con_map[con] = con_index
             self._solver_con_to_pyomo_con_map[con_index] = con
-            self._cons_append_offset += 1
-        elif cone_type is not None:
+        else:
+            assert cone_type is not None
             members = [self._pyomo_var_to_solver_var_map[v_]
-                        for v_ in cone_members]
+                       for v_ in cone_members]
             self._solver_model.appendcone(cone_type,
-                                          cone_param,members)
-            cone_index = self._solver_model.getnumcone() - 1
-            self._solver_model.putconename(cone_index,con_name)
+                                          cone_param,
+                                          members)
+            cone_index = self._solver_model.getnumcone()-1
+            self._solver_model.putconename(cone_index, conname)
             self._pyomo_cone_to_solver_cone_map[con] = cone_index
             self._solver_cone_to_pyomo_cone_map[cone_index] = con
-            self._cones_append_offset += 1
+
         for var in referenced_vars:
             self._referenced_variables[var] += 1
         self._vars_referenced_by_con[con] = referenced_vars
+    
+    def _msk_constraint(self,con):
+        if not con.active:
+            return None
 
-    def _add_constraints(self,con_list):
-        """
-        Prepares a batch of constraints and passes it to the MOSEK task.
-        :param con_list: list of pyomo.core.base.constraint.Constraint
-        """
-        con_list = list(filter(operator.attrgetter('active'),con_list))
-        if self._skip_trivial_constraints:
-            con_list = list(filter(is_fixed(operator.attrgetter('body')),con_list))
+        if is_fixed(con.body):
+            if self._skip_trivial_constraints:
+                return None
 
-        lq = list(filter(operator.attrgetter("_linear_canonical_form"),con_list))
-        conic = list(filter(lambda x: isinstance(x,_ConicBase), con_list))
-        lq_ex = list(itertools.filterfalse(lambda x: isinstance(x,_ConicBase) 
-                                           or (x._linear_canonical_form),
-                                           con_list))
-        num_lq = len(lq) + len(lq_ex)
-        num_cones = len(conic)
-        if num_lq>0:
-            # Linear/Quadratic constraints
-            arow, qexp, referenced_vars = zip(*[self._get_expr_from_pyomo_repn(
-                con.canonical_form(),self._max_constraint_degree) for con in lq])
-            arow[-1:], qexp[-1:], referenced_vars[-1:] = zip(*[self._get_expr_from_pyomo_expr(con.body, 
-                                 self._max_constraint_degree) for con in lq_ex])
-            lbs, ubs, bound_types = zip(*[self._mosek_bounds(con.lower(),
-                                        con.upper(), constant = arow[2]) for con in lq])
-            lbs[-1:], ubs[-1:], bound_types[-1:] = zip(*[self._mosek_bounds(con.lower(),
-                                        con.upper(), constant = arow[2]) for con in lq_ex])
-            l_ids, l_coefs, constants = zip(*arow)
-            q_is, q_js, q_vals = zip(*qexp)
-            sub = range(self._cons_append_offset, self._cons_append_offset + num_lq)
-            ptre = list(map(len,l_ids))
-            ptrb = [0] + ptre[:-1]
-            asubs = list(itertools.chain.from_iterable(l_ids))
-            avals = list(itertools.chain.from_iterable(l_coefs))
-            qcsubi = list(itertools.chain.from_iterable(q_is))
-            qcsubj = list(itertools.chain.from_iterable(q_js))
-            qcval =  list(itertools.chain.from_iterable(q_vals))
-            qcsubk = [i*len(q_is[i - self._cons_append_offset]) for i in sub]
+        mosek_expr = None
+        referenced_vars = None
+        cone_type = None
+        cone_param = 0
+        cone_members = None
+        if con._linear_canonical_form:
+            mosek_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+                                            con.canonical_form(),
+                                            self._max_constraint_degree)
+        elif isinstance(con, _ConicBase):
+            cone_type, cone_param, cone_members = \
+                self._get_cone_data(con)
+            if cone_type is not None:
+                assert cone_members is not None
+                referenced_vars = ComponentSet(cone_members)
+            else:
+                logger.warning("Cone %s was not recognized by Mosek"
+                               % (str(con)))
+                # the cone was not recognized, treat
+                # it like a standard constraint, which
+                # will in all likelihood lead to Mosek
+                # reporting a helpful error message
+                assert mosek_expr is None
+        if (mosek_expr is None) and (cone_type is None):
+            mosek_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+                                            con.body, 
+                                            self._max_constraint_degree)
 
-            self._solver_model.appendcons(num_lq)
-            self._solver_model.putarowlist(sub, ptrb, ptre, asubs, avals)
-            self._solver_model.putqcon(qcsubk, qcsubi, qcsubj, qcval)
-            self._solver_model.putconboundlist(sub, bound_types, lbs, ubs)
-            self._pyomo_con_to_solver_con_map.update(zip(lq, sub))
-            self._solver_con_to_pyomo_con_map.update(zip(sub, lq))
-            self._cons_append_offset += num_lq
-        
-        if num_cones>0 :
-            cone_indices = range(self._cones_append_offset, self._cones_append_offset + num_cones)
-            cone_types, cone_params, cone_members = zip(*map(self._get_cone_data, conic))
-            num_members = list(map(len, cone_members))
-            self._solver_model.appendconesseq(cone_types, cone_params,
-                                              num_members, cone_members[0][0])
-            self._pyomo_cone_to_solver_cone_map.update(zip(conic, cone_indices))
-            self._solver_cone_to_pyomo_cone_map.update(zip(cone_indices, conic))
-            self._cones_append_offset += num_cones
-        
-    def _set_objective(self,obj):
-        if self._objective is not None:
-            for var in self._vars_referenced_by_obj:
-                self._referenced_variables[var] -= 1
-            self._vars_referenced_by_obj = ComponentSet()
-            self._objective = None
-
-        if obj.active is False:
-            raise ValueError('Cannot add inactive objective to solver.')
-        
-        if obj.sense == minimize:
-            self._solver_model.putobjsense(self._mosek.objsense.minimize)
-        elif obj.sense == maximize:
-            self._solver_model.putobjsense(self._mosek.objsense.maximize)
+        assert referenced_vars is not None
+        if mosek_expr is not None:
+            assert cone_type is None
+            con_type, ub, lb = self.set_con_bounds(con, mosek_expr[2])
+            if con.has_lb():
+                if not is_fixed(con.lower):
+                    raise ValueError("Lower bound of constraint {0} "
+                                     "is not constant.".format(con))
+            if con.has_ub():
+                if not is_fixed(con.upper):
+                    raise ValueError("Upper bound of constraint {0} "
+                                     "is not constant.".format(con))
+            for var in referenced_vars:
+                self._referenced_variables[var] += 1
+            self._vars_referenced_by_con[con] = referenced_vars
+            return mosek_expr, con_type, lb, ub
         else:
-            raise ValueError("Objective sense not recognized.")
+            assert cone_type is not None
+            for var in referenced_vars:
+                self._referenced_variables[var] += 1
+            self._vars_referenced_by_con[con] = referenced_vars
+            return cone_type, cone_param, cone_members
 
-        mosek_arow, mosek_qexp, referenced_vars = self._get_expr_from_pyomo_expr(
-            obj.expr, self._max_obj_degree)
-        
-        for var in referenced_vars:
-            self._referenced_variables[var] += 1
-        
-        for i,j in enumerate(mosek_arow[0]):
-            self._solver_model.putcj(j, mosek_arow[1][i])
-
-        self._solver_model.putqobj(mosek_qexp[0],mosek_qexp[1],mosek_qexp[2])
-        self._solver_model.putcfix(mosek_arow[2])
-        self._objective = obj
-        self._vars_referenced_by_obj = referenced_vars
+    def _add_constraints(self, pcons):
+        """
+        This method uses MOSEK's Optimizer API to add multiplie constraints
+        in one pass. This should be faster than passing the constraints one 
+        at a time, which is Pyomo's default behaviour (a choice made to 
+        accomodate the possibility of Persistent interfaces).
+        NOTE: The variables used in cones will be passed sequentially to the
+        solver, i.e. their indices will be consecutive.
+        """
+        lq, cone = [], []
+        lq_data, cone_data = [], []
+        for c in pcons:
+            c_data = self._msk_constraint(c)
+            if len(c_data)==4:
+                lq.append(c)
+                lq_data.append(c_data)
+            elif len(c_data)==3:
+                cone.append(c)
+                cone_data.append(c_data)
+            else:
+                raise Exception("Unrecognized constraint {}".format(c.name))
+        # Linear/Quadratic constraints
+        if len(lq_data)!=0:
+            mosek_expr, con_type, lb, ub = zip(*lq_data)
+            linear_coefs, linear_ids, linear_c, q_vals, q_i, q_j = zip(*mosek_expr)
+            sub = range(self._cons_append_offset, 
+                        self._cons_append_offset + len(lq_data))
+            ptrb, ptre, nnz_len = [],[], 0
+            for p in linear_ids:
+                ptrb.append(nnz_len)
+                nnz_len += len(p)
+                ptre.append(nnz_len)
+            asubs = [i for col_id in linear_ids for i in col_id]
+            avals = [v for col_v in linear_coefs for v in col_v]
+            qcsubk = []
+            qcsubi = list(itertools.chain.from_iterable(q_i))
+            qcsubj = list(itertools.chain.from_iterable(q_j))
+            qcval =  list(itertools.chain.from_iterable(q_vals))
+            for i in sub:
+                qcsubk.extend([i]*len(q_i[i]))
+            self._solver_model.appendcons(len(lq_data))
+            self._solver_model.putarowlist(sub,ptrb,ptre,asubs,avals)
+            self._solver_model.putqcon(qcsubk, qcsubi, qcsubj, qcval)
+            self._solver_model.putconboundlist(sub, con_type, lb, ub)
+            self._pyomo_con_to_solver_con_map.update(zip(lq,sub))
+            self._solver_con_to_pyomo_con_map.update(zip(sub,lq))
+            self._cons_append_offset += len(lq_data)
+        # Conic constraints
+        elif len(cone_data)!=0:
+            cone_indices = range(self._cones_append_offset, 
+                                 self._cones_append_offset 
+                                 + len(cone_data))
+            cone_type, cone_param, cone_members = zip(*cone_data)
+            self._solver_model.appendconesseq(cone_type, cone_param, 
+                                              [len(m) for m in cone_members],
+                                              cone_members[0][0])
+            self._pyomo_cone_to_solver_cone_map.update(zip(cone, cone_indices))
+            self._solver_cone_to_pyomo_cone_map.update(zip(cone_indices, cone))
+            self._cones_append_offset += len(cone_data)
 
     def _add_block(self, block):
         """
-        MOSEK direct interface defines the _add_block method to utilize the
-        _add_vars and the _add_constraints methods that pass variables/constraints
-        to the solver in batches. This should provide a speed-up over the default 
-        behaviour of preparing and passing one variable/constraint at a time.
+        The MOSEK direct interface class re-defines the _add_block method to 
+        pass all variables and constraints in one go (unless add_sequentially
+        argument is set to True). This should be faster than the default behaviour. 
+        Note that the persistent interfaces (in preparation for MOSEK) will 
+        still be using the one-by-one method of passing variables and 
+        constraints to the solver.
         """
-        vars_list = list(block.component_data_objects(
+        t = time.time()
+        self._add_vars(list(block.component_data_objects(
                                 ctype=pyomo.core.base.var.Var,
                                 descend_into = True,
-                                active = True, sort = True))
-        self._add_vars(vars_list)
+                                active = True, sort = True)))
+        print("Total time taken to add variables = {}".format(time.time() - t)) 
+        t = time.time()    
         obj_counter = 0
         pcons = []
         for sub_block in block.block_data_objects(descend_into=True,active=True):
@@ -430,8 +557,89 @@ class MOSEKDirect(DirectSolver):
                                 raise ValueError("Solver interface does not "
                                                  "support multiple objectives.")
                             self._set_objective(obj)
-        self._add_constraints(pcons)    
-    
+        print("Total time taken to add objective = {}".format(time.time() - t))
+        t = time.time()
+        self._add_constraints(pcons)
+        print("Total time taken to add constraints = {}".format(time.time() - t))
+
+    def _mosek_vtype_from_var(self, var):
+        """
+        This function takes a pyomo variable and returns the appropriate mosek variable type
+        :param var: pyomo.core.base.var.Var
+        :return: mosek.variabletype.type_int or mosek.variabletype.type_cont
+        """
+        if var.is_integer():
+            return self._mosek.variabletype.type_int
+        return self._mosek.variabletype.type_cont
+
+    def set_var_boundtype(self, var, ub, lb):
+        if var.is_fixed():
+            return self._mosek.boundkey.fx
+        elif ub != '0' and lb != '0':
+            return self._mosek.boundkey.ra
+        elif ub == '0' and lb == '0':
+            return self._mosek.boundkey.fr
+        elif ub != '0' and lb == '0':
+            return self._mosek.boundkey.up
+        return self._mosek.boundkey.lo
+
+    def set_con_bounds(self, con, constant):
+
+        if con.equality:
+            ub = value(con.upper) - constant
+            lb = value(con.lower) - constant
+            con_type = self._mosek.boundkey.fx
+        elif con.has_lb() and con.has_ub():
+            ub = value(con.upper) - constant
+            lb = value(con.lower) - constant
+            con_type = self._mosek.boundkey.ra
+        elif con.has_lb():
+            ub = 0
+            lb = value(con.lower) - constant
+            con_type = self._mosek.boundkey.lo
+        elif con.has_ub():
+            ub = value(con.upper) - constant
+            lb = 0
+            con_type = self._mosek.boundkey.up
+        else:
+            ub = 0
+            lb = 0
+            con_type = self._mosek.boundkey.fr
+        return con_type, ub, lb
+
+    def _set_objective(self, obj):
+
+        if self._objective is not None:
+            for var in self._vars_referenced_by_obj:
+                self._referenced_variables[var] -= 1
+            self._vars_referenced_by_obj = ComponentSet()
+            self._objective = None
+
+        if obj.active is False:
+            raise ValueError('Cannot add inactive objective to solver.')
+
+        if obj.sense == minimize:
+            self._solver_model.putobjsense(self._mosek.objsense.minimize)
+        elif obj.sense == maximize:
+            self._solver_model.putobjsense(self._mosek.objsense.maximize)
+        else:
+            raise ValueError(
+                'Objective sense is not recognized: {0}'.format(obj.sense))
+
+        mosek_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+            obj.expr, self._max_obj_degree)
+
+        for var in referenced_vars:
+            self._referenced_variables[var] += 1
+
+        for i, j in enumerate(mosek_expr[1]):
+            self._solver_model.putcj(j, mosek_expr[0][i])
+
+        self._solver_model.putqobj(mosek_expr[4], mosek_expr[5], mosek_expr[3])
+        self._solver_model.putcfix(mosek_expr[2])
+        self._objective = obj
+        self._vars_referenced_by_obj = referenced_vars
+
     def _postsolve(self):
 
         extract_duals = False
@@ -442,7 +650,7 @@ class MOSEKDirect(DirectSolver):
             if re.match(suffix, "dual"):
                 extract_duals = True
                 flag = True
-            if re.match(suffix, "slacks"):
+            if re.match(suffix, "slack"):
                 extract_slacks = True
                 flag = True
             if re.match(suffix, "rc"):
@@ -450,13 +658,13 @@ class MOSEKDirect(DirectSolver):
                 flag = True
             if not flag:
                 raise RuntimeError(
-                    "***MOSEK solver plugin cannot extract solution suffix = "
-                    + suffix)
-        
+                    "***The mosek solver plugin cannot extract solution suffix="+suffix)
+
         msk_task = self._solver_model
         msk = self._mosek
 
-        itr_soltypes = [msk.problemtype.qo,msk.problemtype.qcqo,
+        itr_soltypes = [msk.problemtype.qo,
+                        msk.problemtype.qcqo,
                         msk.problemtype.conic]
 
         if (msk_task.getnumintvar() >= 1):
@@ -480,7 +688,7 @@ class MOSEKDirect(DirectSolver):
         self.results.solver.name = self._name
         self.results.solver.wallclock_time = msk_task.getdouinf(
             msk.dinfitem.optimizer_time)
-        
+
         SOLSTA_MAP = {
             msk.solsta.unknown: 'unknown',
             msk.solsta.optimal: 'optimal',
@@ -522,27 +730,29 @@ class MOSEKDirect(DirectSolver):
             }
             SOLSTA_MAP.update(SOLSTA_OLD)
             PROSTA_MAP.update(PROSTA_OLD)
-        
+
         if self._termcode == msk.rescode.ok:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_message = ""
 
         elif self._termcode == msk.rescode.trm_max_iterations:
             self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_message = "Optimizer terminated at the maximum number of iterations."
+            self.results.solver.termination_message = "Optimization terminated because the total number " \
+                "iterations performed exceeded the value specified in the " \
+                "IterationLimit parameter."
             self.results.solver.termination_condition = TerminationCondition.maxIterations
             soln.status = SolutionStatus.stoppedByLimit
 
         elif self._termcode == msk.rescode.trm_max_time:
             self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_message = "Optimizer terminated at the maximum amount of time."
+            self.results.solver.termination_message = "Optimization terminated because the time expended exceeded " \
+                "the value specified in the TimeLimit parameter."
             self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
             soln.status = SolutionStatus.stoppedByLimit
 
         elif self._termcode == msk.rescode.trm_user_callback:
             self.results.solver.status = SolverStatus.aborted
-            self.results.solver.termination_message = "Optimizer terminated due to the return of the "\
-                "user-defined callback function."
+            self.results.solver.termination_message = "Optimization terminated because of the user callback "
             self.results.solver.termination_condition = TerminationCondition.userInterrupt
             soln.status = SolutionStatus.unknown
 
@@ -550,85 +760,87 @@ class MOSEKDirect(DirectSolver):
                                 msk.rescode.trm_mio_num_branches,
                                 msk.rescode.trm_num_max_num_int_solutions]:
             self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_message = "The mixed-integer optimizer terminated as the maximum number "\
-                "of relaxations/branches/feasible solutions was reached."
+            self.results.solver.termination_message = "Optimization terminated because maximum number of relaxations" \
+                " / branches / integer solutions exceeded " \
+                "the value specified in the TimeLimit parameter."
             self.results.solver.termination_condition = TerminationCondition.maxEvaluations
             soln.status = SolutionStatus.stoppedByLimit
+
         else:
-            self.results.solver.termination_message = " Optimization terminated with {} response code." \
-                "Check MOSEK response code documentation for more information.".format(self._termcode)
+            self.results.solver.termination_message = " Optimization terminated %s response code." \
+                "Check Mosek response code documentation for further explanation." % self._termcode
             self.results.solver.termination_condition = TerminationCondition.unknown
 
         if SOLSTA_MAP[sol_status] == 'unknown':
             self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message += " The solution status is unknown."
+            self.results.solver.termination_message += " Unknown solution status."
             self.results.solver.Message = self.results.solver.termination_message
             self.results.solver.termination_condition = TerminationCondition.unknown
             soln.status = SolutionStatus.unknown
 
         if PROSTA_MAP[pro_status] == 'd_infeas':
             self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message += " Problem is dual infeasible"
+            self.results.solver.termination_message += " Problem proven to be dual infeasible"
             self.results.solver.Message = self.results.solver.termination_message
             self.results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
 
         elif PROSTA_MAP[pro_status] == 'p_infeas':
             self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message += " Problem is primal infeasible."
+            self.results.solver.termination_message += " Problem proven to be primal infeasible."
             self.results.solver.Message = self.results.solver.termination_message
             self.results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
 
         elif PROSTA_MAP[pro_status] == 'pd_infeas':
             self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message += " Problem is primal and dual infeasible."
+            self.results.solver.termination_message += " Problem proven to be primal and dual infeasible."
             self.results.solver.Message = self.results.solver.termination_message
             self.results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
 
         elif PROSTA_MAP[pro_status] == 'p_inf_unb':
             self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message += " Problem is either primal infeasible or unbounded."\
-                " This may happen for MIPs."
+            self.results.solver.termination_message += " Problem proven to be infeasible or unbounded."
             self.results.solver.Message = self.results.solver.termination_message
             self.results.solver.termination_condition = TerminationCondition.infeasibleOrUnbounded
             soln.status = SolutionStatus.unsure
 
         if SOLSTA_MAP[sol_status] == 'optimal':
             self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_message += " Model was solved to optimality and an optimal solution is available."
+            self.results.solver.termination_message += " Model was solved to optimality, " \
+                "and an optimal solution is available."
             self.results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
 
         elif SOLSTA_MAP[sol_status] == 'pd_feas':
             self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_message += " The solution is both primal and dual feasible."
+            self.results.solver.termination_message += " The solution is both primal and dual feasible"
             self.results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
 
         elif SOLSTA_MAP[sol_status] == 'p_feas':
             self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_message += " The solution is primal feasible."
+            self.results.solver.termination_message += " Primal feasible solution is available."
             self.results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
 
         elif SOLSTA_MAP[sol_status] == 'd_feas':
             self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_message += " The solution is dual feasible."
+            self.results.solver.termination_message += " Dual feasible solution is available."
             self.results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
 
         elif SOLSTA_MAP[sol_status] == 'd_infeas':
             self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message += " The solution is a certificate of dual infeasibility."
+            self.results.solver.termination_message += " The solution is dual infeasible."
             self.results.solver.Message = self.results.solver.termination_message
             self.results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.infeasible
 
         elif SOLSTA_MAP[sol_status] == 'p_infeas':
             self.results.solver.status = SolverStatus.warning
-            self.results.solver.termination_message += " The solution is a certificate of primal infeasibility."
+            self.results.solver.termination_message += " The solution is primal infeasible."
             self.results.solver.Message = self.results.solver.termination_message
             self.results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
@@ -701,6 +913,9 @@ class MOSEKDirect(DirectSolver):
         self.results.problem.number_of_objectives = 1
         self.results.problem.number_of_solutions = 1
 
+        # if a solve was stopped by a limit, we still need to check to
+        # see if there is a solution available - this may not always
+        # be the case, both in LP and MIP contexts.
         if self._save_results:
             """
             This code in this if statement is only needed for backwards compatability. It is more efficient to set

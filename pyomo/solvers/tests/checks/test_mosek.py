@@ -37,7 +37,7 @@ class MosekDirectTests(unittest.TestCase):
         model.C2 = aml.Constraint(expr=model.X == 2)
         model.O = aml.Objective(expr=model.X)
 
-        opt = aml.SolverFactory("mosek")
+        opt = aml.SolverFactory("mosek_direct")
         results = opt.solve(model)
 
         self.assertIn(results.solver.termination_condition,
@@ -50,7 +50,7 @@ class MosekDirectTests(unittest.TestCase):
         model.X = aml.Var()
         model.O = aml.Objective(expr=model.X)
 
-        opt = aml.SolverFactory("mosek")
+        opt = aml.SolverFactory("mosek_direct")
         results = opt.solve(model)
 
         self.assertIn(results.solver.termination_condition,
@@ -63,7 +63,7 @@ class MosekDirectTests(unittest.TestCase):
         model.X = aml.Var(within=aml.NonNegativeReals)
         model.O = aml.Objective(expr=model.X)
 
-        opt = aml.SolverFactory("mosek")
+        opt = aml.SolverFactory("mosek_direct")
         results = opt.solve(model, load_solutions=False)
 
         self.assertEqual(results.solution.status,
@@ -80,7 +80,7 @@ class MosekDirectTests(unittest.TestCase):
 
         model.O = aml.Objective(expr=model.X + model.Y)
 
-        opt = aml.SolverFactory("mosek")
+        opt = aml.SolverFactory("mosek_direct")
         results = opt.solve(model, suffixes=['dual'], load_solutions=False)
 
         model.dual = aml.Suffix(direction=aml.Suffix.IMPORT)
@@ -97,7 +97,7 @@ class MosekDirectTests(unittest.TestCase):
         model.C2 = aml.Constraint(expr=model.X == 2)
         model.O = aml.Objective(expr=model.X)
 
-        opt = aml.SolverFactory("mosek")
+        opt = aml.SolverFactory("mosek_direct")
         results = opt.solve(model)
 
         self.assertIn(results.solver.termination_condition,
@@ -111,7 +111,7 @@ class MosekDirectTests(unittest.TestCase):
         model.O = aml.Objective(expr=model.X)
 
         instance = model.create_instance()
-        opt = aml.SolverFactory("mosek")
+        opt = aml.SolverFactory("mosek_direct")
         results = opt.solve(instance)
 
         self.assertIn(results.solver.termination_condition,
@@ -124,7 +124,7 @@ class MosekDirectTests(unittest.TestCase):
         model.X = aml.Var(within=aml.NonNegativeIntegers)
         model.O = aml.Objective(expr=model.X)
 
-        opt = aml.SolverFactory("mosek")
+        opt = aml.SolverFactory("mosek_direct")
         results = opt.solve(model, load_solutions=False)
 
         self.assertEqual(results.solution.status,
@@ -136,7 +136,7 @@ class MosekDirectTests(unittest.TestCase):
         model.X = aml.Var(within=aml.NonNegativeIntegers)
         model.O = aml.Objective(expr=model.X)
 
-        opt = aml.SolverFactory("mosek")
+        opt = aml.SolverFactory("mosek_direct")
         results = opt.solve(model, load_solutions=False)
 
         self.assertEqual(results.solution.status,
@@ -219,7 +219,7 @@ class MosekDirectTests(unittest.TestCase):
             model.o.expr += b.r1 + b.r2
             model.c.body += b.r1 + b.r2
 
-        opt = pmo.SolverFactory("mosek")
+        opt = pmo.SolverFactory("mosek_direct")
         results = opt.solve(model)
 
         self.assertEqual(results.solution.status,
