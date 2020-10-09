@@ -92,7 +92,7 @@ def _event_log(model, model_graph, constraint_set, type_of_graph, with_objective
             variable_density = round(nx.bipartite.density(model_graph, variable_nodes), 2)
 
             if constraint_density == variable_density == 1.0:  # If the graph is complete, both will equal 1
-                logger.warning("The bipartite graph constructed from the model is complete (graph density equals 1)")
+                logger.info("The bipartite graph constructed from the model is complete (graph density equals 1)")
             else:
                 logger.info(
                     "For the bipartite graph constructed from the model, the density for constraint nodes is %s" %
@@ -105,7 +105,7 @@ def _event_log(model, model_graph, constraint_set, type_of_graph, with_objective
             graph_density = round(nx.density(model_graph), 2)
 
             if graph_density == 1.0:
-                logger.warning("The graph constructed from the model is complete (graph density equals 1)")
+                logger.info("The graph constructed from the model is complete (graph density equals 1)")
             else:
                 logger.info("The graph constructed from the model has a density of %s" % graph_density)
 
@@ -120,12 +120,12 @@ def _event_log(model, model_graph, constraint_set, type_of_graph, with_objective
 
     if all_objectives_count == 0:
         if with_objective:
-            logger.warning("Parameter 'with_objective' is True but no objective(s) found in the model")
+            logger.info("Parameter 'with_objective' is True but no objective(s) found in the model")
         else:
             logger.info("No objective(s) found in the model")
     elif active_objectives_count == 0:
         if with_objective:
-            logger.warning("Parameter 'with_objective' is True but no active objective(s) found in the model")
+            logger.info("Parameter 'with_objective' is True but no active objective(s) found in the model")
         else:
             logger.info("No active objective(s) found in the model")
 

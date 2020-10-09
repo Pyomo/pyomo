@@ -39,6 +39,7 @@ try:
     # if matplotlib_available:
     import matplotlib.pyplot as plt
     from matplotlib import cm
+    matplotlib_available = True
 
 except (ImportError, RuntimeError, SyntaxError):
     matplotlib_available = False
