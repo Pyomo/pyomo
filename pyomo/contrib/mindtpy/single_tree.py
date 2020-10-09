@@ -46,9 +46,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 continue  # Skip stale variable values.
             if skip_fixed and v_to.is_fixed():
                 continue  # Skip fixed variables.
+            v_val = self.get_values(
+                opt._pyomo_var_to_solver_var_map[v_from])
             try:
-                v_val = self.get_values(
-                    opt._pyomo_var_to_solver_var_map[v_from])
                 v_to.set_value(v_val)
                 if skip_stale:
                     v_to.stale = False
