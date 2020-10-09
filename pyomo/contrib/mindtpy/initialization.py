@@ -131,6 +131,7 @@ def init_rNLP(solve_data, config):
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut
+        # This covers the case when the Lower bound does not exist.
         if main_objective.sense == minimize and not math.isnan(results['Problem'][0]['Lower bound']):
             solve_data.LB = results['Problem'][0]['Lower bound']
         elif not math.isnan(results['Problem'][0]['Upper bound']):
