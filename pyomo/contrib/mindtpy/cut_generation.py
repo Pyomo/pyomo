@@ -42,84 +42,6 @@ def add_objective_linearization(solve_data, config):
         MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
 
 
-'''
-def add_oa_cuts(target_model, dual_values, solve_data, config,
-                linearize_active=True,
-                linearize_violated=True):
-    """
-    Linearizes nonlinear constraints; modifies the model to include the OA cuts
-
-    For nonconvex problems, turn on 'config.add_slack'. Slack variables will
-    always be used for nonlinear equality constraints.
-
-    Parameters
-    ----------
-    target_model:
-        this is the MIP/MILP model for the OA algorithm; we want to add the OA cuts to 'target_model'
-    dual_values:
-        contains the value of the duals for each constraint
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
-    linearize_active: bool, optional
-        this parameter acts as a Boolean flag that signals whether the linearized constraint is active
-    linearize_violated: bool, optional
-        this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
-        linearized constraint has been violated
-    """
-    for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
-                                    dual_values):
-        if constr.body.polynomial_degree() in (0, 1):
-            continue
-
-        constr_vars = list(identify_variables(constr.body))
-        jacs = solve_data.jacobians
-
-        # Equality constraint (makes the problem nonconvex)
-        if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
-            sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-            rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
-            if config.add_slack:
-                slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-            target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
-                expr=copysign(1, sign_adjust * dual_value)
-                * (sum(value(jacs[constr][var]) * (var - value(var))
-                       for var in list(EXPR.identify_variables(constr.body)))
-                    + value(constr.body) - rhs)
-                - (slack_var if config.add_slack else 0) <= 0)
-
-        else:  # Inequality constraint (possibly two-sided)
-            if constr.has_ub() \
-                and (linearize_active and abs(constr.uslack()) < config.bound_tolerance) \
-                    or (linearize_violated and constr.uslack() < 0) \
-                    or (config.linearize_inactive and constr.uslack() > 0):
-                if config.add_slack:
-                    slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-
-                target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
-                    expr=(sum(value(jacs[constr][var])*(var - var.value)
-                              for var in constr_vars) + value(constr.body)
-                          - (slack_var if config.add_slack else 0)
-                          <= constr.upper)
-                )
-
-            if constr.has_lb() \
-                and (linearize_active and abs(constr.lslack()) < config.bound_tolerance) \
-                    or (linearize_violated and constr.lslack() < 0) \
-                    or (config.linearize_inactive and constr.lslack() > 0):
-                if config.add_slack:
-                    slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-
-                target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
-                    expr=(sum(value(jacs[constr][var])*(var - var.value)
-                              for var in constr_vars) + value(constr.body)
-                          + (slack_var if config.add_slack else 0)
-                          >= constr.lower)
-                )
-'''
-
-
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True):
@@ -378,13 +300,6 @@ def add_nogood_cuts(var_values, solve_data, config, feasible=False):
                    if value(abs(v)) <= int_tol) >= 1)
 
     MindtPy.MindtPy_linear_cuts.nogood_cuts.add(expr=int_cut)
-
-    # TODO need to handle theoretical implications of backtracking
-    # if not feasible:
-    #     # Add the no good cuts
-    #     MindtPy.MindtPy_linear_cuts.nogood_cuts.add(expr=int_cut)
-    # else:
-    #     MindtPy.MindtPy_linear_cuts.feasible_nogood_cuts.add(expr=int_cut)
 
 
 def add_affine_cuts(solve_data, config):
