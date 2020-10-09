@@ -164,7 +164,7 @@ def solve_master(solve_data, config, feas_pump=False):
 # The following functions deal with handling the solution we get from the above MIP solver function
 
 
-def handle_master_mip_optimal(master_mip, solve_data, config):
+def handle_master_optimal(master_mip, solve_data, config):
     """
     This function copies the result from 'solve_master' to the working model and updates the upper/lower bound. This
     function is called after an optimal solution is found for the master problem.

@@ -8,7 +8,7 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_nogood_cuts
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_Norm2sq_objective_function
-from pyomo.contrib.mindtpy.mip_solve import solve_master, handle_master_mip_optimal
+from pyomo.contrib.mindtpy.mip_solve import solve_master, handle_master_optimal
 from pyomo.util.infeasible import log_infeasible_constraints
 
 
