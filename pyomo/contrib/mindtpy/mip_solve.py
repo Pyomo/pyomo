@@ -225,7 +225,7 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
         contains the specific configurations for the algorithm
     """
     if master_mip_results.solver.termination_condition is tc.infeasible:
-        handle_master_mip_infeasible(master_mip, solve_data, config)
+        handle_master_infeasible(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.unbounded:
         handle_master_mip_unbounded(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
@@ -261,7 +261,7 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
             (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
 
 
-def handle_master_mip_infeasible(master_mip, solve_data, config):
+def handle_master_infeasible(master_mip, solve_data, config):
     """
     This function handles the result of the latest iteration of solving the MIP problem given an infeasible solution.
 

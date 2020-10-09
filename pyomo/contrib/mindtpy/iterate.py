@@ -4,7 +4,7 @@ from __future__ import division
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_master,
-                                             handle_master_optimal, handle_master_mip_infeasible, handle_master_other_conditions)
+                                             handle_master_optimal, handle_master_infeasible, handle_master_other_conditions)
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
@@ -48,7 +48,7 @@ def MindtPy_iteration_loop(solve_data, config):
                 if master_mip_results.solver.termination_condition is tc.optimal:
                     handle_master_optimal(master_mip, solve_data, config)
                 elif master_mip_results.solver.termination_condition is tc.infeasible:
-                    handle_master_mip_infeasible(
+                    handle_master_infeasible(
                         master_mip, solve_data, config)
                     last_iter_cuts = True
                     break
