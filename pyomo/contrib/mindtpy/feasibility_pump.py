@@ -14,7 +14,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 
 def feas_pump_converged(solve_data, config, discrete_only=True):
     """Calculates the euclidean norm between the discretes in the mip and nlp models"""
-    distance = (sum((nlp_var.value - milp_var.value)**2
+    distance = (max((nlp_var.value - milp_var.value)**2
                     for (nlp_var, milp_var) in
                     zip(solve_data.working_model.MindtPy_utils.variable_list,
                         solve_data.mip.MindtPy_utils.variable_list)
