@@ -14,6 +14,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, indent
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
+from pyomo.contrib.gdpopt.util import time_code
 
 
 def MindtPy_iteration_loop(solve_data, config):
@@ -59,7 +60,8 @@ def MindtPy_iteration_loop(solve_data, config):
                         handle_master_mip_other_conditions(master_mip, master_mip_results,
                                                            solve_data, config)
                     # Call the MILP post-solve callback
-                    config.call_after_master_solve(master_mip, solve_data)
+                    with time_code(solve_data.timing, 'Call after master solve'):
+                        config.call_after_master_solve(master_mip, solve_data)
             else:
                 config.logger.info('Algorithm should terminate here.')
                 break
