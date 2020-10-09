@@ -11,7 +11,7 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
 from pyomo.core import minimize, Objective, Var
 from pyomo.opt.results import ProblemSense
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time, indent
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time, indent, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 
@@ -56,7 +56,8 @@ def MindtPy_iteration_loop(solve_data, config):
                     handle_master_mip_other_conditions(master_mip, master_mip_results,
                                                        solve_data, config)
                 # Call the MILP post-solve callback
-                config.call_after_master_solve(master_mip, solve_data)
+                with time_code(solve_data.timing, 'Call after master solve'):
+                    config.call_after_master_solve(master_mip, solve_data)
         else:
             raise NotImplementedError()
 
@@ -77,7 +78,8 @@ def MindtPy_iteration_loop(solve_data, config):
                 handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                         solve_data, config)
             # Call the NLP post-solve callback
-            config.call_after_subproblem_solve(fixed_nlp, solve_data)
+            with time_code(solve_data.timing, 'Call after subproblem solve'):
+                config.call_after_subproblem_solve(fixed_nlp, solve_data)
 
         if algorithm_should_terminate(solve_data, config, check_cycling=False):
             last_iter_cuts = True
