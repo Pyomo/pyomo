@@ -91,7 +91,7 @@ def handle_feas_pump_NLP_subproblem_optimal(fp_nlp, solve_data, config):
         solve_data.working_model.MindtPy_utils.variable_list,
         config,
         ignore_integrality=True)
-    add_cycling_cuts(solve_data, config)
+    add_orthogonality_cuts(solve_data, config)
 
     # if OA-like or feas_pump converged, update Upper bound,
     # add no_good cuts and increasing objective cuts (feas_pump)
@@ -188,7 +188,7 @@ def feas_pump_loop(solve_data, config):
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
     # TODO: need to be checked here about the cuts transfer from FP-MIP to OA-MIP
-    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_no_cycling_cuts.deactivate()
+    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.deactivate()
     if not config.fp_transfercuts:
         for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts:
             c.deactivate()
@@ -197,11 +197,11 @@ def feas_pump_loop(solve_data, config):
         solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut.deactivate()
 
 
-def add_cycling_cuts(solve_data, config):
+def add_orthogonality_cuts(solve_data, config):
     """
-    Add cycling cuts
+    Add orthogonality cuts
 
-    This function adds cuts to avoid cycling when the independence constraint qualification is not satisfied.
+    This function adds orthogonality cuts to avoid cycling when the independence constraint qualification is not satisfied.
 
     Parameters
     ----------
@@ -215,7 +215,7 @@ def add_cycling_cuts(solve_data, config):
     nlp_MindtPy = solve_data.working_model.MindtPy_utils
     mip_integer_vars = [v for v in mip_MindtPy.variable_list if v.is_integer()]
     nlp_integer_vars = [v for v in nlp_MindtPy.variable_list if v.is_integer()]
-    cycling_cut = sum((nlp_v.value-mip_v.value)*(mip_v-nlp_v.value)
-                      for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
-    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_no_cycling_cuts.add(
-        cycling_cut)
+    orthogonality_cut = sum((nlp_v.value-mip_v.value)*(mip_v-nlp_v.value)
+                            for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
+    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.add(
+        orthogonality_cut)

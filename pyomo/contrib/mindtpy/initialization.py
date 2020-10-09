@@ -45,8 +45,8 @@ def MindtPy_initialize_master(solve_data, config):
         m.dual.deactivate()
 
     if config.init_strategy == 'feas_pump':
-        MindtPy.MindtPy_linear_cuts.fp_no_cycling_cuts = ConstraintList(
-            doc='Cycling cuts')
+        MindtPy.MindtPy_linear_cuts.fp_orthogonality_cuts = ConstraintList(
+            doc='Orthogonality cuts in feasibility pump')
     if config.strategy == 'OA' or config.init_strategy == 'feas_pump':
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
