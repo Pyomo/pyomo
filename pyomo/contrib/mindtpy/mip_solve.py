@@ -208,7 +208,7 @@ def handle_master_optimal(master_mip, solve_data, config):
            solve_data.LB, solve_data.UB))
 
 
-def handle_master_mip_other_conditions(master_mip, master_mip_results, solve_data, config):
+def handle_master_other_conditions(master_mip, master_mip_results, solve_data, config):
     """
     This function handles the result of the latest iteration of solving the MIP problem (given any of a few
     edge conditions, such as if the solution is neither infeasible nor optimal).
