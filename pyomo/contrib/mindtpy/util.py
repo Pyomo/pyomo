@@ -234,8 +234,10 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
     return Objective(expr=sum(obj_blk.L1_obj_var[idx] for idx in obj_blk.L1_obj_idx))
 
+# TODO: this function is not called
 
-def generate_normInf_objective_function(model, setpoint_model, discrete_only=False):
+
+def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
     """Generate objective (PF-OA master problem) for minimum Norm Infinity distance to setpoint_model
     Norm1 distance of (x,y) = \max_i |x_i - y_i|
     discrete_only -- only optimize on distance between the discrete variables
