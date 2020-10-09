@@ -184,9 +184,18 @@ def var_bound_add(solve_data, config):
 
 
 def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
-    """Generate objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model
+    """
+    This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}
-    discrete_only -- only optimize on distance between the discrete variables
+
+    Parameters
+    ----------
+    model: Pyomo model
+        the model that needs new objective function
+    setpoint_model: Pyomo model
+        the model that provides the base point for us to calculate the distance
+    discrete_only: Bool
+        only optimize on distance between the discrete variables
     TODO: remove setpoint_model
     """
     var_filter = (lambda v: v[1].is_integer()) if discrete_only \
@@ -205,9 +214,18 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
 
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
-    """Generate objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
+    """
+    This function generates objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
-    discrete_only -- only optimize on distance between the discrete variables
+
+    Parameters
+    ----------
+    model: Pyomo model
+        the model that needs new objective function
+    setpoint_model: Pyomo model
+        the model that provides the base point for us to calculate the distance
+    discrete_only: Bool
+        only optimize on distance between the discrete variables
     TODO: remove setpoint_model
     """
 
@@ -238,9 +256,18 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
-    """Generate objective (PF-OA master problem) for minimum Norm Infinity distance to setpoint_model
-    Norm1 distance of (x,y) = \max_i |x_i - y_i|
-    discrete_only -- only optimize on distance between the discrete variables
+    """
+    This function generates objective (PF-OA master problem) for minimum Norm Infinity distance to setpoint_model
+    Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|
+
+    Parameters
+    ----------
+    model: Pyomo model
+        the model that needs new objective function
+    setpoint_model: Pyomo model
+        the model that provides the base point for us to calculate the distance
+    discrete_only: Bool
+        only optimize on distance between the discrete variables
     TODO: remove setpoint_model
     """
 
