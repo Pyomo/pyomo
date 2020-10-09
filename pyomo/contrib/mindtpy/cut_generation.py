@@ -331,8 +331,8 @@ def add_ecp_cuts(target_model, solve_data, config,
 
 def add_nogood_cuts(var_values, solve_data, config, feasible=False):
     """
-    Adds integer cuts; modifies the model to include integer cuts
-    This adds an integer cut to the feasible_nogood_cuts ConstraintList, which is not activated by default.
+    Adds no good cuts; modifies the model to include no good cuts
+    This adds an no good cuts to the feasible_nogood_cuts ConstraintList, which is not activated by default.
     However, it may be activated as needed in certain situations or for certain values of option flags.
 
     Parameters
@@ -381,7 +381,7 @@ def add_nogood_cuts(var_values, solve_data, config, feasible=False):
 
     # TODO need to handle theoretical implications of backtracking
     # if not feasible:
-    #     # Add the integer cut
+    #     # Add the no good cuts
     #     MindtPy.MindtPy_linear_cuts.nogood_cuts.add(expr=int_cut)
     # else:
     #     MindtPy.MindtPy_linear_cuts.feasible_nogood_cuts.add(expr=int_cut)

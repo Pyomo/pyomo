@@ -90,12 +90,12 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("integer_to_binary", ConfigValue(
         default=False,
-        description="Convert integer variables to binaries (for integer cuts).",
+        description="Convert integer variables to binaries (for no good cuts).",
         domain=bool
     ))
     CONFIG.declare("add_nogood_cuts", ConfigValue(
         default=False,
-        description="Add integer cuts (no-good cuts) to binary variables to disallow same integer solution again."
+        description="Add no good cuts (no-good cuts) to binary variables to disallow same integer solution again."
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
     ))

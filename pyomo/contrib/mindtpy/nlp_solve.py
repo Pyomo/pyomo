@@ -105,7 +105,7 @@ def solve_NLP_subproblem(solve_data, config):
 def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
     """
     This function copies the result of the NLP solver function ('solve_NLP_subproblem') to the working model, updates
-    the bounds, adds OA and integer cuts, and then stores the new solution if it is the new best solution. This
+    the bounds, adds OA and no good cuts, and then stores the new solution if it is the new best solution. This
     function handles the result of the latest iteration of solving the NLP subproblem given an optimal solution.
 
     Parameters
@@ -240,7 +240,7 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
         elif config.strategy == "GOA":
             add_affine_cuts(solve_data, config)
-    # Add an integer cut to exclude this discrete option
+    # Add an no good cuts to exclude this discrete option
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_nogood_cuts:
         # excludes current discrete option

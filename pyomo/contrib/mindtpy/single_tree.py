@@ -243,7 +243,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
     def add_lazy_nogood_cuts(self, var_values, solve_data, config, opt, feasible=False):
         """
-        Adds integer cuts; add the nogood cuts through Cplex inherent function self.add()
+        Adds no good cuts; add the nogood cuts through Cplex inherent function self.add()
 
         Parameters
         ----------
@@ -343,7 +343,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
     def handle_lazy_NLP_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """
-        This function copies  result to mip(explaination see below), updates bound, adds OA and integer cut,
+        This function copies  result to mip(explaination see below), updates bound, adds OA and no good cuts,
         stores best solution if new one is best
 
         Parameters
