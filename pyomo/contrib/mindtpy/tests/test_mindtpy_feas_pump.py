@@ -226,7 +226,7 @@ class TestMindtPy(unittest.TestCase):
                                 iteration_limit=30)
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_FP_OA_Proposal(self):

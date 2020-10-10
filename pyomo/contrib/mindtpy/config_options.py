@@ -268,6 +268,7 @@ def _add_feas_pump_configs(CONFIG):
         description="Feasibility pump iteration limit",
         doc="Number of maximum iterations in the feasibility pump methods."
     ))
+    # TODO: integrate this option
     CONFIG.declare("fp_projcuts", ConfigValue(
         default=True,
         description="Whether to add cut derived from projection of MIP solution onto NLP feasible set",
@@ -279,7 +280,7 @@ def _add_feas_pump_configs(CONFIG):
         domain=bool
     ))
     CONFIG.declare("fp_projzerotol", ConfigValue(
-        default=1E-1,
+        default=1E-4,
         domain=PositiveFloat,
         description="Tolerance on when to consider optimal value of projection problem as zero, which may trigger the solution of a Sub-NLP"
     ))
