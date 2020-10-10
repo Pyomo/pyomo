@@ -175,7 +175,7 @@ def feas_pump_loop(solve_data, config):
             config.logger.info('FP-NLP %s: Distance-OBJ: %s'
                                % (solve_data.fp_iter, value(fp_nlp.MindtPy_utils.feas_pump_nlp_obj)))
             handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config)
-        elif fp_nlp_result.solver.termination_condition is tc.infeasible:
+        elif fp_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
             config.logger.error("Feasibility pump NLP subproblem infeasible")
         elif termination_condition is tc.maxIterations:
             config.logger.info(

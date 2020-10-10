@@ -345,7 +345,7 @@ def solve_NLP_feas(solve_data, config):
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
-    elif subprob_terminate_cond is tc.infeasible:
+    elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         raise ValueError('Feasibility NLP infeasible. '
                          'This should never happen.')
     elif subprob_terminate_cond is tc.maxIterations:

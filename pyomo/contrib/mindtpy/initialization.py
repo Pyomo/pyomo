@@ -145,7 +145,7 @@ def init_rNLP(solve_data, config):
             for var in solve_data.mip.component_data_objects(ctype=Var):
                 if var.is_integer():
                     var.value = int(round(var.value))
-    elif subprob_terminate_cond is tc.infeasible:
+    elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         # TODO fail? try something else?
         config.logger.info(
             'Initial relaxed NLP problem is infeasible. '
