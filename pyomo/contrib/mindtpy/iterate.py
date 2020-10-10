@@ -293,10 +293,13 @@ def bound_fix(solve_data, config, last_iter_cuts):
     if config.single_tree:
         config.logger.info(
             'Fix the bound to the value of one iteration before optimal solution is found.')
-        if solve_data.results.problem.sense == ProblemSense.minimize:
-            solve_data.LB = solve_data.stored_bound[solve_data.UB]
-        else:
-            solve_data.UB = solve_data.stored_bound[solve_data.LB]
+        try:
+            if solve_data.results.problem.sense == ProblemSense.minimize:
+                solve_data.LB = solve_data.stored_bound[solve_data.UB]
+            else:
+                solve_data.UB = solve_data.stored_bound[solve_data.LB]
+        except KeyError:
+            config.logger.info('No stored bound found. Bound fix failed.')
     else:
         config.logger.info(
             'Solve the master problem without the last nogood cut to fix the bound.'
