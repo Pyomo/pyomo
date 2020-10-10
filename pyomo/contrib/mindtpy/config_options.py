@@ -99,6 +99,11 @@ def _get_MindtPy_config():
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
     ))
+    CONFIG.declare("add_affine_cuts", ConfigValue(
+        default=False,
+        description="Add affine cuts drive from MC++",
+        domain=bool
+    ))
     CONFIG.declare("single_tree", ConfigValue(
         default=False,
         description="Use single tree implementation in solving the MILP master problem.",
