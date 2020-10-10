@@ -140,26 +140,26 @@ def feas_pump_loop(solve_data, config):
 
         solve_data.mip_subiter = 0
         # solve MILP master problem
-        feas_mip, feas_mip_results = solve_master(
+        feas_master, feas_master_results = solve_master(
             solve_data, config, feas_pump=True)
-        if feas_mip_results.solver.termination_condition is tc.optimal:
+        if feas_master_results.solver.termination_condition is tc.optimal:
             config.logger.info(
                 'FP-MIP %s: Distance-OBJ: %s'
                 % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.feas_pump_mip_obj)))
-        elif feas_mip_results.solver.termination_condition is tc.maxTimeLimit:
+        elif feas_master_results.solver.termination_condition is tc.maxTimeLimit:
             config.logger.warning('FP-MIP reaches max TimeLimit')
-        elif feas_mip_results.solver.termination_condition is tc.infeasible:
+        elif feas_master_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
             # TODO: needs to be checked here.
             nogood_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts
             if nogood_cuts.__len__() > 0:
                 nogood_cuts[nogood_cuts.__len__()].deactivate()
             break
-        elif feas_mip_results.solver.termination_condition is tc.unbounded:
+        elif feas_master_results.solver.termination_condition is tc.unbounded:
             config.logger.warning('FP-MIP unbounded')
             break
-        elif (feas_mip_results.solver.termination_condition is tc.other and
-              feas_mip_results.solution.status is SolutionStatus.feasible):
+        elif (feas_master_results.solver.termination_condition is tc.other and
+              feas_master_results.solution.status is SolutionStatus.feasible):
             config.logger.warning('MILP solver reported feasible solution of FP-MIP, '
                                   'but not guaranteed to be optimal.')
         else:
