@@ -342,7 +342,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
         if config.threads > 0:
             masteropt.options["threads"] = config.threads
         master_mip_results = masteropt.solve(
-            solve_data.mip, tee=config.solver_tee, **mip_args)
+            solve_data.mip, tee=config.mip_solver_tee, **mip_args)
         main_objective = next(
             solve_data.working_model.component_data_objects(Objective, active=True))
         if main_objective.sense == minimize:

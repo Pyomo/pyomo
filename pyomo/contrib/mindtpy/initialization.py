@@ -114,7 +114,7 @@ def init_rNLP(solve_data, config):
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
-            m, tee=config.solver_tee, **nlp_args)
+            m, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
         if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
@@ -208,7 +208,7 @@ def init_max_binaries(solve_data, config):
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.001;')
-    results = opt.solve(m, tee=config.solver_tee, **mip_args)
+    results = opt.solve(m, tee=config.mip_solver_tee, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:

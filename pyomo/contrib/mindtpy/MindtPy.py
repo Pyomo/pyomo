@@ -105,6 +105,10 @@ class MindtPySolver(object):
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.bound_tolerance
 
+        if config.solver_tee:
+            config.mip_solver_tee = True
+            config.nlp_solver_tee = True
+
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
         if obj.expr.polynomial_degree() == 0:

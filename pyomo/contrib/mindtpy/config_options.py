@@ -128,6 +128,16 @@ def _get_GDPopt_config():
         description="Stream the output of mip solver and nlp solver to terminal.",
         domain=bool
     ))
+    CONFIG.declare("mip_solver_tee", ConfigValue(
+        default=False,
+        description="Stream the output of mip solver to terminal.",
+        domain=bool
+    ))
+    CONFIG.declare("nlp_solver_tee", ConfigValue(
+        default=False,
+        description="Stream the output of nlp solver to terminal.",
+        domain=bool
+    ))
     CONFIG.declare("logger", ConfigValue(
         default='pyomo.contrib.mindtpy',
         description="The logger object or name to use for reporting.",
