@@ -318,6 +318,9 @@ def bound_fix(solve_data, config, last_iter_cuts):
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
             elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
                 handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+            elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
+                config.logger.info(
+                    'NLP subproblem failed to converge within the time limit.')
             else:
                 handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                         solve_data, config)
