@@ -54,8 +54,8 @@ class TestMindtPy(unittest.TestCase):
                                 bound_tolerance=1E-5,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_init_max_binary(self):
@@ -70,8 +70,8 @@ class TestMindtPy(unittest.TestCase):
                                 add_nogood_cuts=True,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_L2_norm(self):
@@ -86,8 +86,8 @@ class TestMindtPy(unittest.TestCase):
                                 add_nogood_cuts=True,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_sympy(self):
@@ -102,8 +102,8 @@ class TestMindtPy(unittest.TestCase):
                                 add_nogood_cuts=True,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_MINLP_simple(self):
@@ -168,8 +168,8 @@ class TestMindtPy(unittest.TestCase):
                                 integer_to_binary=True,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_GOA_Proposal_with_int_cuts(self):
@@ -185,8 +185,8 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True
                                 )
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_GOA_ConstraintQualificationExample(self):
