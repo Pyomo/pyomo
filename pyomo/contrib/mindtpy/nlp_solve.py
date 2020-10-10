@@ -267,9 +267,6 @@ def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
         if config.add_nogood_cuts:
             # excludes current discrete option
             add_nogood_cuts(var_values, solve_data, config)
-    elif termination_condition is tc.maxTimeLimit:
-        config.logger.info(
-            'NLP subproblem failed to converge within the time limit.')
     else:
         raise ValueError(
             'MindtPy unable to handle NLP subproblem termination '
