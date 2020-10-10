@@ -31,7 +31,6 @@ def MindtPy_iteration_loop(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
-    enough_time_to_fix_bound = True
     working_model = solve_data.working_model
     main_objective = next(
         working_model.component_data_objects(Objective, active=True))
@@ -85,7 +84,6 @@ def MindtPy_iteration_loop(solve_data, config):
             elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
                 config.logger.info(
                     'NLP subproblem failed to converge within the time limit.')
-                enough_time_to_fix_bound = False
                 break
             else:
                 handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
@@ -137,7 +135,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_nogood_cuts and enough_time_to_fix_bound:
+    if config.add_nogood_cuts:
         bound_fix(solve_data, config, last_iter_cuts)
 
 
