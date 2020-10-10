@@ -187,7 +187,7 @@ def feas_pump_loop(solve_data, config):
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
-    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.deactivate()
+    # solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.deactivate()
     # deactivate the improving_objective_cut
     if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut') is not None:
         solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut.deactivate()
