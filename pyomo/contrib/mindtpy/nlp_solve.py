@@ -232,9 +232,9 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
 
     if config.strategy in {'OA', 'GOA'}:
         config.logger.info('Solving feasibility problem')
-        feas_NLP, feas_NLP_results = solve_feasibility_subproblem(
+        feas_subproblem, feas_subproblem_results = solve_feasibility_subproblem(
             solve_data, config)
-        copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
+        copy_var_list_values(feas_subproblem.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
         if config.strategy == "OA":
@@ -291,20 +291,21 @@ def solve_feasibility_subproblem(solve_data, config):
 
     Returns
     -------
-    feas_nlp: Pyomo model
+    feas_subproblem: Pyomo model
         feasibility NLP from the model
     feas_soln: Pyomo results object
         result from solving the feasibility NLP
     """
-    feas_nlp = solve_data.working_model.clone()
-    add_feas_slacks(feas_nlp, config)
+    feas_subproblem = solve_data.working_model.clone()
+    add_feas_slacks(feas_subproblem, config)
 
-    MindtPy = feas_nlp.MindtPy_utils
+    MindtPy = feas_subproblem.MindtPy_utils
     if MindtPy.find_component('objective_value') is not None:
         MindtPy.objective_value.value = 0
 
-    next(feas_nlp.component_data_objects(Objective, active=True)).deactivate()
-    for constr in feas_nlp.component_data_objects(
+    next(feas_subproblem.component_data_objects(
+        Objective, active=True)).deactivate()
+    for constr in feas_subproblem.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         if constr.body.polynomial_degree() not in [0, 1]:
             constr.deactivate()
@@ -322,7 +323,7 @@ def solve_feasibility_subproblem(solve_data, config):
         MindtPy.MindtPy_feas_obj = Objective(
             expr=MindtPy.MindtPy_feas.slack_var,
             sense=minimize)
-    TransformationFactory('core.fix_integer_vars').apply_to(feas_nlp)
+    TransformationFactory('core.fix_integer_vars').apply_to(feas_subproblem)
     with SuppressInfeasibleWarning():
         try:
             nlpopt = SolverFactory(config.nlp_solver)
@@ -333,7 +334,7 @@ def solve_feasibility_subproblem(solve_data, config):
                 nlp_args['add_options'] = nlp_args.get('add_options', [])
                 nlp_args['add_options'].append('option reslim=%s;' % remaining)
             feas_soln = nlpopt.solve(
-                feas_nlp, tee=config.solver_tee, **nlp_args)
+                feas_subproblem, tee=config.solver_tee, **nlp_args)
         except (ValueError, OverflowError) as error:
             for nlp_var, orig_val in zip(
                     MindtPy.variable_list,
@@ -341,7 +342,7 @@ def solve_feasibility_subproblem(solve_data, config):
                 if not nlp_var.fixed and not nlp_var.is_binary():
                     nlp_var.value = orig_val
             feas_soln = nlpopt.solve(
-                feas_nlp, tee=config.solver_tee, **nlp_args)
+                feas_subproblem, tee=config.solver_tee, **nlp_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         copy_var_list_values(
@@ -373,4 +374,4 @@ def solve_feasibility_subproblem(solve_data, config):
                               "This indicates that the nlp subproblem is feasible, although it is found infeasible in the previous step. "
                               "Check the nlp solver output" % value(MindtPy.MindtPy_feas_obj.expr))
 
-    return feas_nlp, feas_soln
+    return feas_subproblem, feas_soln

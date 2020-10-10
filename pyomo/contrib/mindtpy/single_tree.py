@@ -433,11 +433,11 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             dual_values = None
 
         config.logger.info('Solving feasibility problem')
-        feas_NLP, feas_NLP_results = solve_feasibility_subproblem(
+        feas_subproblem, feas_subproblem_results = solve_feasibility_subproblem(
             solve_data, config)
         # In OA algorithm, OA cuts are generated based on the solution of the subproblem
         # We need to first copy the value of variables from the subproblem and then add cuts
-        copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
+        copy_var_list_values(feas_subproblem.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
         if config.strategy == 'OA':
