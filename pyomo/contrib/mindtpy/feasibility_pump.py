@@ -20,7 +20,7 @@ def feas_pump_converged(solve_data, config, discrete_only=True):
                         solve_data.mip.MindtPy_utils.variable_list)
                     if (not discrete_only) or milp_var.is_integer()))
 
-    return distance <= config.integer_tolerance
+    return distance <= (config.integer_tolerance)**2
 
 
 def solve_feas_pump_subproblem(solve_data, config):
