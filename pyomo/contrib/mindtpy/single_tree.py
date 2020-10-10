@@ -532,7 +532,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                         solve_data.LB, config.bound_tolerance, solve_data.UB))
                 solve_data.results.solver.termination_condition = tc.optimal
                 self.abort()
-        elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
+        elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
             self.handle_lazy_NLP_subproblem_infeasible(
                 fixed_nlp, solve_data, config, opt)
         else:

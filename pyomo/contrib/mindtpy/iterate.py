@@ -79,7 +79,7 @@ def MindtPy_iteration_loop(solve_data, config):
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
+            elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
                 handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
             else:
                 handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
@@ -312,22 +312,25 @@ def bound_fix(solve_data, config, last_iter_cuts):
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
+            elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
                 handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
             else:
                 handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                         solve_data, config)
 
         MindtPy = solve_data.mip.MindtPy_utils
-        # only deactivate the last integer cut.
+        # deactivate the integer cuts generated after the best solution was found.
         if config.strategy == 'GOA':
-            if solve_data.results.problem.sense == ProblemSense.minimize:
-                valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
-            else:
-                valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
-            for i in range(valid_no_good_cuts_num+1, len(
-                    MindtPy.MindtPy_linear_cuts.integer_cuts)+1):
-                MindtPy.MindtPy_linear_cuts.integer_cuts[i].deactivate()
+            try:
+                if solve_data.results.problem.sense == ProblemSense.minimize:
+                    valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
+                else:
+                    valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
+                for i in range(valid_no_good_cuts_num+1, len(
+                        MindtPy.MindtPy_linear_cuts.integer_cuts)+1):
+                    MindtPy.MindtPy_linear_cuts.integer_cuts[i].deactivate()
+            except KeyError:
+                config.logger.info('Cut deactivate failed.')
         elif config.strategy == 'OA':
             MindtPy.MindtPy_linear_cuts.integer_cuts[len(
                 MindtPy.MindtPy_linear_cuts.integer_cuts)].deactivate()
