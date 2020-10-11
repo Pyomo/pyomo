@@ -62,7 +62,7 @@ def solve_feas_pump_subproblem(solve_data, config):
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
     MindtPy.feas_pump_nlp_obj = generate_norm2sq_objective_function(
-        fp_nlp, solve_data.mip, discrete_only=True)
+        fp_nlp, solve_data.mip, discrete_only=config.fp_discrete_only)
 
     MindtPy.MindtPy_linear_cuts.deactivate()
     TransformationFactory('contrib.deactivate_trivial_constraints')\
@@ -95,7 +95,7 @@ def handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config):
 
     # if OA-like or feas_pump converged, update Upper bound,
     # add no_good cuts and increasing objective cuts (feas_pump)
-    if feas_pump_converged(solve_data, config):
+    if feas_pump_converged(solve_data, config, discrete_only=config.fp_discrete_only):
         copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
                              solve_data.working_model.MindtPy_utils.variable_list,
                              config)

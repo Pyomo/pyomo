@@ -294,3 +294,8 @@ def _add_feas_pump_configs(CONFIG):
         domain=PositiveFloat,
         description="Optimality tolerance (relative gap) to use for solving MIP projection problem"
     ))
+    CONFIG.declare("fp_discrete_only", ConfigValue(
+        default=True,
+        description="Only calculate the distance among discrete variables in projection problems.",
+        domain=bool
+    ))

@@ -77,7 +77,7 @@ def solve_master(solve_data, config, feas_pump=False):
         MindtPy.feas_pump_mip_obj = generate_norm1_objective_function(
             solve_data.mip,
             solve_data.working_model,
-            discrete_only=True)
+            discrete_only=config.fp_discrete_only)
     else:
         if config.add_slack:
             MindtPy.del_component('MindtPy_penalty_expr')
