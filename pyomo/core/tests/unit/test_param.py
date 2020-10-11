@@ -121,7 +121,7 @@ class ParamTester(object):
     def test_setitem_index_error(self):
         try:
             self.instance.A[2] = 4.3
-            if not self.instance.A._mutable:
+            if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
             self.fail("Expected KeyError because 2 is not a valid key")
@@ -129,7 +129,7 @@ class ParamTester(object):
             pass
         except TypeError:
             # immutable Params should raise a TypeError exception
-            if self.instance.A._mutable:
+            if self.instance.A.mutable:
                 raise
 
     def test_setitem_preexisting(self):
@@ -139,7 +139,7 @@ class ParamTester(object):
 
         idx = sorted(keys)[0]
         self.assertEqual(self.instance.A[idx], self.data[idx])
-        if self.instance.A._mutable:
+        if self.instance.A.mutable:
             self.assertTrue( isinstance( self.instance.A[idx],
                                          pyomo.core.base.param._ParamData ) )
         else:
@@ -147,7 +147,7 @@ class ParamTester(object):
 
         try:
             self.instance.A[idx] = 4.3
-            if not self.instance.A._mutable:
+            if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
             self.assertEqual( self.instance.A[idx], 4.3)
@@ -155,12 +155,12 @@ class ParamTester(object):
                                         pyomo.core.base.param._ParamData ) )
         except TypeError:
             # immutable Params should raise a TypeError exception
-            if self.instance.A._mutable:
+            if self.instance.A.mutable:
                 raise
 
         try:
             self.instance.A[idx] = -4.3
-            if not self.instance.A._mutable:
+            if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
             if self.expectNegativeDomainError:
@@ -174,12 +174,12 @@ class ParamTester(object):
                     % ( str(sys.exc_info()[1]), idx ) )
         except TypeError:
             # immutable Params should raise a TypeError exception
-            if self.instance.A._mutable:
+            if self.instance.A.mutable:
                 raise
 
         try:
             self.instance.A[idx] = 'x'
-            if not self.instance.A._mutable:
+            if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
             if self.expectTextDomainError:
@@ -193,7 +193,7 @@ class ParamTester(object):
                     % ( str(sys.exc_info()[1]), idx ) )
         except TypeError:
             # immutable Params should raise a TypeError exception
-            if self.instance.A._mutable:
+            if self.instance.A.mutable:
                 raise
 
     def test_setitem_default_override(self):
@@ -213,7 +213,7 @@ class ParamTester(object):
 
         self.assertEqual( value(self.instance.A[idx]),
                           self.instance.A._default_val )
-        if self.instance.A._mutable:
+        if self.instance.A.mutable:
             self.assertIsInstance( self.instance.A[idx],
                                    pyomo.core.base.param._ParamData )
         else:
@@ -222,7 +222,7 @@ class ParamTester(object):
 
         try:
             self.instance.A[idx] = 4.3
-            if not self.instance.A._mutable:
+            if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
             self.assertEqual( self.instance.A[idx], 4.3)
@@ -230,12 +230,12 @@ class ParamTester(object):
                                    pyomo.core.base.param._ParamData )
         except TypeError:
             # immutable Params should raise a TypeError exception
-            if self.instance.A._mutable:
+            if self.instance.A.mutable:
                 raise
 
         try:
             self.instance.A[idx] = -4.3
-            if not self.instance.A._mutable:
+            if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
             if self.expectNegativeDomainError:
@@ -249,12 +249,12 @@ class ParamTester(object):
                     % ( str(sys.exc_info()[1]), idx ) )
         except TypeError:
             # immutable Params should raise a TypeError exception
-            if self.instance.A._mutable:
+            if self.instance.A.mutable:
                 raise
 
         try:
             self.instance.A[idx] = 'x'
-            if not self.instance.A._mutable:
+            if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
             if self.expectTextDomainError:
@@ -268,7 +268,7 @@ class ParamTester(object):
                     % ( str(sys.exc_info()[1]), idx) )
         except TypeError:
             # immutable Params should raise a TypeError exception
-            if self.instance.A._mutable:
+            if self.instance.A.mutable:
                 raise
 
     def test_dim(self):
@@ -293,7 +293,7 @@ class ParamTester(object):
     def test_values(self):
         expectException = False
         #    len(self.sparse_data) < len(self.data) and \
-        #    not self.instance.A._mutable
+        #    not self.instance.A.mutable
         try:
             test = self.instance.A.values()
             #self.assertEqual( type(test), list )
@@ -311,7 +311,7 @@ class ParamTester(object):
         expectException = False
         #                  len(self.sparse_data) < len(self.data) and \
         #                  not self.instance.A._default_val is _NotValid and \
-        #                  not self.instance.A._mutable
+        #                  not self.instance.A.mutable
         try:
             test = self.instance.A.items()
             #self.assertEqual( type(test), list )
@@ -332,7 +332,7 @@ class ParamTester(object):
         expectException = False
         #                  len(self.sparse_data) < len(self.data) and \
         #                  not self.instance.A._default_val is None and \
-        #                  not self.instance.A._mutable
+        #                  not self.instance.A.mutable
         try:
             test = itervalues(self.instance.A)
             test = zip(self.instance.A.keys(), test)
@@ -349,7 +349,7 @@ class ParamTester(object):
         expectException = False
         #                  len(self.sparse_data) < len(self.data) and \
         #                  not self.instance.A._default_val is None and \
-        #                  not self.instance.A._mutable
+        #                  not self.instance.A.mutable
         try:
             test = iteritems(self.instance.A)
             if self.instance.A._default_val is _NotValid:
@@ -416,7 +416,7 @@ class ParamTester(object):
             return
         idx = list(set(self.data) - set(self.sparse_data))[0]
         expectException = self.instance.A._default_val is _NotValid \
-                          and not self.instance.A._mutable
+                          and not self.instance.A.mutable
         try:
             test = self.instance.A[idx]
             if expectException:

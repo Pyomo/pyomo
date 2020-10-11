@@ -2,11 +2,12 @@ import traceback
 from collections import namedtuple
 from heapq import heappush, heappop
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time
 from pyomo.contrib.satsolver.satsolver import satisfiable
-from pyomo.core import minimize, Suffix, Constraint, ComponentMap, TransformationFactory
+from pyomo.core import minimize, Suffix, Constraint, TransformationFactory
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt import TerminationCondition as tc
 

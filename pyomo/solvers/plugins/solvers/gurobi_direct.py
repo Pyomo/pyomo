@@ -13,14 +13,13 @@ import re
 import sys
 from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
@@ -245,7 +244,7 @@ class GurobiDirect(DirectSolver):
             e = sys.exc_info()[1]
             msg = ("Unable to create Gurobi model. "
                    "Have you installed the Python "
-                   "bindings for Gurboi?\n\n\t"+
+                   "bindings for Gurobi?\n\n\t"+
                    "Error message: {0}".format(e))
             raise Exception(msg)
 
