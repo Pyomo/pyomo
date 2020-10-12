@@ -196,6 +196,9 @@ def feas_pump_loop(solve_data, config):
             c.deactivate()
         for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts:
             c.deactivate()
+    if config.fp_projcuts:
+        solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.del_component(
+            'fp_orthogonality_cuts')
 
 
 def add_orthogonality_cuts(solve_data, config):
@@ -220,3 +223,8 @@ def add_orthogonality_cuts(solve_data, config):
                             for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
     solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.add(
         orthogonality_cut)
+    if config.fp_projcuts:
+        orthogonality_cut = sum((nlp_v.value-mip_v.value)*(nlp_v-nlp_v.value)
+                                for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
+        solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.add(
+            orthogonality_cut)
