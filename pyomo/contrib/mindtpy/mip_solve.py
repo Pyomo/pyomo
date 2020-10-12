@@ -19,7 +19,7 @@ from pyomo.core.expr import current as EXPR
 from math import fabs
 from pyomo.repn import generate_standard_repn
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
@@ -74,10 +74,21 @@ def solve_master(solve_data, config, feas_pump=False):
     if feas_pump:
         if MindtPy.find_component('feas_pump_mip_obj') is not None:
             MindtPy.del_component('feas_pump_mip_obj')
-        MindtPy.feas_pump_mip_obj = generate_norm1_objective_function(
-            solve_data.mip,
-            solve_data.working_model,
-            discrete_only=config.fp_discrete_only)
+        if config.fp_master_norm == 'L1':
+            MindtPy.feas_pump_mip_obj = generate_norm1_objective_function(
+                solve_data.mip,
+                solve_data.working_model,
+                discrete_only=config.fp_discrete_only)
+        elif config.fp_master_norm == 'L2':
+            MindtPy.feas_pump_mip_obj = generate_norm2sq_objective_function(
+                solve_data.mip,
+                solve_data.working_model,
+                discrete_only=config.fp_discrete_only)
+        elif config.fp_master_norm == 'L_infinity':
+            MindtPy.feas_pump_mip_obj = generate_norm_inf_objective_function(
+                solve_data.mip,
+                solve_data.working_model,
+                discrete_only=config.fp_discrete_only)
     else:
         if config.add_slack:
             MindtPy.del_component('MindtPy_penalty_expr')

@@ -299,3 +299,8 @@ def _add_feas_pump_configs(CONFIG):
         description="Only calculate the distance among discrete variables in projection problems.",
         domain=bool
     ))
+    CONFIG.declare("fp_master_norm", ConfigValue(
+        default="L1",
+        domain=In(["L1", "L2", "L_infinity"]),
+        description="different forms of objective function MIP projection problem."
+    ))
