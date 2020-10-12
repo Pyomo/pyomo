@@ -290,3 +290,46 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
             expr=v_model - v_setpoint.value <= obj_blk.L_infinity_obj_var)
 
     return Objective(expr=obj_blk.L_infinity_obj_var)
+
+
+def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
+    """
+    This function generates objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
+    Norm1 distance of (x,y) = \sum_i |x_i - y_i|
+
+    Parameters
+    ----------
+    model: Pyomo model
+        the model that needs new objective function
+    setpoint_model: Pyomo model
+        the model that provides the base point for us to calculate the distance
+    discrete_only: Bool
+        only optimize on distance between the discrete variables
+    TODO: remove setpoint_model
+    """
+
+    var_filter = (lambda v: v.is_integer()) if discrete_only \
+        else (lambda v: True)
+    model_vars = list(filter(var_filter, model.component_data_objects(Var)))
+    setpoint_vars = list(
+        filter(var_filter, setpoint_model.component_data_objects(Var)))
+    assert len(model_vars) == len(
+        setpoint_vars), "Trying to generate Norm1 norm constraint for models with different number of variables"
+    # if model.MindtPy_utils.find_component('L1_objective_function') is not None:
+    #     model.MindtPy_utils.del_component('L1_objective_function')
+    norm_constraint_blk = model.MindtPy_utils.L1_norm_constraint = Block()
+    norm_constraint_blk.L1_slack_idx = RangeSet(len(model_vars))
+    norm_constraint_blk.L1_slack_var = Var(
+        norm_constraint_blk.L1_slack_idx, domain=Reals, bounds=(0, None))
+    norm_constraint_blk.abs_reformulation = ConstraintList()
+    for idx, v_model, v_setpoint in zip(norm_constraint_blk.L1_slack_idx, model_vars,
+                                        setpoint_vars):
+        norm_constraint_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value >= -norm_constraint_blk.L1_slack_var[idx])
+        norm_constraint_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value <= norm_constraint_blk.L1_slack_var[idx])
+    rhs = config.fp_norm_constraint_coef * \
+        sum(abs(v_model.value-v_setpoint.value)
+            for v_model, v_setpoint in zip(model_vars, setpoint_vars))
+    norm_constraint_blk.sum_slack = Constraint(
+        expr=sum(norm_constraint_blk.L1_slack_var[idx] for idx in norm_constraint_blk.L1_slack_idx) <= rhs)

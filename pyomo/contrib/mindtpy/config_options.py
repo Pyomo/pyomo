@@ -304,3 +304,13 @@ def _add_feas_pump_configs(CONFIG):
         domain=In(["L1", "L2", "L_infinity"]),
         description="different forms of objective function MIP projection problem."
     ))
+    CONFIG.declare("fp_norm_constraint", ConfigValue(
+        default=True,
+        description="Whether to add the norm constraint to FP-NLP",
+        domain=bool
+    ))
+    CONFIG.declare("fp_norm_constraint_coef", ConfigValue(
+        default=1,
+        domain=PositiveFloat,
+        description="The coefficient in the norm constraint, correspond to the Beta in the paper."
+    ))

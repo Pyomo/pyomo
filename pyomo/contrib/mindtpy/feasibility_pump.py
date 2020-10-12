@@ -1,5 +1,6 @@
 from pyomo.core import (Var, Objective, Reals, minimize,
                         RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
+from pyomo.core.base.constraint import ConstraintList
 from pyomo.opt import SolverFactory, SolutionStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
@@ -10,6 +11,8 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function
 from pyomo.contrib.mindtpy.mip_solve import solve_master, handle_master_optimal
 from pyomo.util.infeasible import log_infeasible_constraints
+
+from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
 
 
 def feas_pump_converged(solve_data, config, discrete_only=True):
@@ -51,7 +54,7 @@ def solve_feas_pump_subproblem(solve_data, config):
                        % (solve_data.fp_iter,))
 
     # Set up NLP
-    TransformationFactory('core.relax_integer_vars').apply_to(fp_nlp)
+
     main_objective = next(
         fp_nlp.component_data_objects(Objective, active=True))
     main_objective.deactivate()
@@ -61,12 +64,30 @@ def solve_feas_pump_subproblem(solve_data, config):
     else:
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
+
+    # Add norm_constraint, TODO: rename norm_constraint to like improving_distance_cut
+    if config.fp_norm_constraint:
+        if config.fp_master_norm == 'L1':
+            generate_norm1_norm_constraint(
+                fp_nlp, solve_data.mip, config, discrete_only=True)
+        elif config.fp_master_norm == 'L2':
+            fp_nlp.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
+                                                         for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.variable_list, solve_data.mip.MindtPy_utils.variable_list) if mip_var.is_integer()) <= 0)
+        elif config.fp_master_norm == 'L_infinity':
+            fp_nlp.norm_constraint = ConstraintList()
+            rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
+                fp_nlp.MindtPy_utils.variable_list, solve_data.mip.MindtPy_utils.variable_list) if mip_var.is_integer())
+            for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.variable_list, solve_data.mip.MindtPy_utils.variable_list):
+                if mip_var.is_integer():
+                    fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
+
     MindtPy.feas_pump_nlp_obj = generate_norm2sq_objective_function(
         fp_nlp, solve_data.mip, discrete_only=config.fp_discrete_only)
 
     MindtPy.MindtPy_linear_cuts.deactivate()
-    TransformationFactory('contrib.deactivate_trivial_constraints')\
-        .apply_to(fp_nlp, tmp=True, ignore_infeasible=True)
+    TransformationFactory('core.relax_integer_vars').apply_to(fp_nlp)
+    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+        fp_nlp, tmp=True, ignore_infeasible=True)
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)

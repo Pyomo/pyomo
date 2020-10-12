@@ -83,6 +83,21 @@ class TestMindtPy(unittest.TestCase):
             log_infeasible_constraints(model)
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
+    def test_FP_8PP_Norm_infinity_with_norm_constraint(self):
+        """Test the feasibility pump algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet()
+            print(
+                '\n Solving 8PP problem using feasibility pump with Norm infinity in mip projection problem')
+            results = opt.solve(model, strategy='feas_pump',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                bound_tolerance=1E-5,
+                                fp_master_norm='L_infinity',
+                                fp_norm_constraint=False)
+            log_infeasible_constraints(model)
+            self.assertTrue(is_feasible(model, self.get_config(opt)))
+
     def test_FP_simpleMINLP(self):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
