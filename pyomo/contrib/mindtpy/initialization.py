@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Initialization functions."""
 from __future__ import division
 
