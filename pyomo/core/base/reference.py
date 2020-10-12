@@ -319,6 +319,8 @@ class _ReferenceDict(collections_MutableMapping):
         )
         # Does using this iterator in __getitem__ mean that looking up an
         # index is linear in the size of the "indexing set?"
+        #
+        # Why is an IC_slice_iter object used here?
 
 if six.PY3:
     _ReferenceDict.items = _ReferenceDict.iteritems
