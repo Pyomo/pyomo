@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from pyomo.core import (Var, Objective, Reals, minimize,
                         RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
 from pyomo.core.base.constraint import ConstraintList

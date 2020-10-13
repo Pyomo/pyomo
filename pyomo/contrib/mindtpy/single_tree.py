@@ -1,6 +1,5 @@
+# -*- coding: utf-8 -*-
 from __future__ import division
-
-
 from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,

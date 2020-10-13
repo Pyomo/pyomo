@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
 import logging

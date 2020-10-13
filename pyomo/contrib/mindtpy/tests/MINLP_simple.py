@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Implementation of MINLP problem in Assignment 6 of the Advanced PSE lecture at CMU.
 
 Author: David Bernal <https://github.com/bernalde>

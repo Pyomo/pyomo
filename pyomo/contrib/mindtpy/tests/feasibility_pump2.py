@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Example 2 in paper "A Feasibility Pump for mixed integer nonlinear programs"
 
 Ref:

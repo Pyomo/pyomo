@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic

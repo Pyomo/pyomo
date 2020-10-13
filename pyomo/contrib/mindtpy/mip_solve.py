@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Master problem functions."""
 from __future__ import division
 

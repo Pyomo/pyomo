@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Solution of NLP subproblems."""
 from __future__ import division
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Iteration loop for MindtPy."""
 from __future__ import division
 

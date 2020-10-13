@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 See David Bernal PhD proposal example.
 """

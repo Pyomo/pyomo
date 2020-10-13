@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Cut generation."""
 from __future__ import division
 
