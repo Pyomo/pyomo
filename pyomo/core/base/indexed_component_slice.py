@@ -398,8 +398,6 @@ class _slice_generator(object):
 _IndexedComponent_slice = IndexedComponent_slice
 
 # Mock up a callable object with a "check_complete" method
-# This is necessary because of the API defined by
-# _fill_in_known_wildcards?
 def _advance_iter(_iter):
     return advance_iterator(_iter)
 def _advance_iter_check_complete():
