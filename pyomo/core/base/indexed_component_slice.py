@@ -531,7 +531,6 @@ class _IndexedComponent_slice_iter(object):
                         # by concrete indices in the slice hierarchy...
                         if self._slice.attribute_errors_generate_exceptions \
                            and not self._iter_over_index:
-                            # What is the significance of iter_over_index here?
                             raise
                         # Break from the inner loop; next action will be to
                         # advance the "highest-level iterator"
