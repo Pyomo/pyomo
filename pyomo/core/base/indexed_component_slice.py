@@ -778,6 +778,7 @@ class _IndexedComponent_slice_iter(object):
         the most recent indices checked by each _slice_generator
         in the iter stack.
         """
+        # This method is how we iterate over keys.
         ans = sum(
             ( tuple( x.last_index[i]
                 # last_index is the most recent recent index checked

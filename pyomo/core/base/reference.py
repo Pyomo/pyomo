@@ -85,18 +85,16 @@ class _fill_in_known_wildcards(object):
             the slice to advance
         """
         if _slice in self.known_slices:
-            # Why does iteration stop when a "known slice" is encountered?
-            # I.e. when a slice is encountered for the second time?
-            # Note that _slice is actually a slice_generator...
-            # We only want to fill in the wildcards for each slice once.
-            # Why would we ever encounter the same slice twice?
-            # 
-            # known_slices contains all the slice_generators that have
-            # previously been encountered using this iterator
+            # We have encountered the same slice twice, i.e. IC_slice_iter
+            # has constructed an iter_stack, and is now attempting to
+            # exhaust the most recent iterator in that stack.
+            # We know then that the iter stack is complete, and we
+            # tell IC_slice_iter.__next__ to wrap up by raising
+            # StopIteration.
             raise StopIteration()
         self.known_slices.add(_slice)
 
-        # What is the purpose of `idx_count`?
+        # `idx_count` is the number of indices this component needs.
         if _slice.ellipsis is None:
             idx_count = _slice.explicit_index_count
         elif not _slice.component.is_indexed():
@@ -131,15 +129,16 @@ class _fill_in_known_wildcards(object):
             _slice.last_index = idx
             # Return the component. We have successfully accessed
             # the data value.
-            #print(_slice.component[idx])
             return _slice.component[idx]
         elif len(idx) == 1 and idx[0] in _slice.component:
             # `idx` is a len-1 tuple. It is the scalar, not the tuple,
             # that is contained by the component.
             _slice.last_index = idx
-            #print(_slice.component[idx])
             return _slice.component[idx[0]]
         elif self.look_in_index:
+            # If our component is sparse and we did not find the index,
+            # we try to find the index in the index set if `look_in_index`
+            # is set to True.
             if idx in _slice.component.index_set():
                 _slice.last_index = idx
                 return _slice.component[idx] if self.get_if_not_present \
@@ -183,10 +182,17 @@ class _ReferenceDict(collections_MutableMapping):
     def __contains__(self, key):
         try:
             advance_iterator(self._get_iter(self._slice, key))
+            # This calls IC_slice_iter.__next__, which calls
+            # _fill_in_known_wildcards.
             return True
         except (StopIteration, KeyError):
             return False
         except SliceEllipsisLookupError:
+            # We failed because the notion of "location" in an index
+            # is ambiguous if the index_set has dimen None.
+            # We can still brute-force the lookup by comparing the key
+            # to the wildcards of the `last_index` cached by the
+            # slice's iterator stack.
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
             # Brute force (linear time) lookup
@@ -201,6 +207,8 @@ class _ReferenceDict(collections_MutableMapping):
             return advance_iterator(
                 self._get_iter(self._slice, key, get_if_not_present=True)
             )
+            # This calls IC_slice_iter.__next__, which calls
+            # _fill_in_known_wildcards.
         except StopIteration:
             raise KeyError("KeyError: %s" % (key,))
         except SliceEllipsisLookupError:
@@ -209,8 +217,6 @@ class _ReferenceDict(collections_MutableMapping):
             # Brute force (linear time) lookup
             _iter = iter(self._slice)
             for item in _iter:
-                # Why could this help us in the case of a
-                # SliceEllipsisLookupError?
                 if _iter.get_last_index_wildcards() == key:
                     return item
             raise KeyError("KeyError: %s" % (key,))
@@ -277,6 +283,8 @@ class _ReferenceDict(collections_MutableMapping):
         return self._slice.wildcard_keys()
 
     def __len__(self):
+        # Note that unlike for regular dicts, this means that
+        # checking length is very slow.
         return sum(1 for i in self._slice)
 
     def iteritems(self):
@@ -316,11 +324,11 @@ class _ReferenceDict(collections_MutableMapping):
             _slice,
             _fill_in_known_wildcards(flatten_tuple(key),
                                      get_if_not_present=get_if_not_present)
-        )
-        # Does using this iterator in __getitem__ mean that looking up an
-        # index is linear in the size of the "indexing set?"
-        #
-        # Why is an IC_slice_iter object used here?
+            # Construct a slice iter with `_fill_in_known_wildcards`
+            # as `advance_iter`. This uses all the logic from the slice
+            # iter to walk the call/iter stacks, but just jumps to a
+            # particular component rather than actually iterating.
+            # This is how this object does lookups.
 
 if six.PY3:
     _ReferenceDict.items = _ReferenceDict.iteritems
@@ -437,11 +445,6 @@ def _identify_wildcard_sets(iter_stack, index):
             # with ellipsis should get caught by the check for s.dimen
             # above.
             #
-            # Is it not the case that an ellipsis covering a 3-dimen set
-            # will result in offset that does not equal
-            # explicit_index_count? Or is it that this case is not 
-            # exceptional and does not warrant returning None? -RBP
-            #
             #if offset != level.explicit_index_count:
             #    return None
             tmp[i] = wildcard_sets
@@ -462,11 +465,6 @@ def _identify_wildcard_sets(iter_stack, index):
     # situations (i.e., I can't test them).  Assertions are left in for
     # defensive programming.
     assert len(index) == len(tmp)
-    # Why must the iter stacks have the same length? If we want
-    # `m.b0[:].b1[:].b2.v` and `m.b0[:].b1[:].v` to participate
-    # in the same Reference (for some reason), should they not
-    # have the same wildcard sets? To support this, only the 
-    # number of non-None entries should be compared. (?) -RBP
 
     for i, level in enumerate(tmp):
         assert (index[i] is None) == (level is None)
@@ -480,7 +478,7 @@ def _identify_wildcard_sets(iter_stack, index):
         if any(index[i].get(j,None) is not _set for j,_set in iteritems(level)):
             return None
         # These checks seem to intentionally preclude
-        # `m.b1[:].v` and `m.b2[:,1].v`
+        # `m.b1[:].v` and `m.b2[1,:].v`
         # from having a common set, even if the sliced set is the same.
         # This is probably correct, but additional explanation would
         # be helpful, as this function seems to be doing more than just
@@ -621,13 +619,8 @@ def Reference(reference, ctype=_NotSpecified):
             # skipped if the User knows better and forced a ctype on us.
             ctypes.add(0)
         if index is not None:
-            # Why would index be None here?
-            # It got set to None by _identify_wildcard_sets in a previous
-            # iteration?
-            # ^ This happens if the component _slice_generator in some
+            # This happens if the component _slice_generator in some
             # level of the iter stack is indexed by a set of dimen None.
-            #
-            # The implication is that index will become a SetOf(_ReferenceSet)?
             index = _identify_wildcard_sets(_iter._iter_stack, index)
         # Note that we want to walk the entire slice, unless we can
         # prove that BOTH there aren't common indexing sets AND there is
