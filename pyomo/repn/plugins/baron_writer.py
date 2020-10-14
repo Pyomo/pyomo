@@ -364,7 +364,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         else:
             def mutable_param_gen(b):
                 for param in block.component_objects(Param):
-                    if param._mutable and param.is_indexed():
+                    if param.mutable and param.is_indexed():
                         param_data_iter = \
                             (param_data for index, param_data
                              in iteritems(param))
@@ -635,7 +635,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
             # GAH: Not sure this is necessary, and also it would break for
             #      non-mutable indexed params so I am commenting out for now.
             #for param_data in active_components_data(block, Param, sort=sorter):
-                #instead of checking if param_data._mutable:
+                #instead of checking if param_data.mutable:
                 #if not param_data.is_constant():
                 #    create_symbol_func(symbol_map, param_data, labeler)
 
