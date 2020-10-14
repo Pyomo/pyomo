@@ -310,21 +310,22 @@ class _slice_generator(object):
         self.ellipsis = ellipsis
         self.iter_over_index = iter_over_index
 
-        # This is just checking the dimension of the index set?
         self.tuplize_unflattened_index = (
             self.component._implicit_subsets is None
             or len(self.component._implicit_subsets) == 1 )
 
         self.explicit_index_count = len(fixed) + len(sliced)
         if iter_over_index:
-            # What is the significance of this if tree?
-            # component.__iter__() should iterate over the index
-            # already, right?
+            # This should be used to iterate over all the potential
+            # indices of a sparse IndexedComponent.
             self.component_iter = component.index_set().__iter__()
         else:
+            # The default behavior is to iterate over the component.
             self.component_iter = component.__iter__()
 
-        # Cache for the most recent index returned.
+        # Cache for the most recent index returned. This is used to
+        # iterate over keys of the slice (for instance, in a
+        # _ReferenceDict).
         self.last_index = None
 
     def next(self):
@@ -360,47 +361,37 @@ class _slice_generator(object):
                     continue
             elif len(_idx) != self.explicit_index_count:
                 continue
-            # Per discussion in issue #1492, should the above
-            # cases raise exceptions?
 
             valid = True
             for key, val in iteritems(self.fixed):
                 # If this index of the component does not match all
                 # the specified fixed indices, don't return anything.
-                #
-                # Would `match` be a better name for this flag?
                 if not val == _idx[key]:
                     valid = False
                     break
             if valid:
-                # Remember the index tuple corresponding to the last
-                # component data returned by this iterator
+                # Remember the index tuple corresponding to the lastest
+                # component data returned by this iterator. In this way
+                # we can use the cached indices to iterate over "indices"
+                # of a slice.
                 #
-                # last_index is the latest index encountered, not the
-                # last index that will ever be encountered.
+                # last_index is the most recent index encountered, not 
+                # the last index that will ever be encountered.
                 self.last_index = _idx
-                # last_index is a way to cache the index in case it is
-                # needed later, e.g. when a ellipsis error occurs...
-                # Not sure exactly why it is needed in this case...
-                #
+
                 # Note: it is important to use __getitem__, as the
                 # derived class may implement a non-standard storage
                 # mechanism (e.g., Param)
                 if (not self.iter_over_index) or index in self.component:
-                    # If iter_over_index is True, index needs to be in
-                    # self.component to return the component.
-                    #
-                    # What if self.component is a reference?
-                    # Will this be slow?
+                    # If iter_over_index is False, we are iterating over
+                    # the component ("filled-in" indices only).
+                    # `advance_iter` was called on the component iter,
+                    # so we're pretty sure index is in component.
                     return self.component[index]
-                    # This class is usually instantiated with iter_over_index
-                    # False... So we try to return the component at a
-                    # potentially invalid index. Will the resulting KeyError
-                    # be caught somewhere?
                 else:
-                    # If iter_over_index is True and index not in self.component,
-                    # we return None instead of trying to return the component
-                    # at a potentially invalid index.
+                    # If iter_over_index is True, we don't need to make sure
+                    # index is in component, so we just return None in this
+                    # case.
                     return None
 
 # Backwards compatibility
@@ -443,7 +434,6 @@ class _IndexedComponent_slice_iter(object):
             assert call_stack_len == 1
             # defer creating the iterator until later
             self._iter_stack[0] = _NotIterable # Something not None
-            # What is going on here? -RBP
             # Initializing to _NotIterable is necessary to avoid an
             # error when we walk to the base of the call stack, but why
             # would `set_item` appear at the base of the call stack?
@@ -759,7 +749,6 @@ class _IndexedComponent_slice_iter(object):
                 # (i.e._fill_in_known_wildcards) is complete
                 self.advance_iter.check_complete()
                 # We have a concrete object at the end of the chain. Return it
-                #print('__next__', idx, _comp)
                 return _comp
 
     def get_last_index(self):
