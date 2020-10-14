@@ -56,7 +56,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py
+          PACKAGES: mpi4py openmpi
           NAME: /mpi
 
         exclude:
