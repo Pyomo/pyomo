@@ -23,6 +23,9 @@ OPTION(BUILD_AMPLMP_IF_NEEDED
   "Automatically enable AMPLMP build if ASL not found" OFF)
 MARK_AS_ADVANCED(BUILD_AMPLMP_IF_NEEDED)
 
+OPTION(ENABLE_HSL "Enable the HSL library interfaces" ON)
+MARK_AS_ADVANCED(ENABLE_HSL)
+
 #OPTION(STATIC_LINK "STATIC_LINK" OFF)
 
 # If we build AMPLMP, then we will get a dependency on dlopen
@@ -48,7 +51,7 @@ ENDIF()
 
 # cmake does not search LD_LIBRARY_PATH by default.  So that libraries
 # like HSL can be added through mechanisms like 'environment modules',
-# we will explicitly add LD_LIBRARY_PATH to teh search path
+# we will explicitly add LD_LIBRARY_PATH to the search path
 string(REPLACE ":" ";" LD_LIBRARY_DIR_LIST
   $ENV{LD_LIBRARY_PATH}:$ENV{DYLD_LIBRARY_PATH}
   )
@@ -96,6 +99,12 @@ FIND_LIBRARY(MA57_LIBRARY NAMES coinhsl libcoinhsl ma57 libma57
 # interface, as all versions of the HSL library contain ma27.
 IF( MA27_LIBRARY OR MA27_OBJECT )
     set_property(CACHE BUILD_MA27 PROPERTY VALUE ON)
+ENDIF()
+
+#...but if the HSL interface is not enabled, do not build the MA* libraries
+IF( NOT ENABLE_HSL )
+    set_property(CACHE BUILD_MA27 PROPERTY VALUE OFF)
+    set_property(CACHE BUILD_MA57 PROPERTY VALUE OFF)
 ENDIF()
 
 # If BUILD_AMPLMP_IF_NEEDED is set and we couldn't find / weren't

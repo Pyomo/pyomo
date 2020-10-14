@@ -24,6 +24,7 @@ PyomoUnitsContainer. You can use the module level instance already defined as
 this module using common notation.
 
     .. doctest::
+       :skipif: not pint_available
 
        >>> from pyomo.environ import units as u
        >>> print(3.0*u.kg)
@@ -37,6 +38,7 @@ like the objective function, constraint, or expression using
 There are other methods there that may be helpful for verifying correct units on a model.
 
     .. doctest::
+       :skipif: not pint_available
 
        >>> from pyomo.environ import ConcreteModel, Var, Objective
        >>> from pyomo.environ import units as u
@@ -1154,6 +1156,7 @@ class PyomoUnitsContainer(object):
         Then we can add this to the container with:
 
         .. doctest::
+            :skipif: not pint_available
             :hide:
 
             # get a local units object (to avoid duplicate registration
@@ -1164,6 +1167,7 @@ class PyomoUnitsContainer(object):
             ...     tmp = FILE.write("USD = [currency]\\n")
 
         .. doctest::
+            :skipif: not pint_available
 
             >>> u.load_definitions_from_file('my_additional_units.txt')
             >>> print(u.USD)
@@ -1184,6 +1188,7 @@ class PyomoUnitsContainer(object):
         unit, use
 
         .. doctest::
+            :skipif: not pint_available
             :hide:
 
             # get a local units object (to avoid duplicate registration
@@ -1192,6 +1197,7 @@ class PyomoUnitsContainer(object):
             >>> u = _units.PyomoUnitsContainer()
 
         .. doctest::
+            :skipif: not pint_available
 
             >>> u.load_definitions_from_strings(['USD = [currency]'])
             >>> print(u.USD)

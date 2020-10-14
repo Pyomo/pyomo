@@ -927,14 +927,13 @@ class BlockMatrix(BaseBlockMatrix):
             result = BlockVector(nblocks)
             for i in range(bm):
                 result.set_block(i, np.zeros(self._brow_lengths[i]))
-                for j in range(bn):
-                    if not self.is_empty_block(i, j):
-                        x = other.get_block(j)
-                        A = self._blocks[i, j]
-                        blk = result.get_block(i)
-                        _tmp = A*x
-                        _tmp += blk
-                        result.set_block(i, _tmp)
+            for i, j in zip(*np.nonzero(self._block_mask)):
+                    x = other.get_block(j)
+                    A = self._blocks[i, j]
+                    blk = result.get_block(i)
+                    _tmp = A*x
+                    _tmp += blk
+                    result.set_block(i, _tmp)
             return result
         elif isinstance(other, np.ndarray):
 
@@ -957,7 +956,7 @@ class BlockMatrix(BaseBlockMatrix):
                         x = other[counter: counter + A.shape[1]]
                         blk = result.get_block(i)
                         blk += A * x
-                        counter += A.shape[0]
+                    counter += self.get_col_size(j)
             return result
         elif isinstance(other, BlockMatrix) or isspmatrix(other):
             assert_block_structure(self)

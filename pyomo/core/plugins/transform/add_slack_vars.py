@@ -10,6 +10,8 @@ from pyomo.core.base.component import ComponentUID
 from pyomo.core.base import Constraint, _ConstraintData
 from pyomo.common.deprecation import deprecation_warning
 
+NAME_BUFFER = {}
+
 def target_list(x):
     deprecation_msg = ("In future releases ComponentUID targets will no "
                       "longer be supported in the core.add_slack_variables "
@@ -72,6 +74,13 @@ class AddSlackVariables(NonIsomorphicTransformation):
         super(AddSlackVariables, self).__init__(**kwds)
 
     def _apply_to(self, instance, **kwds):
+        try:
+            assert not NAME_BUFFER
+            self._apply_to_impl(instance, **kwds)
+        finally:
+            NAME_BUFFER.clear()
+
+    def _apply_to_impl(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
         targets = config.targets
@@ -116,10 +125,12 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 raise RuntimeError("Lower bound exceeds upper bound in "
                                    "constraint %s" % cons.name)
             if not cons.active: continue
+            cons_name = cons.getname(fully_qualified=True,
+                                     name_buffer=NAME_BUFFER)
             if cons.lower is not None:
                 # we add positive slack variable to body:
                 # declare positive slack
-                varName = "_slack_plus_" + cons.name
+                varName = "_slack_plus_" + cons_name
                 posSlack = Var(within=NonNegativeReals)
                 xblock.add_component(varName, posSlack)
                 # add positive slack to body expression
@@ -129,7 +140,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
             if cons.upper is not None:
                 # we subtract a positive slack variable from the body:
                 # declare slack
-                varName = "_slack_minus_" + cons.name
+                varName = "_slack_minus_" + cons_name
                 negSlack = Var(within=NonNegativeReals)
                 xblock.add_component(varName, negSlack)
                 # add negative slack to body expression
