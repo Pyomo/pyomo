@@ -854,3 +854,28 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(cons.lower, 0)
         self.assertIs(cons.body, m.y)
         self.assertIsNone(cons.upper)
+
+    def test_use_all_var_bounds(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.x = Var(bounds=(0, 15))
+        m.y = Var(bounds=(3, 5))
+        m.b.c = Constraint(expr=m.x + m.y <= 8)
+
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        fme.apply_to(m.b, vars_to_eliminate=[m.y])
+        constraints = m.b.\
+                      _pyomo_contrib_fme_transformation.projected_constraints
+
+        # if we hadn't included y's bounds, then we wouldn't get any constraints
+        # and y wouldn't be eliminated. If we do include y's bounds, we get new
+        # information that x <= 5:
+        self.assertEqual(len(constraints), 1)
+        cons = constraints[1]
+        self.assertEqual(value(cons.lower), -5)
+        self.assertIsNone(cons.upper)
+        repn = generate_standard_repn(cons.body)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertIs(repn.linear_vars[0], m.x)
+        self.assertEqual(repn.linear_coefs[0], -1)
