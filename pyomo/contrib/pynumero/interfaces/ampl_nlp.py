@@ -440,24 +440,16 @@ class AslNLP(ExtendedNLP):
     def get_eq_constraints_scaling(self):
         constraints_scaling = self.get_constraints_scaling()
         if constraints_scaling is not None:
-            # It is possible that derived classes may implement
-            # additional constraints.  We will assume that the first
-            # _n_con_full entries from get_constraints_scaling
-            # correspond to the constraints from AslNLP.
             return np.compress(self._con_full_eq_mask,
-                               constraints_scaling[:self._n_con_full])
+                               constraints_scaling)
         return None
 
     # overloaded from ExtendedNLP
     def get_ineq_constraints_scaling(self):
         constraints_scaling = self.get_constraints_scaling()
         if constraints_scaling is not None:
-            # It is possible that derived classes may implement
-            # additional constraints.  We will assume that the first
-            # _n_con_full entries from get_constraints_scaling
-            # correspond to the constraints from AslNLP.
             return np.compress(self._con_full_ineq_mask,
-                               constraints_scaling[:self._n_con_full])
+                               constraints_scaling)
         return None
 
     def _evaluate_objective_and_cache_if_necessary(self):
