@@ -324,6 +324,7 @@ class _ReferenceDict(collections_MutableMapping):
             _slice,
             _fill_in_known_wildcards(flatten_tuple(key),
                                      get_if_not_present=get_if_not_present)
+        )
             # Construct a slice iter with `_fill_in_known_wildcards`
             # as `advance_iter`. This uses all the logic from the slice
             # iter to walk the call/iter stacks, but just jumps to a
