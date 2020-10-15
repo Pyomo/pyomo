@@ -301,8 +301,8 @@ Note that
 
 is equivalent to
 
-   >>> instance.y.value = 2
-   >>> instance.y.fixed = True
+   >>> instance.x.value = 2
+   >>> instance.x.fixed = True
 
 and
    >>> instance.x.fix()
@@ -614,7 +614,7 @@ snippet:
 If multiple options are needed, then multiple dictionary entries should
 be added.
 
-Sometime it is desirable to pass options as part of the call to the
+Sometimes it is desirable to pass options as part of the call to the
 solve function as in this snippet:
 
 .. literalinclude:: tests/scripting/spy4scripts_Add_multiple_options_to_solver.spy
