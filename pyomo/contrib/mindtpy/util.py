@@ -1,8 +1,9 @@
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
-
 import logging
 from math import fabs, floor, log
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
+                                                  add_nogood_cuts, add_affine_cuts)
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
@@ -25,11 +26,22 @@ class MindtPySolveData(object):
 
 
 def model_is_valid(solve_data, config):
-    """Validate that the model is solveable by MindtPy.
+    """
+    Determines whether the model is solveable by MindtPy.
 
-    Also preforms some preprocessing such as moving the objective to the
-    constraints.
+    This function returns True if the given model is solveable by MindtPy (and performs some preprocessing such
+    as moving the objective to the constraints).
 
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+
+    Returns
+    -------
+    Boolean value (True if model is solveable in MindtPy else False)
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
@@ -47,7 +59,7 @@ def model_is_valid(solve_data, config):
                 "Your model is an NLP (nonlinear program). "
                 "Using NLP solver %s to solve." % config.nlp_solver)
             SolverFactory(config.nlp_solver).solve(
-                solve_data.original_model, **config.nlp_solver_args)
+                solve_data.original_model, tee=config.solver_tee, **config.nlp_solver_args)
             return False
         else:
             config.logger.info(
@@ -56,20 +68,34 @@ def model_is_valid(solve_data, config):
             mipopt = SolverFactory(config.mip_solver)
             if isinstance(mipopt, PersistentSolver):
                 mipopt.set_instance(solve_data.original_model)
-
-            mipopt.solve(solve_data.original_model, **config.mip_solver_args)
+            if config.threads > 0:
+                masteropt.options["threads"] = config.threads
+            mipopt.solve(solve_data.original_model,
+                         tee=config.solver_tee, **config.mip_solver_args)
             return False
 
-    if not hasattr(m, 'dual'):  # Set up dual value reporting
+    if not hasattr(m, 'dual') and config.use_dual:  # Set up dual value reporting
         m.dual = Suffix(direction=Suffix.IMPORT)
 
-    # TODO if any continuous variables are multipled with binary ones, need
-    # to do some kind of transformation (Glover?) or throw an error message
+    # TODO if any continuous variables are multiplied with binary ones,
+    #  need to do some kind of transformation (Glover?) or throw an error message
     return True
 
 
 def calc_jacobians(solve_data, config):
-    """Generate a map of jacobians."""
+    """
+    Generates a map of jacobians for the variables in the model
+
+    This function generates a map of jacobians corresponding to the variables in the model and adds this
+    ComponentMap to solve_data
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: MindtPy configurations
+        contains the specific configurations for the algorithm
+    """
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
     solve_data.jacobians = ComponentMap()
@@ -89,24 +115,53 @@ def calc_jacobians(solve_data, config):
 
 
 def add_feas_slacks(m, config):
+    """
+    Adds feasibility slack variables according to config.feasibility_norm (given an infeasible problem)
+
+    Parameters
+    ----------
+    m: model
+        Pyomo model
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     MindtPy = m.MindtPy_utils
     # generate new constraints
     for i, constr in enumerate(MindtPy.constraint_list, 1):
         if constr.body.polynomial_degree() not in [0, 1]:
-            rhs = constr.upper if constr.has_ub() else constr.lower
-            if config.feasibility_norm in {'L1', 'L2'}:
-                c = MindtPy.MindtPy_feas.feas_constraints.add(
-                    constr.body - rhs
-                    <= MindtPy.MindtPy_feas.slack_var[i])
-            else:
-                c = MindtPy.MindtPy_feas.feas_constraints.add(
-                    constr.body - rhs
-                    <= MindtPy.MindtPy_feas.slack_var)
+            if constr.has_ub():
+                if config.feasibility_norm in {'L1', 'L2'}:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.upper
+                        <= MindtPy.MindtPy_feas.slack_var[i])
+                else:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.upper
+                        <= MindtPy.MindtPy_feas.slack_var)
+            if constr.has_lb():
+                if config.feasibility_norm in {'L1', 'L2'}:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.lower
+                        >= -MindtPy.MindtPy_feas.slack_var[i])
+                else:
+                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                        constr.body - constr.lower
+                        >= -MindtPy.MindtPy_feas.slack_var)
 
 
 def var_bound_add(solve_data, config):
-    """This function will add bound for variables in nonlinear constraints if they are not bounded.
-       This is to avoid an unbound master problem in the LP/NLP algorithm.
+    """
+    This function will add bounds for variables in nonlinear constraints if they are not bounded. (This is to avoid
+    an unbounded master problem in the LP/NLP algorithm.) Thus, the model will be updated to include bounds for the
+    unbounded variables in nonlinear constraints.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
