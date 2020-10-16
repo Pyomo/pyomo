@@ -27,8 +27,6 @@ import logging
 from six import iteritems
 import inspect
 
-from nose.tools import set_trace
-
 logger = logging.getLogger('pyomo.contrib.fme')
 NAME_BUFFER = {}
 
