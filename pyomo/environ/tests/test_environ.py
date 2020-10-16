@@ -122,7 +122,7 @@ class TestPyomoEnviron(unittest.TestCase):
         # of slow-loading TPLs can vary from platform to platform.
         ref = {'tempfile', 'logging', 'ctypes', 'ssl', 'argparse',
                'textwrap', 'inspect', 'xml', 'platform', 'uuid',
-               'optparse'}
+               'optparse', 'filecmp'}
         # Non-standard-library TPLs that Pyomo will load unconditionally
         ref.add('six')
         ref.add('ply')

@@ -7,12 +7,13 @@ These decomposition algorithms usually rely on the solution of Mixed-Intger Line
 (MILP) and Nonlinear Programs (NLP).
 
 MindtPy currently implements the Outer Approximation (OA) algorithm originally described in
-`Duran & Grossmann, 1986`_. Usage and implementation
+`Duran & Grossmann, 1986`_ and the Extended Cutting Plane (ECP) algorithm originally described in `Westerlund & Petterson, 1995`_. Usage and implementation
 details for MindtPy can be found in the PSE 2018 paper Bernal et al.,
 (`ref <https://doi.org/10.1016/B978-0-444-64241-7.50144-0>`_,
 `preprint <http://egon.cheme.cmu.edu/Papers/Bernal_Chen_MindtPy_PSE2018Paper.pdf>`_).
 
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
+.. _Westerlund & Petterson, 1995: http://dx.doi.org/10.1016/0098-1354(95)87027-X
 
 Usage of MindtPy to solve a Pyomo concrete model involves:
 
@@ -57,6 +58,20 @@ The solution may then be displayed by using the commands
 .. code::
 
   >>> SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt', tee=True)
+
+MindtPy also supports setting options for mip solver and nlp solver. 
+
+.. code::
+
+  >>> SolverFactory('mindtpy').solve(model, 
+                                     strategy='OA',
+                                     time_limit=3600,
+                                     mip_solver='gams',
+                                     mip_solver_args=dict(solver='cplex', warmstart=True),
+                                     nlp_solver='ipopt',
+                                     tee=True)
+
+There are three initialization strategies in MindtPy: rNLP, initial_binary, max_binary. In OA and GOA strategies, the default initialization strategy is rNLP. In ECP strategy, the default initialization strategy is max_binary.
 
 Single tree implementation
 ---------------------------------------------
