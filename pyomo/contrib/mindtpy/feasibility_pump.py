@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 from pyomo.core import (Var, Objective, Reals, minimize,
                         RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
+from pyomo.core.base.constraint import ConstraintList
 from pyomo.opt import SolverFactory, SolutionStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
@@ -11,6 +13,8 @@ from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function
 from pyomo.contrib.mindtpy.mip_solve import solve_master, handle_master_optimal
 from pyomo.util.infeasible import log_infeasible_constraints
 
+from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
+
 
 def feas_pump_converged(solve_data, config, discrete_only=True):
     """Calculates the euclidean norm between the discretes in the mip and nlp models"""
@@ -19,8 +23,8 @@ def feas_pump_converged(solve_data, config, discrete_only=True):
                     zip(solve_data.working_model.MindtPy_utils.variable_list,
                         solve_data.mip.MindtPy_utils.variable_list)
                     if (not discrete_only) or milp_var.is_integer()))
-
-    return distance <= config.integer_tolerance
+    #
+    return distance <= config.fp_projzerotol
 
 
 def solve_feas_pump_subproblem(solve_data, config):
@@ -51,7 +55,6 @@ def solve_feas_pump_subproblem(solve_data, config):
                        % (solve_data.fp_iter,))
 
     # Set up NLP
-    TransformationFactory('core.relax_integer_vars').apply_to(fp_nlp)
     main_objective = next(
         fp_nlp.component_data_objects(Objective, active=True))
     main_objective.deactivate()
@@ -61,12 +64,30 @@ def solve_feas_pump_subproblem(solve_data, config):
     else:
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
+
+    # Add norm_constraint, TODO: rename norm_constraint to like improving_distance_cut
+    if config.fp_norm_constraint:
+        if config.fp_master_norm == 'L1':
+            generate_norm1_norm_constraint(
+                fp_nlp, solve_data.mip, config, discrete_only=True)
+        elif config.fp_master_norm == 'L2':
+            fp_nlp.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
+                                                         for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.variable_list, solve_data.mip.MindtPy_utils.variable_list) if mip_var.is_integer()) <= 0)
+        elif config.fp_master_norm == 'L_infinity':
+            fp_nlp.norm_constraint = ConstraintList()
+            rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
+                fp_nlp.MindtPy_utils.variable_list, solve_data.mip.MindtPy_utils.variable_list) if mip_var.is_integer())
+            for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.variable_list, solve_data.mip.MindtPy_utils.variable_list):
+                if mip_var.is_integer():
+                    fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
+
     MindtPy.feas_pump_nlp_obj = generate_norm2sq_objective_function(
-        fp_nlp, solve_data.mip, discrete_only=True)
+        fp_nlp, solve_data.mip, discrete_only=config.fp_discrete_only)
 
     MindtPy.MindtPy_linear_cuts.deactivate()
-    TransformationFactory('contrib.deactivate_trivial_constraints')\
-        .apply_to(fp_nlp, tmp=True, ignore_infeasible=True)
+    TransformationFactory('core.relax_integer_vars').apply_to(fp_nlp)
+    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+        fp_nlp, tmp=True, ignore_infeasible=True)
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
@@ -95,7 +116,7 @@ def handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config):
 
     # if OA-like or feas_pump converged, update Upper bound,
     # add no_good cuts and increasing objective cuts (feas_pump)
-    if feas_pump_converged(solve_data, config):
+    if feas_pump_converged(solve_data, config, discrete_only=config.fp_discrete_only):
         copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
                              solve_data.working_model.MindtPy_utils.variable_list,
                              config)
@@ -140,26 +161,26 @@ def feas_pump_loop(solve_data, config):
 
         solve_data.mip_subiter = 0
         # solve MILP master problem
-        feas_mip, feas_mip_results = solve_master(
+        feas_master, feas_master_results = solve_master(
             solve_data, config, feas_pump=True)
-        if feas_mip_results.solver.termination_condition is tc.optimal:
+        if feas_master_results.solver.termination_condition is tc.optimal:
             config.logger.info(
                 'FP-MIP %s: Distance-OBJ: %s'
                 % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.feas_pump_mip_obj)))
-        elif feas_mip_results.solver.termination_condition is tc.maxTimeLimit:
+        elif feas_master_results.solver.termination_condition is tc.maxTimeLimit:
             config.logger.warning('FP-MIP reaches max TimeLimit')
-        elif feas_mip_results.solver.termination_condition is tc.infeasible:
+        elif feas_master_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
             # TODO: needs to be checked here.
             nogood_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts
             if nogood_cuts.__len__() > 0:
                 nogood_cuts[nogood_cuts.__len__()].deactivate()
             break
-        elif feas_mip_results.solver.termination_condition is tc.unbounded:
+        elif feas_master_results.solver.termination_condition is tc.unbounded:
             config.logger.warning('FP-MIP unbounded')
             break
-        elif (feas_mip_results.solver.termination_condition is tc.other and
-              feas_mip_results.solution.status is SolutionStatus.feasible):
+        elif (feas_master_results.solver.termination_condition is tc.other and
+              feas_master_results.solution.status is SolutionStatus.feasible):
             config.logger.warning('MILP solver reported feasible solution of FP-MIP, '
                                   'but not guaranteed to be optimal.')
         else:
@@ -187,14 +208,18 @@ def feas_pump_loop(solve_data, config):
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
-    # TODO: need to be checked here about the cuts transfer from FP-MIP to OA-MIP
-    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.deactivate()
+    # solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.deactivate()
+    # deactivate the improving_objective_cut
+    if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut') is not None:
+        solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut.deactivate()
     if not config.fp_transfercuts:
         for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts:
             c.deactivate()
         for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts:
             c.deactivate()
-        solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut.deactivate()
+    if config.fp_projcuts:
+        solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.del_component(
+            'fp_orthogonality_cuts')
 
 
 def add_orthogonality_cuts(solve_data, config):
@@ -219,3 +244,8 @@ def add_orthogonality_cuts(solve_data, config):
                             for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
     solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.add(
         orthogonality_cut)
+    if config.fp_projcuts:
+        orthogonality_cut = sum((nlp_v.value-mip_v.value)*(nlp_v-nlp_v.value)
+                                for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
+        solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.add(
+            orthogonality_cut)

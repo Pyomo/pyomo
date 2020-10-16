@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Solution of NLP subproblems."""
 from __future__ import division
 
@@ -12,9 +13,10 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 from pyomo.opt.results import ProblemSense
+from pyomo.contrib.mindtpy.cut_generation import add_nogood_cuts
 
 
-def solve_NLP_subproblem(solve_data, config):
+def solve_subproblem(solve_data, config):
     """
     Solves the fixed NLP (with fixed binaries)
 
@@ -39,7 +41,7 @@ def solve_NLP_subproblem(solve_data, config):
     fixed_nlp = solve_data.working_model.clone()
     MindtPy = fixed_nlp.MindtPy_utils
     solve_data.nlp_iter += 1
-    config.logger.info('NLP %s: Solve subproblem for fixed binaries.'
+    config.logger.info('Fixed-NLP %s: Solve subproblem for fixed binaries.'
                        % (solve_data.nlp_iter,))
 
     # Set up NLP
@@ -102,10 +104,10 @@ def solve_NLP_subproblem(solve_data, config):
 # The next few functions deal with handling the solution we get from the above NLP solver function
 
 
-def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
+def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
     """
-    This function copies the result of the NLP solver function ('solve_NLP_subproblem') to the working model, updates
-    the bounds, adds OA and integer cuts, and then stores the new solution if it is the new best solution. This
+    This function copies the result of the NLP solver function ('solve_subproblem') to the working model, updates
+    the bounds, adds OA and no good cuts, and then stores the new solution if it is the new best solution. This
     function handles the result of the latest iteration of solving the NLP subproblem given an optimal solution.
 
     Parameters
@@ -140,10 +142,9 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
         solve_data.LB = max(value(main_objective.expr), solve_data.LB)
         solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
         solve_data.LB_progress.append(solve_data.LB)
-
     config.logger.info(
-        'NLP {}: OBJ: {}  LB: {}  UB: {}'
-        .format(solve_data.nlp_iter,
+        'Fixed NLP {}: OBJ: {}  LB: {}  UB: {}'
+        .format(solve_data.nlp_iter if not feas_pump else solve_data.fp_iter,
                 value(main_objective.expr),
                 solve_data.LB, solve_data.UB))
 
@@ -154,13 +155,25 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
         if config.strategy == 'GOA':
             if solve_data.results.problem.sense == ProblemSense.minimize:
                 solve_data.num_no_good_cuts_added.update(
-                    {solve_data.UB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.integer_cuts)})
+                    {solve_data.UB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts)})
             else:
                 solve_data.num_no_good_cuts_added.update(
-                    {solve_data.LB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.integer_cuts)})
+                    {solve_data.LB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts)})
 
-    # Add the linear cut
-    if config.strategy == 'OA':
+        # add obj increasing constraint for feas_pump
+        if feas_pump:
+            if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut') is not None:
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
+                    'improving_objective_cut')
+            if main_objective.sense == minimize:
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
+                                                                                                      <= solve_data.UB - config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
+            else:
+                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
+                                                                                                      >= solve_data.LB + config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
+
+            # Add the linear cut
+    if config.strategy == 'OA' or feas_pump:
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
@@ -175,10 +188,6 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
     elif config.strategy == 'GBD':
         add_gbd_cut(solve_data, config)
 
-    # This adds an integer cut to the feasible_integer_cuts
-    # ConstraintList, which is not activated by default. However, it
-    # may be activated as needed in certain situations or for certain
-    # values of option flags.
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_nogood_cuts:
         add_nogood_cuts(var_values, solve_data, config, feasible=True)
@@ -186,7 +195,7 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
 
-def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
+def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
     """
     Solves feasibility problem and adds cut according to the specified strategy
 
@@ -225,26 +234,24 @@ def handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config):
 
     if config.strategy in {'OA', 'GOA'}:
         config.logger.info('Solving feasibility problem')
-        if config.initial_feas:
-            # add_feas_slacks(fixed_nlp, solve_data)
-            # config.initial_feas = False
-            feas_NLP, feas_NLP_results = solve_NLP_feas(solve_data, config)
-            copy_var_list_values(feas_NLP.MindtPy_utils.variable_list,
-                                 solve_data.mip.MindtPy_utils.variable_list,
-                                 config)
-            if config.strategy == "OA":
-                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
-            elif config.strategy == "GOA":
-                add_affine_cuts(solve_data, config)
-    # Add an integer cut to exclude this discrete option
+        feas_subproblem, feas_subproblem_results = solve_feasibility_subproblem(
+            solve_data, config)
+        copy_var_list_values(feas_subproblem.MindtPy_utils.variable_list,
+                             solve_data.mip.MindtPy_utils.variable_list,
+                             config)
+        if config.strategy == "OA":
+            add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+        elif config.strategy == "GOA":
+            add_affine_cuts(solve_data, config)
+    # Add an no good cuts to exclude this discrete option
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_nogood_cuts:
         # excludes current discrete option
         add_nogood_cuts(var_values, solve_data, config)
 
 
-def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
-                                            solve_data, config):
+def handle_subproblem_other_termination(fixed_nlp, termination_condition,
+                                        solve_data, config):
     """
     Handles the result of the latest iteration of solving the NLP subproblem given a solution that is neither optimal
     nor infeasible.
@@ -273,7 +280,7 @@ def handle_NLP_subproblem_other_termination(fixed_nlp, termination_condition,
             'condition of {}'.format(termination_condition))
 
 
-def solve_NLP_feas(solve_data, config):
+def solve_feasibility_subproblem(solve_data, config):
     """
     Solves a feasibility NLP if the fixed_nlp problem is infeasible
 
@@ -286,20 +293,21 @@ def solve_NLP_feas(solve_data, config):
 
     Returns
     -------
-    feas_nlp: Pyomo model
+    feas_subproblem: Pyomo model
         feasibility NLP from the model
     feas_soln: Pyomo results object
         result from solving the feasibility NLP
     """
-    feas_nlp = solve_data.working_model.clone()
-    add_feas_slacks(feas_nlp, config)
+    feas_subproblem = solve_data.working_model.clone()
+    add_feas_slacks(feas_subproblem, config)
 
-    MindtPy = feas_nlp.MindtPy_utils
+    MindtPy = feas_subproblem.MindtPy_utils
     if MindtPy.find_component('objective_value') is not None:
         MindtPy.objective_value.value = 0
 
-    next(feas_nlp.component_data_objects(Objective, active=True)).deactivate()
-    for constr in feas_nlp.component_data_objects(
+    next(feas_subproblem.component_data_objects(
+        Objective, active=True)).deactivate()
+    for constr in feas_subproblem.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         if constr.body.polynomial_degree() not in [0, 1]:
             constr.deactivate()
@@ -317,7 +325,7 @@ def solve_NLP_feas(solve_data, config):
         MindtPy.MindtPy_feas_obj = Objective(
             expr=MindtPy.MindtPy_feas.slack_var,
             sense=minimize)
-    TransformationFactory('core.fix_integer_vars').apply_to(feas_nlp)
+    TransformationFactory('core.fix_integer_vars').apply_to(feas_subproblem)
     with SuppressInfeasibleWarning():
         try:
             nlpopt = SolverFactory(config.nlp_solver)
@@ -329,7 +337,7 @@ def solve_NLP_feas(solve_data, config):
                 nlp_args['add_options'].append('option reslim=%s;' % remaining)
             with time_code(solve_data.timing, 'feasibility nlp'):
                 feas_soln = nlpopt.solve(
-                    feas_nlp, tee=config.nlp_solver_tee, **nlp_args)
+                    feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)
         except (ValueError, OverflowError) as error:
             for nlp_var, orig_val in zip(
                     MindtPy.variable_list,
@@ -338,7 +346,7 @@ def solve_NLP_feas(solve_data, config):
                     nlp_var.value = orig_val
             with time_code(solve_data.timing, 'feasibility nlp'):
                 feas_soln = nlpopt.solve(
-                    feas_nlp, tee=config.nlp_solver_tee, **nlp_args)
+                    feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         copy_var_list_values(
@@ -370,4 +378,4 @@ def solve_NLP_feas(solve_data, config):
                               "This indicates that the nlp subproblem is feasible, although it is found infeasible in the previous step. "
                               "Check the nlp solver output" % value(MindtPy.MindtPy_feas_obj.expr))
 
-    return feas_nlp, feas_soln
+    return feas_subproblem, feas_soln

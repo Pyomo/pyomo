@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Re-implementation of example 1 of Quesada and Grossmann.
 
 Re-implementation of Quesada example 2 MINLP test problem in Pyomo
@@ -53,9 +54,9 @@ class SimpleMINLP(ConcreteModel):
         # CONSTRAINTS
         m.const1 = Constraint(expr=-X[2] + 5*log(X[1] + 1) + 3*Y[1] >= 0)
         m.const2 = Constraint(expr=-X[2] + X[1]**2 - Y[1] <= 1)
-        m.const3 = Constraint(expr=X[1] + X[2] +20*Y[1] <= 24)
+        m.const3 = Constraint(expr=X[1] + X[2] + 20*Y[1] <= 24)
         m.const4 = Constraint(expr=2*X[2] + 3*X[1] <= 10)
 
         """Cost (objective) function definition"""
         m.cost = Objective(expr=10*X[1]**2 - X[2] + 5*(Y[1] - 1),
-         sense=minimize)
+                           sense=minimize)

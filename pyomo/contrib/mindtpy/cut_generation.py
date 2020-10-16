@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Cut generation."""
 from __future__ import division
 
@@ -255,7 +256,9 @@ def add_ecp_cuts(target_model, solve_data, config,
 
 def add_nogood_cuts(var_values, solve_data, config, feasible=False):
     """
-    Adds integer cuts; modifies the model to include integer cuts
+    Adds no good cuts; modifies the model to include no good cuts
+    This adds an no good cuts to the feasible_nogood_cuts ConstraintList, which is not activated by default.
+    However, it may be activated as needed in certain situations or for certain values of option flags.
 
     Parameters
     ----------
@@ -300,7 +303,7 @@ def add_nogood_cuts(var_values, solve_data, config, feasible=False):
                    sum(v for v in binary_vars
                        if value(abs(v)) <= int_tol) >= 1)
 
-        MindtPy.MindtPy_linear_cuts.integer_cuts.add(expr=int_cut)
+        MindtPy.MindtPy_linear_cuts.nogood_cuts.add(expr=int_cut)
 
 
 def add_affine_cuts(solve_data, config):

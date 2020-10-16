@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic
@@ -187,7 +188,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with Outer Approximation(integer cuts)')
+            print('\n Solving Proposal problem with Outer Approximation(no good cuts)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -215,7 +216,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Outer Approximation(integer cut)')
+                '\n Solving Constraint Qualification Example with Outer Approximation(no good cuts)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],

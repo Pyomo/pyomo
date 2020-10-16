@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Problem B in paper "Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs"
 
 Ref:
