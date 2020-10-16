@@ -38,7 +38,7 @@ try:
     # matplotlib, matplotlib_available = attempt_import('matplotlib', error_message="Could not import 'matplotlib'")
     # if matplotlib_available:
     import matplotlib.pyplot as plt
-    from matplotlib import cm
+    from matplotlib.cm import get_cmap
     matplotlib_available = True
 
 except (ImportError, RuntimeError, SyntaxError):
@@ -439,7 +439,7 @@ class CommunityMap(object):
                 pos = nx.spring_layout(model_graph)
 
         # Define color_map
-        color_map = cm.get_cmap('viridis', len(numbered_community_map))
+        color_map = get_cmap('viridis', len(numbered_community_map))
 
         # Create the figure and draw the graph
         fig = plt.figure()

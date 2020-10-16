@@ -6,6 +6,7 @@ from pyomo.common.dependencies import networkx as nx
 
 logger = getLogger('pyomo.contrib.community_detection')
 
+
 def _event_log(model, model_graph, constraint_set, type_of_graph, with_objective):
     """
     Logs information about the results of the code in generate_model_graph
