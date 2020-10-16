@@ -502,7 +502,7 @@ class TestDecomposition(unittest.TestCase):
         random_seed_value = 5
         partition_of_graph = community_louvain.best_partition(model_graph, random_state=random_seed_value)
 
-        correct_partition = {3: 0, 4: 0, 5: 1, 6: 1, 7: 1, 8: 0, 9: 2, 10: 2, 11: 2}
+        correct_partition = {3: 0, 4: 1, 5: 0, 6: 0, 7: 0, 8: 2, 9: 2, 10: 2, 11: 0, 12: 1, 13: 1, 14: 1}
 
         self.assertEqual(correct_partition, partition_of_graph)
 
