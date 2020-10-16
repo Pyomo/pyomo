@@ -649,7 +649,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         # verify ValueError thrown when param list has an unmutable param
         with self.assertRaises(Exception) as context:
             m_kaug = kaug(m,[m.a,m.b], [m.pert_a,m.pert_b])
-        self.assertTrue('kaug does not support inequalities. Need to replace inequalities to equalities with slack variables' in str(context.exception))
+        self.assertTrue('kaug does not support inequality constraints.' in str(context.exception))
 
     # Test example `parameter_kaug.py`
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
