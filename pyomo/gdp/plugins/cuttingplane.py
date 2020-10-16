@@ -22,7 +22,7 @@ except:
 
 
 from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveFloat,
-                                 NonNegativeFloat)
+                                 NonNegativeFloat, PositiveInt)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
                          SortComponents, Transformation, TransformationFactory,
@@ -47,6 +47,9 @@ from numpy import isclose
 
 import math
 import logging
+
+# DEBUG
+from nose.tools import set_trace
 
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
@@ -135,8 +138,8 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
     """
     instance_rHull = transBlock_rHull.model()
     # TODO: Is this the problem? Can I make this work?
-    if norm == float('inf'):
-        rHull_vars.append(transBlock_rHull.u)
+    # if norm == float('inf'):
+    #     rHull_vars.append(transBlock_rHull.u)
 
     normal_vectors = []
     tight_constraints = Block()
@@ -148,10 +151,15 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
             active=True,
             descend_into=Block,
             sort=SortComponents.deterministic):
+        if norm == float('inf') and constraint.parent_component() is \
+           transBlock_rHull.inf_norm_linearization:
+            # we don't need to bother with these: They should all be tight, but
+            # they don't mean anything to us in terms of finding the cut
+            continue
         multiplier = _constraint_tight(instance_rHull, constraint)
         if multiplier:
             f = constraint.body
-            print(f)
+            # TODO: Yes, this is a bug with differentiate: report it
             firstDerivs = differentiate(f, wrt_list=rHull_vars)
             normal_vec = [multiplier*value(_) for _ in firstDerivs]
             normal_vectors.append(normal_vec)
@@ -167,6 +175,10 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
         # disaggregation constraints in order to do the projection.
         elif constraint in disaggregation_constraints:
             conslist[len(conslist)] = constraint.expr
+
+    # NOTE: we now have all the tight Constraints (in the pyomo sense of the
+    # word "Constraint"), but we are missing some variable bounds. The ones for
+    # the disaggregated variables will be added by FME
 
     # It is possible that the separation problem returned a point in
     # the interior of the convex hull.  It is also possible that the
@@ -205,20 +217,25 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
         if not do_fme and normal_vec_component != 0:
             do_fme = True
 
-    conslist[len(conslist)] = composite_cutexpr_Hull <= 0
+    #conslist[len(conslist)] = composite_cutexpr_Hull <= 0
 
     if do_fme:
         tight_constraints.construct()
         logger.info("Calling FME transformation on %s constraints to eliminate"
                     " %s variables" % (len(tight_constraints.constraints),
                                        len(vars_to_eliminate)))
+        tight_constraints.pprint()
+        for v in vars_to_eliminate:
+            v.pprint()
+        set_trace()
         TransformationFactory('contrib.fourier_motzkin_elimination').\
             apply_to(tight_constraints, vars_to_eliminate=vars_to_eliminate,
-                     zero_tolerance=zero_tolerance)
+                     zero_tolerance=zero_tolerance, verbose=True)
         # I made this block, so I know they are here. Not that I won't hate
         # myself later for messing with private stuff.
         fme_results = tight_constraints._pyomo_contrib_fme_transformation.\
                       projected_constraints
+        fme_results.pprint()
         projected_constraints = [cons for i, cons in iteritems(fme_results)]
     else:
         # we didn't need to project, so it's the last guy we added.
@@ -253,6 +270,9 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
             best = cut_off
             best_cut = cut
             logger.info("FME:\t New best cut: Cuts off x* by %s." % best)
+
+    set_trace()
+
     if best_cut is not None:
         return [best_cut]
 
@@ -470,11 +490,34 @@ class CuttingPlane_Transformation(Transformation):
     CONFIG.declare('minimum_improvement_threshold', ConfigValue(
         default=0.01,
         domain=PositiveFloat,
-        description="Threshold value used to decide when to stop adding cuts",
+        description="Threshold value for difference in relaxed bigM problem "
+        "objectives used to decide when to stop adding cuts",
         doc="""
         If the difference between the objectives in two consecutive iterations is
         less than this value, the algorithm terminates without adding the cut
         generated in the last iteration.  
+        """
+    ))
+    CONFIG.declare('separation_objective_threhold', ConfigValue(
+        default=0.01,
+        domain=PositiveFloat,
+        description="Threshold value used to decide when to stop adding cuts: "
+        "If separation problem objective is not at least this quantity, cut "
+        "generation will terminate.",
+        doc="""
+        If the separation problem objective (distance between relaxed bigM 
+        solution and its projection onto the relaxed hull feasible region)
+        does not exceed this threshold, the algorithm will terminate.
+        """
+    ))
+    CONFIG.declare('max_number_of_cuts', ConfigValue(
+        default=100,
+        domain=PositiveInt,
+        description="The maximum number of cuts to add before the algorithm "
+        "terminates.",
+        doc="""
+        If the algorithm does not terminate due to another criterion first,
+        cut generation will stop after adding this many cuts.
         """
     ))
     CONFIG.declare('norm', ConfigValue(
@@ -625,32 +668,42 @@ class CuttingPlane_Transformation(Transformation):
         zero_tolerance option for the Fourier-Motzkin elimination transformation.
         """
     ))
+    # TODO: integer arithmetic
 
     def __init__(self):
         super(CuttingPlane_Transformation, self).__init__()
 
     def _apply_to(self, instance, bigM=None, **kwds):
-        assert not NAME_BUFFER
-        self._config = self.CONFIG(kwds.pop('options', {}))
-        self._config.set_value(kwds)
+        log_level = logger.getEffectiveLevel()
+        try:
+            assert not NAME_BUFFER
+            self._config = self.CONFIG(kwds.pop('options', {}))
+            self._config.set_value(kwds)
 
-        if self._config.verbose:
-            logger.setLevel(logging.INFO)
+            if self._config.verbose and log_level > logging.INFO:
+                logger.setLevel(logging.INFO)
+                self.verbose = True
+            elif log_level <= logging.INFO:
+                self.verbose = True
+            else:
+                self.verbose = False
 
-        (instance_rBigM, instance_rHull, 
-         var_info, transBlockName) = self._setup_subproblems( instance, bigM,
-                                                              self._config.\
-                                                              tighten_relaxation)
+            (instance_rBigM, instance_rHull, var_info, 
+             transBlockName) = self._setup_subproblems( instance, bigM,
+                                                        self._config.\
+                                                        tighten_relaxation)
 
-        self._generate_cuttingplanes( instance_rBigM, instance_rHull, var_info,
-                                      transBlockName)
+            self._generate_cuttingplanes( instance_rBigM, instance_rHull,
+                                          var_info, transBlockName)
 
-        # restore integrality
-        TransformationFactory('core.relax_integer_vars').apply_to(instance,
-                                                                  undo=True)
-
-        # clear the global name buffer
-        NAME_BUFFER.clear()
+            # restore integrality
+            TransformationFactory('core.relax_integer_vars').apply_to(instance,
+                                                                      undo=True)
+        finally:
+            # clear the global name buffer
+            NAME_BUFFER.clear()
+            # restore logging level
+            logger.setLevel(log_level)
 
     def _setup_subproblems(self, instance, bigM, tighten_relaxation_callback):
         # create transformation block
@@ -681,7 +734,7 @@ class CuttingPlane_Transformation(Transformation):
         # problem to generate cutting planes)
         #
         tighter_instance = tighten_relaxation_callback(instance)
-        instance_rHull = hullRelaxation.create_using(instance)
+        instance_rHull = hullRelaxation.create_using(tighter_instance)
         relaxIntegrality.apply_to(instance_rHull,
                                   transform_deactivated_blocks=True)
 
@@ -710,7 +763,7 @@ class CuttingPlane_Transformation(Transformation):
                                         within=[None] | Reals)
         # we will add a block that we will deactivate to use to store the
         # extended space cuts. We never need to solve these, but we need them to
-        # be contructed for the sake of Fourier-Motzkin Elimination
+        # be constructed for the sake of Fourier-Motzkin Elimination
         extendedSpaceCuts = transBlock_rHull.extendedSpaceCuts = Block()
         extendedSpaceCuts.deactivate()
         extendedSpaceCuts.cuts = Constraint(Any)
@@ -797,7 +850,8 @@ class CuttingPlane_Transformation(Transformation):
 
         # [ESJ Aug 13 2020] NOTE: We actually don't need to worry about variable
         # bounds here becuase the FME transformation will take care of them
-        # (i.e. convert them to constraints for the purposes of the projection.)
+        # (i.e. convert those of the disaggregated variables to constraints for
+        # the purposes of the projection.)
 
         return rBigM_obj, rBigM_linear_constraints
 
@@ -853,15 +907,15 @@ class CuttingPlane_Transformation(Transformation):
                 x_star.value = x_rbigm.value
                 # initialize the X values
                 x_hull.value = x_rbigm.value
-                logger.info("\t%s = %s" % 
-                            (x_rbigm.getname(fully_qualified=True,
-                                             name_buffer=NAME_BUFFER),
-                             x_rbigm.value))
+                if self.verbose:
+                    logger.info("\t%s = %s" % 
+                                (x_rbigm.getname(fully_qualified=True,
+                                                 name_buffer=NAME_BUFFER),
+                                 x_rbigm.value))
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
             obj_diff = prev_obj - rBigM_objVal
-            #improving = True
             improving = math.isinf(obj_diff) or \
                         ( abs(obj_diff) > epsilon if abs(rBigM_objVal) < 1 else
                           abs(obj_diff/prev_obj) > epsilon )
@@ -875,19 +929,21 @@ class CuttingPlane_Transformation(Transformation):
                 return
             logger.warning("separation problem objective value: %s" %
                            value(transBlock_rHull.separation_objective))
-            logger.info("xhat is: ")
-            for x_rbigm, x_hull, x_star in var_info:
-                logger.info("\t%s = %s" % 
-                            (x_hull.getname(fully_qualified=True,
-                                            name_buffer=NAME_BUFFER), 
-                             x_hull.value))
+            if self.verbose:
+                logger.info("xhat is: ")
+                for x_rbigm, x_hull, x_star in var_info:
+                    logger.info("\t%s = %s" % 
+                                (x_hull.getname(fully_qualified=True,
+                                                name_buffer=NAME_BUFFER), 
+                                 x_hull.value))
 
             # [JDS 19 Dec 18] Note: we check that the separation objective was
             # significantly nonzero.  If it is too close to zero, either the
             # rBigM solution was in the convex hull, or the separation vector is
             # so close to zero that the resulting cut is likely to have
             # numerical issues.
-            if value(transBlock_rHull.separation_objective) < epsilon:
+            if value(transBlock_rHull.separation_objective) < \
+               self._config.separation_objective_threhold:
                 break
 
             cuts = self._config.create_cuts(transBlock_rBigM, transBlock_rHull,
@@ -913,6 +969,10 @@ class CuttingPlane_Transformation(Transformation):
                         transBlock_rBigM.cuts[cut_number], transBlock_rHull,
                         bigm_to_hull_map, opt, stream_solver,
                         self._config.back_off_problem_tolerance)
+
+            if cut_number + 1 == self._config.max_number_of_cuts:
+                logger.warning("Reached maximum number of cuts.")
+                break
                 
             prev_obj = rBigM_objVal
 
@@ -947,10 +1007,23 @@ class CuttingPlane_Transformation(Transformation):
                 inf_cons[i+1] = u >= x_star - x_hull
                 i += 2
             # we'll need the duals of these to get the subgradient
-            # TODO: I want this on the transBlock to avoid name conflicts, 
-            # but that doesn't seem to work, see #1611
-            transBlock_rHull.model().dual = Suffix(direction=Suffix.IMPORT)
+            self._add_dual_suffix(transBlock_rHull.model())
             obj_expr = u
 
         # add separation objective to transformation block
         transBlock_rHull.separation_objective = Objective(expr=obj_expr)
+
+    def _add_dual_suffix(self, rHull):
+        # rHull is our model and we aren't giving it back (unless in the future
+        # we we add a callback to do basic steps to it...), so we just check if
+        # dual is there. If it's a Suffix, we'll borrow it. If it's something
+        # else we'll rename it and add the Sufix.
+        dual = rHull.component("dual")
+        if dual is None:
+            rHull.dual = Suffix(direction=Suffix.IMPORT)
+        else:
+            if dual.ctype is Suffix:
+                return
+            rHull.del_component(dual)
+            rHull.add_component(unique_component_name(rHull, "dual"), dual)
+            rHull.dual = Suffix(direction=Suffix.IMPORT)

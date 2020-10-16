@@ -64,6 +64,7 @@ class OneVarDisj(unittest.TestCase):
 
     def check_two_segment_cuts_valid(self, m):
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        cuts.pprint()
 
         # check that all the cuts are valid everywhere
         for cut in cuts.values():
@@ -147,6 +148,16 @@ class OneVarDisj(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(
             m, bigM=1e6, norm=float('inf'),
             post_process_cut=None)
+        self.check_expected_two_segment_cut(m)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_expected_two_segment_cut_inf_norm_fme(self):
+        m = models.twoSegments_SawayaGrossmann()
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, bigM=1e6, norm=float('inf'), create_cuts=create_cuts_fme,
+            post_process_cut=None, verbose=True)
         self.check_expected_two_segment_cut(m)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
