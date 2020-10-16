@@ -450,6 +450,7 @@ class TestDecomposition(unittest.TestCase):
         correct_objective_expr = '- b[0].x + b[0].y + b[0].z'
         self.assertEqual(correct_objective_expr, objective_expr)
 
+    # This test commented out so that we can see if a particular issue is the source of failed tests
     # def test_generate_structured_model_2(self):
     #     m_class = LP_inactive_index()
     #     m_class._generate_model()
