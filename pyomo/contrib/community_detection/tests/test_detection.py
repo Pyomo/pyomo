@@ -23,7 +23,8 @@ from pyomo.common.dependencies import networkx_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Objective, Var, Integers, minimize, RangeSet, Block, ConstraintList
 from pyomo.contrib.community_detection.detection import detect_communities, CommunityMap, \
-    community_louvain_available, matplotlib_available
+    community_louvain_available, matplotlib_available, community_louvain
+from pyomo.contrib.community_detection.community_graph import generate_model_graph
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QP_simple import QP_simple
@@ -451,37 +452,88 @@ class TestDecomposition(unittest.TestCase):
         correct_objective_expr = '- b[0].x + b[0].y + b[0].z'
         self.assertEqual(correct_objective_expr, objective_expr)
 
-    # This test commented out so that we can see if a particular issue is the source of failed tests
-    # def test_generate_structured_model_2(self):
-    #     m_class = LP_inactive_index()
-    #     m_class._generate_model()
-    #     model = m = m_class.model
-    #
-    #     community_map_object = cmo = detect_communities(model, with_objective=False, random_seed=5)
-    #
-    #     # Test the number of blocks
-    #     structured_model = cmo.generate_structured_model()
-    #     self.assertIsInstance(structured_model, Block)
-    #     self.assertEqual(3, len(cmo.community_map),
-    #                      len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
-    #
-    #     # Test what components have been created
-    #     all_components = set([str(component) for component in structured_model.component_data_objects(
-    #         ctype=(Var, Constraint, Objective, ConstraintList), active=cmo.use_only_active_components,
-    #         descend_into=True)])
-    #     correct_components = {'b[2].B[2].c', 'b[1].y', 'z', 'b[0].c1[2]', 'b[1].c1[3]', 'obj[2]',
-    #                           'equality_constraint_list[3]', 'b[0].x', 'b[1].c2[1]', 'b[2].z', 'x',
-    #                           'equality_constraint_list[1]', 'b[0].c2[2]', 'y', 'equality_constraint_list[2]'}
-    #     self.assertEqual(correct_components, all_components)
-    #
-    #     # Basic test for the replacement of variables
-    #     for objective in structured_model.component_data_objects(ctype=Objective, descend_into=True):
-    #         objective_expr = str(objective.expr)  # This for loop should only execute once (only one active objective)
-    #     correct_objective_expr = '- x + y + z'
-    #     self.assertEqual(correct_objective_expr, objective_expr)
+    def test_generate_structured_model_2(self):
+        m_class = LP_inactive_index()
+        m_class._generate_model()
+        model = m = m_class.model
+
+        community_map_object = cmo = detect_communities(model, with_objective=False, random_seed=5)
+
+        # Test the number of blocks
+        structured_model = cmo.generate_structured_model()
+        self.assertIsInstance(structured_model, Block)
+        self.assertEqual(3, len(cmo.community_map),
+                         len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
+
+        # Test what components have been created
+        all_components = set([str(component) for component in structured_model.component_data_objects(
+            ctype=(Var, Constraint, Objective, ConstraintList), active=cmo.use_only_active_components,
+            descend_into=True)])
+        correct_components = {'b[2].B[2].c', 'b[1].y', 'z', 'b[0].c1[2]', 'b[1].c1[3]', 'obj[2]',
+                              'equality_constraint_list[3]', 'b[0].x', 'b[1].c2[1]', 'b[2].z', 'x',
+                              'equality_constraint_list[1]', 'b[0].c2[2]', 'y', 'equality_constraint_list[2]'}
+        self.assertEqual(correct_components, all_components)
+
+        # Basic test for the replacement of variables
+        for objective in structured_model.component_data_objects(ctype=Objective, descend_into=True):
+            objective_expr = str(objective.expr)  # This for loop should only execute once (only one active objective)
+        correct_objective_expr = '- x + y + z'
+        self.assertEqual(correct_objective_expr, objective_expr)
+
+    # Test louvain community detection to see if Python version causes any inconsistencies in community detection
+    def test_louvain_decode_1(self):
+        model = m = decode_model_1()
+        model_graph, _, _ = generate_model_graph(model, type_of_graph='constraint', with_objective=False,
+                                                 weighted_graph=False, use_only_active_components=None)
+        random_seed_value = 5
+        partition_of_graph = community_louvain.best_partition(model_graph, random_state=random_seed_value)
+
+        correct_partition = {4: 0, 5: 0, 6: 1, 7: 1, 8: 1}
+
+        self.assertEqual(correct_partition, partition_of_graph)
+
+    def test_louvain_communities_1(self):
+        m_class = LP_inactive_index()
+        m_class._generate_model()
+        model = m = m_class.model
+
+        model_graph, _, _ = generate_model_graph(model, type_of_graph='constraint', with_objective=True,
+                                                 weighted_graph=True, use_only_active_components=None)
+        random_seed_value = 5
+        partition_of_graph = community_louvain.best_partition(model_graph, random_state=random_seed_value)
+
+        correct_partition = {3: 0, 4: 0, 5: 1, 6: 1, 7: 1, 8: 0, 9: 2, 10: 2, 11: 2}
+
+        self.assertEqual(correct_partition, partition_of_graph)
 
 
 def _collect_community_maps(model):
+    """
+    This is the testing helper function, which collects all 24 possible community maps for a given model (assuming
+    that we have provided a seed value for the community detection).
+
+    This function generates all combinations of the parameters for detect_communities by looping through the types
+    of community maps we can have and then looping through every combination of the other parameters (as seen below).
+    The inner for loop is used to create 8 different combinations of parameter values for with_objective,
+    weighted_graph, and use_only_active_components by counting from 0 to 7 and then interpreting this number as a
+    binary value, which will then be used to assign a True/False value to each of the three parameters.
+
+    Parameters
+    ----------
+    model: Block
+        a Pyomo model or block to be used for community detection
+
+    Returns
+    -------
+    list_of_community_maps:
+        a list of 24 CommunityMap objects which have been stringified (the 24 community maps correspond to all the
+        combinations of parameters that are possible for detect_communities.
+        The parameters for creating the 24 community maps are:
+        type_of_community_map = ['constraint', 'variable', 'bipartite']
+        with_objective = [False, True]
+        weighted_graph = [False, True]
+        use_only_active_components = [None, True]
+    """
     random_seed_test = 5
 
     # Call the detect_communities with all possible parameter combinations for testing
