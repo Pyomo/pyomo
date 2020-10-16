@@ -16,7 +16,8 @@ from __future__ import division
 import logging
 
 import pyutilib.th as unittest
-from six import StringIO
+# from six import StringIO
+import six
 
 from pyomo.common.dependencies import networkx_available
 from pyomo.common.log import LoggingIntercept
@@ -351,7 +352,7 @@ class TestDecomposition(unittest.TestCase):
         self.assertEqual(correct_community_maps, list_of_community_maps)
 
     def test_communities_8(self):
-        output = StringIO()
+        output = six.StringIO()
 
         with LoggingIntercept(output, 'pyomo.contrib.community_detection', logging.ERROR):
             detect_communities(ConcreteModel())
