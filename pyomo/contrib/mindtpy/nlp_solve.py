@@ -93,8 +93,9 @@ def solve_NLP_subproblem(solve_data, config):
         nlp_args['add_options'] = nlp_args.get('add_options', [])
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
     with SuppressInfeasibleWarning():
-        results = nlpopt.solve(
-            fixed_nlp, tee=config.solver_tee, **nlp_args)
+        with time_code(solve_data.timing, 'fixed nlp'):
+            results = nlpopt.solve(
+                fixed_nlp, tee=config.nlp_solver_tee, **nlp_args)
     return fixed_nlp, results
 
 
@@ -326,23 +327,25 @@ def solve_NLP_feas(solve_data, config):
             if config.nlp_solver == 'gams':
                 nlp_args['add_options'] = nlp_args.get('add_options', [])
                 nlp_args['add_options'].append('option reslim=%s;' % remaining)
-            feas_soln = nlpopt.solve(
-                feas_nlp, tee=config.solver_tee, **nlp_args)
+            with time_code(solve_data.timing, 'feasibility nlp'):
+                feas_soln = nlpopt.solve(
+                    feas_nlp, tee=config.nlp_solver_tee, **nlp_args)
         except (ValueError, OverflowError) as error:
             for nlp_var, orig_val in zip(
                     MindtPy.variable_list,
                     solve_data.initial_var_values):
                 if not nlp_var.fixed and not nlp_var.is_binary():
                     nlp_var.value = orig_val
-            feas_soln = nlpopt.solve(
-                feas_nlp, tee=config.solver_tee, **nlp_args)
+            with time_code(solve_data.timing, 'feasibility nlp'):
+                feas_soln = nlpopt.solve(
+                    feas_nlp, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         copy_var_list_values(
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
-    elif subprob_terminate_cond is tc.infeasible:
+    elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         raise ValueError('Feasibility NLP infeasible. '
                          'This should never happen.')
     elif subprob_terminate_cond is tc.maxIterations:

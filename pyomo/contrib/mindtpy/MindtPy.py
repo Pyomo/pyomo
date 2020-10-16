@@ -105,6 +105,10 @@ class MindtPySolver(object):
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.bound_tolerance
 
+        if config.solver_tee:
+            config.mip_solver_tee = True
+            config.nlp_solver_tee = True
+
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
         if obj.expr.polynomial_degree() == 0:
@@ -255,7 +259,6 @@ class MindtPySolver(object):
         solve_data.results.solver.timing = solve_data.timing
         solve_data.results.solver.user_time = solve_data.timing.total
         solve_data.results.solver.wallclock_time = solve_data.timing.total
-
         solve_data.results.solver.iterations = solve_data.mip_iter
         solve_data.results.solver.best_solution_found_time = solve_data.best_solution_found_time
 

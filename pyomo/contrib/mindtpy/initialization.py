@@ -81,7 +81,7 @@ def MindtPy_initialize_master(solve_data, config):
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
                 handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
+            elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
                 handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
             else:
                 handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
@@ -114,7 +114,7 @@ def init_rNLP(solve_data, config):
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
-            m, tee=config.solver_tee, **nlp_args)
+            m, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
         if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
@@ -145,7 +145,7 @@ def init_rNLP(solve_data, config):
             for var in solve_data.mip.component_data_objects(ctype=Var):
                 if var.is_integer():
                     var.value = int(round(var.value))
-    elif subprob_terminate_cond is tc.infeasible:
+    elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         # TODO fail? try something else?
         config.logger.info(
             'Initial relaxed NLP problem is infeasible. '
@@ -208,7 +208,7 @@ def init_max_binaries(solve_data, config):
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.001;')
-    results = opt.solve(m, tee=config.solver_tee, **mip_args)
+    results = opt.solve(m, tee=config.mip_solver_tee, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:

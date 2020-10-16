@@ -5,7 +5,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, time_code
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
@@ -122,30 +122,37 @@ def solve_OA_master(solve_data, config):
         mip_args['add_options'].append('option reslim=%s;' % remaining)
     # elif config.mip_solver == 'glpk':
     #     masteropt.options['timelimit'] = remaining
-    master_mip_results = masteropt.solve(
-        solve_data.mip, tee=config.solver_tee, **mip_args)
+    try:
+        with time_code(solve_data.timing, 'mip'):
+            master_mip_results = masteropt.solve(
+                solve_data.mip, tee=config.mip_solver_tee, **mip_args)
 
-    # if config.single_tree is False and config.add_nogood_cuts is False:
+        # if config.single_tree is False and config.add_nogood_cuts is False:
 
-    if master_mip_results.solver.termination_condition is tc.optimal:
-        if config.single_tree and config.add_nogood_cuts is False:
-            if main_objective.sense == minimize:
-                solve_data.LB = max(
-                    master_mip_results.problem.lower_bound, solve_data.LB)
-                solve_data.LB_progress.append(solve_data.LB)
-            else:
-                solve_data.UB = min(
-                    master_mip_results.problem.upper_bound, solve_data.UB)
-                solve_data.UB_progress.append(solve_data.UB)
+        if master_mip_results.solver.termination_condition is tc.optimal:
+            if config.single_tree and config.add_nogood_cuts is False:
+                if main_objective.sense == minimize:
+                    solve_data.LB = max(
+                        master_mip_results.problem.lower_bound, solve_data.LB)
+                    solve_data.LB_progress.append(solve_data.LB)
+                else:
+                    solve_data.UB = min(
+                        master_mip_results.problem.upper_bound, solve_data.UB)
+                    solve_data.UB_progress.append(solve_data.UB)
 
-    elif master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
-        # Linear solvers will sometimes tell me that it's infeasible or
-        # unbounded during presolve, but fails to distinguish. We need to
-        # resolve with a solver option flag on.
-        master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
-            solve_data.mip, config)
-
-    return solve_data.mip, master_mip_results
+        elif master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
+            # Linear solvers will sometimes tell me that it's infeasible or
+            # unbounded during presolve, but fails to distinguish. We need to
+            # resolve with a solver option flag on.
+            master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
+                solve_data.mip, config)
+        return solve_data.mip, master_mip_results
+    except ValueError:
+        config.logger.warning("ValueError: Cannot load a SolverResults object with bad status: error. "
+                              "MIP solver failed. This usually happens in the single-tree GOA algorithm. "
+                              "Nogood cuts are added and GOA algorithm doesn't converge within the time limit. "
+                              "No integer solution is found, so the cplex solver will report an error status. ")
+        return None, None
 
 
 # The following functions deal with handling the solution we get from the above MIP solver function
@@ -355,4 +362,4 @@ def handle_master_mip_unbounded(master_mip, solve_data, config):
         if isinstance(opt, PersistentSolver):
             opt.set_instance(master_mip)
         master_mip_results = opt.solve(
-            master_mip, tee=config.solver_tee, **config.mip_solver_args)
+            master_mip, tee=config.mip_solver_tee, **config.mip_solver_args)
