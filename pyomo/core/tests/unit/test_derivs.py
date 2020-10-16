@@ -224,8 +224,8 @@ class TestDerivs(unittest.TestCase):
 
     def test_linear_expression(self):
         m = pe.ConcreteModel()
-        m.x = pe.Var(initialize=2)
-        m.y = pe.Var(initialize=3)
+        m.x = pe.Var(initialize=2.0)
+        m.y = pe.Var(initialize=3.0)
         m.p = pe.Param(initialize=2.5, mutable=True)
         e = LinearExpression(constant=m.p, linear_vars=[m.x, m.y], linear_coefs=[1.8, m.p])
         e = pe.log(e)
@@ -237,7 +237,7 @@ class TestDerivs(unittest.TestCase):
 
     def test_NPV(self):
         m = pe.ConcreteModel()
-        m.p = pe.Param(initialize=2, mutable=True)
+        m.p = pe.Param(initialize=2.0, mutable=True)
         e = pe.log(m.p)
         derivs = reverse_ad(e)
         symbolic = reverse_sd(e)
