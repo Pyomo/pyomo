@@ -56,10 +56,10 @@ def do_not_tighten(m):
     return m
 
 def _norm_domain(p):
-    if p in [1, 2, float('inf')]:
+    if p in [2, float('inf')]:
         return p
-    raise ValueError("Expected 1, 2, or float('inf')."
-                     "Only L-1, L-2, and L-infinity norms are supported.")
+    raise ValueError("Expected 2, or float('inf')."
+                     "Only L-2, and L-infinity norms are supported.")
 
 def _get_constraint_exprs(constraints, hull_to_bigm_map):
     """Returns a list of expressions which are constrain.expr translated 
@@ -102,7 +102,7 @@ def _get_linear_approximation_expr(normal_vec, point):
 def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
                     hull_to_bigm_map, rBigM_linear_constraints, rHull_vars,
                     disaggregated_vars, disaggregation_constraints, norm,
-                    cut_threshold, zero_tolerance):
+                    cut_threshold, zero_tolerance, integer_arithmetic):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
     Finds all the constraints which are tight at xhat (assumed to be the 
@@ -132,6 +132,9 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
                    to consider the cut for addition to the bigM model.
     zero_tolerance: Tolerance at which a float will be treated as 0 during
                     Fourier-Motzkin elimination
+    integer_arithmetic: boolean, whether or not to require Fourier-Motzkin
+                        Elimination does integer arithmetic. Only possible 
+                        when all data is integer.
     """
     instance_rHull = transBlock_rHull.model()
 
@@ -186,7 +189,8 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
                                    len(disaggregated_vars)))
     TransformationFactory('contrib.fourier_motzkin_elimination').\
         apply_to(tight_constraints, vars_to_eliminate=disaggregated_vars,
-                 zero_tolerance=zero_tolerance, verbose=True)
+                 zero_tolerance=zero_tolerance,
+                 do_integer_arithmetic=integer_arithmetic)
     # I made this block, so I know they are here. Not that I won't hate
     # myself later for messing with private stuff.
     fme_results = tight_constraints._pyomo_contrib_fme_transformation.\
@@ -232,7 +236,7 @@ def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
                               hull_to_bigm_map, rBigM_linear_constraints,
                               rHull_vars, disaggregated_vars,
                               disaggregation_constraints, norm, cut_threshold,
-                              zero_tolerance):
+                              zero_tolerance, integer_arithmetic):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
     Ignores all parameters except var_info and cut_threshold, and constructs 
@@ -264,6 +268,8 @@ def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
                    to consider the cut for addition to the bigM model.
     zero_tolerance: Tolerance at which a float will be treated as 0 during
                     Fourier-Motzkin elimination. Ignored by this callback
+    integer_arithmetic: Ignored by this callback (specifies FME use integer
+                        arithmetic)
     """
     cut_number = len(transBlock_rBigM.cuts)
 
@@ -400,6 +406,9 @@ class CuttingPlane_Transformation(Transformation):
                               solution in order to be added to the bigM model
     zero_tolerance : Tolerance at which a float will be considered 0 when
                      using Fourier-Motzkin elimination to create cuts.
+    do_integer_arithmetic : Whether or not to require Fourier-Motzkin elimination
+                            to do integer arithmetic. Only possible when all
+                            data is integer.
 
     By default, the callbacks will be set such that the algorithm performed is
     as presented in [1], but with an additional post-processing procedure to
@@ -618,8 +627,19 @@ class CuttingPlane_Transformation(Transformation):
         zero_tolerance option for the Fourier-Motzkin elimination transformation.
         """
     ))
-    # TODO: integer arithmetic
-
+    CONFIG.declare('do_integer_arithmetic', ConfigValue(
+        default=False,
+        domain=bool,
+        description="Only relevant if using Fourier-Motzkin Elimination (FME) "
+        "and if all problem data is integer, requires FME transformation to "
+        "perform integer arithmetic to eliminate numerical error.",
+        doc="""
+        Only relevant when create_cuts=create_cuts_fme and if all problem data 
+        is integer, this sets the do_integer_arithmetic flag to true for the 
+        FME transformation, meaning that the projection to the big-M space 
+        can be done with exact precision.
+        """
+    ))
     def __init__(self):
         super(CuttingPlane_Transformation, self).__init__()
 
@@ -903,7 +923,8 @@ class CuttingPlane_Transformation(Transformation):
                                             disaggregation_constraints,
                                             self._config.norm,
                                             self._config.cut_filtering_threshold,
-                                            self._config.zero_tolerance)
+                                            self._config.zero_tolerance,
+                                            self._config.do_integer_arithmetic)
            
             # We are done if the cut generator couldn't return a valid cut
             if cuts is None or not improving:

@@ -143,6 +143,10 @@ class OneVarDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_expected_two_segment_cut_inf_norm(self):
         m = models.twoSegments_SawayaGrossmann()
+        
+        # make sure this is fine if dual Suffix is already on model
+        m.dual = Suffix(direction=Suffix.IMPORT)
+
         # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
         # 0 <= Y <= 1 (in the limit)
         TransformationFactory('gdp.cuttingplane').apply_to(
@@ -197,6 +201,10 @@ class OneVarDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_two_segment_cuts_valid_inf_norm(self):
         m = models.twoSegments_SawayaGrossmann()
+
+        # make sure this is fine if there is a random component called dual
+        m.dual = Var()
+
         # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
         # 0 <= Y <= 1 (in the limit)
         # This one has to post process, but it is correct with the default
@@ -205,6 +213,51 @@ class OneVarDisj(unittest.TestCase):
             m, bigM=1e6, norm=float('inf'))
 
         self.check_two_segment_cuts_valid(m)
+
+    def check_expected_two_segment_cut_exact(self, m):
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+        # I should get one cut because I made bigM really bad, but I only need
+        # one facet of the convex hull for this problem to be done.
+        self.assertEqual(len(cuts), 1)
+
+        # check that the cut is exact.
+        cut_expr = cuts[0].body
+        # should be 2Y_2 <= x
+        m.x.fix(0)
+        m.disj1.indicator_var.fix(1)
+        m.disj2.indicator_var.fix(0)
+        # The almost equal here is OK because we are going to check that it is
+        # actually valid in the next test. I just wanted to make sure it is the
+        # line I am expecting, so I want to know that it is tight here...
+        self.assertEqual(value(cut_expr), 0)
+
+        # ...and that it is tight here
+        m.x.fix(2)
+        m.disj2.indicator_var.fix(1)
+        m.disj1.indicator_var.fix(0)
+        self.assertEqual(value(cut_expr), 0)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_integer_arithmetic_cuts_valid_l2(self):
+        m = models.twoSegments_SawayaGrossmann()
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, bigM=1e6, create_cuts=create_cuts_fme,
+            post_process_cut=None, do_integer_arithmetic=True)
+        
+        self.check_expected_two_segment_cut_exact(m)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_integer_arithmetic_cuts_valid_inf_norm(self):
+        m = models.twoSegments_SawayaGrossmann()
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, bigM=1e6, create_cuts=create_cuts_fme, norm=float('inf'),
+            post_process_cut=None, do_integer_arithmetic=True)
+        
+        self.check_expected_two_segment_cut_exact(m)
 
 class TwoTermDisj(unittest.TestCase):
     extreme_points = [
@@ -828,10 +881,6 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
         # check that the cuts are in the correct direction. (Which one can lose
         # confidence about in the case of numerical difficulties...)
         m = models.twoDisj_twoCircles_easy()
-        # ESJ TODO: The would-be-third cut is total garbage... I'm not sure why
-        # we don't detect that? It cuts off an extreme point by 0.3 or
-        # something. I think this is a problem with using ipopt, but I don't
-        # know the solution...
         TransformationFactory('gdp.cuttingplane').apply_to(
             m, bigM=1e6, norm=float('inf'), cut_filtering_threshold=0.5)
         self.check_cuts_valid_for_other_extreme_points(m)
