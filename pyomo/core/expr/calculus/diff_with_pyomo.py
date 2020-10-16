@@ -53,7 +53,7 @@ def _diff_SumExpression(node, val_dict, der_dict):
         der_dict[arg] += der
 
 
-def _diff_LinearExpression(node: _expr.LinearExpression, val_dict, der_dict):
+def _diff_LinearExpression(node, val_dict, der_dict):
     der = der_dict[node]
     for ndx, v in enumerate(node.linear_vars):
         coef = node.linear_coefs[ndx]
