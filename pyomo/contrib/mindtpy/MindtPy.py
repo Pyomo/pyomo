@@ -22,14 +22,11 @@ from __future__ import division
 
 import logging
 
-from pyomo.common.config import (
-    ConfigBlock, ConfigValue, In, PositiveFloat, PositiveInt
-)
 from pyomo.contrib.gdpopt.util import (
-    _DoNothing, copy_var_list_values,
+    copy_var_list_values,
     create_utility_block,
     restore_logger_level, time_code,
-    setup_results_object, process_objective, a_logger, lower_logger_level_to)
+    setup_results_object, process_objective, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import (
@@ -37,10 +34,11 @@ from pyomo.contrib.mindtpy.util import (
 )
 from pyomo.core import (
     Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var, value,
-    VarList, TransformationFactory)
+    VarList, TransformationFactory, Objective)
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
-
+from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.contrib.mindtpy.config_options import _get_GDPopt_config
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -53,214 +51,7 @@ __version__ = (0, 1, 0)
 class MindtPySolver(object):
     """A decomposition-based MINLP solver.
     """
-
-    CONFIG = ConfigBlock("MindtPy")
-    CONFIG.declare("bound_tolerance", ConfigValue(
-        default=1E-5,
-        domain=PositiveFloat,
-        description="Bound tolerance",
-        doc="Relative tolerance for bound feasibility checks."
-    ))
-    CONFIG.declare("iteration_limit", ConfigValue(
-        default=30,
-        domain=PositiveInt,
-        description="Iteration limit",
-        doc="Number of maximum iterations in the decomposition methods."
-    ))
-    CONFIG.declare("time_limit", ConfigValue(
-        default=600,
-        domain=PositiveInt,
-        description="Time limit (seconds, default=600)",
-        doc="Seconds allowed until terminated. Note that the time limit can"
-            "currently only be enforced between subsolver invocations. You may"
-            "need to set subsolver time limits as well."
-    ))
-    CONFIG.declare("strategy", ConfigValue(
-        default="OA",
-        domain=In(["OA", "GBD", "ECP", "PSC"]),
-        description="Decomposition strategy",
-        doc="MINLP Decomposition strategy to be applied to the method. "
-            "Currently available Outer Approximation (OA), Extended Cutting "
-            "Plane (ECP), Partial Surrogate Cuts (PSC), and Generalized "
-            "Benders Decomposition (GBD)."
-    ))
-    CONFIG.declare("init_strategy", ConfigValue(
-        default="rNLP",
-        domain=In(["rNLP", "initial_binary", "max_binary"]),
-        description="Initialization strategy",
-        doc="Initialization strategy used by any method. Currently the "
-            "continuous relaxation of the MINLP (rNLP), solve a maximal "
-            "covering problem (max_binary), and fix the initial value for "
-            "the integer variables (initial_binary)."
-    ))
-    CONFIG.declare("max_slack", ConfigValue(
-        default=1000.0,
-        domain=PositiveFloat,
-        description="Maximum slack variable",
-        doc="Maximum slack variable value allowed for the Outer Approximation "
-            "cuts."
-    ))
-    CONFIG.declare("OA_penalty_factor", ConfigValue(
-        default=1000.0,
-        domain=PositiveFloat,
-        description="Outer Approximation slack penalty factor",
-        doc="In the objective function of the Outer Approximation method, the "
-            "slack variables corresponding to all the constraints get "
-            "multiplied by this number and added to the objective."
-    ))
-    CONFIG.declare("ECP_tolerance", ConfigValue(
-        default=1E-4,
-        domain=PositiveFloat,
-        description="ECP tolerance",
-        doc="Feasibility tolerance used to determine the stopping criterion in"
-            "the ECP method. As long as nonlinear constraint are violated for "
-            "more than this tolerance, the method will keep iterating."
-    ))
-    CONFIG.declare("nlp_solver", ConfigValue(
-        default="ipopt",
-        domain=In(["ipopt", "gams"]),
-        description="NLP subsolver name",
-        doc="Which NLP subsolver is going to be used for solving the nonlinear"
-            "subproblems."
-    ))
-    CONFIG.declare("nlp_solver_args", ConfigBlock(
-        implicit=True,
-        description="NLP subsolver options",
-        doc="Which NLP subsolver options to be passed to the solver while "
-            "solving the nonlinear subproblems."
-    ))
-    CONFIG.declare("mip_solver", ConfigValue(
-        default="glpk",
-        domain=In(["gurobi", "cplex", "cbc", "glpk", "gams",
-                   "gurobi_persistent", "cplex_persistent"]),
-        description="MIP subsolver name",
-        doc="Which MIP subsolver is going to be used for solving the mixed-"
-            "integer master problems."
-    ))
-    CONFIG.declare("mip_solver_args", ConfigBlock(
-        implicit=True,
-        description="MIP subsolver options",
-        doc="Which MIP subsolver options to be passed to the solver while "
-            "solving the mixed-integer master problems."
-    ))
-    CONFIG.declare("call_after_master_solve", ConfigValue(
-        default=_DoNothing(),
-        domain=None,
-        description="Function to be executed after every master problem",
-        doc="Callback hook after a solution of the master problem."
-    ))
-    CONFIG.declare("call_after_subproblem_solve", ConfigValue(
-        default=_DoNothing(),
-        domain=None,
-        description="Function to be executed after every subproblem",
-        doc="Callback hook after a solution of the nonlinear subproblem."
-    ))
-    CONFIG.declare("call_after_subproblem_feasible", ConfigValue(
-        default=_DoNothing(),
-        domain=None,
-        description="Function to be executed after every feasible subproblem",
-        doc="Callback hook after a feasible solution"
-            " of the nonlinear subproblem."
-    ))
-    CONFIG.declare("tee", ConfigValue(
-        default=False,
-        description="Stream output to terminal.",
-        domain=bool
-    ))
-    CONFIG.declare("logger", ConfigValue(
-        default='pyomo.contrib.mindtpy',
-        description="The logger object or name to use for reporting.",
-        domain=a_logger
-    ))
-    CONFIG.declare("small_dual_tolerance", ConfigValue(
-        default=1E-8,
-        description="When generating cuts, small duals multiplied "
-                    "by expressions can cause problems. Exclude all duals "
-                    "smaller in absolute value than the following."
-    ))
-    CONFIG.declare("integer_tolerance", ConfigValue(
-        default=1E-5,
-        description="Tolerance on integral values."
-    ))
-    CONFIG.declare("constraint_tolerance", ConfigValue(
-        default=1E-6,
-        description="Tolerance on constraint satisfaction."
-    ))
-    CONFIG.declare("variable_tolerance", ConfigValue(
-        default=1E-8,
-        description="Tolerance on variable bounds."
-    ))
-    CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-8,
-        description="Tolerance on variable equal to zero."
-    ))
-    CONFIG.declare("initial_feas", ConfigValue(
-        default=True,
-        description="Apply an initial feasibility step.",
-        domain=bool
-    ))
-    CONFIG.declare("obj_bound", ConfigValue(
-        default=1E15,
-        domain=PositiveFloat,
-        description="Bound applied to the linearization of the objective function if master MILP is unbounded."
-    ))
-    CONFIG.declare("integer_to_binary", ConfigValue(
-        default=False,
-        description="Convert integer variables to binaries (for integer cuts).",
-        domain=bool
-    ))
-    CONFIG.declare("add_integer_cuts", ConfigValue(
-        default=False,
-        description="Add integer cuts (no-good cuts) to binary variables to disallow same integer solution again."
-                    "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
-        domain=bool
-    ))
-    CONFIG.declare("single_tree", ConfigValue(
-        default=False,
-        description="Use single tree implementation in solving the MILP master problem.",
-        domain=bool
-    ))
-    CONFIG.declare("solution_pool", ConfigValue(
-        default=False,
-        description="Use solution pool in solving the MILP master problem.",
-        domain=bool
-    ))
-    CONFIG.declare("add_slack", ConfigValue(
-        default=False,
-        description="whether add slack variable here."
-                    "slack variables here are used to deal with nonconvex MINLP.",
-        domain=bool
-    ))
-    CONFIG.declare("continuous_var_bound", ConfigValue(
-        default=1e10,
-        description="default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.",
-        domain=PositiveFloat
-    ))
-    CONFIG.declare("integer_var_bound", ConfigValue(
-        default=1e9,
-        description="default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.",
-        domain=PositiveFloat
-    ))
-    CONFIG.declare("cycling_check", ConfigValue(
-        default=True,
-        description="check if OA algorithm is stalled in a cycle and terminate.",
-        domain=bool
-    ))
-    CONFIG.declare("feasibility_norm", ConfigValue(
-        default="L_infinity",
-        domain=In(["L1", "L2", "L_infinity"]),
-        description="different forms of objective function in feasibility subproblem."
-    ))
-    CONFIG.declare("differentiate_mode", ConfigValue(
-        default="reverse_symbolic",
-        domain=In(["reverse_symbolic", "sympy"]),
-        description="differentiate mode to calculate jacobian."
-    ))
-    CONFIG.declare("linearize_inactive", ConfigValue(
-        default=False,
-        description="Add OA cuts for inactive constraints.",
-        domain=bool
-    ))
+    CONFIG = _get_GDPopt_config()
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -288,11 +79,11 @@ class MindtPySolver(object):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
 
-        # configration confirmation
+        # configuration confirmation
         if config.single_tree:
             config.iteration_limit = 1
             config.add_slack = False
-            config.add_integer_cuts = False
+            config.add_nogood_cuts = False
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
                 "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
@@ -300,11 +91,35 @@ class MindtPySolver(object):
         if config.max_slack == 0.0:
             config.add_slack = False
 
+        if config.strategy == "GOA":
+            config.add_nogood_cuts = True
+            config.add_slack = True
+            config.use_mcpp = True
+            config.integer_to_binary = True
+            config.use_dual = False
+            config.use_fbbt = True
+
+        if config.nlp_solver == "baron":
+            config.use_dual = False
+        # if ecp tolerance is not provided use bound tolerance
+        if config.ecp_tolerance is None:
+            config.ecp_tolerance = config.bound_tolerance
+
+        # if the objective function is a constant, dual bound constraint is not added.
+        obj = next(model.component_data_objects(ctype=Objective, active=True))
+        if obj.expr.polynomial_degree() == 0:
+            config.use_dual_bound = False
+
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
         solve_data.timing = Container()
         solve_data.curr_int_sol = []
         solve_data.prev_int_sol = []
+
+        if config.use_fbbt:
+            fbbt(model)
+            config.logger.info(
+                "Use the fbbt to tighten the bounds of variables")
 
         solve_data.original_model = model
         solve_data.working_model = model.clone()
@@ -320,7 +135,7 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            process_objective(solve_data, config, use_mcpp=False)
+            process_objective(solve_data, config, use_mcpp=config.use_mcpp)
 
             # Save model initial values.
             solve_data.initial_var_values = list(
@@ -329,6 +144,7 @@ class MindtPySolver(object):
             # Store the initial model state as the best solution found. If we
             # find no better solution, then we will restore from this copy.
             solve_data.best_solution_found = None
+            solve_data.best_solution_found_time = None
 
             # Record solver name
             solve_data.results.solver.name = 'MindtPy' + str(config.strategy)
@@ -373,6 +189,10 @@ class MindtPySolver(object):
             solve_data.UB = float('inf')
             solve_data.LB_progress = [solve_data.LB]
             solve_data.UB_progress = [solve_data.UB]
+            if config.single_tree and config.add_nogood_cuts:
+                solve_data.stored_bound = {}
+            if config.strategy == 'GOA' and config.add_nogood_cuts:
+                solve_data.num_no_good_cuts_added = {}
 
             # Set of NLP iterations for which cuts were generated
             lin.nlp_iters = Set(dimen=1)
@@ -400,12 +220,13 @@ class MindtPySolver(object):
             # iteration or not
             solve_data.solution_improved = False
 
-            if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
-                solve_data.working_model.ipopt_zL_out = Suffix(
-                    direction=Suffix.IMPORT)
-            if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
-                solve_data.working_model.ipopt_zU_out = Suffix(
-                    direction=Suffix.IMPORT)
+            if config.nlp_solver == 'ipopt':
+                if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
+                    solve_data.working_model.ipopt_zL_out = Suffix(
+                        direction=Suffix.IMPORT)
+                if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
+                    solve_data.working_model.ipopt_zU_out = Suffix(
+                        direction=Suffix.IMPORT)
 
             # Initialize the master problem
             with time_code(solve_data.timing, 'initialization'):
@@ -436,6 +257,7 @@ class MindtPySolver(object):
         solve_data.results.solver.wallclock_time = solve_data.timing.total
 
         solve_data.results.solver.iterations = solve_data.mip_iter
+        solve_data.results.solver.best_solution_found_time = solve_data.best_solution_found_time
 
         if config.single_tree:
             solve_data.results.solver.num_nodes = solve_data.nlp_iter - \

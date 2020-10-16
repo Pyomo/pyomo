@@ -5,15 +5,12 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
                                              handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination, solve_NLP_feas)
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_int_cut)
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
 from math import copysign
 from pyomo.environ import *
@@ -30,6 +27,23 @@ single_tree, single_tree_available = attempt_import(
 
 
 def solve_OA_master(solve_data, config):
+    """
+    This function solves the MIP master problem for the OA algorithm
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+
+    Returns
+    -------
+    solve_data.mip: Pyomo model
+        the MIP stored in solve_data
+    master_mip_results: Pyomo results object
+        result from solving the master MIP
+    """
     solve_data.mip_iter += 1
     MindtPy = solve_data.mip.MindtPy_utils
     config.logger.info(
@@ -55,16 +69,30 @@ def solve_OA_master(solve_data, config):
             expr=sign_adjust * config.OA_penalty_factor * sum(
                 v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
 
-        MindtPy.MindtPy_oa_obj = Objective(
-            expr=main_objective.expr + MindtPy.MindtPy_penalty_expr,
-            sense=main_objective.sense)
-    else:
-        MindtPy.MindtPy_oa_obj = Objective(
-            expr=main_objective.expr,
-            sense=main_objective.sense)
+    MindtPy.MindtPy_oa_obj = Objective(
+        expr=main_objective.expr +
+        (MindtPy.MindtPy_penalty_expr if config.add_slack else 0),
+        sense=main_objective.sense)
+
+    if config.use_dual_bound:
+        # Delete previously added dual bound constraint
+        if MindtPy.MindtPy_linear_cuts.find_component('dual_bound') is not None:
+            MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
+        if main_objective.sense == minimize:
+            MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                expr=main_objective.expr +
+                (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) >= solve_data.LB,
+                doc='Objective function expression should improve on the best found dual bound')
+        else:
+            MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                expr=main_objective.expr +
+                (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) <= solve_data.UB,
+                doc='Objective function expression should improve on the best found dual bound')
+
     # Deactivate extraneous IMPORT/EXPORT suffixes
-    getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
-    getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
+    if config.nlp_solver == 'ipopt':
+        getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
 
     masteropt = SolverFactory(config.mip_solver)
     # determine if persistent solver is called.
@@ -83,15 +111,24 @@ def solve_OA_master(solve_data, config):
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
         masteropt.options['timelimit'] = config.time_limit
+    if config.threads > 0:
+        masteropt.options["threads"] = config.threads
     mip_args = dict(config.mip_solver_args)
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
-        mip_args['add_options'].append('option optcr=0.0;')
+        mip_args['add_options'].append('option optcr=0.001;')
+        mip_args['add_options'].append('option reslim=%s;' % remaining)
+    # elif config.mip_solver == 'glpk':
+    #     masteropt.options['timelimit'] = remaining
     master_mip_results = masteropt.solve(
-        solve_data.mip, **mip_args)  # , tee=True)
+        solve_data.mip, tee=config.solver_tee, **mip_args)
+
+    # if config.single_tree is False and config.add_nogood_cuts is False:
 
     if master_mip_results.solver.termination_condition is tc.optimal:
-        if config.single_tree:
+        if config.single_tree and config.add_nogood_cuts is False:
             if main_objective.sense == minimize:
                 solve_data.LB = max(
                     master_mip_results.problem.lower_bound, solve_data.LB)
@@ -111,18 +148,34 @@ def solve_OA_master(solve_data, config):
     return solve_data.mip, master_mip_results
 
 
-def handle_master_mip_optimal(master_mip, solve_data, config, copy=True):
-    """Copy the result to working model and update upper or lower bound"""
+# The following functions deal with handling the solution we get from the above MIP solver function
+
+
+def handle_master_mip_optimal(master_mip, solve_data, config):
+    """
+    This function copies the result from 'solve_OA_master' to the working model and updates the upper/lower bound. This
+    function is called after an optimal solution is found for the master problem.
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     # proceed. Just need integer values
     MindtPy = master_mip.MindtPy_utils
     main_objective = next(
         master_mip.component_data_objects(Objective, active=True))
     # check if the value of binary variable is valid
     for var in MindtPy.variable_list:
-        if var.value == None and var.is_integer():
+        if var.value is None and var.is_integer():
             config.logger.warning(
-                "Integer variable {} not initialized. It is set to it's lower bound when using the initial_binary initialization method".format(var.name))
+                "Integer variable {} not initialized. It is set to it's lower bound".format(var.name))
             var.value = var.lb  # nlp_var.bounds[0]
+    # warm start for the nlp subproblem
     copy_var_list_values(
         master_mip.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
@@ -143,6 +196,21 @@ def handle_master_mip_optimal(master_mip, solve_data, config, copy=True):
 
 
 def handle_master_mip_other_conditions(master_mip, master_mip_results, solve_data, config):
+    """
+    This function handles the result of the latest iteration of solving the MIP problem (given any of a few
+    edge conditions, such as if the solution is neither infeasible nor optimal).
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    master_mip_results: Pyomo results object
+        result from solving the MIP problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     if master_mip_results.solver.termination_condition is tc.infeasible:
         handle_master_mip_infeasible(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.unbounded:
@@ -150,7 +218,7 @@ def handle_master_mip_other_conditions(master_mip, master_mip_results, solve_dat
     elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
         handle_master_mip_max_timelimit(master_mip, solve_data, config)
     elif (master_mip_results.solver.termination_condition is tc.other and
-            master_mip_results.solution.status is SolutionStatus.feasible):
+          master_mip_results.solution.status is SolutionStatus.feasible):
         # load the solution and suppress the warning message by setting
         # solver status to ok.
         MindtPy = master_mip.MindtPy_utils
@@ -181,6 +249,18 @@ def handle_master_mip_other_conditions(master_mip, master_mip_results, solve_dat
 
 
 def handle_master_mip_infeasible(master_mip, solve_data, config):
+    """
+    This function handles the result of the latest iteration of solving the MIP problem given an infeasible solution.
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     config.logger.info(
         'MILP master problem is infeasible. '
         'Problem may have no more feasible '
@@ -189,6 +269,7 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
         config.logger.warning(
             'MindtPy initialization may have generated poor '
             'quality cuts.')
+    # TODO nogood cuts for single tree case
     # set optimistic bound to infinity
     main_objective = next(
         master_mip.component_data_objects(Objective, active=True))
@@ -196,9 +277,29 @@ def handle_master_mip_infeasible(master_mip, solve_data, config):
         solve_data.LB_progress.append(solve_data.LB)
     else:
         solve_data.UB_progress.append(solve_data.UB)
+    config.logger.info(
+        'MindtPy exiting due to MILP master problem infeasibility.')
+    if solve_data.results.solver.termination_condition is None:
+        if solve_data.mip_iter == 0:
+            solve_data.results.solver.termination_condition = tc.infeasible
+        else:
+            solve_data.results.solver.termination_condition = tc.feasible
 
 
 def handle_master_mip_max_timelimit(master_mip, solve_data, config):
+    """
+    This function handles the result of the latest iteration of solving the MIP problem given that solving the
+    MIP takes too long.
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     # TODO check that status is actually ok and everything is feasible
     MindtPy = master_mip.MindtPy_utils
     config.logger.info(
@@ -224,6 +325,19 @@ def handle_master_mip_max_timelimit(master_mip, solve_data, config):
 
 
 def handle_master_mip_unbounded(master_mip, solve_data, config):
+    """
+    This function handles the result of the latest iteration of solving the MIP problem given an unbounded solution
+    due to the relaxation.
+
+    Parameters
+    ----------
+    master_mip: Pyomo model
+        the MIP master problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
     # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
     # This occurs when the objective is nonlinear. The nonlinear objective is moved
     # to the constraints, and deactivated for the linear master problem.
@@ -241,4 +355,4 @@ def handle_master_mip_unbounded(master_mip, solve_data, config):
         if isinstance(opt, PersistentSolver):
             opt.set_instance(master_mip)
         master_mip_results = opt.solve(
-            master_mip, **config.mip_solver_args)
+            master_mip, tee=config.solver_tee, **config.mip_solver_args)
