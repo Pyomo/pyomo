@@ -48,9 +48,6 @@ from numpy import isclose
 import math
 import logging
 
-# DEBUG
-from nose.tools import set_trace
-
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
 
 NAME_BUFFER = {}
@@ -137,15 +134,12 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
                     Fourier-Motzkin elimination
     """
     instance_rHull = transBlock_rHull.model()
-    # TODO: Is this the problem? Can I make this work?
-    # if norm == float('inf'):
-    #     rHull_vars.append(transBlock_rHull.u)
 
-    normal_vectors = []
     tight_constraints = Block()
     conslist = tight_constraints.constraints = Constraint(
         NonNegativeIntegers)
     conslist.construct()
+    something_interesting = False
     for constraint in instance_rHull.component_data_objects(
             Constraint,
             active=True,
@@ -158,11 +152,10 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
             continue
         multiplier = _constraint_tight(instance_rHull, constraint)
         if multiplier:
+            something_interesting = True
             f = constraint.body
-            # TODO: Yes, this is a bug with differentiate: report it
             firstDerivs = differentiate(f, wrt_list=rHull_vars)
             normal_vec = [multiplier*value(_) for _ in firstDerivs]
-            normal_vectors.append(normal_vec)
             # check if constraint is linear
             if f.polynomial_degree() == 1:
                 conslist[len(conslist)] = constraint.expr
@@ -180,66 +173,25 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
     # word "Constraint"), but we are missing some variable bounds. The ones for
     # the disaggregated variables will be added by FME
 
-    # It is possible that the separation problem returned a point in
-    # the interior of the convex hull.  It is also possible that the
-    # only active constraints are (feasible) equality constraints.
-    # in these situations, there are no normal vectors from which to
-    # create a valid cut.
-    if not normal_vectors:
+    # It is possible that the separation problem returned a point in the
+    # interior of the convex hull.  It is also possible that the only active
+    # constraints are (feasible) equality constraints.  in these situations,
+    # there are not constriants from which to create a valid cut.
+    if not something_interesting:
         return None
 
-    hull_xform = TransformationFactory('gdp.hull')
-
-    composite_normal = list(
-        sum(_) for _ in zip(*tuple(normal_vectors)) )
-    composite_normal_map = ComponentMap(
-        (v,n) for v,n in zip(rHull_vars, composite_normal))
-
-    composite_cutexpr_Hull = 0
-    for x_bigm, x_hull, x_star in var_info:
-        # make the cut in the Hull space with the Hull variables. We will
-        # translate it all to BigM and rBigM later when we have projected
-        # out the disaggregated variables
-        composite_cutexpr_Hull += composite_normal_map[x_hull]*\
-                                   (x_hull - x_hull.value)
-
-    # expand the composite_cutexprs to be in the extended space
-    vars_to_eliminate = ComponentSet()
-    do_fme = False
-    # add the part of the expression involving the disaggregated variables.
-    for x_disaggregated in disaggregated_vars:
-        normal_vec_component = composite_normal_map[x_disaggregated]
-        composite_cutexpr_Hull += normal_vec_component*\
-                                   (x_disaggregated - x_disaggregated.value)
-        vars_to_eliminate.add(x_disaggregated)
-        # check that at least one disaggregated variable appears in the
-        # constraint. Else we don't need to do FME
-        if not do_fme and normal_vec_component != 0:
-            do_fme = True
-
-    #conslist[len(conslist)] = composite_cutexpr_Hull <= 0
-
-    if do_fme:
-        tight_constraints.construct()
-        logger.info("Calling FME transformation on %s constraints to eliminate"
-                    " %s variables" % (len(tight_constraints.constraints),
-                                       len(vars_to_eliminate)))
-        tight_constraints.pprint()
-        for v in vars_to_eliminate:
-            v.pprint()
-        set_trace()
-        TransformationFactory('contrib.fourier_motzkin_elimination').\
-            apply_to(tight_constraints, vars_to_eliminate=vars_to_eliminate,
-                     zero_tolerance=zero_tolerance, verbose=True)
-        # I made this block, so I know they are here. Not that I won't hate
-        # myself later for messing with private stuff.
-        fme_results = tight_constraints._pyomo_contrib_fme_transformation.\
-                      projected_constraints
-        fme_results.pprint()
-        projected_constraints = [cons for i, cons in iteritems(fme_results)]
-    else:
-        # we didn't need to project, so it's the last guy we added.
-        projected_constraints = [conslist[len(conslist) - 1]]
+    tight_constraints.construct()
+    logger.info("Calling FME transformation on %s constraints to eliminate"
+                " %s variables" % (len(tight_constraints.constraints),
+                                   len(disaggregated_vars)))
+    TransformationFactory('contrib.fourier_motzkin_elimination').\
+        apply_to(tight_constraints, vars_to_eliminate=disaggregated_vars,
+                 zero_tolerance=zero_tolerance, verbose=True)
+    # I made this block, so I know they are here. Not that I won't hate
+    # myself later for messing with private stuff.
+    fme_results = tight_constraints._pyomo_contrib_fme_transformation.\
+                  projected_constraints
+    projected_constraints = [cons for i, cons in iteritems(fme_results)]
 
     # we created these constraints with the variables from rHull. We
     # actually need constraints for BigM and rBigM now!
@@ -270,8 +222,6 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
             best = cut_off
             best_cut = cut
             logger.info("FME:\t New best cut: Cuts off x* by %s." % best)
-
-    set_trace()
 
     if best_cut is not None:
         return [best_cut]
