@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Initialization functions."""
 from __future__ import division
 
@@ -5,19 +6,20 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, cop
 from pyomo.contrib.mindtpy.cut_generation import (
     add_oa_cuts, add_affine_cuts, add_objective_linearization,
 )
-from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
+from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
 from pyomo.core import (ConstraintList, Objective,
-                        TransformationFactory, maximize, minimize, value, Var)
+                        TransformationFactory, maximize, minimize, value, Var, Constraint)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination)
+from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
+                                             handle_subproblem_optimal, handle_subproblem_infeasible,
+                                             handle_subproblem_other_termination)
 from pyomo.contrib.mindtpy.util import var_bound_add
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
 import math
+from pyomo.contrib.mindtpy.feasibility_pump import feas_pump_loop
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -43,7 +45,13 @@ def MindtPy_initialize_master(solve_data, config):
     if config.use_dual:
         m.dual.deactivate()
 
-    if config.strategy == 'OA':
+    if config.init_strategy == 'feas_pump':
+        MindtPy.MindtPy_linear_cuts.fp_orthogonality_cuts = ConstraintList(
+            doc='Orthogonality cuts in feasibility pump')
+        if config.fp_projcuts:
+            solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts = ConstraintList(
+                doc='Orthogonality cuts in feasibility pump')
+    if config.strategy == 'OA' or config.init_strategy == 'feas_pump':
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts')
@@ -77,15 +85,18 @@ def MindtPy_initialize_master(solve_data, config):
         init_max_binaries(solve_data, config)
     elif config.init_strategy == 'initial_binary':
         if config.strategy != 'ECP':
-            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
+            fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-                handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+                handle_subproblem_optimal(fixed_nlp, solve_data, config)
+            elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
+                handle_subproblem_infeasible(fixed_nlp, solve_data, config)
             else:
-                handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                        solve_data, config)
+                handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                    solve_data, config)
+    elif config.init_strategy == 'feas_pump':
+        init_rNLP(solve_data, config)
+        feas_pump_loop(solve_data, config)
 
 
 def init_rNLP(solve_data, config):
@@ -100,10 +111,9 @@ def init_rNLP(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
-    solve_data.nlp_iter += 1
     m = solve_data.working_model.clone()
     config.logger.info(
-        "NLP %s: Solve relaxed integrality" % (solve_data.nlp_iter,))
+        "Relaxed NLP: Solve relaxed integrality")
     MindtPy = m.MindtPy_utils
     TransformationFactory('core.relax_integer_vars').apply_to(m)
     nlp_args = dict(config.nlp_solver_args)
@@ -114,7 +124,7 @@ def init_rNLP(solve_data, config):
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
     with SuppressInfeasibleWarning():
         results = SolverFactory(config.nlp_solver).solve(
-            m, tee=config.solver_tee, **nlp_args)
+            m, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
         if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
@@ -125,18 +135,23 @@ def init_rNLP(solve_data, config):
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut
+        # This covers the case when the Lower bound does not exist.
         if main_objective.sense == minimize and not math.isnan(results['Problem'][0]['Lower bound']):
             solve_data.LB = results['Problem'][0]['Lower bound']
         elif not math.isnan(results['Problem'][0]['Upper bound']):
             solve_data.UB = results['Problem'][0]['Upper bound']
         config.logger.info(
-            'NLP %s: OBJ: %s  LB: %s  UB: %s'
-            % (solve_data.nlp_iter, value(main_objective.expr),
-               solve_data.LB, solve_data.UB))
-        if config.strategy in {'OA', 'GOA'}:
+            'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
+            % (value(main_objective.expr), solve_data.LB, solve_data.UB))
+        if config.strategy in {'OA', 'GOA', 'feas_pump'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
+            if config.init_strategy == 'feas_pump':
+                # TODO：remove here
+                copy_var_list_values(m.MindtPy_utils.variable_list,
+                                     solve_data.working_model.MindtPy_utils.variable_list,
+                                     config, ignore_integrality=True)
             if config.strategy == 'OA':
                 add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
             elif config.strategy == 'GOA':
@@ -145,7 +160,7 @@ def init_rNLP(solve_data, config):
             for var in solve_data.mip.component_data_objects(ctype=Var):
                 if var.is_integer():
                     var.value = int(round(var.value))
-    elif subprob_terminate_cond is tc.infeasible:
+    elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         # TODO fail? try something else?
         config.logger.info(
             'Initial relaxed NLP problem is infeasible. '
@@ -167,7 +182,7 @@ def init_max_binaries(solve_data, config):
     """
     Modifies model by maximizing the number of activated binary variables
 
-    Note - The user would usually want to call solve_NLP_subproblem after an
+    Note - The user would usually want to call solve_subproblem after an
     invocation of this function.
 
     Parameters
@@ -208,7 +223,7 @@ def init_max_binaries(solve_data, config):
     if config.mip_solver == 'gams':
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.001;')
-    results = opt.solve(m, tee=config.solver_tee, **mip_args)
+    results = opt.solve(m, tee=config.mip_solver_tee, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:

@@ -38,7 +38,7 @@ from pyomo.core import (
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.mindtpy.config_options import _get_GDPopt_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -51,7 +51,7 @@ __version__ = (0, 1, 0)
 class MindtPySolver(object):
     """A decomposition-based MINLP solver.
     """
-    CONFIG = _get_GDPopt_config()
+    CONFIG = _get_MindtPy_config()
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -79,6 +79,12 @@ class MindtPySolver(object):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
 
+        solve_data = MindtPySolveData()
+        solve_data.results = SolverResults()
+        solve_data.timing = Container()
+        solve_data.curr_int_sol = []
+        solve_data.prev_int_sol = []
+
         # configuration confirmation
         if config.single_tree:
             config.iteration_limit = 1
@@ -98,6 +104,12 @@ class MindtPySolver(object):
             config.integer_to_binary = True
             config.use_dual = False
             config.use_fbbt = True
+        elif config.strategy == "feas_pump":  # feasibility pump alone
+            config.init_strategy = "feas_pump"
+            config.iteration_limit = 0
+            config.add_nogood_cuts = True
+        if config.init_strategy == "feas_pump":
+            solve_data.fp_iter = 1
 
         if config.nlp_solver == "baron":
             config.use_dual = False
@@ -105,16 +117,14 @@ class MindtPySolver(object):
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.bound_tolerance
 
+        if config.solver_tee:
+            config.mip_solver_tee = True
+            config.nlp_solver_tee = True
+
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
         if obj.expr.polynomial_degree() == 0:
             config.use_dual_bound = False
-
-        solve_data = MindtPySolveData()
-        solve_data.results = SolverResults()
-        solve_data.timing = Container()
-        solve_data.curr_int_sol = []
-        solve_data.prev_int_sol = []
 
         if config.use_fbbt:
             fbbt(model)
@@ -135,7 +145,8 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            process_objective(solve_data, config, use_mcpp=config.use_mcpp)
+            process_objective(solve_data, config,
+                              move_linear_objective=(config.init_strategy == 'feas_pump'), use_mcpp=config.use_mcpp)
 
             # Save model initial values.
             solve_data.initial_var_values = list(
@@ -165,19 +176,19 @@ class MindtPySolver(object):
             lin = MindtPy.MindtPy_linear_cuts = Block()
             lin.deactivate()
 
-            # Integer cuts exclude particular discrete decisions
-            lin.integer_cuts = ConstraintList(doc='integer cuts')
-            # Feasible integer cuts exclude discrete realizations that have
+            # no good cuts exclude particular discrete decisions
+            lin.nogood_cuts = ConstraintList(doc='no good cuts')
+            # Feasible no good cuts exclude discrete realizations that have
             # been explored via an NLP subproblem. Depending on model
             # characteristics, the user may wish to revisit NLP subproblems
             # (with a different initialization, for example). Therefore, these
             # cuts are not enabled by default.
             #
             # Note: these cuts will only exclude integer realizations that are
-            # not already in the primary integer_cuts ConstraintList.
-            lin.feasible_integer_cuts = ConstraintList(
-                doc='explored integer cuts')
-            lin.feasible_integer_cuts.deactivate()
+            # not already in the primary nogood_cuts ConstraintList.
+            lin.feasible_nogood_cuts = ConstraintList(
+                doc='explored no good cuts')
+            lin.feasible_nogood_cuts.deactivate()
 
             # Set up iteration counters
             solve_data.nlp_iter = 0

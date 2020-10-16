@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic
@@ -42,8 +43,8 @@ class TestMindtPy(unittest.TestCase):
                                 bound_tolerance=1E-5,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_lazy_OA_8PP_init_max_binary(self):
@@ -57,8 +58,8 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_lazy_OA_MINLP_simple(self):
@@ -117,8 +118,8 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_lazy_OA_ConstraintQualificationExample(self):
@@ -157,7 +158,7 @@ class TestMindtPy(unittest.TestCase):
     #         opt.solve(model, strategy='OA',
     #                   mip_solver=required_solvers[1],
     #                   nlp_solver=required_solvers[0],
-    #                   add_integer_cuts=True,
+    #                   add_nogood_cuts=True,
     #                   integer_to_binary=True,  # if we use lazy callback, we cannot set integer_to_binary True
     #                   lazy_callback=True,
     #                   iteration_limit=1)

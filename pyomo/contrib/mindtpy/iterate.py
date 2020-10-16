@@ -1,19 +1,21 @@
+# -*- coding: utf-8 -*-
 """Iteration loop for MindtPy."""
 from __future__ import division
 
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
 
-from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master,
-                                             handle_master_mip_optimal, handle_master_mip_infeasible, handle_master_mip_other_conditions)
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination)
+from pyomo.contrib.mindtpy.mip_solve import (solve_master,
+                                             handle_master_optimal, handle_master_infeasible, handle_master_other_conditions)
+from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
+                                             handle_subproblem_optimal, handle_subproblem_infeasible,
+                                             handle_subproblem_other_termination)
 from pyomo.core import minimize, Objective, Var
 from pyomo.opt.results import ProblemSense
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time, indent
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time, indent, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
+from pyomo.contrib.gdpopt.util import time_code
 
 
 def MindtPy_iteration_loop(solve_data, config):
@@ -38,28 +40,28 @@ def MindtPy_iteration_loop(solve_data, config):
 
         config.logger.info(
             '---MindtPy Master Iteration %s---'
-            % solve_data.mip_iter)
+            % (solve_data.mip_iter+1))
 
         solve_data.mip_subiter = 0
         # solve MILP master problem
         if config.strategy in {'OA', 'GOA', 'ECP'}:
-            master_mip, master_mip_results = solve_OA_master(
+            master_mip, master_mip_results = solve_master(
                 solve_data, config)
             if master_mip_results is not None:
                 if config.single_tree is False:
                     if master_mip_results.solver.termination_condition is tc.optimal:
-                        handle_master_mip_optimal(
-                            master_mip, solve_data, config)
+                        handle_master_optimal(master_mip, solve_data, config)
                     elif master_mip_results.solver.termination_condition is tc.infeasible:
-                        handle_master_mip_infeasible(
+                        handle_master_infeasible(
                             master_mip, solve_data, config)
                         last_iter_cuts = True
                         break
                     else:
-                        handle_master_mip_other_conditions(master_mip, master_mip_results,
-                                                           solve_data, config)
+                        handle_master_other_conditions(master_mip, master_mip_results,
+                                                       solve_data, config)
                     # Call the MILP post-solve callback
-                    config.call_after_master_solve(master_mip, solve_data)
+                    with time_code(solve_data.timing, 'Call after master solve'):
+                        config.call_after_master_solve(master_mip, solve_data)
             else:
                 config.logger.info('Algorithm should terminate here.')
                 break
@@ -73,17 +75,22 @@ def MindtPy_iteration_loop(solve_data, config):
         if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
-            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
+            fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-                handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+                handle_subproblem_optimal(fixed_nlp, solve_data, config)
+            elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
+                handle_subproblem_infeasible(fixed_nlp, solve_data, config)
+            elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
+                config.logger.info(
+                    'NLP subproblem failed to converge within the time limit.')
+                break
             else:
-                handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                        solve_data, config)
+                handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                    solve_data, config)
             # Call the NLP post-solve callback
-            config.call_after_subproblem_solve(fixed_nlp, solve_data)
+            with time_code(solve_data.timing, 'Call after subproblem solve'):
+                config.call_after_subproblem_solve(fixed_nlp, solve_data)
 
         if algorithm_should_terminate(solve_data, config, check_cycling=False):
             last_iter_cuts = True
@@ -129,7 +136,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_nogood_cuts:
+    if config.add_nogood_cuts and config.strategy is not 'feas_pump':
         bound_fix(solve_data, config, last_iter_cuts)
 
 
@@ -291,10 +298,13 @@ def bound_fix(solve_data, config, last_iter_cuts):
     if config.single_tree:
         config.logger.info(
             'Fix the bound to the value of one iteration before optimal solution is found.')
-        if solve_data.results.problem.sense == ProblemSense.minimize:
-            solve_data.LB = solve_data.stored_bound[solve_data.UB]
-        else:
-            solve_data.UB = solve_data.stored_bound[solve_data.LB]
+        try:
+            if solve_data.results.problem.sense == ProblemSense.minimize:
+                solve_data.LB = solve_data.stored_bound[solve_data.UB]
+            else:
+                solve_data.UB = solve_data.stored_bound[solve_data.LB]
+        except KeyError:
+            config.logger.info('No stored bound found. Bound fix failed.')
     else:
         config.logger.info(
             'Solve the master problem without the last nogood cut to fix the bound.'
@@ -303,29 +313,35 @@ def bound_fix(solve_data, config, last_iter_cuts):
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
         if last_iter_cuts is False:
-            fixed_nlp, fixed_nlp_result = solve_NLP_subproblem(
+            fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition is tc.infeasible:
-                handle_NLP_subproblem_infeasible(fixed_nlp, solve_data, config)
+                handle_subproblem_optimal(fixed_nlp, solve_data, config)
+            elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
+                handle_subproblem_infeasible(fixed_nlp, solve_data, config)
+            elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
+                config.logger.info(
+                    'NLP subproblem failed to converge within the time limit.')
             else:
-                handle_NLP_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                        solve_data, config)
+                handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                    solve_data, config)
 
         MindtPy = solve_data.mip.MindtPy_utils
-        # only deactivate the last integer cut.
+# deactivate the integer cuts generated after the best solution was found.
         if config.strategy == 'GOA':
-            if solve_data.results.problem.sense == ProblemSense.minimize:
-                valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
-            else:
-                valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
-            for i in range(valid_no_good_cuts_num+1, len(
-                    MindtPy.MindtPy_linear_cuts.integer_cuts)+1):
-                MindtPy.MindtPy_linear_cuts.integer_cuts[i].deactivate()
+            try:
+                if solve_data.results.problem.sense == ProblemSense.minimize:
+                    valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
+                else:
+                    valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
+                for i in range(valid_no_good_cuts_num+1, len(
+                        MindtPy.MindtPy_linear_cuts.nogood_cuts)+1):
+                    MindtPy.MindtPy_linear_cuts.nogood_cuts[i].deactivate()
+            except KeyError:
+                config.logger.info('Cut deactivate failed.')
         elif config.strategy == 'OA':
-            MindtPy.MindtPy_linear_cuts.integer_cuts[len(
-                MindtPy.MindtPy_linear_cuts.integer_cuts)].deactivate()
+            MindtPy.MindtPy_linear_cuts.nogood_cuts[len(
+                MindtPy.MindtPy_linear_cuts.nogood_cuts)].deactivate()
         # MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.
@@ -340,7 +356,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
         if config.threads > 0:
             masteropt.options["threads"] = config.threads
         master_mip_results = masteropt.solve(
-            solve_data.mip, tee=config.solver_tee, **mip_args)
+            solve_data.mip, tee=config.mip_solver_tee, **mip_args)
         main_objective = next(
             solve_data.working_model.component_data_objects(Objective, active=True))
         if main_objective.sense == minimize:

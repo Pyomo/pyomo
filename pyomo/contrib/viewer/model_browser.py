@@ -119,7 +119,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
             self.setWindowTitle("Constraints")
         elif standard == "Param":
             components = Param
-            columns = ["name", "value", "_mutable"]
+            columns = ["name", "value", "mutable"]
             editable = ["value"]
             self.setWindowTitle("Parameters")
         elif standard == "Expression":
@@ -263,7 +263,7 @@ class ComponentDataItem(object):
             except:
                 return
         elif isinstance(self.data, _ParamData):
-            if not self.data._mutable: return
+            if not self.data.parent_component().mutable: return
             try:
                 self.data.value = val
             except:

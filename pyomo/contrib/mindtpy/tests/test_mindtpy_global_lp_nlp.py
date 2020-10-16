@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic
@@ -23,10 +24,12 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 
 required_solvers = ('baron', 'cplex_persistent')
-if all(SolverFactory(s).available(False) and SolverFactory(s).license_is_valid() for s in required_solvers):
-    subsolvers_available = True
-else:
+if not all(SolverFactory(s).available(False) for s in required_solvers):
     subsolvers_available = False
+elif not SolverFactory('baron').license_is_valid():
+    subsolvers_available = False
+else:
+    subsolvers_available = True
 
 
 @unittest.skipIf(not subsolvers_available,
@@ -52,8 +55,8 @@ class TestMindtPy(unittest.TestCase):
                                 bound_tolerance=1E-5,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_init_max_binary(self):
@@ -68,8 +71,8 @@ class TestMindtPy(unittest.TestCase):
                                 add_nogood_cuts=True,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_L2_norm(self):
@@ -84,8 +87,8 @@ class TestMindtPy(unittest.TestCase):
                                 add_nogood_cuts=True,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_8PP_sympy(self):
@@ -100,8 +103,8 @@ class TestMindtPy(unittest.TestCase):
                                 add_nogood_cuts=True,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_GOA_MINLP_simple(self):
@@ -166,15 +169,15 @@ class TestMindtPy(unittest.TestCase):
                                 integer_to_binary=True,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_GOA_Proposal_with_int_cuts(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with Outer Approximation(integer cuts)')
+            print('\n Solving Proposal problem with Outer Approximation(no good cuts)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -183,8 +186,8 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True
                                 )
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_GOA_ConstraintQualificationExample(self):
@@ -206,7 +209,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with global Outer Approximation(integer cut)')
+                '\n Solving Constraint Qualification Example with global Outer Approximation(no good cuts)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],

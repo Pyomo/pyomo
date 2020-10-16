@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ Example in the online doc.
 
 The expected optimal solution value is 2.438447187191098.

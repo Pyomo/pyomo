@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic
@@ -22,10 +23,12 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 
 required_solvers = ('baron', 'cplex')
-if all(SolverFactory(s).available() and SolverFactory(s).license_is_valid() for s in required_solvers):
-    subsolvers_available = True
-else:
+if not all(SolverFactory(s).available(False) for s in required_solvers):
     subsolvers_available = False
+elif not SolverFactory('baron').license_is_valid():
+    subsolvers_available = False
+else:
+    subsolvers_available = True
 
 
 @unittest.skipIf(not subsolvers_available,
@@ -165,7 +168,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with Outer Approximation(integer cuts)')
+            print('\n Solving Proposal problem with Outer Approximation(no good cuts)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -195,7 +198,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with global Outer Approximation(integer cut)')
+                '\n Solving Constraint Qualification Example with global Outer Approximation(no good cuts)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],

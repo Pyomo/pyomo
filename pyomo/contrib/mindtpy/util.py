@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
 import logging
@@ -7,7 +8,7 @@ from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
-                        Objective, Reals, Suffix, Var, minimize, value)
+                        Objective, Reals, Suffix, Var, minimize, value, RangeSet, ConstraintList)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import native_numeric_types
@@ -59,7 +60,7 @@ def model_is_valid(solve_data, config):
                 "Your model is an NLP (nonlinear program). "
                 "Using NLP solver %s to solve." % config.nlp_solver)
             SolverFactory(config.nlp_solver).solve(
-                solve_data.original_model, tee=config.solver_tee, **config.nlp_solver_args)
+                solve_data.original_model, tee=config.nlp_solver_tee, **config.nlp_solver_args)
             return False
         else:
             config.logger.info(
@@ -71,7 +72,7 @@ def model_is_valid(solve_data, config):
             if config.threads > 0:
                 masteropt.options["threads"] = config.threads
             mipopt.solve(solve_data.original_model,
-                         tee=config.solver_tee, **config.mip_solver_args)
+                         tee=config.mip_solver_tee, **config.mip_solver_args)
             return False
 
     if not hasattr(m, 'dual') and config.use_dual:  # Set up dual value reporting
@@ -131,20 +132,20 @@ def add_feas_slacks(m, config):
         if constr.body.polynomial_degree() not in [0, 1]:
             if constr.has_ub():
                 if config.feasibility_norm in {'L1', 'L2'}:
-                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    MindtPy.MindtPy_feas.feas_constraints.add(
                         constr.body - constr.upper
                         <= MindtPy.MindtPy_feas.slack_var[i])
                 else:
-                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    MindtPy.MindtPy_feas.feas_constraints.add(
                         constr.body - constr.upper
                         <= MindtPy.MindtPy_feas.slack_var)
             if constr.has_lb():
                 if config.feasibility_norm in {'L1', 'L2'}:
-                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    MindtPy.MindtPy_feas.feas_constraints.add(
                         constr.body - constr.lower
                         >= -MindtPy.MindtPy_feas.slack_var[i])
                 else:
-                    c = MindtPy.MindtPy_feas.feas_constraints.add(
+                    MindtPy.MindtPy_feas.feas_constraints.add(
                         constr.body - constr.lower
                         >= -MindtPy.MindtPy_feas.slack_var)
 
@@ -182,19 +183,29 @@ def var_bound_add(solve_data, config):
                         var.setub(config.continuous_var_bound)
 
 
-def generate_Norm2sq_objective_function(model, setpoint_model, discretes_only=False):
-    """Generate objective for minimum euclidean distance to setpoint_model
-    L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}
-    discretes_only -- only optimize on distance between the discrete variables
+def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
     """
-    var_filter = (lambda v: v[1].is_binary()) if discretes_only \
+    This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model
+    L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}
+
+    Parameters
+    ----------
+    model: Pyomo model
+        the model that needs new objective function
+    setpoint_model: Pyomo model
+        the model that provides the base point for us to calculate the distance
+    discrete_only: Bool
+        only optimize on distance between the discrete variables
+    TODO: remove setpoint_model
+    """
+    var_filter = (lambda v: v[1].is_integer()) if discrete_only \
         else (lambda v: True)
 
     model_vars, setpoint_vars = zip(*filter(var_filter,
                                             zip(model.component_data_objects(Var),
                                                 setpoint_model.component_data_objects(Var))))
     assert len(model_vars) == len(
-        setpoint_vars), "Trying to generate Norm2 objective function for models with different number of variables"
+        setpoint_vars), "Trying to generate Squared Norm2 objective function for models with different number of variables"
 
     return Objective(expr=(
         sum([(model_var - setpoint_var.value)**2
@@ -202,38 +213,124 @@ def generate_Norm2sq_objective_function(model, setpoint_model, discretes_only=Fa
              zip(model_vars, setpoint_vars)])))
 
 
-def generate_Norm1_objective_function(model, setpoint_model, discretes_only=False):
-    """Generate objective for minimum Norm1 distance to setpoint model
+def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
+    """
+    This function generates objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
-    discretes_only -- only optimize on distance between the discrete variables
+
+    Parameters
+    ----------
+    model: Pyomo model
+        the model that needs new objective function
+    setpoint_model: Pyomo model
+        the model that provides the base point for us to calculate the distance
+    discrete_only: Bool
+        only optimize on distance between the discrete variables
+    TODO: remove setpoint_model
     """
 
-    var_filter = (lambda v: v.is_binary()) if discretes_only \
+    var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: True)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm1 objective function for models with different number of variables"
-    if model.find_component('L1_objective_function') is not None:
-        model.del_component('L1_objective_function')
-    obj_blk = model.L1_objective_function = Block()
+    if model.MindtPy_utils.find_component('L1_objective_function') is not None:
+        model.MindtPy_utils.del_component('L1_objective_function')
+    obj_blk = model.MindtPy_utils.L1_objective_function = Block()
+    obj_blk.L1_obj_idx = RangeSet(len(model_vars))
+    obj_blk.L1_obj_var = Var(
+        obj_blk.L1_obj_idx, domain=Reals, bounds=(0, None))
+    obj_blk.abs_reformulation = ConstraintList()
+    for idx, v_model, v_setpoint in zip(obj_blk.L1_obj_idx, model_vars,
+                                        setpoint_vars):
+        obj_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value >= -obj_blk.L1_obj_var[idx])
+        obj_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value <= obj_blk.L1_obj_var[idx])
 
-    obj_blk.L1_obj_var = Var(domain=Reals, bounds=(0, None))
-    obj_blk.L1_obj_ub_idx = RangeSet(len(model_vars))
-    obj_blk.L1_obj_ub_constr = Constraint(
-        obj_blk.L1_obj_ub_idx, rule=lambda i: obj_blk.L1_obj_var >= 0)
-    obj_blk.L1_obj_lb_idx = RangeSet(len(model_vars))
-    obj_blk.L1_obj_lb_constr = Constraint(
-        obj_blk.L1_obj_lb_idx, rule=lambda i: obj_blk.L1_obj_var >= 0)  # 'empty' constraint (will be set later)
+    return Objective(expr=sum(obj_blk.L1_obj_var[idx] for idx in obj_blk.L1_obj_idx))
 
-    for (c_lb, c_ub, v_model, v_setpoint) in zip(obj_blk.L1_obj_lb_idx,
-                                                 obj_blk.L1_obj_ub_idx,
-                                                 model_vars,
-                                                 setpoint_vars):
-        obj_blk.L1_obj_lb_constr[c_lb].set_value(
-            expr=v_model - v_setpoint.value >= -obj_blk.L1_obj_var)
-        obj_blk.L1_obj_ub_constr[c_ub].set_value(
-            expr=v_model - v_setpoint.value <= obj_blk.L1_obj_var)
+# TODO: this function is not called
 
-    return Objective(expr=obj_blk.L1_obj_var)
+
+def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
+    """
+    This function generates objective (PF-OA master problem) for minimum Norm Infinity distance to setpoint_model
+    Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|
+
+    Parameters
+    ----------
+    model: Pyomo model
+        the model that needs new objective function
+    setpoint_model: Pyomo model
+        the model that provides the base point for us to calculate the distance
+    discrete_only: Bool
+        only optimize on distance between the discrete variables
+    TODO: remove setpoint_model
+    """
+
+    var_filter = (lambda v: v.is_integer()) if discrete_only \
+        else (lambda v: True)
+    model_vars = list(filter(var_filter, model.component_data_objects(Var)))
+    setpoint_vars = list(
+        filter(var_filter, setpoint_model.component_data_objects(Var)))
+    assert len(model_vars) == len(
+        setpoint_vars), "Trying to generate Norm Infinity objective function for models with different number of variables"
+    if model.MindtPy_utils.find_component('L_infinity_objective_function') is not None:
+        model.MindtPy_utils.del_component('L_infinity_objective_function')
+    obj_blk = model.MindtPy_utils.L_infinity_objective_function = Block()
+    obj_blk.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
+    obj_blk.abs_reformulation = ConstraintList()
+    for v_model, v_setpoint in zip(model_vars,
+                                   setpoint_vars):
+        obj_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value >= -obj_blk.L_infinity_obj_var)
+        obj_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value <= obj_blk.L_infinity_obj_var)
+
+    return Objective(expr=obj_blk.L_infinity_obj_var)
+
+
+def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
+    """
+    This function generates objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
+    Norm1 distance of (x,y) = \sum_i |x_i - y_i|
+
+    Parameters
+    ----------
+    model: Pyomo model
+        the model that needs new objective function
+    setpoint_model: Pyomo model
+        the model that provides the base point for us to calculate the distance
+    discrete_only: Bool
+        only optimize on distance between the discrete variables
+    TODO: remove setpoint_model
+    """
+
+    var_filter = (lambda v: v.is_integer()) if discrete_only \
+        else (lambda v: True)
+    model_vars = list(filter(var_filter, model.component_data_objects(Var)))
+    setpoint_vars = list(
+        filter(var_filter, setpoint_model.component_data_objects(Var)))
+    assert len(model_vars) == len(
+        setpoint_vars), "Trying to generate Norm1 norm constraint for models with different number of variables"
+    # if model.MindtPy_utils.find_component('L1_objective_function') is not None:
+    #     model.MindtPy_utils.del_component('L1_objective_function')
+    norm_constraint_blk = model.MindtPy_utils.L1_norm_constraint = Block()
+    norm_constraint_blk.L1_slack_idx = RangeSet(len(model_vars))
+    norm_constraint_blk.L1_slack_var = Var(
+        norm_constraint_blk.L1_slack_idx, domain=Reals, bounds=(0, None))
+    norm_constraint_blk.abs_reformulation = ConstraintList()
+    for idx, v_model, v_setpoint in zip(norm_constraint_blk.L1_slack_idx, model_vars,
+                                        setpoint_vars):
+        norm_constraint_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value >= -norm_constraint_blk.L1_slack_var[idx])
+        norm_constraint_blk.abs_reformulation.add(
+            expr=v_model - v_setpoint.value <= norm_constraint_blk.L1_slack_var[idx])
+    rhs = config.fp_norm_constraint_coef * \
+        sum(abs(v_model.value-v_setpoint.value)
+            for v_model, v_setpoint in zip(model_vars, setpoint_vars))
+    norm_constraint_blk.sum_slack = Constraint(
+        expr=sum(norm_constraint_blk.L1_slack_var[idx] for idx in norm_constraint_blk.L1_slack_idx) <= rhs)
