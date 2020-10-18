@@ -10,7 +10,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_tim
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
                         minimize, value)
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, SolverResults
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mindtpy.cut_generation import add_nogood_cuts
@@ -83,9 +83,15 @@ def solve_subproblem(solve_data, config):
         # fixed_nlp.tmp_duals[c] = c_leq * max(
         #     0, c_leq*(value(c.body) - rhs))
         # TODO: change logic to c_leq based on benchmarking
-    # TODO: if deactivate_trivial_constraints finds the nlp is infeasible skip the following.
-    TransformationFactory('contrib.deactivate_trivial_constraints')\
-        .apply_to(fixed_nlp, tmp=True, ignore_infeasible=False)
+    try:
+        TransformationFactory('contrib.deactivate_trivial_constraints')\
+            .apply_to(fixed_nlp, tmp=True, ignore_infeasible=False)
+    except ValueError:
+        config.logger.warning(
+            'infeasibility detected in deactivate_trivial_constraints')
+        results = SolverResults()
+        results.solver.termination_condition = tc.infeasible
+        return fixed_nlp, results
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
