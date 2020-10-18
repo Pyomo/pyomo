@@ -99,7 +99,7 @@ class MindtPySolver(object):
 
         if config.strategy == "GOA":
             config.add_nogood_cuts = True
-            config.add_slack = True
+            config.add_slack = False
             config.use_mcpp = True
             config.integer_to_binary = True
             config.use_dual = False

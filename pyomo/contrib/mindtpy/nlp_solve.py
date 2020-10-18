@@ -83,9 +83,9 @@ def solve_subproblem(solve_data, config):
         # fixed_nlp.tmp_duals[c] = c_leq * max(
         #     0, c_leq*(value(c.body) - rhs))
         # TODO: change logic to c_leq based on benchmarking
-
+    # TODO: if deactivate_trivial_constraints finds the nlp is infeasible skip the following.
     TransformationFactory('contrib.deactivate_trivial_constraints')\
-        .apply_to(fixed_nlp, tmp=True, ignore_infeasible=True)
+        .apply_to(fixed_nlp, tmp=True, ignore_infeasible=False)
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
