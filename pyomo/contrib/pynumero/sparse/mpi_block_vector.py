@@ -276,6 +276,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns total number of elements in this MPIBlockVector
         """
+        assert_block_structure(self)
         comm = self._mpiw
         rank = comm.Get_rank()
         if rank == 0:
