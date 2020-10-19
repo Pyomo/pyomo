@@ -499,7 +499,6 @@ class TestMPIBlockVector(unittest.TestCase):
         vv = BlockVector(3)
         vv.set_blocks([np.arange(3), np.arange(4), np.arange(2)])
         self.assertAlmostEqual(expected, v.dot(vv))
-        print(v.is_broadcasted())
         self.assertAlmostEqual(expected, v.dot(vv.flatten()))
 
     def test_add(self):

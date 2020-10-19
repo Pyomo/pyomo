@@ -114,8 +114,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                     obj._unique_owned_blocks.append(i)
 
         # containers that facilitate looping
-        obj._owned_blocks = np.array(obj._owned_blocks)
-        obj._unique_owned_blocks = np.array(obj._unique_owned_blocks)
+        obj._owned_blocks = np.array(obj._owned_blocks, dtype=np.int)
+        obj._unique_owned_blocks = np.array(obj._unique_owned_blocks, dtype=np.int)
         obj._brow_lengths = np.empty(nblocks, dtype=np.float64)
         obj._brow_lengths.fill(np.nan)
         obj._undefined_brows = set(obj._owned_blocks)
@@ -350,8 +350,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def get_block_size(self, ndx):
         res = self._brow_lengths[ndx]
-        if res == np.nan:
+        if np.isnan(res):
             raise NotFullyDefinedBlockVectorError('The dimensions of the requested block are not defined.')
+        res = int(res)
         return res
 
     def _set_block_size(self, ndx, size):
@@ -665,6 +666,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 self.set_block(i, other.get_block(i).copy())
         elif isinstance(other, np.ndarray):
             assert_block_structure(self)
+            if not self.is_broadcasted():
+                self.broadcast_block_sizes()
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             offset = 0
             for idx in range(self.nblocks):
