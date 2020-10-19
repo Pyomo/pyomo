@@ -15,37 +15,28 @@ Implements a general cutting plane-based reformulation for linear and
 convex GDPs.
 """
 from __future__ import division
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
-
 
 from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveFloat,
                                  NonNegativeFloat, PositiveInt)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
                          SortComponents, Transformation, TransformationFactory,
-                         value, TransformationFactory, NonNegativeIntegers,
-                         Reals, NonNegativeReals, Suffix )
+                         value, NonNegativeIntegers, Reals, NonNegativeReals,
+                         Suffix )
 from pyomo.core.expr import differentiate
-from pyomo.core.base.component import ComponentUID
-from pyomo.core.expr.current import identify_variables
-from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentSet
 from pyomo.opt import SolverFactory
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import ( verify_successful_solve, NORMAL, INFEASIBLE,
-                             NONOPTIMAL, clone_without_expression_components )
+from pyomo.gdp.util import ( verify_successful_solve, NORMAL,
+                             clone_without_expression_components )
 
 from pyomo.contrib.fme.fourier_motzkin_elimination import \
     Fourier_Motzkin_Elimination_Transformation
 
-from six import iterkeys, itervalues, iteritems
-from numpy import isclose
+from six import iteritems
 
-import math
+from math import isinf
 import logging
 
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
@@ -729,8 +720,20 @@ class CuttingPlane_Transformation(Transformation):
         # add it to the transformation block so that we don't have to
         # worry about name conflicts.
         transBlock_rHull.xstar = Param( range(len(transBlock.all_vars)),
-                                        mutable=True, default=None,
-                                        within=[None] | Reals)
+                                        mutable=True, default=0, within=Reals)
+        # initialize xstar to a value inside of the variable bounds so that if
+        # it's not used in the actual model, the separation problem will solve
+        # trivially
+        # for i, v in enumerate(transBlock.all_vars):
+        #     n = v.value
+        #     if n is None:
+        #         n = 0
+        #     if v.lb is not None and n < v.lb:
+        #         n = v.lb
+        #     if v.ub is not None and n > v.ub:
+        #         n = v.ub
+        #     transBlock_rHull.xstar[i] = n
+
         # we will add a block that we will deactivate to use to store the
         # extended space cuts. We never need to solve these, but we need them to
         # be constructed for the sake of Fourier-Motzkin Elimination
@@ -742,16 +745,15 @@ class CuttingPlane_Transformation(Transformation):
         # Generate the mapping between the variables on all the
         # instances and the xstar parameter.
         #
-        var_info = tuple(
+        var_info = [
             (v, # this is the bigM variable
              transBlock_rHull.all_vars[i],
              transBlock_rHull.xstar[i])
-            for i,v in enumerate(transBlock.all_vars))
+            for i,v in enumerate(transBlock.all_vars)]
 
-        #
-        # Add the separation objective to the hull subproblem
-        #
-        self._add_separation_objective(var_info, transBlock_rHull)
+        # NOTE: we wait to add the separation objective to the rHull problem
+        # because it is best to do it in the first iteration, so that we can
+        # skip stale variables.
 
         return (instance, instance_rHull, var_info, transBlockName)
 
@@ -871,12 +873,22 @@ class CuttingPlane_Transformation(Transformation):
             rBigM_objVal = value(rBigM_obj)
             logger.warning("rBigM objective = %s" % (rBigM_objVal,))
 
+            #
+            # Add the separation objective to the hull subproblem if it's not
+            # there already (so in the first iteration). We're waiting until now
+            # to avoid it including variables that came back stale from the
+            # rbigm solve.
+            #
+            if transBlock_rHull.component("separation_objective") is None:
+                self._add_separation_objective(var_info, transBlock_rHull)
+            
             # copy over xstar
             logger.info("x* is:")
             for x_rbigm, x_hull, x_star in var_info:
-                x_star.value = x_rbigm.value
-                # initialize the X values
-                x_hull.value = x_rbigm.value
+                if not x_rbigm.stale:
+                    x_star.value = x_rbigm.value
+                    # initialize the X values
+                    x_hull.value = x_rbigm.value    
                 if self.verbose:
                     logger.info("\t%s = %s" % 
                                 (x_rbigm.getname(fully_qualified=True,
@@ -886,7 +898,7 @@ class CuttingPlane_Transformation(Transformation):
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
             obj_diff = prev_obj - rBigM_objVal
-            improving = math.isinf(obj_diff) or \
+            improving = isinf(obj_diff) or \
                         ( abs(obj_diff) > epsilon if abs(rBigM_objVal) < 1 else
                           abs(obj_diff/prev_obj) > epsilon )
 
@@ -959,27 +971,58 @@ class CuttingPlane_Transformation(Transformation):
 
 
     def _add_separation_objective(self, var_info, transBlock_rHull):
+        # creates the separation objective. That is just adding an objective for
+        # Euclidean norm, it means adding an auxilary variable to linearize the
+        # L-infinity norm. We do this assuming that rBigM has been solved, and
+        # if any variables come back stale, we leave them out of the separation
+        # problem, as they aren't doing anything and they could cause numerical
+        # issues later.
+
         # Deactivate any/all other objectives
         for o in transBlock_rHull.model().component_data_objects(Objective):
             o.deactivate()
         norm = self._config.norm
+        to_delete = []
 
         if norm == 2:
             obj_expr = 0
-            for x_rbigm, x_hull, x_star in var_info:
-                obj_expr += (x_hull - x_star)**2
+            for i, (x_rbigm, x_hull, x_star) in enumerate(var_info):
+                if not x_rbigm.stale:
+                    obj_expr += (x_hull - x_star)**2
+                else:
+                    if self.verbose:
+                        logger.info("The variable %s will not be included in "
+                                    "the separation problem: It was stale in "
+                                    "the rBigM solve." % x_rbigm.getname(
+                                        fully_qualified=True,
+                                        name_buffer=NAME_BUFFER))
+                    to_delete.append(i)
         elif norm == float('inf'):
             u = transBlock_rHull.u = Var(domain=NonNegativeReals)
             inf_cons = transBlock_rHull.inf_norm_linearization = Constraint(
                 NonNegativeIntegers)
             i = 0
-            for x_rbigm, x_hull, x_star in var_info:
-                inf_cons[i] = u >= x_hull - x_star
-                inf_cons[i+1] = u >= x_star - x_hull
-                i += 2
+            for j, (x_rbigm, x_hull, x_star) in enumerate(var_info):
+                if not x_rbigm.stale:
+                    inf_cons[i] = u >= x_hull - x_star
+                    inf_cons[i+1] = u >= x_star - x_hull
+                    i += 2
+                else:
+                    if self.verbose:
+                        logger.info("The variable %s will not be included in "
+                                    "the separation problem: It was stale in "
+                                    "the rBigM solve." % x_rbigm.getname(
+                                        fully_qualified=True,
+                                        name_buffer=NAME_BUFFER))
+                    to_delete.append(j)
             # we'll need the duals of these to get the subgradient
             self._add_dual_suffix(transBlock_rHull.model())
             obj_expr = u
+        
+        # delete the unneeded x_stars so that we don't add cuts involving
+        # useless variables later.
+        for i in sorted(to_delete, reverse=True):
+            del var_info[i]
 
         # add separation objective to transformation block
         transBlock_rHull.separation_objective = Objective(expr=obj_expr)
@@ -996,5 +1039,5 @@ class CuttingPlane_Transformation(Transformation):
             if dual.ctype is Suffix:
                 return
             rHull.del_component(dual)
-            rHull.add_component(unique_component_name(rHull, "dual"), dual)
             rHull.dual = Suffix(direction=Suffix.IMPORT)
+            rHull.add_component(unique_component_name(rHull, "dual"), dual)

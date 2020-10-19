@@ -181,6 +181,10 @@ class OneVarDisj(unittest.TestCase):
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_two_segment_cuts_valid(self):
         m = models.twoSegments_SawayaGrossmann()
+        # add stupid variable to make sure that we don't require everything in
+        # rBigM to be useful.
+        m.will_be_stale = Var()
+
         # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
         # 0 <= Y <= 1 (in the limit)
         TransformationFactory('gdp.cuttingplane').apply_to(m, bigM=1e6)
@@ -202,7 +206,11 @@ class OneVarDisj(unittest.TestCase):
     def test_two_segment_cuts_valid_inf_norm(self):
         m = models.twoSegments_SawayaGrossmann()
 
-        # make sure this is fine if there is a random component called dual
+        # make sure this is fine if there is a random component called dual:
+        # Note that this not only tests that we handle the creating of the dual
+        # Suffix correctly, but also that we handle a stupid variable in rBigM
+        # that will come back stale and really shouldn't be in the separation
+        # problem.
         m.dual = Var()
 
         # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
