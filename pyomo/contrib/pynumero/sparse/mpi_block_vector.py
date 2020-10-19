@@ -276,9 +276,15 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns total number of elements in this MPIBlockVector
         """
-        if not self._broadcasted:
-            self.broadcast_block_sizes()
-        return np.sum(self._brow_lengths)
+        comm: MPI.Comm = self._mpiw
+        rank = comm.Get_rank()
+        if rank == 0:
+            indices = self._owned_blocks
+        else:
+            indices = self._unique_owned_blocks
+        local_size = np.sum(self._brow_lengths[indices])
+        size = comm.allreduce(local_size)
+        return size
 
     @property
     def ndim(self):
@@ -742,7 +748,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns a copy of the MPIBlockVector structure filled with zeros
         """
-        print(self.is_broadcasted())
         result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm, assert_correct_owners=False)
         if self.is_broadcasted():
             result.finalize_block_sizes(broadcast=False, block_sizes=self.block_sizes(copy=False))
@@ -788,7 +793,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         float
 
         """
-        print(self.is_broadcasted())
         assert_block_structure(self)
         assert out is None
         if isinstance(other, MPIBlockVector):
