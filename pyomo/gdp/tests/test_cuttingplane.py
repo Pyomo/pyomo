@@ -10,8 +10,9 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
-from pyomo.gdp import *
+from pyomo.environ import (ConcreteModel, Var, Constraint, Objective, Block,
+                           TransformationFactory, value, maximize, Suffix)
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.plugins.cuttingplane import create_cuts_fme 
 
 import pyomo.opt
@@ -19,7 +20,6 @@ import pyomo.gdp.tests.models as models
 from pyomo.repn import generate_standard_repn
 from pyomo.gdp.tests.common_tests import diff_apply_to_and_create_using
 
-import random
 from six import StringIO
 
 solvers = pyomo.opt.check_available_solvers('ipopt')
