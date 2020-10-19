@@ -455,9 +455,6 @@ class TestMPIBlockMatrix(unittest.TestCase):
         bm += bm
         serial_bm += serial_bm
 
-        print(bm.to_local_array())
-        print(m.toarray()*2)
-
         rows, columns = np.nonzero(bm.ownership_mask)
         for i, j in zip(rows, columns):
             if bm.get_block(i, j) is not None:
