@@ -43,7 +43,6 @@ from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
-
 NAME_BUFFER = {}
 
 def _to_dict(val):

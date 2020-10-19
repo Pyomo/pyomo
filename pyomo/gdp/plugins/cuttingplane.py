@@ -473,17 +473,16 @@ class CuttingPlane_Transformation(Transformation):
     CONFIG.declare('norm', ConfigValue(
         default=2,
         domain=_norm_domain,
-        description="Norm to use in the separation problem: 1, 2, or "
+        description="Norm to use in the separation problem: 2, or "
         "float('inf')",
         doc="""
         Norm used to calculate distance in the objective of the separation 
         problem which finds the nearest point on the hull relaxation region
         to the current solution of the relaxed bigm problem.
 
-        Supported norms are the Euclidean norm (specify 2), the L-1 norm 
-        (specify 1), and the infinity norm (specify float('inf')). Note that
-        the first makes the separation problem quadratic and the latter two 
-        make it an LP.
+        Supported norms are the Euclidean norm (specify 2) and the infinity 
+        norm (specify float('inf')). Note that the first makes the separation 
+        problem objective quadratic and the latter makes it linear.
         """
     ))
     CONFIG.declare('verbose', ConfigValue(
@@ -721,18 +720,6 @@ class CuttingPlane_Transformation(Transformation):
         # worry about name conflicts.
         transBlock_rHull.xstar = Param( range(len(transBlock.all_vars)),
                                         mutable=True, default=0, within=Reals)
-        # initialize xstar to a value inside of the variable bounds so that if
-        # it's not used in the actual model, the separation problem will solve
-        # trivially
-        # for i, v in enumerate(transBlock.all_vars):
-        #     n = v.value
-        #     if n is None:
-        #         n = 0
-        #     if v.lb is not None and n < v.lb:
-        #         n = v.lb
-        #     if v.ub is not None and n > v.ub:
-        #         n = v.ub
-        #     transBlock_rHull.xstar[i] = n
 
         # we will add a block that we will deactivate to use to store the
         # extended space cuts. We never need to solve these, but we need them to

@@ -1,19 +1,14 @@
-from __future__ import division
-
 from pyomo.environ import *
 from pyomo.gdp import *
 
-'''Problem from http://www.minlp.org/library/problem/index.php?i=172&lib=GDP We
-are minimizing the cost of a design of a plant with parallel processing units
-and storage tanks in between. We decide the number and volume of units, and the
-volume and location of the storage tanks. The problem is convexified and has a
-nonlinear objective and global constraints
+'''Problem from http://www.minlp.org/library/problem/index.php?i=172&lib=GDP
+We are minimizing the cost of a design of a plant with parallel processing units and storage tanks
+in between. We decide the number and volume of units, and the volume and location of the storage
+tanks. The problem is convexified and has a nonlinear objective and global constraints
 
-NOTE: When I refer to 'gams' in the comments, that is Batch101006_BM.gms for
-now. It's confusing because the _opt file is different (It has hard-coded bigM
-parameters so that each constraint has the optimal bigM).
-
-'''
+NOTE: When I refer to 'gams' in the comments, that is Batch101006_BM.gms for now. It's confusing
+because the _opt file is different (It has hard-coded bigM parameters so that each constraint 
+has the "optimal" bigM).'''
 
 def build_model():
     model = AbstractModel()
