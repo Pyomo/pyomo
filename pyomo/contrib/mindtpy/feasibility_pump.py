@@ -58,7 +58,7 @@ def solve_feas_pump_subproblem(solve_data, config):
     main_objective = next(
         fp_nlp.component_data_objects(Objective, active=True))
     main_objective.deactivate()
-    if main_objective.sense == 'minimize':
+    if main_objective.sense == minimize:
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value <= solve_data.UB)
     else:
@@ -137,10 +137,6 @@ def handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config):
         else:
             config.logger.error("Feasibility pump fixed nlp is infeasible, something might be wrong. "
                                 "There might be a problem with the precisions - the feasibility pump seems to have converged")
-
-    if solve_data.solution_improved:
-        solve_data.best_solution_found = solve_data.working_model.clone()
-        # log_infeasible_constraints(solve_data.working_model)
 
 
 def feas_pump_loop(solve_data, config):
