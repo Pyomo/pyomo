@@ -163,12 +163,12 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         True if the algorithm should terminate else returns False
     """
     if solve_data.should_terminate:
-        if solve_data.results.problem.sense == ProblemSense.minimize:
+        if solve_data.objective_sense == minimize:
             if solve_data.UB == float('inf'):
                 solve_data.results.solver.termination_condition = tc.noSolution
             else:
                 solve_data.results.solver.termination_condition = tc.feasible
-        elif solve_data.results.problem.sense == ProblemSense.maximize:
+        else:
             if solve_data.LB == float('-inf'):
                 solve_data.results.solver.termination_condition = tc.noSolution
             else:
@@ -265,7 +265,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                             nlc))
                     return False
         # For ECP to know whether to know which bound to copy over (primal or dual)
-        if solve_data.objective_sense == 1:
+        if solve_data.objective_sense == minimize:
             solve_data.UB = solve_data.LB
         else:
             solve_data.LB = solve_data.UB
@@ -313,7 +313,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
         config.logger.info(
             'Fix the bound to the value of one iteration before optimal solution is found.')
         try:
-            if solve_data.results.problem.sense == ProblemSense.minimize:
+            if solve_data.objective_sense == minimize:
                 solve_data.LB = solve_data.stored_bound[solve_data.UB]
             else:
                 solve_data.UB = solve_data.stored_bound[solve_data.LB]
@@ -344,7 +344,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
         # deactivate the integer cuts generated after the best solution was found.
         if config.strategy == 'GOA':
             try:
-                if solve_data.results.problem.sense == ProblemSense.minimize:
+                if solve_data.objective_sense == minimize:
                     valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
                 else:
                     valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]

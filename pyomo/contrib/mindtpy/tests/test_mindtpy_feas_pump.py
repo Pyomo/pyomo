@@ -252,7 +252,6 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=30)
-            print(value(model.cost.expr))
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
