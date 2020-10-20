@@ -285,7 +285,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             indices = self._unique_owned_blocks
         local_size = np.sum(self._brow_lengths[indices])
         size = comm.allreduce(local_size)
-        return size
+        assert int(size) == size
+        return int(size)
 
     @property
     def ndim(self):

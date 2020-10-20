@@ -89,8 +89,10 @@ class TestMPIBlockVector(unittest.TestCase):
 
     def test_size(self):
         v1 = self.v1
+        self.assertEqual(type(v1.size), int)
         self.assertEqual(v1.size, 10)
         v2 = self.v2
+        self.assertEqual(type(v2.size), int)
         self.assertEqual(v2.size, 20)
 
     def test_shape(self):
