@@ -11,34 +11,34 @@
 import pyomo.opt.base.opt_config
 import pyomo.opt.solver
 
-from pyomo.opt.base.error import ConverterError
-from pyomo.opt.base.convert import (Factory, ProblemConverterFactory,
-                                    convert_problem)
-from pyomo.opt.base.solvers import (_extract_version, UnknownSolver, SolverFactory,
-                                    SolverFactoryClass, check_available_solvers,
-                                    _raise_ephemeral_error, OptSolver,
-                                    default_config_block)
-from pyomo.opt.base.results import ReaderFactory, AbstractResultsReader
-from pyomo.opt.base.problem import (ProblemConfigFactory, BaseProblemConfig,
-                                    AbstractProblemWriter, BranchDirection,
-                                    WriterFactory)
-from pyomo.opt.base.formats import (ProblemFormat, ResultsFormat,
-                                    guess_format)
-from pyomo.opt.results.container import (ScalarData, ScalarType,
-                                         default_print_options, strict,
-                                         ListContainer, MapContainer,
-                                         UndefinedData, undefined, ignore)
-import pyomo.opt.results.problem
-from pyomo.opt.results.solver import SolverStatus, TerminationCondition, \
-    check_optimal_termination, assert_optimal_termination
-from pyomo.opt.results.problem import ProblemSense
-from pyomo.opt.results.solution import SolutionStatus, Solution
-from pyomo.opt.results.results_ import SolverResults
+from pyomo.opt.base import (
+    check_available_solvers, convert, convert_problem, error, formats,
+    guess_format, opt_config, solvers,
+    AbstractProblemWriter, AbstractResultsReader, BaseProblemConfig,
+    BranchDirection, ConverterError, OptSolver, ProblemConfigFactory,
+    ProblemFormat, ReaderFactory, ResultsFormat, SolverFactory,
+    UnknownSolver, WriterFactory,
+)
 
-from pyomo.opt.problem.ampl import AmplModel
+from pyomo.opt.results import (
+    container, problem, solution,
+    ScalarData, ScalarType,
+    default_print_options,
+    ListContainer, MapContainer,
+    UndefinedData, undefined, ignore,
+    SolverStatus, TerminationCondition,
+    check_optimal_termination, assert_optimal_termination,
+    ProblemSense,
+    SolutionStatus, Solution, results_,
+    SolverResults
+)
 
-from pyomo.opt.parallel.async_solver import (AsynchronousActionManager, SolverManagerFactory, AsynchronousSolverManager)
-import pyomo.opt.parallel.manager
-import pyomo.opt.parallel.pyro
-import pyomo.opt.parallel.local
+from pyomo.opt.problem import (
+    ampl, AmplModel
+)
+
+from pyomo.opt.parallel import (
+    pyro, manager, async_solver, local,
+    SolverManagerFactory, AsynchronousSolverManager
+)
 

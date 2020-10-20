@@ -23,7 +23,12 @@ from pyomo.opt import (SolverFactory,
 # Define the modeling namespace
 #
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.core.expr import numvalue, numeric_expr, boolean_value, logical_expr, current
+from pyomo.core.expr import (
+    numvalue, numeric_expr, boolean_value, logical_expr, current,
+    calculus, symbol_map, expr_errors, visitor, sympy_tools, taylor_series,
+    expr_common, cnf_walker, template_expr
+)
+
 
 from pyomo.core.expr.numvalue import (
     value, is_constant, is_fixed, is_variable_type,
