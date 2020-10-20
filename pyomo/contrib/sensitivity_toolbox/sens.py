@@ -15,25 +15,23 @@ from pyomo.core.expr.current import (clone_expression, identify_variables,
                                      ExpressionReplacementVisitor)
 
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.deprecation import deprecated
 from pyomo.opt import SolverFactory
 import logging
 
-
+@deprecated('The sipopt function has been deprecated. Use the sensitivity_calculation() function with the "sipopt" option to access this functionality.', 
+            version='TBD')
 def sipopt(instance, paramSubList, perturbList,
-           cloneModel=True, streamSoln=False, keepfiles=False):
-    import warnings
-    warnings.warn("sipopt function will be combined into sensitivity_calculation and removed in a future release.", DeprecationWarning)    
+           cloneModel=True, streamSoln=False, keepfiles=False):    
     m = sensitivity_calculation('sipopt', instance, paramSubList, perturbList,
          cloneModel, streamSoln, keepfiles, optarg=None)
 
     return m
 
-
-
+@deprecated('The kaug function has been deprecated. Use the sensitivity_calculation() function with the "kaug" option to access this functionality.', 
+            version='TBD')
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
-    import warnings
-    warnings.warn("kaug function will be combined into sensitivity_calculation and removed in a future release.", DeprecationWarning)
     m = sensitivity_calculation('kaug', instance, paramSubList, perturbList,
          cloneModel, streamSoln, keepfiles, optarg)
 
