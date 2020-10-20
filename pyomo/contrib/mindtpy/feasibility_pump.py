@@ -2,7 +2,7 @@
 from pyomo.core import (Var, Objective, Reals, minimize,
                         RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
 from pyomo.core.base.constraint import ConstraintList
-from pyomo.opt import SolverFactory, SolutionStatus
+from pyomo.opt import SolverFactory, SolutionStatus, SolverResults
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
                                              handle_subproblem_optimal, handle_subproblem_infeasible,
@@ -86,8 +86,15 @@ def solve_feas_pump_subproblem(solve_data, config):
 
     MindtPy.MindtPy_linear_cuts.deactivate()
     TransformationFactory('core.relax_integer_vars').apply_to(fp_nlp)
-    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
-        fp_nlp, tmp=True, ignore_infeasible=True)
+    try:
+        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+            fp_nlp, tmp=True, ignore_infeasible=False)
+    except ValueError:
+        config.logger.warning(
+            'infeasibility detected in deactivate_trivial_constraints')
+        results = SolverResults()
+        results.solver.termination_condition = tc.infeasible
+        return fp_nlp, results
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
