@@ -4,7 +4,7 @@ from __future__ import division
 
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values, get_main_elapsed_time
 from pyomo.contrib.mindtpy.cut_generation import (
-    add_oa_cuts, add_affine_cuts, add_objective_linearization,
+    add_oa_cuts, add_affine_cuts,
 )
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)

@@ -12,37 +12,6 @@ from pyomo.core.expr import differentiate
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 
-def add_objective_linearization(solve_data, config):
-    """
-    If objective is nonlinear, then this function adds a linearized objective. This function should be used to
-    initialize the ECP method.
-
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
-    """
-    m = solve_data.working_model
-    MindtPy = m.MindtPy_utils
-    solve_data.mip_iter += 1
-    gen = (obj for obj in MindtPy.jacs
-           if obj is MindtPy.MindtPy_objective_expr)
-    MindtPy.MindtPy_linear_cuts.mip_iters.add(solve_data.mip_iter)
-    sign_adjust = 1 if MindtPy.obj.sense == minimize else -1
-
-    # generate new constraints
-    # TODO some kind of special handling if the dual is phenomenally small?
-    for obj in gen:
-        c = MindtPy.MindtPy_linear_cuts.ecp_cuts.add(
-            expr=sign_adjust * sum(
-                value(MindtPy.jacs[obj][id(var)]) * (var - value(var))
-                for var in list(EXPR.identify_variables(obj.body))) +
-            value(obj.body) <= 0)
-        MindtPy.ECP_constr_map[obj, solve_data.mip_iter] = c
-
-
 def add_oa_cuts(target_model, dual_values, solve_data, config,
                 linearize_active=True,
                 linearize_violated=True):
