@@ -19,6 +19,8 @@ from pyomo.common.deprecation import deprecated
 from pyomo.opt import SolverFactory
 import logging
 
+_log = logging.getLogger('__name__')
+
 @deprecated('The sipopt function has been deprecated. Use the sensitivity_calculation() function with method="sipopt" to access this functionality.', 
             version='TBD')
 def sipopt(instance, paramSubList, perturbList,
@@ -295,20 +297,20 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
             m.DeltaP[b.paramConst[kk]] = value(ii)-value(perturbSubMap[id(ii)])
             kk += 1
         
-        logger = logging.getLogger(__name__)            
+                    
         logger.info("ipopt starts")
         ipopt.solve(m, tee=streamSoln)
         m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
         m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
-        logger.info("ipopt completed")
+        logger.debug("ipopt completed")
         #: k_aug
         logger.info("k_aug starts")
         kaug.options['dsdp_mode'] = ""  #: sensitivity mode!
         kaug.solve(m, tee=streamSoln)
-        logger.info("k_aug completed")
+        logger.debug("k_aug completed")
         dotsens.options["dsdp_mode"] = ""
         logger.info("dotsens starts")
         dotsens.solve(m, tee=streamSoln) 
-        logger.info("dotsens completed")
+        logger.debug("dotsens completed")
                 
     return m        

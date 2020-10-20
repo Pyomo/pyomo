@@ -9,7 +9,7 @@
 # ____________________________________________________________________________
 
 """
-Unit Tests for interfacing with sIPOPT and k_aug
+Unit Tests for interfacing with sensitivity_calculation
 """
 
 import pyutilib.th as unittest
