@@ -124,8 +124,8 @@ class TestMindtPy(unittest.TestCase):
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
     # def test_FP_Feasibility_Pump2(self):
-    #     """Test the extended cutting plane decomposition algorithm.
-    #     TODO: the fixed_nlp is an LP"""
+    #     """Test the extended cutting plane decomposition algorithm."""
+    #     # TODO: the fixed_nlp is an LP
     #     with SolverFactory('mindtpy') as opt:
     #         model = Feasibility_Pump2()
     #         print('\n Solving Feasibility_Pump2 with feasibility pump')
@@ -134,7 +134,8 @@ class TestMindtPy(unittest.TestCase):
     #                             nlp_solver=required_solvers[0],
     #                             bound_tolerance=1E-3,
     #                             tee=True,
-    #                             solver_tee=True)
+    #                             # solver_tee=True
+    #                             )
     #         log_infeasible_constraints(model)
     #         self.assertTrue(is_feasible(model, self.get_config(opt)))
 

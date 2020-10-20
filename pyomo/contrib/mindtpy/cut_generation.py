@@ -206,7 +206,7 @@ def add_ecp_cuts(target_model, solve_data, config,
 def add_no_good_cuts(var_values, solve_data, config, feasible=False):
     """
     Adds no-good cuts; modifies the model to include no-good cuts
-    This adds an no-good cuts to the feasible_no_good_cuts ConstraintList, which is not activated by default.
+    This adds an no-good cuts to the no_good_cuts ConstraintList, which is not activated by default.
     However, it may be activated as needed in certain situations or for certain values of option flags.
 
     Parameters
@@ -319,15 +319,7 @@ def add_affine_cuts(solve_data, config):
             lb_int = max(constr.lower, mc_eqn.lower()
                          ) if constr.has_lb() else mc_eqn.lower()
 
-            parent_block = constr.parent_block()
-            # Create a block on which to put outer approximation cuts.
-            # TODO: create it at the beginning.
-            aff_utils = parent_block.component('MindtPy_aff')
-            if aff_utils is None:
-                aff_utils = parent_block.MindtPy_aff = Block(
-                    doc="Block holding affine constraints")
-                aff_utils.MindtPy_aff_cons = ConstraintList()
-            aff_cuts = aff_utils.MindtPy_aff_cons
+            aff_cuts = m.MindtPy_utils.MindtPy_linear_cuts.aff_cuts
             if concave_cut_valid:
                 concave_cut = sum(ccSlope[var] * (var - var.value)
                                   for var in vars_in_constr

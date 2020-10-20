@@ -249,7 +249,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
         elif config.strategy == "GOA":
             add_affine_cuts(solve_data, config)
-    # Add an no-good cuts to exclude this discrete option
+    # Add a no-good cut to exclude this discrete option
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_no_good_cuts:
         # excludes current discrete option

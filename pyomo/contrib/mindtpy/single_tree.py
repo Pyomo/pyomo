@@ -209,15 +209,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 lb_int = max(constr.lower, mc_eqn.lower()
                              ) if constr.has_lb() else mc_eqn.lower()
 
-                parent_block = constr.parent_block()
-                # Create a block on which to put outer approximation cuts.
-                # TODO: create it at the beginning.
-                aff_utils = parent_block.component('MindtPy_aff')
-                if aff_utils is None:
-                    aff_utils = parent_block.MindtPy_aff = Block(
-                        doc="Block holding affine constraints")
-                    aff_utils.MindtPy_aff_cons = ConstraintList()
-                aff_cuts = aff_utils.MindtPy_aff_cons
                 if concave_cut_valid:
                     pyomo_concave_cut = sum(ccSlope[var] * (var - var.value)
                                             for var in vars_in_constr
@@ -241,7 +232,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     self.add(constraint=cplex.SparsePair(ind=cplex_convex_cut.variables, val=cplex_convex_cut.coefficients),
                              sense="L",
                              rhs=ub_int - cplex_convex_rhs)
-                    # aff_cuts.add(expr=convex_cut)
                     counter += 1
 
             config.logger.info("Added %s affine cuts" % counter)
@@ -505,9 +495,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     solve_data.LB, config.bound_tolerance, solve_data.UB))
             solve_data.results.solver.termination_condition = tc.optimal
             self.abort()
-        # else:
         # solve subproblem
-        # Solve NLP subproblem
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = solve_subproblem(
             solve_data, config)

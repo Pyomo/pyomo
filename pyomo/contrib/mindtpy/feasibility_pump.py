@@ -171,7 +171,6 @@ def feas_pump_loop(solve_data, config):
             config.logger.warning('FP-MIP reaches max TimeLimit')
         elif feas_master_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
-            # TODO: needs to be checked here.
             no_good_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts
             if no_good_cuts.__len__() > 0:
                 no_good_cuts[no_good_cuts.__len__()].deactivate()

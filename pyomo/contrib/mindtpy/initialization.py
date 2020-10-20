@@ -59,6 +59,9 @@ def MindtPy_initialize_master(solve_data, config):
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.ecp_cuts = ConstraintList(
             doc='Extended Cutting Planes')
+    elif config.strategy == 'GOA':
+        MindtPy.MindtPy_linear_cuts.aff_cuts = ConstraintList(
+            doc='Affine cuts')
     # elif config.strategy == 'PSC':
     #     detect_nonlinear_vars(solve_data, config)
     #     MindtPy.MindtPy_linear_cuts.psc_cuts = ConstraintList(
