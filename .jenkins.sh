@@ -187,7 +187,7 @@ if test -z "$MODE" -o "$MODE" == test; then
             while /bin/true; do
                 i=$[$i+1]
                 echo "Uploading coverage to codecov (attempt $i)"
-                codecov -X gcovcodecov -X gcov --no-color \
+                codecov -X gcovcodecov -X gcov -X s3 --no-color \
                     -t $CODECOV_TOKEN --root `pwd` -e OS,python \
                     --name $CODECOV_JOB_NAME $CODECOV_ARGS \
                     | tee .cover.upload
