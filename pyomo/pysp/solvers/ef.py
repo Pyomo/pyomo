@@ -11,8 +11,7 @@ import os
 import logging
 import sys
 import time
-
-from pyutilib.misc import config
+import argparse
 
 import pyomo.solvers
 from pyomo.common.dependencies import yaml
@@ -693,8 +692,7 @@ def runef_register_options(options=None):
     # Deprecated
     #
 
-    class _DeprecatedActivateJSONIOSolutionSaver(
-            config.argparse.Action):
+    class _DeprecatedActivateJSONIOSolutionSaver(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -775,6 +773,7 @@ def runef(options,
         if options.output_file is not None:
             with ExtensiveFormAlgorithm(sp, options) as ef:
                 ef.build_ef()
+                ## !!THIS SEEMS LIKE A BUG!! - mrmundt #
                 ef.write(filename)
         else:
             print("")

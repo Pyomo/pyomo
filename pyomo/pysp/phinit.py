@@ -1256,6 +1256,7 @@ def run_ph(options, ph):
 def exec_runph(options):
 
     start_time = time.time()
+    import pyomo.environ
 
     try:
 

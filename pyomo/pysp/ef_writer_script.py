@@ -12,7 +12,7 @@ import os
 import logging
 import sys
 import time
-from pyutilib.misc import config
+import argparse
 
 import pyomo.solvers
 from pyomo.common.dependencies import yaml
@@ -619,7 +619,7 @@ def runef_register_options(options=None):
     safe_register_common_option(options,
                                 "pyro_shutdown_workers")
 
-    class _DeprecatedActivateJSONIOSolutionSaver(config.argparse.Action):
+    class _DeprecatedActivateJSONIOSolutionSaver(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")

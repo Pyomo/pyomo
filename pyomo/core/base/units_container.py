@@ -108,7 +108,7 @@ information.
 #    * Extend external function interface to support units for the arguments in addition to the function itself
 
 import six
-from sys import stdout
+import sys
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_numeric_types
@@ -382,7 +382,7 @@ class _PyomoUnit(NumericValue):
         """Display a user readable string description of this object.
         """
         if ostream is None: #pragma:nocover
-            ostream = stdout
+            ostream = sys.stdout
         ostream.write(str(self))
         # There is also a long form, but the verbose flag is not really the correct indicator
         # if verbose:
@@ -1108,6 +1108,7 @@ class UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
             return (pyomo_unit, pint_unit)
 
+        # !!THIS SEEMS LIKE A BUG!! - mrmundt #
         raise TypeError('An unhandled expression node type: {} was encountered while retrieving the'
                         ' units of expression'.format(str(node_type), str(node)))
 

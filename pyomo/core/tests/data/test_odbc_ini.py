@@ -12,7 +12,7 @@
 #
 
 import os
-
+import pyomo.environ
 import pyutilib.th as unittest
 
 try:

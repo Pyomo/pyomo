@@ -94,6 +94,7 @@ def help_commands():
     print("")
 
 def help_writers():
+    import pyomo.environ
     from pyomo.opt.base import WriterFactory
     wrapper = textwrap.TextWrapper()
     wrapper.initial_indent = '      '
@@ -125,6 +126,7 @@ def help_checkers():
         print(wrapper.fill(tmp[key]))
 
 def help_datamanagers(options):
+    import pyomo.environ
     from pyomo.dataportal import DataManagerFactory
     wrapper = textwrap.TextWrapper()
     wrapper.initial_indent = '      '
@@ -245,6 +247,7 @@ def help_environment():
     print(str(info))
 
 def help_transformations():
+    import pyomo.environ
     from pyomo.core import TransformationFactory
     wrapper = textwrap.TextWrapper()
     wrapper.initial_indent = '      '

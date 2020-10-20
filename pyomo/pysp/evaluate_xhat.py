@@ -150,7 +150,7 @@ def run_evaluate_xhat(options,
                       solution_savers=()):
 
     start_time = time.time()
-
+    import pyomo.environ
     solution_loaders = sort_extensions_by_precedence(solution_loaders)
     solution_savers = sort_extensions_by_precedence(solution_savers)
 

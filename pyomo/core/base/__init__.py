@@ -14,7 +14,6 @@
 from six import iteritems, iterkeys
 import pyomo.core.expr.numvalue
 import pyomo.core.expr.logical_expr
-from pyomo.core.expr.numvalue import (native_types)
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.symbol_map import SymbolMap
 import pyomo.core.base.action
@@ -40,6 +39,7 @@ import pyomo.core.base.util
 import pyomo.core.base.var
 
 from pyomo.core.expr.numvalue import (nonpyomo_leaf_types,
+                                      native_types,
                                       native_numeric_types,
                                       value, is_constant,
                                       is_fixed, is_variable_type,

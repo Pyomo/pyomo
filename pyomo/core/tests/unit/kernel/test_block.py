@@ -679,7 +679,7 @@ class TestMisc(unittest.TestCase):
         b.c3 = constraint(body=b.v, ub=b.eu)
         b.dual = suffix(direction=suffix.IMPORT)
 
-        import pyomo.environ        
+        import pyomo.environ
         from pyomo.opt.base.solvers import UnknownSolver
         from pyomo.opt import SolverFactory
         from pyomo.opt import SolverStatus, TerminationCondition
