@@ -16,9 +16,12 @@ defaults:
 
 env:
   PYTHONWARNINGS: ignore::UserWarning
+  PYTHON_REQUIRED_PKGS: >
+      ply six nose coverage
   PYTHON_BASE_PKGS: >
-      coverage cython dill ipython networkx nose openpyxl pathos
+      cython dill ipython networkx openpyxl pathos
       pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd wheel
+      python-louvain
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn
   CACHE_VER: v2
@@ -55,7 +58,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py
+          PACKAGES: mpi4py openmpi
           NAME: /mpi
 
         exclude:
@@ -71,7 +74,7 @@ jobs:
     - name: Configure job parameters
       run: |
         JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}"
-        echo "::set-env name=GHA_JOBNAME::"`echo "$JOB" | sed 's|/|_|g'`
+        echo "GHA_JOBNAME=$JOB" | sed 's|/|_|g' >> $GITHUB_ENV
 
     # Ideally we would cache the conda downloads; however, each cache is
     # over 850MB, and with 5 python versions, that would consume 4.2 of
@@ -117,7 +120,7 @@ jobs:
         )"
         echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
         echo "$CURLRC" > ${GITHUB_WORKSPACE}/_curlrc
-        echo "::set-env name=CURL_HOME::$GITHUB_WORKSPACE"
+        echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
     - name: Update OSX
       if: matrix.TARGET == 'osx'
@@ -155,7 +158,7 @@ jobs:
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
-      uses: goanpeca/setup-miniconda@v1
+      uses: conda-incubator/setup-miniconda@v1
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
@@ -184,7 +187,7 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         pip install --cache-dir cache/pip ${PYTHON_BASE_PKGS} \
-            ${{matrix.PACKAGES}}
+            ${PYTHON_REQUIRED_PKGS} ${{matrix.PACKAGES}}
         if [[ ${{matrix.python}} != pypy* ]]; then
             # NumPy and derivatives either don't build under pypy, or if
             # they do, the builds take forever.
@@ -194,9 +197,9 @@ jobs:
             || echo "WARNING: CPLEX Community Edition is not available"
         pip install --cache-dir cache/pip xpress \
             || echo "WARNING: Xpress Community Edition is not available"
-        python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
-            % (sys.executable,))'
-        echo "::set-env name=NOSETESTS::"`which nosetests`
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
+        echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
 
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
@@ -209,16 +212,16 @@ jobs:
         conda config --show-sources
         conda list --show-channel-urls
         conda install -q -y -c conda-forge ${PYTHON_BASE_PKGS} \
-            ${PYTHON_NUMPY_PKGS} ${{matrix.PACKAGES}}
+            ${PYTHON_NUMPY_PKGS} ${PYTHON_REQUIRED_PKGS} ${{matrix.PACKAGES}}
         # Note: CPLEX 12.9 (the last version in conda that supports
         #    Python 2.7) causes a seg fault in the tests.
         conda install -q -y -c ibmdecisionoptimization cplex=12.10 \
             || echo "WARNING: CPLEX Community Edition is not available"
         conda install -q -y -c fico-xpress xpress \
             || echo "WARNING: Xpress Community Edition is not available"
-        python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
-            % (sys.executable,))'
-        echo "::set-env name=NOSETESTS::"`which nosetests`
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
+        echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
 
     - name: Setup TPL package directories
       run: |
@@ -226,13 +229,13 @@ jobs:
         mkdir -p "$TPL_DIR"
         DOWNLOAD_DIR="${GITHUB_WORKSPACE}/cache/download"
         mkdir -p "$DOWNLOAD_DIR"
-        echo "::set-env name=TPL_DIR::$TPL_DIR"
-        echo "::set-env name=DOWNLOAD_DIR::$DOWNLOAD_DIR"
+        echo "TPL_DIR=$TPL_DIR" >> $GITHUB_ENV
+        echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
 
     - name: Install Ipopt
       run: |
         IPOPT_DIR=$TPL_DIR/ipopt
-        echo "::add-path::$IPOPT_DIR"
+        echo "$IPOPT_DIR" >> $GITHUB_PATH
         mkdir -p $IPOPT_DIR
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
@@ -260,9 +263,9 @@ jobs:
       shell: pwsh
       run: |
         $GAMS_DIR="${env:TPL_DIR}/gams"
-        echo "::add-path::$GAMS_DIR"
-        echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
-        echo "::set-env name=DYLD_LIBRARY_PATH::${env:DYLD_LIBRARY_PATH}:$GAMS_DIR"
+        echo "$GAMS_DIR" >> $GITHUB_PATH
+        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
+        echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
         $INSTALLER="${env:DOWNLOAD_DIR}/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -290,7 +293,7 @@ jobs:
 
     - name: Install GAMS Python bindings
       run: |
-        GAMS_DIR="$TPL_DIR/gams"
+        GAMS_DIR="${env:TPL_DIR}/gams"
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
@@ -304,7 +307,7 @@ jobs:
       shell: pwsh
       run: |
         $BARON_DIR="${env:TPL_DIR}/baron"
-        echo "::add-path::$BARON_DIR"
+        echo "$BARON_DIR" >> $GITHUB_PATH
         $URL="https://www.minlp.com/downloads/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
@@ -334,7 +337,7 @@ jobs:
       if: matrix.TARGET != 'win'
       run: |
         GJH_DIR="$TPL_DIR/gjh"
-        echo "::add-path::${GJH_DIR}"
+        echo "${GJH_DIR}" >> $GITHUB_PATH
         INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
         if test ! -e "$INSTALL_DIR/bin"; then
             mkdir -p "$INSTALL_DIR"
@@ -367,7 +370,7 @@ jobs:
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
-        echo "::set-env name=PYOMO_CONFIG_DIR::${GITHUB_WORKSPACE}/config"
+        echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
 
     - name: Set up coverage tracking
       run: |
@@ -377,8 +380,8 @@ jobs:
             COVERAGE_BASE=${GITHUB_WORKSPACE}/.cover
         fi
         COVERAGE_RC=${COVERAGE_BASE}_rc
-        echo "::set-env name=COVERAGE_RCFILE::$COVERAGE_RC"
-        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
+        echo "COVERAGE_RCFILE=$COVERAGE_RC" >> $GITHUB_ENV
+        echo "COVERAGE_PROCESS_START=$COVERAGE_RC" >> $GITHUB_ENV
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
         echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
         SITE_PACKAGES=$($PYTHON_EXE -c "from distutils.sysconfig import \

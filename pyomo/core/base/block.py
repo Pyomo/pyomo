@@ -2153,21 +2153,15 @@ _BlockData._Block_reserved_words = set(dir(Block()))
 
 
 class _IndexedCustomBlockMeta(type):
-    """Metaclass for creating an indexed block with
-    a custom block data type."""
+    """Metaclass for creating an indexed custom block.
+    """
 
-    def __new__(meta, name, bases, dct):
-        def __init__(self, *args, **kwargs):
-            bases[0].__init__(self, *args, **kwargs)
-
-        dct["__init__"] = __init__
-        return type.__new__(meta, name, bases, dct)
+    pass
 
 
 class _ScalarCustomBlockMeta(type):
-    '''Metaclass used to create a scalar block with a
-    custom block data type
-    '''
+    """Metaclass for creating a scalar custom block.
+    """
 
     def __new__(meta, name, bases, dct):
         def __init__(self, *args, **kwargs):
@@ -2182,9 +2176,14 @@ class _ScalarCustomBlockMeta(type):
 
 
 class CustomBlock(Block):
-    ''' This CustomBlock is the base class that allows
-    for easy creation of specialized derived blocks
-    '''
+    """ The base class used by instances of custom block components
+    """
+
+    def __init__(self, *args, **kwds):
+        if self._default_ctype is not None:
+            kwds.setdefault('ctype', self._default_ctype)
+        Block.__init__(self, *args, **kwds)
+
 
     def __new__(cls, *args, **kwds):
         if cls.__name__.startswith('_Indexed') or \
@@ -2193,37 +2192,65 @@ class CustomBlock(Block):
             # therefore, we need to create what we have
             return super(CustomBlock, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            bname = "_Scalar{}".format(cls.__name__)
-            n = _ScalarCustomBlockMeta(bname, (cls._ComponentDataClass, cls), {})
+            n = _ScalarCustomBlockMeta(
+                "_Scalar%s" % (cls.__name__,),
+                (cls._ComponentDataClass, cls),
+                {}
+            )
             return n.__new__(n)
         else:
-            bname = "_Indexed{}".format(cls.__name__)
-            n = _IndexedCustomBlockMeta(bname, (cls,), {})
+            n = _IndexedCustomBlockMeta(
+                "_Indexed%s" % (cls.__name__,),
+                (cls,),
+                {}
+            )
             return n.__new__(n)
 
 
-def declare_custom_block(name):
-    ''' Decorator to declare the custom component
-    that goes along with a custom block data
+def declare_custom_block(name, new_ctype=None):
+    """ Decorator to declare components for a custom block data class
 
-    @declare_custom_block(name=FooBlock)
-    class FooBlockData(_BlockData):
-       # custom block data class
-    '''
+    >>> @declare_custom_block(name=FooBlock)
+    ... class FooBlockData(_BlockData):
+    ...    # custom block data class
+    ...    pass
+    """
 
     def proc_dec(cls):
         # this is the decorator function that
         # creates the block component class
+
+        # Default (derived) Block attributes
+        clsbody = {
+            "__module__": cls.__module__,  # magic to fix the module
+            # Default IndexedComponent data object is the decorated class:
+            "_ComponentDataClass": cls,
+            # By default this new block does not declare a new ctype
+            "_default_ctype": None,
+        }
+
         c = type(
-            name,
-            # name of new class
-            (CustomBlock,),
-            # base classes
-            {"__module__": cls.__module__,
-             "_ComponentDataClass": cls})  # magic to fix the module
+            name,  # name of new class
+            (CustomBlock,),  # base classes
+            clsbody,  # class body definitions (will populate __dict__)
+        )
+
+        if new_ctype is not None:
+            if new_ctype is True:
+                c._default_ctype = c
+            elif type(new_ctype) is type:
+                c._default_ctype = new_ctype
+            else:
+                raise ValueError("Expected new_ctype to be either type "
+                                 "or 'True'; received: %s" % (new_ctype,))
+
+        # Register the new Block type in the same module as the BlockData
+        setattr(sys.modules[cls.__module__], name, c)
+        # TODO: can we also register concrete Indexed* and Scalar*
+        # classes into the original BlockData module (instead of relying
+        # on metaclasses)?
 
         # are these necessary?
-        setattr(sys.modules[cls.__module__], name, c)
         setattr(cls, '_orig_name', name)
         setattr(cls, '_orig_module', cls.__module__)
         return cls
