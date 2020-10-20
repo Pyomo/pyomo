@@ -37,10 +37,6 @@ def kaug(instance, paramSubList, perturbList,
 
     return m
 
-
-
-
-
 def sensitivity_calculation(method, instance, paramSubList, perturbList,
          cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
     """This function accepts a Pyomo ConcreteModel, a list of 
@@ -48,6 +44,7 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
     is then converted into the design structure required to call sipopt or
     kaug dsdp mode to get an approximate perturbed solution with updated 
     bounds on the decision variable.
+    
     Parameters
     ----------
     method: string
@@ -79,7 +76,7 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
     -------
     model: ConcreteModel
         if method is 'sipopt',
-        The model modified for use with sipopt.  The returned model has
+        The model is modified for use with sipopt.  The returned model has
             three :class:`Suffix` members defined:
 
         - ``model.sol_state_1``: the approximated results at the
@@ -88,7 +85,7 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
         - ``model.sol_state_1_z_U``: the updated upper bound
         
         if method is 'kaug',
-        The model modified for use with kaug.  
+        The model is modified for use with kaug.  
         The model contains the approximated results at the perturbation point
         
     Raises
