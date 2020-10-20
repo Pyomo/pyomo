@@ -136,7 +136,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_no_good_cuts and config.strategy is not 'feas_pump':
+    if config.add_no_good_cuts and config.strategy is not 'feas_pump' and not solve_data.should_terminate:
         bound_fix(solve_data, config, last_iter_cuts)
 
 
@@ -162,6 +162,18 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     boolean
         True if the algorithm should terminate else returns False
     """
+    if solve_data.should_terminate:
+        if solve_data.results.problem.sense == ProblemSense.minimize:
+            if solve_data.UB == float('inf'):
+                solve_data.results.solver.termination_condition = tc.noSolution
+            else:
+                solve_data.results.solver.termination_condition = tc.feasible
+        elif solve_data.results.problem.sense == ProblemSense.maximize:
+            if solve_data.LB == float('-inf'):
+                solve_data.results.solver.termination_condition = tc.noSolution
+            else:
+                solve_data.results.solver.termination_condition = tc.feasible
+        return True
 
     # Check bound convergence
     if solve_data.LB + config.bound_tolerance >= solve_data.UB:
@@ -327,7 +339,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
                                                     solve_data, config)
 
         MindtPy = solve_data.mip.MindtPy_utils
-# deactivate the integer cuts generated after the best solution was found.
+        # deactivate the integer cuts generated after the best solution was found.
         if config.strategy == 'GOA':
             try:
                 if solve_data.results.problem.sense == ProblemSense.minimize:
@@ -338,7 +350,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
                         MindtPy.MindtPy_linear_cuts.no_good_cuts)+1):
                     MindtPy.MindtPy_linear_cuts.no_good_cuts[i].deactivate()
             except KeyError:
-                config.logger.info('Cut deactivate failed.')
+                config.logger.info('No-good cut deactivate failed.')
         elif config.strategy == 'OA':
             MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
                 MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()

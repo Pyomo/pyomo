@@ -204,9 +204,15 @@ def feas_pump_loop(solve_data, config):
             handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config)
         elif fp_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
             config.logger.error("Feasibility pump NLP subproblem infeasible")
-        elif termination_condition is tc.maxIterations:
-            config.logger.info(
+            solve_data.should_terminate = True
+            solve_data.results.solver.status = SolverStatus.error
+            return
+        elif fp_nlp_result.solver.termination_condition is tc.maxIterations:
+            config.logger.error(
                 'Feasibility pump NLP subproblem failed to converge within iteration limit.')
+            solve_data.should_terminate = True
+            solve_data.results.solver.status = SolverStatus.error
+            return
         else:
             raise ValueError(
                 'MindtPy unable to handle NLP subproblem termination '

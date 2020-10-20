@@ -10,7 +10,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_tim
 from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
                         minimize, value)
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverFactory, SolverResults
+from pyomo.opt import SolverFactory, SolverResults, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
@@ -242,6 +242,8 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
         config.logger.info('Solving feasibility problem')
         feas_subproblem, feas_subproblem_results = solve_feasibility_subproblem(
             solve_data, config)
+        if solve_data.should_terminate:
+            return
         copy_var_list_values(feas_subproblem.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
@@ -360,17 +362,24 @@ def solve_feasibility_subproblem(solve_data, config):
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
     elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
-        raise ValueError('Feasibility NLP infeasible. '
-                         'This should never happen.')
+        config.logger.error('Feasibility NLP infeasible. '
+                            'This should never happen.')
+        solve_data.should_terminate = True
+        solve_data.results.solver.status = SolverStatus.error
+        return feas_subproblem, feas_soln
     elif subprob_terminate_cond is tc.maxIterations:
-        raise ValueError('Subsolver reached its maximum number of iterations without converging, '
-                         'consider increasing the iterations limit of the subsolver or reviewing your formulation.')
+        config.logger.error('Subsolver reached its maximum number of iterations without converging, '
+                            'consider increasing the iterations limit of the subsolver or reviewing your formulation.')
+        solve_data.should_terminate = True
+        solve_data.results.solver.status = SolverStatus.error
+        return feas_subproblem, feas_soln
     else:
-        raise ValueError(
-            'MindtPy unable to handle feasibility NLP termination condition '
-            'of {}'.format(subprob_terminate_cond))
+        config.error('MindtPy unable to handle feasibility NLP termination condition '
+                     'of {}'.format(subprob_terminate_cond))
+        solve_data.should_terminate = True
+        solve_data.results.solver.status = SolverStatus.error
+        return feas_subproblem, feas_soln
 
-    var_values = [v.value for v in MindtPy.variable_list]
     duals = [0 for _ in MindtPy.constraint_list]
 
     for i, c in enumerate(MindtPy.constraint_list):

@@ -84,6 +84,7 @@ class MindtPySolver(object):
         solve_data.timing = Container()
         solve_data.curr_int_sol = []
         solve_data.prev_int_sol = []
+        solve_data.should_terminate = False
 
         # configuration confirmation
         if config.single_tree:
