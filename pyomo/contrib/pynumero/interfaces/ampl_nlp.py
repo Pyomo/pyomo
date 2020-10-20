@@ -362,13 +362,13 @@ class AslNLP(ExtendedNLP):
         numpy.ndarray
         """
         if vector_type == 'primals':
-            return np.zeros(self._n_primals, dtype=np.float64)
+            return np.zeros(self.n_primals(), dtype=np.float64)
         elif vector_type == 'constraints' or vector_type == 'duals':
-            return np.zeros(self._n_con_full, dtype=np.float64)
+            return np.zeros(self.n_constraints(), dtype=np.float64)
         elif vector_type == 'eq_constraints' or vector_type == 'duals_eq':
-            return np.zeros(self._n_con_eq, dtype=np.float64)
+            return np.zeros(self.n_eq_constraints(), dtype=np.float64)
         elif vector_type == 'ineq_constraints' or vector_type == 'duals_ineq':
-            return np.zeros(self._n_con_ineq, dtype=np.float64)
+            return np.zeros(self.n_ineq_constraints(), dtype=np.float64)
         else:
             raise RuntimeError('Called create_new_vector with an unknown vector_type')
 
@@ -440,14 +440,16 @@ class AslNLP(ExtendedNLP):
     def get_eq_constraints_scaling(self):
         constraints_scaling = self.get_constraints_scaling()
         if constraints_scaling is not None:
-            return np.compress(self._con_full_eq_mask, constraints_scaling)
+            return np.compress(self._con_full_eq_mask,
+                               constraints_scaling)
         return None
 
     # overloaded from ExtendedNLP
     def get_ineq_constraints_scaling(self):
         constraints_scaling = self.get_constraints_scaling()
         if constraints_scaling is not None:
-            return np.compress(self._con_full_ineq_mask, constraints_scaling)
+            return np.compress(self._con_full_ineq_mask,
+                               constraints_scaling)
         return None
 
     def _evaluate_objective_and_cache_if_necessary(self):

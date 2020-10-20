@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""Tests for the MINDT solver plugin."""
+"""Tests for the MindtPy solver."""
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \
@@ -51,8 +51,8 @@ class TestMindtPy(unittest.TestCase):
                                 bound_tolerance=1E-5,
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_lazy_OA_8PP_init_max_binary(self):
@@ -66,8 +66,8 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_lazy_OA_MINLP_simple(self):
@@ -126,8 +126,8 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 single_tree=True)
 
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_lazy_OA_ConstraintQualificationExample(self):
@@ -140,7 +140,7 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True
                                 )
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.maxIterations)
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample(self):
