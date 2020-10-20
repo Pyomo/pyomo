@@ -152,10 +152,10 @@ def solve_master(solve_data, config, feas_pump=False):
             master_mip_results = masteropt.solve(
                 solve_data.mip, tee=config.mip_solver_tee, **mip_args)
 
-        # if config.single_tree is False and config.add_nogood_cuts is False:
+        # if config.single_tree is False and config.add_no_good_cuts is False:
 
         if master_mip_results.solver.termination_condition is tc.optimal:
-            if config.single_tree and config.add_nogood_cuts is False:
+            if config.single_tree and config.add_no_good_cuts is False:
                 if main_objective.sense == minimize:
                     solve_data.LB = max(
                         master_mip_results.problem.lower_bound, solve_data.LB)
@@ -175,7 +175,7 @@ def solve_master(solve_data, config, feas_pump=False):
     except ValueError:
         config.logger.warning("ValueError: Cannot load a SolverResults object with bad status: error. "
                               "MIP solver failed. This usually happens in the single-tree GOA algorithm. "
-                              "Nogood cuts are added and GOA algorithm doesn't converge within the time limit. "
+                              "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
                               "No integer solution is found, so the cplex solver will report an error status. ")
         return None, None
 
@@ -301,7 +301,7 @@ def handle_master_infeasible(master_mip, solve_data, config):
         config.logger.warning(
             'MindtPy initialization may have generated poor '
             'quality cuts.')
-    # TODO nogood cuts for single tree case
+    # TODO no-good cuts for single tree case
     # set optimistic bound to infinity
     main_objective = next(
         master_mip.component_data_objects(Objective, active=True))

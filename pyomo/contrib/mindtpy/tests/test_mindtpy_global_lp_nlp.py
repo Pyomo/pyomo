@@ -51,7 +51,7 @@ class TestMindtPy(unittest.TestCase):
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 bound_tolerance=1E-5,
                                 single_tree=True)
 
@@ -68,7 +68,7 @@ class TestMindtPy(unittest.TestCase):
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 single_tree=True)
 
             self.assertIn(results.solver.termination_condition,
@@ -84,7 +84,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 feasibility_norm='L2',
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 single_tree=True)
 
             self.assertIn(results.solver.termination_condition,
@@ -100,7 +100,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 differentiate_mode='sympy',
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 single_tree=True)
 
             self.assertIn(results.solver.termination_condition,
@@ -116,7 +116,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 obj_bound=10,
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 single_tree=True)
 
             self.assertIs(results.solver.termination_condition,
@@ -133,7 +133,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver='baron',
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 single_tree=True,
                                 bound_tolerance=1E-2
                                 )
@@ -150,7 +150,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 obj_bound=10,
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 use_mcpp=True,
                                 single_tree=True)
             self.assertIs(results.solver.termination_condition,
@@ -165,7 +165,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 integer_to_binary=True,
                                 single_tree=True)
 
@@ -177,11 +177,11 @@ class TestMindtPy(unittest.TestCase):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with Outer Approximation(no good cuts)')
+            print('\n Solving Proposal problem with Outer Approximation(no-good cuts)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 integer_to_binary=True,  # if we use lazy callback, we cannot set integer_to_binary True
                                 single_tree=True
                                 )
@@ -198,7 +198,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 single_tree=True
                                 )
             self.assertIs(results.solver.termination_condition,
@@ -209,11 +209,11 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with global Outer Approximation(no good cuts)')
+                '\n Solving Constraint Qualification Example with global Outer Approximation(no-good cuts)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 single_tree=True
                                 )
             self.assertIn(results.solver.termination_condition, [
@@ -227,7 +227,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 single_tree=True
                                 )
             self.assertIs(results.solver.termination_condition,
@@ -243,7 +243,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 feasibility_norm="L_infinity",
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 single_tree=True
                                 )
             self.assertIs(results.solver.termination_condition,

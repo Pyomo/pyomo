@@ -134,9 +134,9 @@ def MindtPy_iteration_loop(solve_data, config):
         #             'Switching to OA.'.format(max_nonimprove_iter))
         #         config.strategy = 'OA'
 
-    # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
+    # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_nogood_cuts and config.strategy is not 'feas_pump':
+    if config.add_no_good_cuts and config.strategy is not 'feas_pump':
         bound_fix(solve_data, config, last_iter_cuts)
 
 
@@ -307,7 +307,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             config.logger.info('No stored bound found. Bound fix failed.')
     else:
         config.logger.info(
-            'Solve the master problem without the last nogood cut to fix the bound.'
+            'Solve the master problem without the last no_good cut to fix the bound.'
             'zero_tolerance is set to 1E-4')
         config.zero_tolerance = 1E-4
         # Solve NLP subproblem
@@ -335,13 +335,13 @@ def bound_fix(solve_data, config, last_iter_cuts):
                 else:
                     valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
                 for i in range(valid_no_good_cuts_num+1, len(
-                        MindtPy.MindtPy_linear_cuts.nogood_cuts)+1):
-                    MindtPy.MindtPy_linear_cuts.nogood_cuts[i].deactivate()
+                        MindtPy.MindtPy_linear_cuts.no_good_cuts)+1):
+                    MindtPy.MindtPy_linear_cuts.no_good_cuts[i].deactivate()
             except KeyError:
                 config.logger.info('Cut deactivate failed.')
         elif config.strategy == 'OA':
-            MindtPy.MindtPy_linear_cuts.nogood_cuts[len(
-                MindtPy.MindtPy_linear_cuts.nogood_cuts)].deactivate()
+            MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
+                MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()
         # MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.

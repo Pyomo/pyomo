@@ -7,7 +7,7 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
                                              handle_subproblem_optimal, handle_subproblem_infeasible,
                                              handle_subproblem_other_termination)
-from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_nogood_cuts
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function
 from pyomo.contrib.mindtpy.mip_solve import solve_master, handle_master_optimal
@@ -172,9 +172,9 @@ def feas_pump_loop(solve_data, config):
         elif feas_master_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
             # TODO: needs to be checked here.
-            nogood_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts
-            if nogood_cuts.__len__() > 0:
-                nogood_cuts[nogood_cuts.__len__()].deactivate()
+            no_good_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts
+            if no_good_cuts.__len__() > 0:
+                no_good_cuts[no_good_cuts.__len__()].deactivate()
             break
         elif feas_master_results.solver.termination_condition is tc.unbounded:
             config.logger.warning('FP-MIP unbounded')
@@ -215,7 +215,7 @@ def feas_pump_loop(solve_data, config):
     if not config.fp_transfercuts:
         for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts:
             c.deactivate()
-        for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts:
+        for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts:
             c.deactivate()
     if config.fp_projcuts:
         solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.del_component(

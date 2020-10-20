@@ -4,7 +4,7 @@ from __future__ import division
 import logging
 from math import fabs, floor, log
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_nogood_cuts, add_affine_cuts)
+                                                  add_no_good_cuts, add_affine_cuts)
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,

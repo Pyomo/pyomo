@@ -254,10 +254,10 @@ def add_ecp_cuts(target_model, solve_data, config,
 #             - slack_var <= 0)
 
 
-def add_nogood_cuts(var_values, solve_data, config, feasible=False):
+def add_no_good_cuts(var_values, solve_data, config, feasible=False):
     """
-    Adds no good cuts; modifies the model to include no good cuts
-    This adds an no good cuts to the feasible_nogood_cuts ConstraintList, which is not activated by default.
+    Adds no-good cuts; modifies the model to include no-good cuts
+    This adds an no-good cuts to the feasible_no_good_cuts ConstraintList, which is not activated by default.
     However, it may be activated as needed in certain situations or for certain values of option flags.
 
     Parameters
@@ -271,11 +271,11 @@ def add_nogood_cuts(var_values, solve_data, config, feasible=False):
     feasible: bool, optional
         boolean indicating if integer combination yields a feasible or infeasible NLP
     """
-    if not config.add_nogood_cuts:
+    if not config.add_no_good_cuts:
         return
-    with time_code(solve_data.timing, 'Nogood cut generation'):
+    with time_code(solve_data.timing, 'no_good cut generation'):
 
-        config.logger.info("Adding nogood cuts")
+        config.logger.info("Adding no_good cuts")
 
         m = solve_data.mip
         MindtPy = m.MindtPy_utils
@@ -303,7 +303,7 @@ def add_nogood_cuts(var_values, solve_data, config, feasible=False):
                    sum(v for v in binary_vars
                        if value(abs(v)) <= int_tol) >= 1)
 
-        MindtPy.MindtPy_linear_cuts.nogood_cuts.add(expr=int_cut)
+        MindtPy.MindtPy_linear_cuts.no_good_cuts.add(expr=int_cut)
 
 
 def add_affine_cuts(solve_data, config):
