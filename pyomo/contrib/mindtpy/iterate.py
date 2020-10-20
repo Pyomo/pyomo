@@ -223,6 +223,8 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
             if solve_data.best_solution_found is not None:
                 solve_data.results.solver.termination_condition = tc.feasible
             else:
+                # TODO: Is it correct to set solve_data.working_model as the best_solution_found?
+                # In function copy_var_list_values, skip_fixed is set to True in default.
                 solve_data.best_solution_found = solve_data.working_model.clone()
                 config.logger.warning(
                     'Algorithm did not find a feasible solution. '
