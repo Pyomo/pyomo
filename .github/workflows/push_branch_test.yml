@@ -16,8 +16,10 @@ defaults:
 
 env:
   PYTHONWARNINGS: ignore::UserWarning
+  PYTHON_REQUIRED_PKGS: >
+      ply six nose coverage
   PYTHON_BASE_PKGS: >
-      coverage cython dill ipython networkx nose openpyxl pathos
+      cython dill ipython networkx openpyxl pathos
       pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd wheel
       python-louvain
   PYTHON_NUMPY_PKGS: >
@@ -56,7 +58,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py
+          PACKAGES: mpi4py openmpi
           NAME: /mpi
 
         exclude:
@@ -185,7 +187,7 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         pip install --cache-dir cache/pip ${PYTHON_BASE_PKGS} \
-            ${{matrix.PACKAGES}}
+            ${PYTHON_REQUIRED_PKGS} ${{matrix.PACKAGES}}
         if [[ ${{matrix.python}} != pypy* ]]; then
             # NumPy and derivatives either don't build under pypy, or if
             # they do, the builds take forever.
@@ -210,7 +212,7 @@ jobs:
         conda config --show-sources
         conda list --show-channel-urls
         conda install -q -y -c conda-forge ${PYTHON_BASE_PKGS} \
-            ${PYTHON_NUMPY_PKGS} ${{matrix.PACKAGES}}
+            ${PYTHON_NUMPY_PKGS} ${PYTHON_REQUIRED_PKGS} ${{matrix.PACKAGES}}
         # Note: CPLEX 12.9 (the last version in conda that supports
         #    Python 2.7) causes a seg fault in the tests.
         conda install -q -y -c ibmdecisionoptimization cplex=12.10 \

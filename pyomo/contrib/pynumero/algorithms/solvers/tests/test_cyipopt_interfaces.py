@@ -83,7 +83,7 @@ class TestCyIpoptNLP(unittest.TestCase):
 
         cynlp = CyIpoptNLP(PyomoNLP(m))
         obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
-        self.assertTrue(obj_scaling == None)
+        self.assertTrue(obj_scaling == 1.0)
         self.assertTrue(len(x_scaling) == 3)
         # vars are in order x[2], x[3], x[1]
         self.assertTrue(x_scaling[0] == 1.0)

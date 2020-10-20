@@ -2,6 +2,7 @@ import pyutilib.th as unittest
 import pyomo.environ as pe
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_ad, reverse_sd
 from pyomo.common.getGSL import find_GSL
+from pyomo.core.expr.numeric_expr import LinearExpression
 
 
 tol = 6
@@ -220,3 +221,25 @@ class TestDerivs(unittest.TestCase):
         derivs = reverse_ad(e)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
+
+    def test_linear_expression(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var(initialize=2.0)
+        m.y = pe.Var(initialize=3.0)
+        m.p = pe.Param(initialize=2.5, mutable=True)
+        e = LinearExpression(constant=m.p, linear_vars=[m.x, m.y], linear_coefs=[1.8, m.p])
+        e = pe.log(e)
+        derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        for v in [m.x, m.y, m.p]:
+            self.assertAlmostEqual(derivs[v], pe.value(symbolic[v]), tol)
+            self.assertAlmostEqual(derivs[v], approx_deriv(e, v), tol)
+
+    def test_NPV(self):
+        m = pe.ConcreteModel()
+        m.p = pe.Param(initialize=2.0, mutable=True)
+        e = pe.log(m.p)
+        derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.p], pe.value(symbolic[m.p]), tol)
+        self.assertAlmostEqual(derivs[m.p], approx_deriv(e, m.p), tol)
