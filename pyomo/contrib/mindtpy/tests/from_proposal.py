@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 See David Bernal PhD proposal example.
+Link: https://www.researchgate.net/project/Convex-MINLP/update/5c7eb2ee3843b034242e9e4a
 """
 
 from __future__ import division
