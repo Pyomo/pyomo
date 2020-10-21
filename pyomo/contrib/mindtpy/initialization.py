@@ -139,10 +139,12 @@ def init_rNLP(solve_data, config):
             m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut
         # This covers the case when the Lower bound does not exist.
-        if main_objective.sense == minimize and not math.isnan(results['Problem'][0]['Lower bound']):
-            solve_data.LB = results['Problem'][0]['Lower bound']
-        elif not math.isnan(results['Problem'][0]['Upper bound']):
-            solve_data.UB = results['Problem'][0]['Upper bound']
+        # TODO: should we use the bound of the rNLP here?
+        if main_objective.sense == minimize:
+            if not math.isnan(results.problem.lower_bound):
+                solve_data.LB = results.problem.lower_bound
+        elif not math.isnan(results.problem.upper_bound):
+            solve_data.UB = results.problem.upper_bound
         config.logger.info(
             'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
             % (value(main_objective.expr), solve_data.LB, solve_data.UB))
