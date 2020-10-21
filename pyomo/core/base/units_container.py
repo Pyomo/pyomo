@@ -1108,9 +1108,8 @@ class UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
             return (pyomo_unit, pint_unit)
 
-        # !!THIS SEEMS LIKE A BUG!! - mrmundt #
         raise TypeError('An unhandled expression node type: {} was encountered while retrieving the'
-                        ' units of expression'.format(str(node_type), str(node)))
+                ' units of expression {}'.format(str(type(node)), str(node)))
 
 
 class PyomoUnitsContainer(object):
