@@ -35,7 +35,7 @@ def instance2dat(instance, output_filename):
                 output_file.write(";\n")
             elif set_object.dim() == 1:
                 for index in set_object:
-                    output_file.write("set "+set_name+"[\""+str(index)+"\"]"+" := \n")
+                    output_file.write("set "+set_name+"[\""+str(index)+"\"]"+" :=")
                     for element in set_object[index]:
                         output_file.write(element,)
                     output_file.write(";\n")
@@ -59,13 +59,13 @@ def instance2dat(instance, output_filename):
             output_file.write("param "+param_name+" := \n")
             if param_object.dim() == 1:
                 for index in param_object:
-                    output_file.write(index, str(value(param_object[index])),)
+                    output_file.write(index, str(value(param_object[index])) + "\n")
             else:
                 for index in param_object:
                     for i in index:
                         output_file.write(i,)
-                    output_file.write(str(value(param_object[index])),)
-            output_file.write(";\,")
+                    output_file.write(str(value(param_object[index])) + "\n")
+            output_file.write(";\n")
             output_file.write("\n")
 
     output_file.close()
