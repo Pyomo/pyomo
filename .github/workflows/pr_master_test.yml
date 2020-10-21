@@ -19,11 +19,12 @@ defaults:
 
 env:
   PYTHONWARNINGS: ignore::UserWarning
+  PYTHON_CORE_PKGS: wheel
   PYTHON_REQUIRED_PKGS: >
       ply six nose coverage
   PYTHON_BASE_PKGS: >
-      cython dill ipython networkx openpyxl pathos
-      pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd wheel
+      dill ipython networkx openpyxl pathos
+      pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd
       python-louvain
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn
@@ -31,14 +32,15 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.NAME }}
+    name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
-        mpi: [0]
+        other: [""]
+
         include:
         - os: ubuntu-latest
           TARGET: linux
@@ -55,12 +57,29 @@ jobs:
 
         - os: ubuntu-latest
           python: 3.7
+          other: /mpi
           mpi: 3
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
           PACKAGES: mpi4py openmpi
-          NAME: /mpi
+
+        - os: ubuntu-latest
+          python: 3.9
+          other: /slim
+          slim: 1
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.6
+          other: /cython
+          setup_options: --with-cython
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+          PACKAGES: cython
 
         exclude:
         - {os: macos-latest, python: pypy2}
@@ -73,8 +92,21 @@ jobs:
 
     - name: Configure job parameters
       run: |
-        JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}"
+        JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.other}}"
         echo "GHA_JOBNAME=$JOB" | sed 's|/|_|g' >> $GITHUB_ENV
+        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
+        PYTHON_PACKAGES="${PYTHON_REQUIRED_PKGS}"
+        if test -z "${{matrix.slim}}"; then
+            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_BASE_PKGS}"
+        fi
+        if [[ ${{matrix.python}} != pypy* && ! "${{matrix.slim}}" ]]; then
+            # NumPy and derivatives either don't build under pypy, or if
+            # they do, the builds take forever.
+            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_NUMPY_PKGS}"
+        fi
+        PYTHON_PACKAGES="$PYTHON_PACKAGES ${{matrix.PACKAGES}}"
+        echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
+            | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     # Ideally we would cache the conda downloads; however, each cache is
     # over 850MB, and with 5 python versions, that would consume 4.2 of
@@ -185,14 +217,8 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
-        pip install --cache-dir cache/pip ${PYTHON_BASE_PKGS} \
-            ${PYTHON_REQUIRED_PKGS} ${{matrix.PACKAGES}}
-        if [[ ${{matrix.python}} != pypy* ]]; then
-            # NumPy and derivatives either don't build under pypy, or if
-            # they do, the builds take forever.
-            pip install --cache-dir cache/pip ${PYTHON_NUMPY_PKGS}
-        fi
+        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
+        pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
         pip install --cache-dir cache/pip cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
         pip install --cache-dir cache/pip xpress \
@@ -211,8 +237,8 @@ jobs:
         conda info
         conda config --show-sources
         conda list --show-channel-urls
-        conda install -q -y -c conda-forge ${PYTHON_BASE_PKGS} \
-            ${PYTHON_NUMPY_PKGS} ${PYTHON_REQUIRED_PKGS} ${{matrix.PACKAGES}}
+        conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
+        conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
         # Note: CPLEX 12.9 (the last version in conda that supports
         #    Python 2.7) causes a seg fault in the tests.
         conda install -q -y -c ibmdecisionoptimization cplex=12.10 \
@@ -366,7 +392,7 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop
+        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -431,7 +457,7 @@ jobs:
 
     - name: Process code coverage report
       env:
-        CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
+        CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.other}}
       run: |
         coverage combine
         coverage report -i
