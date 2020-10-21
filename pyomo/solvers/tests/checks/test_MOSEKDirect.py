@@ -19,8 +19,8 @@ diff_tol = 1e-3
 
 
 @unittest.skipIf(not mosek_available,
-                 "The 'mosek' python bindings are not available")
-class MosekDirectTests(unittest.TestCase):
+                 "MOSEK's python bindings are not available")
+class MOSEKDirectTests(unittest.TestCase):
 
     def setUp(self):
         self.stderr = sys.stderr
