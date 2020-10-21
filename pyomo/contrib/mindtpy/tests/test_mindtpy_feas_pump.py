@@ -23,7 +23,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from pyomo.contrib.mindtpy.tests.feasibility_pump1 import Feasibility_Pump1
 from pyomo.contrib.mindtpy.tests.feasibility_pump2 import Feasibility_Pump2
 
-required_solvers = ('ipopt', 'cplex')
+required_solvers = ('ipopt', 'glpk', 'cplex')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -63,7 +63,7 @@ class TestMindtPy(unittest.TestCase):
             print(
                 '\n Solving 8PP problem using feasibility pump with squared Norm2 in mip projection problem')
             results = opt.solve(model, strategy='feas_pump',
-                                mip_solver=required_solvers[1],
+                                mip_solver=required_solvers[2],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5,
                                 fp_master_norm='L2')
