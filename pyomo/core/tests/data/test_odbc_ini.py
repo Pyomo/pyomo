@@ -12,13 +12,13 @@
 #
 
 import os
-import pyomo.environ
 import pyutilib.th as unittest
 
 try:
     import pyodbc
     pyodbc_available = True
 
+    # !!THIS SEEMS LIKE A BUG!! - mrmundt #
     from pyomo.core.plugins.data.db_table import ODBCConfig, ODBCError
 except ImportError:
     pyodbc_available = False
