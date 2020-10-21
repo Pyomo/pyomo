@@ -101,7 +101,7 @@ def solve_subproblem(solve_data, config):
         nlp_args['add_options'] = nlp_args.get('add_options', [])
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
     with SuppressInfeasibleWarning():
-        with time_code(solve_data.timing, 'fixed nlp'):
+        with time_code(solve_data.timing, 'fixed subproblem'):
             results = nlpopt.solve(
                 fixed_nlp, tee=config.nlp_solver_tee, **nlp_args)
     return fixed_nlp, results
@@ -343,7 +343,7 @@ def solve_feasibility_subproblem(solve_data, config):
             if config.nlp_solver == 'gams':
                 nlp_args['add_options'] = nlp_args.get('add_options', [])
                 nlp_args['add_options'].append('option reslim=%s;' % remaining)
-            with time_code(solve_data.timing, 'feasibility nlp'):
+            with time_code(solve_data.timing, 'feasibility subproblem'):
                 feas_soln = nlpopt.solve(
                     feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)
         except (ValueError, OverflowError) as error:
@@ -352,7 +352,7 @@ def solve_feasibility_subproblem(solve_data, config):
                     solve_data.initial_var_values):
                 if not nlp_var.fixed and not nlp_var.is_binary():
                     nlp_var.value = orig_val
-            with time_code(solve_data.timing, 'feasibility nlp'):
+            with time_code(solve_data.timing, 'feasibility subproblem'):
                 feas_soln = nlpopt.solve(
                     feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = feas_soln.solver.termination_condition

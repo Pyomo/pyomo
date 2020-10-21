@@ -148,7 +148,7 @@ def solve_master(solve_data, config, feas_pump=False):
     # elif config.mip_solver == 'glpk':
     #     masteropt.options['timelimit'] = remaining
     try:
-        with time_code(solve_data.timing, 'mip'):
+        with time_code(solve_data.timing, 'master'):
             master_mip_results = masteropt.solve(
                 solve_data.mip, tee=config.mip_solver_tee, **mip_args)
 

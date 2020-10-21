@@ -65,7 +65,8 @@ def solve_feas_pump_subproblem(solve_data, config):
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
 
-    # Add norm_constraint, TODO: rename norm_constraint to like improving_distance_cut
+    # Add norm_constraint, which guarantees the monotonicity of the norm objective value in each iteration
+    # Ref: Paper "A storm of feasibility pumps for nonconvex MINLP"
     if config.fp_norm_constraint:
         if config.fp_master_norm == 'L1':
             generate_norm1_norm_constraint(

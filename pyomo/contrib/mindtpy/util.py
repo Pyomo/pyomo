@@ -251,8 +251,6 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
     return Objective(expr=sum(obj_blk.L1_obj_var[idx] for idx in obj_blk.L1_obj_idx))
 
-# TODO: this function is not called
-
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
     """
