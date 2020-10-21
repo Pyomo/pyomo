@@ -759,7 +759,7 @@ class Constraint(ActiveIndexedComponent):
 
     _ComponentDataClass = _GeneralConstraintData
     class Infeasible(object): pass
-    Feasible = IndexedComponent.Skip
+    Feasible = ActiveIndexedComponent.Skip
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
     Satisfied = Feasible
