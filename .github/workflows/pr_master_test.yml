@@ -99,7 +99,7 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_BASE_PKGS}"
         fi
-        if [[ ${{matrix.python}} != pypy* -a ! "${{matrix.slim}}" ]]; then
+        if [[ ${{matrix.python}} != pypy* && ! "${{matrix.slim}}" ]]; then
             # NumPy and derivatives either don't build under pypy, or if
             # they do, the builds take forever.
             PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_NUMPY_PKGS}"
