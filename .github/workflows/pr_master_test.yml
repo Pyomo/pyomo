@@ -106,7 +106,7 @@ jobs:
         fi
         PYTHON_PACKAGES="$PYTHON_PACKAGES ${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
-            | tr '\n' ' ' | sed -r 's/ +/ /g' >> $GITHUB_ENV
+            | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     # Ideally we would cache the conda downloads; however, each cache is
     # over 850MB, and with 5 python versions, that would consume 4.2 of
