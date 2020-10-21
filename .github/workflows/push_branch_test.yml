@@ -28,14 +28,15 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.NAME }}
+    name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
         python: [3.8]
-        mpi: [0]
+        other: [""]
+
         include:
         - os: ubuntu-latest
           TARGET: linux
@@ -54,12 +55,20 @@ jobs:
 
         - os: ubuntu-latest
           python: 3.7
+          other: /mpi
           mpi: 3
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
           PACKAGES: mpi4py openmpi
-          NAME: /mpi
+
+        - os: ubuntu-latest
+          python: 3.9
+          other: /cython
+          setup_options: --with-cython
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
 
         exclude:
         - {os: macos-latest, python: pypy2}
@@ -67,13 +76,12 @@ jobs:
         - {os: windows-latest, python: pypy2}
         - {os: windows-latest, python: pypy3}
 
-
     steps:
     - uses: actions/checkout@v2
 
     - name: Configure job parameters
       run: |
-        JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}"
+        JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.other}}"
         echo "GHA_JOBNAME=$JOB" | sed 's|/|_|g' >> $GITHUB_ENV
 
     # Ideally we would cache the conda downloads; however, each cache is
@@ -366,7 +374,7 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop
+        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -431,7 +439,7 @@ jobs:
 
     - name: Process code coverage report
       env:
-        CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
+        CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.other}}
       run: |
         coverage combine
         coverage report -i
