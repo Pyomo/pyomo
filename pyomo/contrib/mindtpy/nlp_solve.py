@@ -191,8 +191,8 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
         add_affine_cuts(solve_data, config)
     elif config.strategy == 'PSC':
         add_psc_cut(solve_data, config)
-    elif config.strategy == 'GBD':
-        add_gbd_cut(solve_data, config)
+    # elif config.strategy == 'GBD':
+    #     add_gbd_cut(solve_data, config)
 
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_no_good_cuts:
