@@ -482,6 +482,8 @@ jobs:
     if: always() # run even if a build job fails
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v2
+
     - name: Pip package cache
       uses: actions/cache@v1
       if: matrix.PYENV == 'pip'
