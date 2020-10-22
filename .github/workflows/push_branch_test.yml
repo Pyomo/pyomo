@@ -546,7 +546,7 @@ jobs:
                 echo "No coverage to upload."
                 return
             fi
-            coverage xml -i
+            coverage xml || coverage xml -i
             export CODECOV_NAME=$BUILD_GROUP
             i=0
             while : ; do
@@ -577,7 +577,7 @@ jobs:
             echo "Build group: $BUILD_GROUP"
             rm -vf .coverage coverage.xml
             ls .coverage-${BUILD_GROUP}* | sed 's/^/    /'
-            coverage combine .coverage-${BUILD_GROUP}*/.coverage
+            coverage combine --debug=config,dataio .coverage-${BUILD_GROUP}*
             upload
         done
         # Legacy builds that don't support coverage 5.x
@@ -588,7 +588,7 @@ jobs:
         echo ""
         echo "Build group: $BUILD_GROUP"
         rm -vf .coverage coverage.xml
-        coverage combine .coverage-*
+        coverage combine --debug=config,dataio .coverage-*
         upload
 
     - name: Check codecov upload success
