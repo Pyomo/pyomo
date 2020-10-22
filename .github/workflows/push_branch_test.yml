@@ -479,6 +479,7 @@ jobs:
   cover:
     name: process-coverage
     needs: build
+    if: always() # run even if a build job fails
     runs-on: ubuntu-latest
     steps:
     - name: Download build artifacts
