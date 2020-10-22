@@ -545,9 +545,6 @@ jobs:
         set +e
         CODECOV="${GITHUB_WORKSPACE}/codecov.sh"
         echo "CODECOV=$CODECOV" >> $GITHUB_ENV
-        mkdir -p `basename $CODECOV`
-        # Always attempt to update the codecov script, but fall back on
-        # the previously cached script if it fails
         for i in `seq 3`; do
             echo "Downloading current codecov script (attempt ${i})"
             curl -L https://codecov.io/bash -o $CODECOV
