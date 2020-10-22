@@ -489,9 +489,10 @@ jobs:
     - name: Update codecov uploader
       run: |
         set +e
+        CODECOV="${GITHUB_WORKSPACE}/cache/download/codecov.sh"
+        echo "CODECOV=$CODECOV" >> $GITHUB_ENV
         # Always attempt to update the codecov script, but fall back on
         # the previously cached script if it fails
-        CODECOV="${GITHUB_WORKSPACE}/cache/download/codecov.sh"
         for i in `seq 3`; do
             echo "Downloading current codecov script (attempt ${i})"
             curl -L https://codecov.io/bash -o $CODECOV
