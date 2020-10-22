@@ -509,6 +509,8 @@ jobs:
         set +e
         ARTIFACTS=`ls -d artifacts/* | cut -d/ -f2 | cut -d- -f1 | sort | uniq`
         for BUILD_GROUP in $ARTIFACTS; do
+            echo "Build group: $BUILD_GROUP"
+            ls artifacts/${BUILD_GROUP}*/.coverage | sed 's/^/    /'
             rm -vf .coverage coverage.xml
             coverage combine artifacts/${BUILD_GROUP}*/.coverage
             coverage xml -i
