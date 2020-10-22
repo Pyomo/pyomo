@@ -87,7 +87,8 @@ jobs:
         - {os: windows-latest, python: pypy3}
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v2
 
     - name: Configure job parameters
       run: |
@@ -482,7 +483,9 @@ jobs:
     if: always() # run even if a build job fails
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v2
+      # We need the source for .codecov.yml and running "coverage xml"
 
     - name: Pip package cache
       uses: actions/cache@v1
@@ -491,13 +494,6 @@ jobs:
       with:
         path: cache/pip
         key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
-
-    - name: TPL package download cache
-      uses: actions/cache@v1
-      id: download-cache
-      with:
-        path: cache/download
-        key: download-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: Download build artifacts
       uses: actions/download-artifact@v2
@@ -519,10 +515,17 @@ jobs:
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
 
+    - name: Generate parse_table_datacmds
+      run: |
+        # Manually invoke the DAT parser so that parse_table_datacmds.py
+        # is generated before running "coverage xml"
+        $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
+            parse_data_commands; parse_data_commands(data='')"
+
     - name: Update codecov uploader
       run: |
         set +e
-        CODECOV="${GITHUB_WORKSPACE}/cache/download/codecov.sh"
+        CODECOV="${GITHUB_WORKSPACE}/codecov.sh"
         echo "CODECOV=$CODECOV" >> $GITHUB_ENV
         mkdir -p `basename $CODECOV`
         # Always attempt to update the codecov script, but fall back on
@@ -537,6 +540,10 @@ jobs:
             echo "Pausing $DELAY seconds before re-attempting download"
             sleep $DELAY
         done
+        if test ! -e $CODECOV; then
+            echo "Failed to download codecov.sh"
+            exit 1
+        fi
 
     - name: Upload codecov reports
       run: |
@@ -579,7 +586,7 @@ jobs:
             echo "Build group: $BUILD_GROUP"
             rm -vf .coverage coverage.xml
             ls .coverage-${BUILD_GROUP}* | sed 's/^/    /'
-            coverage combine --debug=config,dataio .coverage-${BUILD_GROUP}*
+            coverage combine --debug=dataio .coverage-${BUILD_GROUP}*
             upload
         done
         # Legacy builds that don't support coverage 5.x
@@ -590,7 +597,7 @@ jobs:
         echo ""
         echo "Build group: $BUILD_GROUP"
         rm -vf .coverage coverage.xml
-        coverage combine --debug=config,dataio .coverage-*
+        coverage combine --debug=dataio .coverage-*
         upload
 
     - name: Check codecov upload success
