@@ -533,16 +533,16 @@ jobs:
             done
         done
 
-      - name: Check codecov upload success
-        run: |
-          FAIL=`grep FAIL codecov.result | wc -l`
-          ALL=`cat codecov.result | wc -l`
-          # Fail if more than 1/9 codecov uploads fail
-          echo "$FAIL of $ALL codecov uploads failed"
-          if test $FAIL -gt 0; then
-              grep FAIL codecov.result | sed 's/^/    /'
-              if test $FAIL -gt 1; then
-                  echo "More than 1 codecov upload failed."
-                  exit 1
-              fi
-          fi
+    - name: Check codecov upload success
+      run: |
+        FAIL=`grep FAIL codecov.result | wc -l`
+        ALL=`cat codecov.result | wc -l`
+        # Fail if more than 1/9 codecov uploads fail
+        echo "$FAIL of $ALL codecov uploads failed"
+        if test $FAIL -gt 0; then
+            grep FAIL codecov.result | sed 's/^/    /'
+            if test $FAIL -gt 1; then
+                echo "More than 1 codecov upload failed."
+                exit 1
+            fi
+        fi
