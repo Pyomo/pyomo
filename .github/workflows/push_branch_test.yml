@@ -609,10 +609,12 @@ jobs:
         }
         for ARTIFACT in artifacts/*_*${{matrix.TARGET}}_*; do
             NAME=`echo $ARTIFACT | cut -d/ -f2`
-            cp $ARTIFACT/.coverage .coverage-$NAME
+            cp -v $ARTIFACT/.coverage .coverage-$NAME
         done
-        upload ${{matrix.TARGET}} .coverage-${{matrix.TARGET}}*
-        upload ${{matrix.TARGET}}/other .coverage-*
+        upload ${{matrix.TARGET}} .coverage-*_${{matrix.TARGET}}-*
+        if compgen -G ".coverage-*" > /dev/null; then
+            upload ${{matrix.TARGET}}/other .coverage-*
+        fi
         # Legacy builds that don't support coverage 5.x
         if compgen -G ".coverage-*" > /dev/null; then
             echo ""
