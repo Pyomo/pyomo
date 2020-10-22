@@ -88,7 +88,8 @@ jobs:
         - {os: windows-latest, python: pypy3}
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v2
 
     - name: Configure job parameters
       run: |
@@ -478,25 +479,34 @@ jobs:
           # TEST-*.xml
 
   cover:
-    name: process-coverage
+    name: process-coverage-${{ matrix.TARGET }}
     needs: build
     if: always() # run even if a build job fails
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+        include:
+        - os: ubuntu-latest
+          TARGET: linux
+        - os: macos-latest
+          TARGET: osx
+        - os: windows-latest
+          TARGET: win
+
     steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v2
+      # We need the source for .codecov.yml and running "coverage xml"
+
     - name: Pip package cache
       uses: actions/cache@v1
-      if: matrix.PYENV == 'pip'
       id: pip-cache
       with:
         path: cache/pip
         key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
-
-    - name: TPL package download cache
-      uses: actions/cache@v1
-      id: download-cache
-      with:
-        path: cache/download
-        key: download-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: Download build artifacts
       uses: actions/download-artifact@v2
@@ -518,14 +528,36 @@ jobs:
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
 
+    - name: Install Pyomo and PyUtilib
+      run: |
+        echo ""
+        echo "Clone Pyomo-model-libraries..."
+        git clone https://github.com/Pyomo/pyomo-model-libraries.git
+        echo ""
+        echo "Install PyUtilib..."
+        echo ""
+        $PYTHON_EXE -m pip install git+https://github.com/PyUtilib/pyutilib
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
+        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        echo ""
+        echo "Set custom PYOMO_CONFIG_DIR"
+        echo ""
+        echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    - name: Generate parse_table_datacmds
+      run: |
+        # Manually invoke the DAT parser so that parse_table_datacmds.py
+        # is generated before running "coverage xml"
+        $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
+            parse_data_commands; parse_data_commands(data='')"
+
     - name: Update codecov uploader
       run: |
         set +e
-        CODECOV="${GITHUB_WORKSPACE}/cache/download/codecov.sh"
+        CODECOV="${GITHUB_WORKSPACE}/codecov.sh"
         echo "CODECOV=$CODECOV" >> $GITHUB_ENV
-        mkdir -p `basename $CODECOV`
-        # Always attempt to update the codecov script, but fall back on
-        # the previously cached script if it fails
         for i in `seq 3`; do
             echo "Downloading current codecov script (attempt ${i})"
             curl -L https://codecov.io/bash -o $CODECOV
@@ -536,17 +568,27 @@ jobs:
             echo "Pausing $DELAY seconds before re-attempting download"
             sleep $DELAY
         done
+        if test ! -e $CODECOV; then
+            echo "Failed to download codecov.sh"
+            exit 1
+        fi
 
     - name: Upload codecov reports
       run: |
         set +e
         function upload {
+            echo ""
+            echo "Build group: $1"
+            export CODECOV_NAME=$1
+            shift
+            rm -vf .coverage coverage.xml
+            echo "    $@" | sed 's/ /\n    /'
+            coverage combine --debug=dataio $@
             if test ! -e .coverage; then
                 echo "No coverage to upload."
                 return
             fi
-            coverage xml -i
-            export CODECOV_NAME=$BUILD_GROUP
+            coverage xml || coverage xml -i
             i=0
             while : ; do
                 ((i+=1))
@@ -566,31 +608,26 @@ jobs:
                 sleep $DELAY
             done
         }
-        ARTIFACTS=`ls -d artifacts/* | cut -d/ -f2 | cut -d- -f1 | sort | uniq`
-        for BUILD_GROUP in $ARTIFACTS; do
-            echo ""
-            echo "Build group: $BUILD_GROUP"
-            ls artifacts/${BUILD_GROUP}*/.coverage | sed 's/^/    /'
-            rm -vf .coverage coverage.xml
-            coverage combine artifacts/${BUILD_GROUP}*/.coverage
-            upload
+        for ARTIFACT in artifacts/*_*${{matrix.TARGET}}_*; do
+            NAME=`echo $ARTIFACT | cut -d/ -f2`
+            cp -v $ARTIFACT/.coverage .coverage-$NAME
         done
+        upload ${{matrix.TARGET}} .coverage-*_${{matrix.TARGET}}-*
+        if compgen -G ".coverage-*" > /dev/null; then
+            upload ${{matrix.TARGET}}/other .coverage-*
+        fi
         # Legacy builds that don't support coverage 5.x
-        echo ""
-        echo "Installing coverage 4.x for legacy builds"
-        pip install 'coverage<5'
-        BUILD_GROUP=legacy
-        echo ""
-        echo "Build group: $BUILD_GROUP"
-        rm -vf .coverage coverage.xml
-        coverage combine artifacts/*/.coverage
-        upload
+        if compgen -G ".coverage-*" > /dev/null; then
+            echo ""
+            echo "Installing coverage 4.x for legacy builds"
+            pip install 'coverage<5'
+            upload ${{matrix.TARGET}}/legacy .coverage-*
+        fi
 
     - name: Check codecov upload success
       run: |
         FAIL=`grep FAIL codecov.result | wc -l`
         ALL=`cat codecov.result | wc -l`
-        # Fail if more than 1/9 codecov uploads fail
         echo "$FAIL of $ALL codecov uploads failed"
         if test $FAIL -gt 0; then
             grep FAIL codecov.result | sed 's/^/    /'
