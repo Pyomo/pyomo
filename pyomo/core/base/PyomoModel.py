@@ -287,7 +287,7 @@ class ModelSolutions(object):
                 ignore_invalid_labels=ignore_invalid_labels,
                 ignore_fixed_vars=ignore_fixed_vars)
 
-    def store_to(self, results, cuid=False):
+    def store_to(self, results, cuid=False, skip_stale_vars=True):
         """
         Return a Solution() object that is populated with the values in the model.
         """
@@ -318,7 +318,7 @@ class ModelSolutions(object):
                 soln.objective[ sm.getSymbol(obj, labeler) ] = vals
             entry = soln_._entry['variable']
             for obj in instance.component_data_objects(Var, active=True):
-                if obj.stale:
+                if obj.stale and skip_stale_vars:
                     continue
                 vals = entry.get(id(obj), None)
                 if vals is None:
