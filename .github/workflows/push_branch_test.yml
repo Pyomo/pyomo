@@ -478,10 +478,23 @@ jobs:
           # TEST-*.xml
 
   cover:
-    name: process-coverage
+    name: process-coverage-${{ matrix.TARGET }}
     needs: build
     if: always() # run even if a build job fails
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+        include:
+        - os: ubuntu-latest
+          TARGET: linux
+        - os: macos-latest
+          TARGET: osx
+        - os: windows-latest
+          TARGET: win
+
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v2
@@ -489,7 +502,6 @@ jobs:
 
     - name: Pip package cache
       uses: actions/cache@v1
-      if: matrix.PYENV == 'pip'
       id: pip-cache
       with:
         path: cache/pip
@@ -563,15 +575,19 @@ jobs:
     - name: Upload codecov reports
       run: |
         set +e
-        pwd
-        ls -a
         function upload {
+            echo ""
+            echo "Build group: $1"
+            export CODECOV_NAME=$1
+            shift
+            rm -vf .coverage coverage.xml
+            echo "    $@" | sed 's/ /\n    /'
+            coverage combine --debug=dataio $@
             if test ! -e .coverage; then
                 echo "No coverage to upload."
                 return
             fi
             coverage xml || coverage xml -i
-            export CODECOV_NAME=$BUILD_GROUP
             i=0
             while : ; do
                 ((i+=1))
@@ -591,35 +607,24 @@ jobs:
                 sleep $DELAY
             done
         }
-        for ARTIFACT in artifacts/*; do
+        for ARTIFACT in artifacts/*_*${{matrix.TARGET}}_*; do
             NAME=`echo $ARTIFACT | cut -d/ -f2`
             cp $ARTIFACT/.coverage .coverage-$NAME
         done
-        BUILD_GROUPS=`ls .coverage-* | cut -d- -f2 | sort | uniq`
-        for BUILD_GROUP in $BUILD_GROUPS; do
-            echo ""
-            echo "Build group: $BUILD_GROUP"
-            rm -vf .coverage coverage.xml
-            ls .coverage-${BUILD_GROUP}* | sed 's/^/    /'
-            coverage combine --debug=dataio .coverage-${BUILD_GROUP}*
-            upload
-        done
+        upload ${{matrix.TARGET}} .coverage-${{matrix.TARGET}}*
+        upload ${{matrix.TARGET}}/other .coverage-*
         # Legacy builds that don't support coverage 5.x
-        echo ""
-        echo "Installing coverage 4.x for legacy builds"
-        pip install 'coverage<5'
-        BUILD_GROUP=legacy
-        echo ""
-        echo "Build group: $BUILD_GROUP"
-        rm -vf .coverage coverage.xml
-        coverage combine --debug=dataio .coverage-*
-        upload
+        if compgen -G ".coverage-*" > /dev/null; then
+            echo ""
+            echo "Installing coverage 4.x for legacy builds"
+            pip install 'coverage<5'
+            upload ${{matrix.TARGET}}/legacy .coverage-*
+        fi
 
     - name: Check codecov upload success
       run: |
         FAIL=`grep FAIL codecov.result | wc -l`
         ALL=`cat codecov.result | wc -l`
-        # Fail if more than 1/9 codecov uploads fail
         echo "$FAIL of $ALL codecov uploads failed"
         if test $FAIL -gt 0; then
             grep FAIL codecov.result | sed 's/^/    /'
