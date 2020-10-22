@@ -21,16 +21,6 @@ from six import itervalues, iterkeys, iteritems
 from six.moves import xrange
 from pyomo.common import pyomo_api
 
-try:
-    import cProfile as profile
-except ImportError:
-    import profile
-try:
-    import pstats
-    pstats_available=True
-except ImportError:
-    pstats_available=False
-
 from pyutilib.misc import Options
 memory_data = Options()
 
@@ -926,11 +916,19 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
     TempfileManager.push()
     pcount = options.runtime.profile_count
     if pcount > 0:
-        if not pstats_available:
-            msg = "Cannot use the 'profile' option.  The Python 'pstats' "    \
-                  'package cannot be imported!'
+        # Defer import of profiling packages until we know that they
+        # are needed
+        try:
+            try:
+                import cProfile as profile
+            except ImportError:
+                import profile
+            import pstats
+        except ImportError:
             configure_loggers(shutdown=True)
-            raise ValueError(msg)
+            raise ValueError(
+                "Cannot use the 'profile' option: the Python "
+                "'profile' or 'pstats' package cannot be imported!")
         tfile = TempfileManager.create_tempfile(suffix=".profile")
         tmp = profile.runctx(
           command.__name__ + '(options=options,parser=parser)', command.__globals__, locals(), tfile
