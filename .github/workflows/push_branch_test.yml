@@ -539,12 +539,10 @@ jobs:
     - name: Upload codecov reports
       run: |
         set +e
-        ARTIFACTS=`ls -d artifacts/* | cut -d/ -f2 | cut -d- -f1 | sort | uniq`
-        for BUILD_GROUP in $ARTIFACTS; do
-            echo "Build group: $BUILD_GROUP"
-            ls artifacts/${BUILD_GROUP}*/.coverage | sed 's/^/    /'
-            rm -vf .coverage coverage.xml
-            coverage combine artifacts/${BUILD_GROUP}*/.coverage
+        function upload {
+            if test ! -e .coverage; then
+                return
+            fi
             coverage xml -i
             export CODECOV_NAME=$BUILD_GROUP
             i=0
@@ -565,7 +563,22 @@ jobs:
                 echo "Pausing $DELAY seconds before re-attempting upload"
                 sleep $DELAY
             done
+        }
+        ARTIFACTS=`ls -d artifacts/* | cut -d/ -f2 | cut -d- -f1 | sort | uniq`
+        for BUILD_GROUP in $ARTIFACTS; do
+            echo "Build group: $BUILD_GROUP"
+            ls artifacts/${BUILD_GROUP}*/.coverage | sed 's/^/    /'
+            rm -vf .coverage coverage.xml
+            coverage combine artifacts/${BUILD_GROUP}*/.coverage
+            upload()
         done
+        # Legacy builds that don't support coverage 5.x
+        pip install 'coverage<5'
+        BUILD_GROUP=legacy
+        echo "Build group: $BUILD_GROUP"
+        rm -vf .coverage coverage.xml
+        coverage combine artifacts/*/.coverage
+        upload()
 
     - name: Check codecov upload success
       run: |
