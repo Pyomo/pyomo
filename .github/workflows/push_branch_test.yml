@@ -565,13 +565,17 @@ jobs:
                 sleep $DELAY
             done
         }
-        ARTIFACTS=`ls -d artifacts/* | cut -d/ -f2 | cut -d- -f1 | sort | uniq`
-        for BUILD_GROUP in $ARTIFACTS; do
+        for ARTIFACT in artifacts/*; do
+            NAME=`echo $ARTIFACT | cut -d/ -f2`
+            cp $ARTIFACT/.coverage .coverage-$NAME
+        done
+        BUILD_GROUPS=`ls .coverage-* | cut -d- -f2 | sort | uniq`
+        for BUILD_GROUP in $BUILD_GROUPS; do
             echo ""
             echo "Build group: $BUILD_GROUP"
-            ls artifacts/${BUILD_GROUP}*/.coverage | sed 's/^/    /'
             rm -vf .coverage coverage.xml
-            coverage combine artifacts/${BUILD_GROUP}*/.coverage
+            ls .coverage-{BUILD_GROUP}* | sed 's/^/    /'
+            coverage combine .coverage-${BUILD_GROUP}*/.coverage
             upload
         done
         # Legacy builds that don't support coverage 5.x
@@ -582,7 +586,7 @@ jobs:
         echo ""
         echo "Build group: $BUILD_GROUP"
         rm -vf .coverage coverage.xml
-        coverage combine artifacts/*/.coverage
+        coverage combine .coverage-*
         upload
 
     - name: Check codecov upload success
