@@ -93,6 +93,11 @@ jobs:
       run: |
         JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.other}}"
         echo "GHA_JOBNAME=$JOB" | sed 's|/|_|g' >> $GITHUB_ENV
+        if test -z "${{matrix.other}}"; then
+            echo "GHA_JOBGROUP=${{matrix.TARGET}}" >> $GITHUB_ENV
+        else
+            echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
+        fi
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
         PYTHON_PACKAGES="${PYTHON_REQUIRED_PKGS}"
         if test -z "${{matrix.slim}}"; then
@@ -455,12 +460,34 @@ jobs:
         make -C doc/OnlineDocs doctest -d
 
     - name: Process code coverage report
-      env:
-        CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.other}}
       run: |
         coverage combine
         coverage report -i
         coverage xml -i
+
+    - name: Record build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
+        path: |
+          .coverage
+          coverage.xml
+          # In general, do not record test results as artifacts to
+          #   manage total artifact storage
+          # TEST-*.xml
+
+  cover:
+    name: process-coverage
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v2
+      with:
+        path: artifacts
+
+    - name: Update codecov uploader
+      run: |
         set +e
         # Always attempt to update the codecov script, but fall back on
         # the previously cached script if it fails
@@ -475,54 +502,46 @@ jobs:
             echo "Pausing $DELAY seconds before re-attempting download"
             sleep $DELAY
         done
-        i=0
-        while : ; do
-            ((i+=1))
-            echo "Uploading coverage to codecov (attempt ${i})"
-            bash $CODECOV -Z -X gcov -X s3 -f coverage.xml
-            if test $? == 0; then
-                echo "PASS" > ${GITHUB_WORKSPACE}/codecov.result
-                break
-            elif test $i -ge 2; then
-                # Do not fail the build just because the codecov upload fails
-                echo "FAIL" > ${GITHUB_WORKSPACE}/codecov.result
-                break
-            fi
-            DELAY=$(( RANDOM % 30 + 30))
-            echo "Pausing $DELAY seconds before re-attempting upload"
-            sleep $DELAY
+
+    - name: Upload codecov reports
+      run: |
+        set +e
+        ARTIFACTS=`ls -d artifacts/* | cut -d/ -f2 | cut -d- -f1 | sort | uniq`
+        for BUILD_GROUP in $ARTIFACTS; do
+            rm -vf .coverage coverage.xml
+            coverage combine artifacts/${BUILD_GROUP}*/.coverage
+            coverage xml -i
+            export CODECOV_NAME=$BUILD_GROUP
+            i=0
+            while : ; do
+                ((i+=1))
+                echo "Uploading coverage to codecov (attempt ${i})"
+                bash $CODECOV -Z -X gcov -X s3 -f coverage.xml
+                if test $? == 0; then
+                    echo "PASS $CODECOV_NAME" >> codecov.result
+                    break
+                elif test $i -ge 2; then
+                    # Do not fail the build (yet) just because the codecov
+                    # upload fails
+                    echo "FAIL $CODECOV_NAME" >> codecov.result
+                    break
+                fi
+                DELAY=$(( RANDOM % 30 + 30))
+                echo "Pausing $DELAY seconds before re-attempting upload"
+                sleep $DELAY
+            done
         done
-
-    - name: Record build artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{github.job}}_${{env.GHA_JOBNAME}}
-        path: |
-          codecov.result
-        # In general, do not record test results as artifacts to
-        #   manage total artifact storage
-        # TEST-*.xml
-
-  post:
-    name: post-build
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v2
-        with:
-          path: artifacts
 
       - name: Check codecov upload success
         run: |
-          FAIL=`grep FAIL artifacts/*/codecov.result | wc -l`
-          ALL=`ls -1 artifacts/*/codecov.result | wc -l`
-          # Fail is more than 1/9 codecov uploads fail
+          FAIL=`grep FAIL codecov.result | wc -l`
+          ALL=`cat codecov.result | wc -l`
+          # Fail if more than 1/9 codecov uploads fail
           echo "$FAIL of $ALL codecov uploads failed"
           if test $FAIL -gt 0; then
-              grep FAIL artifacts/*/codecov.result | sed 's/^/    /'
-              if test $(( $FAIL * 9 )) -gt $ALL; then
-                  echo "More than 1/9 codecov uploads failed:"
+              grep FAIL codecov.result | sed 's/^/    /'
+              if test $FAIL -gt 1; then
+                  echo "More than 1 codecov upload failed."
                   exit 1
               fi
           fi
