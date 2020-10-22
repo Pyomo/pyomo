@@ -541,6 +541,7 @@ jobs:
         set +e
         function upload {
             if test ! -e .coverage; then
+                echo "No coverage to upload."
                 return
             fi
             coverage xml -i
@@ -566,6 +567,7 @@ jobs:
         }
         ARTIFACTS=`ls -d artifacts/* | cut -d/ -f2 | cut -d- -f1 | sort | uniq`
         for BUILD_GROUP in $ARTIFACTS; do
+            echo ""
             echo "Build group: $BUILD_GROUP"
             ls artifacts/${BUILD_GROUP}*/.coverage | sed 's/^/    /'
             rm -vf .coverage coverage.xml
@@ -573,8 +575,11 @@ jobs:
             upload
         done
         # Legacy builds that don't support coverage 5.x
+        echo ""
+        echo "Installing coverage 4.x for legacy builds"
         pip install 'coverage<5'
         BUILD_GROUP=legacy
+        echo ""
         echo "Build group: $BUILD_GROUP"
         rm -vf .coverage coverage.xml
         coverage combine artifacts/*/.coverage
