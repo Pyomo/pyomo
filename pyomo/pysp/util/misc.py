@@ -19,16 +19,6 @@ import sys
 import subprocess
 import inspect
 import argparse
-# for profiling
-try:
-    import cProfile as profile
-except ImportError:
-    import profile
-try:
-    import pstats
-    pstats_available=True
-except ImportError:
-    pstats_available=False
 
 from pyutilib.misc import PauseGC, import_file
 from pyutilib.services import TempfileManager
@@ -306,7 +296,20 @@ def launch_command(command,
 
         rc = 0
 
-        if pstats_available and (profile_count > 0):
+        if profile_count > 0:
+            # Defer import of profiling packages until we know that they
+            # are needed
+            try:
+                try:
+                    import cProfile as profile
+                except ImportError:
+                    import profile
+                import pstats
+            except ImportError:
+                configure_loggers(shutdown=True)
+                raise ValueError(
+                    "Cannot use the 'profile' option: the Python "
+                    "'profile' or 'pstats' package cannot be imported!")
             #
             # Call the main routine with profiling.
             #
