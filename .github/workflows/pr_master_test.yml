@@ -483,15 +483,46 @@ jobs:
     if: always() # run even if a build job fails
     runs-on: ubuntu-latest
     steps:
+    - name: Pip package cache
+      uses: actions/cache@v1
+      if: matrix.PYENV == 'pip'
+      id: pip-cache
+      with:
+        path: cache/pip
+        key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
+
+    - name: TPL package download cache
+      uses: actions/cache@v1
+      id: download-cache
+      with:
+        path: cache/download
+        key: download-${{env.CACHE_VER}}.0-${{runner.os}}
+
     - name: Download build artifacts
       uses: actions/download-artifact@v2
       with:
         path: artifacts
 
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Install Python Packages (pip)
+      shell: bash # DO NOT REMOVE: see note above
+      run: |
+        python -c 'import sys;print(sys.executable)'
+        python -m pip install --cache-dir cache/pip --upgrade pip
+        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS} \
+            ${PYTHON_REQUIRED_PKGS}
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
+
     - name: Update codecov uploader
       run: |
         set +e
         CODECOV="${GITHUB_WORKSPACE}/cache/download/codecov.sh"
+        mkdir -p `basename $CODECOV`
         echo "CODECOV=$CODECOV" >> $GITHUB_ENV
         # Always attempt to update the codecov script, but fall back on
         # the previously cached script if it fails
