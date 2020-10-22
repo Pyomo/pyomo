@@ -570,7 +570,7 @@ jobs:
             ls artifacts/${BUILD_GROUP}*/.coverage | sed 's/^/    /'
             rm -vf .coverage coverage.xml
             coverage combine artifacts/${BUILD_GROUP}*/.coverage
-            upload()
+            upload
         done
         # Legacy builds that don't support coverage 5.x
         pip install 'coverage<5'
@@ -578,7 +578,7 @@ jobs:
         echo "Build group: $BUILD_GROUP"
         rm -vf .coverage coverage.xml
         coverage combine artifacts/*/.coverage
-        upload()
+        upload
 
     - name: Check codecov upload success
       run: |
