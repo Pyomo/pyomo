@@ -539,6 +539,8 @@ jobs:
     - name: Upload codecov reports
       run: |
         set +e
+        pwd
+        ls -a
         function upload {
             if test ! -e .coverage; then
                 echo "No coverage to upload."
@@ -574,7 +576,7 @@ jobs:
             echo ""
             echo "Build group: $BUILD_GROUP"
             rm -vf .coverage coverage.xml
-            ls .coverage-{BUILD_GROUP}* | sed 's/^/    /'
+            ls .coverage-${BUILD_GROUP}* | sed 's/^/    /'
             coverage combine .coverage-${BUILD_GROUP}*/.coverage
             upload
         done
