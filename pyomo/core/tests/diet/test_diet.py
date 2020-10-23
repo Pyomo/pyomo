@@ -12,7 +12,7 @@ import json
 import os
 from nose.tools import nottest
 
-import pyomo.common.testing as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers
