@@ -22,8 +22,6 @@ from pyutilib.th import *
 
 from pyomo.common.collections import Mapping, Sequence
 
-print str(_unittest.TestCase.__doc__)
-
 class TestCase(_pyunit.TestCase):
     """A Pyomo-specific class whose instances are single test cases.
 
