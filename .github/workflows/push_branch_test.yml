@@ -594,7 +594,7 @@ jobs:
             while : ; do
                 ((i+=1))
                 echo "Uploading coverage to codecov (attempt ${i})"
-                bash $CODECOV -Z --env TAG,GHA_OS_NAME -X gcov -X s3 \
+                bash $CODECOV -Z -e TAG,GHA_OS_NAME -X gcov -X s3 \
                     -f coverage.xml
                 if test $? == 0; then
                     echo "PASS $CODECOV_NAME" >> codecov.result
