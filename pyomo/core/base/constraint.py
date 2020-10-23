@@ -494,15 +494,14 @@ class _GeneralConstraintData(_ConstraintData):
             self._upper = None
             self._equality = False
 
-            if expr is Constraint.Infeasible:
+            if expr is Constraint.Skip:
+                del self.parent_component()[self.index()]
+                return
+            elif expr is Constraint.Infeasible:
                 del self.parent_component()[self.index()]
                 raise ValueError(
                     "Constraint '%s' is always infeasible"
                     % (self.name,) )
-            elif ( expr is Constraint.Skip or
-                   expr is Constraint.Feasible ):
-                del self.parent_component()[self.index()]
-                return
             else:
                 raise ValueError(
                     "Constraint '%s' does not have a proper "
@@ -760,7 +759,7 @@ class Constraint(ActiveIndexedComponent):
 
     _ComponentDataClass = _GeneralConstraintData
     class Infeasible(object): pass
-    class Feasible(object): pass
+    Feasible = ActiveIndexedComponent.Skip
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
     Satisfied = Feasible
