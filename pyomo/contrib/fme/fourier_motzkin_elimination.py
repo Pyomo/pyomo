@@ -222,7 +222,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         # NOTE that we are ignoring deactivated constraints
         constraints = []
         ctypes_not_to_transform = set((Block, Param, Objective, Set, SetOf,
-                                       Expression, Suffix))
+                                       Expression, Suffix, Var))
         for obj in instance.component_data_objects(
                 descend_into=Block,
                 sort=SortComponents.deterministic,
@@ -233,19 +233,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 cons_list = self._process_constraint(obj)
                 constraints.extend(cons_list)
                 obj.deactivate() # the truth will be on our transformation block
-            elif obj.ctype is Var:
-                # variable bounds are constraints, but we only need them if this
-                # is a variable we are projecting out
-                if obj not in vars_to_eliminate:
-                    continue
-                if obj.lb is not None:
-                    constraints.append({'body': generate_standard_repn(obj),
-                                        'lower': value(obj.lb),
-                                        'map': ComponentMap([(obj, 1)])})
-                if obj.ub is not None:
-                    constraints.append({'body': generate_standard_repn(-obj),
-                                        'lower': -value(obj.ub),
-                                        'map': ComponentMap([(obj, -1)])})
             else:
                 raise RuntimeError(
                     "Found active component %s of type %s. The "
@@ -255,6 +242,16 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                     "and Objectives may be active on the model." % (obj.name,
                                                                     obj.ctype))
 
+        for obj in vars_to_eliminate:
+            if obj.lb is not None:
+                constraints.append({'body': generate_standard_repn(obj),
+                                    'lower': value(obj.lb),
+                                    'map': ComponentMap([(obj, 1)])})
+            if obj.ub is not None:
+                constraints.append({'body': generate_standard_repn(-obj),
+                                    'lower': -value(obj.ub),
+                                    'map': ComponentMap([(obj, -1)])})
+        
         new_constraints = self._fourier_motzkin_elimination( constraints,
                                                              vars_to_eliminate)
 
