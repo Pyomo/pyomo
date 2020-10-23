@@ -46,8 +46,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             # Equality constraint (makes the problem nonconvex)
             if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower and config.use_dual:
                 sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-                # TODO: fix else rhs
-                rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+                rhs = constr.lower
                 if config.add_slack:
                     slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
                 target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(

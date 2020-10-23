@@ -105,7 +105,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 # Equality constraint (makes the problem nonconvex)
                 if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
                     sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-                    rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+                    rhs = constr.lower
 
                     # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
                     pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (
