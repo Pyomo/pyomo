@@ -580,6 +580,8 @@ jobs:
             echo ""
             echo "Build group: $1"
             export CODECOV_NAME=$1
+            export TAG=$1
+            export GHA_OS_NAME=${{matrix.TARGET}}
             shift
             rm -vf .coverage coverage.xml
             echo "    $@" | sed 's/ /\n    /'
@@ -593,7 +595,8 @@ jobs:
             while : ; do
                 ((i+=1))
                 echo "Uploading coverage to codecov (attempt ${i})"
-                bash $CODECOV -Z -X gcov -X s3 -f coverage.xml
+                bash $CODECOV -Z --env TAG,GHA_OS_NAME -X gcov -X s3 \
+                    -f coverage.xml
                 if test $? == 0; then
                     echo "PASS $CODECOV_NAME" >> codecov.result
                     break
