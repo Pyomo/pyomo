@@ -17,7 +17,7 @@ convex GDPs.
 from __future__ import division
 
 from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveFloat,
-                                 NonNegativeFloat, PositiveInt)
+                                 NonNegativeFloat, PositiveInt, In)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
                          SortComponents, Transformation, TransformationFactory,
@@ -46,12 +46,6 @@ NAME_BUFFER = {}
 def do_not_tighten(m):
     return m
 
-def _norm_domain(p):
-    if p in [2, float('inf')]:
-        return p
-    raise ValueError("Expected 2, or float('inf')."
-                     "Only L-2, and L-infinity norms are supported.")
-
 def _get_constraint_exprs(constraints, hull_to_bigm_map):
     """Returns a list of expressions which are constrain.expr translated 
     into the bigm space, for each constraint in constraints.
@@ -63,6 +57,9 @@ def _get_constraint_exprs(constraints, hull_to_bigm_map):
     return cuts
 
 def _constraint_tight(model, constraint):
+    # TODO: Exact equalities should be included, but constraints which do not
+    # involve disaggreggated variables should not.
+
     """Returns 0 if the constraint is not tight or if it is an exactly 
     satisfied equality, 1 if the constraint is tight at or in violation of its UB
     and -1 if it is tight at or in violation of its LB
@@ -90,7 +87,7 @@ def _get_linear_approximation_expr(normal_vec, point):
     return body >= -sum(normal_vec[idx]*v.value for (idx, v) in
                        enumerate(point))
 
-def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
+def create_cuts_fme(transBlock_rHull, var_info,
                     hull_to_bigm_map, rBigM_linear_constraints, rHull_vars,
                     disaggregated_vars, disaggregation_constraints, norm,
                     cut_threshold, zero_tolerance, integer_arithmetic):
@@ -102,13 +99,12 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
     Fourier-Motzkin elimination is used to project the disaggregated variables
     out of the polyhedron formed by the composite normal and the collection 
     of tight constraints. This results in multiple cuts, of which we select
-    one which cuts of x* by the greatest margin, as long as that margin is
+    one that cuts of x* by the greatest margin, as long as that margin is
     more than cut_threshold. If no cut satisfies the margin specified by 
     cut_threshold, we return None.
 
     Parameters
     -----------
-    transBlock_rBigm: transformation block on relaxed bigM instance
     transBlock_rHull: transformation blcok on relaxed hull instance
     var_info: List of tuples (rBigM_var, rHull_var, xstar_param)
     hull_to_bigm_map: For expression substition, maps id(hull_var) to 
@@ -181,11 +177,9 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
     TransformationFactory('contrib.fourier_motzkin_elimination').\
         apply_to(tight_constraints, vars_to_eliminate=disaggregated_vars,
                  zero_tolerance=zero_tolerance,
-                 do_integer_arithmetic=integer_arithmetic)
-    # I made this block, so I know they are here. Not that I won't hate
-    # myself later for messing with private stuff.
-    fme_results = tight_constraints._pyomo_contrib_fme_transformation.\
-                  projected_constraints
+                 do_integer_arithmetic=integer_arithmetic,
+                 projected_constraints_name="fme_constraints")
+    fme_results = tight_constraints.fme_constraints
     projected_constraints = [cons for i, cons in iteritems(fme_results)]
 
     # we created these constraints with the variables from rHull. We
@@ -199,18 +193,18 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
     # we find
     best = 0
     best_cut = None
-    for i in sorted(range(len(cuts)), reverse=True):
-        cut = cuts[i]
+    cuts_to_keep = []
+    for i, cut in enumerate(cuts):
         # x* is still in rBigM, so we can just remove this constraint if it
         # is satisfied at x*
         logger.info("FME: Post-processing cut %s" % cut)
         if value(cut):
             logger.info("FME:\t Doesn't cut off x*")
-            del cuts[i]
             continue
-        # we have found a constraint which cuts of x* by some convincing
-        # amount and is not already in rBigM, this has to be our cut and we
-        # can stop. We know cut is lb <= expr and that it's violated
+        # we have found a constraint which cuts of x* by some convincing amount
+        # and is not already in rBigM. 
+        cuts_to_keep.append(i)
+        # We know cut is lb <= expr and that it's violated
         assert len(cut.args) == 2
         cut_off = value(cut.args[0]) - value(cut.args[1])
         if cut_off > cut_threshold and cut_off > best:
@@ -218,12 +212,17 @@ def create_cuts_fme(transBlock_rBigM, transBlock_rHull, var_info,
             best_cut = cut
             logger.info("FME:\t New best cut: Cuts off x* by %s." % best)
 
+    # NOTE: this is not used right now, but it's not hard to imagine a world in
+    # which we would want to keep multiple cuts from FME, so leaving it in for
+    # now.
+    cuts = [cuts[i] for i in cuts_to_keep]
+
     if best_cut is not None:
         return [best_cut]
 
     return None
 
-def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
+def create_cuts_normal_vector(transBlock_rHull, var_info,
                               hull_to_bigm_map, rBigM_linear_constraints,
                               rHull_vars, disaggregated_vars,
                               disaggregation_constraints, norm, cut_threshold,
@@ -240,7 +239,6 @@ def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
 
     Parameters
     -----------
-    transBlock_rBigm: transformation block on relaxed bigM instance
     transBlock_rHull: transformation blcok on relaxed hull instance. Ignored by
                       this callback.
     var_info: List of tuples (rBigM_var, rHull_var, xstar_param)
@@ -262,8 +260,6 @@ def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
     integer_arithmetic: Ignored by this callback (specifies FME use integer
                         arithmetic)
     """
-    cut_number = len(transBlock_rBigM.cuts)
-
     cutexpr = 0
     if norm == 2:
         for x_rbigm, x_hull, x_star in var_info:
@@ -277,11 +273,9 @@ def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
                             "a solver which provides dual information.")
         i = 0
         for x_rbigm, x_hull, x_star in var_info:
-            # ESJ: This appears opposite the paper, but it is because the duals
-            # come back nonpostive.
-            mu_plus = -value(duals[transBlock_rHull.inf_norm_linearization[i]])
-            mu_minus = -value(
-                duals[transBlock_rHull.inf_norm_linearization[i+1]])
+            # ESJ: We wrote this so duals will be nonnegative
+            mu_plus = value(duals[transBlock_rHull.inf_norm_linearization[i]])
+            mu_minus = value(duals[transBlock_rHull.inf_norm_linearization[i+1]])
             assert mu_plus >= 0
             assert mu_minus >= 0
             cutexpr += (mu_plus - mu_minus)*(x_rbigm - x_hull.value)
@@ -291,10 +285,6 @@ def create_cuts_normal_vector(transBlock_rBigM, transBlock_rHull, var_info,
     if value(cutexpr) < -cut_threshold:
         return [cutexpr >= 0]
     return None
-
-def _restore_objective(instance_rHull, transBlock_rHull):
-    transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
-    transBlock_rHull.separation_objective.activate()
 
 def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
                                                       bigm_to_hull_map, opt,
@@ -334,7 +324,9 @@ def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
                        "back off the new cut "
                        "did not solve normally. Leaving the constraint as is, "
                        "which could lead to numerical trouble%s" % (results,))
-        _restore_objective(instance_rHull, transBlock_rHull, orig_obj)
+        # restore the objective
+        transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
+        transBlock_rHull.separation_objective.activate()
         return
 
     # we're minimizing, val is <= 0
@@ -342,8 +334,9 @@ def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
     if val <= 0:
         logger.info("\tBacking off cut by %s" % val)
         cut._body += abs(val)
-    # else there is nothing to do
-    _restore_objective(instance_rHull, transBlock_rHull)
+    # else there is nothing to do: restore the objective
+    transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
+    transBlock_rHull.separation_objective.activate()
 
 def back_off_constraint_by_fixed_tolerance(cut, transBlock_rHull,
                                            bigm_to_hull_map, opt, stream_solver,
@@ -472,7 +465,7 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('norm', ConfigValue(
         default=2,
-        domain=_norm_domain,
+        domain=In([2, float('inf')]),
         description="Norm to use in the separation problem: 2, or "
         "float('inf')",
         doc="""
@@ -503,8 +496,6 @@ class CuttingPlane_Transformation(Transformation):
         description="""If true, sets tee=True for every solve performed over
         "the course of the algorithm"""
     ))
-    # TODO: I'd rather just have them pass the SolverFactory, if we can make
-    # that possible...
     CONFIG.declare('solver_options', ConfigValue(
         default={},
         description="Dictionary of solver options",
@@ -630,6 +621,22 @@ class CuttingPlane_Transformation(Transformation):
         can be done with exact precision.
         """
     ))
+    CONFIG.declare('cuts_name', ConfigValue(
+        default=None,
+        domain=str,
+        description="Optional name for the IndexedConstraint containing the "
+        "projected cuts. Must be a unique name with respect to the "
+        "instance.",
+        doc="""
+        Optional name for the IndexedConstraint containing the projected 
+        constraints. If not specified, the cuts will be stored on a 
+        private block created by the transformation, so if you want access 
+        to them after the transformation, use this argument.
+
+        Must be a string which is a unique component name with respect to the 
+        Block on which the transformation is called.
+        """
+    ))
     def __init__(self):
         super(CuttingPlane_Transformation, self).__init__()
 
@@ -648,18 +655,21 @@ class CuttingPlane_Transformation(Transformation):
             else:
                 self.verbose = False
 
-            (instance_rBigM, instance_rHull, var_info, 
+            (instance_rBigM, cuts_obj, instance_rHull, var_info, 
              transBlockName) = self._setup_subproblems( instance, bigM,
                                                         self._config.\
                                                         tighten_relaxation)
 
-            self._generate_cuttingplanes( instance_rBigM, instance_rHull,
-                                          var_info, transBlockName)
+            self._generate_cuttingplanes( instance_rBigM, cuts_obj,
+                                          instance_rHull, var_info,
+                                          transBlockName)
 
             # restore integrality
             TransformationFactory('core.relax_integer_vars').apply_to(instance,
                                                                       undo=True)
         finally:
+            del self._config
+            del self.verbose
             # clear the global name buffer
             NAME_BUFFER.clear()
             # restore logging level
@@ -667,7 +677,7 @@ class CuttingPlane_Transformation(Transformation):
 
     def _setup_subproblems(self, instance, bigM, tighten_relaxation_callback):
         # create transformation block
-        transBlockName, transBlock = self._add_relaxation_block(instance)
+        transBlockName, transBlock = self._add_transformation_block(instance)
 
         # We store a list of all vars so that we can efficiently
         # generate maps among the subproblems
@@ -682,7 +692,17 @@ class CuttingPlane_Transformation(Transformation):
             sort=SortComponents.deterministic) if not v.is_fixed())
 
         # we'll store all the cuts we add together
-        transBlock.cuts = Constraint(NonNegativeIntegers)
+        nm = self._config.cuts_name
+        if nm is None:
+            cuts_obj = transBlock.cuts = Constraint(NonNegativeIntegers)
+        else:
+            # check that this really is an available name
+            if instance.component(nm) is not None:
+                raise GDP_Error("cuts_name was specified as '%s', but this is "
+                                "already a component on the instance! Please "
+                                "specify a unique name." % nm)
+            instance.add_component(nm, Constraint(NonNegativeIntegers))
+            cuts_obj = instance.component(nm)
 
         # get bigM and hull relaxations
         bigMRelaxation = TransformationFactory('gdp.bigm')
@@ -742,7 +762,7 @@ class CuttingPlane_Transformation(Transformation):
         # because it is best to do it in the first iteration, so that we can
         # skip stale variables.
 
-        return (instance, instance_rHull, var_info, transBlockName)
+        return (instance, cuts_obj, instance_rHull, var_info, transBlockName)
 
     # this is the map that I need to translate my projected cuts and add
     # them to bigM
@@ -808,25 +828,24 @@ class CuttingPlane_Transformation(Transformation):
             rBigM_linear_constraints.extend(fme._process_constraint(cons))
 
         # [ESJ Aug 13 2020] NOTE: We actually don't need to worry about variable
-        # bounds here becuase the FME transformation will take care of them
+        # bounds here because the FME transformation will take care of them
         # (i.e. convert those of the disaggregated variables to constraints for
         # the purposes of the projection.)
 
         return rBigM_obj, rBigM_linear_constraints
 
-    def _generate_cuttingplanes( self, instance_rBigM, instance_rHull, var_info,
-                                 transBlockName):
+    def _generate_cuttingplanes( self, instance_rBigM, cuts_obj, instance_rHull,
+                                 var_info, transBlockName):
 
         opt = SolverFactory(self._config.solver)
         stream_solver = self._config.stream_solver
         opt.options = self._config.solver_options
 
         improving = True
-        prev_obj = float("inf")
+        prev_obj = None
         epsilon = self._config.minimum_improvement_threshold
         cuts = None
 
-        transBlock_rBigM = instance_rBigM.component(transBlockName)
         transBlock_rHull = instance_rHull.component(transBlockName)
 
         rBigM_obj, rBigM_linear_constraints = self.\
@@ -884,10 +903,12 @@ class CuttingPlane_Transformation(Transformation):
 
             # compare objectives: check absolute difference close to 0, relative
             # difference further from 0.
-            obj_diff = prev_obj - rBigM_objVal
-            improving = isinf(obj_diff) or \
-                        ( abs(obj_diff) > epsilon if abs(rBigM_objVal) < 1 else
-                          abs(obj_diff/prev_obj) > epsilon )
+            if prev_obj is None:
+                improving = True
+            else:
+                obj_diff = prev_obj - rBigM_objVal
+                improving = ( abs(obj_diff) > epsilon if abs(rBigM_objVal) < 1
+                             else abs(obj_diff/prev_obj) > epsilon )
 
             # solve separation problem to get xhat.
             opt.solve(instance_rHull, tee=stream_solver)
@@ -915,8 +936,8 @@ class CuttingPlane_Transformation(Transformation):
                self._config.separation_objective_threhold:
                 break
 
-            cuts = self._config.create_cuts(transBlock_rBigM, transBlock_rHull,
-                                            var_info, hull_to_bigm_map,
+            cuts = self._config.create_cuts(transBlock_rHull, var_info,
+                                            hull_to_bigm_map,
                                             rBigM_linear_constraints,
                                             rHull_vars, disaggregated_vars,
                                             disaggregation_constraints,
@@ -931,12 +952,12 @@ class CuttingPlane_Transformation(Transformation):
 
             for cut in cuts:
                 # we add the cut to the model and then post-process it in place.
-                cut_number = len(transBlock_rBigM.cuts)
+                cut_number = len(cuts_obj)
                 logger.warning("Adding cut %s to BigM model." % (cut_number,))
-                transBlock_rBigM.cuts.add(cut_number, cut)
+                cuts_obj.add(cut_number, cut)
                 if self._config.post_process_cut is not None:
                     self._config.post_process_cut(
-                        transBlock_rBigM.cuts[cut_number], transBlock_rHull,
+                        cuts_obj[cut_number], transBlock_rHull,
                         bigm_to_hull_map, opt, stream_solver,
                         self._config.back_off_problem_tolerance)
 
@@ -946,7 +967,7 @@ class CuttingPlane_Transformation(Transformation):
                 
             prev_obj = rBigM_objVal
 
-    def _add_relaxation_block(self, instance):
+    def _add_transformation_block(self, instance):
         # creates transformation block with a unique name based on name, adds it
         # to instance, and returns it.
         transBlockName = unique_component_name(
@@ -991,8 +1012,10 @@ class CuttingPlane_Transformation(Transformation):
             i = 0
             for j, (x_rbigm, x_hull, x_star) in enumerate(var_info):
                 if not x_rbigm.stale:
-                    inf_cons[i] = u >= x_hull - x_star
-                    inf_cons[i+1] = u >= x_star - x_hull
+                    # NOTE: these are written as >= constraints so that we know
+                    # the duals will come back nonnegative.
+                    inf_cons[i] = u  - x_hull >= - x_star
+                    inf_cons[i+1] = u + x_hull >= x_star
                     i += 2
                 else:
                     if self.verbose:

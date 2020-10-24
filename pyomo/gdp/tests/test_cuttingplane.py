@@ -222,8 +222,8 @@ class OneVarDisj(unittest.TestCase):
 
         self.check_two_segment_cuts_valid(m)
 
-    def check_expected_two_segment_cut_exact(self, m):
-        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+    def check_expected_two_segment_cut_exact(self, cuts):
+        m = cuts.model()
         # I should get one cut because I made bigM really bad, but I only need
         # one facet of the convex hull for this problem to be done.
         self.assertEqual(len(cuts), 1)
@@ -253,8 +253,9 @@ class OneVarDisj(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(
             m, bigM=1e6, create_cuts=create_cuts_fme,
             post_process_cut=None, do_integer_arithmetic=True)
-        
-        self.check_expected_two_segment_cut_exact(m)
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+
+        self.check_expected_two_segment_cut_exact(cuts)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
     def test_integer_arithmetic_cuts_valid_inf_norm(self):
@@ -264,9 +265,52 @@ class OneVarDisj(unittest.TestCase):
         TransformationFactory('gdp.cuttingplane').apply_to(
             m, bigM=1e6, create_cuts=create_cuts_fme, norm=float('inf'),
             post_process_cut=None, do_integer_arithmetic=True)
-        
-        self.check_expected_two_segment_cut_exact(m)
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
 
+        self.check_expected_two_segment_cut_exact(cuts)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_maximization(self):
+        m = models.twoSegments_SawayaGrossmann()
+        m.obj.expr = -m.obj.expr
+        m.obj.sense = maximize
+
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, bigM=1e6, create_cuts=create_cuts_fme,
+            post_process_cut=None, do_integer_arithmetic=True)
+        cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
+
+        self.check_expected_two_segment_cut_exact(cuts)
+
+    @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
+    def test_cuts_named_correctly(self):
+        m = models.twoSegments_SawayaGrossmann()
+        # have to make M big for the bigm relaxation to be the box 0 <= x <= 3,
+        # 0 <= Y <= 1 (in the limit)
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m, bigM=1e6, create_cuts=create_cuts_fme, cuts_name="perfect_cuts",
+            post_process_cut=None, do_integer_arithmetic=True)
+        cuts = m.component("perfect_cuts")
+        self.assertIsInstance(cuts, Constraint)
+        self.assertIsNone(
+            m._pyomo_gdp_cuttingplane_transformation.component("cuts"))
+
+        self.check_expected_two_segment_cut_exact(cuts)
+
+    def test_non_unique_cut_name_error(self):
+        m = models.twoSegments_SawayaGrossmann()
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "cuts_name was specified as 'disj1', but this is "
+            "already a component on the instance! Please "
+            "specify a unique name.",
+            TransformationFactory('gdp.cuttingplane').apply_to,
+            m,
+            cuts_name="disj1")
+   
 class TwoTermDisj(unittest.TestCase):
     extreme_points = [
         (1,0,4,1),
