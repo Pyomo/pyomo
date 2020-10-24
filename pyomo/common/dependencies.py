@@ -409,7 +409,8 @@ yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
 pympler, pympler_available = attempt_import(
     'pympler', callback=_finalize_pympler)
 numpy, numpy_available = attempt_import('numpy', alt_names=['np'])
-scipy, scipy_available = attempt_import('scipy', callback=_finalize_scipy)
+scipy, scipy_available = attempt_import(
+    'scipy', callback=_finalize_scipy, deferred_submodules={'stats':None})
 networkx, networkx_available = attempt_import('networkx', alt_names=['nx'])
 pandas, pandas_available = attempt_import('pandas', alt_names=['pd'])
 dill, dill_available = attempt_import('dill')
