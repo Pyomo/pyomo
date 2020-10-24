@@ -159,7 +159,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
         solve_data.best_solution_found_time = get_main_elapsed_time(
             solve_data.timing)
         if config.strategy == 'GOA':
-            if solve_data.results.problem.sense == ProblemSense.minimize:
+            if solve_data.objective_sense == minimize:
                 solve_data.num_no_good_cuts_added.update(
                     {solve_data.UB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts)})
             else:

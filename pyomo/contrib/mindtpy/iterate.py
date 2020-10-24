@@ -44,7 +44,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
         solve_data.mip_subiter = 0
         # solve MILP master problem
-        if config.strategy in {'OA', 'GOA', 'ECP'}:
+        if config.strategy in {'OA', 'GOA', 'ECP', 'LOA'}:
             master_mip, master_mip_results = solve_master(
                 solve_data, config)
             if master_mip_results is not None:

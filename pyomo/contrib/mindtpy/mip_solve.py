@@ -26,7 +26,7 @@ single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
 
 
-def solve_master(solve_data, config, feas_pump=False):
+def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
     """
     This function solves the MIP master problem
 
@@ -53,66 +53,8 @@ def solve_master(solve_data, config, feas_pump=False):
         config.logger.info('MIP %s: Solve master problem.' %
                            (solve_data.mip_iter,))
 
-    MindtPy = solve_data.mip.MindtPy_utils
-
-    # Set up MILP
-    for c in MindtPy.constraint_list:
-        if c.body.polynomial_degree() not in (1, 0):
-            c.deactivate()
-
-    MindtPy.MindtPy_linear_cuts.activate()
-    main_objective = next(
-        solve_data.mip.component_data_objects(Objective, active=True))
-    main_objective.deactivate()
-
-    sign_adjust = 1 if main_objective.sense == minimize else - 1
-    MindtPy.del_component('MindtPy_oa_obj')
-
-    if feas_pump:
-        if MindtPy.find_component('feas_pump_mip_obj') is not None:
-            MindtPy.del_component('feas_pump_mip_obj')
-        if config.fp_master_norm == 'L1':
-            MindtPy.feas_pump_mip_obj = generate_norm1_objective_function(
-                solve_data.mip,
-                solve_data.working_model,
-                discrete_only=config.fp_discrete_only)
-        elif config.fp_master_norm == 'L2':
-            MindtPy.feas_pump_mip_obj = generate_norm2sq_objective_function(
-                solve_data.mip,
-                solve_data.working_model,
-                discrete_only=config.fp_discrete_only)
-        elif config.fp_master_norm == 'L_infinity':
-            MindtPy.feas_pump_mip_obj = generate_norm_inf_objective_function(
-                solve_data.mip,
-                solve_data.working_model,
-                discrete_only=config.fp_discrete_only)
-    else:
-        if config.add_slack:
-            MindtPy.del_component('MindtPy_penalty_expr')
-
-            MindtPy.MindtPy_penalty_expr = Expression(
-                expr=sign_adjust * config.OA_penalty_factor * sum(
-                    v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
-
-        MindtPy.MindtPy_oa_obj = Objective(
-            expr=main_objective.expr +
-            (MindtPy.MindtPy_penalty_expr if config.add_slack else 0),
-            sense=main_objective.sense)
-
-        if config.use_dual_bound:
-            # Delete previously added dual bound constraint
-            if MindtPy.MindtPy_linear_cuts.find_component('dual_bound') is not None:
-                MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
-            if main_objective.sense == minimize:
-                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=main_objective.expr +
-                    (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) >= solve_data.LB,
-                    doc='Objective function expression should improve on the best found dual bound')
-            else:
-                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=main_objective.expr +
-                    (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) <= solve_data.UB,
-                    doc='Objective function expression should improve on the best found dual bound')
+    # setup master problem
+    setup_master(solve_data, config, feas_pump, loa_projection)
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
     if config.nlp_solver == 'ipopt':
@@ -156,7 +98,7 @@ def solve_master(solve_data, config, feas_pump=False):
 
         if master_mip_results.solver.termination_condition is tc.optimal:
             if config.single_tree and config.add_no_good_cuts is False:
-                if main_objective.sense == minimize:
+                if solve_data.objective_sense == minimize:
                     solve_data.LB = max(
                         master_mip_results.problem.lower_bound, solve_data.LB)
                     solve_data.LB_progress.append(solve_data.LB)
@@ -388,3 +330,81 @@ def handle_master_unbounded(master_mip, solve_data, config):
             opt.set_instance(master_mip)
         master_mip_results = opt.solve(
             master_mip, tee=config.mip_solver_tee, **config.mip_solver_args)
+
+
+def setup_master(solve_data, config, feas_pump, loa_projection):
+    """
+    Set up master problem/master projection problem for OA, ECP, Feasibility Pump and LOA methods.
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    """
+    MindtPy = solve_data.mip.MindtPy_utils
+
+    for c in MindtPy.constraint_list:
+        if c.body.polynomial_degree() not in (1, 0):
+            c.deactivate()
+
+    MindtPy.MindtPy_linear_cuts.activate()
+    main_objective = next(
+        solve_data.mip.component_data_objects(Objective, active=True))
+    main_objective.deactivate()
+
+    sign_adjust = 1 if main_objective.sense == minimize else - 1
+    MindtPy.del_component('MindtPy_oa_obj')
+
+    if feas_pump:
+        if MindtPy.find_component('feas_pump_mip_obj') is not None:
+            MindtPy.del_component('feas_pump_mip_obj')
+        if config.fp_master_norm == 'L1':
+            MindtPy.feas_pump_mip_obj = generate_norm1_objective_function(
+                solve_data.mip,
+                solve_data.working_model,
+                discrete_only=config.fp_discrete_only)
+        elif config.fp_master_norm == 'L2':
+            MindtPy.feas_pump_mip_obj = generate_norm2sq_objective_function(
+                solve_data.mip,
+                solve_data.working_model,
+                discrete_only=config.fp_discrete_only)
+        elif config.fp_master_norm == 'L_infinity':
+            MindtPy.feas_pump_mip_obj = generate_norm_inf_objective_function(
+                solve_data.mip,
+                solve_data.working_model,
+                discrete_only=config.fp_discrete_only)
+    elif loa_projection:
+        if MindtPy.find_component('loa_proj_mip_obj') is not None:
+            MindtPy.del_component('loa_proj_mip_obj')
+        MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
+                                                                       solve_data.working_model,
+                                                                       discrete_only=False)
+    else:
+        if config.add_slack:
+            MindtPy.del_component('MindtPy_penalty_expr')
+
+            MindtPy.MindtPy_penalty_expr = Expression(
+                expr=sign_adjust * config.OA_penalty_factor * sum(
+                    v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
+
+        MindtPy.MindtPy_oa_obj = Objective(
+            expr=main_objective.expr +
+            (MindtPy.MindtPy_penalty_expr if config.add_slack else 0),
+            sense=main_objective.sense)
+
+        if config.use_dual_bound:
+            # Delete previously added dual bound constraint
+            if MindtPy.MindtPy_linear_cuts.find_component('dual_bound') is not None:
+                MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
+            if main_objective.sense == minimize:
+                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                    expr=main_objective.expr +
+                    (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) >= solve_data.LB,
+                    doc='Objective function expression should improve on the best found dual bound')
+            else:
+                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                    expr=main_objective.expr +
+                    (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) <= solve_data.UB,
+                    doc='Objective function expression should improve on the best found dual bound')
