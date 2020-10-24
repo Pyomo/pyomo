@@ -196,7 +196,6 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
         the model that provides the base point for us to calculate the distance
     discrete_only: Bool
         only optimize on distance between the discrete variables
-    TODO: remove setpoint_model
     """
     var_filter = (lambda v: v[1].is_integer()) if discrete_only \
         else (lambda v: True)
