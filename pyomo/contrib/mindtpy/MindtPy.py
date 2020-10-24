@@ -112,7 +112,7 @@ class MindtPySolver(object):
         if config.init_strategy == "feas_pump":
             solve_data.fp_iter = 1
 
-        if config.nlp_solver == "baron":
+        if config.nlp_solver == "baron" or (config.nlp_solver == "gams" and config.nlp_solver_args['solver']):
             config.use_dual = False
         # if ecp tolerance is not provided use bound tolerance
         if config.ecp_tolerance is None:
@@ -147,7 +147,9 @@ class MindtPySolver(object):
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
             process_objective(solve_data, config,
-                              move_linear_objective=(config.init_strategy == 'feas_pump'), use_mcpp=config.use_mcpp)
+                              move_linear_objective=(config.init_strategy == 'feas_pump'
+                                                     or config.strategy == 'LOA'),
+                              use_mcpp=config.use_mcpp)
 
             # Save model initial values.
             solve_data.initial_var_values = list(

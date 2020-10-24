@@ -148,6 +148,7 @@ def _get_MindtPy_config():
         domain=bool
     ))
     CONFIG.declare("use_dual", ConfigValue(
+        # TODO: should we set the default value to True?
         default=True,
         description="use dual solution from the nlp solver to add OA cuts for equality constraints.",
         domain=bool
@@ -167,6 +168,7 @@ def _get_MindtPy_config():
     _add_tolerance_configs(CONFIG)
     _add_feas_pump_configs(CONFIG)
     _add_bound_configs(CONFIG)
+    _add_loa_configs(CONFIG)
     return CONFIG
 
 
@@ -330,4 +332,12 @@ def _add_feas_pump_configs(CONFIG):
         default=1,
         domain=PositiveFloat,
         description="The coefficient in the norm constraint, correspond to the Beta in the paper."
+    ))
+
+
+def _add_loa_configs(CONFIG):
+    CONFIG.declare("loa_coef", ConfigValue(
+        default=0.5,
+        domain=PositiveFloat,
+        description="loa_coef"
     ))

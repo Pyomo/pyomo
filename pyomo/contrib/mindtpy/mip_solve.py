@@ -43,6 +43,10 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
         the MIP stored in solve_data
     master_mip_results: Pyomo results object
         result from solving the master MIP
+    feas_pump: Bool
+        generate the feasibility pump projection master problem
+    loa_projection: Bool
+        generate the LOA projection master problem
     """
     if feas_pump:
         # solve_data.mip_iter += 1
@@ -93,6 +97,7 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
         with time_code(solve_data.timing, 'master'):
             master_mip_results = masteropt.solve(
                 solve_data.mip, tee=config.mip_solver_tee, **mip_args)
+            # print(master_mip_results)
 
         # if config.single_tree is False and config.add_no_good_cuts is False:
 
@@ -113,6 +118,10 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
             # resolve with a solver option flag on.
             master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
                 solve_data.mip, config)
+
+        # if loa_projection:
+        #     solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
+
         return solve_data.mip, master_mip_results
     except ValueError:
         config.logger.warning("ValueError: Cannot load a SolverResults object with bad status: error. "
@@ -125,7 +134,7 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
 # The following functions deal with handling the solution we get from the above MIP solver function
 
 
-def handle_master_optimal(master_mip, solve_data, config):
+def handle_master_optimal(master_mip, solve_data, config, update_bound=True):
     """
     This function copies the result from 'solve_master' to the working model and updates the upper/lower bound. This
     function is called after an optimal solution is found for the master problem.
@@ -141,8 +150,6 @@ def handle_master_optimal(master_mip, solve_data, config):
     """
     # proceed. Just need integer values
     MindtPy = master_mip.MindtPy_utils
-    main_objective = next(
-        master_mip.component_data_objects(Objective, active=True))
     # check if the value of binary variable is valid
     for var in MindtPy.variable_list:
         if var.value is None and var.is_integer():
@@ -155,18 +162,19 @@ def handle_master_optimal(master_mip, solve_data, config):
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
 
-    if main_objective.sense == minimize:
-        solve_data.LB = max(
-            value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
-        solve_data.LB_progress.append(solve_data.LB)
-    else:
-        solve_data.UB = min(
-            value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
-        solve_data.UB_progress.append(solve_data.UB)
-    config.logger.info(
-        'MIP %s: OBJ: %s  LB: %s  UB: %s'
-        % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
-           solve_data.LB, solve_data.UB))
+    if update_bound:
+        if solve_data.objective_sense == minimize:
+            solve_data.LB = max(
+                value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
+            solve_data.LB_progress.append(solve_data.LB)
+        else:
+            solve_data.UB = min(
+                value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
+            solve_data.UB_progress.append(solve_data.UB)
+        config.logger.info(
+            'MIP %s: OBJ: %s  LB: %s  UB: %s'
+            % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
+               solve_data.LB, solve_data.UB))
 
 
 def handle_master_other_conditions(master_mip, master_mip_results, solve_data, config):
@@ -342,6 +350,10 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm
+    feas_pump: Bool
+        generate the feasibility pump projection master problem
+    loa_projection: Bool
+        generate the LOA projection master problem
     """
     MindtPy = solve_data.mip.MindtPy_utils
 
@@ -350,11 +362,13 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
             c.deactivate()
 
     MindtPy.MindtPy_linear_cuts.activate()
+    # TODO: here need to check if the this works well with feasibility pump, since OA uses the expression of main_objective.
     main_objective = next(
         solve_data.mip.component_data_objects(Objective, active=True))
+    # main_objective.pprint()
     main_objective.deactivate()
 
-    sign_adjust = 1 if main_objective.sense == minimize else - 1
+    sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
     MindtPy.del_component('MindtPy_oa_obj')
 
     if feas_pump:
@@ -379,8 +393,15 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
         if MindtPy.find_component('loa_proj_mip_obj') is not None:
             MindtPy.del_component('loa_proj_mip_obj')
         MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
-                                                                       solve_data.working_model,
+                                                                       solve_data.best_solution_found,
                                                                        discrete_only=False)
+        if solve_data.objective_sense == minimize:
+            MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
+                expr=MindtPy.objective_value <= (1 - config.loa_coef) * value(solve_data.UB) + config.loa_coef * solve_data.LB)
+        else:
+            MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
+                expr=MindtPy.objective_value >= (1 - config.loa_coef) * value(solve_data.UB) + config.loa_coef * solve_data.UB)
+
     else:
         if config.add_slack:
             MindtPy.del_component('MindtPy_penalty_expr')

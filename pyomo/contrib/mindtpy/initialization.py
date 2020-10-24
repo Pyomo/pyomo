@@ -143,8 +143,10 @@ def init_rNLP(solve_data, config):
         if main_objective.sense == minimize:
             if not math.isnan(results.problem.lower_bound):
                 solve_data.LB = results.problem.lower_bound
+                solve_data.LB_progress.append(results.problem.lower_bound)
         elif not math.isnan(results.problem.upper_bound):
             solve_data.UB = results.problem.upper_bound
+            solve_data.UB_progress.append(results.problem.upper_bound)
         config.logger.info(
             'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
             % (value(main_objective.expr), solve_data.LB, solve_data.UB))

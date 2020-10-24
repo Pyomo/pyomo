@@ -9,7 +9,7 @@ from pyomo.contrib.mindtpy.mip_solve import (solve_master,
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
                                              handle_subproblem_optimal, handle_subproblem_infeasible,
                                              handle_subproblem_other_termination)
-from pyomo.core import minimize, Objective, Var
+from pyomo.core import minimize, maximize, Objective, Var
 from pyomo.opt.results import ProblemSense
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, indent, time_code
@@ -71,6 +71,15 @@ def MindtPy_iteration_loop(solve_data, config):
         if algorithm_should_terminate(solve_data, config, check_cycling=True):
             last_iter_cuts = False
             break
+
+        if config.strategy == 'LOA':
+            if (solve_data.best_solution_found is not None) and ((solve_data.objective_sense == minimize and solve_data.LB != float('inf'))
+                                                                 or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
+                master_mip, master_mip_results = solve_master(
+                    solve_data, config, loa_projection=True)
+                if master_mip_results.solver.termination_condition is tc.optimal:
+                    handle_master_optimal(
+                        master_mip, solve_data, config, update_bound=False)
 
         if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
