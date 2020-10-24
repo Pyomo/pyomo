@@ -853,21 +853,17 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertIs(cons.body, m.y)
         self.assertIsNone(cons.upper)
 
-    def test_use_all_var_bounds(self):
+    def make_tiny_model_where_bounds_matter(self):
         m = ConcreteModel()
         m.b = Block()
         m.x = Var(bounds=(0, 15))
         m.y = Var(bounds=(3, 5))
         m.b.c = Constraint(expr=m.x + m.y <= 8)
 
-        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        fme.apply_to(m.b, vars_to_eliminate=[m.y])
-        constraints = m.b.\
-                      _pyomo_contrib_fme_transformation.projected_constraints
+        return m
 
-        # if we hadn't included y's bounds, then we wouldn't get any constraints
-        # and y wouldn't be eliminated. If we do include y's bounds, we get new
-        # information that x <= 5:
+    def check_tiny_model_constraints(self, constraints):
+        m = constraints.model()
         self.assertEqual(len(constraints), 1)
         cons = constraints[1]
         self.assertEqual(value(cons.lower), -5)
@@ -877,3 +873,41 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(len(repn.linear_vars), 1)
         self.assertIs(repn.linear_vars[0], m.x)
         self.assertEqual(repn.linear_coefs[0], -1)
+
+    def test_use_all_var_bounds(self):
+        m = self.make_tiny_model_where_bounds_matter()
+
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        fme.apply_to(m.b, vars_to_eliminate=[m.y])
+        constraints = m.b.\
+                      _pyomo_contrib_fme_transformation.projected_constraints
+
+        # if we hadn't included y's bounds, then we wouldn't get any constraints
+        # and y wouldn't be eliminated. If we do include y's bounds, we get new
+        # information that x <= 5:
+        self.check_tiny_model_constraints(constraints)
+
+    def test_projected_constraints_named_correctly(self):
+        m = self.make_tiny_model_where_bounds_matter()
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        fme.apply_to(m.b, vars_to_eliminate=[m.y],
+                     projected_constraints_name='fme_constraints')
+        self.assertIsInstance(m.b.component("fme_constraints"), Constraint)
+        self.check_tiny_model_constraints(m.b.fme_constraints)
+
+        self.assertIsNone(m.b._pyomo_contrib_fme_transformation.component(
+            "projected_constraints"))
+
+    def test_non_unique_constraint_name_error(self):
+        m = self.make_tiny_model_where_bounds_matter()
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        self.assertRaisesRegexp(
+            RuntimeError,
+            "projected_constraints_name was specified "
+            "as 'c', but this is already a component on "
+            "the instance! Please specify a unique " 
+            "name.",
+            fme.apply_to,
+            m.b, 
+            vars_to_eliminate=[m.y],
+            projected_constraints_name='c')

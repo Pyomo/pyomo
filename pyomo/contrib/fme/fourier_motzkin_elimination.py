@@ -171,6 +171,22 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         abs(int(x) - x) <= integer_tolerance.
         """
     ))
+    CONFIG.declare('projected_constraints_name', ConfigValue(
+        default=None,
+        domain=str,
+        description="Optional name for the ConstraintList containing the "
+        "projected constraints. Must be a unique name with respect to the "
+        "instance.",
+        doc="""
+        Optional name for the ConstraintList containing the projected 
+        constraints. If not specified, the constraints will be stored on a 
+        private block created by the transformation, so if you want access 
+        to them after the transformation, use this argument.
+
+        Must be a string which is a unique component name with respect to the 
+        Block on which the transformation is called.
+        """
+    ))
 
     def __init__(self):
         """Initialize transformation object"""
@@ -215,8 +231,19 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             '_pyomo_contrib_fme_transformation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
-        projected_constraints = transBlock.projected_constraints = \
-                                ConstraintList()
+        nm = config.projected_constraints_name
+        if nm is None:
+            projected_constraints = transBlock.projected_constraints = \
+                                    ConstraintList()
+        else:
+            # check that this component doesn't already exist
+            if instance.component(nm) is not None:
+                raise RuntimeError("projected_constraints_name was specified "
+                                   "as '%s', but this is already a component "
+                                   "on the instance! Please specify a unique " 
+                                   "name." % nm)
+            instance.add_component(nm, ConstraintList())
+            projected_constraints = instance.component(nm)
 
         # collect all of the constraints
         # NOTE that we are ignoring deactivated constraints
