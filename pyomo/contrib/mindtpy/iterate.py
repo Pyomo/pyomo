@@ -134,9 +134,9 @@ def MindtPy_iteration_loop(solve_data, config):
         #             'Switching to OA.'.format(max_nonimprove_iter))
         #         config.strategy = 'OA'
 
-    # if add_nogood_cuts is True, the bound obtained in the last iteration is no reliable.
+    # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_nogood_cuts and config.strategy is not 'feas_pump':
+    if config.add_no_good_cuts and config.strategy is not 'feas_pump' and not solve_data.should_terminate:
         bound_fix(solve_data, config, last_iter_cuts)
 
 
@@ -162,6 +162,18 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     boolean
         True if the algorithm should terminate else returns False
     """
+    if solve_data.should_terminate:
+        if solve_data.objective_sense == minimize:
+            if solve_data.UB == float('inf'):
+                solve_data.results.solver.termination_condition = tc.noSolution
+            else:
+                solve_data.results.solver.termination_condition = tc.feasible
+        else:
+            if solve_data.LB == float('-inf'):
+                solve_data.results.solver.termination_condition = tc.noSolution
+            else:
+                solve_data.results.solver.termination_condition = tc.feasible
+        return True
 
     # Check bound convergence
     if solve_data.LB + config.bound_tolerance >= solve_data.UB:
@@ -211,6 +223,8 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
             if solve_data.best_solution_found is not None:
                 solve_data.results.solver.termination_condition = tc.feasible
             else:
+                # TODO: Is it correct to set solve_data.working_model as the best_solution_found?
+                # In function copy_var_list_values, skip_fixed is set to True in default.
                 solve_data.best_solution_found = solve_data.working_model.clone()
                 config.logger.warning(
                     'Algorithm did not find a feasible solution. '
@@ -251,7 +265,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                             nlc))
                     return False
         # For ECP to know whether to know which bound to copy over (primal or dual)
-        if solve_data.objective_sense == 1:
+        if solve_data.objective_sense == minimize:
             solve_data.UB = solve_data.LB
         else:
             solve_data.LB = solve_data.UB
@@ -299,7 +313,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
         config.logger.info(
             'Fix the bound to the value of one iteration before optimal solution is found.')
         try:
-            if solve_data.results.problem.sense == ProblemSense.minimize:
+            if solve_data.objective_sense == minimize:
                 solve_data.LB = solve_data.stored_bound[solve_data.UB]
             else:
                 solve_data.UB = solve_data.stored_bound[solve_data.LB]
@@ -307,7 +321,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             config.logger.info('No stored bound found. Bound fix failed.')
     else:
         config.logger.info(
-            'Solve the master problem without the last nogood cut to fix the bound.'
+            'Solve the master problem without the last no_good cut to fix the bound.'
             'zero_tolerance is set to 1E-4')
         config.zero_tolerance = 1E-4
         # Solve NLP subproblem
@@ -327,21 +341,21 @@ def bound_fix(solve_data, config, last_iter_cuts):
                                                     solve_data, config)
 
         MindtPy = solve_data.mip.MindtPy_utils
-# deactivate the integer cuts generated after the best solution was found.
+        # deactivate the integer cuts generated after the best solution was found.
         if config.strategy == 'GOA':
             try:
-                if solve_data.results.problem.sense == ProblemSense.minimize:
+                if solve_data.objective_sense == minimize:
                     valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
                 else:
                     valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
                 for i in range(valid_no_good_cuts_num+1, len(
-                        MindtPy.MindtPy_linear_cuts.nogood_cuts)+1):
-                    MindtPy.MindtPy_linear_cuts.nogood_cuts[i].deactivate()
+                        MindtPy.MindtPy_linear_cuts.no_good_cuts)+1):
+                    MindtPy.MindtPy_linear_cuts.no_good_cuts[i].deactivate()
             except KeyError:
-                config.logger.info('Cut deactivate failed.')
+                config.logger.info('No-good cut deactivate failed.')
         elif config.strategy == 'OA':
-            MindtPy.MindtPy_linear_cuts.nogood_cuts[len(
-                MindtPy.MindtPy_linear_cuts.nogood_cuts)].deactivate()
+            MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
+                MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()
         # MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.

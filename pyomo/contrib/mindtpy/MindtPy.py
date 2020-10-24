@@ -84,12 +84,13 @@ class MindtPySolver(object):
         solve_data.timing = Container()
         solve_data.curr_int_sol = []
         solve_data.prev_int_sol = []
+        solve_data.should_terminate = False
 
         # configuration confirmation
         if config.single_tree:
             config.iteration_limit = 1
             config.add_slack = False
-            config.add_nogood_cuts = False
+            config.add_no_good_cuts = False
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
                 "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
@@ -98,8 +99,8 @@ class MindtPySolver(object):
             config.add_slack = False
 
         if config.strategy == "GOA":
-            config.add_nogood_cuts = True
-            config.add_slack = True
+            config.add_no_good_cuts = True
+            config.add_slack = False
             config.use_mcpp = True
             config.integer_to_binary = True
             config.use_dual = False
@@ -107,7 +108,7 @@ class MindtPySolver(object):
         elif config.strategy == "feas_pump":  # feasibility pump alone
             config.init_strategy = "feas_pump"
             config.iteration_limit = 0
-            config.add_nogood_cuts = True
+            config.add_no_good_cuts = True
         if config.init_strategy == "feas_pump":
             solve_data.fp_iter = 1
 
@@ -176,19 +177,19 @@ class MindtPySolver(object):
             lin = MindtPy.MindtPy_linear_cuts = Block()
             lin.deactivate()
 
-            # no good cuts exclude particular discrete decisions
-            lin.nogood_cuts = ConstraintList(doc='no good cuts')
-            # Feasible no good cuts exclude discrete realizations that have
+            # no-good cuts exclude particular discrete decisions
+            lin.no_good_cuts = ConstraintList(doc='no-good cuts')
+            # Feasible no-good cuts exclude discrete realizations that have
             # been explored via an NLP subproblem. Depending on model
             # characteristics, the user may wish to revisit NLP subproblems
             # (with a different initialization, for example). Therefore, these
             # cuts are not enabled by default.
             #
             # Note: these cuts will only exclude integer realizations that are
-            # not already in the primary nogood_cuts ConstraintList.
-            lin.feasible_nogood_cuts = ConstraintList(
-                doc='explored no good cuts')
-            lin.feasible_nogood_cuts.deactivate()
+            # not already in the primary no_good_cuts ConstraintList.
+            lin.feasible_no_good_cuts = ConstraintList(
+                doc='explored no-good cuts')
+            lin.feasible_no_good_cuts.deactivate()
 
             # Set up iteration counters
             solve_data.nlp_iter = 0
@@ -200,9 +201,9 @@ class MindtPySolver(object):
             solve_data.UB = float('inf')
             solve_data.LB_progress = [solve_data.LB]
             solve_data.UB_progress = [solve_data.UB]
-            if config.single_tree and config.add_nogood_cuts:
+            if config.single_tree and config.add_no_good_cuts:
                 solve_data.stored_bound = {}
-            if config.strategy == 'GOA' and config.add_nogood_cuts:
+            if config.strategy == 'GOA' and config.add_no_good_cuts:
                 solve_data.num_no_good_cuts_added = {}
 
             # Set of NLP iterations for which cuts were generated

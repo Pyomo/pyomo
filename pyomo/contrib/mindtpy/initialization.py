@@ -4,7 +4,7 @@ from __future__ import division
 
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values, get_main_elapsed_time
 from pyomo.contrib.mindtpy.cut_generation import (
-    add_oa_cuts, add_affine_cuts, add_objective_linearization,
+    add_oa_cuts, add_affine_cuts,
 )
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
@@ -59,6 +59,9 @@ def MindtPy_initialize_master(solve_data, config):
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.ecp_cuts = ConstraintList(
             doc='Extended Cutting Planes')
+    elif config.strategy == 'GOA':
+        MindtPy.MindtPy_linear_cuts.aff_cuts = ConstraintList(
+            doc='Affine cuts')
     # elif config.strategy == 'PSC':
     #     detect_nonlinear_vars(solve_data, config)
     #     MindtPy.MindtPy_linear_cuts.psc_cuts = ConstraintList(
@@ -136,10 +139,12 @@ def init_rNLP(solve_data, config):
             m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut
         # This covers the case when the Lower bound does not exist.
-        if main_objective.sense == minimize and not math.isnan(results['Problem'][0]['Lower bound']):
-            solve_data.LB = results['Problem'][0]['Lower bound']
-        elif not math.isnan(results['Problem'][0]['Upper bound']):
-            solve_data.UB = results['Problem'][0]['Upper bound']
+        # TODO: should we use the bound of the rNLP here?
+        if main_objective.sense == minimize:
+            if not math.isnan(results.problem.lower_bound):
+                solve_data.LB = results.problem.lower_bound
+        elif not math.isnan(results.problem.upper_bound):
+            solve_data.UB = results.problem.upper_bound
         config.logger.info(
             'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
             % (value(main_objective.expr), solve_data.LB, solve_data.UB))

@@ -4,7 +4,7 @@ from __future__ import division
 import logging
 from math import fabs, floor, log
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_nogood_cuts, add_affine_cuts)
+                                                  add_no_good_cuts, add_affine_cuts)
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
@@ -226,7 +226,6 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
         the model that provides the base point for us to calculate the distance
     discrete_only: Bool
         only optimize on distance between the discrete variables
-    TODO: remove setpoint_model
     """
 
     var_filter = (lambda v: v.is_integer()) if discrete_only \
@@ -252,8 +251,6 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
     return Objective(expr=sum(obj_blk.L1_obj_var[idx] for idx in obj_blk.L1_obj_idx))
 
-# TODO: this function is not called
-
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
     """
@@ -268,7 +265,6 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
         the model that provides the base point for us to calculate the distance
     discrete_only: Bool
         only optimize on distance between the discrete variables
-    TODO: remove setpoint_model
     """
 
     var_filter = (lambda v: v.is_integer()) if discrete_only \
@@ -306,7 +302,6 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
         the model that provides the base point for us to calculate the distance
     discrete_only: Bool
         only optimize on distance between the discrete variables
-    TODO: remove setpoint_model
     """
 
     var_filter = (lambda v: v.is_integer()) if discrete_only \

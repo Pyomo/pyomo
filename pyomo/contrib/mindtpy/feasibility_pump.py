@@ -2,12 +2,12 @@
 from pyomo.core import (Var, Objective, Reals, minimize,
                         RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
 from pyomo.core.base.constraint import ConstraintList
-from pyomo.opt import SolverFactory, SolutionStatus
+from pyomo.opt import SolverFactory, SolutionStatus, SolverResults
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
                                              handle_subproblem_optimal, handle_subproblem_infeasible,
                                              handle_subproblem_other_termination)
-from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_nogood_cuts
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function
 from pyomo.contrib.mindtpy.mip_solve import solve_master, handle_master_optimal
@@ -58,14 +58,15 @@ def solve_feas_pump_subproblem(solve_data, config):
     main_objective = next(
         fp_nlp.component_data_objects(Objective, active=True))
     main_objective.deactivate()
-    if main_objective.sense == 'minimize':
+    if main_objective.sense == minimize:
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value <= solve_data.UB)
     else:
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
 
-    # Add norm_constraint, TODO: rename norm_constraint to like improving_distance_cut
+    # Add norm_constraint, which guarantees the monotonicity of the norm objective value sequence of all iterations
+    # Ref: Paper "A storm of feasibility pumps for nonconvex MINLP"
     if config.fp_norm_constraint:
         if config.fp_master_norm == 'L1':
             generate_norm1_norm_constraint(
@@ -86,8 +87,15 @@ def solve_feas_pump_subproblem(solve_data, config):
 
     MindtPy.MindtPy_linear_cuts.deactivate()
     TransformationFactory('core.relax_integer_vars').apply_to(fp_nlp)
-    TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
-        fp_nlp, tmp=True, ignore_infeasible=True)
+    try:
+        TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+            fp_nlp, tmp=True, ignore_infeasible=False)
+    except ValueError:
+        config.logger.warning(
+            'infeasibility detected in deactivate_trivial_constraints')
+        results = SolverResults()
+        results.solver.termination_condition = tc.infeasible
+        return fp_nlp, results
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
@@ -131,10 +139,6 @@ def handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config):
             config.logger.error("Feasibility pump fixed nlp is infeasible, something might be wrong. "
                                 "There might be a problem with the precisions - the feasibility pump seems to have converged")
 
-    if solve_data.solution_improved:
-        solve_data.best_solution_found = solve_data.working_model.clone()
-        # log_infeasible_constraints(solve_data.working_model)
-
 
 def feas_pump_loop(solve_data, config):
     """
@@ -171,10 +175,9 @@ def feas_pump_loop(solve_data, config):
             config.logger.warning('FP-MIP reaches max TimeLimit')
         elif feas_master_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
-            # TODO: needs to be checked here.
-            nogood_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts
-            if nogood_cuts.__len__() > 0:
-                nogood_cuts[nogood_cuts.__len__()].deactivate()
+            no_good_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts
+            if no_good_cuts.__len__() > 0:
+                no_good_cuts[no_good_cuts.__len__()].deactivate()
             break
         elif feas_master_results.solver.termination_condition is tc.unbounded:
             config.logger.warning('FP-MIP unbounded')
@@ -198,9 +201,15 @@ def feas_pump_loop(solve_data, config):
             handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config)
         elif fp_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
             config.logger.error("Feasibility pump NLP subproblem infeasible")
-        elif termination_condition is tc.maxIterations:
-            config.logger.info(
+            solve_data.should_terminate = True
+            solve_data.results.solver.status = SolverStatus.error
+            return
+        elif fp_nlp_result.solver.termination_condition is tc.maxIterations:
+            config.logger.error(
                 'Feasibility pump NLP subproblem failed to converge within iteration limit.')
+            solve_data.should_terminate = True
+            solve_data.results.solver.status = SolverStatus.error
+            return
         else:
             raise ValueError(
                 'MindtPy unable to handle NLP subproblem termination '
@@ -215,7 +224,7 @@ def feas_pump_loop(solve_data, config):
     if not config.fp_transfercuts:
         for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts:
             c.deactivate()
-        for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.nogood_cuts:
+        for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts:
             c.deactivate()
     if config.fp_projcuts:
         solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.del_component(

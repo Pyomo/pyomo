@@ -92,12 +92,12 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("integer_to_binary", ConfigValue(
         default=False,
-        description="Convert integer variables to binaries (for no good cuts).",
+        description="Convert integer variables to binaries (for no-good cuts).",
         domain=bool
     ))
-    CONFIG.declare("add_nogood_cuts", ConfigValue(
+    CONFIG.declare("add_no_good_cuts", ConfigValue(
         default=False,
-        description="Add no good cuts (no-good cuts) to binary variables to disallow same integer solution again."
+        description="Add no-good cuts (no-good cuts) to binary variables to disallow same integer solution again."
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
     ))
@@ -159,7 +159,7 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("use_dual_bound", ConfigValue(
         default=True,
-        description="add dual bound constraint to enforce the objective function should improve on the best found dual bound",
+        description="add dual bound constraint to enforce the objective satisfies best-found dual bound",
         domain=bool
     ))
 
@@ -298,7 +298,7 @@ def _add_feas_pump_configs(CONFIG):
     ))
     CONFIG.declare("fp_transfercuts", ConfigValue(
         default=True,
-        description="Whether to transfer cuts from the Feasibility Pump MIP to the DICOPT MIP (all except from the round in which the FP MIP became infeasible)",
+        description="Whether to transfer cuts from the Feasibility Pump MIP to master MIP in selected 'strategy' (all except from the round in which the FP MIP became infeasible)",
         domain=bool
     ))
     CONFIG.declare("fp_projzerotol", ConfigValue(
