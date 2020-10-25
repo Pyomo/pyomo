@@ -49,12 +49,10 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
         generate the LOA projection master problem
     """
     if feas_pump:
-        # solve_data.mip_iter += 1
         config.logger.info('FP-MIP %s: Solve master problem.' %
                            (solve_data.fp_iter,))
     elif loa_projection:
-        solve_data.mip_iter += 1
-        config.logger.info('LOA-MIP %s: Solve master problem.' %
+        config.logger.info('LOA-Projection-MIP %s: Solve master projection problem.' %
                            (solve_data.mip_iter,))
     else:
         solve_data.mip_iter += 1
@@ -398,6 +396,8 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
         MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
                                                                        solve_data.best_solution_found,
                                                                        discrete_only=False)
+        if MindtPy.MindtPy_linear_cuts.find_component('obj_limit') is not None:
+            MindtPy.MindtPy_linear_cuts.del_component('obj_limit')
         if solve_data.objective_sense == minimize:
             MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
                 expr=MindtPy.objective_value <= (1 - config.loa_coef) * value(solve_data.UB) + config.loa_coef * solve_data.LB)
