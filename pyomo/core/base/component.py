@@ -1262,8 +1262,13 @@ class ComponentUID(object):
 
         value_map = {}
         value_map.update(fixed)
-        value_map.update(sliced)
+        try:
+            value_map.update(sliced)
+        except TypeError:
+            sliced = {i: slice(None) for i in sliced}
+            value_map.update(sliced)
         value_map.update(ellipsis)
+
 
         # Assume that the keys of fixed, sliced, and ellipsis
         # partition the index we're describing.
