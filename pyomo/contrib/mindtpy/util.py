@@ -197,10 +197,8 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     discrete_only: Bool
         only optimize on distance between the discrete variables
     """
-    # TODO: do we need to skip config.add_slack variable here?
-    var_filter = (lambda v: (v[1].is_integer() if discrete_only else True) and
-                  v[1].name != 'MindtPy_utils.objective_value' and
-                  'MindtPy_utils.MindtPy_feas.slack_var' not in v[1].name)
+    var_filter = (lambda v: v[1].is_integer()) if discrete_only \
+        else (lambda v: True)
 
     model_vars, setpoint_vars = zip(*filter(var_filter,
                                             zip(model.component_data_objects(Var),
@@ -229,11 +227,8 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
         only optimize on distance between the discrete variables
     """
 
-    # TODO: do we need to skip config.add_slack variable here?
-    var_filter = (lambda v: (v[1].is_integer() if discrete_only else True) and
-                  v[1].name != 'MindtPy_utils.objective_value' and
-                  'MindtPy_utils.MindtPy_feas.slack_var' not in v[1].name)
-
+    var_filter = (lambda v: v.is_integer()) if discrete_only \
+        else (lambda v: True)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
@@ -271,11 +266,8 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
         only optimize on distance between the discrete variables
     """
 
-    # TODO: do we need to skip config.add_slack variable here?
-    var_filter = (lambda v: (v[1].is_integer() if discrete_only else True) and
-                  v[1].name != 'MindtPy_utils.objective_value' and
-                  'MindtPy_utils.MindtPy_feas.slack_var' not in v[1].name)
-
+    var_filter = (lambda v: v.is_integer()) if discrete_only \
+        else (lambda v: True)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
