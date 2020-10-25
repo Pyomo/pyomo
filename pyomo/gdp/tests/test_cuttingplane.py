@@ -22,7 +22,7 @@ from pyomo.gdp.tests.common_tests import diff_apply_to_and_create_using
 
 from six import StringIO
 
-solvers = pyomo.opt.check_available_solvers('ipopt')
+solvers = pyomo.opt.check_available_solvers('ipopt', 'gurobi')
 
 def check_validity(self, body, lower, upper, TOL=0):
     if lower is not None:
@@ -64,7 +64,6 @@ class OneVarDisj(unittest.TestCase):
 
     def check_two_segment_cuts_valid(self, m):
         cuts = m._pyomo_gdp_cuttingplane_transformation.cuts
-        cuts.pprint()
 
         # check that all the cuts are valid everywhere
         for cut in cuts.values():
@@ -523,6 +522,37 @@ class TwoTermDisj(unittest.TestCase):
             TransformationFactory('gdp.cuttingplane').apply_to,
             m
         )
+
+    # I'm doing this test with Gurobi because ipopt doesn't really catch this
+    # problem as constraints are never *exactly* satisfied. (The problem being
+    # that we need to consider exactly satisfied equalities interesting for
+    # FME.)
+    @unittest.skipIf('gurobi' not in solvers, "Ipopt solver not available")
+    def test_equality_constraints_on_disjuncts_with_fme(self):
+        m = models.oneVarDisj_2pts()
+        m.obj.expr = m.x + m.disj1.indicator_var
+        m.obj.sense = maximize
+
+        TransformationFactory('gdp.cuttingplane').apply_to(
+            m,
+            create_cuts=create_cuts_fme,
+            post_process_cut=None, verbose=True, solver='gurobi',
+            cuts_name="cuts", bigM=5)
+
+        # rBigM first iteration solve will give (x = 3, Y = 0.6). If we don't
+        # catch equality constraints, we don't get a cut. But we need to get 
+        # x + Y <= 1. (Where Y is the indicator that x = 0).
+        self.assertEqual(len(m.cuts), 1)
+        cut = m.cuts[0]
+        self.assertEqual(cut.lower, 0)
+        self.assertIsNone(cut.upper)
+        repn = generate_standard_repn(cut.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertIs(repn.linear_vars[0], m.disj1.indicator_var)
+        self.assertEqual(repn.linear_coefs[0], 1)
+        self.assertIs(repn.linear_vars[1], m.x)
+        self.assertEqual(repn.linear_coefs[1], -1)
 
 class Grossmann_TestCases(unittest.TestCase):
     def check_cuts_valid_at_extreme_pts(self, m):

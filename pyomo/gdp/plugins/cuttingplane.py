@@ -26,6 +26,7 @@ from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
 from pyomo.core.expr import differentiate
 from pyomo.common.collections import ComponentSet
 from pyomo.opt import SolverFactory
+from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import ( verify_successful_solve, NORMAL,
@@ -57,24 +58,23 @@ def _get_constraint_exprs(constraints, hull_to_bigm_map):
     return cuts
 
 def _constraint_tight(model, constraint):
-    # TODO: Exact equalities should be included, but constraints which do not
-    # involve disaggreggated variables should not.
-
-    """Returns 0 if the constraint is not tight or if it is an exactly 
-    satisfied equality, 1 if the constraint is tight at or in violation of its UB
-    and -1 if it is tight at or in violation of its LB
+    """
+    Returns a list [a,b] where a is -1 if the lower bound is tight or
+    slightly violated, b is 1 if the upper bound is tight of slightly
+    violated, and [a,b]=[-1,1] if we have an exactly satisfied (or
+    slightly violated) equality.
     """
     val = value(constraint.body)
-    ans = 0
+    ans = [0, 0]
     if constraint.lower is not None:
         if value(constraint.lower) >= val:
             # tight or in violation of LB
-            ans -= 1
+            ans[0] -= 1
 
     if constraint.upper is not None:
         if value(constraint.upper) <= val:
             # tight or in violation of UB
-            ans += 1
+            ans[1] += 1
 
     return ans
 
@@ -87,10 +87,27 @@ def _get_linear_approximation_expr(normal_vec, point):
     return body >= -sum(normal_vec[idx]*v.value for (idx, v) in
                        enumerate(point))
 
-def create_cuts_fme(transBlock_rHull, var_info,
-                    hull_to_bigm_map, rBigM_linear_constraints, rHull_vars,
-                    disaggregated_vars, disaggregation_constraints, norm,
-                    cut_threshold, zero_tolerance, integer_arithmetic):
+def _precompute_potentially_useful_constraints(transBlock_rHull,
+                                               disaggregated_vars):
+    instance_rHull = transBlock_rHull.model()
+    constraints = transBlock_rHull.constraints_for_FME = []
+    for constraint in instance_rHull.component_data_objects(
+            Constraint,
+            active=True,
+            descend_into=Block,
+            sort=SortComponents.deterministic):
+        # we don't care about anything that does not involve at least one
+        # disaggregated variable.
+        repn = generate_standard_repn(constraint.body)
+        for v in repn.linear_vars + repn.quadratic_vars + repn.nonlinear_vars:
+            # ESJ: This is why disaggregated_vars is a ComponentSet
+            if v in disaggregated_vars:
+                constraints.append(constraint)
+                break
+
+def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
+                    rBigM_linear_constraints, rHull_vars, disaggregated_vars,
+                    norm, cut_threshold, zero_tolerance, integer_arithmetic):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
     Finds all the constraints which are tight at xhat (assumed to be the 
@@ -111,9 +128,8 @@ def create_cuts_fme(transBlock_rHull, var_info,
                       coresponding bigm var
     rBigM_linear_constraints: list of linear constraints in relaxed bigM
     rHull_vars: list of all variables in relaxed hull
-    disaggregated_vars: list of disaggregated variables in hull reformulation
-    disaggregation_constraints: list of disaggregation constraints in hull
-                                reformulation
+    disaggregated_vars: ComponentSet of disaggregated variables in hull 
+                        reformulation
     norm: norm used in the separation problem
     cut_threshold: Amount x* needs to be infeasible in generated cut in order
                    to consider the cut for addition to the bigM model.
@@ -124,49 +140,43 @@ def create_cuts_fme(transBlock_rHull, var_info,
                         when all data is integer.
     """
     instance_rHull = transBlock_rHull.model()
+    # In the first iteration, we will compute a list of constraints that could
+    # ever be interesting: Everything that involves at least one disaggregated
+    # variable.
+    if transBlock_rHull.component("constraints_for_FME") is None:
+        _precompute_potentially_useful_constraints( transBlock_rHull,
+                                                    disaggregated_vars)
 
     tight_constraints = Block()
     conslist = tight_constraints.constraints = Constraint(
         NonNegativeIntegers)
     conslist.construct()
     something_interesting = False
-    for constraint in instance_rHull.component_data_objects(
-            Constraint,
-            active=True,
-            descend_into=Block,
-            sort=SortComponents.deterministic):
-        if norm == float('inf') and constraint.parent_component() is \
-           transBlock_rHull.inf_norm_linearization:
-            # we don't need to bother with these: They should all be tight, but
-            # they don't mean anything to us in terms of finding the cut
-            continue
-        multiplier = _constraint_tight(instance_rHull, constraint)
-        if multiplier:
-            something_interesting = True
-            f = constraint.body
-            firstDerivs = differentiate(f, wrt_list=rHull_vars)
-            normal_vec = [multiplier*value(_) for _ in firstDerivs]
-            # check if constraint is linear
-            if f.polynomial_degree() == 1:
-                conslist[len(conslist)] = constraint.expr
-            else: 
-                # we will use the linear approximation of this constraint at
-                # x_hat
-                conslist[len(conslist)] = _get_linear_approximation_expr(
-                    normal_vec, rHull_vars)
-        # even if it was satisfied exactly, we need to grab the
-        # disaggregation constraints in order to do the projection.
-        elif constraint in disaggregation_constraints:
-            conslist[len(conslist)] = constraint.expr
+    for constraint in transBlock_rHull.constraints_for_FME:
+        multipliers = _constraint_tight(instance_rHull, constraint)
+        for multiplier in multipliers:
+            if multiplier:
+                something_interesting = True
+                f = constraint.body
+                firstDerivs = differentiate(f, wrt_list=rHull_vars)
+                normal_vec = [multiplier*value(_) for _ in firstDerivs]
+                # check if constraint is linear
+                if f.polynomial_degree() == 1:
+                    conslist[len(conslist)] = constraint.expr
+                else: 
+                    # we will use the linear approximation of this constraint at
+                    # x_hat
+                    conslist[len(conslist)] = _get_linear_approximation_expr(
+                        normal_vec, rHull_vars)
 
     # NOTE: we now have all the tight Constraints (in the pyomo sense of the
     # word "Constraint"), but we are missing some variable bounds. The ones for
     # the disaggregated variables will be added by FME
 
     # It is possible that the separation problem returned a point in the
-    # interior of the convex hull.  It is also possible that the only active
-    # constraints are (feasible) equality constraints.  in these situations,
-    # there are not constriants from which to create a valid cut.
+    # interior of the convex hull. It is also possible that the only active
+    # constraints do not involve the disaggregated variables. In these
+    # situations, there are not constraints from which to create a valid cut.
     if not something_interesting:
         return None
 
@@ -222,10 +232,9 @@ def create_cuts_fme(transBlock_rHull, var_info,
 
     return None
 
-def create_cuts_normal_vector(transBlock_rHull, var_info,
-                              hull_to_bigm_map, rBigM_linear_constraints,
-                              rHull_vars, disaggregated_vars,
-                              disaggregation_constraints, norm, cut_threshold,
+def create_cuts_normal_vector(transBlock_rHull, var_info, hull_to_bigm_map,
+                              rBigM_linear_constraints, rHull_vars,
+                              disaggregated_vars, norm, cut_threshold,
                               zero_tolerance, integer_arithmetic):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
@@ -247,12 +256,10 @@ def create_cuts_normal_vector(transBlock_rHull, var_info,
     rBigM_linear_constraints: list of linear constraints in relaxed bigM.
                               Ignored by this callback.
     rHull_vars: list of all variables in relaxed hull. Ignored by this callback.
-    disaggregated_vars: list of disaggregated variables in hull reformulation.
-                        Ignored by this callback
+    disaggregated_vars: ComponentSet of disaggregated variables in hull 
+                        reformulation. Ignored by this callback
     norm: The norm used in the separation problem, will be used to calculate
           the subgradient used to generate the cut
-    disaggregation_constraints: list of disaggregation constraints in hull
-                                reformulation. Ignored by this callback
     cut_threshold: Amount x* needs to be infeasible in generated cut in order
                    to consider the cut for addition to the bigM model.
     zero_tolerance: Tolerance at which a float will be treated as 0 during
@@ -366,6 +373,10 @@ class CuttingPlane_Transformation(Transformation):
     """Relax convex disjunctive model by forming the bigm relaxation and then
     iteratively adding cuts from the hull relaxation (or the hull relaxation
     after some basic steps) in order to strengthen the formulation.
+
+    Note that gdp.cuttingplane is not a structural transformation: If variables
+    on the model are fixed, they will be treated as data, and unfixing them
+    after transformation will very likely result in an invalid model.
 
     This transformation accepts the following keyword arguments:
     
@@ -536,9 +547,8 @@ class CuttingPlane_Transformation(Transformation):
                           coresponding bigm var
         rBigM_linear_constraints: list of linear constraints in relaxed bigM
         rHull_vars: list of all variables in relaxed hull
-        disaggregated_vars: list of disaggregated variables in hull reformulation
-        disaggregation_constraints: list of disaggregation constraints in hull
-                                    reformulation
+        disaggregated_vars: ComponentSet of disaggregated variables in hull 
+                            reformulation
         cut_threshold: Amount x* needs to be infeasible in generated cut in order
                        to consider the cut for addition to the bigM model.
         zero_tolerance: Tolerance at which a float will be treated as 0
@@ -682,10 +692,6 @@ class CuttingPlane_Transformation(Transformation):
         # We store a list of all vars so that we can efficiently
         # generate maps among the subproblems
 
-        # TODO: In the other transformations, we are able to offer an option
-        # about how to handle fixed variables. We don't have the same luxury
-        # here unless we unfix them and then fix them back at the end. Should we
-        # do that?
         transBlock.all_vars = list(v for v in instance.component_data_objects(
             Var,
             descend_into=(Block, Disjunct),
@@ -776,8 +782,7 @@ class CuttingPlane_Transformation(Transformation):
                     range(len(var_info)))
 
     def _get_disaggregated_vars(self, hull):
-        disaggregatedVars = []
-        disaggregationConstraints = ComponentSet()
+        disaggregatedVars = ComponentSet()
         hull_xform = TransformationFactory('gdp.hull')
         for disjunction in hull.component_data_objects( Disjunction,
                                                         descend_into=(Disjunct,
@@ -787,12 +792,9 @@ class CuttingPlane_Transformation(Transformation):
                     transBlock = disjunct.transformation_block()
                     for v in transBlock.disaggregatedVars.\
                         component_data_objects(Var):
-                        disaggregatedVars.append(v)
-                        disaggregationConstraints.add(
-                            hull_xform.get_disaggregation_constraint(
-                                hull_xform.get_src_var(v), disjunction))
+                        disaggregatedVars.add(v)
                 
-        return disaggregatedVars, disaggregationConstraints
+        return disaggregatedVars
 
     def _get_rBigM_obj_and_constraints(self, instance_rBigM):
         # We try to grab the first active objective. If there is more
@@ -860,9 +862,7 @@ class CuttingPlane_Transformation(Transformation):
             sort=SortComponents.deterministic)]
 
         # collect a list of disaggregated variables.
-        (disaggregated_vars, 
-         disaggregation_constraints) = self._get_disaggregated_vars(
-             instance_rHull)
+        disaggregated_vars = self._get_disaggregated_vars( instance_rHull)
 
         hull_to_bigm_map = self._create_hull_to_bigm_substitution_map(var_info)
         bigm_to_hull_map = self._create_bigm_to_hull_substition_map(var_info)
@@ -940,7 +940,6 @@ class CuttingPlane_Transformation(Transformation):
                                             hull_to_bigm_map,
                                             rBigM_linear_constraints,
                                             rHull_vars, disaggregated_vars,
-                                            disaggregation_constraints,
                                             self._config.norm,
                                             self._config.cut_filtering_threshold,
                                             self._config.zero_tolerance,
