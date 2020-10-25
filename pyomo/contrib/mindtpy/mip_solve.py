@@ -52,6 +52,10 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
         # solve_data.mip_iter += 1
         config.logger.info('FP-MIP %s: Solve master problem.' %
                            (solve_data.fp_iter,))
+    elif loa_projection:
+        solve_data.mip_iter += 1
+        config.logger.info('LOA-MIP %s: Solve master problem.' %
+                           (solve_data.mip_iter,))
     else:
         solve_data.mip_iter += 1
         config.logger.info('MIP %s: Solve master problem.' %
@@ -365,6 +369,12 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
 
     sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
     MindtPy.del_component('MindtPy_oa_obj')
+    if config.strategy == 'LOA':
+        # loa_proj_mip_obj should be deleted for both master problem and master projection problem in LOA method.
+        # For master problem, the objective function is MindtPy_oa_obj.
+        # For master projection problem, the objective function is loa_proj_mip_obj, but it will be defined later.
+        if MindtPy.find_component('loa_proj_mip_obj') is not None:
+            MindtPy.del_component('loa_proj_mip_obj')
 
     if feas_pump:
         if MindtPy.find_component('feas_pump_mip_obj') is not None:
@@ -385,8 +395,6 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
     elif loa_projection:
-        if MindtPy.find_component('loa_proj_mip_obj') is not None:
-            MindtPy.del_component('loa_proj_mip_obj')
         MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
                                                                        solve_data.best_solution_found,
                                                                        discrete_only=False)

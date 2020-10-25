@@ -56,7 +56,7 @@ def MindtPy_initialize_master(solve_data, config):
         if config.fp_projcuts:
             solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts = ConstraintList(
                 doc='Orthogonality cuts in feasibility pump')
-    if config.strategy == 'OA' or config.init_strategy == 'feas_pump':
+    if config.strategy in {'OA', 'LOA'} or config.init_strategy == 'feas_pump':
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts')
@@ -164,7 +164,7 @@ def init_rNLP(solve_data, config):
                 copy_var_list_values(m.MindtPy_utils.variable_list,
                                      solve_data.working_model.MindtPy_utils.variable_list,
                                      config, ignore_integrality=True)
-            if config.strategy == 'OA':
+            if config.strategy in {'OA', 'LOA'}:
                 add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
             elif config.strategy == 'GOA':
                 add_affine_cuts(solve_data, config)
