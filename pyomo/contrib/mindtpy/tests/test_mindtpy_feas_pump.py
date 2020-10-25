@@ -212,7 +212,7 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_FP_OA_simpleMINLP(self):
@@ -226,7 +226,7 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
     def test_FP_OA_Feasibility_Pump1(self):
@@ -239,7 +239,8 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
-            log_infeasible_constraints(model)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
     def test_FP_OA_MINLP2_simple(self):
@@ -253,7 +254,7 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=30)
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
 
     def test_FP_OA_MINLP3_simple(self):
@@ -283,7 +284,7 @@ class TestMindtPy(unittest.TestCase):
                                 iteration_limit=30)
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
 

@@ -41,6 +41,11 @@ def MindtPy_initialize_master(solve_data, config):
         var_bound_add(solve_data, config)
 
     m = solve_data.mip = solve_data.working_model.clone()
+    solve_data.mip_original_obj = next(
+        solve_data.mip.component_data_objects(Objective, active=True))
+    next(solve_data.mip.component_data_objects(
+        Objective, active=True)).deactivate()
+
     MindtPy = m.MindtPy_utils
     if config.use_dual:
         m.dual.deactivate()
@@ -245,10 +250,10 @@ def init_max_binaries(solve_data, config):
             'MILP master problem is infeasible. '
             'Problem may have no more feasible '
             'binary configurations.')
-    elif subprob_terminate_cond is tc.maxTimeLimit:
+    elif solve_terminate_cond is tc.maxTimeLimit:
         config.logger.info(
             'NLP subproblem failed to converge within time limit.')
-    elif subprob_terminate_cond is tc.maxIterations:
+    elif solve_terminate_cond is tc.maxIterations:
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
     else:

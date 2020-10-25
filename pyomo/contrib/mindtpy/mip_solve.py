@@ -362,11 +362,6 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
             c.deactivate()
 
     MindtPy.MindtPy_linear_cuts.activate()
-    # TODO: here need to check if the this works well with feasibility pump, since OA uses the expression of main_objective.
-    main_objective = next(
-        solve_data.mip.component_data_objects(Objective, active=True))
-    # main_objective.pprint()
-    main_objective.deactivate()
 
     sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
     MindtPy.del_component('MindtPy_oa_obj')
@@ -411,21 +406,21 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
                     v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
 
         MindtPy.MindtPy_oa_obj = Objective(
-            expr=main_objective.expr +
+            expr=solve_data.mip_original_obj.expr +
             (MindtPy.MindtPy_penalty_expr if config.add_slack else 0),
-            sense=main_objective.sense)
+            sense=solve_data.objective_sense)
 
         if config.use_dual_bound:
             # Delete previously added dual bound constraint
             if MindtPy.MindtPy_linear_cuts.find_component('dual_bound') is not None:
                 MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
-            if main_objective.sense == minimize:
+            if solve_data.objective_sense == minimize:
                 MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=main_objective.expr +
+                    expr=solve_data.mip_original_obj.expr +
                     (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) >= solve_data.LB,
                     doc='Objective function expression should improve on the best found dual bound')
             else:
                 MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=main_objective.expr +
+                    expr=solve_data.mip_original_obj.expr +
                     (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) <= solve_data.UB,
                     doc='Objective function expression should improve on the best found dual bound')
