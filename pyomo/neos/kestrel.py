@@ -316,7 +316,7 @@ class kestrelAMPL:
         if six.PY2:
             nl_string = base64.encodestring(zipped_nl_file.getvalue())
         else:
-            nl_string = (base64.encodestring(zipped_nl_file.getvalue())).decode('utf-8')
+            nl_string = (base64.encodebytes(zipped_nl_file.getvalue())).decode('utf-8')
         xml = """
               <document>
               <category>kestrel</category>

@@ -680,6 +680,19 @@ class TestComponentSlices(unittest.TestCase):
         finally:
             normalize_index.flatten = _old_flatten
 
+    def test_compare_1dim_slice(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=range(2))
+        m.J = Set(initialize=range(2,4))
+        m.K = Set(initialize=['a','b'])
+
+        @m.Block(m.I, m.J)
+        def b(b, i, j):
+            b.v = Var(m.K)
+
+        self.assertEqual(m.b[0,:].v[:], m.b[0,:].v[:])
+        self.assertNotEqual(m.b[0,:].v[:], m.b[0,:].v['a'])
+
 
 if __name__ == "__main__":
     unittest.main()
