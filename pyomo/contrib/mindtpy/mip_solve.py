@@ -99,9 +99,6 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
         with time_code(solve_data.timing, 'master'):
             master_mip_results = masteropt.solve(
                 solve_data.mip, tee=config.mip_solver_tee, **mip_args)
-            # print(master_mip_results)
-
-        # if config.single_tree is False and config.add_no_good_cuts is False:
 
         if master_mip_results.solver.termination_condition is tc.optimal:
             if config.single_tree and config.add_no_good_cuts is False:
@@ -121,11 +118,12 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
             master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
                 solve_data.mip, config)
 
-        # if loa_projection:
-        #     solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
+        if loa_projection:
+            solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
 
         return solve_data.mip, master_mip_results
     except ValueError:
+        solve_data.mip.pprint()
         config.logger.warning("ValueError: Cannot load a SolverResults object with bad status: error. "
                               "MIP solver failed. This usually happens in the single-tree GOA algorithm. "
                               "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
@@ -367,12 +365,6 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
 
     sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
     MindtPy.del_component('MindtPy_oa_obj')
-    if config.strategy == 'LOA':
-        # loa_proj_mip_obj should be deleted for both master problem and master projection problem in LOA method.
-        # For master problem, the objective function is MindtPy_oa_obj.
-        # For master projection problem, the objective function is loa_proj_mip_obj, but it will be defined later.
-        if MindtPy.find_component('loa_proj_mip_obj') is not None:
-            MindtPy.del_component('loa_proj_mip_obj')
 
     if feas_pump:
         if MindtPy.find_component('feas_pump_mip_obj') is not None:

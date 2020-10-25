@@ -109,6 +109,8 @@ class MindtPySolver(object):
             config.init_strategy = "feas_pump"
             config.iteration_limit = 0
             config.add_no_good_cuts = True
+        elif config.strategy == "LOA":
+            config.cycling_check = False
         if config.init_strategy == "feas_pump":
             solve_data.fp_iter = 1
 
