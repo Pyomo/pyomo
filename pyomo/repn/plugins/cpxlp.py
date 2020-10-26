@@ -13,11 +13,8 @@
 #
 
 import logging
-import math
-import operator
 
-from six import iterkeys, iteritems, StringIO
-from six.moves import xrange
+from six import iteritems
 
 from pyutilib.misc import PauseGC
 from pyomo.opt import ProblemFormat

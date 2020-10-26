@@ -20,7 +20,7 @@ f(x) = | 1     , -1 <= x <=  1
 
 """
 
-from pyomo.environ import *
+from pyomo.core import ConcreteModel, Var, Objective, Piecewise, Constraint,  maximize
 
 DOMAIN_PTS = [float(i) for i in (list(range(-5,0))+list(range(1,5)))]
 

@@ -12,7 +12,6 @@
 # Tests for Pyomo kernel examples
 #
 
-import os
 import glob
 import sys
 from os.path import basename, dirname, abspath, join

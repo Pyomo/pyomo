@@ -40,13 +40,11 @@ from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option,
-                                    safe_register_unique_option,
                                     safe_declare_common_option,
                                     safe_declare_unique_option,
                                     _domain_positive,
                                     _domain_positive_integer,
-                                    _domain_nonnegative_integer,
-                                    _domain_must_be_str)
+                                    _domain_nonnegative_integer)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
 from pyomo.pysp.scenariotree.manager import \

@@ -1,17 +1,29 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Solution of NLP subproblems."""
 from __future__ import division
-
+import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_nogood_cuts, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
-from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
-from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
+from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time
+from pyomo.core import (Constraint, Objective, TransformationFactory,
                         minimize, value)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 from pyomo.opt.results import ProblemSense
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def solve_NLP_subproblem(solve_data, config):
@@ -170,8 +182,10 @@ def handle_NLP_subproblem_optimal(fixed_nlp, solve_data, config):
                              config)
         add_affine_cuts(solve_data, config)
     elif config.strategy == 'PSC':
+        # !!THIS SEEMS LIKE A BUG!! - mrmundt #
         add_psc_cut(solve_data, config)
     elif config.strategy == 'GBD':
+        # !!THIS SEEMS LIKE A BUG!! - mrmundt #
         add_gbd_cut(solve_data, config)
 
     # This adds an integer cut to the feasible_integer_cuts

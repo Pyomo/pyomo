@@ -3,8 +3,6 @@
 import pyutilib.th as unittest
 from pyomo.core import (Block, ConcreteModel, TransformationFactory, RangeSet, Constraint, Var)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
-from pyomo.gdp.plugins import bigm
 
 
 class TestDisjunctReclassify(unittest.TestCase):

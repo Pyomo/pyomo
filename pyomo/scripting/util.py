@@ -17,8 +17,7 @@ import traceback
 import types
 import time
 import json
-from six import itervalues, iterkeys, iteritems
-from six.moves import xrange
+from six import iteritems
 from pyomo.common import pyomo_api
 
 from pyutilib.misc import Options
@@ -37,9 +36,8 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.dataportal import DataPortal
-from pyomo.core import *
-from pyomo.core.base import TextLabeler
-import pyomo.core.base
+from pyomo.core import IPyomoScriptCreateModel, IPyomoScriptCreateDataPortal, IPyomoScriptPrintModel, IPyomoScriptModifyInstance, IPyomoScriptPrintInstance, IPyomoScriptSaveInstance, IPyomoScriptPrintResults, IPyomoScriptSaveResults, IPyomoScriptPostprocess, IPyomoScriptPreprocess, Model, TransformationFactory, Suffix, display
+
 
 # Importing IPython is slow; defer the import to the point that it is
 # actually needed.

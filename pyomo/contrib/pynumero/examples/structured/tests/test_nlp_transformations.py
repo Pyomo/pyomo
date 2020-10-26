@@ -7,10 +7,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import pyutilib.th as unittest
-from pyomo.common.plugin import alias
-import pyomo.environ as aml
-import os
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available, scipy_sparse as spa, scipy_available
@@ -27,7 +25,7 @@ if not AmplInterface.available():
 from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.nlp_transformations import AdmmNLP
 from pyomo.core.plugins.transform.hierarchy import Transformation
-import pyomo.environ as aml
+import pyomo.environ as pyo
 
 
 class AdmmModel(Transformation):
@@ -59,7 +57,7 @@ class AdmmModel(Transformation):
         cloned_vars = []
         original_vars = []
         for v in complicating_vars:
-            vid = aml.ComponentUID(v)
+            vid = pyo.ComponentUID(v)
             vv = vid.find_component_on(model)
             if v.is_indexed():
                 raise RuntimeError('Indexed variables not supported')
@@ -78,16 +76,16 @@ class AdmmModel(Transformation):
             assert len(w_estimates) == nz
             w_vals = w_estimates
 
-        model._z = aml.Param(range(nz), initialize=0.0, mutable=True)
-        model._w = aml.Param(range(nz), initialize=0.0, mutable=True)
+        model._z = pyo.Param(range(nz), initialize=0.0, mutable=True)
+        model._w = pyo.Param(range(nz), initialize=0.0, mutable=True)
         for i in range(nz):
             model._z[i].value = z_vals[i]
             model._w[i].value = w_vals[i]
 
-        model._rho = aml.Param(initialize=rho, mutable=True)
+        model._rho = pyo.Param(initialize=rho, mutable=True)
 
         # defines objective
-        objectives = model.component_map(aml.Objective, active=True)
+        objectives = model.component_map(pyo.Objective, active=True)
         if len(objectives) > 1:
             raise RuntimeError('Multiple objectives not supported')
         obj = list(objectives.values())[0]
@@ -95,7 +93,8 @@ class AdmmModel(Transformation):
         def rule_linkin_exprs(m, i):
             return cloned_vars[i] - m._z[i]
         # store non-anticipativity expression
-        model._linking_residuals = aml.Expression(range(nz), rule=rule_linkin_exprs)
+        model._linking_residuals = pyo.Expression(range(nz),
+                                                  rule=rule_linkin_exprs)
 
         dual_term = 0.0
         penalty_term = 0.0
@@ -104,11 +103,11 @@ class AdmmModel(Transformation):
             penalty_term += (model._linking_residuals[zid])**2
 
         # multiplier terms in objective
-        model._dual_obj_term = aml.Expression(expr=dual_term)
+        model._dual_obj_term = pyo.Expression(expr=dual_term)
         # penalty term
-        model._penalty_obj_term = aml.Expression(expr=0.5 * model._rho * penalty_term)
+        model._penalty_obj_term = pyo.Expression(expr=0.5 * model._rho * penalty_term)
 
-        model._aug_obj = aml.Objective(expr=obj.expr +
+        model._aug_obj = pyo.Objective(expr=obj.expr +
                                             model._dual_obj_term +
                                             model._penalty_obj_term)
 
@@ -116,11 +115,12 @@ class AdmmModel(Transformation):
 
     def propagate_solution(self, augmented_model, original_model):
 
-        for avar in augmented_model.component_objects(ctype=aml.Var, descend_into=True):
-            cuid = aml.ComponentUID(avar)
+        for avar in augmented_model.component_objects(ctype=pyo.Var,
+                                                      descend_into=True):
+            cuid = pyo.ComponentUID(avar)
             original_v = cuid.find_component_on(original_model)
             for k in avar:
-                original_v[k].value = aml.value(avar[k])
+                original_v[k].value = pyo.value(avar[k])
 
 
 def create_basic_dense_qp(G, A, b, c):
@@ -128,11 +128,11 @@ def create_basic_dense_qp(G, A, b, c):
     nx = G.shape[0]
     nl = A.shape[0]
 
-    model = aml.ConcreteModel()
+    model = pyo.ConcreteModel()
     model.var_ids = range(nx)
     model.con_ids = range(nl)
 
-    model.x = aml.Var(model.var_ids, initialize=0.0)
+    model.x = pyo.Var(model.var_ids, initialize=0.0)
     model.hessian_f = G
     model.jacobian_c = A
     model.rhs = b
@@ -140,7 +140,8 @@ def create_basic_dense_qp(G, A, b, c):
 
     def equality_constraint_rule(m, i):
         return sum(m.jacobian_c[i, j] * m.x[j] for j in m.var_ids) == m.rhs[i]
-    model.equalities = aml.Constraint(model.con_ids, rule=equality_constraint_rule)
+    model.equalities = pyo.Constraint(model.con_ids,
+                                      rule=equality_constraint_rule)
 
     def objective_rule(m):
         accum = 0.0
@@ -150,44 +151,44 @@ def create_basic_dense_qp(G, A, b, c):
         accum += sum(m.x[j] * m.grad_f[j] for j in m.var_ids)
         return accum
 
-    model.obj = aml.Objective(rule=objective_rule, sense=aml.minimize)
+    model.obj = pyo.Objective(rule=objective_rule, sense=pyo.minimize)
 
     return model
 
 
 def create_model2():
-    model = aml.ConcreteModel()
+    model = pyo.ConcreteModel()
     model.indices = [i for i in range(1, 6)]
-    model.x = aml.Var(model.indices, initialize=2)
+    model.x = pyo.Var(model.indices, initialize=2)
 
     def rule_obj(m):
         expr = (m.x[1] - m.x[2]) ** 2 + (m.x[2] + m.x[3] - 2) ** 2 + (m.x[4] - 1) ** 2 + (m.x[5] - 1) **2
         return expr
 
-    model.obj = aml.Objective(rule=rule_obj)
+    model.obj = pyo.Objective(rule=rule_obj)
 
-    model.c1 = aml.Constraint(expr=model.x[1] + 3 * model.x[2] == 0.0)
-    model.c2 = aml.Constraint(expr=model.x[3] + model.x[4] - 2 * model.x[5] == 0.0)
-    model.c3 = aml.Constraint(expr=model.x[2] - model.x[5] == 0.0)
+    model.c1 = pyo.Constraint(expr=model.x[1] + 3 * model.x[2] == 0.0)
+    model.c2 = pyo.Constraint(expr=model.x[3] + model.x[4] - 2 * model.x[5] == 0.0)
+    model.c3 = pyo.Constraint(expr=model.x[2] - model.x[5] == 0.0)
 
     return model
 
 
 def create_basic_model():
 
-    m = aml.ConcreteModel()
-    m.x = aml.Var([1, 2, 3], domain=aml.Reals)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([1, 2, 3], domain=pyo.Reals)
     for i in range(1, 4):
         m.x[i].value = i
-    m.c1 = aml.Constraint(expr=m.x[1] ** 2 - m.x[2] - 1 == 0)
-    m.c2 = aml.Constraint(expr=m.x[1] - m.x[3] - 0.5 == 0)
-    m.d1 = aml.Constraint(expr=m.x[1] + m.x[2] <= 100.0)
-    m.d2 = aml.Constraint(expr=m.x[2] + m.x[3] >= -100.0)
-    m.d3 = aml.Constraint(expr=m.x[2] + m.x[3] + m.x[1] >= -500.0)
+    m.c1 = pyo.Constraint(expr=m.x[1] ** 2 - m.x[2] - 1 == 0)
+    m.c2 = pyo.Constraint(expr=m.x[1] - m.x[3] - 0.5 == 0)
+    m.d1 = pyo.Constraint(expr=m.x[1] + m.x[2] <= 100.0)
+    m.d2 = pyo.Constraint(expr=m.x[2] + m.x[3] >= -100.0)
+    m.d3 = pyo.Constraint(expr=m.x[2] + m.x[3] + m.x[1] >= -500.0)
     m.x[2].setlb(0.0)
     m.x[3].setlb(0.0)
     m.x[2].setub(100.0)
-    m.obj = aml.Objective(expr=m.x[1]**2 + m.x[2]**2 + m.x[3]**2)
+    m.obj = pyo.Objective(expr=m.x[1]**2 + m.x[2]**2 + m.x[3]**2)
     return m
 
 

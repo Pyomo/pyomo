@@ -16,13 +16,12 @@
 
 import csv
 import sys
-import itertools
 from operator import itemgetter
 import os
 thisfile = os.path.abspath(__file__)
 
 import pyomo.common.plugin
-from pyomo.core import *
+from pyomo.core import TextLabeler, Var, Constraint, Piecewise, Expression, SOSConstraint
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.piecewise import _PiecewiseData
 from pyomo.pysp import phextension

@@ -15,7 +15,7 @@ import time
 import itertools
 import enum
 
-from pyomo.core import *
+from pyomo.core import Var
 
 from six import iteritems, itervalues
 

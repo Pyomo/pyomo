@@ -18,7 +18,7 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from pyomo.environ import *
+from pyomo.environ import AbstractModel, Param, Var, NonNegativeReals, Objective, Constraint, minimize
 
 model = AbstractModel()
 

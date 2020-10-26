@@ -17,13 +17,12 @@ import time
 import six
 import sys
 import subprocess
-import traceback
 import inspect
 import argparse
 
 from pyutilib.misc import PauseGC, import_file
 from pyutilib.services import TempfileManager
-import pyutilib.common
+from pyutilib.common import ApplicationError
 from pyomo.opt.base import ConverterError
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.plugin import (ExtensionPoint,
@@ -375,7 +374,7 @@ def launch_command(command,
                         sys.stderr.write(error_label+"CONVERTER ERROR:\n")
                         sys.stderr.write(str(sys.exc_info()[1])+"\n")
                         raise
-                    except pyutilib.common.ApplicationError:
+                    except ApplicationError:
                         sys.stderr.write(error_label+"APPLICATION ERROR:\n")
                         sys.stderr.write(str(sys.exc_info()[1])+"\n")
                         raise

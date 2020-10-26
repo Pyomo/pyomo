@@ -28,20 +28,15 @@ import time
 from pyutilib.math.util import isclose
 from pyutilib.misc import PauseGC
 
-from pyomo.opt import ProblemFormat
-from pyomo.opt.base import *
+from pyomo.opt import ProblemFormat, AbstractProblemWriter, WriterFactory
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (NumericConstant,
                                       native_numeric_types,
-                                      value)
-from pyomo.core.base import *
-from pyomo.core.base import SymbolMap, Block
-from pyomo.core.base.var import Var
-from pyomo.core.base import _ExpressionData, Expression, SortComponents
-from pyomo.core.base import var
-from pyomo.core.base import param
+                                      value,
+                                      is_fixed)
+from pyomo.core.base import SymbolMap, NameLabeler, _ExpressionData, SortComponents, var, param, Var, ExternalFunction, ComponentMap, Objective, Constraint, SOSConstraint, Suffix
 import pyomo.core.base.suffix
-from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
+from pyomo.repn.standard_repn import generate_standard_repn
 
 import pyomo.core.kernel.suffix
 from pyomo.core.kernel.block import IBlock

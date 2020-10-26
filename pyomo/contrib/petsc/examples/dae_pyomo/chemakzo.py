@@ -1,12 +1,20 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 A test problem from https://archimede.dm.uniba.it/~testset/report/chemakzo.pdf
 """
 from __future__ import division  # No integer division
 from __future__ import print_function  # Python 3 style print
 
-from pyomo.environ import *
-from pyomo.opt import SolverFactory
-import os
+from pyomo.environ import ConcreteModel, Param, Var, Constraint, Suffix, SolverFactory
 
 if __name__ == "__main__":
     opt = SolverFactory('petsc')

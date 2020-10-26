@@ -15,15 +15,14 @@ import sys
 import time
 import logging
 
-import pyutilib.misc
 from pyutilib.common import ApplicationError, WindowsError
 from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
 import pyomo.common
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import *
+from pyomo.opt.base import ResultsFormat
+from pyomo.opt.base.solvers import OptSolver
 from pyomo.opt.results import SolverStatus, SolverResults
 
 logger = logging.getLogger('pyomo.opt')

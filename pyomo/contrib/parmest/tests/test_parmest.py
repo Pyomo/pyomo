@@ -24,13 +24,9 @@ import platform
 is_osx = platform.mac_ver()[0] != ''
 
 import pyutilib.th as unittest
-import tempfile
 import sys
 import os
-import shutil
-import glob
 import subprocess
-import sys
 from itertools import product
 
 import pyomo.contrib.parmest.parmest as parmest
@@ -121,9 +117,9 @@ class parmest_object_Tester_RB(unittest.TestCase):
         self.assertTrue(CR[0.75].sum() == 7)
         self.assertTrue(CR[1.0].sum() == 10) # all true
         
-        parmest.pairwise_plot(theta_est)
-        parmest.pairwise_plot(theta_est, thetavals)
-        parmest.pairwise_plot(theta_est, thetavals, 0.8, ['MVN', 'KDE', 'Rect'])
+        graphics.pairwise_plot(theta_est)
+        graphics.pairwise_plot(theta_est, thetavals)
+        graphics.pairwise_plot(theta_est, thetavals, 0.8, ['MVN', 'KDE', 'Rect'])
         
     @unittest.skipIf(not graphics.imports_available,
                      "parmest.graphics imports are unavailable")
@@ -143,7 +139,7 @@ class parmest_object_Tester_RB(unittest.TestCase):
         self.assertTrue(LR[0.9].sum() == 11)
         self.assertTrue(LR[1.0].sum() == 60) # all true
         
-        parmest.pairwise_plot(LR, thetavals, 0.8)
+        graphics.pairwise_plot(LR, thetavals, 0.8)
 
     def test_leaveNout(self):
         lNo_theta = self.pest.theta_est_leaveNout(1) 
@@ -340,14 +336,14 @@ class parmest_graphics(unittest.TestCase):
         self.B = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))
         
     def test_pairwise_plot(self):
-        parmest.pairwise_plot(self.A, alpha=0.8, distributions=['Rect', 'MVN', 'KDE'])
+        graphics.pairwise_plot(self.A, alpha=0.8, distributions=['Rect', 'MVN', 'KDE'])
         
     def test_grouped_boxplot(self):
-        parmest.grouped_boxplot(self.A, self.B, normalize=True, 
+        graphics.grouped_boxplot(self.A, self.B, normalize=True, 
                                 group_names=['A', 'B'])
         
     def test_grouped_violinplot(self):
-        parmest.grouped_violinplot(self.A, self.B)
+        graphics.grouped_violinplot(self.A, self.B)
         
 if __name__ == '__main__':
     unittest.main()

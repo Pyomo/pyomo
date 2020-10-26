@@ -24,7 +24,6 @@ else:
         _ordered_dict_ = ordereddict.OrderedDict
 
 from pyutilib.pyro import using_pyro3, using_pyro4
-import pyutilib.services
 import pyutilib.th as unittest
 
 from pyomo.common.dependencies import dill, dill_available
@@ -49,7 +48,7 @@ from pyomo.pysp.scenariotree.tree_structure_model import \
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Expression, Constraint, Objective, sum_product
 
 thisfile = os.path.abspath(__file__)
 thisdir = os.path.dirname(thisfile)

@@ -1,11 +1,20 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Transformation to convert explicit bounds to variable bounds."""
 
 from __future__ import division
 
-import math
 from math import fabs
+import math
 
-from pyomo.core import Integers
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
@@ -83,9 +92,11 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
             if var.is_integer() or var.is_binary():
                 # Make sure that the lb and ub are integral. Use safe construction if near to integer.
                 if var.has_lb():
-                    var.setlb(int(min(math.ceil(var.lb - config.tolerance), math.ceil(var.lb))))
+                    var.setlb(int(min(math.ceil(var.lb - config.tolerance),
+                                      math.ceil(var.lb))))
                 if var.has_ub():
-                    var.setub(int(max(math.floor(var.ub + config.tolerance), math.floor(var.ub))))
+                    var.setub(int(max(math.floor(var.ub + config.tolerance),
+                                      math.floor(var.ub))))
 
             if var is not None and var.value is not None:
                 _adjust_var_value_if_not_feasible(var)
