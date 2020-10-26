@@ -173,6 +173,7 @@ def feas_pump_loop(solve_data, config):
                 % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.feas_pump_mip_obj)))
         elif feas_master_results.solver.termination_condition is tc.maxTimeLimit:
             config.logger.warning('FP-MIP reaches max TimeLimit')
+            solve_data.results.solver.termination_condition = tc.maxTimeLimit
         elif feas_master_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
             no_good_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts

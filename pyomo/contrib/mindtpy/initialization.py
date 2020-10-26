@@ -173,6 +173,7 @@ def init_rNLP(solve_data, config):
     elif subprob_terminate_cond is tc.maxTimeLimit:
         config.logger.info(
             'NLP subproblem failed to converge within time limit.')
+        solve_data.results.solver.termination_condition = tc.maxTimeLimit
     elif subprob_terminate_cond is tc.maxIterations:
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
@@ -246,6 +247,7 @@ def init_max_binaries(solve_data, config):
     elif subprob_terminate_cond is tc.maxTimeLimit:
         config.logger.info(
             'NLP subproblem failed to converge within time limit.')
+        solve_data.results.solver.termination_condition = tc.maxTimeLimit
     elif subprob_terminate_cond is tc.maxIterations:
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')

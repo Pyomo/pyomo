@@ -13,6 +13,7 @@ from pyomo.core import minimize, Objective, Var
 from pyomo.opt.results import ProblemSense
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, indent, time_code
+from pyomo.opt.results.solver import TerminationCondition
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import time_code
@@ -84,6 +85,7 @@ def MindtPy_iteration_loop(solve_data, config):
             elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
                 config.logger.info(
                     'NLP subproblem failed to converge within the time limit.')
+                solve_data.results.solver.termination_condition = tc.maxTimeLimit
                 break
             else:
                 handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
@@ -336,6 +338,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
                 config.logger.info(
                     'NLP subproblem failed to converge within the time limit.')
+                solve_data.results.solver.termination_condition = tc.maxTimeLimit
             else:
                 handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                     solve_data, config)

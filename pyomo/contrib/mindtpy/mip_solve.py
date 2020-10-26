@@ -249,6 +249,7 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
         handle_master_unbounded(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
         handle_master_max_timelimit(master_mip, solve_data, config)
+        solve_data.results.solver.termination_condition = tc.maxTimeLimit
     elif (master_mip_results.solver.termination_condition is tc.other and
           master_mip_results.solution.status is SolutionStatus.feasible):
         # load the solution and suppress the warning message by setting
