@@ -100,7 +100,7 @@ def test_solver_cases(*args):
                                    'conic_constraints'])
     
         _test_solver_cases['mosek', 'python'] = initialize(
-            name='mosek',
+            name='mosek_direct',
             io='python',
             capabilities=_mosek_capabilities,
             import_suffixes=['dual', 'rc', 'slack'])

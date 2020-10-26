@@ -130,18 +130,6 @@ class MOSEKDirectTests(unittest.TestCase):
         self.assertEqual(results.solution.status,
                          SolutionStatus.optimal)
 
-    def test_optimal_mip(self):
-
-        model = aml.ConcreteModel()
-        model.X = aml.Var(within=aml.NonNegativeIntegers)
-        model.O = aml.Objective(expr=model.X)
-
-        opt = aml.SolverFactory("mosek_direct")
-        results = opt.solve(model, load_solutions=False)
-
-        self.assertEqual(results.solution.status,
-                         SolutionStatus.optimal)
-
     def test_conic(self):
 
         model = pmo.block()
