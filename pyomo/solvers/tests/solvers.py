@@ -20,7 +20,8 @@ from pyomo.opt.base.solvers import UnknownSolver
 import pyomo.environ
 from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
 from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
-from pyomo.solvers.plugins.solvers.mosek_direct import MosekDirect
+from pyomo.solvers.plugins.solvers.mosek_direct import MOSEKDirect
+from pyomo.solvers.plugins.solvers.mosek_persistent import MOSEKPersistent
 
 # ----------------------------------------------------------------
 
@@ -56,8 +57,8 @@ def initialize(**kwds):
     elif (obj.name == "gurobi") and \
        (not GUROBISHELL.license_is_valid()):
         obj.available = False
-    elif (obj.name == "mosek") and \
-       (not MosekDirect.license_is_valid()):
+    elif (obj.name == "mosek_direct") and \
+       (not MOSEKDirect.license_is_valid()):
         obj.available = False
     else:
         obj.available = \
@@ -94,13 +95,24 @@ def test_solver_cases(*args):
         _mosek_capabilities = set(['linear',
                                    'integer',
                                    'quadratic_objective',
-                                   'quadratic_constraint'])
-
+                                   'quadratic_constraint',
+                                   'conic_constraints'])
+    
         _test_solver_cases['mosek', 'python'] = initialize(
-            name='mosek',
+            name='mosek_direct',
             io='python',
             capabilities=_mosek_capabilities,
             import_suffixes=['dual', 'rc', 'slack'])
+
+        #
+        # MOSEK Persistent
+        #
+        _test_solver_cases['mosek_persistent','python'] = initialize(
+                name = 'mosek_persistent',
+                io = 'python',
+                capabilities=_mosek_capabilities,
+                import_suffixes=['dual','rc','slack'])
+
         #
         # CPLEX
         #

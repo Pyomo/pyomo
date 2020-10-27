@@ -1,0 +1,9 @@
+Names
+ x2
+ ONE_VAR_CONSTANT
+scen
+  1
+  0
+scen
+  1
+  0

@@ -9,6 +9,11 @@ solvers:
     coliny:
         name: 'asl:coliny'
     #
+    mosek:
+    mosek_direct:
+            name: mosek
+            solver_io: python
+    #
     cplex:
     cplex_asl:
         name: cplex
@@ -171,6 +176,7 @@ suites:
             pico_asl:
             gurobi:
             gurobi_direct:
+            mosek_direct:
         problems:
             mip_unbounded1a:
             mip_unique1:
@@ -195,6 +201,7 @@ suites:
             pico_asl:
             gurobi:
             gurobi_direct:
+            mosek_direct:
         problems:
             diet1:
                 abstol: 1e-5
