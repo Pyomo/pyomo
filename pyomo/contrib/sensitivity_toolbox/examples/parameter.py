@@ -15,7 +15,7 @@
 
 from __future__ import print_function
 from pyomo.environ import ConcreteModel, Param, Var, Objective, Constraint, NonNegativeReals, value
-from pyomo.contrib.sensitivity_toolbox.sens import sipopt
+from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
 def create_model():
     ''' Create a concrete Pyomo model for this example
@@ -52,9 +52,9 @@ def run_example(print_flag=True):
     m.perturbed_eta2 = Param(initialize = 1.0)
 
 
-    m_sipopt = sipopt(m,[m.eta1,m.eta2],
-                        [m.perturbed_eta1,m.perturbed_eta2],
-                        streamSoln=True)
+    m_sipopt = sensitivity_calculation('sipopt',m,[m.eta1,m.eta2],
+                                       [m.perturbed_eta1,m.perturbed_eta2],
+                                       streamSoln=True)
     
 
     
