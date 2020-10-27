@@ -20,7 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, AbstractModel, Objective, ObjectiveList, Var, Param, Set, RangeSet, value, maximize, minimize, simple_objective_rule, simple_objectivelist_rule
 
 class TestSimpleObj(unittest.TestCase):
 

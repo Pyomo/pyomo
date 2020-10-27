@@ -9,12 +9,9 @@
 #  ___________________________________________________________________________
 
 import logging
-from six import iteritems
 
-from pyomo.core.expr.current import ProductExpression
-from pyomo.core import *
-from pyomo.core.base.var import _VarData
-from pyomo.gdp import *
+from pyomo.core import TransformationFactory, Transformation, Block, VarList, Set, SortComponents, Objective, Constraint
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
 
 logger = logging.getLogger('pyomo.gdp')
@@ -27,7 +24,6 @@ class Bilinear_Transformation(Transformation):
         super(Bilinear_Transformation, self).__init__()
 
     def _apply_to(self, instance, **kwds):
-        options = kwds.pop('options', {})
         # TODO: This data should be stored differently.  We cannot nest this transformation with itself
         if getattr(instance, 'bilinear_data_', None) is None:
             instance.bilinear_data_ = Block()

@@ -20,7 +20,6 @@ import pyutilib.th as unittest
 from pyomo.environ import ConcreteModel, Var, Set, TransformationFactory
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
-from six import StringIO
 
 currdir = dirname(abspath(__file__)) + os.sep
 

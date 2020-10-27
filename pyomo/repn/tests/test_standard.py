@@ -17,12 +17,11 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
 
 from pyomo.core.expr.current import Expr_if
-from pyomo.core.expr import expr_common, current as EXPR
-from pyomo.repn import *
-from pyomo.environ import *
+from pyomo.core.expr import current as EXPR
+from pyomo.repn import generate_standard_repn
+from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Set, Expression, RangeSet, ExternalFunction, quicksum, cos, sin, summation, sum_product
 import pyomo.kernel
 from pyomo.core.base.numvalue import native_numeric_types, as_numeric
 
@@ -4147,14 +4146,21 @@ class Test(unittest.TestCase):
         e = 100*m.g(1,2.0,'3')
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "300")
+        self.assertEqual(rep.polynomial_degree(), 0)
         rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(rep.polynomial_degree(), 0)
         # The function ID is inconsistent, so we don't do a test
         #self.assertEqual(str(rep.to_expression()), "100*g(0, 1, 2.0, '3')")
 
         e = 100*m.g(1,2.0,'3',m.v)
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "400")
+        self.assertEqual(rep.polynomial_degree(), 0)
         rep = generate_standard_repn(e, compute_values=False)
+        # FIXME: this is a lie: the degree should be 0, but because
+        # compute_falues=False creates a "structural" standard repn, the
+        # computed degree appears to be general nonlinear.
+        self.assertEqual(rep.polynomial_degree(), None)
         # The function ID is inconsistent, so we don't do a test
         #self.assertEqual(str(rep.to_expression()), "100*g(0, 1, 2.0, '3', v)")
 

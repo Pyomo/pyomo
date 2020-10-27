@@ -116,7 +116,6 @@ def get_index_set_except(comp, *sets):
         and a value for each set excluded. These values must be provided
         in the same order their Sets were provided in the sets argument.
     """
-    n_set = len(sets)
     s_set = ComponentSet(sets)
     try:
         total_s_dim = sum([s.dimen for s in sets])

@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base import *
+from pyomo.core import ConcreteModel, Var, Set,  Objective, Constraint, ConstraintList, NonNegativeReals, NonPositiveReals, Expression, ComponentMap, maximize, minimize
 from pyomo.opt import (ProblemFormat,
                        SolverFactory,
                        SolverManagerFactory,

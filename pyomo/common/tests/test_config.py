@@ -12,7 +12,7 @@ import os
 import pyutilib.th as unittest
 
 from pyomo.common.config import (
-    ConfigBlock, ConfigList, ConfigValue,
+    ConfigBlock, ConfigValue,
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, Path, PathList, ConfigEnum

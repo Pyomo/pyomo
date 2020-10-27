@@ -11,15 +11,12 @@
 from __future__ import print_function
 import pyutilib.th as unittest
 
-from pyomo.environ import (Var, Set, ConcreteModel, value, Constraint,
-                           TransformationFactory, pyomo)
+from pyomo.environ import (Var, Set, ConcreteModel, 
+                           TransformationFactory)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
-import os
 from six import StringIO
-from pyutilib.misc import setup_redirect, reset_redirect
-from pyutilib.misc import import_file
 
 from pyomo.common.log import LoggingIntercept
 

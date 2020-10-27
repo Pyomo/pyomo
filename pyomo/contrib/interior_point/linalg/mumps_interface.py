@@ -1,9 +1,19 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from .base_linear_solver_interface import LinearSolverInterface
 from .results import LinearSolverStatus, LinearSolverResults
 from pyomo.common.dependencies import attempt_import
 from scipy.sparse import isspmatrix_coo, tril
 from collections import OrderedDict
-import logging
+
 mumps, mumps_available = attempt_import(name='pyomo.contrib.pynumero.linalg.mumps_interface',
                                         error_message='pymumps is required to use the MumpsInterface')
 

@@ -13,7 +13,7 @@ import os
 from six import iteritems, PY3
 
 import pyutilib.services
-from pyomo.opt.base import *
+from pyomo.opt.base import ProblemFormat
 from pyomo.opt.base.convert import ProblemConverterFactory
 from pyomo.solvers.plugins.converter.pico import PicoMIPConverter
 from pyomo.core.kernel.block import IBlock

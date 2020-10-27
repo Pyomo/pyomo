@@ -9,8 +9,13 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.extensions import ExtensionBuilderFactory
+from pyomo.opt import SolverFactory
 from .build import PyNumeroBuilder
+from .algorithms.solvers.cyipopt_solver import PyomoCyIpoptSolver
 
 def load():
     ExtensionBuilderFactory.register('pynumero')(PyNumeroBuilder)
-
+    SolverFactory.register(
+        'cyipopt',
+        doc='Cyipopt: direct python bindings to the Ipopt NLP solver'
+    )(PyomoCyIpoptSolver)

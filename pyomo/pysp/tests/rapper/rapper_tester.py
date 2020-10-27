@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # Provide some test for rapper; most are smoke because PySP is tested elsewhere
 # Author: David L. Woodruff (circa March 2017; Sept 2018; Feb 2020)
 
@@ -6,8 +16,7 @@ import tempfile
 import sys
 import os
 import shutil
-import json
-import pyomo.environ as pyo
+from pyomo.environ import SolverFactory, TerminationCondition
 import pyomo.pysp.util.rapper as rapper
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 import pyomo.pysp.plugins.csvsolutionwriter as csvw
@@ -23,7 +32,7 @@ __date__ = 'August 14, 2017'
 __version__ = 1.7
 
 solvername = "ipopt" # could use almost any solver
-solver_available = pyo.SolverFactory(solvername).available(False)
+solver_available =  SolverFactory(solvername).available(False)
 
 class Testrapper(unittest.TestCase):
     """ Test the rapper code."""
@@ -109,7 +118,7 @@ class Testrapper(unittest.TestCase):
                                 tree_model = self.farmer_concrete_tree)
         ef_sol = stsolver.solve_ef(solvername)
         assert(ef_sol.solver.termination_condition \
-               ==  pyo.TerminationCondition.optimal)
+               ==   TerminationCondition.optimal)
         for name, varval in stsolver.root_Var_solution():
             #print (name, str(varval))
             pass

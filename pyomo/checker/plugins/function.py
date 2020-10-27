@@ -10,8 +10,8 @@
 
 import ast
 
-from pyomo.common.plugin import *
-from pyomo.checker.hooks import *
+from pyomo.common.plugin import SingletonPlugin, implements
+from pyomo.checker.hooks import IPreCheckHook, IPostCheckHook
 
 
 class FunctionTrackerHook(SingletonPlugin):
