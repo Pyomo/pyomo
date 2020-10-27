@@ -17,9 +17,10 @@ from pyomo.common.deprecation import deprecated
 from pyomo.opt import SolverFactory
 import logging
 
-_log = logging.getLogger('__name__')
+_log = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 
-@deprecated('The sipopt function has been deprecated. Use the sensitivity_calculation() function with method="sipopt" to access this functionality.', 
+@deprecated('The sipopt function has been deprecated. Use the sensitivity_calculation() '
+            'function with method="sipopt" to access this functionality.', 
             version='TBD')
 def sipopt(instance, paramSubList, perturbList,
            cloneModel=True, streamSoln=False, keepfiles=False):    
@@ -28,7 +29,8 @@ def sipopt(instance, paramSubList, perturbList,
 
     return m
 
-@deprecated('The kaug function has been deprecated. Use the sensitivity_calculation() function with method="kaug" to access this functionality.', 
+@deprecated('The kaug function has been deprecated. Use the sensitivity_calculation() '
+            'function with method="kaug" to access this functionality.', 
             version='TBD')
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
