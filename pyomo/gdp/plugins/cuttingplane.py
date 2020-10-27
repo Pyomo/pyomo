@@ -37,7 +37,6 @@ from pyomo.contrib.fme.fourier_motzkin_elimination import \
 
 from six import iteritems
 
-from math import isinf
 import logging
 
 logger = logging.getLogger('pyomo.gdp.cuttingplane')

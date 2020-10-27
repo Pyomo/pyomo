@@ -24,7 +24,6 @@ from pyomo.opt.parallel.manager import (ActionManagerError,
                                         ActionHandle)
 from pyomo.opt.parallel.async_solver import AsynchronousSolverManager, SolverManagerFactory
 
-import six
 from six import string_types
 
 

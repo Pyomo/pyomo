@@ -18,7 +18,7 @@ from pyutilib.misc import Bunch, Options
 from pyutilib.services import TempfileManager
 
 from pyomo.common import Executable
-from pyomo.opt import *
+from pyomo.opt import SolverFactory, OptSolver, ProblemFormat, ResultsFormat, SolverResults, TerminationCondition, SolutionStatus, ProblemSense
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
 

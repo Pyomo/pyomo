@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pickle
 
 import pyutilib.th as unittest
@@ -26,11 +36,8 @@ from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.parameter import parameter
 from pyomo.core.kernel.objective import objective
 from pyomo.core.kernel.block import block
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet)
 
 import six
-from six import StringIO
 
 try:
     import numpy

@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.symbol_map import *
+from pyomo.core.expr.symbol_map import SymbolMap
 
 from pyomo.core.base.label import TextLabeler
 def symbol_map_from_instance(instance):

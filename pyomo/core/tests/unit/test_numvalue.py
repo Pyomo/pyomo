@@ -15,10 +15,12 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.math
+from pyutilib.math import nan, infinity
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.environ import (value, ConcreteModel, Param, Var, 
+                           polynomial_degree, is_constant, is_fixed,
+                           is_potentially_variable, is_variable_type)
 from pyomo.core.expr.numvalue import (NumericConstant,
                                       as_numeric,
                                       is_numeric_data)
@@ -163,11 +165,11 @@ class Test_value(unittest.TestCase):
         self.assertEqual(val, value(val))
 
     def test_nan(self):
-        val = pyutilib.math.nan
+        val = nan
         self.assertEqual(id(val), id(value(val)))
 
     def test_inf(self):
-        val = pyutilib.math.infinity
+        val = infinity
         self.assertEqual(id(val), id(value(val)))
 
     def test_string(self):
@@ -179,12 +181,12 @@ class Test_value(unittest.TestCase):
         self.assertEqual(1.0, value(val))
 
     def test_const3(self):
-        val = NumericConstant(pyutilib.math.nan)
-        self.assertEqual(id(pyutilib.math.nan), id(value(val)))
+        val = NumericConstant(nan)
+        self.assertEqual(id(nan), id(value(val)))
 
     def test_const4(self):
-        val = NumericConstant(pyutilib.math.infinity)
-        self.assertEqual(id(pyutilib.math.infinity), id(value(val)))
+        val = NumericConstant(infinity)
+        self.assertEqual(id(infinity), id(value(val)))
 
     def test_param1(self):
         m = ConcreteModel()
@@ -255,11 +257,11 @@ class Test_polydegree(unittest.TestCase):
         self.assertEqual(0, polynomial_degree(val))
 
     def test_nan(self):
-        val = pyutilib.math.nan
+        val = nan
         self.assertEqual(0, polynomial_degree(val))
 
     def test_inf(self):
-        val = pyutilib.math.infinity
+        val = infinity
         self.assertEqual(0, polynomial_degree(val))
 
     def test_string(self):
@@ -271,11 +273,11 @@ class Test_polydegree(unittest.TestCase):
         self.assertEqual(0, polynomial_degree(val))
 
     def test_const3(self):
-        val = NumericConstant(pyutilib.math.nan)
+        val = NumericConstant(nan)
         self.assertEqual(0, polynomial_degree(val))
 
     def test_const4(self):
-        val = NumericConstant(pyutilib.math.infinity)
+        val = NumericConstant(infinity)
         self.assertEqual(0, polynomial_degree(val))
 
     def test_param1(self):

@@ -10,14 +10,14 @@
 
 import pyomo.common.plugin
 
-from six import iteritems, itervalues, print_
+from six import iteritems, print_
 
 import random
 
 from pyomo.pysp import phextension
 from pyomo.pysp.convergence import ConvergenceBase
 
-from pyomo.core.base import minimize, maximize
+from pyomo.core.base import minimize
 
 import math
 

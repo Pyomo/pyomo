@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """ Example in the online doc.
 
 The expected optimal solution value is 2.438447187191098.
@@ -10,10 +20,8 @@ The expected optimal solution value is 2.438447187191098.
 """
 from __future__ import division
 
-from six import iteritems
-
-from pyomo.environ import (Binary, ConcreteModel, Constraint, Reals,
-                           Objective, Param, RangeSet, Var, exp, minimize, log)
+from pyomo.environ import (Binary, ConcreteModel, Constraint,
+                           Objective, Var, minimize, log)
 
 
 class OnlineDocExample(ConcreteModel):

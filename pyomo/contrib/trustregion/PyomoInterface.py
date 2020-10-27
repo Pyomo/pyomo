@@ -1,23 +1,31 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import logging
 
-import os
 import numpy as np
 from pyutilib.math import infinity
 from pyomo.common.collections import ComponentSet
-from pyomo.common.modeling import randint, unique_component_name
+from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
-    Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, 
-    RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
+    Block, Var, Param, VarList, ConstraintList, Constraint, Objective,
+    RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize,
 )
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.external import PythonCallbackFunction
-from pyomo.core.base.var import _VarData
 from pyomo.core.base.numvalue import nonpyomo_leaf_types
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 from pyomo.contrib.trustregion.GeometryGenerator import (
     generate_quadratic_rom_geometry
 )
-from pyomo.contrib.trustregion.helper import *
+from pyomo.contrib.trustregion.helper import maxIgnoreNone, minIgnoreNone
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 

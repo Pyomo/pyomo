@@ -19,7 +19,7 @@ import pyutilib.common
 import pyutilib.th as unittest
 
 from pyomo.dataportal.factory import DataManagerFactory
-from pyomo.environ import *
+from pyomo.environ import AbstractModel, ConcreteModel, Set, DataPortal, Param, Boolean, Any, value
 
 currdir=dirname(abspath(__file__))+os.sep
 example_dir=pyomo_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep+"tab"+os.sep

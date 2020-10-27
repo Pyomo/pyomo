@@ -15,8 +15,8 @@ import pyutilib.th as unittest
 from six import StringIO
 import logging
 
-from pyomo.environ import *
-from pyomo.network import *
+from pyomo.environ import ConcreteModel, AbstractModel, Var, Set, Constraint, RangeSet, NonNegativeReals, Reals, Binary, TransformationFactory, Block
+from pyomo.network import Arc, Port
 
 class TestArc(unittest.TestCase):
 

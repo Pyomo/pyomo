@@ -1,8 +1,18 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pickle
 
 import pyutilib.th as unittest
 from pyomo.core.expr import logical_expr
-import pyomo.kernel
+from pyomo.kernel import pprint
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
 from pyomo.core.tests.unit.kernel.test_tuple_container import \
@@ -21,28 +31,25 @@ from pyomo.core.kernel.parameter import parameter
 from pyomo.core.kernel.expression import (expression,
                                           data_expression)
 from pyomo.core.kernel.block import block
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet)
 
 class Test_constraint(unittest.TestCase):
 
     def test_pprint(self):
-        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         v = variable()
         c = constraint((1, v**2, 2))
-        pyomo.kernel.pprint(c)
+        pprint(c)
         b = block()
         b.c = c
-        pyomo.kernel.pprint(c)
-        pyomo.kernel.pprint(b)
+        pprint(c)
+        pprint(b)
         m = block()
         m.b = b
-        pyomo.kernel.pprint(c)
-        pyomo.kernel.pprint(b)
-        pyomo.kernel.pprint(m)
+        pprint(c)
+        pprint(b)
+        pprint(m)
 
     def test_ctype(self):
         c = constraint()
@@ -1588,16 +1595,16 @@ class Test_linear_constraint(unittest.TestCase):
         # is still in the early stages.
         v = variable()
         c = linear_constraint(lb=1, terms=[(v,1)], ub=1)
-        pyomo.kernel.pprint(c)
+        pprint(c)
         b = block()
         b.c = c
-        pyomo.kernel.pprint(c)
-        pyomo.kernel.pprint(b)
+        pprint(c)
+        pprint(b)
         m = block()
         m.b = b
-        pyomo.kernel.pprint(c)
-        pyomo.kernel.pprint(b)
-        pyomo.kernel.pprint(m)
+        pprint(c)
+        pprint(b)
+        pprint(m)
 
     def test_ctype(self):
         c = linear_constraint([],[])

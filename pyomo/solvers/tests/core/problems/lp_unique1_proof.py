@@ -1,6 +1,16 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # This is a computational proof that lp_unique1.py has a unique primal and dual solution.
 
-from pyomo.core import *
+from pyomo.core import ConcreteModel, Param, RangeSet, Var, Constraint, Objective, NonNegativeReals
 from pyomo.opt import SolverFactory
 
 def get_model(flag, fixprim, fixdual):
@@ -75,12 +85,12 @@ for i in range(1,8):
     model = get_model(True, i, 1)
     results = opt.solve(model)
     if results.solution[0].objective['ydiff'].value != 0:
-        print "ERROR: nonzero difference i=%d ydiff=%f" % (i, results.solution[0].objective['ydiff'].value)
+        print("ERROR: nonzero difference i=%d ydiff=%f" % (i, results.solution[0].objective['ydiff'].value))
 
 for i in range(1,8):
     model = get_model(False, 1, i)
     results = opt.solve(model)
     if results.solution[0].objective['xdiff'].value != 0:
-        print "ERROR: nonzero difference i=%d xdiff=%f" % (i, results.solution[0].objective['xdiff'].value)
+        print("ERROR: nonzero difference i=%d xdiff=%f" % (i, results.solution[0].objective['xdiff'].value))
 
-print "SUCCESS!"
+print("SUCCESS!")

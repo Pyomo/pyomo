@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+from pyomo.environ import Var, maximize, value
 from pyomo.opt import SolverFactory
 
 from six import itervalues

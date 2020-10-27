@@ -11,10 +11,9 @@
 import sys
 import re
 import copy
-import math
 import logging
 
-from pyutilib.misc import quote_split, Options
+from pyutilib.misc import  Options
 import pyutilib.common
 from pyutilib.misc import flatten
 
@@ -258,7 +257,6 @@ def _process_set_data(cmd, sname, _model):
         logger.debug("DEBUG: _process_set_data(start) %s",cmd)
     if len(cmd) == 0:
         return []
-    sd = sname
     ans=[]
     i=0
     template=None
@@ -549,7 +547,7 @@ def _apply_templates(cmd):
             nindex = len(tmp)
             template=tmp
             ilist = set()
-            for kk in range(len(tmp)):
+            for kk in range(nindex):
                 if tmp[kk] == '*':
                     ilist.add(kk)
         elif len(ilist) == 0:
@@ -868,7 +866,6 @@ def _process_load(cmd, _model, _data, _default, options=None):
            isinstance(data, UnknownDataManager):
             raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % options.using)
     set_name=None
-    param_name=None
     #
     # Create symbol map
     #

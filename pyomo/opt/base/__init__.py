@@ -10,9 +10,16 @@
 
 import pyomo.opt.base.opt_config
 
-from pyomo.opt.base.error import *
-from pyomo.opt.base.convert import *
-from pyomo.opt.base.solvers import *
-from pyomo.opt.base.results import *
-from pyomo.opt.base.problem import *
-from pyomo.opt.base.formats import *
+from pyomo.opt.base.error import ConverterError
+from pyomo.opt.base.convert import convert_problem
+from pyomo.opt.base.solvers import (
+    UnknownSolver, SolverFactory, check_available_solvers, OptSolver,
+)
+from pyomo.opt.base.results import ReaderFactory, AbstractResultsReader
+from pyomo.opt.base.problem import (
+    ProblemConfigFactory, BaseProblemConfig, AbstractProblemWriter,
+    BranchDirection, WriterFactory
+)
+from pyomo.opt.base.formats import (
+    ProblemFormat, ResultsFormat, guess_format,
+)
