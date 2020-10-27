@@ -10,6 +10,8 @@
 
 import operator
 import itertools
+import pyomo.core.base.var
+import pyomo.core.base.constraint
 from pyomo.core.expr.numvalue import (is_fixed,value)
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.core.base.constraint import Constraint
@@ -21,9 +23,31 @@ from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import \
         DirectOrPersistentSolver
 from pyomo.opt.base import SolverFactory
 from pyomo.core.kernel.conic import _ConicBase
+from pyomo.core.kernel.block import block
 
 @SolverFactory.register('mosek_persistent', doc = 'Persistent python interface to MOSEK.')
 class MOSEKPersistent(PersistentSolver, MOSEKDirect):
+    """
+    This class provides a persistent interface between pyomo and MOSEK's Optimizer API.
+    As a child to the MOSEKDirect class, this interface does not need any file IO. 
+    Furthermore, the persistent interface preserves the MOSEK task object, allowing 
+    users to make incremental changes (such as removing variables/constraints, modifying
+    variables, adding columns etc.) to their models. Note that users are responsible for 
+    informing the persistent interface of any incremental change. For instance, if a new 
+    variable is defined, then it would need to be added explicitly by calling the add_var
+    method, before the solver knows of its existence.
+
+    Keyword Arguments
+    -----------------
+    type: str
+        String indicating the class type of the solver instance.
+    name: str
+        String representing either the class type of the solver instance or an assigned name.
+    doc: str
+        Documentation for the solver
+    options: dict
+        Dictionary of solver options
+    """
     
     def __init__(self, **kwds):
         kwds['type'] = 'mosek_persistent'
@@ -37,106 +61,151 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
         MOSEKDirect._warm_start(self)
     
     def remove_var(self, solver_var):
+        """
+        Remove a single variable from the model as well as the MOSEK task.
+
+        This will keep any other model components intact.
+
+        Parameters
+        ----------
+        solver_var: Var (scalar Var or single _VarData)
+        """
         self.remove_vars(solver_var)
     
     def remove_vars(self, *solver_vars):
+        """
+        Remove multiple scalar variables from the model as well as the MOSEK task. The
+        user can pass an unpacked list of scalar variables.
+
+        This will keep any other model components intact.
+
+        Parameters
+        ----------
+        *solver_var: Var (scalar Var or single _VarData)
+        """
         try:
-            var_ids = [self._pyomo_var_to_solver_var_map[v] 
-                        for v in solver_vars] 
-        except KeyError as ev:
-            v_name = self._symbol_map.getSymbol(ev,self._labeler)
+            var_ids = []
+            for v in solver_vars:
+                var_ids.append(self._pyomo_var_to_solver_var_map[v])
+                self._symbol_map.removeSymbol(v)
+                self._labeler.remove_obj(v)
+                del self._referenced_variables[v]
+                del self._pyomo_var_to_solver_var_map[v]
+            self._solver_model.removevars(var_ids)
+        except KeyError:
+            v_name = self._symbol_map.getSymbol(v,self._labeler)
             raise ValueError(
             "Variable {} needs to be added before removal.".format(v_name))
-        self._solver_model.removevars(var_ids)
-        for v in solver_vars:
-            self._symbol_map.removeSymbol(v)
-            self._labeler.remove_obj(v)
-            del self._referenced_variables[v]
-            del self._pyomo_var_to_solver_var_map[v]
         var_num = self._solver_model.getnumvar()
+        for i,v in enumerate(self._pyomo_var_to_solver_var_map):
+            self._pyomo_var_to_solver_var_map[v] = i
         self._solver_var_to_pyomo_var_map = dict(zip((
             range(var_num)),self._pyomo_var_to_solver_var_map.keys()))
-        self._vars_append_offset = var_num
 
     def remove_constraint(self, solver_con):
+        """
+        Remove a single constraint from the model as well as the MOSEK task. 
+        
+        This will keep any other model components intact.
+        
+        To remove a conic-domain, you should use the remove_block method.
+
+        Parameters
+        ----------
+        solver_con: Constraint (scalar Constraint or single _ConstraintData)
+        """
         self.remove_constraints(solver_con)
     
     def remove_constraints(self, *solver_cons):
         """
-        Method to remove a constraint/cone from the solver model.
-        User can pass several constraints as arguments, each of them 
-        separated by commas (for instance, unpack a list of constraints).
-        It is important to remember that removing constraints is an 
-        expensive operation, that may not necessarily provide a huge 
-        advantage over re-doing the entire model from scratch, especially
-        if the Interior-point optimizer is being used.
+        Remove multiple constraints from the model as well as the MOSEK task in one
+        method call. 
+        
+        This will keep any other model components intact.
+
+        To remove conic-domains, use the remove_block method.
+        
+        Parameters
+        ----------
+        *solver_cons: Constraint (scalar Constraint or single _ConstraintData)
         """
-        lq = list(itertools.filterfalse(
+        lq_cons = list(itertools.filterfalse(
             lambda x: isinstance(x,_ConicBase), solver_cons))
-        cones = list(filter(lambda x: isinstance(x,_ConicBase), solver_cons))
+        cone_cons = list(filter(lambda x: isinstance(x,_ConicBase), solver_cons))
         try:
-            lq = [self._pyomo_con_to_solver_con_map[c] for c in lq]
-            cones = [self._pyomo_cone_to_solver_cone_map[c] for c in cones]
-        except KeyError as ec:
-            c_name = self._symbol_map.getSymbol(ec, self._labeler)
+            lq = []
+            cones = []
+            for c in lq_cons:
+                lq.append(self._pyomo_con_to_solver_con_map[c])
+                self._symbol_map.removeSymbol(c)
+                self._labeler.remove_obj(c)
+                del self._pyomo_con_to_solver_con_map[c]
+            for c in cone_cons:
+                cones.append(self._pyomo_cone_to_solver_cone_map[c])
+                self._symbol_map.removeSymbol(c)
+                self._labeler.remove_obj(c)
+                del self._pyomo_cone_to_solver_cone_map[c]
+            self._solver_model.removecons(lq)
+            self._solver_model.removecones(cones)
+            lq_num = self._solver_model.getnumcon()
+            cone_num = self._solver_model.getnumcone()
+        except KeyError:
+            c_name = self._symbol_map.getSymbol(c, self._labeler)
             raise ValueError(
             "Constraint/Cone {} needs to be added before removal.".format(c_name))
-        self._solver_model.removecons(lq)
-        self._solver_model.removecones(cones)
-        lq_num = self._solver_model.getnumcon()
-        cone_num = self._solver_model.getnumcone()
-        for c in lq:
-            self._symbol_map.removeSymbol(c)
-            self._labeler.remove_obj(c)
-            del self._pyomo_con_to_solver_con_map[c]
-        for c in cones:
-            self._symbol_map.removeSymbol(c)
-            self._labeler.remove_obj(c)
-            del self._pyomo_cone_to_solver_cone_map[c]
         self._solver_con_to_pyomo_con_map = dict(zip(
             range(lq_num),self._pyomo_con_to_solver_con_map.keys()))
         self._solver_cone_to_pyomo_cone_map = dict(zip(
             range(cone_num),self._pyomo_cone_to_solver_cone_map.keys()))
-        self._cons_append_offset = lq_num
-        self._cones_append_offset = cone_num
-        for c in solver_cons:
-            for v in self._vars_referenced_by_con[c]:
-                self._referenced_variables[v] -= 1
-    
+        for i,c in enumerate(self._pyomo_con_to_solver_con_map):
+            self._pyomo_con_to_solver_con_map[c] = i
+        for i,c in enumerate(self._pyomo_cone_to_solver_cone_map):
+            self._pyomo_cone_to_solver_cone_map[c] = i
+        
+
     def update_var(self, solver_var):
+        """
+        Update a single variable in solver model. This method allows fixing/unfixing,
+        changing variable type and bounds.
+
+        Parameters
+        ----------
+        solver_var: Var
+        """
+
         self.update_vars(solver_var)
         
     def update_vars(self, *solver_vars):
         """
-        Update variable(s) in the solver's model.
-        This method allows fixing/unfixing variables, changing the 
-        variable bounds and updating the variable types.
-        Passing a single scalar var, much like other interfaces
-        is perfectly valid, but a user can also pass several variables
-        as arguments to change several variables at a time. This functionality
-        has been introduced with the list unpacking operator in mind.
+        Update multiple scalar variables in solver model. This method allows fixing/unfixing,
+        changing variable types and bounds.
 
-        Parameters:
-        *solver_vars: scalar Vars or single _VarData, separated by commas
+        Parameters
+        ----------
+        *solver_var: Constraint (scalar Constraint or single _ConstraintData)
         """
         try:
-            var_ids = [self._pyomo_var_to_solver_var_map[v] for v in solver_vars]
-        except KeyError as ev:
-            v_name = self._symbol_map.getSymbol(ev, self._labeler)
+            var_ids = []
+            for v in solver_vars:
+                var_ids.append(self._pyomo_var_to_solver_var_map[v])
+            vtypes = list(map(self._mosek_vartype_from_var, solver_vars))
+            lbs, ubs, bound_types = zip(*[self._mosek_bounds(
+                *p.bounds) for p in solver_vars])
+            self._solver_model.putvartypelist(var_ids, vtypes)
+            self._solver_model.putvarboundlist(var_ids, bound_types, lbs, ubs)
+        except KeyError:
+            print(v.name)
+            v_name = self._symbol_map.getSymbol(v, self._labeler)
             raise ValueError(
             "Variable {} needs to be added before it can be modified.".format(
                 v_name))
-        vtypes = list(map(self._mosek_vartype_from_var, solver_vars))
-        lbs, ubs, bound_types = zip(*[self._mosek_bounds(
-            *p.bounds) for p in solver_vars])
-        self._solver_model.putvartypelist(var_ids, vtypes)
-        self._solver_model.putvarboundlist(var_ids, bound_types, lbs, ubs)
-    
+        
     def _add_column(self, var, obj_coef, constraints, coefficients):
-        self._add_var(var)
-        self._solver_model.putcj(self._vars_append_offset-1, obj_coef)
+        self.add_var(var)
+        var_num = self._solver_model.getnumvar()
+        self._solver_model.putcj(var_num-1, obj_coef)
         self._solver_model.putacol(
-            self._vars_append_offset-1, constraints, coefficients)
+            var_num-1, constraints, coefficients)
         self._referenced_variables[var] = len(constraints)
 
 

@@ -81,25 +81,26 @@ class MOSEKPersistentTests(unittest.TestCase):
         m.z = pmo.variable()
         m.c1 = pmo.conic.rotated_quadratic.as_domain(2, m.x, [m.y])
         m.c2 = pmo.conic.quadratic(m.x, [m.y, m.z])
-        m.c3 = pmo.constraint(m.z > 0)
-        m.c4 = pmo.constraint(m.x + m.y > 0)
+        m.c3 = pmo.constraint(m.z >= 0)
+        m.c4 = pmo.constraint(m.x + m.y >= 0)
         opt = pmo.SolverFactory('mosek_persistent')
         opt.set_instance(m)
 
-        self.assertEqual(opt._solver_model.getnumcon(),2)
+        self.assertEqual(opt._solver_model.getnumcon(),5)
         self.assertEqual(opt._solver_model.getnumcone(),2)
         
-        opt.remove_constraint(m.c1)
+        opt.remove_block(m.c1)
         self.assertEqual(opt._solver_model.getnumcon(),2)
         self.assertEqual(opt._solver_model.getnumcone(),1)
 
         opt.remove_constraints(m.c2, m.c3)
         self.assertEqual(opt._solver_model.getnumcon(),1)
         self.assertEqual(opt._solver_model.getnumcone(),0)
-
-        opt.add_constraint(m.c1)
-        self.assertEqual(opt._solver_model.getnumcone(),1)
+        
         self.assertRaises(ValueError,opt.remove_constraint,m.c2)
+        opt.add_constraint(m.c2)
+        opt.add_block(m.c1)
+        self.assertEqual(opt._solver_model.getnumcone(),2)
 
     def test_column_addition(self):
         '''
@@ -122,7 +123,6 @@ class MOSEKPersistentTests(unittest.TestCase):
         opt.add_column(m, m.new_var, 1, [m.c2, m.c3], [1,3])
 
         self.assertEqual(opt._solver_model.getnumvar(), 4)
-        self.assertEqual(len(opt._solver_model.getc()),4)
 
         opt.solve(m)
         for i,v in enumerate([m.x, m.y, m.z, m.new_var]):
@@ -159,7 +159,9 @@ class MOSEKPersistentTests(unittest.TestCase):
         m.z = aml.Var()
 
         opt.update_vars(m.x, m.y)
-        self.assertRaises(ValueError, opt.update_var(m.z))
+        self.assertRaises(ValueError, opt.update_var, m.z)
+        opt.add_var(m.z)
+        
         opt.solve(m)
         self.assertAlmostEqual(m.x.value, int_sol_to_get[0], places = 1)
         self.assertAlmostEqual(m.y.value, int_sol_to_get[1], places = 1)
