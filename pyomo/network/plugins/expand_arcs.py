@@ -11,13 +11,13 @@
 import logging
 logger = logging.getLogger('pyomo.network')
 
-from six import next, iteritems, itervalues
+from six import iteritems, itervalues
 
 from pyomo.common.modeling import unique_component_name
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.base.indexed_component import UnindexedComponent_set
-from pyomo.core.base import Transformation, Var, Block, SortComponents, TransformationFactory
+from pyomo.core.base import Transformation, Block, SortComponents, TransformationFactory
 
 from pyomo.network import Arc
 from pyomo.network.util import replicate_var
@@ -72,7 +72,6 @@ class ExpandArcs(Transformation):
         matched_ports = ComponentMap()
 
         for arc in instance.component_data_objects(**obj_iter_kwds):
-            ports = ComponentSet(arc.ports)
             ref = None
 
             for p in arc.ports:

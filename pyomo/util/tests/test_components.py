@@ -7,31 +7,32 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from six.moves import zip_longest
 
 import pyutilib.th as unittest
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import pyomo.kernel as pmo
 from pyomo.util.components import iter_component, rename_components
 
 class TestUtilComponents(unittest.TestCase):
 
     def test_rename_components(self):
-        model = pe.ConcreteModel()
-        model.x = pe.Var([1, 2, 3], bounds=(-10, 10), initialize=5.0)
-        model.z = pe.Var(bounds=(10, 20))
-        model.obj = pe.Objective(expr=model.z + model.x[1])
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var([1, 2, 3], bounds=(-10, 10), initialize=5.0)
+        model.z = pyo.Var(bounds=(10, 20))
+        model.obj = pyo.Objective(expr=model.z + model.x[1])
 
         def con_rule(m, i):
             return m.x[i] + m.z == i
-        model.con = pe.Constraint([1, 2, 3], rule=con_rule)
-        model.zcon = pe.Constraint(expr=model.z >= model.x[2])
-        model.b = pe.Block()
-        model.b.bx = pe.Var([1,2,3], initialize=42)
-        model.b.bz = pe.Var(initialize=42)
+        model.con = pyo.Constraint([1, 2, 3], rule=con_rule)
+        model.zcon = pyo.Constraint(expr=model.z >= model.x[2])
+        model.b = pyo.Block()
+        model.b.bx = pyo.Var([1,2,3], initialize=42)
+        model.b.bz = pyo.Var(initialize=42)
 
-        c_list = list(model.component_objects(ctype=[pe.Var,pe.Constraint,pe.Objective]))
+        c_list = list(model.component_objects(ctype=[pyo.Var,pyo.Constraint,pyo.Objective]))
         name_map = rename_components(model=model,
                                      component_list=c_list,
                                      prefix='scaled_')
@@ -54,15 +55,15 @@ class TestUtilComponents(unittest.TestCase):
             self.assertEqual(id(i), id(j))
 
     def test_iter_component_base(self):
-        model = pe.ConcreteModel()
-        model.x = pe.Var([1, 2, 3], initialize=0)
-        model.z = pe.Var(initialize=0)
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var([1, 2, 3], initialize=0)
+        model.z = pyo.Var(initialize=0)
 
         def con_rule(m, i):
             return m.x[i] + m.z == i
 
-        model.con = pe.Constraint([1, 2, 3], rule=con_rule)
-        model.zcon = pe.Constraint(expr=model.z >= model.x[2])
+        model.con = pyo.Constraint([1, 2, 3], rule=con_rule)
+        model.zcon = pyo.Constraint(expr=model.z >= model.x[2])
 
         self.assertSameComponents(list(iter_component(model.x)), list(model.x.values()))
         self.assertSameComponents(list(iter_component(model.z)), [model.z[None]])

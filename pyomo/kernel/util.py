@@ -20,7 +20,6 @@ from pyomo.core.kernel.base import \
      _no_ctype,
      _convert_ctype,
      _convert_descend_into)
-from pyomo.core.kernel.block import block
 
 import six
 

@@ -118,12 +118,6 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         prob.number_of_continuous_variables = self._instance.statistics.number_of_continuous_variables
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
         #
-        from pyomo.core import maximize
-        ##if self._instance.sense == maximize:
-            ##prob.sense = pyomo.opt.ProblemSense.maximize
-        ##else:
-            ##prob.sense = pyomo.opt.ProblemSense.minimize
-        #
         # SOLUTION(S)
         #
         self._instance.solutions.store_to(results)

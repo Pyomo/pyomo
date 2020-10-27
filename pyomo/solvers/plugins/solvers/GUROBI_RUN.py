@@ -16,7 +16,7 @@ import re
 This script is run using the Gurobi/system python. Do not assume any third party packages
 are available!
 """
-from gurobipy import *
+from gurobipy import gurobi, read, GRB
 import sys
 if sys.version_info[0] < 3:
     from itertools import izip as zip

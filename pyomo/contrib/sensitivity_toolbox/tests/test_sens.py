@@ -13,13 +13,18 @@ Unit Tests for interfacing with sIPOPT and k_aug
 """
 
 import pyutilib.th as unittest
+from six import StringIO
+import logging
 
-from pyomo.environ import * 
+from pyomo.environ import ConcreteModel, Param, Var, Block,  Suffix, value
 from pyomo.opt import SolverFactory
 from pyomo.dae import ContinuousSet
 from pyomo.common.dependencies import scipy_available
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr.current import identify_variables
-from pyomo.contrib.sensitivity_toolbox.sens import sipopt, kaug
+from pyomo.contrib.sensitivity_toolbox.sens import sipopt, kaug, sensitivity_calculation
+import pyomo.contrib.sensitivity_toolbox.examples.parameter as param_ex
+import pyomo.contrib.sensitivity_toolbox.examples.parameter_kaug as param_kaug_ex
 import pyomo.contrib.sensitivity_toolbox.examples.feedbackController as fc
 import pyomo.contrib.sensitivity_toolbox.examples.rangeInequality as ri
 import pyomo.contrib.sensitivity_toolbox.examples.HIV_Transmission as hiv
@@ -27,6 +32,87 @@ import pyomo.contrib.sensitivity_toolbox.examples.HIV_Transmission as hiv
 opt = SolverFactory('ipopt_sens', solver_io='nl')
 opt_kaug = SolverFactory('k_aug',solver_io='nl')
 opt_dotsens = SolverFactory('dot_sens',solver_io='nl')
+
+
+class FunctionDeprecationTest(unittest.TestCase):
+
+    @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
+    def test_sipopt_deprecated(self):
+        m = param_ex.create_model()
+        m.perturbed_eta1 = Param(initialize = 4.0)
+        m.perturbed_eta2 = Param(initialize = 1.0)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.sensitivity_toolbox', logging.WARNING):
+            sipopt(m,[m.eta1,m.eta1],
+                   [m.perturbed_eta1,m.perturbed_eta2],
+                   cloneModel=False)    
+        self.assertIn("DEPRECATED: The sipopt function has been deprecated. Use the "
+                      "sensitivity_calculation() function with method='sipopt' to access",
+                      output.getvalue().replace('\n', ' '))
+
+
+    @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
+    def test_sipopt_equivalent(self):
+        m1 = param_ex.create_model()
+        m1.perturbed_eta1 = Param(initialize = 4.0)
+        m1.perturbed_eta2 = Param(initialize = 1.0)
+
+        m2 = param_ex.create_model()
+        m2.perturbed_eta1 = Param(initialize = 4.0)
+        m2.perturbed_eta2 = Param(initialize = 1.0)
+
+        m11 = sipopt(m1,[m1.eta1,m1.eta2],
+               [m1.perturbed_eta1,m1.perturbed_eta2],
+                    cloneModel=True)        
+        m22 = sensitivity_calculation('sipopt',m2,[m2.eta1,m2.eta2],
+                                [m2.perturbed_eta1,m2.perturbed_eta2],
+                                cloneModel=True)        
+        out1 = StringIO()
+        out2 = StringIO()
+        m11._sipopt_data.constList.pprint(ostream=out1)
+        m22._sipopt_data.constList.pprint(ostream=out2)
+        self.assertMultiLineEqual(out1.getvalue(), out2.getvalue())
+
+    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
+    @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")  
+    def test_kaug_deprecated(self):
+        m = param_ex.create_model()
+        m.perturbed_eta1 = Param(initialize = 4.0)
+        m.perturbed_eta2 = Param(initialize = 1.0)
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.sensitivity_toolbox', logging.WARNING):
+            kaug(m,[m.eta1,m.eta1],
+                 [m.perturbed_eta1,m.perturbed_eta2],
+                 cloneModel=False)        
+        self.assertIn("DEPRECATED: The kaug function has been deprecated. Use the "
+                      "sensitivity_calculation() function with method='kaug'",
+                      output.getvalue().replace('\n', ' '))
+
+    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
+    @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")  
+    def test_kaug_equivalent(self):
+        m1 = param_ex.create_model()
+        m1.perturbed_eta1 = Param(initialize = 4.0)
+        m1.perturbed_eta2 = Param(initialize = 1.0)
+
+        m2 = param_ex.create_model()
+        m2.perturbed_eta1 = Param(initialize = 4.0)
+        m2.perturbed_eta2 = Param(initialize = 1.0)
+
+        m11 = kaug(m1,[m1.eta1,m1.eta2],
+                   [m1.perturbed_eta1,m1.perturbed_eta2],
+                   cloneModel=True)        
+        m22 = sensitivity_calculation('kaug',m2,[m2.eta1,m2.eta2],
+                                      [m2.perturbed_eta1,m2.perturbed_eta2],
+                                      cloneModel=True)        
+        out1 = StringIO()
+        out2 = StringIO()
+        m11.pprint(ostream=out1)
+        m22.pprint(ostream=out2)
+        self.assertMultiLineEqual(out1.getvalue(), out2.getvalue())
+
 
 class TestSensitivityToolbox(unittest.TestCase):
 
@@ -49,35 +135,30 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         # verify ValueError thrown when param and perturb list are different
         # lengths
-        try:
-            Result = sipopt(m,list_one,list_two)
-            self.fail("Expected ValueError: for different length lists")
-        except ValueError:
-            pass
+        with self.assertRaises(ValueError) as context:
+            Result = sensitivity_calculation('sipopt',m,list_one,list_two)
+        self.assertTrue("Length of paramSubList argument does not equal "
+                        "length of perturbList" in str(context.exception))
 
         # verify ValueError thrown when param list has a Var in it
-        try:
-            Result = sipopt(m,list_three,list_two)
-            self.fail("Expected ValueError: variable sent through paramSubList")
-        except ValueError:
-            pass
+        with self.assertRaises(ValueError) as context:
+            Result = sensitivity_calculation('sipopt',m,list_three,list_one)
+        self.assertTrue("paramSubList argument is expecting a list of Params" in str(context.exception))
 
         # verify ValueError thrown when perturb list has Var in it
-        try:
-            Result = sipopt(m,list_one,list_three)
-            self.fail("Expected ValueError: variable sent through perturbList")
-        except ValueError:
-            pass
+        with self.assertRaises(ValueError) as context:
+            Result = sensitivity_calculation('sipopt',m,list_one,list_three)
+        self.assertTrue("perturbList argument is expecting a list of Params" in str(context.exception))
 
         # verify ValueError thrown when param list has an unmutable param
-        try:
-            Result = sipopt(m,list_four,list_one)
-            self.fail("Expected ValueError:" 
-                       "unmutable param sent through paramSubList")
-        except ValueError:
-            pass
+        with self.assertRaises(ValueError) as context:
+            Result = sensitivity_calculation('sipopt',m,list_four,list_one)
+        self.assertTrue("parameters within paramSubList must be mutable" in str(context.exception))
 
-
+        # verify ValueError thrown when an invalid method is specified
+        with self.assertRaises(ValueError) as context:
+            Result = sensitivity_calculation('foo',m,list_four,list_one)
+        self.assertTrue("method should be 'sipopt' or 'kaug'" in str(context.exception))
 
     # test feedbackController Solution when the model gets cloned
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
@@ -90,7 +171,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_orig.perturbed_a = Param(initialize=-0.25)
         m_orig.perturbed_H = Param(initialize=0.55)
 
-        m_sipopt = sipopt(m_orig,[m_orig.a,m_orig.H],
+        m_sipopt = sensitivity_calculation('sipopt',m_orig,[m_orig.a,m_orig.H],
                             [m_orig.perturbed_a,m_orig.perturbed_H],
                             cloneModel=True)        
   
@@ -185,7 +266,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_orig.perturbed_a = Param(initialize=-0.25)
         m_orig.perturbed_H = Param(initialize=0.55)
 
-        m_sipopt = sipopt(m_orig,[m_orig.a,m_orig.H],
+        m_sipopt = sensitivity_calculation('sipopt',m_orig,[m_orig.a,m_orig.H],
                             [m_orig.perturbed_a,m_orig.perturbed_H],
                             cloneModel=False)
 
@@ -257,8 +338,6 @@ class TestSensitivityToolbox(unittest.TestCase):
         self.assertAlmostEqual(value(m_sipopt.J),0.0048956783,8)
 
 
-
-
     # test indexed param mapping to var and perturbed values
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
@@ -282,7 +361,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         m.aaDelta = Param(initialize =0.0001001)
 
-        m_sipopt = sipopt(m, [m.eps,m.qq,m.aa],
+        m_sipopt = sensitivity_calculation('sipopt',m, [m.eps,m.qq,m.aa],
                              [m.epsDelta,m.qqDelta,m.aaDelta])
 
         # param to var data
@@ -316,7 +395,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         m.pert_a = Param(initialize=0.01)
         m.pert_b = Param(initialize=1.01)
 
-        m_sipopt = sipopt(m,[m.a,m.b], [m.pert_a,m.pert_b])
+        m_sipopt = sensitivity_calculation('sipopt',m,[m.a,m.b], [m.pert_a,m.pert_b])
 
         # verify substitutions in equality constraint
         self.assertTrue(m_sipopt.C_equal.lower.ctype is Param and
@@ -357,8 +436,7 @@ class TestSensitivityToolbox(unittest.TestCase):
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_parameter_example(self):
     
-        from pyomo.contrib.sensitivity_toolbox.examples.parameter import run_example
-        d = run_example()
+        d = param_ex.run_example()
         
         d_correct = {'eta1':4.5, 'eta2':1.0, 'x1_init':0.15, 'x2_init':0.15, 'x3_init':0.0,
             'cost_sln':0.5, 'x1_sln':0.5, 'x2_sln':0.5, 'x3_sln':0.0, 'eta1_pert':4.0,
@@ -372,53 +450,7 @@ class TestSensitivityToolbox(unittest.TestCase):
     
     
     # Test kaug
-    # Perform the same tests as ipopt_sens 
-    # test arguments
-    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
-    @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
-    def test_kaug_bad_arg_kaug(self):
-        m = ConcreteModel()
-        m.t = ContinuousSet(bounds=(0,1))
-
-        m.a = Param(initialize=1, mutable=True)
-        m.b = Param(initialize=2, mutable=True)
-        m.c = Param(initialize=3, mutable=False)
-
-        m.x = Var(m.t)
-
-        list_one = [m.a,m.b]
-        list_two = [m.a,m.b,m.c]
-        list_three = [m.a, m.x]
-        list_four = [m.a,m.c]
-
-        # verify ValueError thrown when param and perturb list are different
-        # lengths
-        with self.assertRaises(ValueError):
-            Result = kaug(m, list_one, list_two)
-
-        # verify ValueError thrown when param list has a Var in it
-        try:
-            Result = kaug(m,list_three,list_two)
-            self.fail("Expected ValueError: variable sent through paramSubList")
-        except ValueError:
-            pass
-
-        # verify ValueError thrown when perturb list has Var in it
-        try:
-            Result = kaug(m,list_one,list_three)
-            self.fail("Expected ValueError: variable sent through perturbList")
-        except ValueError:
-            pass
-
-        # verify ValueError thrown when param list has an unmutable param
-        try:
-            Result = kaug(m,list_four,list_one)
-            self.fail("Expected ValueError:"
-                       "unmutable param sent through paramSubList")
-        except ValueError:
-            pass
-
-
+    # Perform the same tests as for sipopt
     # test feedbackController Solution when the model gets cloned
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
@@ -430,7 +462,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_orig.perturbed_a = Param(initialize=-0.25)
         m_orig.perturbed_H = Param(initialize=0.55)
 
-        m_kaug = kaug(m_orig,[m_orig.a,m_orig.H],
+        m_kaug = sensitivity_calculation('kaug',m_orig,[m_orig.a,m_orig.H],
                                [m_orig.perturbed_a,m_orig.perturbed_H],
                                 cloneModel=True)
 
@@ -525,7 +557,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_orig.perturbed_a = Param(initialize=-0.25)
         m_orig.perturbed_H = Param(initialize=0.55)
 
-        m_kaug = kaug(m_orig,[m_orig.a,m_orig.H],
+        m_kaug = sensitivity_calculation('kaug',m_orig,[m_orig.a,m_orig.H],
                              [m_orig.perturbed_a,m_orig.perturbed_H],
                              cloneModel=False)
 
@@ -612,7 +644,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         m.aaDelta = Param(initialize =0.0001001)
 
-        m_kaug = kaug(m, [m.eps,m.qq,m.aa],
+        m_kaug = sensitivity_calculation('kaug',m, [m.eps,m.qq,m.aa],
                          [m.epsDelta,m.qqDelta,m.aaDelta])
 
         # param to var data
@@ -648,7 +680,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         # m_kaug = kaug(m,[m.a,m.b], [m.pert_a,m.pert_b])
         # verify ValueError thrown when param list has an unmutable param
         with self.assertRaises(Exception) as context:
-            m_kaug = kaug(m,[m.a,m.b], [m.pert_a,m.pert_b])
+            m_kaug = sensitivity_calculation('kaug',m,[m.a,m.b], [m.pert_a,m.pert_b])
         self.assertTrue('kaug does not support inequality constraints.' in str(context.exception))
 
     # Test example `parameter_kaug.py`
@@ -656,8 +688,7 @@ class TestSensitivityToolbox(unittest.TestCase):
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")    
     def test_parameter_example_kaug(self):
 
-        from parameter_kaug import example
-        d = example()
+        d = param_kaug_ex.run_example()
 
         d_correct = {'eta1':4.5, 'eta2':1.0, 'x1_init':0.15, 'x2_init':0.15, 'x3_init':0.0,
                      'eta1_pert':4.0, 'eta2_pert':1.0, 'x1_pert':0.3333333,'x2_pert':0.6666667,

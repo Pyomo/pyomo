@@ -1,5 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pickle
-import abc
 
 import pyutilib.th as unittest
 import pyomo.kernel as pmo
@@ -29,7 +38,6 @@ from pyomo.core.kernel.piecewise_library.transforms_nd import \
 import pyomo.core.kernel.piecewise_library.transforms_nd as \
     transforms_nd
 import pyomo.core.kernel.piecewise_library.util as util
-from pyomo.core.base.block import Block
 
 # for the multi-dimensional piecewise tests
 _test_v = None

@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import gc
 import sys
 import time
 import contextlib
@@ -41,7 +40,6 @@ from pyomo.pysp.scenariotree.instance_factory import \
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
 from pyomo.pysp.util.misc import (launch_command,
                                   load_extensions)
-import pyomo.pysp.phsolverserverutils
 
 #
 # utility method to construct an option parser for ph arguments,
@@ -1257,9 +1255,8 @@ def run_ph(options, ph):
 
 def exec_runph(options):
 
-    import pyomo.environ
-
     start_time = time.time()
+    import pyomo.environ
 
     try:
 

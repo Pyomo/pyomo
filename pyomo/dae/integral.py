@@ -15,7 +15,6 @@ from pyomo.core.base.expression import (Expression,
                                         _GeneralExpressionData,
                                         SimpleExpression,
                                         IndexedExpression)
-from pyomo.dae.misc import create_access_function, create_partial_expression
 
 __all__ = ('Integral', )
 

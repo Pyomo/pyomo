@@ -15,11 +15,11 @@ __all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type',
 
 import sys
 import logging
-from six import iteritems, PY3, string_types, text_type, binary_type
+from six import iteritems, PY3
 
 from pyomo.core.expr.expr_common import \
     (_add, _sub, _mul, _div, _pow,
-     _neg, _abs, _inplace, _radd,
+     _neg, _abs, _radd,
      _rsub, _rmul, _rdiv, _rpow,
      _iadd, _isub, _imul, _idiv,
      _ipow, _lt, _le, _eq)
@@ -118,6 +118,7 @@ if PY3:
 else:
     native_types.add(unicode)
     native_boolean_types.add(unicode)
+
 native_types.update( native_numeric_types )
 native_types.update( native_integer_types )
 native_types.update( native_boolean_types )

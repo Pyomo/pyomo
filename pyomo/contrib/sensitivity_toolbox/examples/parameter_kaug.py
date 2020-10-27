@@ -15,7 +15,7 @@
 
 
 from pyomo.environ import * 
-from pyomo.contrib.sensitivity_toolbox.sens import kaug
+from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
 def create_model():
     ''' Create a concrete Pyomo model for this example
@@ -35,7 +35,7 @@ def create_model():
     
     return m 
 
-def example(print_flag=True):
+def run_example(print_flag=True):
     '''
     Execute the example
     
@@ -52,11 +52,9 @@ def example(print_flag=True):
     m.perturbed_eta2 = Param(initialize = 1.0)
 
 
-    m_kaug_dsdp = kaug(m,[m.eta1,m.eta2],
-                        [m.perturbed_eta1,m.perturbed_eta2],
-                        streamSoln=True)
-    
-
+    m_kaug_dsdp = sensitivity_calculation('kaug',m,[m.eta1,m.eta2],
+                                          [m.perturbed_eta1,m.perturbed_eta2],
+                                          streamSoln=True)    
     
     if print_flag:
         print("\nOriginal parameter values:")
@@ -99,4 +97,4 @@ def example(print_flag=True):
     return d
 
 if __name__=='__main__':
-    d = example()
+    d = run_example()

@@ -16,9 +16,7 @@ from __future__ import division, print_function, absolute_import
 __author__ = "John Eslick"
 
 import os
-import warnings
 import logging
-import re
 
 _log = logging.getLogger(__name__)
 
@@ -28,8 +26,6 @@ from pyomo.contrib.viewer.report import value_no_exception, get_residual
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _VarData
 from pyomo.core.base.constraint import _ConstraintData
-from pyomo.core.base.expression import _ExpressionData
-from pyomo.network.port import SimplePort
 from pyomo.core.base.param import _ParamData
 from pyomo.environ import Block, Var, Constraint, Param, Expression, value
 
@@ -119,7 +115,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
             self.setWindowTitle("Constraints")
         elif standard == "Param":
             components = Param
-            columns = ["name", "value", "_mutable"]
+            columns = ["name", "value", "mutable"]
             editable = ["value"]
             self.setWindowTitle("Parameters")
         elif standard == "Expression":
@@ -263,7 +259,7 @@ class ComponentDataItem(object):
             except:
                 return
         elif isinstance(self.data, _ParamData):
-            if not self.data._mutable: return
+            if not self.data.parent_component().mutable: return
             try:
                 self.data.value = val
             except:

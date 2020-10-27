@@ -17,12 +17,11 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.dependencies import (
     attempt_import, ModuleUnavailable, DeferredImportModule,
     DeferredImportIndicator, DeferredImportError,
-    _DeferredAnd, _DeferredOr
+    _DeferredAnd, _DeferredOr, check_min_version
 )
 
 import pyomo.common.tests.dep_mod as dep_mod
 from pyomo.common.tests.dep_mod import (
-    numpy, numpy_available,
     bogus_nonexisting_module as bogus_nem,
     bogus_nonexisting_module_available as has_bogus_nem,
 )
@@ -79,6 +78,8 @@ class TestDependencies(unittest.TestCase):
                                     defer_check=False)
         self.assertTrue(avail)
         self.assertTrue(inspect.ismodule(mod))
+        self.assertTrue(check_min_version(mod, '1.0'))
+        self.assertFalse(check_min_version(mod, '2.0'))
 
         mod, avail = attempt_import('pyomo.common.tests.dep_mod',
                                     minimum_version='2.0',
@@ -100,6 +101,16 @@ class TestDependencies(unittest.TestCase):
                 DeferredImportError, "Failed import "
                 "\(version 1.5 does not satisfy the minimum version 2.0\)"):
             mod.hello
+
+        # Verify check_min_version works with deferred imports
+
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod',
+                                    defer_check=True)
+        self.assertTrue(check_min_version(mod, '1.0'))
+
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod',
+                                    defer_check=True)
+        self.assertFalse(check_min_version(mod, '2.0'))
 
     def test_and_or(self):
         mod0, avail0 = attempt_import('pyutilib',

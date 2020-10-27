@@ -18,10 +18,10 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 from six.moves import xrange
 
-import pyomo.opt
-from pyomo.environ import *
+from pyomo.opt import check_available_solvers
+from pyomo.environ import ConcreteModel, RangeSet, Var, Set, Objective, Constraint, SolverFactory, AbstractModel
 
-solvers = pyomo.opt.check_available_solvers('glpk')
+solvers = check_available_solvers('glpk')
 
 # GAH: These tests been temporarily disabled. It is no longer the job of Var
 #      to validate its domain at the time of construction. It only needs to

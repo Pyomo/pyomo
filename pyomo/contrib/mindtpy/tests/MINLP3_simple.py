@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Re-implementation of example 1 of Quesada and Grossmann.
 
 Re-implementation of Quesada example 2 MINLP test problem in Pyomo
@@ -20,10 +30,8 @@ Ref:
 """
 from __future__ import division
 
-from six import iteritems
-
 from pyomo.environ import (Binary, ConcreteModel, Constraint, Reals,
-                           Objective, Param, RangeSet, Var, exp, minimize, log)
+                           Objective, RangeSet, Var, minimize, log)
 
 
 class SimpleMINLP(ConcreteModel):

@@ -11,7 +11,8 @@ import pyutilib.th as unittest
 from pyomo.contrib.pynumero.dependencies import numpy as np, numpy_available
 if not numpy_available:
     raise unittest.SkipTest('pynumero MA27 tests require numpy')
-from pyomo.contrib.pynumero.linalg.ma27 import *
+import ctypes
+from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
 
 
 @unittest.skipIf(not MA27Interface.available(), reason='MA27 not available')

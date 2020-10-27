@@ -28,11 +28,9 @@ except ImportError:                         #pragma:nocover
 from pyomo.common.collections import ComponentMap
 from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
-                        CounterLabeler,
-                        Objective, SOSConstraint, Set,
+                        Objective, SOSConstraint,
                         ComponentUID)
-from pyomo.core.base.block import (_BlockData,
-                                   generate_cuid_names)
+from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.repn import generate_standard_repn
 from pyomo.pysp.phutils import (BasicSymbolMap,
@@ -42,7 +40,6 @@ from pyomo.pysp.phutils import (BasicSymbolMap,
                                 extractComponentIndices,
                                 find_active_objective)
 
-import six
 from six import iterkeys, iteritems, itervalues
 from six.moves import xrange
 
@@ -1529,12 +1526,12 @@ class ScenarioTree(object):
 
             if tree_node_name not in node_stage_ids:
                 raise ValueError("No stage is assigned to tree node=%s"
-                                 % (tree_node.name))
+                                 % (tree_node_name))
 
             stage_name = value(node_stage_ids[tree_node_name])
             if stage_name not in self._stage_map:
                 raise ValueError("Unknown stage=%s assigned to tree node=%s"
-                                 % (stage_name, tree_node.name))
+                                 % (stage_name, tree_node_name))
 
             node_stage = self._stage_map[stage_name]
             new_tree_node = ScenarioTreeNode(

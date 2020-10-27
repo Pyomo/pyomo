@@ -9,19 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
-import math
 import sys
-
 import pyutilib.th as unittest
 import tempfile
-import sys
 import os
 import shutil
-import json
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as rapper
-from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 import pyomo as pyomoroot
 
 solvername = "ipopt" # could use almost any solver
