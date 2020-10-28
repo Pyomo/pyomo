@@ -9,7 +9,6 @@ solvers:
     coliny:
         name: 'asl:coliny'
     #
-    mosek:
     mosek_direct:
             name: mosek
             solver_io: python

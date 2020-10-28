@@ -45,15 +45,15 @@ MissingSuffixFailures = {}
 # MOSEK
 #
 
-ExpectedFailures['mosek', 'python', 'QCP_simple'] = \
+ExpectedFailures['mosek_direct', 'python', 'QCP_simple'] = \
     (lambda v: True,
      "Conic constraints not yet handled by this interface")
 
-ExpectedFailures['mosek', 'python', 'QCP_simple_nosuffixes'] = \
+ExpectedFailures['mosek_direct', 'python', 'QCP_simple_nosuffixes'] = \
     (lambda v: True,
      "Conic constraints not yet handled by this interface")
 
-ExpectedFailures['mosek', 'python', 'MIQCP_simple'] = \
+ExpectedFailures['mosek_direct', 'python', 'MIQCP_simple'] = \
     (lambda v: True,
      "Conic constraints not yet handled by this interface")
 #
