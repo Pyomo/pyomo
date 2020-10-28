@@ -19,7 +19,6 @@ from pyomo.common.dependencies import networkx as nx
 from itertools import combinations
 
 import copy
-import six
 
 logger = getLogger('pyomo.contrib.community_detection')
 
