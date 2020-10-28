@@ -48,7 +48,10 @@ def solve_subproblem(solve_data, config):
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
 
     MindtPy.MindtPy_linear_cuts.deactivate()
+    # TODO: Do we really need to calculate tmp_duals by default?
+    # if config.use_dual and (config.strategy in {'OA', 'ECP', 'LOA'} or config.init_strategy == 'feas_pump'):
     fixed_nlp.tmp_duals = ComponentMap()
+    # tem_duals are used to add oa cuts for nonlinear equality constraint.
     # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
     # The values of the duals are computed as follows: (Complementary Slackness)
     #
@@ -71,7 +74,8 @@ def solve_subproblem(solve_data, config):
         try:
             fixed_nlp.tmp_duals[c] = c_geq * max(
                 0, c_geq*(rhs - value(c.body)))
-        except (ValueError, OverflowError) as error:
+        except (ValueError, OverflowError, AttributeError) as error:
+            # AttributeError is included to condition when value(c.body) belongs to complex type
             fixed_nlp.tmp_duals[c] = None
             evaluation_error = True
     if evaluation_error:

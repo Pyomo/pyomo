@@ -87,6 +87,11 @@ def MindtPy_iteration_loop(solve_data, config):
                     'NLP subproblem failed to converge within the time limit.')
                 solve_data.results.solver.termination_condition = tc.maxTimeLimit
                 break
+            elif fixed_nlp_result.solver.termination_condition is tc.maxEvaluations:
+                config.logger.info(
+                    'NLP subproblem failed due to maxEvaluations.')
+                solve_data.results.solver.termination_condition = tc.maxEvaluations
+                break
             else:
                 handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                     solve_data, config)
@@ -339,6 +344,10 @@ def bound_fix(solve_data, config, last_iter_cuts):
                 config.logger.info(
                     'NLP subproblem failed to converge within the time limit.')
                 solve_data.results.solver.termination_condition = tc.maxTimeLimit
+            elif fixed_nlp_result.solver.termination_condition is tc.maxEvaluations:
+                config.logger.info(
+                    'NLP subproblem failed due to maxEvaluations.')
+                solve_data.results.solver.termination_condition = tc.maxEvaluations
             else:
                 handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                     solve_data, config)
