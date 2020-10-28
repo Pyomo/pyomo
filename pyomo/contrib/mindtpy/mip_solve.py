@@ -99,36 +99,37 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
         with time_code(solve_data.timing, 'master'):
             master_mip_results = masteropt.solve(
                 solve_data.mip, tee=config.mip_solver_tee, **mip_args)
-
-        if master_mip_results.solver.termination_condition is tc.optimal:
-            if config.single_tree and config.add_no_good_cuts is False:
-                if solve_data.objective_sense == minimize:
-                    solve_data.LB = max(
-                        master_mip_results.problem.lower_bound, solve_data.LB)
-                    solve_data.LB_progress.append(solve_data.LB)
-                else:
-                    solve_data.UB = min(
-                        master_mip_results.problem.upper_bound, solve_data.UB)
-                    solve_data.UB_progress.append(solve_data.UB)
-
-        elif master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
-            # Linear solvers will sometimes tell me that it's infeasible or
-            # unbounded during presolve, but fails to distinguish. We need to
-            # resolve with a solver option flag on.
-            master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
-                solve_data.mip, config)
-
-        if loa_projection:
-            solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
-
-        return solve_data.mip, master_mip_results
     except ValueError:
-        solve_data.mip.pprint()
         config.logger.warning("ValueError: Cannot load a SolverResults object with bad status: error. "
                               "MIP solver failed. This usually happens in the single-tree GOA algorithm. "
                               "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
                               "No integer solution is found, so the cplex solver will report an error status. ")
         return None, None
+
+    if master_mip_results.solver.termination_condition is tc.optimal:
+        if config.single_tree and config.add_no_good_cuts is False:
+            if solve_data.objective_sense == minimize:
+                solve_data.LB = max(
+                    master_mip_results.problem.lower_bound, solve_data.LB)
+                solve_data.LB_progress.append(solve_data.LB)
+            else:
+                solve_data.UB = min(
+                    master_mip_results.problem.upper_bound, solve_data.UB)
+                solve_data.UB_progress.append(solve_data.UB)
+
+    elif master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
+        # Linear solvers will sometimes tell me that it's infeasible or
+        # unbounded during presolve, but fails to distinguish. We need to
+        # resolve with a solver option flag on.
+        master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
+            solve_data.mip, config)
+
+    if loa_projection:
+        solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
+        solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
+            'obj_limit')
+
+    return solve_data.mip, master_mip_results
 
 
 # The following functions deal with handling the solution we get from the above MIP solver function
@@ -388,8 +389,8 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
         MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
                                                                        solve_data.best_solution_found,
                                                                        discrete_only=False)
-        if MindtPy.MindtPy_linear_cuts.find_component('obj_limit') is not None:
-            MindtPy.MindtPy_linear_cuts.del_component('obj_limit')
+        # if MindtPy.MindtPy_linear_cuts.find_component('obj_limit') is not None:
+        #     MindtPy.MindtPy_linear_cuts.del_component('obj_limit')
         if solve_data.objective_sense == minimize:
             MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
                 expr=MindtPy.objective_value <= (1 - config.loa_coef) * value(solve_data.UB) + config.loa_coef * solve_data.LB)

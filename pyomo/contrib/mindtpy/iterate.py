@@ -362,7 +362,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
                     MindtPy.MindtPy_linear_cuts.no_good_cuts[i].deactivate()
             except KeyError:
                 config.logger.info('No-good cut deactivate failed.')
-        elif config.strategy == 'OA':
+        elif config.strategy in {'OA', 'LOA'}:
             MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
                 MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()
         # MindtPy.MindtPy_linear_cuts.oa_cuts.activate()

@@ -43,7 +43,8 @@ class TestMindtPy(unittest.TestCase):
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                bound_tolerance=1E-5)
+                                bound_tolerance=1E-5,
+                                )
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -140,7 +141,9 @@ class TestMindtPy(unittest.TestCase):
             print('\n Solving Proposal problem with Outer Approximation')
             results = opt.solve(model, strategy='LOA',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0])
+                                nlp_solver=required_solvers[0],
+                                init_strategy='rNLP',
+                                )
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -182,7 +185,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='LOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_no_good_cuts=True
+                                add_no_good_cuts=True,
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
