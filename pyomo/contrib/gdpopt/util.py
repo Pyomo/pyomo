@@ -172,7 +172,13 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
             expr=util_blk.objective_value, sense=main_obj.sense)
         # Add the new variable and constraint to the working lists
         util_blk.variable_list.append(util_blk.objective_value)
+        util_blk.continuous_var_list.append(util_blk.objective_value)
         util_blk.constraint_list.append(util_blk.objective_constr)
+        if util_blk.objective_constr.body.polynomial_degree() in (0, 1):
+            util_blk.linear_constraint_list.append(util_blk.objective_constr)
+        else:
+            util_blk.nonlinear_constraint_list.append(
+                util_blk.objective_constr)
 
 
 def a_logger(str_or_logger):
@@ -285,6 +291,14 @@ def build_ordered_component_lists(model, solve_data):
                 ctype=Constraint, active=True,
                 descend_into=(Block, Disjunct))))
     setattr(
+        util_blk, 'linear_constraint_list', list(c for c in model.component_data_objects(
+            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree in (0, 1)))
+    setattr(
+        util_blk, 'nonlinear_constraint_list', list(c for c in model.component_data_objects(
+            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree not in (0, 1)))
+    setattr(
         util_blk, 'disjunct_list', list(
             model.component_data_objects(
                 ctype=Disjunct, active=True,
@@ -317,6 +331,16 @@ def build_ordered_component_lists(model, solve_data):
             ctype=Var, descend_into=(Block, Disjunct))
         if v in var_set)
     setattr(util_blk, 'variable_list', var_list)
+    discrete_var_list = list(
+        v for v in model.component_data_objects(
+            ctype=Var, descend_into=(Block, Disjunct))
+        if v in var_set and v.is_integer())
+    setattr(util_blk, 'discrete_var_list', discrete_var_list)
+    continuous_var_list = list(
+        v for v in model.component_data_objects(
+            ctype=Var, descend_into=(Block, Disjunct))
+        if v in var_set and v.is_continuous())
+    setattr(util_blk, 'continuous_var_list', continuous_var_list)
 
 
 def setup_results_object(solve_data, config):
