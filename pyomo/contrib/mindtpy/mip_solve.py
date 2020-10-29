@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Master problem functions."""
 from __future__ import division
+from pyomo.opt.plugins import sol
 from pyomo.core import Constraint, Expression, Objective, minimize, value
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
@@ -9,7 +10,7 @@ from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbound
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.environ import *
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, IncumbentCallback_cplex
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
@@ -127,6 +128,11 @@ def solve_master(solve_data, config, feas_pump=False):
         masteropt.options['timelimit'] = config.time_limit
     if config.threads > 0:
         masteropt.options["threads"] = config.threads
+    if config.use_tabu_list:
+        tabu_list = masteropt._solver_model.register_callback(
+            IncumbentCallback_cplex)
+        tabu_list.solve_data = solve_data
+        tabu_list.opt = masteropt
     mip_args = dict(config.mip_solver_args)
     elapsed = get_main_elapsed_time(solve_data.timing)
     remaining = int(max(config.time_limit - elapsed, 1))

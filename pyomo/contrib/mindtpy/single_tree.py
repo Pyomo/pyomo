@@ -473,7 +473,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
     def __call__(self):
         """
         This is an inherent function in LazyConstraintCallback in cplex. 
-        This funtion is call whenever the a integer solution is found during the branch and bound process
+        This funtion is called whenever the a integer solution is found during the branch and bound process
         """
         solve_data = self.solve_data
         config = self.config
