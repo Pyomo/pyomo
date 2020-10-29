@@ -33,6 +33,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
     """
     with time_code(solve_data.timing, 'OA cut generation'):
         for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
+            # TODO: here the index is correlated to the duals, try if this can be fixed when temp duals are removed.
             if constr.body.polynomial_degree() in (0, 1):
                 continue
 
@@ -106,11 +107,7 @@ def add_ecp_cuts(target_model, solve_data, config,
         linearized constraint has been violated
     """
     with time_code(solve_data.timing, 'ECP cut generation'):
-        for constr in target_model.MindtPy_utils.constraint_list:
-
-            if constr.body.polynomial_degree() in (0, 1):
-                continue
-
+        for constr in target_model.MindtPy_utils.nonlinear_constraint_list:
             constr_vars = list(identify_variables(constr.body))
             jacs = solve_data.jacobians
 
@@ -236,10 +233,7 @@ def add_affine_cuts(solve_data, config):
         config.logger.info("Adding affine cuts")
         counter = 0
 
-        for constr in m.MindtPy_utils.constraint_list:
-            if constr.body.polynomial_degree() in (1, 0):
-                continue
-
+        for constr in m.MindtPy_utils.nonlinear_constraint_list:
             vars_in_constr = list(
                 identify_variables(constr.body))
             if any(var.value is None for var in vars_in_constr):

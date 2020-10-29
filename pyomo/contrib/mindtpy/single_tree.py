@@ -92,6 +92,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         with time_code(solve_data.timing, 'OA cut generation'):
             for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
                                             dual_values):
+                # TODO: here the index is correlated to the duals, try if this can be fixed when temp duals are removed.
                 if constr.body.polynomial_degree() in (0, 1):
                     continue
 
@@ -158,9 +159,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             config.logger.info("Adding affine cuts")
             counter = 0
 
-            for constr in m.MindtPy_utils.constraint_list:
-                if constr.body.polynomial_degree() in (1, 0):
-                    continue
+            for constr in m.MindtPy_utils.nonlinear_constraint_list:
 
                 vars_in_constr = list(
                     identify_variables(constr.body))
