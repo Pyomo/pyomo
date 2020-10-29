@@ -152,8 +152,6 @@ def solve_master(solve_data, config, feas_pump=False):
             master_mip_results = masteropt.solve(
                 solve_data.mip, tee=config.mip_solver_tee, **mip_args)
 
-        # if config.single_tree is False and config.add_no_good_cuts is False:
-
         if master_mip_results.solver.termination_condition is tc.optimal:
             if config.single_tree and config.add_no_good_cuts is False:
                 if main_objective.sense == minimize:

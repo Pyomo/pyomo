@@ -23,7 +23,7 @@ from pyomo.util.infeasible import log_infeasible_constraints
 from pyomo.contrib.mindtpy.tests.feasibility_pump1 import Feasibility_Pump1
 from pyomo.contrib.mindtpy.tests.feasibility_pump2 import Feasibility_Pump2
 
-required_solvers = ('ipopt', 'glpk', 'cplex')
+required_solvers = ('ipopt', 'glpk')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -58,17 +58,18 @@ class TestMindtPy(unittest.TestCase):
 
     def test_FP_8PP_Norm2(self):
         """Test the feasibility pump algorithm."""
-        with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
-            print(
-                '\n Solving 8PP problem using feasibility pump with squared Norm2 in mip projection problem')
-            results = opt.solve(model, strategy='feas_pump',
-                                mip_solver=required_solvers[2],
-                                nlp_solver=required_solvers[0],
-                                bound_tolerance=1E-5,
-                                fp_master_norm='L2')
-            log_infeasible_constraints(model)
-            self.assertTrue(is_feasible(model, self.get_config(opt)))
+        if SolverFactory('cplex').available():
+            with SolverFactory('mindtpy') as opt:
+                model = EightProcessFlowsheet()
+                print(
+                    '\n Solving 8PP problem using feasibility pump with squared Norm2 in mip projection problem')
+                results = opt.solve(model, strategy='feas_pump',
+                                    mip_solver=required_solvers[2],
+                                    nlp_solver=required_solvers[0],
+                                    bound_tolerance=1E-5,
+                                    fp_master_norm='L2')
+                log_infeasible_constraints(model)
+                self.assertTrue(is_feasible(model, self.get_config(opt)))
 
     def test_FP_8PP_Norm_infinity(self):
         """Test the feasibility pump algorithm."""

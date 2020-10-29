@@ -149,23 +149,22 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.objective.expr), 2.438447, places=2)
 
-    # TODO fix the bug with integer_to_binary
-    # def test_OA_Proposal_with_int_cuts(self):
-    #     """Test the outer approximation decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = ProposalModel()
-    #         print('\n Solving problem with Outer Approximation')
-    #         opt.solve(model, strategy='OA',
-    #                   mip_solver=required_solvers[1],
-    #                   nlp_solver=required_solvers[0],
-    #                   add_no_good_cuts=True,
-    #                   integer_to_binary=True,  # if we use lazy callback, we cannot set integer_to_binary True
-    #                   lazy_callback=True,
-    #                   iteration_limit=1)
+    def test_OA_Proposal_with_int_cuts(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            print('\n Solving problem with Outer Approximation')
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_no_good_cuts=True,
+                                integer_to_binary=True,
+                                single_tree=True,
+                                iteration_limit=1)
 
-    #         # self.assertIs(results.solver.termination_condition,
-    #         #               TerminationCondition.optimal)
-    #         self.assertAlmostEquals(value(model.obj.expr), 0.66555, places=2)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEquals(value(model.obj.expr), 0.66555, places=2)
 
 
 if __name__ == "__main__":

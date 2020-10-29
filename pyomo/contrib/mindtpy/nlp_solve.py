@@ -193,8 +193,8 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
         add_affine_cuts(solve_data, config)
-    elif config.strategy == 'PSC':
-        add_psc_cut(solve_data, config)
+    # elif config.strategy == 'PSC':
+    #     add_psc_cut(solve_data, config)
     # elif config.strategy == 'GBD':
     #     add_gbd_cut(solve_data, config)
 
@@ -366,7 +366,7 @@ def solve_feasibility_subproblem(solve_data, config):
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
     elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
-        config.logger.error('Feasibility NLP infeasible. '
+        config.logger.error('Feasibility subproblem infeasible. '
                             'This should never happen.')
         solve_data.should_terminate = True
         solve_data.results.solver.status = SolverStatus.error
@@ -378,7 +378,7 @@ def solve_feasibility_subproblem(solve_data, config):
         solve_data.results.solver.status = SolverStatus.error
         return feas_subproblem, feas_soln
     else:
-        config.error('MindtPy unable to handle feasibility NLP termination condition '
+        config.error('MindtPy unable to handle feasibility subproblem termination condition '
                      'of {}'.format(subprob_terminate_cond))
         solve_data.should_terminate = True
         solve_data.results.solver.status = SolverStatus.error
