@@ -128,7 +128,6 @@ def init_rNLP(solve_data, config):
             config.logger.info(
                 'relaxed NLP is not solved to optimality.')
         main_objective = next(m.component_data_objects(Objective, active=True))
-        nlp_solution_values = list(v.value for v in MindtPy.variable_list)
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut

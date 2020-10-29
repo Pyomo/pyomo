@@ -188,8 +188,8 @@ def handle_master_optimal(master_mip, solve_data, config):
     main_objective = next(
         master_mip.component_data_objects(Objective, active=True))
     # check if the value of binary variable is valid
-    for var in MindtPy.variable_list:
-        if var.value is None and var.is_integer():
+    for var in MindtPy.discrete_variable_list:
+        if var.value is None:
             config.logger.warning(
                 "Integer variable {} not initialized. It is set to it's lower bound".format(var.name))
             var.value = var.lb  # nlp_var.bounds[0]
