@@ -20,10 +20,10 @@ import copy
 import logging
 import textwrap
 
-import pyutilib.misc.config
-from pyutilib.misc.config import (ConfigValue,
+from pyomo.common.config import (ConfigValue,
                                   ConfigBlock)
 from pyomo.core.base import maximize, minimize
+import argparse
 
 import six
 
@@ -2004,12 +2004,12 @@ _map_to_deprecated = {}
 _deprecated_block = \
     PySPConfigBlock("A collection of common deprecated PySP command-line options")
 _deprecated_options_group_title = "Deprecated Options"
-if pyutilib.misc.config.argparse_is_available:
+if argparse:
 
     #
     # --model-directory
     #
-    class _DeprecatedModelDirectory(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedModelDirectory(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2053,7 +2053,7 @@ if pyutilib.misc.config.argparse_is_available:
     #
     # -i, --instance-directory
     #
-    class _DeprecatedInstanceDirectory(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedInstanceDirectory(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2098,7 +2098,7 @@ if pyutilib.misc.config.argparse_is_available:
     # --handshake-with-phpyro
     #
 
-    class _DeprecatedHandshakeWithPHPyro(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedHandshakeWithPHPyro(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2142,7 +2142,7 @@ if pyutilib.misc.config.argparse_is_available:
     # --phpyro-required-workers
     #
 
-    class _DeprecatedPHPyroRequiredWorkers(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedPHPyroRequiredWorkers(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2186,7 +2186,7 @@ if pyutilib.misc.config.argparse_is_available:
     # --phpyro-workers-timeout
     #
 
-    class _DeprecatedPHPyroWorkersTimeout(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedPHPyroWorkersTimeout(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2231,7 +2231,7 @@ if pyutilib.misc.config.argparse_is_available:
     #
 
     class _DeprecatedPHPyroTransmitLeafStageVariableSolutions(
-            pyutilib.misc.config.argparse.Action):
+            argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2279,7 +2279,7 @@ if pyutilib.misc.config.argparse_is_available:
     # --scenario-tree-seed
     #
 
-    class _DeprecatedScenarioTreeSeed(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedScenarioTreeSeed(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2323,7 +2323,7 @@ if pyutilib.misc.config.argparse_is_available:
     # --scenario-mipgap
     #
 
-    class _DeprecatedScenarioMipGap(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedScenarioMipGap(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2367,7 +2367,7 @@ if pyutilib.misc.config.argparse_is_available:
     # --scenario-solver-options
     #
 
-    class _DeprecatedScenarioSolverOptions(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedScenarioSolverOptions(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2385,7 +2385,7 @@ if pyutilib.misc.config.argparse_is_available:
     # --bounds-cfgfile
     #
 
-    class _DeprecatedBoundsCFGFile(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedBoundsCFGFile(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2431,7 +2431,7 @@ if pyutilib.misc.config.argparse_is_available:
     # --aggregate-cfgfile
     #
 
-    class _DeprecatedAggregateCFGFile(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedAggregateCFGFile(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2478,7 +2478,7 @@ if pyutilib.misc.config.argparse_is_available:
     # --shutdown-pyro
     #
 
-    class _DeprecatedShutdownPyro(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedShutdownPyro(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2521,7 +2521,7 @@ if pyutilib.misc.config.argparse_is_available:
     _map_to_deprecated['pyro_shutdown'] = \
         _deprecated_block.get('shutdown_pyro')
 
-    class _DeprecatedShutdownPyroWorkers(pyutilib.misc.config.argparse.Action):
+    class _DeprecatedShutdownPyroWorkers(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")
@@ -2705,7 +2705,6 @@ def safe_register_common_option(configblock,
 
 if __name__ == "__main__":
     import pyomo.environ
-    import argparse
 
     class Junk1(object):
 
