@@ -209,9 +209,8 @@ class MindtPySolver(object):
             lin.mip_iters = Set(dimen=1)
 
             if config.feasibility_norm == 'L1' or config.feasibility_norm == 'L2':
-                feas.nl_constraint_set = Set(initialize=[i for i, constr in enumerate(MindtPy.nonlinear_constraint_list, 1)],
-                                             doc="Integer index set over the nonlinear constraints."
-                                             "The set corresponds to the index of nonlinear constraint in constraint_set")
+                feas.nl_constraint_set = RangeSet(len(MindtPy.nonlinear_constraint_list),
+                                                  doc="Integer index set over the nonlinear constraints.")
                 # Create slack variables for feasibility problem
                 feas.slack_var = Var(feas.nl_constraint_set,
                                      domain=NonNegativeReals, initialize=1)
