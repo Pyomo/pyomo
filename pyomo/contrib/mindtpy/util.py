@@ -2,18 +2,12 @@
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
 import logging
-from math import fabs, floor, log
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_no_good_cuts, add_affine_cuts)
-
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
-                        Objective, Reals, Suffix, Var, minimize, value, RangeSet, ConstraintList)
+from pyomo.core import (Block, Constraint, Objective,
+                        Reals, Suffix, Var, RangeSet, ConstraintList)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.opt import SolverFactory
-from pyomo.opt.results import ProblemSense
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 

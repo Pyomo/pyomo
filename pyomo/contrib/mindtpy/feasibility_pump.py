@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
-from pyomo.core import (Var, Objective, Reals, minimize,
-                        RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
+from pyomo.core import (Objective, minimize, Constraint,
+                        TransformationFactory, value)
 from pyomo.core.base.constraint import ConstraintList
 from pyomo.opt import SolverFactory, SolutionStatus, SolverResults
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
-from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
-                                             handle_subproblem_optimal, handle_subproblem_infeasible,
-                                             handle_subproblem_other_termination)
-from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, get_main_elapsed_time, copy_var_list_values
+from pyomo.contrib.mindtpy.nlp_solve import (
+    solve_subproblem, handle_subproblem_optimal)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function
-from pyomo.contrib.mindtpy.mip_solve import solve_master, handle_master_optimal
-from pyomo.util.infeasible import log_infeasible_constraints
-
+from pyomo.contrib.mindtpy.mip_solve import solve_master
 from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
 
 

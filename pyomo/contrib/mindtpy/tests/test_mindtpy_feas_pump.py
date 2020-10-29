@@ -64,7 +64,7 @@ class TestMindtPy(unittest.TestCase):
                 print(
                     '\n Solving 8PP problem using feasibility pump with squared Norm2 in mip projection problem')
                 results = opt.solve(model, strategy='feas_pump',
-                                    mip_solver=required_solvers[2],
+                                    mip_solver='cplex',
                                     nlp_solver=required_solvers[0],
                                     bound_tolerance=1E-5,
                                     fp_master_norm='L2')

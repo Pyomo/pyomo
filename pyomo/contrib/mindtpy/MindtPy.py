@@ -19,21 +19,17 @@ rigorous. Questions: Please make a post at StackOverflow and/or David Bernal
 
 """
 from __future__ import division
-
 import logging
-
 from pyomo.contrib.gdpopt.util import (
     copy_var_list_values,
-    create_utility_block,
-    restore_logger_level, time_code,
+    create_utility_block, time_code,
     setup_results_object, process_objective, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import (
-    MindtPySolveData, model_is_valid
-)
+    MindtPySolveData, model_is_valid)
 from pyomo.core import (
-    Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var, value,
+    Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var,
     VarList, TransformationFactory, Objective)
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
@@ -254,8 +250,6 @@ class MindtPySolver(object):
                     from_list=solve_data.best_solution_found.MindtPy_utils.variable_list,
                     to_list=MindtPy.variable_list,
                     config=config)
-                # MindtPy.objective_value.set_value(
-                #     value(solve_data.working_objective_expr, exception=False))
                 copy_var_list_values(
                     MindtPy.variable_list,
                     solve_data.original_model.component_data_objects(Var),

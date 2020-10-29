@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
-from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
+from pyomo.core import Constraint, Objective, minimize, value
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
-                                             handle_subproblem_optimal, handle_subproblem_infeasible,
-                                             handle_subproblem_other_termination, solve_feasibility_subproblem)
+from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
 from math import copysign
 from pyomo.environ import *
 from pyomo.core.expr import current as EXPR
 from math import fabs
 from pyomo.repn import generate_standard_repn
-import logging
-from pyomo.common.dependencies import attempt_import
 import cplex
 from cplex.callbacks import LazyConstraintCallback
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
