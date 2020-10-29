@@ -319,10 +319,8 @@ def solve_feasibility_subproblem(solve_data, config):
 
     next(feas_subproblem.component_data_objects(
         Objective, active=True)).deactivate()
-    for constr in feas_subproblem.component_data_objects(
-            ctype=Constraint, active=True, descend_into=True):
-        if constr.body.polynomial_degree() not in [0, 1]:
-            constr.deactivate()
+    for constr in feas_subproblem.MindtPy_utils.nonlinear_constraint_list:
+        constr.deactivate()
 
     MindtPy.MindtPy_feas.activate()
     if config.feasibility_norm == 'L1':

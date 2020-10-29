@@ -33,6 +33,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
     """
     with time_code(solve_data.timing, 'OA cut generation'):
         for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
+            # TODO: here the index is correlated to the duals, try if this can be fixed when temp duals are removed.
             if constr.body.polynomial_degree() in (0, 1):
                 continue
 
