@@ -275,8 +275,11 @@ class MOSEKDirect(DirectSolver):
         var_num = self._solver_model.getnumvar()
         vnames = [self._symbol_map.getSymbol(v,self._labeler) for v in var_list]
         vtypes = list(map(self._mosek_vartype_from_var, var_list))
-        lbs, ubs, bound_types = zip(*[self._mosek_bounds(
-            *p.bounds) for p in var_list])
+        if len(var_list)>0:
+            lbs, ubs, bound_types = zip(*[self._mosek_bounds(
+                *p.bounds) for p in var_list])
+        else:
+            lbs, ubs, bound_types = [],[],[]
         self._solver_model.appendvars(len(var_list))
         var_ids = range(var_num, 
                         var_num + len(var_list))
@@ -436,10 +439,11 @@ class MOSEKDirect(DirectSolver):
         ----------
         block: Block (scalar Block or single _BlockData)
         """
-        self.add_vars(list(block.component_data_objects(
+        var_list = list(block.component_data_objects(
             ctype=pyomo.core.base.var.Var, 
             descend_into = True, active = True, 
-            sort = True)))
+            sort = True))
+        self.add_vars(var_list)
         for sub_block in block.block_data_objects(descend_into=True,
                                                   active=True):
             con_list = []

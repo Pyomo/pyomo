@@ -6,7 +6,6 @@ from pyomo.opt import (TerminationCondition,
 import pyomo.environ as aml
 import pyomo.kernel as pmo
 import sys
-from test_MOSEKDirect import *
 
 try:
     import mosek
