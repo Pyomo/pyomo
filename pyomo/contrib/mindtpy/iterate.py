@@ -241,8 +241,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     if config.strategy == 'ECP':
         # check to see if the nonlinear constraints are satisfied
         MindtPy = solve_data.working_model.MindtPy_utils
-        nonlinear_constraints = [c for c in MindtPy.constraint_list if
-                                 c.body.polynomial_degree() not in (1, 0)]
+        nonlinear_constraints = [c for c in MindtPy.nonlinear_constraint_list]
         for nlc in nonlinear_constraints:
             if nlc.has_lb():
                 try:

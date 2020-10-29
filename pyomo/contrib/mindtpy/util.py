@@ -98,9 +98,7 @@ def calc_jacobians(solve_data, config):
         mode = differentiate.Modes.reverse_symbolic
     elif config.differentiate_mode == "sympy":
         mode = differentiate.Modes.sympy
-    for c in solve_data.mip.MindtPy_utils.constraint_list:
-        if c.body.polynomial_degree() in (1, 0):
-            continue  # skip linear constraints
+    for c in solve_data.mip.MindtPy_utils.nonlinear_constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
         jac_list = differentiate(
             c.body, wrt_list=vars_in_constr, mode=mode)
@@ -160,21 +158,20 @@ def var_bound_add(solve_data, config):
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
-    for c in MindtPy.constraint_list:
-        if c.body.polynomial_degree() not in (1, 0):
-            for var in list(EXPR.identify_variables(c.body)):
-                if var.has_lb() and var.has_ub():
-                    continue
-                elif not var.has_lb():
-                    if var.is_integer():
-                        var.setlb(-config.integer_var_bound - 1)
-                    else:
-                        var.setlb(-config.continuous_var_bound - 1)
-                elif not var.has_ub():
-                    if var.is_integer():
-                        var.setub(config.integer_var_bound)
-                    else:
-                        var.setub(config.continuous_var_bound)
+    for c in MindtPy.nonlinear_constraint_list:
+        for var in list(EXPR.identify_variables(c.body)):
+            if var.has_lb() and var.has_ub():
+                continue
+            elif not var.has_lb():
+                if var.is_integer():
+                    var.setlb(-config.integer_var_bound - 1)
+                else:
+                    var.setlb(-config.continuous_var_bound - 1)
+            elif not var.has_ub():
+                if var.is_integer():
+                    var.setub(config.integer_var_bound)
+                else:
+                    var.setub(config.continuous_var_bound)
 
 
 def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):

@@ -158,9 +158,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             config.logger.info("Adding affine cuts")
             counter = 0
 
-            for constr in m.MindtPy_utils.constraint_list:
-                if constr.body.polynomial_degree() in (1, 0):
-                    continue
+            for constr in m.MindtPy_utils.nonlinear_constraint_list:
 
                 vars_in_constr = list(
                     identify_variables(constr.body))

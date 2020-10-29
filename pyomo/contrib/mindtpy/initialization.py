@@ -200,9 +200,8 @@ def init_max_binaries(solve_data, config):
     config.logger.info(
         "MILP %s: maximize value of binaries" %
         (solve_data.mip_iter))
-    for c in MindtPy.constraint_list:
-        if c.body.polynomial_degree() not in (1, 0):
-            c.deactivate()
+    for c in MindtPy.nonlinear_constraint_list:
+        c.deactivate()
     objective = next(m.component_data_objects(Objective, active=True))
     objective.deactivate()
     binary_vars = (
@@ -238,11 +237,11 @@ def init_max_binaries(solve_data, config):
             'MILP master problem is infeasible. '
             'Problem may have no more feasible '
             'binary configurations.')
-    elif subprob_terminate_cond is tc.maxTimeLimit:
+    elif solve_terminate_cond is tc.maxTimeLimit:
         config.logger.info(
             'NLP subproblem failed to converge within time limit.')
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
-    elif subprob_terminate_cond is tc.maxIterations:
+    elif solve_terminate_cond is tc.maxIterations:
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
     else:

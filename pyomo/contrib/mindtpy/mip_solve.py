@@ -45,9 +45,8 @@ def solve_master(solve_data, config, feas_pump=False):
     MindtPy = solve_data.mip.MindtPy_utils
 
     # Set up MILP
-    for c in MindtPy.constraint_list:
-        if c.body.polynomial_degree() not in (1, 0):
-            c.deactivate()
+    for c in MindtPy.nonlinear_constraint_list:
+        c.deactivate()
 
     MindtPy.MindtPy_linear_cuts.activate()
     main_objective = next(
