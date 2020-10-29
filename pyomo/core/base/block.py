@@ -32,11 +32,13 @@ else:
 from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.deprecation import deprecated
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import (
-    Component, ActiveComponentData, ComponentUID,
+    Component, ActiveComponentData,
 )
+from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
@@ -2014,101 +2016,15 @@ class IndexedBlock(Block):
         Block.__init__(self, *args, **kwds)
 
 
-def generate_cuid_names(block,
-                        ctype=None,
-                        descend_into=True,
-                        cuid_names_=None):
-    """
-    Bulk generation of CUID strings for all components stored on a block.
-
-    Args:
-        block: The block to generate CUID strings for.
-        ctype: The ctype to generate CUID strings for (e.g.,
-            Var). This keyword is optional and if left to
-            its default value of None, the function will
-            generate CUID strings for all component
-            types. Note that if ctype is not None, this
-            function will still generate CUID strings for
-            any parent containers (such as blocks) that
-            prefix the components requested even though the
-            parent ctype may not match the input ctype.
-        descend_into (bool, component type, or iterable of component types):
-            Indicates whether or not the function should descend
-            into subblocks. Default is True.
-            Example usage: descend_into=(Block, Disjunct)
-        cuid_names_: Used internally by the function.
-
-    Returns:
-        A dictionary-like object that maps model components
-        to their CUID string.
-
-    """
-    # get the current blocks label, if it has one
-    if cuid_names_ is None:
-        cuid_names_ = ComponentMap()
-        block_prefix = ''
-    else:
-        block_prefix = cuid_names_[block] + '.'
-
-    # determine if we need to generate labels on
-    # subblocks
-    if descend_into is True:
-        descend_ctype = (Block,)
-    elif descend_into is False:
-        descend_ctype = False
-    elif type(descend_into) == type:
-        descend_ctype = (descend_into,)
-    elif isinstance(descend_into, collections.Iterable):
-        for i in descend_into:
-            assert type(i) == type
-        descend_ctype = tuple(descend_into)
-    else:
-        raise ValueError('Unrecognized value passed to descend_into: %s. '
-                         'We support True, False, types, or '
-                         'iterables of types.'
-                         % descend_into)
-
-    if type(ctype) in (tuple, list, set):
-        ctypes = tuple(ctype)
-    elif ctype is None:
-        ctypes = None
-    else:
-        ctypes = (ctype,)
-
-    if descend_into and ctype is not None:
-        ctypes = tuple(set(descend_ctype) | set(ctypes))
-
-    for key, obj in block.component_map(ctype=ctypes).items():
-        obj_cuid = block_prefix + key
-        if obj.is_indexed():
-            for data_key, obj_data in obj.items():
-                if data_key.__class__ is tuple:
-                    key_cuid = ','.join(
-                        ComponentUID.tDict.get(type(x), '?') + str(x)
-                        for x in data_key)
-                else:
-                    key_cuid = ComponentUID.tDict.get(type(data_key), '?') + \
-                        str(data_key)
-                cuid_names_[obj_data] = obj_cuid + ":" + key_cuid
-            obj_cuid += ":**"
-        cuid_names_[obj] = obj_cuid
-
-    # Now recurse into subblocks
-    if descend_into:
-        sub_blocks = block.component_data_objects(descend_ctype,
-                                                  descend_into=descend_into)
-        for block_ in sub_blocks:
-            generate_cuid_names(block_,
-                                ctype=ctypes,
-                                descend_into=False,
-                                cuid_names_=cuid_names_)
-
-    return cuid_names_
-
-
 #
 # Deprecated functions.
 #
+@deprecated("generate_cuid_names() is deprecated. "
+            "Use the ComponentUID.generate_cuid_string_map() static method",
+            version="TBD")
+def generate_cuid_names(block, ctype=None, descend_into=True):
+    return ComponentUID.generate_cuid_string_map(block, ctype, descend_into)
+
 def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
     """DEPRECATED: The active_components function is deprecated.
 

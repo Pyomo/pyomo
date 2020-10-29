@@ -18,8 +18,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import ComponentUID
 from pyomo.core.base.block import (Block,
-                                   SortComponents,
-                                   generate_cuid_names)
+                                   SortComponents)
 from pyomo.core.base.var import Var
 from pyomo.core.base.objective import (Objective,
                                        _ObjectiveData)
@@ -399,8 +398,8 @@ class EmbeddedSP(object):
             _map_variable_stages(self.reference_model)
         self.time_stages = tuple(sorted(self.stage_to_variables_map))
         assert self.time_stages[0] == 1
-        self.variable_symbols = generate_cuid_names(self.reference_model,
-                                                    ctype=Var)
+        self.variable_symbols = ComponentUID.generate_cuid_string_map(
+            self.reference_model, ctype=Var, repr_version=1)
         # remove the parent blocks from this map
         keys_to_delete = []
         for var in self.variable_symbols:
