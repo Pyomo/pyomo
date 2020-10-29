@@ -67,6 +67,11 @@ class MOSEKDirect(DirectSolver):
             self._version = self._mosek_env.getversion()
             self._version_major = self._version[0]
             self._name = "MOSEK " + ".".join([str(i) for i in self._version])
+            self._bound_type_map = {0: self._mosek.boundkey.fr, 
+                                    1: self._mosek.boundkey.lo,
+                                    2: self._mosek.boundkey.up,
+                                    3: self._mosek.boundkey.ra,
+                                    4: self._mosek.boundkey.fx}
         except ImportError:
             self._python_api_exists = False
         except Exception as e:
@@ -77,12 +82,6 @@ class MOSEKDirect(DirectSolver):
         self._max_obj_degree = 2
         self._max_constraint_degree = 2
         self._termcode = None
-
-        self._bound_type_map = {0: self._mosek.boundkey.fr, 
-                                1: self._mosek.boundkey.lo,
-                                2: self._mosek.boundkey.up,
-                                3: self._mosek.boundkey.ra,
-                                4: self._mosek.boundkey.fx}
         
         # Undefined capabilities default to None.
         self._capabilities.linear = True

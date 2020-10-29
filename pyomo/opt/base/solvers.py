@@ -210,10 +210,9 @@ def check_available_solvers(*args):
         elif (arg[0] == "baron") and \
            (not BARONSHELL.license_is_valid()):
             available = False
-        elif (arg[0] == "mosek_direct" 
-                or arg[0] == "mosek_persistent") and \
+        elif (arg[0] == "mosek_direct" or arg[0] == "mosek_persistent") and \
                 (not MOSEKDirect.license_is_valid()):
-                    available = False
+            available = False
         else:
             available = \
                 (opt.available(exception_flag=False)) and \
