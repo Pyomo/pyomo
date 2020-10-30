@@ -507,6 +507,7 @@ class Estimator(object):
                 for v in self.theta_names:
 
                     #ind_vars.append(eval('ef.'+v))
+                    # This line needs to be updated to work with IDAES models
                     ind_vars.append(self.ef_instance.MASTER_BLEND_VAR_RootNode[v])
         
                 # calculate the reduced hessian
