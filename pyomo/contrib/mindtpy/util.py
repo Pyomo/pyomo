@@ -62,13 +62,13 @@ def model_is_valid(solve_data, config):
             config.logger.info(
                 "Your model is an LP (linear program). "
                 "Using LP solver %s to solve." % config.mip_solver)
-            mipopt = SolverFactory(config.mip_solver)
-            if isinstance(mipopt, PersistentSolver):
-                mipopt.set_instance(solve_data.original_model)
+            masteropt = SolverFactory(config.mip_solver)
+            if isinstance(masteropt, PersistentSolver):
+                masteropt.set_instance(solve_data.original_model)
             if config.threads > 0:
                 masteropt.options["threads"] = config.threads
-            mipopt.solve(solve_data.original_model,
-                         tee=config.mip_solver_tee, **config.mip_solver_args)
+            masteropt.solve(solve_data.original_model,
+                            tee=config.mip_solver_tee, **config.mip_solver_args)
             return False
 
     if not hasattr(m, 'dual') and config.use_dual:  # Set up dual value reporting

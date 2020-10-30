@@ -128,7 +128,6 @@ def init_rNLP(solve_data, config):
             config.logger.info(
                 'relaxed NLP is not solved to optimality.')
         main_objective = next(m.component_data_objects(Objective, active=True))
-        nlp_solution_values = list(v.value for v in MindtPy.variable_list)
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
         # Add OA cut
@@ -156,9 +155,8 @@ def init_rNLP(solve_data, config):
             elif config.strategy == 'GOA':
                 add_affine_cuts(solve_data, config)
             # TODO check if value of the binary or integer varibles is 0/1 or integer value.
-            for var in solve_data.mip.component_data_objects(ctype=Var):
-                if var.is_integer():
-                    var.value = int(round(var.value))
+            for var in solve_data.mip.MindtPy_utils.discrete_variable_list:
+                var.value = int(round(var.value))
     elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         # TODO fail? try something else?
         config.logger.info(

@@ -69,14 +69,13 @@ def solve_feas_pump_subproblem(solve_data, config):
                 fp_nlp, solve_data.mip, config, discrete_only=True)
         elif config.fp_master_norm == 'L2':
             fp_nlp.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
-                                                         for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.variable_list, solve_data.mip.MindtPy_utils.variable_list) if mip_var.is_integer()) <= 0)
+                                                         for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list)) <= 0)
         elif config.fp_master_norm == 'L_infinity':
             fp_nlp.norm_constraint = ConstraintList()
             rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
-                fp_nlp.MindtPy_utils.variable_list, solve_data.mip.MindtPy_utils.variable_list) if mip_var.is_integer())
-            for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.variable_list, solve_data.mip.MindtPy_utils.variable_list):
-                if mip_var.is_integer():
-                    fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
+                fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list))
+            for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list):
+                fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
 
     MindtPy.feas_pump_nlp_obj = generate_norm2sq_objective_function(
         fp_nlp, solve_data.mip, discrete_only=config.fp_discrete_only)
@@ -241,11 +240,8 @@ def add_orthogonality_cuts(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
-    m = solve_data.mip
-    mip_MindtPy = solve_data.mip.MindtPy_utils
-    nlp_MindtPy = solve_data.working_model.MindtPy_utils
-    mip_integer_vars = [v for v in mip_MindtPy.variable_list if v.is_integer()]
-    nlp_integer_vars = [v for v in nlp_MindtPy.variable_list if v.is_integer()]
+    mip_integer_vars = solve_data.mip.MindtPy_utils.discrete_variable_list
+    nlp_integer_vars = solve_data.working_model.MindtPy_utils.discrete_variable_list
     orthogonality_cut = sum((nlp_v.value-mip_v.value)*(mip_v-nlp_v.value)
                             for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
     solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.add(
