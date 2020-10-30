@@ -13,25 +13,19 @@ from __future__ import division
 import math
 import logging
 from itertools import islice
-from six import itervalues
 
 logger = logging.getLogger('pyomo.core')
 
 from pyutilib.math.util import isclose
 from pyomo.common.deprecation import deprecated
-from pyomo.common.errors import DeveloperError
 
 from .expr_common import (
     _add, _sub, _mul, _div,
     _pow, _neg, _abs, _inplace,
-    _unary, _radd, _rsub, _rmul,
-    _rdiv, _rpow, _iadd, _isub,
-    _imul, _idiv, _ipow, _lt, _le,
-    _eq,
+    _unary
 )
 from .numvalue import (
     NumericValue,
-    NumericConstant,
     native_types,
     nonpyomo_leaf_types,
     native_numeric_types,

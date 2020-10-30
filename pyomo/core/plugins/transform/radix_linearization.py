@@ -11,6 +11,7 @@
 from pyomo.core.expr.current import ProductExpression, PowExpression
 from pyomo.core import Binary, value
 from pyomo.core.base import Transformation, TransformationFactory, Var, Constraint, ConstraintList, Block, RangeSet
+from pyomo.core.base.numvalue import as_numeric
 from pyomo.core.base.var import _VarData
 
 from six import iteritems

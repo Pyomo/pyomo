@@ -8,13 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iterkeys
-import pyutilib.misc
+from six import iterkeys
 from pyomo.common import DeveloperError
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import NondifferentiableError
-from pyomo.core.expr import current
 from pyomo.core.expr import current as EXPR, native_types
 from pyomo.core.expr.numvalue import value
 
@@ -35,23 +33,23 @@ def _configure_sympy(sympy, available):
         sympy.Add: _sum,
         sympy.Mul: _prod,
         sympy.Pow: lambda x, y: x**y,
-        sympy.exp: lambda x: current.exp(x),
-        sympy.log: lambda x: current.log(x),
-        sympy.sin: lambda x: current.sin(x),
-        sympy.asin: lambda x: current.asin(x),
-        sympy.sinh: lambda x: current.sinh(x),
-        sympy.asinh: lambda x: current.asinh(x),
-        sympy.cos: lambda x: current.cos(x),
-        sympy.acos: lambda x: current.acos(x),
-        sympy.cosh: lambda x: current.cosh(x),
-        sympy.acosh: lambda x: current.acosh(x),
-        sympy.tan: lambda x: current.tan(x),
-        sympy.atan: lambda x: current.atan(x),
-        sympy.tanh: lambda x: current.tanh(x),
-        sympy.atanh: lambda x: current.atanh(x),
-        sympy.ceiling: lambda x: current.ceil(x),
-        sympy.floor: lambda x: current.floor(x),
-        sympy.sqrt: lambda x: current.sqrt(x),
+        sympy.exp: lambda x: EXPR.exp(x),
+        sympy.log: lambda x: EXPR.log(x),
+        sympy.sin: lambda x: EXPR.sin(x),
+        sympy.asin: lambda x: EXPR.asin(x),
+        sympy.sinh: lambda x: EXPR.sinh(x),
+        sympy.asinh: lambda x: EXPR.asinh(x),
+        sympy.cos: lambda x: EXPR.cos(x),
+        sympy.acos: lambda x: EXPR.acos(x),
+        sympy.cosh: lambda x: EXPR.cosh(x),
+        sympy.acosh: lambda x: EXPR.acosh(x),
+        sympy.tan: lambda x: EXPR.tan(x),
+        sympy.atan: lambda x: EXPR.atan(x),
+        sympy.tanh: lambda x: EXPR.tanh(x),
+        sympy.atanh: lambda x: EXPR.atanh(x),
+        sympy.ceiling: lambda x: EXPR.ceil(x),
+        sympy.floor: lambda x: EXPR.floor(x),
+        sympy.sqrt: lambda x: EXPR.sqrt(x),
         sympy.Abs: lambda x: abs(x),
         sympy.Derivative: _nondifferentiable,
         sympy.Tuple: lambda *x: x,

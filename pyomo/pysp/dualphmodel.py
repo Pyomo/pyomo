@@ -10,7 +10,7 @@
 
 import copy
 
-from pyomo.core import *
+from pyomo.core import ConcreteModel, Suffix, Var, Block, Set, RangeSet, Objective, Constraint, NonNegativeReals, sum_product, value
 from pyomo.opt import SolverFactory
 from pyomo.core.expr.current import ExpressionBase
 from pyomo.pysp.phutils import update_all_rhos, find_active_objective

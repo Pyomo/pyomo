@@ -7,11 +7,12 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import pyomo.environ as pyo
 import pyomo.dae as dae
 import numpy as np
 import networkx
-import json
+
 
 def create_model(demand_factor=1.0):
 

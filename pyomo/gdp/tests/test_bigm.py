@@ -10,10 +10,9 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
-from pyomo.gdp import *
+from pyomo.environ import TransformationFactory, Block, Set, Constraint, ComponentMap, Suffix, ConcreteModel, Var, Any, value
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, _ConstraintData
-from pyomo.core.expr import current as EXPR
 from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
 import logging
@@ -22,9 +21,8 @@ import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
 import random
-import sys
 
-from six import iteritems, StringIO
+from six import StringIO
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):

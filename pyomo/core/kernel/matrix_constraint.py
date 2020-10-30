@@ -12,13 +12,11 @@ from pyomo.common.dependencies import (
     numpy, numpy_available as has_numpy,
     scipy, scipy_available as has_scipy,
 )
-import pyomo.core.expr
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.constraint import \
     (IConstraint,
      constraint_tuple)
 
-import six
 from six.moves import zip, xrange
 
 _noarg = object()

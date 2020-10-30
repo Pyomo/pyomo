@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import gc         # garbage collection control.
 import os
 import socket
 import sys
@@ -23,7 +22,7 @@ from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
 
-from pyomo.core import *
+from pyomo.core import Var, Suffix, Constraint
 from pyomo.opt import UndefinedData
 from pyomo.common import pyomo_command
 from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
@@ -38,7 +37,6 @@ from pyomo.pysp.phsolverserverutils import (TransmitType,
 from pyomo.pysp.ph import _PHBase
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 reset_stage_cost_variables,
-                                find_active_objective,
                                 extract_solve_times)
 from pyomo.pysp.util.misc import launch_command
 
@@ -1359,7 +1357,7 @@ def exec_phsolverserver(options):
             if module_to_find.rfind(".py"):
                 module_to_find = module_to_find.rstrip(".py")
             if module_to_find.find("/") != -1:
-                module_to_find = string.split(module_to_find,"/")[-1]
+                module_to_find = module_to_find.split("/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
                 # the second condition gets around goofyness related to issubclass returning

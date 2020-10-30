@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+from pyomo.environ import AbstractModel, Param, RangeSet, Var, Reals, Binary, PositiveIntegers, Constraint, Objective
 import math
 
 model = AbstractModel()

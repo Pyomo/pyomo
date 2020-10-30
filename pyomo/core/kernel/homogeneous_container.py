@@ -8,10 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.base import \
-    (_no_ctype,
-     _convert_descend_into,
-     ICategorizedObjectContainer)
+from pyomo.core.kernel.base import ICategorizedObjectContainer
 
 class IHomogeneousContainer(ICategorizedObjectContainer):
     """

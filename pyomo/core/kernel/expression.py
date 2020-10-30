@@ -8,25 +8,18 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
-
-from pyomo.core.expr import expr_common
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
-     _abstract_readwrite_property,
-     _abstract_readonly_property)
+     _abstract_readwrite_property)
 from pyomo.core.kernel.container_utils import \
     define_simple_containers
 from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
-                                      is_variable_type,
                                       is_potentially_variable,
                                       is_numeric_data,
                                       value)
-
-import six
 
 class IIdentityExpression(NumericValue):
     """The interface for classes that simply wrap another

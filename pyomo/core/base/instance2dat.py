@@ -29,21 +29,21 @@ def instance2dat(instance, output_filename):
             if set_object.dim() == 0:
                 if len(set_object) == 0:
                     continue
-                print >>output_file, "set "+set_name+" := "
+                output_file.write("set " + set_name + " := \n")
                 for element in set_object:
-                    print >>output_file, element
-                print >>output_file, ";"
+                    output_file.write(element,)
+                output_file.write(";\n")
             elif set_object.dim() == 1:
                 for index in set_object:
-                    print >>output_file, "set "+set_name+"[\""+str(index)+"\"]"+" := ",
+                    output_file.write("set " + set_name + "[\""+str(index) + "\"]"+" :=")
                     for element in set_object[index]:
-                        print >>output_file, element,
-                    print >>output_file, ";"
+                        output_file.write(element,)
+                    output_file.write(";\n")
             else:
-                print >>output_file, "***MULTIPLY INDEXED SETS NOT IMPLEMENTED!!!"
+                output_file.write("***MULTIPLY INDEXED SETS NOT IMPLEMENTED!!!\n")
                 pass
 
-            print >>output_file, ""
+            output_file.write("\n")
 
     for param_name, param_object in iteritems(instance.component_map(Param, active=True)):
         if (param_object._initialize is not None) and (type(param_object._initialize) is types.FunctionType):
@@ -52,19 +52,20 @@ def instance2dat(instance, output_filename):
             continue
 
         if None in param_object:
-            print >>output_file, "param "+param_name+" := "+str(value(param_object[None]))+" ;"
-            print >>output_file, ""
+            output_file.write("param "+param_name+" := "
+                              + str(value(param_object[None])) + " ;\n")
+            output_file.write("\n")
         else:
-            print >>output_file, "param "+param_name+" := "
+            output_file.write("param " + param_name + " := \n")
             if param_object.dim() == 1:
                 for index in param_object:
-                    print >>output_file, index, str(value(param_object[index]))
+                    output_file.write(str(index) + str(value(param_object[index])) + "\n")
             else:
                 for index in param_object:
                     for i in index:
-                        print >>output_file, i,
-                    print >>output_file, str(value(param_object[index]))
-            print >>output_file, ";"
-            print >>output_file, ""
+                        output_file.write(i,)
+                    output_file.write(str(value(param_object[index])) + "\n")
+            output_file.write(";\n")
+            output_file.write("\n")
 
     output_file.close()
