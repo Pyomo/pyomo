@@ -155,7 +155,7 @@ def init_rNLP(solve_data, config):
             elif config.strategy == 'GOA':
                 add_affine_cuts(solve_data, config)
             # TODO check if value of the binary or integer varibles is 0/1 or integer value.
-            for var in solve_data.mip.discrete_variable_list:
+            for var in solve_data.mip.MindtPy_utils.discrete_variable_list:
                 var.value = int(round(var.value))
     elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         # TODO fail? try something else?
