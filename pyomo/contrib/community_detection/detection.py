@@ -16,6 +16,7 @@ from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
 from pyomo.common.dependencies import networkx as nx
+from pyomo.common.dependencies import matplotlib, matplotlib_available
 from itertools import combinations
 
 import copy
@@ -26,23 +27,9 @@ logger = getLogger('pyomo.contrib.community_detection')
 community_louvain, community_louvain_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
-# Attempt import of matplotlib (adapted from pyomo.contrib.parmest.graphics)
-try:
-    # matplotlib.pyplot can generate a runtime error on OSX when not
-    # installed as a Framework (as is the case in the CI systems)
-    #
-    # occasionally dependent conda packages for older distributions
-    # (e.g. python 3.5) get released that are either broken not
-    # compatible, resulting in a SyntaxError
-
-    # matplotlib, matplotlib_available = attempt_import('matplotlib', error_message="Could not import 'matplotlib'")
-    # if matplotlib_available:
-    import matplotlib.pyplot as plt
-    from matplotlib.cm import get_cmap
-    matplotlib_available = True
-
-except (ImportError, RuntimeError, SyntaxError):
-    matplotlib_available = False
+# Import matplotlib
+plt = matplotlib.pyplot
+cm = matplotlib.cm
 
 
 def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
@@ -197,7 +184,8 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
     # Return an instance of CommunityMap class which contains the community_map along with other relevant information
     # for the community_map
     return CommunityMap(community_map, type_of_community_map, with_objective, weighted_graph, random_seed,
-                        use_only_active_components, model, model_graph, number_component_map, constraint_variable_map)
+                        use_only_active_components, model, model_graph, number_component_map, constraint_variable_map,
+                        partition_of_graph)
 
 
 class CommunityMap(object):
@@ -215,7 +203,8 @@ class CommunityMap(object):
     """
 
     def __init__(self, community_map, type_of_community_map, with_objective, weighted_graph, random_seed,
-                 use_only_active_components, model, graph, graph_node_mapping, constraint_variable_map):
+                 use_only_active_components, model, graph, graph_node_mapping, constraint_variable_map,
+                 graph_partition):
         """
         Constructor method for the CommunityMap class
 
@@ -250,6 +239,8 @@ class CommunityMap(object):
             model) to a component in the model
         constraint_variable_map: dict
             a dictionary that maps a numbered constraint to a list of (numbered) variables that appear in the constraint
+        graph_partition: dict
+            the partition of the networkX model graph based on the Louvain community detection
         """
 
         self.community_map = community_map
@@ -262,6 +253,7 @@ class CommunityMap(object):
         self.graph = graph
         self.graph_node_mapping = graph_node_mapping
         self.constraint_variable_map = constraint_variable_map
+        self.graph_partition = graph_partition
 
     def __repr__(self):
         """
@@ -439,7 +431,7 @@ class CommunityMap(object):
                 pos = nx.spring_layout(model_graph)
 
         # Define color_map
-        color_map = get_cmap('viridis', len(numbered_community_map))
+        color_map = cm.get_cmap('viridis', len(numbered_community_map))
 
         # Create the figure and draw the graph
         fig = plt.figure()
