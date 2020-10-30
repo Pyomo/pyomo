@@ -267,6 +267,14 @@ class Test(unittest.TestCase):
             join(currdir,"solve1b.out"), join(currdir,"solve1b.txt"),
             tolerance=1e-4)
 
+        # test store_to() function with skip_stale_vars=True
+        results = opt.solve(model)
+        model.solutions.store_to(results, skip_stale_vars=True)
+        results.write(filename=join(currdir,"solve1b.out"), format='json')
+        self.assertMatchesJsonBaseline(
+            join(currdir,"solve1b.out"), join(currdir,"solve1b.txt"),
+            tolerance=1e-4)
+
     def test_display(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
