@@ -287,7 +287,7 @@ class ModelSolutions(object):
                 ignore_invalid_labels=ignore_invalid_labels,
                 ignore_fixed_vars=ignore_fixed_vars)
 
-    def store_to(self, results, cuid=False, skip_stale_vars=True):
+    def store_to(self, results, cuid=False, skip_stale_vars=False):
         """
         Return a Solution() object that is populated with the values in the model.
         """
