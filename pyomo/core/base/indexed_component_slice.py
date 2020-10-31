@@ -370,7 +370,7 @@ class _slice_generator(object):
                     valid = False
                     break
             if valid:
-                # Remember the index tuple corresponding to the lastest
+                # Remember the index tuple corresponding to the last
                 # component data returned by this iterator. In this way
                 # we can use the cached indices to iterate over "indices"
                 # of a slice.
@@ -584,7 +584,7 @@ class _IndexedComponent_slice_iter(object):
                         self._iter_stack[idx] = None
                 elif _call[0] == IndexedComponent_slice.call:
                     try:
-                        # Assume the callable "comp" in our hierarcy
+                        # Assume the callable "comp" in our hierarchy
                         # returns a component:
                         _comp = _comp( *(_call[1]), **(_call[2]) )
                         # The only callable "comp" here should be
@@ -767,7 +767,7 @@ class _IndexedComponent_slice_iter(object):
         # This method is how we iterate over keys.
         ans = sum(
             ( tuple( x.last_index[i]
-                # last_index is the most recent recent index checked
+                # last_index is the most recent index checked
                 # by a certain _slice_generator.
                      for i in range(len(x.last_index))
                      if i not in x.fixed )
