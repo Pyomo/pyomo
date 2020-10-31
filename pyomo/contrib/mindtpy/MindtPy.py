@@ -87,6 +87,7 @@ class MindtPySolver(object):
             config.iteration_limit = 1
             config.add_slack = False
             config.add_no_good_cuts = False
+            config.use_tabu_list = False
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
                 "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
@@ -97,7 +98,9 @@ class MindtPySolver(object):
             config.add_slack = False
 
         if config.strategy == "GOA":
+            # TODO: Choose one from the following two
             config.add_no_good_cuts = True
+            config.use_tabu_list = False
             config.add_slack = False
             config.use_mcpp = True
             config.integer_to_binary = True
@@ -106,7 +109,9 @@ class MindtPySolver(object):
         elif config.strategy == "feas_pump":  # feasibility pump alone
             config.init_strategy = "feas_pump"
             config.iteration_limit = 0
+            # TODO: Choose one from the following two
             config.add_no_good_cuts = True
+            config.use_tabu_list = False
         if config.init_strategy == "feas_pump":
             solve_data.fp_iter = 1
 
@@ -199,9 +204,9 @@ class MindtPySolver(object):
             solve_data.UB = float('inf')
             solve_data.LB_progress = [solve_data.LB]
             solve_data.UB_progress = [solve_data.UB]
-            if config.single_tree and config.add_no_good_cuts:
+            if config.single_tree and (config.add_no_good_cuts or config.use_tabu_list):
                 solve_data.stored_bound = {}
-            if config.strategy == 'GOA' and config.add_no_good_cuts:
+            if config.strategy == 'GOA' and (config.add_no_good_cuts or config.use_tabu_list):
                 solve_data.num_no_good_cuts_added = {}
             if config.use_tabu_list:
                 solve_data.tabu_list = set()

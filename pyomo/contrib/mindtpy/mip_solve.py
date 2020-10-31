@@ -147,7 +147,7 @@ def solve_master(solve_data, config, feas_pump=False):
                 solve_data.mip, tee=config.mip_solver_tee, **mip_args)
 
         if master_mip_results.solver.termination_condition is tc.optimal:
-            if config.single_tree and config.add_no_good_cuts is False:
+            if config.single_tree and config.add_no_good_cuts is False and config.use_tabu_list is False:
                 if main_objective.sense == minimize:
                     solve_data.LB = max(
                         master_mip_results.problem.lower_bound, solve_data.LB)

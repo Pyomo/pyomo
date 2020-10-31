@@ -13,7 +13,6 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverResults, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 from pyomo.opt.results import ProblemSense
-from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
 
 
 def solve_subproblem(solve_data, config):
@@ -202,7 +201,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
     if config.add_no_good_cuts:
         add_no_good_cuts(var_values, solve_data, config, feasible=True)
     if config.use_tabu_list:
-        solve_data.tabu_list.add([v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list])
+        solve_data.tabu_list.add((v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list))
 
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
@@ -263,7 +262,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
         # excludes current discrete option
         add_no_good_cuts(var_values, solve_data, config)
     if config.use_tabu_list:
-        solve_data.tabu_list.add([v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list])
+        solve_data.tabu_list.add((v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list))
 
 
 
@@ -292,7 +291,7 @@ def handle_subproblem_other_termination(fixed_nlp, termination_condition,
             # excludes current discrete option
             add_no_good_cuts(var_values, solve_data, config)
         if config.use_tabu_list:
-            solve_data.tabu_list.add([v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list])
+            solve_data.tabu_list.add((v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list))
 
     else:
         raise ValueError(
