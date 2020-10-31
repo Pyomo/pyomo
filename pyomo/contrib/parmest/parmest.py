@@ -84,6 +84,40 @@ def _object_from_string(instance, vstr):
     return retval[indexstr]
 
 #=============================================
+def process_variable_names(vstr):
+    """
+    Process the name of a Var or Param (e.g. "pp.Keq_a[2]")
+    This function is needed to use calc_cov with IDAES models
+    
+    args:
+        vstr: a particular Var or Param (e.g. "pp.Keq_a[2]")
+    return:
+        str: updated string
+    """
+   
+    l = vstr.find('[')
+    if l == -1:
+        #indexstr = None
+        #basestr = vstr
+        return vstr
+    else:
+        r = vstr.find(']')
+        indexstr = vstr[l+1:r]
+        basestr = vstr[:l]
+        
+        # Process index
+        # Remove '
+        new_ = indexstr.replace("'","")
+        # Remove "
+        new_ = new_.replace('"',"")
+        # Remove empty space
+        new_ = new_.replace(' ',"")
+        
+        new_indexstr = ',$'.join(new_.split(','))
+        
+        return basestr + ':$' + new_indexstr
+
+#=============================================
 def _ef_ROOT_node_Object_from_string(efinstance, vstr):
     """
     Wrapper for _object_from_string for PySP extensive forms
@@ -507,8 +541,8 @@ class Estimator(object):
                 for v in self.theta_names:
 
                     #ind_vars.append(eval('ef.'+v))
-                    # This line needs to be updated to work with IDAES models
-                    ind_vars.append(self.ef_instance.MASTER_BLEND_VAR_RootNode[v])
+                    v_ = process_variable_names(v)
+                    ind_vars.append(self.ef_instance.MASTER_BLEND_VAR_RootNode[v_])
         
                 # calculate the reduced hessian
                 solve_result, inv_red_hes = inv_reduced_hessian_barrier(self.ef_instance, 
