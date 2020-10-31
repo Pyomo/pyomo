@@ -127,7 +127,7 @@ def solve_master(solve_data, config, feas_pump=False):
         masteropt.options['timelimit'] = config.time_limit
     if config.threads > 0:
         masteropt.options["threads"] = config.threads
-    if config.use_tabu_list:
+    if config.use_tuba_list:
         tabu_list = masteropt._solver_model.register_callback(
             IncumbentCallback_cplex)
         tabu_list.solve_data = solve_data

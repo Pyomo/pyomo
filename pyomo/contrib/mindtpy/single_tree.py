@@ -311,8 +311,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                        master_mip.MindtPy_utils.variable_list,
                                        solve_data.working_model.MindtPy_utils.variable_list,
                                        config)
-        # if config.strategy == 'GOA':
-        # if not config.add_no_good_cuts:
         if main_objective.sense == minimize:
             solve_data.LB = max(
                 self.get_best_objective_value(), solve_data.LB)

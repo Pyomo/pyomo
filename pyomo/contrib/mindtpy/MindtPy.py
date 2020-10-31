@@ -90,6 +90,8 @@ class MindtPySolver(object):
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
                 "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
+        if config.use_tuba_list:
+            config.mip_solver = 'cplex_persistent'
         # if the slacks fix to zero, just don't add them
         if config.max_slack == 0.0:
             config.add_slack = False
