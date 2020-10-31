@@ -1276,7 +1276,12 @@ class ComponentUID(object):
 
     def _partial_cuid_from_slice_info(self, slice_info):
         """
-        TODO
+        Gets an index from the slice_info entry in a slice's
+        call stack, then validates that index. (Only a subset
+        of the "indices" supported by a slice are supported
+        by ComponentUIDs.) The slice_info entry is parsed
+        separately because it has a very different structure 
+        than the index in a get_item entry.
         """
         index = self._index_from_slice_info(slice_info)
         validated_index = self._validate_slice_index(index)
@@ -1329,7 +1334,7 @@ class ComponentUID(object):
                     # Generate _cid entries for parent (non-slice)
                     # components. This is the only place `context` gets
                     # used, as the slice does not access any "components"
-                    # in its call call stack.
+                    # in its call stack.
                     yield cid
             elif call == IndexedComponent_slice.get_item:
                 # Need to parse index to get potential slice
