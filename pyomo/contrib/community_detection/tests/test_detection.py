@@ -105,17 +105,12 @@ class TestDecomposition(unittest.TestCase):
 
             self.assertEqual(correct_community_maps, str_test_community_maps)
 
-        test_community_maps_dimensions = []
-        for community_map in test_community_maps:
-            correct_length = len(community_map)
-            n_members = sum(len(community[0]) + len(community[1]) for community in community_map.values())
-            test_community_maps_dimensions.append((correct_length, n_members))
+        # Partition-based diagnostic test
+        correct_num_communities, correct_num_nodes, test_num_communities, test_num_nodes = \
+            _collect_partition_dependent_tests(test_community_maps, test_partitions)
 
-        correct_community_maps_dimensions = [(3, 12), (3, 18), (3, 12), (3, 18), (3, 8), (2, 10), (3, 8), (2, 10),
-                                             (3, 12), (1, 15), (3, 12), (1, 15), (3, 8), (1, 9), (3, 8), (1, 9),
-                                             (3, 12), (3, 15), (3, 12), (3, 15), (3, 8), (3, 9), (3, 8), (3, 9)]
-
-        self.assertEqual(correct_community_maps_dimensions, test_community_maps_dimensions)
+        self.assertEqual(correct_num_communities, test_num_communities)
+        self.assertEqual(correct_num_nodes, test_num_nodes)
 
     def test_communities_2(self):
         m_class = QP_simple()
@@ -158,18 +153,12 @@ class TestDecomposition(unittest.TestCase):
 
             self.assertEqual(correct_community_maps, str_test_community_maps)
 
-        test_community_maps_dimensions = []
-        for community_map in test_community_maps:
-            correct_length = len(community_map)
-            n_members = sum(len(community[0]) + len(community[1]) for community in community_map.values())
-            test_community_maps_dimensions.append((correct_length, n_members))
+        # Partition-based diagnostic test
+        correct_num_communities, correct_num_nodes, test_num_communities, test_num_nodes = \
+            _collect_partition_dependent_tests(test_community_maps, test_partitions)
 
-        correct_community_maps_dimensions = [(1, 4), (1, 6), (1, 4), (1, 6), (1, 4), (1, 5), (1, 4), (1, 5), (1, 4),
-                                             (1, 6), (1, 4), (1, 6), (1, 4), (1, 5),
-                                             (1, 4), (1, 5), (2, 4), (2, 6), (2, 4), (2, 6), (2, 4), (2, 5), (2, 4),
-                                             (2, 5)]
-
-        self.assertEqual(correct_community_maps_dimensions, test_community_maps_dimensions)
+        self.assertEqual(correct_num_communities, test_num_communities)
+        self.assertEqual(correct_num_nodes, test_num_nodes)
 
     def test_communities_3(self):
         m_class = LP_unbounded()
@@ -200,17 +189,12 @@ class TestDecomposition(unittest.TestCase):
 
             self.assertEqual(correct_community_maps, str_test_community_maps)
 
-        test_community_maps_dimensions = []
-        for community_map in test_community_maps:
-            correct_length = len(community_map)
-            n_members = sum(len(community[0]) + len(community[1]) for community in community_map.values())
-            test_community_maps_dimensions.append((correct_length, n_members))
+        # Partition-based diagnostic test
+        correct_num_communities, correct_num_nodes, test_num_communities, test_num_nodes = \
+            _collect_partition_dependent_tests(test_community_maps, test_partitions)
 
-        correct_community_maps_dimensions = [(0, 0), (1, 3), (0, 0), (1, 3), (0, 0), (1, 3), (0, 0), (1, 3), (2, 2),
-                                             (1, 3), (2, 2), (1, 3), (2, 2), (1, 3), (2, 2), (1, 3), (2, 2), (1, 3),
-                                             (2, 2), (1, 3), (2, 2), (1, 3), (2, 2), (1, 3)]
-
-        self.assertEqual(correct_community_maps_dimensions, test_community_maps_dimensions)
+        self.assertEqual(correct_num_communities, test_num_communities)
+        self.assertEqual(correct_num_nodes, test_num_nodes)
 
     def test_communities_4(self):
         m_class = SOS1_simple()
@@ -262,17 +246,12 @@ class TestDecomposition(unittest.TestCase):
 
             self.assertEqual(correct_community_maps, str_test_community_maps)
 
-        test_community_maps_dimensions = []
-        for community_map in test_community_maps:
-            correct_length = len(community_map)
-            n_members = sum(len(community[0]) + len(community[1]) for community in community_map.values())
-            test_community_maps_dimensions.append((correct_length, n_members))
+        # Partition-based diagnostic test
+        correct_num_communities, correct_num_nodes, test_num_communities, test_num_nodes = \
+            _collect_partition_dependent_tests(test_community_maps, test_partitions)
 
-        correct_community_maps_dimensions = [(2, 6), (2, 9), (2, 6), (1, 7), (2, 6), (2, 9), (2, 6), (1, 7), (2, 6),
-                                             (1, 7), (2, 6), (1, 7), (2, 6), (1, 7), (2, 6), (1, 7), (3, 6), (3, 7),
-                                             (3, 6), (3, 7), (3, 6), (3, 7), (3, 6), (3, 7)]
-
-        self.assertEqual(correct_community_maps_dimensions, test_community_maps_dimensions)
+        self.assertEqual(correct_num_communities, test_num_communities)
+        self.assertEqual(correct_num_nodes, test_num_nodes)
 
     def test_communities_5(self):
         model = m = create_model_5()
@@ -332,17 +311,12 @@ class TestDecomposition(unittest.TestCase):
 
             self.assertEqual(correct_community_maps, str_test_community_maps)
 
-        test_community_maps_dimensions = []
-        for community_map in test_community_maps:
-            correct_length = len(community_map)
-            n_members = sum(len(community[0]) + len(community[1]) for community in community_map.values())
-            test_community_maps_dimensions.append((correct_length, n_members))
+        # Partition-based diagnostic test
+        correct_num_communities, correct_num_nodes, test_num_communities, test_num_nodes = \
+            _collect_partition_dependent_tests(test_community_maps, test_partitions)
 
-        correct_community_maps_dimensions = [(1, 11), (1, 12), (1, 11), (1, 12), (1, 11), (1, 12), (1, 11), (1, 12),
-                                             (1, 11), (1, 12), (1, 11), (1, 12), (1, 11), (1, 12), (1, 11), (1, 12),
-                                             (1, 11), (6, 12), (1, 11), (6, 12), (1, 11), (6, 12), (1, 11), (6, 12)]
-
-        self.assertEqual(correct_community_maps_dimensions, test_community_maps_dimensions)
+        self.assertEqual(correct_num_communities, test_num_communities)
+        self.assertEqual(correct_num_nodes, test_num_nodes)
 
     def test_communities_6(self):
         model = m = create_model_6()
@@ -390,17 +364,12 @@ class TestDecomposition(unittest.TestCase):
 
             self.assertEqual(correct_community_maps, str_test_community_maps)
 
-        test_community_maps_dimensions = []
-        for community_map in test_community_maps:
-            correct_length = len(community_map)
-            n_members = sum(len(community[0]) + len(community[1]) for community in community_map.values())
-            test_community_maps_dimensions.append((correct_length, n_members))
+        # Partition-based diagnostic test
+        correct_num_communities, correct_num_nodes, test_num_communities, test_num_nodes = \
+            _collect_partition_dependent_tests(test_community_maps, test_partitions)
 
-        correct_community_maps_dimensions = [(2, 6), (2, 7), (2, 6), (2, 7), (2, 6), (2, 7), (2, 6), (2, 7), (2, 6),
-                                             (2, 7), (2, 6), (2, 7), (2, 6), (2, 7), (2, 6), (2, 7), (2, 6), (2, 7),
-                                             (2, 6), (2, 7), (2, 6), (2, 7), (2, 6), (2, 7)]
-
-        self.assertEqual(correct_community_maps_dimensions, test_community_maps_dimensions)
+        self.assertEqual(correct_num_communities, test_num_communities)
+        self.assertEqual(correct_num_nodes, test_num_nodes)
 
     def test_communities_7(self):
         model = m = disconnected_model()
@@ -441,17 +410,12 @@ class TestDecomposition(unittest.TestCase):
 
             self.assertEqual(correct_community_maps, str_test_community_maps)
 
-        test_community_maps_dimensions = []
-        for community_map in test_community_maps:
-            correct_length = len(community_map)
-            n_members = sum(len(community[0]) + len(community[1]) for community in community_map.values())
-            test_community_maps_dimensions.append((correct_length, n_members))
+        # Partition-based diagnostic test
+        correct_num_communities, correct_num_nodes, test_num_communities, test_num_nodes = \
+            _collect_partition_dependent_tests(test_community_maps, test_partitions)
 
-        correct_community_maps_dimensions = [(1, 2), (2, 4), (1, 2), (2, 4), (1, 2), (2, 4), (1, 2), (2, 4), (2, 3),
-                                             (2, 4), (2, 3), (2, 4), (2, 3), (2, 4), (2, 3), (2, 4), (2, 3), (3, 5),
-                                             (2, 3), (3, 5), (2, 3), (3, 5), (2, 3), (3, 5)]
-
-        self.assertEqual(correct_community_maps_dimensions, test_community_maps_dimensions)
+        self.assertEqual(correct_num_communities, test_num_communities)
+        self.assertEqual(correct_num_nodes, test_num_nodes)
 
     def test_decode_1(self):
         model = m = decode_model_1()
@@ -504,17 +468,12 @@ class TestDecomposition(unittest.TestCase):
 
             self.assertEqual(correct_community_maps, str_test_community_maps)
 
-        test_community_maps_dimensions = []
-        for community_map in test_community_maps:
-            correct_length = len(community_map)
-            n_members = sum(len(community[0]) + len(community[1]) for community in community_map.values())
-            test_community_maps_dimensions.append((correct_length, n_members))
+        # Partition-based diagnostic test
+        correct_num_communities, correct_num_nodes, test_num_communities, test_num_nodes = \
+            _collect_partition_dependent_tests(test_community_maps, test_partitions)
 
-        correct_community_maps_dimensions = [(2, 10), (2, 10), (2, 10), (2, 10), (2, 10), (2, 10), (2, 10), (2, 10),
-                                             (2, 10), (2, 10), (2, 10), (2, 10), (2, 10), (2, 10), (2, 10), (2, 10),
-                                             (2, 9), (2, 9), (2, 9), (2, 9), (2, 9), (2, 9), (2, 9), (2, 9)]
-
-        self.assertEqual(correct_community_maps_dimensions, test_community_maps_dimensions)
+        self.assertEqual(correct_num_communities, test_num_communities)
+        self.assertEqual(correct_num_nodes, test_num_nodes)
 
     def test_decode_2(self):
         model = m = decode_model_2()
@@ -594,16 +553,12 @@ class TestDecomposition(unittest.TestCase):
 
             self.assertEqual(correct_community_maps, str_test_community_maps)
 
-        test_community_maps_dimensions = []
-        for community_map in test_community_maps:
-            correct_length = len(community_map)
-            n_members = sum(len(community[0]) + len(community[1]) for community in community_map.values())
-            test_community_maps_dimensions.append((correct_length, n_members))
+        # Partition-based diagnostic test
+        correct_num_communities, correct_num_nodes, test_num_communities, test_num_nodes = \
+            _collect_partition_dependent_tests(test_community_maps, test_partitions)
 
-        correct_community_maps_dimensions = [(2, 15), (2, 15), (2, 14), (2, 14), (2, 15), (2, 15), (2, 14), (2, 14),
-                                             (2, 14), (2, 14), (2, 14), (2, 14), (2, 14), (2, 14), (2, 14), (2, 14),
-                                             (2, 13), (2, 13), (2, 13), (2, 13), (2, 13), (2, 13), (2, 13), (2, 13)]
-        self.assertEqual(correct_community_maps_dimensions, test_community_maps_dimensions)
+        self.assertEqual(correct_num_communities, test_num_communities)
+        self.assertEqual(correct_num_nodes, test_num_nodes)
 
     def test_communities_8(self):
         output = StringIO()
@@ -838,17 +793,48 @@ def _collect_community_maps(model):
                                                       random_seed=random_seed_test,
                                                       use_only_active_components=use_only_active_components)
 
-            # Create the partition for the model graph used to create the community map to ensure that the partition
-            # is consistent, otherwise certain tests will be skipped
-            partition_of_graph = community_louvain.best_partition(latest_community_map.graph,
-                                                                  random_state=latest_community_map.random_seed)
-
             # Add this latest community map object and its partition to their respective lists
             list_of_community_maps.append(latest_community_map)
-            list_of_partitions.append(partition_of_graph)
+            list_of_partitions.append(latest_community_map.graph_partition)
 
     # Return the list of community maps for use in the testing functions
     return list_of_community_maps, list_of_partitions
+
+
+def _collect_partition_dependent_tests(test_community_maps, test_partitions):
+    expected_num_comm_list = []
+    expected_num_members_list = []
+    actual_num_comm_list = []
+    actual_num_members_list = []
+
+    for community_map, partition in zip(test_community_maps, test_partitions):
+        expected_number_of_communities = len(set(partition.values()))
+        expected_number_of_members = len(partition)
+
+        # Now we will extract the lists within the community map that correspond to the
+        # nodes of the networkX graph
+        if community_map.type_of_community_map == 'constraint':
+            list_of_node_lists = [community[0] for community in
+                                  community_map.values()]
+
+        elif community_map.type_of_community_map == 'variable':
+            list_of_node_lists = [community[1] for community in
+                                  community_map.values()]
+
+        else:
+            list_of_node_lists = [community[0] + community[1] for community in
+                                  community_map.values()]
+
+        # We have to flatten list_of_node_lists
+        actual_number_of_members = len([node for node_list in list_of_node_lists for node in node_list])
+        actual_number_of_communities = len(community_map)
+
+        expected_num_comm_list.append(expected_number_of_communities)
+        expected_num_members_list.append(expected_number_of_members)
+        actual_num_comm_list.append(actual_number_of_communities)
+        actual_num_members_list.append(actual_number_of_members)
+
+    return expected_num_comm_list, expected_num_members_list, actual_num_comm_list, actual_num_members_list
 
 
 def create_model_5():  # This model comes from a GAMS convert of instance st_test4.gms at minlplib.com
