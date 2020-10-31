@@ -33,6 +33,7 @@ import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
 import pyomo.environ as pyo
+from pyomo.contrib.parmest.parmest import process_variable_names
 
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
@@ -63,6 +64,23 @@ class Object_from_string_Tester(unittest.TestCase):
         fixstatus = pyo_Var_obj.fixed
         self.assertEqual(fixstatus, False)
 
+class Variable_name_Tester(unittest.TestCase):
+    def setUp(self):
+        pass
+    
+    def tearDown(self):
+        pass
+    
+    def tests(self):
+        # Test this function does nothing if there are not any indices
+        self.assertTrue('hello' == process_variable_names('hello'))
+        
+        # Test this function works for IDAES style indicies
+        print(process_variable_names("fs.properties.tau['benzene', 'toluene']"))
+        self.assertTrue("fs.properties.tau:$benzene,$toluene" == process_variable_names("fs.properties.tau['benzene', 'toluene']"))
+        
+        # Same test, but with ' ' instead
+        self.assertTrue('fs.properties.tau:$benzene,$toluene' == process_variable_names('fs.properties.tau["benzene", "toluene"]'))
         
 @unittest.skipIf(not parmest.parmest_available,
                  "Cannot test parmest: required dependencies are missing")
@@ -263,9 +281,46 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
         The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
         "Nonlinear Parameter Estimation", Y. Bard, 1974.
         '''
-        
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+class parmest_object_Tester_RB_match_paper_alternate(unittest.TestCase):
     
+    def setUp(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model_alternate
+           
+        data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
+                                  [4,16.0],[5,15.6],[7,19.8]], columns=['hour', 'y'])
         
+        theta_names = ["theta['asymptote']", "theta['rate_constant']"]
+        
+        def SSE(model, data):  
+            expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+            return expr
+        
+        self.pest = parmest.Estimator(rooney_biegler_model_alternate, data, theta_names, SSE)
+    
+    def test_theta_est(self):
+        objval, thetavals = self.pest.theta_est(calc_cov=False)
+        
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
+    
+    @unittest.skipIf(not asl_available, "Cannot test covariance matrix: required ASL dependency is missing")
+    def test_theta_est_cov(self):
+        objval, thetavals, cov = self.pest.theta_est(calc_cov=True)
+        
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
+        
+        # Covariance matrix
+        self.assertAlmostEqual(cov[0,0], 6.30579403, places=2) # 6.22864 from paper
+        self.assertAlmostEqual(cov[0,1], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,0], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,1], 0.04193591, places=2) # 0.04124 from paper
+
 
 @unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")

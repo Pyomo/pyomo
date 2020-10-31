@@ -35,6 +35,29 @@ def rooney_biegler_model(data):
     model.SSE = pyo.Objective(rule = SSE_rule, sense=pyo.minimize)
 
     return model
+    
+def rooney_biegler_model_alternate(data):
+    ''' Alternate model definition used in a unit test
+    Here, the fitted parameters are defined as a single variable over a set
+    A bit silly for this specific example
+    '''
+
+    model = pyo.ConcreteModel()
+
+    model.var_names = pyo.Set(initialize=['asymptote','rate_constant'])
+
+    model.theta = pyo.Var(model.var_names, initialize={'asymptote':15, 'rate_constant':0.5})
+
+    def response_rule(m, h):
+        expr = m.theta['asymptote'] * (1 - pyo.exp(-m.theta['rate_constant'] * h))
+        return expr
+    model.response_function = pyo.Expression(data.hour, rule = response_rule)
+
+    def SSE_rule(m):
+        return sum((data.y[i] - m.response_function[data.hour[i]])**2 for i in data.index)
+    model.SSE = pyo.Objective(rule = SSE_rule, sense=pyo.minimize)
+
+    return model
 
 
 if __name__ == '__main__':
