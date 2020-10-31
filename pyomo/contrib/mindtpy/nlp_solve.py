@@ -201,8 +201,8 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_no_good_cuts:
         add_no_good_cuts(var_values, solve_data, config, feasible=True)
-    if config.use_tuba_list:
-        solve_data.tuba_list.add([v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list])
+    if config.use_tabu_list:
+        solve_data.tabu_list.add([v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list])
 
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
@@ -262,8 +262,8 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
     if config.add_no_good_cuts:
         # excludes current discrete option
         add_no_good_cuts(var_values, solve_data, config)
-    if config.use_tuba_list:
-        solve_data.tuba_list.add([v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list])
+    if config.use_tabu_list:
+        solve_data.tabu_list.add([v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list])
 
 
 
@@ -291,8 +291,8 @@ def handle_subproblem_other_termination(fixed_nlp, termination_condition,
         if config.add_no_good_cuts:
             # excludes current discrete option
             add_no_good_cuts(var_values, solve_data, config)
-        if config.use_tuba_list:
-            solve_data.tuba_list.add([v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list])
+        if config.use_tabu_list:
+            solve_data.tabu_list.add([v.value for v in solve_data.mip.MindtPy_utils.discrete_variable_list])
 
     else:
         raise ValueError(

@@ -100,7 +100,7 @@ def _get_MindtPy_config():
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
     ))
-    CONFIG.declare("use_tuba_list", ConfigValue(
+    CONFIG.declare("use_tabu_list", ConfigValue(
         default=True,
         description="Add no-good cuts (no-good cuts) to binary variables to disallow same integer solution again."
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",

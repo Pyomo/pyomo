@@ -90,7 +90,7 @@ class MindtPySolver(object):
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
                 "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
-        if config.use_tuba_list:
+        if config.use_tabu_list:
             config.mip_solver = 'cplex_persistent'
         # if the slacks fix to zero, just don't add them
         if config.max_slack == 0.0:
@@ -203,8 +203,8 @@ class MindtPySolver(object):
                 solve_data.stored_bound = {}
             if config.strategy == 'GOA' and config.add_no_good_cuts:
                 solve_data.num_no_good_cuts_added = {}
-            if config.use_tuba_list:
-                solve_data.tuba_list = set()
+            if config.use_tabu_list:
+                solve_data.tabu_list = set()
 
             # Set of NLP iterations for which cuts were generated
             lin.nlp_iters = Set(dimen=1)
