@@ -10,7 +10,7 @@
 
 import logging
 
-from pyutilib.misc import Bunch
+from pyomo.common.misc import Bunch
 from pyutilib.services import TempfileManager
 
 from pyomo.opt.base import SolverFactory, ProblemFormat, ResultsFormat

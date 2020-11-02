@@ -15,7 +15,7 @@ import re
 import tempfile
 
 from pyomo.common import Executable
-from pyutilib.misc import Options, Bunch
+from pyomo.common.misc import Options, Bunch
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 

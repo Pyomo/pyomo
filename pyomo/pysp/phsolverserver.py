@@ -16,8 +16,8 @@ import copy
 from optparse import OptionParser
 
 import pyutilib.common
-import pyutilib.misc
-from pyutilib.misc import PauseGC
+from pyomo.common.misc import Bunch
+from pyutilib.misc import PauseGC, import_file
 from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
@@ -62,7 +62,7 @@ class PHPyroWorker(TaskWorker):
 
     def process(self, data):
 
-        data = pyutilib.misc.Bunch(**data)
+        data = Bunch(**data)
         result = None
         if data.action == "release":
 
@@ -968,7 +968,7 @@ class _PHSolverServer(_PHBase):
         elif module_name in sys.modules:
             this_module = sys.modules[module_name]
         else:
-            this_module = pyutilib.misc.import_file(module_name,
+            this_module = import_file(module_name,
                                                     clear_cache=True)
             self._modules_imported[module_name] = this_module
 
@@ -1344,7 +1344,7 @@ def exec_phsolverserver(options):
                 # make sure "." is in the PATH.
                 original_path = list(sys.path)
                 sys.path.insert(0,'.')
-                pyutilib.misc.import_file(this_extension)
+                import_file(this_extension)
                 print("Module successfully loaded")
                 sys.path[:] = original_path # restore to what it was
 

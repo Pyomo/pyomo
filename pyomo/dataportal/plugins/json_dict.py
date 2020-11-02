@@ -12,7 +12,7 @@ import os.path
 import json
 import six
 
-from pyutilib.misc import Options
+from pyomo.common.misc import Options
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 from pyomo.dataportal.factory import DataManagerFactory

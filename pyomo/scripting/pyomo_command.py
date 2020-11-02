@@ -9,8 +9,7 @@
 #  ___________________________________________________________________________
 
 
-from pyutilib.misc import Options, Container
-
+from pyomo.common.misc import Options, Container
 from pyomo.common.dependencies import pympler_available
 import pyomo.scripting.util
 from pyomo.core import ConcreteModel

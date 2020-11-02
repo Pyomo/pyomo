@@ -31,7 +31,7 @@ logger = logging.getLogger('pyomo.common')
 
 class PyomoAPIData(dict):
     """
-    A generalization of pyutilib.misc.Bunch.  This class counts
+    A generalization of pyomo.common.misc.Bunch.  This class counts
     access to attributes, and it generates errors for undefined attributes.
     """
 

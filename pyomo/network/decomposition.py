@@ -17,7 +17,7 @@ from pyomo.core import Constraint, value, Objective, Var, ConcreteModel, \
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
-from pyutilib.misc import Options
+from pyomo.common.misc import Options
 import logging, time
 from six import iteritems
 

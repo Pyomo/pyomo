@@ -23,7 +23,7 @@ try:
 except:                                           #pragma:nocover
     import pickle
 
-from pyutilib.misc import Bunch
+from pyomo.common.misc import Bunch
 
 from pyomo.common.dependencies import attempt_import, dill, dill_available
 from pyomo.common import pyomo_command

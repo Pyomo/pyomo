@@ -13,9 +13,8 @@ import re
 import copy
 import logging
 
-from pyutilib.misc import  Options
 import pyutilib.common
-from pyutilib.misc import flatten
+from pyomo.common.misc import Options, flatten
 
 from pyomo.dataportal.parse_datacmds import (
     parse_data_commands, _re_number

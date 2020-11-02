@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """This module contains functions to interrogate the size of a Pyomo model."""
 import logging
 
@@ -5,7 +15,7 @@ from pyomo.common.collections import ComponentSet
 from pyomo.core import Block, Constraint, Var
 from pyomo.core.expr import current as EXPR
 from pyomo.gdp import Disjunct, Disjunction
-from pyutilib.misc import Container
+from pyomo.common.misc import Container
 
 
 default_logger = logging.getLogger('pyomo.util.model_size')

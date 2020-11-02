@@ -45,7 +45,7 @@ import operator
 import types
 import enum
 
-from pyutilib.misc import flatten_tuple
+from pyomo.common.misc import flatten_tuple
 
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory

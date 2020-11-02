@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Tests the induced linearity module."""
 import pyutilib.th as unittest
 from pyomo.contrib.preprocessing.plugins.induced_linearity import (
@@ -10,7 +20,7 @@ from pyomo.environ import (Binary, ConcreteModel, Constraint, ConstraintList,
                            TransformationFactory, Var, exp)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
-from pyutilib.misc import Bunch
+from pyomo.common.misc import Bunch
 
 glpk_available = SolverFactory('glpk').available()
 

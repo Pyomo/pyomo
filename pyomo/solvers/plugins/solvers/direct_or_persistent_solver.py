@@ -18,7 +18,7 @@ import pyomo.common
 from pyomo.common.collections import ComponentMap, ComponentSet
 import pyomo.opt.base.solvers
 from pyomo.opt.base.formats import ResultsFormat
-from pyutilib.misc import Options
+from pyomo.common.misc import Options
 
 class DirectOrPersistentSolver(OptSolver):
     """

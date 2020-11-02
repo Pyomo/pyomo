@@ -19,7 +19,7 @@ import pyomo.common
 
 from pyomo.opt.base.solvers import _extract_version
 import pyutilib.subprocess
-from pyutilib.misc import Options, quote_split
+from pyomo.common.misc import Options, quote_split
 
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.kernel.objective import IObjective

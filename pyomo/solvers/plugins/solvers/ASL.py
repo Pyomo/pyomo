@@ -14,7 +14,7 @@ import six
 
 from pyomo.common import Executable
 from pyutilib.common import ApplicationError
-from pyutilib.misc import Options, Bunch
+from pyomo.common.misc import Options, Bunch
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 

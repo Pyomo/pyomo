@@ -18,7 +18,7 @@ import logging
 import socket
 
 import pyutilib.subprocess
-from pyutilib.misc import Options
+from pyomo.common.misc import Options, sort_index
 
 import pyomo.common
 import pyomo.scripting.pyomo_parser
@@ -398,7 +398,7 @@ def print_components(data):
     print("Pyomo Model Components:")
     print("----------------------------------------------------------------")
     components = pyomo.core.base._pyomo.model_components()
-    index = pyutilib.misc.sort_index(components)
+    index = sort_index(components)
     for i in index:
         print("")
         print(" "+components[i][0])
@@ -409,7 +409,7 @@ def print_components(data):
     print("Pyomo Virtual Sets:")
     print("----------------------------------------------------------------")
     pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
-    index = pyutilib.misc.sort_index(pyomo_sets)
+    index = sort_index(pyomo_sets)
     for i in index:
         print("")
         print(" "+pyomo_sets[i][0])

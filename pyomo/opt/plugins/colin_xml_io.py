@@ -12,9 +12,10 @@
 Define the plugin for COLIN XML IO
 """
 
+import re
 from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 import xml.dom.minidom
-from pyutilib.misc import tostr
+from pyomo.common.misc import tostr
 
 try:
     unicode

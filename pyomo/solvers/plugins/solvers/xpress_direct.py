@@ -12,7 +12,7 @@ import logging
 import re
 import sys
 import time
-from pyutilib.misc import Bunch
+from pyomo.common.misc import Bunch
 from pyutilib.services import TempfileManager
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.expr.numvalue import is_fixed
@@ -754,8 +754,8 @@ class XpressDirect(DirectSolver):
             if xpress_con in self._range_constraints:
                 ## for xpress, the slack on a range constraint
                 ## is based on the upper bound
-                lb = con.lb
-                ub = con.ub
+                lb = xpress_con.lb
+                ub = xpress_con.ub
                 ub_s = val
                 expr_val = ub-ub_s
                 lb_s = lb-expr_val

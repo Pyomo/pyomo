@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import time
-import pyutilib.misc
+from pyomo.common.misc import Bunch
 import pyomo.opt
 from pyomo.opt import SolverFactory
 from pyomo.core import TransformationFactory
@@ -83,8 +83,8 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
             #
             # Return the sub-solver return condition value and log
             #
-            return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None),
-                                       log=getattr(opt,'_log',None))
+            return Bunch(rc=getattr(opt,'_rc', None),
+                         log=getattr(opt,'_log',None))
 
     def _postsolve(self):
         #

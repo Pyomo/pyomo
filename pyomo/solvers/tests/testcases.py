@@ -12,7 +12,7 @@ import sys
 import logging
 
 import pyutilib.th as unittest
-from pyutilib.misc import Options
+from pyomo.common.misc import Options
 
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models

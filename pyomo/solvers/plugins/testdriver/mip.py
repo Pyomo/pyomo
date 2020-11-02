@@ -13,7 +13,7 @@ import os.path
 
 import pyutilib.autotest
 import pyomo.common
-from pyutilib.misc import Options
+from pyomo.common.misc import Options
 
 from pyomo.common.plugin import Plugin, implements, alias
 import pyomo.opt

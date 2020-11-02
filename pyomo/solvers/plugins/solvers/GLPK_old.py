@@ -14,7 +14,7 @@ import re
 import sys
 
 from pyutilib.common import ApplicationError
-from pyutilib.misc import Bunch, Options
+from pyomo.common.misc import Bunch, Options
 from pyutilib.services import TempfileManager
 import pyutilib.subprocess
 

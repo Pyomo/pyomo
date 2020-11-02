@@ -22,12 +22,13 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyutilib.misc import Container, PauseGC
+from pyutilib.misc import PauseGC
 
 from pyomo.common import timing, PyomoAPIFactory
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.plugin import ExtensionPoint
+from pyomo.common.misc import Container
 
 from pyomo.core.expr import expr_common
 from pyomo.core.expr.symbol_map import SymbolMap
@@ -838,7 +839,7 @@ from solvers are immediately loaded into the original model instance.""")
                     tmp_clone_counter = expr_common.clone_counter
                     if clone_counter != tmp_clone_counter:
                         clone_counter = tmp_clone_counter
-                        print("             Cloning detected! (clone count: %d)" % clone_counters)
+                        print("             Cloning detected! (clone count: %d)" % clone_counter)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.

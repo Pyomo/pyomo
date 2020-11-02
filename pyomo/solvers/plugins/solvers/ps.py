@@ -10,9 +10,11 @@
 
 from six.moves import xrange
 
-from pyutilib.misc import Bunch
+from pyomo.common.misc import Bunch
 
-from pyomo.opt import SolverResults, ProblemSense, SolverStatus, SolutionStatus, TerminationCondition, SolverFactory
+from pyomo.opt import (SolverResults, ProblemSense,
+                       SolverStatus, SolutionStatus,
+                       TerminationCondition, SolverFactory)
 from pyomo.opt.blackbox import solver
 from pyomo.opt.blackbox import problem
 

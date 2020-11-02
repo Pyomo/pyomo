@@ -10,7 +10,7 @@
 
 import logging
 
-from pyutilib.misc import Options
+from pyomo.common.misc import Options
 
 from pyomo.opt.base.solvers import SolverFactory
 from pyomo.common import Executable

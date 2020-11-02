@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.misc import flatten_tuple
+from pyomo.common.misc import flatten_tuple
 from pyomo.common import DeveloperError
 from pyomo.core.base.set import SetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData

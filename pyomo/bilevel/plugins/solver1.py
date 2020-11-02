@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import time
-import pyutilib.misc
+from pyomo.common.misc import Bunch
 from pyomo.core import TransformationFactory, Var, ComponentUID, Block, Objective, Set
 import pyomo.opt
 import pyomo.common
@@ -156,8 +156,8 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
             #
             # Return the sub-solver return condition value and log
             #
-            return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None),
-                                       log=getattr(opt,'_log',None))
+            return Bunch(rc=getattr(opt,'_rc', None),
+                         log=getattr(opt,'_log',None))
 
     def _postsolve(self):
         #

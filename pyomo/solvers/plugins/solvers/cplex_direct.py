@@ -13,7 +13,7 @@ import re
 import six
 import sys
 
-from pyutilib.misc import Bunch
+from pyomo.common.misc import Bunch
 from pyutilib.services import TempfileManager
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base import Suffix, Var, Constraint, SOSConstraint, Objective

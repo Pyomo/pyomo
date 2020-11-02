@@ -20,11 +20,10 @@ import json
 from six import iteritems
 from pyomo.common import pyomo_api
 
-from pyutilib.misc import Options
+from pyomo.common.misc import Options, Container
 memory_data = Options()
 
 import pyutilib.misc
-from pyutilib.misc import Container
 from pyutilib.services import TempfileManager
 
 from pyomo.common.dependencies import (
@@ -161,7 +160,7 @@ def apply_preprocessing(data, parser=None):
     Returned:
         error: This is true if an error has occurred.
     """
-    data.local = pyutilib.misc.Options()
+    data.local = Options()
     #
     if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Applying Pyomo preprocessing actions\n' % (time.time()-start_time))
@@ -278,7 +277,8 @@ def create_model(data):
         else:
             model_options = data.options.model.options.value()
             tick = time.time()
-            model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
+            model = ep.service().apply( options = Container(*data.options),
+                                       model_options=Container(*model_options) )
             if data.options.runtime.report_timing is True:
                 print("      %6.2f seconds required to construct instance" % (time.time() - tick))
                 data.local.time_initial_import = None
@@ -476,9 +476,8 @@ def create_model(data):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following Pyomo instance creation" % mem_used)
 
-    return pyutilib.misc.Options(
-                    model=model, instance=instance,
-                    smap_id=smap_id, filename=fname, local=data.local )
+    return Options(model=model, instance=instance,
+                   smap_id=smap_id, filename=fname, local=data.local )
 
 @pyomo_api(namespace='pyomo.script')
 def apply_optimizer(data, instance=None):
@@ -623,7 +622,7 @@ def apply_optimizer(data, instance=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following optimization" % mem_used)
 
-    return pyutilib.misc.Options(results=results, opt=solver, local=data.local)
+    return Options(results=results, opt=solver, local=data.local)
 
 
 @pyomo_api(namespace='pyomo.script')
@@ -893,8 +892,8 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
                 _options = args
             else:
                 _options = parser.parse_args(args=args)
-            # Replace the parser options object with a pyutilib.misc.Options object
-            options = pyutilib.misc.Options()
+            # Replace the parser options object with a pyomo.common.misc.Options object
+            options = Options()
             for key in dir(_options):
                 if key[0] != '_':
                     val = getattr(_options, key)
