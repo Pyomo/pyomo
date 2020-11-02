@@ -10,9 +10,11 @@
 #
 # Unit Tests for ComponentUID
 #
+from six import StringIO
 
 import pyutilib.th as unittest
 from pyomo.environ import ConcreteModel, Block, Var, Set, Param, ComponentUID
+from pyomo.common.log import LoggingIntercept
 
 _star = slice(None)
 
@@ -119,43 +121,53 @@ class TestComponentUID(unittest.TestCase):
             cuid._cids,
             (('a',(_star,)), ('c',tuple()), ('b',(_star, _star))) )
 
+    def test_find_component_deprecated(self):
+        ref = self.m.b[1,'2'].c.a[3]
+        cuid = ComponentUID(ref)
+        DEP_OUT = StringIO()
+        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
+            self.assertTrue(cuid.find_component(self.m) is ref)
+        self.assertIn('ComponentUID.find_component() is deprecated.',
+                      DEP_OUT.getvalue())
+
     def test_find_explicit_exists(self):
         ref = self.m.b[1,'2'].c.a[3]
         cuid = ComponentUID(ref)
-        self.assertTrue(cuid.find_component(self.m) is ref)
+        self.assertTrue(cuid.find_component_on(self.m) is ref)
 
     def test_find_component_exists_1(self):
         ref = self.m.b[1,'2'].c.a
         cuid = ComponentUID(ref)
-        self.assertTrue(cuid.find_component(self.m) is ref)
+        self.assertTrue(cuid.find_component_on(self.m) is ref)
 
     def test_find_wildcard_not_exists_2(self):
         cuid = ComponentUID('b:1,$2.c.a:*')
-        self.assertIsNone(cuid.find_component(self.m))
+        self.assertIsNone(cuid.find_component_on(self.m))
 
     def test_find_wildcard_not_exists_3(self):
         cuid = ComponentUID('b[*,*]')
-        self.assertIsNone(cuid.find_component(self.m))
+        self.assertIsNone(cuid.find_component_on(self.m))
 
     # def test_find_implicit_exists(self):
     #     cuid = ComponentUID('b:1,2.c.a:3')
-    #     self.assertTrue(cuid.find_component(self.m) is self.m.b[1,'2'].c.a[3])
+    #     self.assertTrue(cuid.find_component_on(self.m) is
+    #                     self.m.b[1,'2'].c.a[3])
 
     def test_find_implicit_notExists_1(self):
         cuid = ComponentUID('b:1,2.c.a:4')
-        self.assertTrue(cuid.find_component(self.m) is None)
+        self.assertTrue(cuid.find_component_on(self.m) is None)
 
     def test_find_implicit_notExists_2(self):
         cuid = ComponentUID('b:1,1.c.a:3')
-        self.assertTrue(cuid.find_component(self.m) is None)
+        self.assertTrue(cuid.find_component_on(self.m) is None)
 
     def test_find_explicit_notExists_1(self):
         cuid = ComponentUID('b:1,2.c.a:$3')
-        self.assertTrue(cuid.find_component(self.m) is None)
+        self.assertTrue(cuid.find_component_on(self.m) is None)
 
     def test_find_explicit_notExists_2(self):
         cuid = ComponentUID('b:$1,2.c.a:3')
-        self.assertTrue(cuid.find_component(self.m) is None)
+        self.assertTrue(cuid.find_component_on(self.m) is None)
 
     def test_printers_1(self):
         cuid = ComponentUID(self.m.b[1,'2'].c.a[3])

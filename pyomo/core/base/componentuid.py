@@ -8,9 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
-#####
-
 import bisect
 import codecs
 import re
@@ -19,6 +16,7 @@ import ply.lex
 from six import string_types, iteritems
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.deprecation import deprecated
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 
 class ComponentUID(object):
@@ -382,23 +380,21 @@ class ComponentUID(object):
     def _resolve_cuid(self, block):
         obj = block
         for name, idx in reversed(self._cids):
-            #print obj.name, name, idx
             try:
                 if len(idx):
                     obj = getattr(obj, name)[idx]
                 else:
                     obj = getattr(obj, name)
             except KeyError:
-                #print sys.exc_info()
                 return None
             except AttributeError:
-                #print sys.exc_info()
                 return None
             except IndexError:
-                #print sys.exc_info()
                 return None
         return obj
 
+    @deprecated("ComponentUID.find_component() is deprecated. "
+                "Use ComponentUID.find_component_on()", version='TBD')
     def find_component(self, block):
         return self.find_component_on(block)
 

@@ -59,7 +59,7 @@ def _update_data(worker, scenario, data):
     instance = scenario.instance
     assert instance is not None
     for cuid, val in data:
-        cuid.find_component(instance).value = val
+        cuid.find_component_on(instance).value = val
 
 #
 # These distributions are documented by the SMPS format
