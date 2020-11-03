@@ -25,7 +25,6 @@ from pyomo.common.dependencies import (
     pandas as pd, pandas_available,
     scipy, scipy_available,
 )
-parmest_available = numpy_available & pandas_available & scipy_available
 
 import pyomo.environ as pyo
 ####import pyomo.pysp.util.rapper as st
@@ -36,19 +35,23 @@ from pyomo.environ import Block
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
-    fit_rect_dist, fit_mvn_dist, fit_kde_dist
+from pyomo.contrib.parmest.graphics import (fit_rect_dist,
+                                            fit_mvn_dist,
+                                            fit_kde_dist)
 
-__version__ = 0.3
+parmest_available = numpy_available & pandas_available & scipy_available
+
+__version__ = 0.31
 
 if numpy_available and scipy_available:
     from pyomo.contrib.pynumero.asl import AmplInterface
     asl_available = AmplInterface.available()
 else:
-    asl_available=False
+    asl_available = False
 
 if asl_available:
     from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
+
 
 
 #=============================================
@@ -532,7 +535,7 @@ class Estimator(object):
                     vals = {}
                     for var in return_values:
                         exp_i_var = eval('exp_i.'+ str(var))
-                        temp = [_.value for _ in exp_i_var.itervalues()]
+                        temp = [pyo.value(_) for _ in exp_i_var.itervalues()]
                         if len(temp) == 1:
                             vals[var] = temp[0]
                         else:

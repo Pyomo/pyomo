@@ -16,7 +16,7 @@ f(x) = | 1      , 1 <  x <= 2
        \ x-1    , 2 <  x <= 3
 """
 
-from pyomo.environ import *
+from pyomo.core import ConcreteModel, Var, Objective, Param, Piecewise, Constraint,  maximize
 
 DOMAIN_PTS = [0, 1, 1, 2, 3]
 F = [0, 0, 1, 1, 2]

@@ -11,13 +11,10 @@
 __all__ = ('PySPConfiguredObject', 'PySPConfiguredExtension')
 
 import inspect
-import copy
-import sys
 from collections import defaultdict
 
 from pyomo.common.plugin import SingletonPlugin
-from pyomo.pysp.util.config import (PySPConfigValue,
-                                    PySPConfigBlock,
+from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_option,
                                     check_options_match,
                                     safe_declare_common_option,

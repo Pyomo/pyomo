@@ -21,7 +21,7 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 
 from pyomo.core.base import IntegerSet
-from pyomo.environ import *
+from pyomo.environ import AbstractModel, ConcreteModel, Set, Param, Var, VarList, RangeSet, Suffix, Expression, NonPositiveReals, PositiveReals, Reals, RealSet, NonNegativeReals, Integers, Binary, value
 
 class PyomoModel(unittest.TestCase):
 

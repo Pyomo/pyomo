@@ -155,8 +155,10 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         else:
             # Use Pyomo's contrib.fbbt package
             lb, ub = compute_bounds_on_expr(main_obj.expr)
-            util_blk.objective_value.setub(ub)
-            util_blk.objective_value.setlb(lb)
+            if solve_data.results.problem.sense == ProblemSense.minimize:
+                util_blk.objective_value.setlb(lb)
+            else:
+                util_blk.objective_value.setub(ub)
 
         if main_obj.sense == minimize:
             util_blk.objective_constr = Constraint(

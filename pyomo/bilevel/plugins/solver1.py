@@ -12,7 +12,6 @@ import time
 import pyutilib.misc
 from pyomo.core import TransformationFactory, Var, ComponentUID, Block, Objective, Set
 import pyomo.opt
-from pyomo.bilevel.components import SubModel
 import pyomo.common
 
 

@@ -333,7 +333,6 @@ class FileDownloader(object):
                 % (self._fname,))
         zip_file = zipfile.ZipFile(io.BytesIO(self.retrieve_url(url)))
         # Simple sanity checks
-        names = []
         for info in zip_file.infolist():
             f = info.filename
             if f[0] in '\\/' or '..' in f:

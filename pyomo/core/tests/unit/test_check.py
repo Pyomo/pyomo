@@ -20,7 +20,7 @@ from six import StringIO
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.environ import AbstractModel, BuildCheck, Param, Set, value
 
 class PyomoModel(unittest.TestCase):
 

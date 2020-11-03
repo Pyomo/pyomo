@@ -15,7 +15,6 @@ import glob
 import datetime
 import textwrap
 import logging
-import argparse
 import socket
 
 import pyutilib.subprocess
@@ -221,7 +220,6 @@ def help_api(options):
                     print("    "+line)
 
 def help_environment():
-    cmddir = os.path.dirname(os.path.abspath(sys.executable))+os.sep
     info = Options()
     #
     info.python = Options()

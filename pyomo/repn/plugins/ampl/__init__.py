@@ -8,4 +8,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.repn.plugins.ampl.ampl_ import *
+from pyomo.repn.plugins.ampl.ampl_ import ProblemWriter_nl

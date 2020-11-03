@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Piecewise
+from pyomo.core import ConcreteModel, Var, Objective, Piecewise
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model

@@ -15,7 +15,7 @@
 #          '# nonlinear vars in constraints, objectives, both'
 #
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Objective, Constraint
 
 model = ConcreteModel()
 

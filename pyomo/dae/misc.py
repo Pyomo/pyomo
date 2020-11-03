@@ -10,17 +10,15 @@
 
 import logging
 
+from pyomo.common.collections import ComponentMap
+from pyomo.common.log import LoggingIntercept
 from pyomo.core import Suffix, Var, Constraint, Piecewise, Block
 from pyomo.core import Expression, Param
-from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.block import _BlockData, IndexedBlock
-from pyomo.dae import ContinuousSet, DerivativeVar, DAE_Error
-from pyomo.common.collections import ComponentMap
-from pyomo.core.base.block import SortComponents
-from pyomo.common.log import LoggingIntercept
+from pyomo.core.base.block import IndexedBlock, SortComponents
+from pyomo.dae import ContinuousSet, DAE_Error
 
-from six import iterkeys, itervalues, iteritems, StringIO
+from six import iterkeys, itervalues, StringIO
 
 logger = logging.getLogger('pyomo.dae')
 
@@ -171,7 +169,7 @@ def expand_components(block):
 
                 N = len(redo_expansion)
 
-    except Exception as e:
+    except Exception:
         logger.error(buf.getvalue())
         raise
 
@@ -451,7 +449,6 @@ def get_index_information(var, ds):
     # Find index order of ContinuousSet in the variable
     indargs = []
     dsindex = 0
-    tmpds2 = None
 
     if var.dim() != 1:
         indCount = 0
