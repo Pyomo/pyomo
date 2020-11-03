@@ -16,7 +16,7 @@ import os
 
 import pyomo.common
 import pyutilib.subprocess
-from pyomo.common.errors import ApplicationError, WindowsError
+from pyomo.common.errors import ApplicationError
 
 import pyomo.opt.solver.shellcmd
 from pyomo.opt.solver.shellcmd import SystemCallSolver
@@ -48,7 +48,7 @@ class ILMLicensedSystemCallSolver(SystemCallSolver):
                     # user hits Ctrl-C.
                     cmd.append("-batch")
                 [rc,log] = pyutilib.subprocess.run(cmd)
-            except WindowsError:
+            except OSError:
                 msg = sys.exc_info()[1]
                 raise ApplicationError("Could not execute the command: ilmtest\n\tError message: "+msg)
             sys.stdout.flush()

@@ -49,25 +49,8 @@ class NondifferentiableError(PyomoException, ValueError):
     pass
 
 
-class WindowsError_def(Exception):
-    """
-    An exception used there is an error configuring a package.
-    """
-
-    def __init__(self, *args, **kargs):
-        Exception.__init__(self, *args, **kargs)  #pragma:nocover
-
-
-if (sys.platform[0:3] != "win"):
-    WindowsError = WindowsError_def
-else:
-    WindowsError = WindowsError
-
-
-class ApplicationError(Exception):
+class ApplicationError(PyomoException):
     """
     An exception used when an external application generates an error.
     """
-
-    def __init__(self, *args, **kargs):
-        Exception.__init__(self, *args, **kargs)  #pragma:nocover
+    pass
