@@ -10,7 +10,10 @@
 #### Using mpi-sppy instead of PySP; May 2020
 #### Adding option for "local" EF starting Sept 2020
 
+# False implies use the EF that is local to parmset
 use_mpisppy_ef = True  # this is for testing only as Sept 2020
+# If you really want to be able to run completely without mpisppy
+# then you need to put the mpisppy imports in a try bock, BTW
 
 import re
 import importlib as im
@@ -18,6 +21,8 @@ import types
 import json
 from itertools import combinations
 import mpisppy.utils.sputils as sputils
+sputils.disable_tictoc_output()
+
 import pyomo.contrib.parmest.create_ef as local_ef
 
 from pyomo.common.dependencies import (
