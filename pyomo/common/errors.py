@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import sys
 
 class PyomoException(Exception):
     """
@@ -46,3 +47,27 @@ class InfeasibleConstraintException(PyomoException):
 class NondifferentiableError(PyomoException, ValueError):
     """A Pyomo-specific ValueError raised for non-differentiable expressions"""
     pass
+
+
+class WindowsError_def(Exception):
+    """
+    An exception used there is an error configuring a package.
+    """
+
+    def __init__(self, *args, **kargs):
+        Exception.__init__(self, *args, **kargs)  #pragma:nocover
+
+
+if (sys.platform[0:3] != "win"):
+    WindowsError = WindowsError_def
+else:
+    WindowsError = WindowsError
+
+
+class ApplicationError(Exception):
+    """
+    An exception used when an external application generates an error.
+    """
+
+    def __init__(self, *args, **kargs):
+        Exception.__init__(self, *args, **kargs)  #pragma:nocover

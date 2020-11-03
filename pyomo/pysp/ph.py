@@ -22,7 +22,7 @@ try:
 except ImportError:
     guppy_available = False
 
-import pyutilib.common
+from pyomo.common.errors import ApplicationError
 
 from pyomo.core import Var, Set, BooleanSet, IntegerSet, Suffix, value, minimize, maximize
 from pyomo.opt import (UndefinedData,
@@ -4243,7 +4243,7 @@ class ProgressiveHedging(_PHBase):
                     print("")
                     self._current_iteration -= 1
                     break
-                except pyutilib.common._exceptions.ApplicationError:
+                except ApplicationError:
                     print("")
                     print(" ** Caught ApplicationError exception. "
                           "Attempting to gracefully exit PH")

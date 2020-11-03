@@ -18,7 +18,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 import pyutilib.services
-import pyutilib.common
+from pyomo.common.errors import ApplicationError
 
 import pyomo.opt
 
@@ -139,7 +139,7 @@ class OptConvertDebug(unittest.TestCase):
         try:
             ans = pyomo.opt.convert_problem( (currdir+"unknown.nl",), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("Expected pyomo.opt.ConverterError exception")
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             if pyomo.common.Executable("pico_convert"):
                 self.fail("Expected ApplicationError because pico_convert is not available")
             return
@@ -172,7 +172,7 @@ class OptConvertDebug(unittest.TestCase):
         try:
             ans = pyomo.opt.convert_problem( (currdir+"test3.mod",currdir+"test5.dat"), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("Expected pyomo.opt.ConverterError exception because we provided a MOD file with a 'data;' declaration")
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             if pyomo.common.Executable("glpsol"):
                 self.fail("Expected ApplicationError because glpsol is not available")
             return

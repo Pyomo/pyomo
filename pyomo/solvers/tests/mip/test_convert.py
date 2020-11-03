@@ -20,7 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 from pyutilib.services import TempfileManager
-from pyutilib.common import ApplicationError
+from pyomo.common.errors import ApplicationError
 
 from pyomo.opt import ProblemFormat, ConverterError, convert_problem
 from pyomo.common import Executable

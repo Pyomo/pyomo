@@ -10,7 +10,7 @@
 
 import os.path
 import six
-import pyutilib.common
+from pyomo.common.errors import ApplicationError
 from pyutilib.excel.spreadsheet import ExcelSpreadsheet, Interfaces
 
 from pyomo.dataportal import TableData
@@ -54,7 +54,7 @@ class SheetTable(TableData):
         else:
             try:
                 self.sheet = ExcelSpreadsheet(self.filename, ctype=self.ctype)
-            except pyutilib.common.ApplicationError:
+            except ApplicationError:
                 raise
 
     def read(self):

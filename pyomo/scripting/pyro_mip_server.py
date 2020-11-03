@@ -30,7 +30,7 @@ except:
 import pyutilib.services
 import pyutilib.pyro
 from pyutilib.pyro import using_pyro4, TaskProcessingError
-import pyutilib.common
+from pyomo.common.errors import ApplicationError
 from pyomo.common import pyomo_command
 from pyomo.opt.base import SolverFactory, ConverterError
 
@@ -233,7 +233,7 @@ def main():
                 sys.stderr.write("CONVERTER ERROR:\n")
                 sys.stderr.write(str(sys.exc_info()[1])+"\n")
                 raise
-            except pyutilib.common.ApplicationError:
+            except ApplicationError:
                 sys.stderr.write("APPLICATION ERROR:\n")
                 sys.stderr.write(str(sys.exc_info()[1])+"\n")
                 raise
