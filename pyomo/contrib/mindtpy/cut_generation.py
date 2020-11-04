@@ -44,7 +44,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             jacs = solve_data.jacobians
 
             # Equality constraint (makes the problem nonconvex)
-            if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower and config.use_dual:
+            if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower and config.equality_relaxation:
                 sign_adjust = -1 if solve_data.objective_sense == minimize else 1
                 rhs = constr.lower
                 if config.add_slack:

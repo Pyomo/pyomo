@@ -103,7 +103,7 @@ class MindtPySolver(object):
             config.add_slack = False
             config.use_mcpp = True
             config.integer_to_binary = True
-            config.use_dual = False
+            config.equality_relaxation = False
             config.use_fbbt = True
         elif config.strategy == "feas_pump":  # feasibility pump alone
             config.init_strategy = "feas_pump"
@@ -116,7 +116,7 @@ class MindtPySolver(object):
             solve_data.fp_iter = 1
 
         if config.nlp_solver == "baron" or (config.nlp_solver == "gams" and config.nlp_solver_args['solver']):
-            config.use_dual = False
+            config.equality_relaxation = False
         # if ecp tolerance is not provided use bound tolerance
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.bound_tolerance

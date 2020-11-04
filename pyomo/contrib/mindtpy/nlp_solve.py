@@ -129,7 +129,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
         fixed_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    if config.use_dual:
+    if config.equality_relaxation:
         for c in fixed_nlp.tmp_duals:
             if fixed_nlp.dual.get(c, None) is None:
                 fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
@@ -218,7 +218,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
     # TODO try something else? Reinitialize with different initial
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
-    if config.use_dual:
+    if config.equality_relaxation:
         for c in fixed_nlp.component_data_objects(ctype=Constraint):
             rhs = c.upper if c. has_ub() else c.lower
             c_geq = -1 if c.has_ub() else 1

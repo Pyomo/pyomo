@@ -347,7 +347,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         opt: SolverFactory
             the mip solver
         """
-        if config.use_dual:
+        if config.equality_relaxation:
             for c in fixed_nlp.tmp_duals:
                 if fixed_nlp.dual.get(c, None) is None:
                     fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
@@ -417,7 +417,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info('NLP subproblem was locally infeasible.')
-        if config.use_dual:
+        if config.equality_relaxation:
             for c in fixed_nlp.component_data_objects(ctype=Constraint):
                 rhs = ((0 if c.upper is None else c.upper)
                        + (0 if c.lower is None else c.lower))

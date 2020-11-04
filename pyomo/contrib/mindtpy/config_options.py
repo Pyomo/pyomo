@@ -153,8 +153,7 @@ def _get_MindtPy_config():
         description="use package MC++ to set a bound for variable 'objective_value', which is introduced when the original problem's objective function is nonlinear.",
         domain=bool
     ))
-    CONFIG.declare("use_dual", ConfigValue(
-        # TODO: should we set the default value to True?
+    CONFIG.declare("equality_relaxation", ConfigValue(
         default=True,
         description="use dual solution from the nlp solver to add OA cuts for equality constraints.",
         domain=bool
