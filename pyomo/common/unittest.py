@@ -113,7 +113,7 @@ class TestCase(_pyunit.TestCase):
                             str(e), _unittest.case.safe_repr(key)))
             return # PASS!
 
-        elif all(isinstance(_, six.string_types) for _ in args):
+        elif any(isinstance(_, six.string_types) for _ in args):
             if first == second:
                 return # PASS!
 
@@ -139,7 +139,7 @@ class TestCase(_pyunit.TestCase):
             try:
                 f = float(first)
                 s = float(second)
-                if abs(f - s) / max(abs(f), abs(s)) <= tolerance:
+                if abs(f - s) / max(abs(f), abs(s)) <= delta:
                     return # PASS!
             except:
                 pass
