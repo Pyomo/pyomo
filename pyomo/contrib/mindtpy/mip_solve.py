@@ -386,11 +386,10 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
     elif loa_projection:
-        MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
-                                                                       solve_data.best_solution_found,
-                                                                       discrete_only=False)
-        # if MindtPy.MindtPy_linear_cuts.find_component('obj_limit') is not None:
-        #     MindtPy.MindtPy_linear_cuts.del_component('obj_limit')
+        if config.add_regularization == "level_squared":
+            MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
+                                                                        solve_data.best_solution_found,
+                                                                        discrete_only=False)
         if solve_data.objective_sense == minimize:
             MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
                 expr=MindtPy.objective_value <= (1 - config.loa_coef) * value(solve_data.UB) + config.loa_coef * solve_data.LB)

@@ -179,7 +179,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
                                                                                                       >= solve_data.LB + config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
 
             # Add the linear cut
-    if config.strategy in {'OA', 'LOA'} or feas_pump:
+    if config.strategy == 'OA' or feas_pump:
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
@@ -238,7 +238,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
     #         elif var.has_lb() and abs(value(var) - var.lb) < config.bound_tolerance:
     #             fixed_nlp.ipopt_zU_out[var] = -1
 
-    if config.strategy in {'OA', 'GOA', 'LOA'}:
+    if config.strategy in {'OA', 'GOA'}:
         config.logger.info('Solving feasibility problem')
         feas_subproblem, feas_subproblem_results = solve_feasibility_subproblem(
             solve_data, config)
@@ -247,7 +247,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
         copy_var_list_values(feas_subproblem.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
-        if config.strategy in {"OA", "LOA"}:
+        if config.strategy == "OA":
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
         elif config.strategy == "GOA":
             add_affine_cuts(solve_data, config)

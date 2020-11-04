@@ -44,7 +44,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
         solve_data.mip_subiter = 0
         # solve MILP master problem
-        if config.strategy in {'OA', 'GOA', 'ECP', 'LOA'}:
+        if config.strategy in {'OA', 'GOA', 'ECP'}:
             master_mip, master_mip_results = solve_master(
                 solve_data, config)
             if master_mip_results is not None:
@@ -72,7 +72,7 @@ def MindtPy_iteration_loop(solve_data, config):
             last_iter_cuts = False
             break
 
-        if config.strategy == 'LOA':
+        if config.add_regularization == "level_squared":
             if (solve_data.best_solution_found is not None) and ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
                                                                  or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
                 master_mip, master_mip_results = solve_master(
@@ -362,7 +362,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
                     MindtPy.MindtPy_linear_cuts.no_good_cuts[i].deactivate()
             except KeyError:
                 config.logger.info('No-good cut deactivate failed.')
-        elif config.strategy in {'OA', 'LOA'}:
+        elif config.strategy == 'OA':
             MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
                 MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()
         # MindtPy.MindtPy_linear_cuts.oa_cuts.activate()

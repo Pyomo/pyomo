@@ -29,13 +29,19 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
-        domain=In(["OA", "GBD", "ECP", "PSC", "GOA",
-                   "LOA", "QOA", "feas_pump"]),
+        domain=In(["OA", "GBD", "ECP", "PSC", "GOA", "feas_pump"]),
         description="Decomposition strategy",
         doc="MINLP Decomposition strategy to be applied to the method. "
             "Currently available Outer Approximation (OA), Extended Cutting "
             "Plane (ECP), Partial Surrogate Cuts (PSC), and Generalized "
             "Benders Decomposition (GBD)."
+    ))
+    CONFIG.declare("add_regularization", ConfigValue(
+        default=None,
+        domain=In(["level_linear", "level_squared", "grad_lag", "hess_lag"]),
+        description="add regularization",
+        doc="solving a projection problem before solve the fixed subpoblem"
+            "the objective function of the projection problem."
     ))
     CONFIG.declare("init_strategy", ConfigValue(
         default=None,

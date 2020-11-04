@@ -109,7 +109,8 @@ class MindtPySolver(object):
             config.init_strategy = "feas_pump"
             config.iteration_limit = 0
             config.add_no_good_cuts = True
-        elif config.strategy == "LOA":
+        # TODO: is this option necessary?
+        elif config.add_regularization is not None:
             config.cycling_check = False
         if config.init_strategy == "feas_pump":
             solve_data.fp_iter = 1
@@ -150,7 +151,7 @@ class MindtPySolver(object):
             setup_results_object(solve_data, config)
             process_objective(solve_data, config,
                               move_linear_objective=(config.init_strategy == 'feas_pump'
-                                                     or config.strategy == 'LOA'),
+                                                     or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp)
 
             # Save model initial values.

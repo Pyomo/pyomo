@@ -40,7 +40,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=False)
             print('\n Solving 8PP problem with Outer Approximation')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -56,7 +57,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=False)
             print('\n Solving 8PP problem with Outer Approximation(max_binary)')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0])
@@ -98,7 +100,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving MINLP_simple problem with Outer Approximation')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0])
@@ -112,7 +115,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print('\n Solving MINLP2_simple problem with Outer Approximation')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0])
@@ -126,7 +130,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print('\n Solving MINLP3_simple problem with Outer Approximation')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0])
@@ -141,11 +146,11 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print('\n Solving Proposal problem with Outer Approximation')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 init_strategy='initial_binary',
-                                tee=True
                                 )
 
             self.assertIs(results.solver.termination_condition,
@@ -172,7 +177,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print('\n Solving Constraint Qualification Example with Outer Approximation')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0]
                                 )
@@ -185,7 +191,8 @@ class TestMindtPy(unittest.TestCase):
             model = ConstraintQualificationExample()
             print(
                 '\n Solving Constraint Qualification Example with Outer Approximation(no-good cuts)')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 add_no_good_cuts=True,
@@ -198,7 +205,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print('\n Solving Online Doc Example with Outer Approximation')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0]
                                 )
@@ -211,7 +219,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print('\n Solving Online Doc Example with Outer Approximation')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 feasibility_norm="L_infinity"
@@ -225,11 +234,11 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print('\n Solving Online Doc Example with Outer Approximation')
-            results = opt.solve(model, strategy='LOA',
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="level_squared",
                                 mip_solver=required_solvers[1],
                                 nlp_solver='baron',
                                 init_strategy = 'initial_binary',
-                                tee=True,
                                 loa_coef=0.4
                                 )
             self.assertIs(results.solver.termination_condition,
