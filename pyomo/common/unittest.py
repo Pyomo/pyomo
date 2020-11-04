@@ -22,6 +22,9 @@ from pyutilib.th import *
 
 from pyomo.common.collections import Mapping, Sequence
 
+# This augments the unittest exports with two additional decorators
+__all__ = _unittest.__all__ + ['category', 'nottest']
+
 class TestCase(_pyunit.TestCase):
     """A Pyomo-specific class whose instances are single test cases.
 
