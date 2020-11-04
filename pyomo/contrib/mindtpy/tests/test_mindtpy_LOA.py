@@ -17,6 +17,7 @@ from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
+from pyomo.contrib.mindtpy.tests.MINLP4_simple import SimpleMINLP4
 
 required_solvers = ('ipopt', 'cplex')
 # required_solvers = ('gams', 'gams')
@@ -136,13 +137,15 @@ class TestMindtPy(unittest.TestCase):
 
     def test_OA_Proposal(self):
         """Test the outer approximation decomposition algorithm."""
+        # A little difference from the proposal slides
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print('\n Solving Proposal problem with Outer Approximation')
             results = opt.solve(model, strategy='LOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                init_strategy='rNLP',
+                                init_strategy='initial_binary',
+                                tee=True
                                 )
 
             self.assertIs(results.solver.termination_condition,
@@ -217,6 +220,23 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(
                 value(model.objective.expr), 2.438447, places=2)
+
+    def test_OA_MINLP4_simple(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP4()
+            print('\n Solving Online Doc Example with Outer Approximation')
+            results = opt.solve(model, strategy='LOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver='baron',
+                                init_strategy = 'initial_binary',
+                                tee=True,
+                                loa_coef=0.4
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.obj.expr), -56.981, places=2)
+
 
     # the following tests are used to improve code coverage
 
