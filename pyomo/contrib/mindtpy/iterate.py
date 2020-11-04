@@ -68,9 +68,6 @@ def MindtPy_iteration_loop(solve_data, config):
         else:
             raise NotImplementedError()
 
-        if algorithm_should_terminate(solve_data, config, check_cycling=True):
-            last_iter_cuts = False
-            break
 
         if config.add_regularization == "level_squared":
             if (solve_data.best_solution_found is not None) and ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
@@ -80,6 +77,10 @@ def MindtPy_iteration_loop(solve_data, config):
                 if master_mip_results.solver.termination_condition is tc.optimal:
                     handle_master_optimal(
                         master_mip, solve_data, config, update_bound=False)
+
+        if algorithm_should_terminate(solve_data, config, check_cycling=True):
+            last_iter_cuts = False
+            break
 
         if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
