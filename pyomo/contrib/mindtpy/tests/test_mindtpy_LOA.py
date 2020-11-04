@@ -38,24 +38,24 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet(convex=False)
+            model = EightProcessFlowsheet()
             print('\n Solving 8PP problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 add_regularization="level_squared",
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                bound_tolerance=1E-5,
+                                bound_tolerance=1E-5
                                 )
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_OA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet(convex=False)
+            model = EightProcessFlowsheet()
             print('\n Solving 8PP problem with Outer Approximation(max_binary)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization="level_squared",
@@ -64,7 +64,7 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0])
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     # def test_OA_8PP_L2_norm(self):

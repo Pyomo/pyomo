@@ -154,7 +154,7 @@ def _get_MindtPy_config():
         domain=bool
     ))
     CONFIG.declare("equality_relaxation", ConfigValue(
-        default=True,
+        default=False,
         description="use dual solution from the nlp solver to add OA cuts for equality constraints.",
         domain=bool
     ))
@@ -166,6 +166,11 @@ def _get_MindtPy_config():
     CONFIG.declare("use_dual_bound", ConfigValue(
         default=True,
         description="add dual bound constraint to enforce the objective satisfies best-found dual bound",
+        domain=bool
+    ))
+    CONFIG.declare("heuristic_nonconvex", ConfigValue(
+        default=False,
+        description="use dual solution from the nlp solver and slack variables to add OA cuts for equality constraints.",
         domain=bool
     ))
 

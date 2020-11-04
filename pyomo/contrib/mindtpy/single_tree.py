@@ -94,8 +94,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         config.logger.info("Adding OA cuts")
         with time_code(solve_data.timing, 'OA cut generation'):
-            for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
-                                            dual_values):
+            for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
                 if constr.body.polynomial_degree() in (0, 1):
                     continue
 
@@ -108,7 +107,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     rhs = constr.lower
 
                     # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
-                    pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (
+                    pyomo_expr = copysign(1, sign_adjust * dual_values[index]) * (sum(value(jacs[constr][var]) * (
                         var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant

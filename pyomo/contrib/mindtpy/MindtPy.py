@@ -124,6 +124,9 @@ class MindtPySolver(object):
         if config.solver_tee:
             config.mip_solver_tee = True
             config.nlp_solver_tee = True
+        if config.heuristic_nonconvex:
+            config.equality_relaxation = True
+            config.add_slack = True
 
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))

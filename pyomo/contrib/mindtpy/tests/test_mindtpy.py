@@ -33,17 +33,33 @@ else:
                  "Symbolic differentiation is not available")
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
-
+    
     def test_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet(convex=False)
+            model = EightProcessFlowsheet()
             print('\n Solving 8PP problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_OA_8PP_nonconvex(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=False)
+            print('\n Solving nonconvex 8PP problem with Outer Approximation')
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                bound_tolerance=1E-5,
+                                heuristic_nonconvex=True)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -57,7 +73,8 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0])
+                                nlp_solver=required_solvers[0],
+                                heuristic_nonconvex=True,)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -71,7 +88,8 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                feasibility_norm='L2')
+                                feasibility_norm='L2',
+                                heuristic_nonconvex=True,)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -85,7 +103,8 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                differentiate_mode='sympy')
+                                differentiate_mode='sympy',
+                                heuristic_nonconvex=True,)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
