@@ -15,9 +15,10 @@ import inspect
 import six
 import sys
 import logging
+import math
 from weakref import ref as weakref_ref
 
-import pyutilib.math
+
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (ZeroConstant,
@@ -29,10 +30,8 @@ from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
     ( ActiveIndexedComponent,
-      UnindexedComponent_set,
-      _get_indexed_component_data_name, )
-from pyomo.core.base.misc import (apply_indexed_rule,
-                                  tabular_writer)
+      UnindexedComponent_set)
+from pyomo.core.base.misc import (tabular_writer)
 from pyomo.core.base.set import Set
 from pyomo.core.base.util import (
     disable_methods, Initializer,
@@ -62,6 +61,16 @@ tuple, or one of Constraint.Skip, Constraint.Feasible, or
 Constraint.Infeasible.  The most common cause of this error is
 forgetting to include the "return" statement at the end of your rule.
 """
+
+def is_finite(x):
+    """
+    Returns true if the argument is a float or int and it is not infinite or NaN
+    """
+    try:
+        return not math.isinf(x)
+    except TypeError:
+        return False
+
 
 def _map_constraint_result(fn, none_val, args, kwargs):
     if fn.__class__ in _simple_constraint_rule_types:
@@ -662,7 +671,7 @@ class _GeneralConstraintData(_ConstraintData):
         #
         if (self._lower is not None) and is_constant(self._lower):
             val = self._lower if self._lower.__class__ in native_numeric_types else self._lower()
-            if not pyutilib.math.is_finite(val):
+            if not is_finite(val):
                 if val > 0:
                     raise ValueError(
                         "Constraint '%s' created with a +Inf lower "
@@ -675,7 +684,7 @@ class _GeneralConstraintData(_ConstraintData):
 
         if (self._upper is not None) and is_constant(self._upper):
             val = self._upper if self._upper.__class__ in native_numeric_types else self._upper()
-            if not pyutilib.math.is_finite(val):
+            if not is_finite(val):
                 if val < 0:
                     raise ValueError(
                         "Constraint '%s' created with a -Inf upper "
