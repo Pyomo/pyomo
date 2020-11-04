@@ -102,8 +102,7 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("use_tabu_list", ConfigValue(
         default=False,
-        description="Add no-good cuts (no-good cuts) to binary variables to disallow same integer solution again."
-                    "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
+        description="Use tabu list and incumbent callback to disallow same integer solution again.",
         domain=bool
     ))
     CONFIG.declare("add_affine_cuts", ConfigValue(
