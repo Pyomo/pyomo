@@ -211,7 +211,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver='baron',
                                 init_strategy='initial_binary',
-                                loa_coef=0.4
+                                level_coef=0.4
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)

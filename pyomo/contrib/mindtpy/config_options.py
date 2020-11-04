@@ -346,8 +346,9 @@ def _add_feas_pump_configs(CONFIG):
 
 
 def _add_loa_configs(CONFIG):
-    CONFIG.declare("loa_coef", ConfigValue(
+    CONFIG.declare("level_coef", ConfigValue(
         default=0.5,
         domain=PositiveFloat,
-        description="loa_coef"
+        description="the coefficient in the projection master problem"
+            "represents how much the linear approximation of the MINLP problem is trusted."
     ))

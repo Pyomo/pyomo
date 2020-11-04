@@ -392,10 +392,10 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
                                                                         discrete_only=False)
         if solve_data.objective_sense == minimize:
             MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
-                expr=MindtPy.objective_value <= (1 - config.loa_coef) * value(solve_data.UB) + config.loa_coef * solve_data.LB)
+                expr=MindtPy.objective_value <= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.LB)
         else:
             MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
-                expr=MindtPy.objective_value >= (1 - config.loa_coef) * value(solve_data.UB) + config.loa_coef * solve_data.UB)
+                expr=MindtPy.objective_value >= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.UB)
 
     else:
         if config.add_slack:
