@@ -11,7 +11,7 @@
 import math
 import six
 
-# Import base classes privately (so that we hae handles on them)
+# Import base classes privately (so that we have handles on them)
 import pyutilib.th.pyunit as _pyunit
 from pyutilib.th.pyunit import unittest as _unittest
 
@@ -45,13 +45,13 @@ class TestCase(_pyunit.TestCase):
         """Test that first and second are equal up to a relative tolerance
 
         This compares first and second using a relative tolerance
-        (`delta`).  It will recursively decend into Sequence and Mapping
+        (`delta`).  It will recursively descend into Sequence and Mapping
         containers (allowing for the relative comparison of structured
         data including lists and dicts).
 
         If `places` is supplied, `delta` is computed as `10**-places`.
 
-        If neither `places` not `delta` is provided, delta defaults to 1e-7.
+        If neither `places` nor `delta` is provided, delta defaults to 1e-7.
 
         If `allow_second_superset` is True, then:
 
