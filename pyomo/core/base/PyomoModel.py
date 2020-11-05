@@ -234,7 +234,7 @@ class ModelSolutions(object):
 
             logger.warning(
                 'Loading a SolverResults object with a '
-                'warning status into model=%s;\n'
+                'warning status into model.\nmodel.name="%s";\n'
                 'message from solver=%s;\n'
                 '%s'
                 % (
