@@ -226,7 +226,7 @@ class ModelSolutions(object):
                 results.solver.termination_condition
                 == pyomo.opt.TerminationCondition.infeasible
             ):
-                termination_condition_message = 'termination Condition=%s' % str(
+                termination_condition_message = 'termination condition=%s' % str(
                     results.solver.termination_condition.value
                 )
             else:
