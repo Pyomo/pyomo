@@ -74,7 +74,7 @@ class ResidualDataModel(QAbstractTableModel):
         else:
             ac = True
         self._items = list(self.ui_data.model.component_data_objects(
-            pyo.Constraint, active=ac))
+             pyo.Constraint, active=ac))
 
     def sort(self):
         self._items.sort(key=

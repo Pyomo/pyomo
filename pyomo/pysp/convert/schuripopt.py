@@ -327,7 +327,6 @@ def convertschuripopt(options):
     Construct a senario tree manager and write the
     schuripopt input files.
     """
-    import pyomo.environ
 
     start_time = time.time()
 

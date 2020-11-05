@@ -19,23 +19,28 @@ defaults:
 
 env:
   PYTHONWARNINGS: ignore::UserWarning
+  PYTHON_CORE_PKGS: wheel
+  PYTHON_REQUIRED_PKGS: >
+      ply six nose coverage
   PYTHON_BASE_PKGS: >
-      coverage cython dill ipython networkx nose openpyxl pathos
-      pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd wheel
+      dill ipython networkx openpyxl pathos
+      pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd
+      python-louvain
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn
   CACHE_VER: v2
 
 jobs:
   build:
-    name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.NAME }}
+    name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
-        mpi: [0]
+        other: [""]
+
         include:
         - os: ubuntu-latest
           TARGET: linux
@@ -52,12 +57,29 @@ jobs:
 
         - os: ubuntu-latest
           python: 3.7
+          other: /mpi
           mpi: 3
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py
-          NAME: /mpi
+          PACKAGES: mpi4py openmpi
+
+        - os: ubuntu-latest
+          python: 3.9
+          other: /slim
+          slim: 1
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.6
+          other: /cython
+          setup_options: --with-cython
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+          PACKAGES: cython
 
         exclude:
         - {os: macos-latest, python: pypy2}
@@ -65,14 +87,32 @@ jobs:
         - {os: windows-latest, python: pypy2}
         - {os: windows-latest, python: pypy3}
 
-
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v2
 
     - name: Configure job parameters
       run: |
-        JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}"
-        echo "::set-env name=GHA_JOBNAME::"`echo "$JOB" | sed 's|/|_|g'`
+        JOB="${{matrix.TARGET}}/${{matrix.python}}${{matrix.other}}"
+        echo "GHA_JOBNAME=$JOB" | sed 's|/|_|g' >> $GITHUB_ENV
+        if test -z "${{matrix.other}}"; then
+            echo "GHA_JOBGROUP=${{matrix.TARGET}}" >> $GITHUB_ENV
+        else
+            echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
+        fi
+        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
+        PYTHON_PACKAGES="${PYTHON_REQUIRED_PKGS}"
+        if test -z "${{matrix.slim}}"; then
+            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_BASE_PKGS}"
+        fi
+        if [[ ${{matrix.python}} != pypy* && ! "${{matrix.slim}}" ]]; then
+            # NumPy and derivatives either don't build under pypy, or if
+            # they do, the builds take forever.
+            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_NUMPY_PKGS}"
+        fi
+        PYTHON_PACKAGES="$PYTHON_PACKAGES ${{matrix.PACKAGES}}"
+        echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
+            | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     # Ideally we would cache the conda downloads; however, each cache is
     # over 850MB, and with 5 python versions, that would consume 4.2 of
@@ -118,7 +158,7 @@ jobs:
         )"
         echo "$CURLRC" > ${GITHUB_WORKSPACE}/.curlrc
         echo "$CURLRC" > ${GITHUB_WORKSPACE}/_curlrc
-        echo "::set-env name=CURL_HOME::$GITHUB_WORKSPACE"
+        echo "CURL_HOME=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
     - name: Update OSX
       if: matrix.TARGET == 'osx'
@@ -156,7 +196,7 @@ jobs:
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
-      uses: goanpeca/setup-miniconda@v1
+      uses: conda-incubator/setup-miniconda@v1
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
@@ -183,21 +223,15 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
-        pip install --cache-dir cache/pip ${PYTHON_BASE_PKGS} \
-            ${{matrix.PACKAGES}}
-        if [[ ${{matrix.python}} != pypy* ]]; then
-            # NumPy and derivatives either don't build under pypy, or if
-            # they do, the builds take forever.
-            pip install --cache-dir cache/pip ${PYTHON_NUMPY_PKGS}
-        fi
+        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
+        pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
         pip install --cache-dir cache/pip cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
         pip install --cache-dir cache/pip xpress \
             || echo "WARNING: Xpress Community Edition is not available"
-        python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
-            % (sys.executable,))'
-        echo "::set-env name=NOSETESTS::"`which nosetests`
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
+        echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
 
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
@@ -209,17 +243,17 @@ jobs:
         conda info
         conda config --show-sources
         conda list --show-channel-urls
-        conda install -q -y -c conda-forge ${PYTHON_BASE_PKGS} \
-            ${PYTHON_NUMPY_PKGS} ${{matrix.PACKAGES}}
+        conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
+        conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
         # Note: CPLEX 12.9 (the last version in conda that supports
         #    Python 2.7) causes a seg fault in the tests.
         conda install -q -y -c ibmdecisionoptimization cplex=12.10 \
             || echo "WARNING: CPLEX Community Edition is not available"
         conda install -q -y -c fico-xpress xpress \
             || echo "WARNING: Xpress Community Edition is not available"
-        python -c 'import sys; print("::set-env name=PYTHON_EXE::%s" \
-            % (sys.executable,))'
-        echo "::set-env name=NOSETESTS::"`which nosetests`
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
+        echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
 
     - name: Setup TPL package directories
       run: |
@@ -227,13 +261,13 @@ jobs:
         mkdir -p "$TPL_DIR"
         DOWNLOAD_DIR="${GITHUB_WORKSPACE}/cache/download"
         mkdir -p "$DOWNLOAD_DIR"
-        echo "::set-env name=TPL_DIR::$TPL_DIR"
-        echo "::set-env name=DOWNLOAD_DIR::$DOWNLOAD_DIR"
+        echo "TPL_DIR=$TPL_DIR" >> $GITHUB_ENV
+        echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
 
     - name: Install Ipopt
       run: |
         IPOPT_DIR=$TPL_DIR/ipopt
-        echo "::add-path::$IPOPT_DIR"
+        echo "$IPOPT_DIR" >> $GITHUB_PATH
         mkdir -p $IPOPT_DIR
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
@@ -261,9 +295,9 @@ jobs:
       shell: pwsh
       run: |
         $GAMS_DIR="${env:TPL_DIR}/gams"
-        echo "::add-path::$GAMS_DIR"
-        echo "::set-env name=LD_LIBRARY_PATH::${env:LD_LIBRARY_PATH}:$GAMS_DIR"
-        echo "::set-env name=DYLD_LIBRARY_PATH::${env:DYLD_LIBRARY_PATH}:$GAMS_DIR"
+        echo "$GAMS_DIR" >> $GITHUB_PATH
+        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
+        echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
         $INSTALLER="${env:DOWNLOAD_DIR}/gams_install.exe"
         $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -291,7 +325,7 @@ jobs:
 
     - name: Install GAMS Python bindings
       run: |
-        GAMS_DIR="$TPL_DIR/gams"
+        GAMS_DIR="${env:TPL_DIR}/gams"
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
@@ -305,7 +339,7 @@ jobs:
       shell: pwsh
       run: |
         $BARON_DIR="${env:TPL_DIR}/baron"
-        echo "::add-path::$BARON_DIR"
+        echo "$BARON_DIR" >> $GITHUB_PATH
         $URL="https://www.minlp.com/downloads/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
@@ -335,7 +369,7 @@ jobs:
       if: matrix.TARGET != 'win'
       run: |
         GJH_DIR="$TPL_DIR/gjh"
-        echo "::add-path::${GJH_DIR}"
+        echo "${GJH_DIR}" >> $GITHUB_PATH
         INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
         if test ! -e "$INSTALL_DIR/bin"; then
             mkdir -p "$INSTALL_DIR"
@@ -364,11 +398,11 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop
+        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
-        echo "::set-env name=PYOMO_CONFIG_DIR::${GITHUB_WORKSPACE}/config"
+        echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
 
     - name: Set up coverage tracking
       run: |
@@ -378,8 +412,8 @@ jobs:
             COVERAGE_BASE=${GITHUB_WORKSPACE}/.cover
         fi
         COVERAGE_RC=${COVERAGE_BASE}_rc
-        echo "::set-env name=COVERAGE_RCFILE::$COVERAGE_RC"
-        echo "::set-env name=COVERAGE_PROCESS_START::$COVERAGE_RC"
+        echo "COVERAGE_RCFILE=$COVERAGE_RC" >> $GITHUB_ENV
+        echo "COVERAGE_PROCESS_START=$COVERAGE_RC" >> $GITHUB_ENV
         cp ${GITHUB_WORKSPACE}/.coveragerc ${COVERAGE_RC}
         echo "data_file=${COVERAGE_BASE}age" >> ${COVERAGE_RC}
         SITE_PACKAGES=$($PYTHON_EXE -c "from distutils.sysconfig import \
@@ -428,16 +462,102 @@ jobs:
         make -C doc/OnlineDocs doctest -d
 
     - name: Process code coverage report
-      env:
-        CODECOV_NAME: ${{matrix.TARGET}}/${{matrix.python}}${{matrix.NAME}}
       run: |
         coverage combine
         coverage report -i
         coverage xml -i
+
+    - name: Record build artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
+        path: |
+          .coverage
+          coverage.xml
+          # In general, do not record test results as artifacts to
+          #   manage total artifact storage
+          # TEST-*.xml
+
+  cover:
+    name: process-coverage-${{ matrix.TARGET }}
+    needs: build
+    if: always() # run even if a build job fails
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+        include:
+        - os: ubuntu-latest
+          TARGET: linux
+        - os: macos-latest
+          TARGET: osx
+        - os: windows-latest
+          TARGET: win
+
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v2
+      # We need the source for .codecov.yml and running "coverage xml"
+
+    - name: Pip package cache
+      uses: actions/cache@v1
+      id: pip-cache
+      with:
+        path: cache/pip
+        key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v2
+      with:
+        path: artifacts
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Install Python Packages (pip)
+      shell: bash # DO NOT REMOVE: see note above
+      run: |
+        python -c 'import sys;print(sys.executable)'
+        python -m pip install --cache-dir cache/pip --upgrade pip
+        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS} \
+            ${PYTHON_REQUIRED_PKGS}
+        python -c 'import sys; print("PYTHON_EXE=%s" \
+            % (sys.executable,))' >> $GITHUB_ENV
+
+    - name: Install Pyomo and PyUtilib
+      run: |
+        echo ""
+        echo "Clone Pyomo-model-libraries..."
+        git clone https://github.com/Pyomo/pyomo-model-libraries.git
+        echo ""
+        echo "Install PyUtilib..."
+        echo ""
+        $PYTHON_EXE -m pip install git+https://github.com/PyUtilib/pyutilib
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
+        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        echo ""
+        echo "Set custom PYOMO_CONFIG_DIR"
+        echo ""
+        echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    - name: Generate parse_table_datacmds
+      run: |
+        # Manually invoke the DAT parser so that parse_table_datacmds.py
+        # is generated before running "coverage xml"
+        $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
+            parse_data_commands; parse_data_commands(data='')"
+
+    - name: Update codecov uploader
+      run: |
         set +e
-        # Always attempt to update the codecov script, but fall back on
-        # the previously cached script if it fails
-        CODECOV="${GITHUB_WORKSPACE}/cache/download/codecov.sh"
+        CODECOV="${GITHUB_WORKSPACE}/codecov.sh"
+        echo "CODECOV=$CODECOV" >> $GITHUB_ENV
         for i in `seq 3`; do
             echo "Downloading current codecov script (attempt ${i})"
             curl -L https://codecov.io/bash -o $CODECOV
@@ -448,54 +568,74 @@ jobs:
             echo "Pausing $DELAY seconds before re-attempting download"
             sleep $DELAY
         done
-        i=0
-        while : ; do
-            ((i+=1))
-            echo "Uploading coverage to codecov (attempt ${i})"
-            bash $CODECOV -Z -X gcov -X s3 -f coverage.xml
-            if test $? == 0; then
-                echo "PASS" > ${GITHUB_WORKSPACE}/codecov.result
-                break
-            elif test $i -ge 2; then
-                # Do not fail the build just because the codecov upload fails
-                echo "FAIL" > ${GITHUB_WORKSPACE}/codecov.result
-                break
+        if test ! -e $CODECOV; then
+            echo "Failed to download codecov.sh"
+            exit 1
+        fi
+
+    - name: Upload codecov reports
+      run: |
+        set +e
+        function upload {
+            echo ""
+            echo "Build group: $1"
+            export CODECOV_NAME=$1
+            export TAG=$1
+            export GHA_OS_NAME=${{matrix.TARGET}}
+            shift
+            rm -vf .coverage coverage.xml
+            echo "    $@" | sed 's/ /\n    /'
+            coverage combine --debug=dataio $@
+            if test ! -e .coverage; then
+                echo "No coverage to upload."
+                return
             fi
-            DELAY=$(( RANDOM % 30 + 30))
-            echo "Pausing $DELAY seconds before re-attempting upload"
-            sleep $DELAY
+            coverage xml || coverage xml -i
+            i=0
+            while : ; do
+                ((i+=1))
+                echo "Uploading coverage to codecov (attempt ${i})"
+                bash $CODECOV -Z -e TAG,GHA_OS_NAME -X gcov -X s3 \
+                    -f coverage.xml
+                if test $? == 0; then
+                    echo "PASS $CODECOV_NAME" >> codecov.result
+                    break
+                elif test $i -ge 2; then
+                    # Do not fail the build (yet) just because the codecov
+                    # upload fails
+                    echo "FAIL $CODECOV_NAME" >> codecov.result
+                    break
+                fi
+                DELAY=$(( RANDOM % 30 + 30))
+                echo "Pausing $DELAY seconds before re-attempting upload"
+                sleep $DELAY
+            done
+        }
+        for ARTIFACT in artifacts/*_*${{matrix.TARGET}}_*; do
+            NAME=`echo $ARTIFACT | cut -d/ -f2`
+            cp -v $ARTIFACT/.coverage .coverage-$NAME
         done
+        upload ${{matrix.TARGET}} .coverage-*_${{matrix.TARGET}}-*
+        if compgen -G ".coverage-*" > /dev/null; then
+            upload ${{matrix.TARGET}}/other .coverage-*
+        fi
+        # Legacy builds that don't support coverage 5.x
+        if compgen -G ".coverage-*" > /dev/null; then
+            echo ""
+            echo "Installing coverage 4.x for legacy builds"
+            pip install 'coverage<5'
+            upload ${{matrix.TARGET}}/legacy .coverage-*
+        fi
 
-    - name: Record build artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{github.job}}_${{env.GHA_JOBNAME}}
-        path: |
-          codecov.result
-        # In general, do not record test results as artifacts to
-        #   manage total artifact storage
-        # TEST-*.xml
-
-  post:
-    name: post-build
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v2
-        with:
-          path: artifacts
-
-      - name: Check codecov upload success
-        run: |
-          FAIL=`grep FAIL artifacts/*/codecov.result | wc -l`
-          ALL=`ls -1 artifacts/*/codecov.result | wc -l`
-          # Fail is more than 1/9 codecov uploads fail
-          echo "$FAIL of $ALL codecov uploads failed"
-          if test $FAIL -gt 0; then
-              grep FAIL artifacts/*/codecov.result | sed 's/^/    /'
-              if test $(( $FAIL * 9 )) -gt $ALL; then
-                  echo "More than 1/9 codecov uploads failed:"
-                  exit 1
-              fi
-          fi
+    - name: Check codecov upload success
+      run: |
+        FAIL=`grep FAIL codecov.result | wc -l`
+        ALL=`cat codecov.result | wc -l`
+        echo "$FAIL of $ALL codecov uploads failed"
+        if test $FAIL -gt 0; then
+            grep FAIL codecov.result | sed 's/^/    /'
+            if test $FAIL -gt 1; then
+                echo "More than 1 codecov upload failed."
+                exit 1
+            fi
+        fi

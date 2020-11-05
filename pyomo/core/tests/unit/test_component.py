@@ -16,7 +16,7 @@ import pyutilib.th as unittest
 from pyomo.common import DeveloperError
 import pyomo.core.base._pyomo
 from pyomo.core.base.block import generate_cuid_names
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Component, Block, Var, Set, Param, ComponentUID
 
 
 class TestComponent(unittest.TestCase):

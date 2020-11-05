@@ -34,6 +34,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
     CyIpoptSolver, CyIpoptNLP
 )
 
+
 def create_model1():
     m = pyo.ConcreteModel()
     m.x = pyo.Var([1, 2, 3], initialize=4.0)
@@ -44,6 +45,7 @@ def create_model1():
     m.x[2].setlb(0.0)
 
     return m
+
 
 def create_model2():
     m = pyo.ConcreteModel()
@@ -223,7 +225,3 @@ class TestCyIpoptSolver(unittest.TestCase):
         x, info = solver.solve(tee=False)
         nlp.set_primals(x)
         self.assertAlmostEqual(nlp.evaluate_objective(), -5.0879028e+02, places=5)
-
-        
-
-

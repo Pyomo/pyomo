@@ -10,11 +10,13 @@
 
 import logging
 import re
+import six
 import sys
-import pyomo.common
+
 from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
 from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.core.base import Suffix, Var, Constraint, SOSConstraint, Objective
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
@@ -157,20 +159,29 @@ class CPLEXDirect(DirectSolver):
     def _apply_solver(self):
         if not self._save_results:
             for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
-                for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=False, active=True, sort=False):
+                for var in block.component_data_objects(ctype=Var, descend_into=False, active=True, sort=False):
                     var.stale = True
-        _log_file = self._log_file
-        if self.version() >= (12, 10):
-            _log_file = open(self._log_file, 'w')
+        # In recent versions of CPLEX it is helpful to manually open the
+        # log file and then explicitly close it after CPLEX is finished.
+        # This ensures that the file is closed (and unlocked) on Windows
+        # before the TempfileManager (or user) attempts to delete the
+        # log file.  Passing in an opened file object is supported at
+        # least as far back as CPLEX 12.5.1 [the oldest version
+        # supported by IBM as of 1 Oct 2020]
+        if self.version() >= (12, 5, 1) \
+           and isinstance(self._log_file, six.string_types):
+            _log_file = (open(self._log_file, 'a'),)
+            _close_log_file = True
+        else:
+            _log_file = (self._log_file,)
+            _close_log_file = False
+        if self._tee:
+            def _process_stream(arg):
+                sys.stdout.write(arg)
+                return arg
+            _log_file += (_process_stream,)
         try:
-            if self._tee:
-                def _process_stream(arg):
-                    sys.stdout.write(arg)
-                    return arg
-                self._solver_model.set_results_stream(_log_file, _process_stream)
-            else:
-                self._solver_model.set_results_stream(_log_file)
-            
+            self._solver_model.set_results_stream(*_log_file)
             if self._keepfiles:
                 print("Solver log file: "+self._log_file)
             
@@ -240,8 +251,9 @@ class CPLEXDirect(DirectSolver):
             t1 = time.time()
             self._wallclock_time = t1 - t0
         finally:
-            if self.version() >= (12, 10):
-                _log_file.close()
+            self._solver_model.set_results_stream(None)
+            if _close_log_file:
+                _log_file[0].close()
 
         # FIXME: can we get a return code indicating if CPLEX had a significant failure?
         return Bunch(rc=None, log=None)
@@ -359,7 +371,7 @@ class CPLEXDirect(DirectSolver):
     def _add_block(self, block):
         var_data = _VariableData(self._solver_model)
         for var in block.component_data_objects(
-            ctype=pyomo.core.base.var.Var, descend_into=True, active=True, sort=True
+            ctype=Var, descend_into=True, active=True, sort=True
         ):
             self._add_var(var, var_data)
         var_data.store_in_cplex()
@@ -367,7 +379,7 @@ class CPLEXDirect(DirectSolver):
         lin_con_data = _LinearConstraintData(self._solver_model)
         for sub_block in block.block_data_objects(descend_into=True, active=True):
             for con in sub_block.component_data_objects(
-                ctype=pyomo.core.base.constraint.Constraint,
+                ctype=Constraint,
                 descend_into=False,
                 active=True,
                 sort=True,
@@ -379,7 +391,7 @@ class CPLEXDirect(DirectSolver):
                 self._add_constraint(con, lin_con_data)
 
             for con in sub_block.component_data_objects(
-                ctype=pyomo.core.base.sos.SOSConstraint,
+                ctype=SOSConstraint,
                 descend_into=False,
                 active=True,
                 sort=True,
@@ -388,7 +400,7 @@ class CPLEXDirect(DirectSolver):
 
             obj_counter = 0
             for obj in sub_block.component_data_objects(
-                ctype=pyomo.core.base.objective.Objective,
+                ctype=Objective,
                 descend_into=False,
                 active=True,
             ):

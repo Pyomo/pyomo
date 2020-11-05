@@ -244,7 +244,7 @@ class GurobiDirect(DirectSolver):
             e = sys.exc_info()[1]
             msg = ("Unable to create Gurobi model. "
                    "Have you installed the Python "
-                   "bindings for Gurboi?\n\n\t"+
+                   "bindings for Gurobi?\n\n\t"+
                    "Error message: {0}".format(e))
             raise Exception(msg)
 

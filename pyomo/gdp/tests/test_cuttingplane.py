@@ -10,16 +10,13 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
-from pyomo.gdp import *
+from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Block, TransformationFactory
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 
 import pyomo.opt
 from pyomo.repn import generate_standard_repn
 
-import random
 from six import StringIO
-
-from nose.tools import set_trace
 
 solvers = pyomo.opt.check_available_solvers('ipopt')
 

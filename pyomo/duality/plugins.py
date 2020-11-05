@@ -17,7 +17,6 @@ from pyomo.core.base import (Transformation,
                              Var,
                              Constraint,
                              Objective,
-                             Set,
                              minimize,
                              NonNegativeReals,
                              NonPositiveReals,
@@ -26,7 +25,6 @@ from pyomo.core.base import (Transformation,
                              Model,
                              ConcreteModel)
 from pyomo.duality.collect import collect_linear_terms
-from pyomo.common.deprecation import deprecated
 
 def load():
     pass

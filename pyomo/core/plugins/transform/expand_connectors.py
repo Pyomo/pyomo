@@ -16,7 +16,7 @@ from six import next, iteritems, itervalues
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Connector, Constraint, \
-    ConstraintList, Var, VarList, TraversalStrategy, SortComponents
+    ConstraintList, Var, SortComponents
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 
 

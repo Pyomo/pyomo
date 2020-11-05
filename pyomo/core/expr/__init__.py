@@ -16,29 +16,27 @@
 # symbols that are used by developers.
 # 
 
-from . import numvalue, numeric_expr, boolean_value, logical_expr, current
+from pyomo.core.expr import numvalue, numeric_expr, boolean_value, logical_expr, current
 
-from .numvalue import (
+from pyomo.core.expr.numvalue import (
     value, is_constant, is_fixed, is_variable_type,
     is_potentially_variable, NumericValue, ZeroConstant,
     native_numeric_types, native_types, polynomial_degree,
 )
 
-from .boolean_value import BooleanValue
+from pyomo.core.expr.boolean_value import BooleanValue
 
-from .numeric_expr import linear_expression, nonlinear_expression
-from .logical_expr import inequality
+from pyomo.core.expr.numeric_expr import linear_expression, nonlinear_expression
+from pyomo.core.expr.logical_expr import (land, lor, equivalent, exactly,
+                                          atleast, atmost, implies, lnot,
+                                          xor, inequality)
 
-from .logical_expr import (
-    land, lor, equivalent, exactly, atleast, atmost, implies, lnot, xor
-)
-
-from .current import (
+from pyomo.core.expr.current import (
     log, log10, sin, cos, tan, cosh, sinh, tanh,
     asin, acos, atan, exp, sqrt, asinh, acosh,
     atanh, ceil, floor,
     Expr_if,
 )
 
-from .calculus.derivatives import differentiate
-from .taylor_series import taylor_series_expansion
+from pyomo.core.expr.calculus.derivatives import differentiate
+from pyomo.core.expr.taylor_series import taylor_series_expansion
