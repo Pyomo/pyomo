@@ -21,7 +21,7 @@ from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
 
-from pyutilib.math.util import isclose as isclose_default
+from math import isclose as isclose_default
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.objective import (_GeneralObjectiveData,
