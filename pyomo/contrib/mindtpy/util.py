@@ -335,7 +335,7 @@ class IncumbentCallback_cplex(IncumbentCallback):
         opt = self.opt
         integer_var_value_list = []
         for var in solve_data.mip.MindtPy_utils.discrete_variable_list:
-            integer_var_value_list.append(self.get_values(opt._pyomo_var_to_solver_var_map[var]))
+            integer_var_value_list.append(round(self.get_values(opt._pyomo_var_to_solver_var_map[var])))
         integer_var_value_tuple = tuple(integer_var_value_list)
         if integer_var_value_tuple in solve_data.tabu_list:
             self.reject()

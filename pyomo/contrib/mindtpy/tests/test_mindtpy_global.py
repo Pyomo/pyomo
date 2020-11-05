@@ -125,10 +125,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0],
-                                obj_bound=10,
-                                add_no_good_cuts=True)
-
+                                nlp_solver=required_solvers[0])
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)

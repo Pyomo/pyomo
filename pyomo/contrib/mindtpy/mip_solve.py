@@ -132,6 +132,13 @@ def solve_master(solve_data, config, feas_pump=False):
             IncumbentCallback_cplex)
         tabu_list.solve_data = solve_data
         tabu_list.opt = masteropt
+        masteropt._solver_model.parameters.preprocessing.reduce.set(1)
+        # If the callback is used to reject incumbents, the user must set the 
+        # parameter c.parameters.preprocessing.reduce either to the value 1 (one) 
+        # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
+        masteropt._solver_model.set_warning_stream(None)
+        masteropt._solver_model.set_log_stream(None)
+        masteropt._solver_model.set_error_stream(None)
     mip_args = dict(config.mip_solver_args)
     elapsed = get_main_elapsed_time(solve_data.timing)
     remaining = int(max(config.time_limit - elapsed, 1))

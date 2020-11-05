@@ -91,16 +91,14 @@ class MindtPySolver(object):
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
                 "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
-        if config.use_tabu_list:
-            config.mip_solver = 'cplex_persistent'
         # if the slacks fix to zero, just don't add them
         if config.max_slack == 0.0:
             config.add_slack = False
 
         if config.strategy == "GOA":
             # TODO: Choose one from the following two
-            config.add_no_good_cuts = True
-            config.use_tabu_list = False
+            config.add_no_good_cuts = False
+            config.use_tabu_list = True
             config.add_slack = False
             config.use_mcpp = True
             config.integer_to_binary = True
@@ -110,8 +108,8 @@ class MindtPySolver(object):
             config.init_strategy = "feas_pump"
             config.iteration_limit = 0
             # TODO: Choose one from the following two
-            config.add_no_good_cuts = True
-            config.use_tabu_list = False
+            config.add_no_good_cuts = False
+            config.use_tabu_list = True
         if config.init_strategy == "feas_pump":
             solve_data.fp_iter = 1
 
@@ -124,6 +122,8 @@ class MindtPySolver(object):
         if config.solver_tee:
             config.mip_solver_tee = True
             config.nlp_solver_tee = True
+        if config.use_tabu_list:
+            config.mip_solver = 'cplex_persistent'
 
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
@@ -250,7 +250,6 @@ class MindtPySolver(object):
             # Algorithm main loop
             with time_code(solve_data.timing, 'main loop'):
                 MindtPy_iteration_loop(solve_data, config)
-
             if solve_data.best_solution_found is not None:
                 # Update values in original model
                 copy_var_list_values(
