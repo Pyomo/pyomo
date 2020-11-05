@@ -222,11 +222,11 @@ class ModelSolutions(object):
         # If there is a warning, then print a warning message.
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
-            if hasattr(results.solver, "termination_condition") and (
+            if hasattr(results.solver, 'termination_condition') and (
                 results.solver.termination_condition
                 == pyomo.opt.TerminationCondition.infeasible
             ):
-                termination_condition_message = 'Termination Condition=%s' % str(
+                termination_condition_message = 'termination Condition=%s' % str(
                     results.solver.termination_condition.value
                 )
             else:
@@ -234,8 +234,8 @@ class ModelSolutions(object):
 
             logger.warning(
                 'Loading a SolverResults object with a '
-                'warning status into model=%s; '
-                'message from solver=%s; '
+                'warning status into model=%s;\n'
+                'message from solver=%s;\n'
                 '%s'
                 % (
                     instance.name,
