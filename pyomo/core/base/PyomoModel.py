@@ -218,26 +218,27 @@ class ModelSolutions(object):
         # If there is a warning, then print a warning message.
         #
         if (results.solver.status == SolverStatus.warning):
-            if hasattr(results.solver, 'termination_condition') and (
+            if hasattr(results.solver, "termination_condition") and (
                 results.solver.termination_condition
                 == TerminationCondition.infeasible
             ):
-                termination_condition_message = 'termination condition=%s' % str(
-                    results.solver.termination_condition.value
+                termination_condition_message = (
+                    "termination condition=%s" % str(
+                        results.solver.termination_condition.value
+                    )
                 )
             else:
-                termination_condition_message = ''
+                termination_condition_message = ""
 
             logger.warning(
-                'Loading a SolverResults object with a '
-                'warning status into model.\nmodel.name="%s";\n'
-                'message from solver=%s;\n'
-                '%s'
+                "Loading a SolverResults object with a warning status into "
+                "model. model.name=\"%s\"; message from solver=%s; %s"
                 % (
                     instance.name,
                     results.solver.Message,
-                    termination_condition_message)
+                    termination_condition_message
                 )
+            )
         #
         # If the solver status not one of either OK or Warning, then generate an error.
         #
