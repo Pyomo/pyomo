@@ -62,12 +62,11 @@ def isclose_const(a, b, rel_tol=1e-9, abs_tol=0.0):
             a = value(a)
         else:
             return False
-    # Copied from pyutilib.math.isclose
     return abs(a-b) <= max( rel_tol * max(abs(a), abs(b)), abs_tol )
 
 #
 # The global isclose() function used below.  This is either isclose_default
-# (defined in pyutilib) or isclose_const
+# or isclose_const
 #
 isclose = isclose_default
 

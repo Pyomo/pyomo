@@ -24,8 +24,8 @@ import logging
 import operator
 import os
 import time
+from math import isclose
 
-from pyutilib.math.util import isclose
 from pyutilib.misc import PauseGC
 
 from pyomo.opt import ProblemFormat, AbstractProblemWriter, WriterFactory
