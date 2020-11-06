@@ -12,7 +12,7 @@
 # set up as soon as possible
 from . import log
 
-from pyutilib.factory.factory import (
+from .factory import (
     Factory, CachedFactory
 )
 
