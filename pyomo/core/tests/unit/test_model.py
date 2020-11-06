@@ -283,11 +283,11 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
         opt = SolverFactory('glpk')
         results = opt.solve(model, symbolic_solver_labels=True)
+        model.x[1].fix()
+        results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results,skip_stale_vars=False)
         for index in model.A:
             self.assertIn(model.x[index].getname(), results.solution.variable.keys())
-        model.x[1].fix()
-        results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results,skip_stale_vars=True)
         for index in model.A:
             if index == 1:
