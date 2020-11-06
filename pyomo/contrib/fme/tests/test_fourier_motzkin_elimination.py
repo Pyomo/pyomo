@@ -12,6 +12,9 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+# Need solvers/writers registered.
+import pyomo.environ as pyo
+
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
@@ -20,8 +23,6 @@ from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import log
 from pyomo.gdp import Disjunction, Disjunct
-# Register hull transformation
-from pyomo.gdp.plugins.hull import Hull_Reformulation
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.opt import SolverFactory, check_available_solvers
 import pyomo.contrib.fme.fourier_motzkin_elimination
@@ -579,8 +580,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         fme.apply_to(m, vars_to_eliminate=m.x,
+                     projected_constraints_name='projected_constraints',
                      constraint_filtering_callback=None)
-        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+        constraints = m.projected_constraints
 
         # 0 <= y <= 3
         cons = constraints[5]
@@ -658,7 +660,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         constraints[1].deactivate()
         # NOTE also that some of the suproblems in this test are unbounded: We
         # need to keep those constraints.
-        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+        fme.post_process_fme_constraints(
+            m, SolverFactory('glpk'),
+            projected_constraints=m.projected_constraints)
         # we needed all the constraints, so we kept them all
         self.assertEqual(len(constraints), 6)
 
@@ -667,7 +671,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # because why withold the information *during* FME, but if there's some
         # reason, we may as well use all the information we've got.)
         m.some_new_cons = Constraint(expr=m.y <= 2)
-        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+        fme.post_process_fme_constraints(
+            m, SolverFactory('glpk'),
+            projected_constraints=m.projected_constraints)
         # now we should have lost one constraint
         self.assertEqual(len(constraints), 5)
         # and it should be the y <= 3 one...
@@ -927,7 +933,6 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         fme.apply_to(m, vars_to_eliminate=[m.x0, m.x1])
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
-        constraints.pprint()
 
         self.assertEqual(len(constraints), 1)
         cons = constraints[1]
