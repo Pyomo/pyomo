@@ -34,7 +34,7 @@ from pyomo.core import (
 from pyomo.opt import SolverFactory, SolverResults
 from pyutilib.misc import Container
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -81,49 +81,8 @@ class MindtPySolver(object):
         solve_data.curr_int_sol = []
         solve_data.prev_int_sol = []
         solve_data.should_terminate = False
-
-        # configuration confirmation
-        if config.single_tree:
-            config.iteration_limit = 1
-            config.add_slack = False
-            config.add_no_good_cuts = False
-            config.use_tabu_list = False
-            config.mip_solver = 'cplex_persistent'
-            config.logger.info(
-                "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
-        # if the slacks fix to zero, just don't add them
-        if config.max_slack == 0.0:
-            config.add_slack = False
-
-        if config.strategy == "GOA":
-            # TODO: Choose one from the following two
-            config.add_no_good_cuts = False
-            config.use_tabu_list = True
-            config.add_slack = False
-            config.use_mcpp = True
-            config.integer_to_binary = True
-            config.use_dual = False
-            config.use_fbbt = True
-        elif config.strategy == "feas_pump":  # feasibility pump alone
-            config.init_strategy = "feas_pump"
-            config.iteration_limit = 0
-            # TODO: Choose one from the following two
-            config.add_no_good_cuts = False
-            config.use_tabu_list = True
-        if config.init_strategy == "feas_pump":
-            solve_data.fp_iter = 1
-
-        if config.nlp_solver == "baron":
-            config.use_dual = False
-        # if ecp tolerance is not provided use bound tolerance
-        if config.ecp_tolerance is None:
-            config.ecp_tolerance = config.bound_tolerance
-
-        if config.solver_tee:
-            config.mip_solver_tee = True
-            config.nlp_solver_tee = True
-        if config.use_tabu_list:
-            config.mip_solver = 'cplex_persistent'
+        
+        check_config(config)
 
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
@@ -198,6 +157,8 @@ class MindtPySolver(object):
             solve_data.nlp_iter = 0
             solve_data.mip_iter = 0
             solve_data.mip_subiter = 0
+            if config.init_strategy == "feas_pump":
+                solve_data.fp_iter = 1
 
             # set up bounds
             solve_data.LB = float('-inf')

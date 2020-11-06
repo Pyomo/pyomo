@@ -335,3 +335,45 @@ def _add_feas_pump_configs(CONFIG):
         domain=PositiveFloat,
         description="The coefficient in the norm constraint, correspond to the Beta in the paper."
     ))
+
+def check_config(config):
+    # configuration confirmation
+    if config.single_tree:
+        config.iteration_limit = 1
+        config.add_slack = False
+        config.add_no_good_cuts = False
+        config.use_tabu_list = False
+        config.mip_solver = 'cplex_persistent'
+        config.logger.info(
+            "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
+    # if the slacks fix to zero, just don't add them
+    if config.max_slack == 0.0:
+        config.add_slack = False
+
+    if config.strategy == "GOA":
+        # TODO: Choose one from the following two
+        config.add_no_good_cuts = False
+        config.use_tabu_list = True
+        config.add_slack = False
+        config.use_mcpp = True
+        config.integer_to_binary = True
+        config.use_dual = False
+        config.use_fbbt = True
+    elif config.strategy == "feas_pump":  # feasibility pump alone
+        config.init_strategy = "feas_pump"
+        config.iteration_limit = 0
+        # TODO: Choose one from the following two
+        config.add_no_good_cuts = False
+        config.use_tabu_list = True
+        
+    if config.nlp_solver == "baron":
+        config.use_dual = False
+    # if ecp tolerance is not provided use bound tolerance
+    if config.ecp_tolerance is None:
+        config.ecp_tolerance = config.bound_tolerance
+
+    if config.solver_tee:
+        config.mip_solver_tee = True
+        config.nlp_solver_tee = True
+    if config.use_tabu_list:
+        config.mip_solver = 'cplex_persistent'
