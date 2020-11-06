@@ -506,8 +506,8 @@ class CuttingPlane_Transformation(Transformation):
         description="""If true, sets tee=True for every solve performed over
         "the course of the algorithm"""
     ))
-    CONFIG.declare('solver_options', ConfigValue(
-        default={},
+    CONFIG.declare('solver_options', ConfigBlock(
+        implicit=True,
         description="Dictionary of solver options",
         doc="""
         Dictionary of solver options that will be set for the solver for both the
@@ -840,7 +840,7 @@ class CuttingPlane_Transformation(Transformation):
 
         opt = SolverFactory(self._config.solver)
         stream_solver = self._config.stream_solver
-        opt.options = self._config.solver_options
+        opt.options = dict(self._config.solver_options)
 
         improving = True
         prev_obj = None

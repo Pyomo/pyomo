@@ -537,6 +537,9 @@ class TwoTermDisj(unittest.TestCase):
             m,
             create_cuts=create_cuts_fme,
             post_process_cut=None, verbose=True, solver='gurobi',
+            # don't actually need this, but taking the excuse to set solver
+            # options
+            solver_options={'FeasibilityTol': 1e-8},
             cuts_name="cuts", bigM=5)
 
         # rBigM first iteration solve will give (x = 3, Y = 0.6). If we don't
