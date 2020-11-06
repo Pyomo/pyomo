@@ -238,8 +238,8 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                                    "as '%s', but this is already a component "
                                    "on the instance! Please specify a unique " 
                                    "name." % nm)
-            instance.add_component(nm, ConstraintList())
-            projected_constraints = instance.component(nm)
+            projected_constraints = ConstraintList()
+            instance.add_component(nm, projected_constraints)
 
         # collect all of the constraints
         # NOTE that we are ignoring deactivated constraints

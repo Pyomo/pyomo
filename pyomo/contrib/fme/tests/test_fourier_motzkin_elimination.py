@@ -20,6 +20,8 @@ from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import log
 from pyomo.gdp import Disjunction, Disjunct
+# Register hull transformation
+from pyomo.gdp.plugins.hull import Hull_Reformulation
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.opt import SolverFactory, check_available_solvers
 import pyomo.contrib.fme.fourier_motzkin_elimination
