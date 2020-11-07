@@ -10,10 +10,13 @@ from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbound
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.environ import *
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, IncumbentCallback_cplex
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function
+from pyomo.contrib.mindtpy.tabu_list import IncumbentCallback_cplex
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
+tabu_list, tabu_list_available = attempt_import(
+    'pyomo.contrib.mindtpy.tabu_list')
 
 
 def solve_master(solve_data, config, feas_pump=False):
@@ -128,10 +131,10 @@ def solve_master(solve_data, config, feas_pump=False):
     if config.threads > 0:
         masteropt.options["threads"] = config.threads
     if config.use_tabu_list:
-        tabu_list = masteropt._solver_model.register_callback(
-            IncumbentCallback_cplex)
-        tabu_list.solve_data = solve_data
-        tabu_list.opt = masteropt
+        tabulist = masteropt._solver_model.register_callback(
+            tabu_list.IncumbentCallback_cplex)
+        tabulist.solve_data = solve_data
+        tabulist.opt = masteropt
         masteropt._solver_model.parameters.preprocessing.reduce.set(1)
         # If the callback is used to reject incumbents, the user must set the 
         # parameter c.parameters.preprocessing.reduce either to the value 1 (one) 
