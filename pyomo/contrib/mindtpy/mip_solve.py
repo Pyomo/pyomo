@@ -26,7 +26,7 @@ single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
 
 
-def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
+def solve_master(solve_data, config, feas_pump=False, regularization_problem=False):
     """
     This function solves the MIP master problem
 
@@ -45,13 +45,13 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
         result from solving the master MIP
     feas_pump: Bool
         generate the feasibility pump projection master problem
-    loa_projection: Bool
+    regularization_problem: Bool
         generate the LOA projection master problem
     """
     if feas_pump:
         config.logger.info('FP-MIP %s: Solve master problem.' %
                            (solve_data.fp_iter,))
-    elif loa_projection:
+    elif regularization_problem:
         config.logger.info('LOA-Projection-MIP %s: Solve master projection problem.' %
                            (solve_data.mip_iter,))
     else:
@@ -60,7 +60,7 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
                            (solve_data.mip_iter,))
 
     # setup master problem
-    setup_master(solve_data, config, feas_pump, loa_projection)
+    setup_master(solve_data, config, feas_pump, regularization_problem)
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
     if config.nlp_solver == 'ipopt':
@@ -124,7 +124,7 @@ def solve_master(solve_data, config, feas_pump=False, loa_projection=False):
         master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
             solve_data.mip, config)
 
-    if loa_projection:
+    if regularization_problem:
         solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
         solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
             'obj_limit')
@@ -341,7 +341,7 @@ def handle_master_unbounded(master_mip, solve_data, config):
             master_mip, tee=config.mip_solver_tee, **config.mip_solver_args)
 
 
-def setup_master(solve_data, config, feas_pump, loa_projection):
+def setup_master(solve_data, config, feas_pump, regularization_problem):
     """
     Set up master problem/master projection problem for OA, ECP, Feasibility Pump and LOA methods.
 
@@ -353,7 +353,7 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
         contains the specific configurations for the algorithm
     feas_pump: Bool
         generate the feasibility pump projection master problem
-    loa_projection: Bool
+    regularization_problem: Bool
         generate the LOA projection master problem
     """
     MindtPy = solve_data.mip.MindtPy_utils
@@ -385,7 +385,7 @@ def setup_master(solve_data, config, feas_pump, loa_projection):
                 solve_data.mip,
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
-    elif loa_projection:
+    elif regularization_problem:
         if config.add_regularization == "level_squared":
             MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
                                                                         solve_data.best_solution_found,
