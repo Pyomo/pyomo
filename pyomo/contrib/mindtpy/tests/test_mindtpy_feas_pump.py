@@ -47,7 +47,7 @@ class TestMindtPy(unittest.TestCase):
     def test_FP_8PP(self):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem using feasibility pump')
             results = opt.solve(model, strategy='feas_pump',
                                 mip_solver=required_solvers[1],
@@ -59,7 +59,7 @@ class TestMindtPy(unittest.TestCase):
     def test_FP_8PP_Norm2(self):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print(
                 '\n Solving 8PP problem using feasibility pump with squared Norm2 in mip projection problem')
             results = opt.solve(model, strategy='feas_pump',
@@ -73,7 +73,7 @@ class TestMindtPy(unittest.TestCase):
     def test_FP_8PP_Norm_infinity(self):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print(
                 '\n Solving 8PP problem using feasibility pump with Norm infinity in mip projection problem')
             results = opt.solve(model, strategy='feas_pump',
@@ -87,7 +87,7 @@ class TestMindtPy(unittest.TestCase):
     def test_FP_8PP_Norm_infinity_with_norm_constraint(self):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print(
                 '\n Solving 8PP problem using feasibility pump with Norm infinity in mip projection problem')
             results = opt.solve(model, strategy='feas_pump',
@@ -203,7 +203,7 @@ class TestMindtPy(unittest.TestCase):
     def test_FP_OA_8PP(self):
         """Test the FP-OA algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem using FP-OA')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='feas_pump',

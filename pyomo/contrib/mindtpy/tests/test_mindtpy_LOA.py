@@ -38,7 +38,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 add_regularization="level_squared",
@@ -55,7 +55,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with Outer Approximation(max_binary)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization="level_squared",

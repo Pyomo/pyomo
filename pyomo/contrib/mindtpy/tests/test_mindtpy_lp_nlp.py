@@ -34,7 +34,7 @@ class TestMindtPy(unittest.TestCase):
     def test_lazy_OA_8PP(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with LP/NLP')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='rNLP',
@@ -50,7 +50,7 @@ class TestMindtPy(unittest.TestCase):
     def test_lazy_OA_8PP_init_max_binary(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP_init_max_binary problem with LP/NLP')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='max_binary',

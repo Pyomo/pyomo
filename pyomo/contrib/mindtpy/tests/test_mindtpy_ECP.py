@@ -37,7 +37,7 @@ class TestMindtPy(unittest.TestCase):
     def test_ECP_8PP(self):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with extended cutting plane')
             results = opt.solve(model, strategy='ECP',
                                 init_strategy='rNLP',
@@ -52,7 +52,7 @@ class TestMindtPy(unittest.TestCase):
     def test_ECP_8PP_init_max_binary(self):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with extended cutting plane(max_binary)')
             results = opt.solve(model, strategy='ECP',
                                 init_strategy='max_binary',
@@ -66,7 +66,7 @@ class TestMindtPy(unittest.TestCase):
     def test_ECP_8PP_L2_norm(self):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with extended cutting plane(max_binary)')
             results = opt.solve(model, strategy='ECP',
                                 mip_solver=required_solvers[1],
@@ -80,7 +80,7 @@ class TestMindtPy(unittest.TestCase):
     def test_ECP_8PP_sympy(self):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with extended cutting plane(max_binary)')
             results = opt.solve(model, strategy='ECP',
                                 mip_solver=required_solvers[1],
@@ -246,7 +246,7 @@ class TestMindtPy(unittest.TestCase):
     def test_rNLP_add_slack(self):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print(
                 '\n Test rNLP initialize strategy and add_slack to improve code coverage')
             opt.solve(model, strategy='ECP',

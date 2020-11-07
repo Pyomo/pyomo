@@ -37,7 +37,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='rNLP',
@@ -113,7 +113,7 @@ class TestMindtPy(unittest.TestCase):
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
+    #         model = EightProcessFlowsheet(convex=True)
     #         print('\n Solving problem with Partial Surrogate Cuts')
     #         opt.solve(model, strategy='PSC',
     #                   init_strategy='rNLP', mip_solver=required_solvers[1],
@@ -126,7 +126,7 @@ class TestMindtPy(unittest.TestCase):
     # def test_GBD(self):
     #     """Test the generalized Benders Decomposition algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
+    #         model = EightProcessFlowsheet(convex=True)
     #         print('\n Solving problem with Generalized Benders Decomposition')
     #         opt.solve(model, strategy='GBD',
     #                   init_strategy='rNLP', mip_solver=required_solvers[1],
@@ -139,7 +139,7 @@ class TestMindtPy(unittest.TestCase):
     # def test_ECP(self):
     #     """Test the Extended Cutting Planes algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
+    #         model = EightProcessFlowsheet(convex=True)
     #         print('\n Solving problem with Extended Cutting Planes')
     #         opt.solve(model, strategy='ECP',
     #                   init_strategy='rNLP', mip_solver=required_solvers[1],
@@ -333,7 +333,7 @@ class TestMindtPy(unittest.TestCase):
     def test_rNLP_add_slack(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print(
                 '\n Test rNLP initialize strategy and add_slack to improve code coverage')
             opt.solve(model, strategy='OA',
