@@ -197,7 +197,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     discrete_only: Bool
         only optimize on distance between the discrete variables
     """
-    # TODO: do we need to skip config.add_slack variable here?
+    # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v[1].is_integer()) if discrete_only \
         else (lambda v: v[1].name != 'MindtPy_utils.objective_value' and
               'MindtPy_utils.MindtPy_feas.slack_var' not in v[1].name)
@@ -228,7 +228,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     discrete_only: Bool
         only optimize on distance between the discrete variables
     """
-    # TODO: do we need to skip config.add_slack variable here?
+    # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: v.name != 'MindtPy_utils.objective_value' and
               'MindtPy_utils.MindtPy_feas.slack_var' not in v.name)
@@ -268,8 +268,7 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     discrete_only: Bool
         only optimize on distance between the discrete variables
     """
-    # TODO: do we need to skip config.add_slack variable here?
-    # the objective_value variable and slack_var variables should not be included here.
+    # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: v.name != 'MindtPy_utils.objective_value' and
               'MindtPy_utils.MindtPy_feas.slack_var' not in v.name)
@@ -315,8 +314,6 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm1 norm constraint for models with different number of variables"
-    # if model.MindtPy_utils.find_component('L1_objective_function') is not None:
-    #     model.MindtPy_utils.del_component('L1_objective_function')
     norm_constraint_blk = model.MindtPy_utils.L1_norm_constraint = Block()
     norm_constraint_blk.L1_slack_idx = RangeSet(len(model_vars))
     norm_constraint_blk.L1_slack_var = Var(
