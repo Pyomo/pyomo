@@ -67,15 +67,3 @@ class Factory(object):
             self._doc[name] = doc
             return cls
         return fn
-
-    #
-    # The following methods are deprecated.
-    #
-    def services(self):
-        raise RuntimeError("ERROR: Factory.services() is not defined.  Use Factory.__iter__() instead.")
-
-    def activate(self):
-        raise RuntimeError("ERROR: Factory.activate() is not defined.")
-
-    def deactivate(self):
-        raise RuntimeError("ERROR: Factory.deactivate() is not defined.")
