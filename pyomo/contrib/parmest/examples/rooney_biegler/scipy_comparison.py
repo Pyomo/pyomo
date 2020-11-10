@@ -68,12 +68,12 @@ r = residual(theta_hat, t, y)
 
 # calculate variance of the residuals
 # -2 because there are 2 fitted parameters
-sigre = r.T @ r / (len(y) - 2)
+sigre = np.matmul(r.T, r / (len(y) - 2))
 print("sigre = ",sigre)
 
 # approximate covariance
 # Need to divide by 2 because optimize.least_squares scaled the objective by 1/2
-cov = sigre * np.linalg.inv(sol.jac.T @ sol.jac)
+cov = sigre * np.linalg.inv(np.matmul(sol.jac.T, sol.jac))
 
 print("\ncovariance=\n",cov)
 
