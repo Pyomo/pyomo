@@ -119,7 +119,7 @@ jobs:
     # the 5 GB GitHub allows.
     #
     #- name: Conda package cache
-    #  uses: actions/cache@v1
+    #  uses: actions/cache@v2
     #  if: matrix.PYENV == 'conda'
     #  id: conda-cache
     #  with:
@@ -127,7 +127,7 @@ jobs:
     #    key: conda-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     - name: Pip package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       if: matrix.PYENV == 'pip'
       id: pip-cache
       with:
@@ -135,7 +135,7 @@ jobs:
         key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     - name: OS package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       if: matrix.TARGET != 'osx'
       id: os-cache
       with:
@@ -143,7 +143,7 @@ jobs:
         key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       id: download-cache
       with:
         path: cache/download
@@ -507,7 +507,7 @@ jobs:
       # We need the source for .codecov.yml and running "coverage xml"
 
     - name: Pip package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       id: pip-cache
       with:
         path: cache/pip
