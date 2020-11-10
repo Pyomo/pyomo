@@ -25,7 +25,7 @@ env:
       python-louvain
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn
-  CACHE_VER: v2
+  CACHE_VER: v3
 
 jobs:
   build:
