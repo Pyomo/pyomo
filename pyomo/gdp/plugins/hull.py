@@ -24,12 +24,12 @@ from pyomo.core import (
     Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalConstraint,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (
-    _warn_for_active_logical_constraint, clone_without_expression_components, target_list,
-    is_child_of, get_src_disjunction,
-    get_src_constraint, get_transformed_constraints,
-    get_src_disjunct, _warn_for_active_disjunction,
-    _warn_for_active_disjunct, )
+from pyomo.gdp.util import ( _warn_for_active_logical_constraint,
+                             clone_without_expression_components, target_list,
+                             is_child_of, get_src_disjunction,
+                             get_src_constraint, get_transformed_constraints,
+                             get_src_disjunct, _warn_for_active_disjunction,
+                             _warn_for_active_disjunct, )
 from functools import wraps
 from six import iteritems, iterkeys
 from weakref import ref as weakref_ref
