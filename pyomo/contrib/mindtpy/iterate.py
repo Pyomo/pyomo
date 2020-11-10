@@ -69,7 +69,7 @@ def MindtPy_iteration_loop(solve_data, config):
             raise NotImplementedError()
 
 
-        if config.add_regularization == "level_squared":
+        if config.add_regularization is not None:
             if (solve_data.best_solution_found is not None) and ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
                                                                  or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
                 master_mip, master_mip_results = solve_master(

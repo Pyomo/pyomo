@@ -128,6 +128,10 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
         solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
         solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
             'obj_limit')
+        if config.add_regularization == "level_L1":
+            solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
+        elif config.add_regularization == "level_L_infinity":
+            solve_data.mip.MindtPy_utils.del_component("L_infinity_objective_function")
 
     return solve_data.mip, master_mip_results
 
@@ -386,12 +390,16 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
     elif regularization_problem:
-        if config.add_regularization == "level_squared":
+        if config.add_regularization == "level_L1":
+            MindtPy.loa_proj_mip_obj = generate_norm1_objective_function(solve_data.mip,
+                                                                           solve_data.best_solution_found,
+                                                                           discrete_only=False)
+        elif config.add_regularization == "level_L2":
             MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
                                                                            solve_data.best_solution_found,
                                                                            discrete_only=False)
-        elif config.add_regularization == "level_linear":
-            MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
+        elif config.add_regularization == "level_L_infinity":
+            MindtPy.loa_proj_mip_obj = generate_norm_inf_objective_function(solve_data.mip,
                                                                            solve_data.best_solution_found,
                                                                            discrete_only=False)
         if solve_data.objective_sense == minimize:

@@ -38,7 +38,7 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("add_regularization", ConfigValue(
         default=None,
-        domain=In(["level_linear", "level_squared", "grad_lag", "hess_lag"]),
+        domain=In(["level_L1", "level_L2", "level_L_infinity", "grad_lag", "hess_lag"]),
         description="add regularization",
         doc="solving a projection problem before solve the fixed subproblem"
             "the objective function of the projection problem."
