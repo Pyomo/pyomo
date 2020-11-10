@@ -8,6 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyutilib.common import ApplicationError
+
 
 class PyomoException(Exception):
     """
@@ -45,11 +47,4 @@ class InfeasibleConstraintException(PyomoException):
 
 class NondifferentiableError(PyomoException, ValueError):
     """A Pyomo-specific ValueError raised for non-differentiable expressions"""
-    pass
-
-
-class ApplicationError(PyomoException):
-    """
-    An exception used when an external application generates an error.
-    """
     pass
