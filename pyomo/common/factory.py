@@ -7,6 +7,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+#
+#  This module was originally developed as part of the PyUtilib project
+#  Copyright (c) 2008 Sandia Corporation.
+#  This software is distributed under the BSD License.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  ___________________________________________________________________________
 
 
 class Factory(object):
@@ -20,8 +27,6 @@ class Factory(object):
         self._description = description
         self._cls = {}
         self._doc = {}
-        self._cached = False
-        self._cache = {}
 
     def __call__(self, name, **kwds):
         if 'exception' in kwds:
@@ -36,10 +41,6 @@ class Factory(object):
             if self._description is None:
                 raise ValueError("Unknown factory object type: '%s'" % name)
             raise ValueError("Unknown %s: '%s'" % (self._description, name))
-        if self._cached:
-            if name not in self._cache:
-                self._cache[name] = self._cls[name](**kwds)
-            return self._cache[name]
         return self._cls[name](**kwds)
 
     def __iter__(self):
