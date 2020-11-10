@@ -28,7 +28,7 @@ env:
       python-louvain
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn
-  CACHE_VER: v2
+  CACHE_VER: v3
 
 jobs:
   build:
@@ -119,7 +119,7 @@ jobs:
     # the 5 GB GitHub allows.
     #
     #- name: Conda package cache
-    #  uses: actions/cache@v1
+    #  uses: actions/cache@v2
     #  if: matrix.PYENV == 'conda'
     #  id: conda-cache
     #  with:
@@ -127,7 +127,7 @@ jobs:
     #    key: conda-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     - name: Pip package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       if: matrix.PYENV == 'pip'
       id: pip-cache
       with:
@@ -135,7 +135,7 @@ jobs:
         key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     - name: OS package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       if: matrix.TARGET != 'osx'
       id: os-cache
       with:
@@ -143,7 +143,7 @@ jobs:
         key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       id: download-cache
       with:
         path: cache/download
@@ -196,7 +196,7 @@ jobs:
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
-      uses: conda-incubator/setup-miniconda@v1
+      uses: conda-incubator/setup-miniconda@v2
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
@@ -272,11 +272,16 @@ jobs:
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
-            URL=https://github.com/IDAES/idaes-ext/releases/download/2.2.1
             if test "${{matrix.TARGET}}" == osx; then
                 echo "IDAES Ipopt not available on OSX"
                 exit 0
-            elif test "${{matrix.TARGET}}" == linux; then
+            fi
+            URL=https://github.com/IDAES/idaes-ext
+            RELEASE=$(curl --max-time 150 --retry 8 \
+                -L -s -H 'Accept: application/json' ${URL}/releases/latest)
+            VER=$(echo $RELEASE | sed -e 's/.*"tag_name":"\([^"]*\)".*/\1/')
+            URL=${URL}/releases/download/$VER
+            if test "${{matrix.TARGET}}" == linux; then
                 curl --max-time 150 --retry 8 \
                     -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
                     > $IPOPT_TAR
@@ -502,7 +507,7 @@ jobs:
       # We need the source for .codecov.yml and running "coverage xml"
 
     - name: Pip package cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       id: pip-cache
       with:
         path: cache/pip
