@@ -50,7 +50,7 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
     """
     
     def __init__(self, **kwds):
-        kwds['type'] = 'mosek_persistent'
+        kwds.setdefault('type', 'mosek_persistent')
         MOSEKDirect.__init__(self, **kwds)
 
         self._pyomo_model = kwds.pop('model', None)
