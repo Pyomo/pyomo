@@ -218,6 +218,12 @@ def feas_pump_loop(solve_data, config):
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
     solve_data.mip.MindtPy_utils.feas_pump_mip_obj.deactivate()
+    
+    if config.fp_master_norm == 'L1':
+        solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
+    elif config.fp_master_norm == 'L_infinity':
+        solve_data.mip.MindtPy_utils.del_component("L_infinity_objective_function")
+    
     # deactivate the improving_objective_cut
     if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut') is not None:
         solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut.deactivate()
