@@ -6,6 +6,13 @@
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________ 
+#
+#  This module was originally developed as part of the PyUtilib project
+#  Copyright (c) 2008 Sandia Corporation.
+#  This software is distributed under the BSD License.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 
 import sys
@@ -291,11 +298,11 @@ class _HierarchicalHelper(object):
                 else:
                     _percent = float('nan')
                 s += indent
-                s += ( name_formatter + '{ncalls:>9d} {aggtime:>9.3f} '
+                s += ( name_formatter + '{ncalls:>9d} {cumtime:>9.3f} '
                        '{percall:>9.3f} {percent:>6.1f}\n' ).format(
                            name=name,
                            ncalls=timer.n_calls,
-                           aggtime=timer.total_time,
+                           cumtime=timer.total_time,
                            percall=timer.total_time/timer.n_calls,
                            percent=_percent )
                 s += timer.to_str(
@@ -308,11 +315,11 @@ class _HierarchicalHelper(object):
             else:
                 _percent = float('nan')
             s += indent
-            s += ( name_formatter + '{ncalls:>9} {aggtime:>9.3f} '
+            s += ( name_formatter + '{ncalls:>9} {cumtime:>9.3f} '
                    '{percall:>9} {percent:>6.1f}\n' ).format(
                        name='other',
                        ncalls='n/a',
-                       aggtime=other_time,
+                       cumtime=other_time,
                        percall='n/a',
                        percent=_percent )
             s += underline.replace('-', '=')
@@ -347,7 +354,7 @@ class HierarchicalTimer(object):
     ...
     >>> timer.stop('all')
     >>> print(timer)
-    Identifier        ncalls   aggtime   percall      %
+    Identifier        ncalls   cumtime   percall      %
     ---------------------------------------------------
     all                    1     2.248     2.248  100.0
          ----------------------------------------------
@@ -365,10 +372,10 @@ class HierarchicalTimer(object):
 
     The columns are:
       ncalls : The number of times the timer was started and stopped
-      aggtime: The aggregate time (in seconds) the timer was active
+      cumtime: The cumulative time (in seconds) the timer was active
                (started but not stopped)
-      percall: aggtime (in seconds) / ncalls
-      %      : This is aggtime of the timer divided by aggtime of the
+      percall: cumtime (in seconds) / ncalls
+      %      : This is cumtime of the timer divided by cumtime of the
                parent timer times 100
 
 
@@ -489,22 +496,22 @@ class HierarchicalTimer(object):
     def __str__(self):
         stage_identifier_lengths = self._get_identifier_len()
         name_formatter = '{name:<' + str(sum(stage_identifier_lengths)) + '}'
-        s = ( name_formatter + '{ncalls:>9} {aggtime:>9} '
+        s = ( name_formatter + '{ncalls:>9} {cumtime:>9} '
               '{percall:>9} {percent:>6}\n').format(
                   name='Identifier',
                   ncalls='ncalls',
-                  aggtime='aggtime',
+                  cumtime='cumtime',
                   percall='percall',
                   percent='%')
         underline = '-' * (sum(stage_identifier_lengths) + 36) + '\n'
         s += underline
         sub_stage_identifier_lengths = stage_identifier_lengths[1:]
         for name, timer in self.timers.items():
-            s += ( name_formatter + '{ncalls:>9d} {aggtime:>9.3f} '
+            s += ( name_formatter + '{ncalls:>9d} {cumtime:>9.3f} '
                    '{percall:>9.3f} {percent:>6.1f}\n').format(
                        name=name,
                        ncalls=timer.n_calls,
-                       aggtime=timer.total_time,
+                       cumtime=timer.total_time,
                        percall=timer.total_time/timer.n_calls,
                        percent=self.get_total_percent_time(name))
             s += timer.to_str(
