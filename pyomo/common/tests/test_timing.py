@@ -11,9 +11,11 @@
 import pyutilib.th as unittest
 
 from six import StringIO
+import time
 
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.timing import ConstructionTimer, report_timing
+from pyomo.common.timing import (ConstructionTimer, report_timing,
+                                 TicTocTimer, HierarchicalTimer)
 from pyomo.environ import ConcreteModel, RangeSet, Var
 
 class TestTiming(unittest.TestCase):
@@ -54,3 +56,31 @@ class TestTiming(unittest.TestCase):
             self.assertEqual(os.getvalue().strip(), ref)
             self.assertEqual(buf.getvalue().strip(), "")
 
+    def test_TicTocTimer_tictoc(self):
+        timer = TicTocTimer()
+        timer.tic('First lap.')
+        time.sleep(0.1)
+        self.assertAlmostEqual(0.103, timer.toc(), 2)
+        timer.stop()
+        timer.tic('Stopped clock - resetting to 0.')
+        timer.start()
+        time.sleep(0.1)
+        self.assertAlmostEqual(0.103, timer.toc(), 2)
+
+    def test_HierarchicalTimer(self):
+        timer = HierarchicalTimer()
+        timer.start('all')
+        time.sleep(0.02)
+        for i in range(10):
+            timer.start('a')
+            time.sleep(0.01)
+            for j in range(5):
+                timer.start('aa')
+                time.sleep(0.001)
+                timer.stop('aa')
+            timer.start('ab')
+            timer.stop('ab')
+            timer.stop('a')
+        timer.stop('all')
+        self.assertIn('Identifier', str(timer))
+        self.assertEqual(1, timer.get_num_calls('all'))

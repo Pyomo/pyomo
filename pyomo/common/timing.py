@@ -34,6 +34,8 @@ def report_timing(stream=True):
             _logger.removeHandler(h)
 
 _construction_logger = logging.getLogger('pyomo.common.timing.construction')
+
+
 class ConstructionTimer(object):
     fmt = "%%6.%df seconds to construct %s %s; %d %s total"
     def __init__(self, obj):
@@ -80,6 +82,8 @@ class ConstructionTimer(object):
 
 
 _transform_logger = logging.getLogger('pyomo.common.timing.transformation')
+
+
 class TransformationTimer(object):
     fmt = "%%6.%df seconds to apply Transformation %s%s"
     def __init__(self, obj, mode=None):
@@ -112,6 +116,7 @@ class TransformationTimer(object):
 #
 # Setup the timer
 #
+# TODO: Remove this bit for Pyomo 6.0 - we won't care about older versions
 if sys.version_info >= (3,3):
     # perf_counter is guaranteed to be monotonic and the most accurate timer
     _time_source = time.perf_counter
@@ -125,6 +130,7 @@ else:
         _time_source = time.clock
     else:
         _time_source = time.time
+
 
 class TicTocTimer(object):
     """A class to calculate and report elapsed time.
@@ -285,11 +291,11 @@ class _HierarchicalHelper(object):
                 else:
                     _percent = float('nan')
                 s += indent
-                s += ( name_formatter + '{ncalls:>9d} {cumtime:>9.3f} '
+                s += ( name_formatter + '{ncalls:>9d} {aggtime:>9.3f} '
                        '{percall:>9.3f} {percent:>6.1f}\n' ).format(
                            name=name,
                            ncalls=timer.n_calls,
-                           cumtime=timer.total_time,
+                           aggtime=timer.total_time,
                            percall=timer.total_time/timer.n_calls,
                            percent=_percent )
                 s += timer.to_str(
@@ -302,11 +308,11 @@ class _HierarchicalHelper(object):
             else:
                 _percent = float('nan')
             s += indent
-            s += ( name_formatter + '{ncalls:>9} {cumtime:>9.3f} '
+            s += ( name_formatter + '{ncalls:>9} {aggtime:>9.3f} '
                    '{percall:>9} {percent:>6.1f}\n' ).format(
                        name='other',
                        ncalls='n/a',
-                       cumtime=other_time,
+                       aggtime=other_time,
                        percall='n/a',
                        percent=_percent )
             s += underline.replace('-', '=')
@@ -341,7 +347,7 @@ class HierarchicalTimer(object):
     ...
     >>> timer.stop('all')
     >>> print(timer)
-    Identifier        ncalls   cumtime   percall      %
+    Identifier        ncalls   aggtime   percall      %
     ---------------------------------------------------
     all                    1     2.248     2.248  100.0
          ----------------------------------------------
@@ -359,10 +365,10 @@ class HierarchicalTimer(object):
 
     The columns are:
       ncalls : The number of times the timer was started and stopped
-      cumtime: The cumulative time (in seconds) the timer was active
+      aggtime: The aggregate time (in seconds) the timer was active
                (started but not stopped)
-      percall: cumtime (in seconds) / ncalls
-      %      : This is cumtime of the timer divided by cumtime of the
+      percall: aggtime (in seconds) / ncalls
+      %      : This is aggtime of the timer divided by aggtime of the
                parent timer times 100
 
 
@@ -483,22 +489,22 @@ class HierarchicalTimer(object):
     def __str__(self):
         stage_identifier_lengths = self._get_identifier_len()
         name_formatter = '{name:<' + str(sum(stage_identifier_lengths)) + '}'
-        s = ( name_formatter + '{ncalls:>9} {cumtime:>9} '
+        s = ( name_formatter + '{ncalls:>9} {aggtime:>9} '
               '{percall:>9} {percent:>6}\n').format(
                   name='Identifier',
                   ncalls='ncalls',
-                  cumtime='cumtime',
+                  aggtime='aggtime',
                   percall='percall',
                   percent='%')
         underline = '-' * (sum(stage_identifier_lengths) + 36) + '\n'
         s += underline
         sub_stage_identifier_lengths = stage_identifier_lengths[1:]
         for name, timer in self.timers.items():
-            s += ( name_formatter + '{ncalls:>9d} {cumtime:>9.3f} '
+            s += ( name_formatter + '{ncalls:>9d} {aggtime:>9.3f} '
                    '{percall:>9.3f} {percent:>6.1f}\n').format(
                        name=name,
                        ncalls=timer.n_calls,
-                       cumtime=timer.total_time,
+                       aggtime=timer.total_time,
                        percall=timer.total_time/timer.n_calls,
                        percent=self.get_total_percent_time(name))
             s += timer.to_str(
