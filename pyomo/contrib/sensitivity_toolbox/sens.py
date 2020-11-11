@@ -32,6 +32,7 @@ def sipopt(instance, paramSubList, perturbList,
 
 @deprecated("The kaug function has been deprecated. Use the sensitivity_calculation() "
             "function with method='kaug' to access this functionality.", 
+            logger='pyomo.contrib.sensitivity_toolbox',
             version='TBD')
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
