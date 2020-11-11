@@ -109,8 +109,8 @@ class FunctionDeprecationTest(unittest.TestCase):
                                       cloneModel=True)        
         out1 = StringIO()
         out2 = StringIO()
-        m11.pprint(ostream=out1)
-        m22.pprint(ostream=out2)
+        m11._kaug_data.constList.pprint(ostream=out1)
+        m22._kaug_data.constList.pprint(ostream=out2)
         self.assertMultiLineEqual(out1.getvalue(), out2.getvalue())
 
 
