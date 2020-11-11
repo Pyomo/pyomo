@@ -70,7 +70,7 @@ def model_is_valid(solve_data, config):
             if isinstance(mipopt, PersistentSolver):
                 mipopt.set_instance(solve_data.original_model)
             if config.threads > 0:
-                masteropt.options["threads"] = config.threads
+                mipopt.options["threads"] = config.threads
             mipopt.solve(solve_data.original_model,
                          tee=config.mip_solver_tee, **config.mip_solver_args)
             return False

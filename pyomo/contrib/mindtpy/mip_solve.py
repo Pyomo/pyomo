@@ -402,6 +402,10 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
             MindtPy.loa_proj_mip_obj = generate_norm_inf_objective_function(solve_data.mip,
                                                                            solve_data.best_solution_found,
                                                                            discrete_only=False)
+        # elif config.add_regularization == "grad_lag":
+        #     MindtPy.loa_proj_mip_obj = 
+        # elif config.add_regularization == "hess_lag":
+        #     MindtPy.loa_proj_mip_obj = 
         if solve_data.objective_sense == minimize:
             MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
                 expr=MindtPy.objective_value <= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.LB)
