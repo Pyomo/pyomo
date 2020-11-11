@@ -17,7 +17,7 @@ from pyomo.common.deprecation import deprecated
 from pyomo.opt import SolverFactory
 import logging
 
-_log = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
+logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 
 @deprecated("The sipopt function has been deprecated. Use the sensitivity_calculation() "
             "function with method='sipopt' to access this functionality.",
