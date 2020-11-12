@@ -24,14 +24,9 @@ from operator import itemgetter
 from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
-if PY3:
-    from collections.abc import Mapping as collections_Mapping
-else:
-    from collections import Mapping as collections_Mapping
-
 from pyutilib.misc.indent_io import StreamIndenter
 
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -768,7 +763,7 @@ class _BlockData(ActiveComponentData):
             src_comp_map = src.component_map()
             src_raw_dict = {k:v for k,v in iteritems(src.__dict__)
                             if k not in src_comp_map}
-        elif isinstance(src, collections_Mapping):
+        elif isinstance(src, Mapping):
             src_comp_map = {}
             src_raw_dict = src
         else:
