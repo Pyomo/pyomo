@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
-from pyomo.opt.base.problem import *
+from pyomo.opt.base.problem import ProblemConfigFactory, BaseProblemConfig
 
 
 @ProblemConfigFactory.register('default')

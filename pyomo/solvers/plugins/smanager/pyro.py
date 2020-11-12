@@ -21,7 +21,7 @@ except:
 import pyutilib.pyro
 from pyutilib.pyro import using_pyro4, TaskProcessingError
 import pyutilib.misc
-from pyomo.opt.base import OptSolver
+from pyomo.opt.base import OptSolver, SolverFactory
 from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
 from pyomo.opt.parallel.async_solver import (AsynchronousSolverManager,
                                              SolverManagerFactory)

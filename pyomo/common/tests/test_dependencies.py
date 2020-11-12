@@ -22,13 +22,23 @@ from pyomo.common.dependencies import (
 
 import pyomo.common.tests.dep_mod as dep_mod
 from pyomo.common.tests.dep_mod import (
-    numpy, numpy_available,
     bogus_nonexisting_module as bogus_nem,
     bogus_nonexisting_module_available as has_bogus_nem,
 )
 
 bogus, bogus_available \
     = attempt_import('nonexisting.module.bogus', defer_check=True)
+
+# global objects for the submodule tests
+def _finalize_pyo(module, available):
+    if available:
+        import pyomo.core
+
+pyo, pyo_available = attempt_import(
+    'pyomo', alt_names=['pyo'],
+    deferred_submodules={'version': None,
+                         'common.tests.dep_mod': ['dm']})
+dm = pyo.common.tests.dep_mod
 
 class TestDependencies(unittest.TestCase):
     def test_import_error(self):
@@ -239,6 +249,31 @@ class TestDependencies(unittest.TestCase):
         self.assertTrue(avail)
         self.assertEqual(attempted_import, [True])
         self.assertIs(mod._indicator_flag._module, dep_mod)
+
+    def test_deferred_submodules(self):
+        import pyomo
+        pyo_ver = pyomo.version.version
+
+        self.assertIsInstance(pyo, DeferredImportModule)
+        self.assertIsNone(pyo._submodule_name)
+        self.assertEqual(pyo_available._deferred_submodules,
+                         {'.version': None,
+                          '.common': None,
+                          '.common.tests': None,
+                          '.common.tests.dep_mod': ['dm']})
+        # This doesn't cause test_mod to be resolved
+        version = pyo.version
+        self.assertIsInstance(pyo, DeferredImportModule)
+        self.assertIsNone(pyo._submodule_name)
+        self.assertIsInstance(dm, DeferredImportModule)
+        self.assertEqual(dm._submodule_name, '.common.tests.dep_mod')
+        self.assertIsInstance(version, DeferredImportModule)
+        self.assertEqual(version._submodule_name, '.version')
+        # This causes the global objects to be resolved
+        self.assertEqual(version.version, pyo_ver)
+        self.assertTrue(inspect.ismodule(pyo))
+        self.assertTrue(inspect.ismodule(dm))
+        
 
 if __name__ == '__main__':
     unittest.main()

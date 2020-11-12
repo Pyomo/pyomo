@@ -16,7 +16,7 @@ f(x) = | 1      , 1 <  x <= 2
        \ x-1    , 2 <  x <= 3
 """
 
-from pyomo.environ import *
+from pyomo.core import ConcreteModel, Var, Objective, Piecewise, Constraint,  maximize, sum_product
 
 INDEX = [1,2,3,4]
 DOMAIN_PTS = [0, 1, 1, 2, 3]

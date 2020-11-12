@@ -24,8 +24,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
                                       is_constant,
-                                      native_numeric_types,
-                                      _sub)
+                                      native_numeric_types)
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \

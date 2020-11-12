@@ -15,7 +15,6 @@ from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Cons
 from pyomo.repn import generate_standard_repn
 from pyomo.mpec import ComplementarityList, complements
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
-from pyomo.bilevel.components import SubModel
 
 
 logger = logging.getLogger('pyomo.core')

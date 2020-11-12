@@ -1,8 +1,18 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pickle
 
 import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import NumericValue
-import pyomo.kernel
+from pyomo.kernel import pprint
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
 from pyomo.core.tests.unit.kernel.test_tuple_container import \
@@ -19,28 +29,25 @@ from pyomo.core.kernel.objective import (IObjective,
                                          maximize)
 from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.block import block
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet)
 
 class Test_objective(unittest.TestCase):
 
     def test_pprint(self):
-        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         v = variable()
         o = objective(expr=v**2)
-        pyomo.kernel.pprint(o)
+        pprint(o)
         b = block()
         b.o = o
-        pyomo.kernel.pprint(o)
-        pyomo.kernel.pprint(b)
+        pprint(o)
+        pprint(b)
         m = block()
         m.b = b
-        pyomo.kernel.pprint(o)
-        pyomo.kernel.pprint(b)
-        pyomo.kernel.pprint(m)
+        pprint(o)
+        pprint(b)
+        pprint(m)
 
     def test_ctype(self):
         o = objective()

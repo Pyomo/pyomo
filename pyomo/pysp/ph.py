@@ -10,31 +10,22 @@
 
 import gc
 import logging
-import pickle
 import sys
 import time
 import inspect
 import uuid
-from operator import itemgetter
 from math import fabs, sqrt
-
-try:
-    from guppy import hpy
-    guppy_available = True
-except ImportError:
-    guppy_available = False
 
 import pyutilib.common
 
-from pyomo.core import *
+from pyomo.common.dependencies import attempt_import
+from pyomo.core import Var, Set, BooleanSet, IntegerSet, Suffix, value, minimize, maximize
 from pyomo.opt import (UndefinedData,
-                       ProblemFormat,
                        undefined,
                        SolverFactory,
                        SolverStatus,
                        TerminationCondition,
-                       SolutionStatus,
-                       SolverStatus)
+                       SolutionStatus)
 
 import pyomo.pysp.convergence
 from pyomo.pysp.phboundbase import (_PHBoundBase,
@@ -67,6 +58,9 @@ from pyomo.opt.parallel.local import SolverManager_Serial
 
 from six import iterkeys, itervalues, iteritems
 from six.moves import xrange
+
+guppy, guppy_available = attempt_import('guppy')
+
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -1945,10 +1939,10 @@ class ProgressiveHedging(_PHBase):
         # and in that order.
         def convert_value_string_to_number(s):
             try:
-                return float(s)
+                return int(s)
             except ValueError:
                 try:
-                    return int(s)
+                    return float(s)
                 except ValueError:
                     return s
 
@@ -4379,7 +4373,7 @@ class ProgressiveHedging(_PHBase):
                 # gather and report memory statistics (for leak
                 # detection purposes) if specified.
                 if (guppy_available) and (self._profile_memory >= 1):
-                    print(hpy().heap())
+                    print(guppy.hpy().heap())
 
                     #print "New (persistent) objects constructed during PH iteration "+str(self._current_iteration)+":"
                     #memory_tracker.print_diff(summary1=summary_last_iteration,

@@ -14,7 +14,6 @@ UI Tests
 from subprocess import Popen
 import os
 import time
-from pyomo.environ import *
 import pyutilib.th as unittest
 
 test_file = os.path.join(os.path.dirname(__file__), "pytest_qt.py")

@@ -16,7 +16,7 @@ import sys
 import six
 import types
 
-from six import StringIO
+from six import StringIO, iterkeys
 
 from copy import deepcopy
 from os.path import abspath, dirname, join
@@ -24,13 +24,13 @@ from os.path import abspath, dirname, join
 currdir = dirname( abspath(__file__) )
 
 import pyutilib.th as unittest
-import pyutilib.services
+from pyutilib.services import TempfileManager
 
-from pyomo.environ import *
+from pyomo.environ import AbstractModel, ConcreteModel, Var, Set, Param, Block, Suffix, Constraint, Component, Objective, Expression, SOSConstraint, SortComponents, NonNegativeIntegers, TraversalStrategy, RangeSet, SolverFactory, value, sum_product
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.base.block import SimpleBlock, SubclassOf, _BlockData, declare_custom_block
 from pyomo.core.expr import current as EXPR
-from pyomo.opt import *
+from pyomo.opt import check_available_solvers
 
 from pyomo.gdp import Disjunct
 
@@ -535,7 +535,7 @@ class TestBlock(unittest.TestCase):
         self.block = None
         if os.path.exists("unknown.lp"):
             os.unlink("unknown.lp")
-        pyutilib.services.TempfileManager.clear_tempfiles()
+        TempfileManager.clear_tempfiles()
 
     def test_collect_ctypes(self):
         b = Block(concrete=True)

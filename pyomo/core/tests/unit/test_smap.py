@@ -11,10 +11,9 @@
 # Unit Tests for SymbolMap
 #
 
-from six import StringIO
-import os
 import pyutilib.th as unittest
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Set, Var, Objective, Constraint, Block, SymbolMap, TextLabeler
+from pyomo.core.base.symbol_map import symbol_map_from_instance
 
 
 class Test(unittest.TestCase):

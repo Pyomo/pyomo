@@ -1,14 +1,23 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 #
 # Test the Pyomo command-line interface
 #
 
 import os
-import gc
 
 # __file__ fails if script is called in different ways on Windows
 # __file__ fails if someone does os.chdir() before
 # sys.argv[0] also fails because it doesn't not always contains the path
-from os.path import abspath, dirname, exists, join
+from os.path import abspath, dirname, join
 from inspect import getfile, currentframe
 currdir = dirname(abspath(getfile(currentframe())))
 datadir = os.path.normpath(join(
