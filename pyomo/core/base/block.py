@@ -32,6 +32,7 @@ else:
 from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import (
@@ -39,7 +40,7 @@ from pyomo.core.base.component import (
 )
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
-from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.util import Initializer
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set,
 )
@@ -1837,11 +1838,28 @@ class Block(ActiveIndexedComponent):
     def __init__(self, *args, **kwargs):
         """Constructor"""
         self._suppress_ctypes = set()
-        self._rule = kwargs.pop('rule', None)
-        self._options = kwargs.pop('options', None)
+        _rule = kwargs.pop('rule', None)
+        _options = kwargs.pop('options', None)
+        # As concrete applies to the Block at declaration time, we will
+        # not use an initializer.
         _concrete = kwargs.pop('concrete', False)
         kwargs.setdefault('ctype', Block)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
+        if _options is not None:
+            deprecation_warning(
+                "The Block 'options=' keyword is deprecated.  "
+                "Equivalent functionality can be obtained by wrapping "
+                "the rule function to add the options dictionary to "
+                "the function arguments", version='TBD')
+            if self.is_indexed():
+                def rule_wrapper(model, *_idx):
+                    return _rule(model, *_idx, **_options)
+            else:
+                def rule_wrapper(model):
+                    return _rule(model, **_options)
+            self._rule = Initializer(rule_wrapper)
+        else:
+            self._rule = Initializer(_rule)
         if _concrete:
             # Call self.construct() as opposed to just setting the _constructed
             # flag so that the base class construction procedure fires (this
@@ -1858,21 +1876,26 @@ class Block(ActiveIndexedComponent):
             if data is not None:
                 data = data.get(idx, None)
             if data is not None:
+                # Note that for scalar Blocks, this will override the
+                # entry for _BlockConstruction.data[id(self)], as _block
+                # is self.
                 _BlockConstruction.data[id(_block)] = data
         else:
             data = None
 
         try:
-            obj = apply_indexed_rule(
-                self, self._rule, _block, idx, self._options)
-        finally:
-            if data is not None:
-                del _BlockConstruction.data[id(_block)]
-
-        if obj is not _block and isinstance(obj, _BlockData):
+            obj = self._rule(_block, idx)
             # If the user returns a block, transfer over everything
-            # they defined into the empty one we created.
-            _block.transfer_attributes_from(obj)
+            # they defined into the empty one we created.  We do
+            # this inside the try block so that any abstract
+            # components declared by the rule have the opportunity
+            # to be initialized with data from
+            # _BlockConstruction.data as they are transferred over.
+            if obj is not _block and isinstance(obj, _BlockData):
+                _block.transfer_attributes_from(obj)
+        finally:
+            if data is not None and _block is not self:
+                del _BlockConstruction.data[id(_block)]
 
         # TBD: Should we allow skipping Blocks???
         # if obj is Block.Skip and idx is not None:
@@ -1914,7 +1937,7 @@ class Block(ActiveIndexedComponent):
         try:
             if self.is_indexed():
                 # We can only populate Blocks with finite indexing sets
-                if self._rule is not None and self.index_set().isfinite():
+                if self.index_set().isfinite():
                     for _idx in self.index_set():
                         # Trigger population & call the rule
                         self._getitem_when_not_present(_idx)
@@ -1925,34 +1948,30 @@ class Block(ActiveIndexedComponent):
                 # pseudo-abstract) sub-blocks and then adding them to a
                 # Concrete model block.
                 _idx = next(iter(UnindexedComponent_set))
-                if _idx not in self._data:
-                    # Derived block classes may not follow the scalar
-                    # Block convention of initializing _data to point to
-                    # itself (i.e., they are not set up to support
-                    # Abstract models)
-                    self._data[_idx] = self
-                _block = self
-                for name, obj in iteritems(_block.component_map()):
-                    if not obj._constructed:
-                        if data is None:
-                            _data = None
-                        else:
-                            _data = data.get(name, None)
-                        obj.construct(_data)
-                if self._rule is not None:
-                    obj = apply_indexed_rule(
-                        self, self._rule, _block, _idx, self._options)
-                    if obj is not _block and isinstance(obj, _BlockData):
-                        # If the user returns a block, transfer over
-                        # everything they defined into the empty one we
-                        # created.
-                        _block.transfer_attributes_from(obj)
+                _predefined_components = self.component_map()
+                if _predefined_components:
+                    if _idx not in self._data:
+                        # Derived block classes may not follow the scalar
+                        # Block convention of initializing _data to point to
+                        # itself (i.e., they are not set up to support
+                        # Abstract models)
+                        self._data[_idx] = self
+                    if data is not None:
+                        data = data.get(_idx, None)
+                    if data is None:
+                        data = {}
+                    for name, obj in iteritems(_predefined_components):
+                        if not obj._constructed:
+                            obj.construct(data.get(name, None))
+                # Trigger the (normal) intialization of the block
+                self._getitem_when_not_present(_idx)
         finally:
-            # We must check if data is still in the dictionary, as
-            # scalar blocks will have already removed the entry (as
-            # the _data and the component are the same object)
-            if data is not None and id(self) in _BlockConstruction.data:
-                del _BlockConstruction.data[id(self)]
+            # We must allow that id(self) may no longer be in
+            # _BlockConstruction.data, as _getitem_when_not_present will
+            # have already removed the entry for scalar blocks (as the
+            # BlockData and the Block component are the same object)
+            if data is not None:
+                _BlockConstruction.data.pop(id(self), None)
             timer.report()
 
     def _pprint_callback(self, ostream, idx, data):
