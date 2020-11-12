@@ -14,7 +14,7 @@ import copy
 import logging
 
 from pyutilib.misc import  Options
-import pyutilib.common
+from pyomo.common.errors import ApplicationError
 from pyutilib.misc import flatten
 
 from pyomo.dataportal.parse_datacmds import (
@@ -856,7 +856,7 @@ def _process_load(cmd, _model, _data, _default, options=None):
         data = DataManagerFactory(tmp)
         if (data is None) or \
            isinstance(data, UnknownDataManager):
-            raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % tmp)
+            raise ApplicationError("Data manager '%s' is not available." % tmp)
     else:
         try:
             data = DataManagerFactory(options.using)
@@ -864,7 +864,7 @@ def _process_load(cmd, _model, _data, _default, options=None):
             data = None
         if (data is None) or \
            isinstance(data, UnknownDataManager):
-            raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % options.using)
+            raise ApplicationError("Data manager '%s' is not available." % options.using)
     set_name=None
     #
     # Create symbol map

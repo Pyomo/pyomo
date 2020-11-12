@@ -16,14 +16,9 @@ import inspect
 import uuid
 from math import fabs, sqrt
 
-try:
-    from guppy import hpy
-    guppy_available = True
-except ImportError:
-    guppy_available = False
+from pyomo.common.errors import ApplicationError
 
-import pyutilib.common
-
+from pyomo.common.dependencies import attempt_import
 from pyomo.core import Var, Set, BooleanSet, IntegerSet, Suffix, value, minimize, maximize
 from pyomo.opt import (UndefinedData,
                        undefined,
@@ -63,6 +58,9 @@ from pyomo.opt.parallel.local import SolverManager_Serial
 
 from six import iterkeys, itervalues, iteritems
 from six.moves import xrange
+
+guppy, guppy_available = attempt_import('guppy')
+
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -4243,7 +4241,7 @@ class ProgressiveHedging(_PHBase):
                     print("")
                     self._current_iteration -= 1
                     break
-                except pyutilib.common._exceptions.ApplicationError:
+                except ApplicationError:
                     print("")
                     print(" ** Caught ApplicationError exception. "
                           "Attempting to gracefully exit PH")
@@ -4375,7 +4373,7 @@ class ProgressiveHedging(_PHBase):
                 # gather and report memory statistics (for leak
                 # detection purposes) if specified.
                 if (guppy_available) and (self._profile_memory >= 1):
-                    print(hpy().heap())
+                    print(guppy.hpy().heap())
 
                     #print "New (persistent) objects constructed during PH iteration "+str(self._current_iteration)+":"
                     #memory_tracker.print_diff(summary1=summary_last_iteration,
