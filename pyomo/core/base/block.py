@@ -291,12 +291,13 @@ class PseudoMap(object):
         # list will be walked and sorted before returning the first
         # element.
         sort_order = self._sorted
-        self._sorted = False
-        for x in itervalues(self):
+        try:
+            self._sorted = False
+            for x in itervalues(self):
+                return True
+            return False
+        finally:
             self._sorted = sort_order
-            return True
-        self._sorted = sort_order
-        return False
 
     __bool__ = __nonzero__
 
