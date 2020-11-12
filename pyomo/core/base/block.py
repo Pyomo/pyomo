@@ -1844,6 +1844,9 @@ class Block(ActiveIndexedComponent):
         # As concrete applies to the Block at declaration time, we will
         # not use an initializer.
         _concrete = kwargs.pop('concrete', False)
+        # As dense applies to the whole container, we will not use an
+        # initializer
+        self._dense = kwargs.pop('dense', True)
         kwargs.setdefault('ctype', Block)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _options is not None:
@@ -1938,7 +1941,8 @@ class Block(ActiveIndexedComponent):
         try:
             if self.is_indexed():
                 # We can only populate Blocks with finite indexing sets
-                if self.index_set().isfinite():
+                if self.index_set().isfinite() and (
+                        self._dense or self._rule is not None):
                     for _idx in self.index_set():
                         # Trigger population & call the rule
                         self._getitem_when_not_present(_idx)
