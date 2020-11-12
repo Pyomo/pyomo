@@ -2022,11 +2022,8 @@ class SimpleBlock(_BlockData, Block):
         # trigger the Block rule
         self._data[None] = self
 
-    def display(self, filename=None, ostream=None, prefix=""):
-        """
-        Display values in the block
-        """
-        Block.display(self, filename, ostream, prefix)
+    # We want scalar Blocks to pick up the Block display method
+    display = Block.display
 
 
 class IndexedBlock(Block):
