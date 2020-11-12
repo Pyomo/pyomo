@@ -13,7 +13,7 @@ import os
 import re
 import sys
 
-from pyutilib.common import ApplicationError
+from pyomo.common.errors import ApplicationError
 from pyutilib.misc import Bunch, Options
 from pyutilib.services import TempfileManager
 import pyutilib.subprocess
