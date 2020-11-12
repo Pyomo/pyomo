@@ -87,7 +87,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
                  nbrows,
                  nbcols,
                  rank_ownership,
-                 mpi_comm):
+                 mpi_comm,
+                 assert_correct_owners=True):
 
         shape = (nbrows, nbcols)
         self._block_matrix = BlockMatrix(nbrows, nbcols)
@@ -117,8 +118,9 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         # Note: this requires communication but is disabled when assertions
         # are turned off
-        assert self._assert_correct_owners(), \
-            'rank_owner must be the same in all processors'
+        if assert_correct_owners:
+            assert self._assert_correct_owners(), \
+                'rank_owner must be the same in all processors'
 
         # make some of the pointers unmutable
         self._rank_owner.flags.writeable = False
@@ -606,11 +608,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
         if rank == root:
             owners_in_processor = np.split(receive_data, num_processors)
             root_rank_owners = owners_in_processor[root]
-            for i in range(flat_size):
-                for k in range(num_processors):
-                    if k != root:
-                        if owners_in_processor[k][i] != root_rank_owners[i]:
-                            return False
+            for k in range(num_processors):
+                if k != root:
+                    if not np.array_equal(owners_in_processor[k], root_rank_owners):
+                        return False
         return True
 
     def __repr__(self):
