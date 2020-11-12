@@ -25,10 +25,10 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertEqual(opt.get_xpress_attribute('rows'), 1)
 
         res = opt.solve()
-        self.assertAlmostEqual(m.x.value, -0.4)
-        self.assertAlmostEqual(m.y.value, 0.2)
+        self.assertAlmostEqual(m.x.value, -0.4, delta=1e-6)
+        self.assertAlmostEqual(m.y.value, 0.2, delta=1e-6)
         opt.load_duals()
-        self.assertAlmostEqual(m.dual[m.c1], -0.4)
+        self.assertAlmostEqual(m.dual[m.c1], -0.4, delta=1e-6)
         del m.dual
 
         m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
@@ -37,8 +37,8 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertEqual(opt.get_xpress_attribute('rows'), 2)
 
         res = opt.solve(save_results=False, load_solutions=False)
-        self.assertAlmostEqual(m.x.value, -0.4)
-        self.assertAlmostEqual(m.y.value, 0.2)
+        self.assertAlmostEqual(m.x.value, -0.4, delta=1e-6)
+        self.assertAlmostEqual(m.y.value, 0.2, delta=1e-6)
         opt.load_vars()
         self.assertAlmostEqual(m.x.value, 0, delta=1e-6)
         self.assertAlmostEqual(m.y.value, 1, delta=2e-6)
@@ -51,8 +51,8 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertEqual(opt.get_xpress_control('feastol'), 1e-6)
         res = opt.solve(options={'feastol': '1e-7'})
         self.assertEqual(opt.get_xpress_control('feastol'), 1e-7)
-        self.assertAlmostEqual(m.x.value, -0.4)
-        self.assertAlmostEqual(m.y.value, 0.2)
+        self.assertAlmostEqual(m.x.value, -0.4, delta=1e-6)
+        self.assertAlmostEqual(m.y.value, 0.2, delta=1e-6)
 
         m.x.setlb(-5)
         m.x.setub(5)
