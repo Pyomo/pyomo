@@ -15,7 +15,7 @@ import time
 import copy
 from optparse import OptionParser
 
-import pyutilib.common
+from pyomo.common.errors import ApplicationError
 import pyutilib.misc
 from pyutilib.misc import PauseGC
 from pyutilib.pyro import (TaskWorker,
@@ -1161,7 +1161,7 @@ class _PHSolverServer(_PHBase):
                                         data.warmstart,
                                         data.variable_transmission)
                     successful_solve = True
-                except pyutilib.common.ApplicationError as exc:
+                except ApplicationError as exc:
                     print("Solve failed for object=%s - this was attempt=%d"
                           % (data.name, attempts_so_far))
                     if (attempts_so_far == max_num_attempts):
