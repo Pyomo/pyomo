@@ -20,8 +20,6 @@ import logging
 import time
 import traceback
 
-__all__ = ('TicTocTimer', 'tic', 'toc')
-
 _logger = logging.getLogger('pyomo.common.timing')
 _logger.propagate = False
 _logger.setLevel(logging.WARNING)
