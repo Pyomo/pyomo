@@ -1968,7 +1968,7 @@ class Block(ActiveIndexedComponent):
                     for name, obj in iteritems(_predefined_components):
                         if not obj._constructed:
                             obj.construct(data.get(name, None))
-                # Trigger the (normal) intialization of the block
+                # Trigger the (normal) initialization of the block
                 self._getitem_when_not_present(_idx)
         finally:
             # We must allow that id(self) may no longer be in
