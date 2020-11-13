@@ -17,18 +17,17 @@ import pyomo.core.base.var
 import pyomo.core.base.constraint
 from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
-from pyomo.core.expr.numvalue import (is_fixed,value)
-from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.core import is_fixed, value, minimize, maximize
 from pyomo.repn import generate_standard_repn
 from pyomo.core.base.suffix import Suffix
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import \
-        DirectOrPersistentSolver
+    DirectOrPersistentSolver
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.opt import SolverFactory
-from pyomo.core.kernel.conic import (_ConicBase,quadratic,rotated_quadratic,
-                                     primal_exponential,primal_power,
-                                     dual_exponential,dual_power)
+from pyomo.core.kernel.conic import (_ConicBase, quadratic, rotated_quadratic,
+                                     primal_exponential, primal_power,
+                                     dual_exponential, dual_power)
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
@@ -38,6 +37,7 @@ logger = logging.getLogger('pyomo.solvers')
 class DegreeError(ValueError):
     pass
 
+
 def _is_numeric(x):
     try:
         float(x)
@@ -45,16 +45,17 @@ def _is_numeric(x):
         return False
     return True
 
-@SolverFactory.register('mosek_direct',doc='Direct python interface to MOSEK')
+
+@SolverFactory.register('mosek_direct', doc='Direct python interface to MOSEK')
 class MOSEKDirect(DirectSolver):
     """
     A class to provide a direct interface between pyomo and MOSEK's Optimizer API.
     Due to direct python bindings interacting with each other, there is no need for
-    file IO. 
+    file IO.
     """
-    
-    def __init__(self,**kwds):
-        kwds['type'] = 'mosek_direct'
+
+    def __init__(self, **kwds):
+        kwds.setdefault('type', 'mosek_direct')
         DirectSolver.__init__(self, **kwds)
         self._pyomo_cone_to_solver_cone_map = dict()
         self._solver_cone_to_pyomo_cone_map = ComponentMap()
@@ -65,9 +66,8 @@ class MOSEKDirect(DirectSolver):
             self._mosek_env = self._mosek.Env()
             self._python_api_exists = True
             self._version = self._mosek_env.getversion()
-            self._version_major = self._version[0]
             self._name = "MOSEK " + ".".join([str(i) for i in self._version])
-            self._bound_type_map = {0: self._mosek.boundkey.fr, 
+            self._bound_type_map = {0: self._mosek.boundkey.fr,
                                     1: self._mosek.boundkey.lo,
                                     2: self._mosek.boundkey.up,
                                     3: self._mosek.boundkey.ra,
@@ -75,14 +75,14 @@ class MOSEKDirect(DirectSolver):
         except ImportError:
             self._python_api_exists = False
         except Exception as e:
-            print("Import of MOSEK failed - MOSEK message = "+ str(e) + "\n")
+            print("Import of MOSEK failed - MOSEK message = " + str(e) + "\n")
             self._python_api_exists = False
 
         self._range_constraint = set()
         self._max_obj_degree = 2
         self._max_constraint_degree = 2
         self._termcode = None
-        
+
         # Undefined capabilities default to None.
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
@@ -103,7 +103,8 @@ class MOSEKDirect(DirectSolver):
         except ImportError:
             return False
         try:
-            mosek.Env().Task(0,0).optimize()
+            mosek.Env().checkoutlicense(mosek.feature.pton)
+            mosek.Env().checkinlicense(mosek.feature.pton)
         except mosek.Error:
             return False
         return True
@@ -111,10 +112,10 @@ class MOSEKDirect(DirectSolver):
     def _apply_solver(self):
         if not self._save_results:
             for block in self._pyomo_model.block_data_objects(
-                descend_into=True,active=True):
+                    descend_into=True, active=True):
                 for var in block.component_data_objects(
-                    ctype=pyomo.core.base.var.Var, descend_into=False,
-                    active=True,sort=False):
+                        ctype=pyomo.core.base.var.Var, descend_into=False,
+                        active=True, sort=False):
                     var.stale = True
 
         if self._tee:
@@ -122,56 +123,53 @@ class MOSEKDirect(DirectSolver):
                 sys.stdout.write(msg)
                 sys.stdout.flush()
             self._solver_model.set_Stream(
-                self._mosek.streamtype.log,_process_stream)
+                self._mosek.streamtype.log, _process_stream)
 
         if self._keepfiles:
-            print("Solver log file : " + self._log_file)
+            logger.info("Solver log file: %s" % (self._log_file,))
 
         for key, option in self.options.items():
             try:
-                param = ".".join(("self._mosek",key))
+                param = key.split('.')
+                if 'mosek' in param:
+                    param.remove('mosek')
+                param = getattr(self._mosek, param[0])(param[1])
                 if 'sparam' in key.split('.'):
-                    self._solver_model.putstrparam(eval(param),option)
+                    self._solver_model.putstrparam(param, option)
                 elif 'dparam' in key.split('.'):
-                    self._solver_model.putdouparam(eval(param),option)
+                    self._solver_model.putdouparam(param, option)
                 elif 'iparam' in key.split('.'):
                     if isinstance(option, str):
-                        if 'mosek' in option.split('.'):
-                            self._solver_model.putintparam(
-                                eval(param),eval(option))
-                        else:
-                            option = ".".join(("mosek",option))
-                            self._solver_model.putintparam(
-                                eval(param),eval(option))
+                        option = option.split('.')
+                        if 'mosek' in option:
+                            option.remove('mosek')
+                        option = getattr(self._mosek, option[0])(option[1])
                     else:
-                        self._solver_model.putintparam(eval(param),option)
-            except (TypeError,AttributeError):
+                        self._solver_model.putintparam(param, option)
+            except (TypeError, AttributeError):
                 raise
         try:
             self._termcode = self._solver_model.optimize()
             self._solver_model.solutionsummary(self._mosek.streamtype.msg)
         except self._mosek.Error as e:
-            print("ERROR : "+str(e.errno))
-            if e.msg is not None:
-                print("\t"+e.msg)
-                sys.exit(1)
-        return Bunch(rc=None,log=None)
-        
-    def _set_instance(self,model,kwds={}):
+            logger.error(e)
+            raise
+        return Bunch(rc=None, log=None)
+
+    def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
-        DirectOrPersistentSolver._set_instance(self,model,kwds)
+        super(MOSEKDirect, self)._set_instance(model, kwds)
         self._pyomo_cone_to_solver_cone_map = dict()
         self._solver_cone_to_pyomo_cone_map = ComponentMap()
-        self._whichsol = getattr(self._mosek.soltype,kwds.pop(
-            'soltype','bas'))
+        self._whichsol = getattr(self._mosek.soltype, kwds.pop(
+            'soltype', 'bas'))
         try:
             self._solver_model = self._mosek.Env().Task()
-        except Exception:
-            e = sys.exc_info()[1]
-            msg = ("MOSEK task creation failed. Make sure that MOSEK's "
-                   "python bindings are installed correctly.\n\n\t"+
-                   "Error message: {}".format(e))
-            raise Exception(msg)
+        except:
+            err_msg = sys.exc_info()[1]
+            logger.error("MOSEK task creation failed. "
+                         + "Reason: {}".format(err_msg))
+            raise
         self._add_block(model)
 
     def _get_cone_data(self, con):
@@ -182,74 +180,76 @@ class MOSEKDirect(DirectSolver):
         elif isinstance(con, rotated_quadratic):
             cone_type = self._mosek.conetype.rquad
             cone_members = [con.r1, con.r2] + list(con.x)
-        elif self._version_major>=9:
+        elif self._version[0] >= 9:
             if isinstance(con, primal_exponential):
                 cone_type = self._mosek.conetype.pexp
                 cone_members = [con.r, con.x1, con.x2]
             elif isinstance(con, primal_power):
                 cone_type = self._mosek.conetype.ppow
-                cone_param = con.alpha
+                cone_param = value(con.alpha)
                 cone_members = [con.r1, con.r2] + list(con.x)
             elif isinstance(con, dual_exponential):
                 cone_type = self._mosek.conetype.dexp
                 cone_members = [con.r, con.x1, con.x2]
             elif isinstance(con, dual_power):
                 cone_type = self._mosek.conetype.dpow
-                cone_param = con.alpha
+                cone_param = value(con.alpha)
                 cone_members = [con.r1, con.r2] + list(con.x)
         return(cone_type, cone_param, ComponentSet(cone_members))
 
-    def _get_expr_from_pyomo_repn(self,repn,max_degree=2):
+    def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
         degree = repn.polynomial_degree()
-        if (degree is None) or degree>max_degree:
+        if (degree is None) or degree > max_degree:
             raise DegreeError(
-        'MOSEK does not support expressions of degree {}.'.format(degree))
-        
-        referenced_vars = ComponentSet(repn.linear_vars)
-        indices = [self._pyomo_var_to_solver_var_map[i] 
-                   for i in repn.linear_vars]
-        mosek_arow = [indices,list(repn.linear_coefs),repn.constant]
+                'MOSEK does not support expressions of degree {}.'.format(degree))
 
-        if len(repn.quadratic_vars)==0:
-            mosek_qexp = [[],[],[]]
-            return mosek_arow, mosek_qexp, referenced_vars    
+        referenced_vars = ComponentSet(repn.linear_vars)
+        indices = tuple(self._pyomo_var_to_solver_var_map[i]
+                        for i in repn.linear_vars)
+        mosek_arow = (indices, tuple(repn.linear_coefs), repn.constant)
+
+        if len(repn.quadratic_vars) == 0:
+            mosek_qexp = ((), (), ())
+            return mosek_arow, mosek_qexp, referenced_vars
         else:
             q_vars = itertools.chain.from_iterable(repn.quadratic_vars)
-            [referenced_vars.add(q) for q in q_vars]
-            qsubi, qsubj = zip(*[
-                [self._pyomo_var_to_solver_var_map[xi],
-                self._pyomo_var_to_solver_var_map[xj]] 
-                for xi,xj in repn.quadratic_vars])
-            qval = list(map(
-                lambda v,i,j: v*((i==j)+1),repn.quadratic_coefs,qsubi,qsubj))
-            mosek_qexp = [qsubi,qsubj,qval]
+            referenced_vars.update(q_vars)
+            qsubi = tuple(
+                self._pyomo_var_to_solver_var_map[i] for i, j in repn.quadratic_vars)
+            qsubj = tuple(
+                self._pyomo_var_to_solver_var_map[j] for i, j in repn.quadratic_vars)
+            qvals = tuple(v * 2 if qsubi[i] is qsubj[i] else v
+                          for i, v in enumerate(repn.quadratic_coefs))
+            mosek_qexp = (qsubi, qsubj, qvals)
         return mosek_arow, mosek_qexp, referenced_vars
-    
-    def _get_expr_from_pyomo_expr(self,expr,max_degree=2):
-        repn = generate_standard_repn(expr,quadratic=(max_degree==2))
+
+    def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
+        repn = generate_standard_repn(expr, quadratic=(max_degree == 2))
         try:
-            mosek_arow, mosek_qexp, referenced_vars = self._get_expr_from_pyomo_repn(repn,max_degree)
+            mosek_arow, mosek_qexp, referenced_vars = self._get_expr_from_pyomo_repn(
+                repn, max_degree)
         except DegreeError as e:
             msg = e.args[0]
             msg += '\nexpr: {}'.format(expr)
-            raise DegreeError(msg)
+            logger.error(DegreeError(msg))
+            raise e
         return mosek_arow, mosek_qexp, referenced_vars
-    
+
     def _mosek_vartype_from_var(self, var):
         if var.is_integer():
             return self._mosek.variabletype.type_int
         return self._mosek.variabletype.type_cont
-    
-    def _mosek_bounds(self, lb, ub, constant = 0.0):
+
+    def _mosek_bounds(self, lb, ub, constant=0.0):
         if lb is None:
             lb = -float('inf')
         if ub is None:
             ub = float('inf')
         lb -= constant
         ub -= constant
-        bound_key = (lb!=-float('inf')) + 2*(ub!=float('inf')) + (lb==ub)
+        bound_key = (lb != -float('inf')) + 2*(ub != float('inf')) + (lb == ub)
         return lb, ub, self._bound_type_map[bound_key]
-    
+
     def _add_var(self, var):
         """
         Prepare and pass one variable to MOSEK.
@@ -260,42 +260,42 @@ class MOSEKDirect(DirectSolver):
         ----------
         var: Var
         """
-        self.add_vars([var])
+        self.add_vars((var,))
 
-    def add_vars(self, var_list):
+    def add_vars(self, var_seq):
         """ 
         Prepare variables and pass them to MOSEK in one method call.
 
         This will keep any existing model components intact.
-        
+
         Parameters
         ----------
-        var_list: list of Var
+        var_seq: tuple/list of Var
         """
+        if not var_seq:
+            return
         var_num = self._solver_model.getnumvar()
-        vnames = [self._symbol_map.getSymbol(v,self._labeler) for v in var_list]
-        vtypes = list(map(self._mosek_vartype_from_var, var_list))
-        if len(var_list)>0:
-            lbs, ubs, bound_types = zip(*[self._mosek_bounds(
-                *p.bounds) for p in var_list])
-        else:
-            lbs, ubs, bound_types = [],[],[]
-        self._solver_model.appendvars(len(var_list))
-        var_ids = range(var_num, 
-                        var_num + len(var_list))
-        _vnames = list(map(self._solver_model.putvarname,var_ids,vnames))
-        self._solver_model.putvartypelist(var_ids,vtypes)
-        self._solver_model.putvarboundlist(var_ids,bound_types,lbs,ubs)
-        self._pyomo_var_to_solver_var_map.update(zip(var_list,var_ids))
-        self._solver_var_to_pyomo_var_map.update(zip(var_ids,var_list))
-        self._referenced_variables.update(zip(var_list,[0]*len(var_list)))
+        vnames = tuple(self._symbol_map.getSymbol(
+            v, self._labeler) for v in var_seq)
+        vtypes = tuple(map(self._mosek_vartype_from_var, var_seq))
+        lbs, ubs, bound_types = zip(*tuple(self._mosek_bounds(
+            *p.bounds) for p in var_seq))
+        self._solver_model.appendvars(len(var_seq))
+        var_ids = range(var_num,
+                        var_num + len(var_seq))
+        _vnames = tuple(map(self._solver_model.putvarname, var_ids, vnames))
+        self._solver_model.putvartypelist(var_ids, vtypes)
+        self._solver_model.putvarboundlist(var_ids, bound_types, lbs, ubs)
+        self._pyomo_var_to_solver_var_map.update(zip(var_seq, var_ids))
+        self._solver_var_to_pyomo_var_map.update(zip(var_ids, var_seq))
+        self._referenced_variables.update(zip(var_seq, [0]*len(var_seq)))
 
-    def _add_constraint(self,con):
+    def _add_constraint(self, con):
         """
         Prepare and pass one constraint to MOSEK.
 
         This will keep any existing model components intact.
-        
+
         If this method is used to add a cone, then the cone should be 
         passed as a constraint. Use the add_block method for conic_domains.
 
@@ -303,9 +303,9 @@ class MOSEKDirect(DirectSolver):
         ----------
         con: Constraint (scalar Constraint or single _ConstraintData)
         """
-        self.add_constraints([con])
+        self.add_constraints((con,))
 
-    def add_constraints(self,con_list):
+    def add_constraints(self, con_seq):
         """
         Prepare constraints and pass them to MOSEK in one method call.
 
@@ -313,90 +313,94 @@ class MOSEKDirect(DirectSolver):
 
         If this method is used to add cones, then the cones should be 
         passed as constraints. Use the add_block method for conic_domains.
-        
+
         Parameters
         ----------
-        con_list: list of Constraint (scalar Constraint or single _ConstraintData)
+        con_seq: list of Constraint (scalar Constraint or single _ConstraintData)
         """
-        active_list = list(filter(operator.attrgetter('active'),con_list))
-        if len(active_list) != len(con_list):
-            logger.warning("Inactive constraints will be skipped.")
-        con_list = active_list
-        if self._skip_trivial_constraints:
-            con_list = list(filter(is_fixed(
-                operator.attrgetter('body')),con_list))
+        if not con_seq:
+            return
 
-        lq = list(filter(operator.attrgetter("_linear_canonical_form"),
-                  con_list))
-        conic = list(filter(lambda x: isinstance(x,_ConicBase), con_list))
-        lq_ex = list(itertools.filterfalse(lambda x: isinstance(
-            x,_ConicBase) or (x._linear_canonical_form),con_list))
+        active_seq = tuple(filter(operator.attrgetter('active'), con_seq))
+        if len(active_seq) != len(con_seq):
+            logger.warning("Inactive constraints will be skipped.")
+        con_seq = active_seq
+        if self._skip_trivial_constraints:
+            con_seq = tuple(filter(is_fixed(
+                operator.attrgetter('body')), con_seq))
+
+        lq = tuple(filter(operator.attrgetter("_linear_canonical_form"),
+                          con_seq))
+        conic = tuple(filter(lambda x: isinstance(x, _ConicBase), con_seq))
+        lq_ex = tuple(itertools.filterfalse(lambda x: isinstance(
+            x, _ConicBase) or (x._linear_canonical_form), con_seq))
         lq_all = lq + lq_ex
         num_lq = len(lq) + len(lq_ex)
         num_cones = len(conic)
-        if num_lq>0:
+        if num_lq > 0:
             con_num = self._solver_model.getnumcon()
-            lq_data = [self._get_expr_from_pyomo_repn(c.canonical_form()) 
+            lq_data = [self._get_expr_from_pyomo_repn(c.canonical_form())
                        for c in lq]
             lq_data.extend(
-                [self._get_expr_from_pyomo_expr(c.body) for c in lq_ex])
+                self._get_expr_from_pyomo_expr(c.body) for c in lq_ex)
             arow, qexp, referenced_vars = zip(*lq_data)
             q_is, q_js, q_vals = zip(*qexp)
             l_ids, l_coefs, constants = zip(*arow)
-            lbs, ubs, bound_types = zip(*[self._mosek_bounds(
-                    value(lq_all[i].lower), 
-                    value(lq_all[i].upper), 
-                    constants[i]) for i in range(num_lq)])
+            lbs, ubs, bound_types = zip(*tuple(self._mosek_bounds(
+                value(lq_all[i].lower),
+                value(lq_all[i].upper),
+                constants[i]) for i in range(num_lq)))
             sub = range(con_num, con_num + num_lq)
-            sub_names = [self._symbol_map.getSymbol(c, self._labeler)
-                         for c in lq_all]
-            ptre = list(itertools.accumulate(list(map(len,l_ids))))
-            ptrb = [0] + ptre[:-1]
-            asubs = list(itertools.chain.from_iterable(l_ids))
-            avals = list(itertools.chain.from_iterable(l_coefs))
-            qcsubi = list(itertools.chain.from_iterable(q_is))
-            qcsubj = list(itertools.chain.from_iterable(q_js))
-            qcval =  list(itertools.chain.from_iterable(q_vals))
-            qcsubk = [i*len(q_is[i - con_num]) for i in sub]
+            sub_names = tuple(self._symbol_map.getSymbol(c, self._labeler)
+                              for c in lq_all)
+            ptre = tuple(itertools.accumulate(list(map(len, l_ids))))
+            ptrb = (0,) + ptre[:-1]
+            asubs = tuple(itertools.chain.from_iterable(l_ids))
+            avals = tuple(itertools.chain.from_iterable(l_coefs))
+            qcsubi = tuple(itertools.chain.from_iterable(q_is))
+            qcsubj = tuple(itertools.chain.from_iterable(q_js))
+            qcval = tuple(itertools.chain.from_iterable(q_vals))
+            qcsubk = tuple(i*len(q_is[i - con_num]) for i in sub)
             self._solver_model.appendcons(num_lq)
             self._solver_model.putarowlist(sub, ptrb, ptre, asubs, avals)
             self._solver_model.putqcon(qcsubk, qcsubi, qcsubj, qcval)
             self._solver_model.putconboundlist(sub, bound_types, lbs, ubs)
-            _cnames = list(map(self._solver_model.putconname,sub, sub_names))
+            for i, s_n in enumerate(sub_names):
+                self._solver_model.putconname(sub[i], s_n)
             self._pyomo_con_to_solver_con_map.update(zip(lq_all, sub))
             self._solver_con_to_pyomo_con_map.update(zip(sub, lq_all))
 
-            for i,c in enumerate(lq_all):
+            for i, c in enumerate(lq_all):
                 self._vars_referenced_by_con[c] = referenced_vars[i]
                 for v in referenced_vars[i]:
                     self._referenced_variables[v] += 1
-                    
-        if num_cones>0 :
+
+        if num_cones > 0:
             cone_num = self._solver_model.getnumcone()
-            cone_indices = range(cone_num, 
+            cone_indices = range(cone_num,
                                  cone_num + num_cones)
-            cone_names = [self._symbol_map.getSymbol(
-                c,self._labeler) for c in conic]
+            cone_names = tuple(self._symbol_map.getSymbol(
+                c, self._labeler) for c in conic)
             cone_type, cone_param, cone_members = zip(*map(
                 self._get_cone_data, conic))
             for i in range(num_cones):
-                members = [self._pyomo_var_to_solver_var_map[c_m] 
-                            for c_m in cone_members[i]]
+                members = tuple(self._pyomo_var_to_solver_var_map[c_m]
+                                for c_m in cone_members[i])
                 self._solver_model.appendcone(
                     cone_type[i], cone_param[i], members)
-            _cnames = list(map(
-                self._solver_model.putconename,cone_indices,cone_names))
+                self._solver_model.putconename(
+                    cone_indices[i], cone_names[i])
             self._pyomo_cone_to_solver_cone_map.update(
                 zip(conic, cone_indices))
             self._solver_cone_to_pyomo_cone_map.update(
                 zip(cone_indices, conic))
-        
-            for i,c in enumerate(conic):
+
+            for i, c in enumerate(conic):
                 self._vars_referenced_by_con[c] = cone_members[i]
                 for v in cone_members[i]:
-                    self._referenced_variables[v] += 1 
-        
-    def _set_objective(self,obj):
+                    self._referenced_variables[v] += 1
+
+    def _set_objective(self, obj):
         if self._objective is not None:
             for var in self._vars_referenced_by_obj:
                 self._referenced_variables[var] -= 1
@@ -405,7 +409,7 @@ class MOSEKDirect(DirectSolver):
 
         if obj.active is False:
             raise ValueError('Cannot add inactive objective to solver.')
-        
+
         if obj.sense == minimize:
             self._solver_model.putobjsense(self._mosek.objsense.minimize)
         elif obj.sense == maximize:
@@ -418,9 +422,9 @@ class MOSEKDirect(DirectSolver):
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
-        
+
         self._solver_model.putclist(mosek_arow[0], mosek_arow[1])
-        self._solver_model.putqobj(mosek_qexp[0],mosek_qexp[1],mosek_qexp[2])
+        self._solver_model.putqobj(mosek_qexp[0], mosek_qexp[1], mosek_qexp[2])
         self._solver_model.putcfix(mosek_arow[2])
 
         self._objective = obj
@@ -439,11 +443,11 @@ class MOSEKDirect(DirectSolver):
         ----------
         block: Block (scalar Block or single _BlockData)
         """
-        var_list = list(block.component_data_objects(
-            ctype=pyomo.core.base.var.Var, 
-            descend_into = True, active = True, 
-            sort = True))
-        self.add_vars(var_list)
+        var_seq = tuple(block.component_data_objects(
+            ctype=pyomo.core.base.var.Var,
+            descend_into=True, active=True,
+            sort=True))
+        self.add_vars(var_seq)
         for sub_block in block.block_data_objects(descend_into=True,
                                                   active=True):
             con_list = []
@@ -476,7 +480,7 @@ class MOSEKDirect(DirectSolver):
                     raise ValueError("Solver interface does not "
                                      "support multiple objectives.")
                 self._set_objective(obj)
-        
+
     def _postsolve(self):
 
         extract_duals = False
@@ -487,7 +491,7 @@ class MOSEKDirect(DirectSolver):
             if re.match(suffix, "dual"):
                 extract_duals = True
                 flag = True
-            if re.match(suffix, "slacks"):
+            if re.match(suffix, "slack"):
                 extract_slacks = True
                 flag = True
             if re.match(suffix, "rc"):
@@ -497,11 +501,11 @@ class MOSEKDirect(DirectSolver):
                 raise RuntimeError(
                     "***MOSEK solver plugin cannot extract solution suffix = "
                     + suffix)
-        
+
         msk_task = self._solver_model
         msk = self._mosek
 
-        itr_soltypes = [msk.problemtype.qo,msk.problemtype.qcqo,
+        itr_soltypes = [msk.problemtype.qo, msk.problemtype.qcqo,
                         msk.problemtype.conic]
 
         if (msk_task.getnumintvar() >= 1):
@@ -525,7 +529,7 @@ class MOSEKDirect(DirectSolver):
         self.results.solver.name = self._name
         self.results.solver.wallclock_time = msk_task.getdouinf(
             msk.dinfitem.optimizer_time)
-        
+
         SOLSTA_MAP = {
             msk.solsta.unknown: 'unknown',
             msk.solsta.optimal: 'optimal',
@@ -550,7 +554,7 @@ class MOSEKDirect(DirectSolver):
             msk.prosta.prim_infeas_or_unbounded: 'p_inf_unb'
         }
 
-        if self._version_major < 9:
+        if self._version[0] < 9:
             SOLSTA_OLD = {
                 msk.solsta.near_optimal: 'optimal',
                 msk.solsta.near_integer_optimal: 'optimal',
@@ -567,7 +571,7 @@ class MOSEKDirect(DirectSolver):
             }
             SOLSTA_MAP.update(SOLSTA_OLD)
             PROSTA_MAP.update(PROSTA_OLD)
-        
+
         if self._termcode == msk.rescode.ok:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_message = ""
@@ -601,7 +605,8 @@ class MOSEKDirect(DirectSolver):
             soln.status = SolutionStatus.stoppedByLimit
         else:
             self.results.solver.termination_message = " Optimization terminated with {} response code." \
-                "Check MOSEK response code documentation for more information.".format(self._termcode)
+                "Check MOSEK response code documentation for more information.".format(
+                    self._termcode)
             self.results.solver.termination_condition = TerminationCondition.unknown
 
         if SOLSTA_MAP[sol_status] == 'unknown':
@@ -760,7 +765,7 @@ class MOSEKDirect(DirectSolver):
                     set(self._pyomo_var_to_solver_var_map.values())))
                 var_vals = [0.0] * len(mosek_vars)
                 self._solver_model.getxx(whichsol, var_vals)
-                names = list(map(msk_task.getvarname,mosek_vars))
+                names = list(map(msk_task.getvarname, mosek_vars))
 
                 for mosek_var, val, name in zip(mosek_vars, var_vals, names):
                     pyomo_var = self._solver_var_to_pyomo_var_map[mosek_var]
@@ -779,7 +784,7 @@ class MOSEKDirect(DirectSolver):
 
                 if extract_duals or extract_slacks:
                     mosek_cons = list(range(msk_task.getnumcon()))
-                    con_names = list(map(msk_task.getconname,mosek_cons))
+                    con_names = list(map(msk_task.getconname, mosek_cons))
                     for name in con_names:
                         soln_constraints[name] = {}
                     """TODO wrong length, needs to be getnumvars()
@@ -855,7 +860,7 @@ class MOSEKDirect(DirectSolver):
             if pyomo_var.value is not None:
                 for solType in self._mosek.soltype.values:
                     self._solver_model.putxxslice(
-                        solType, mosek_var, mosek_var+1, [(pyomo_var.value)])
+                        solType, mosek_var, mosek_var + 1, [(pyomo_var.value)])
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_map

@@ -21,7 +21,6 @@ import pyomo.environ
 from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
 from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
 from pyomo.solvers.plugins.solvers.mosek_direct import MOSEKDirect
-from pyomo.solvers.plugins.solvers.mosek_persistent import MOSEKPersistent
 
 # ----------------------------------------------------------------
 
