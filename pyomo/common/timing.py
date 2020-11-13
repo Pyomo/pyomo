@@ -6,7 +6,7 @@
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________ 
+#  ___________________________________________________________________________
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -24,6 +24,8 @@ _logger = logging.getLogger('pyomo.common.timing')
 _logger.propagate = False
 _logger.setLevel(logging.WARNING)
 
+class _NotSpecified(object): pass
+
 def report_timing(stream=True):
     if stream:
         _logger.setLevel(logging.INFO)
@@ -37,8 +39,6 @@ def report_timing(stream=True):
         _logger.setLevel(logging.WARNING)
         for h in _logger.handlers:
             _logger.removeHandler(h)
-
-class _NotSpecified(object): pass
 
 
 _construction_logger = logging.getLogger('pyomo.common.timing.construction')
@@ -158,14 +158,15 @@ class TicTocTimer(object):
         logger (Logger): an optional output stream using the python
            logging package. Note: timing logged using logger.info
     """
-    def __init__(self, ostream=None, logger=None):
+    def __init__(self, ostream=_NotSpecified, logger=None):
         self._lastTime = self._loadTime = _time_source()
         self._ostream = ostream
         self._logger = logger
         self._start_count = 0
         self._cumul = 0
 
-    def tic(self, msg=_NotSpecified, ostream=None, logger=None):
+    def tic(self, msg=_NotSpecified,
+            ostream=_NotSpecified, logger=_NotSpecified):
         """Reset the tic/toc delta timer.
 
         This resets the reference time from which the next delta time is
@@ -173,9 +174,8 @@ class TicTocTimer(object):
 
         Args:
             msg (str): The message to print out.  If not specified, then
-                prints out "Resetting the tic/toc delta timer"; if it
-                evaluates to :const:`False` (:const:`0`, :const:`False`,
-                :const:`""`) then no message is printed.
+                prints out "Resetting the tic/toc delta timer"; if msg
+                is None, then no message is printed.
             ostream (FILE): an optional output stream (overrides the ostream
                 provided when the class was constructed).
             logger (Logger): an optional output stream using the python
@@ -186,11 +186,12 @@ class TicTocTimer(object):
         self._lastTime = _time_source()
         if msg is _NotSpecified:
             msg = "Resetting the tic/toc delta timer"
-        if msg:
+        if msg is not None:
             self.toc(msg=msg, delta=False, ostream=ostream, logger=logger)
 
 
-    def toc(self, msg=_NotSpecified, delta=True, ostream=None, logger=None):
+    def toc(self, msg=_NotSpecified, delta=True,
+            ostream=_NotSpecified, logger=_NotSpecified):
         """Print out the elapsed time.
 
         This resets the reference time from which the next delta time is
@@ -199,9 +200,8 @@ class TicTocTimer(object):
         Args:
             msg (str): The message to print out.  If not specified, then
                 print out the file name, line number, and function that
-                called this method; if it evaluates to :const:`False`
-                (:const:`0`, :const:`False`, :const:`""`) then no
-                message is printed.
+                called this method; if msg is None, then no message is
+                printed.
             delta (bool): print out the elapsed wall clock time since
                 the last call to :meth:`tic` or :meth:`toc`
                 (:const:`True` (default)) or since the module was first
@@ -223,30 +223,30 @@ class TicTocTimer(object):
             ans = self._cumul
             if self._lastTime:
                 ans += _time_source() - self._lastTime
-            if msg:
+            if msg is not None:
                 msg = "[%8.2f|%4d] %s\n" % (ans, self._start_count, msg)
         elif delta:
             ans = now - self._lastTime
             self._lastTime = now
-            if msg:
+            if msg is not None:
                 msg = "[+%7.2f] %s\n" % (ans, msg)
         else:
             ans = now - self._loadTime
-            if msg:
+            if msg is not None:
                 msg = "[%8.2f] %s\n" % (ans, msg)
 
-        if msg:
-            if ostream is None:
-                ostream = self._ostream
-                if ostream is None and logger is None:
-                    ostream = sys.stdout
-            if ostream is not None:
-                ostream.write(msg)
-
-            if logger is None:
+        if msg is not None:
+            if logger is _NotSpecified:
                 logger = self._logger
             if logger is not None:
                 logger.info(msg)
+
+            if ostream is _NotSpecified:
+                ostream = self._ostream
+                if ostream is _NotSpecified and logger is None:
+                    ostream = sys.stdout
+            if ostream is not None:
+                ostream.write(msg)
 
         return ans
 
