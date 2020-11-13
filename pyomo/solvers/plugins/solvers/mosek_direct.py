@@ -66,12 +66,7 @@ class MOSEKDirect(DirectSolver):
             self._mosek_env = self._mosek.Env()
             self._python_api_exists = True
             self._version = self._mosek_env.getversion()
-            self._name = "MOSEK " + ".".join([str(i) for i in self._version])
-            self._bound_type_map = {0: self._mosek.boundkey.fr,
-                                    1: self._mosek.boundkey.lo,
-                                    2: self._mosek.boundkey.up,
-                                    3: self._mosek.boundkey.ra,
-                                    4: self._mosek.boundkey.fx}
+            self._name = "MOSEK " + ".".join(str(i) for i in self._version)
         except ImportError:
             self._python_api_exists = False
         except Exception as e:
@@ -95,7 +90,7 @@ class MOSEKDirect(DirectSolver):
     @staticmethod
     def license_is_valid():
         """
-        Runs a check for a valid MOSEK license. Returns False if MOSEK fails 
+        Runs a check for a valid MOSEK license. Returns False if MOSEK fails
         to run on a trivial test case.
         """
         try:
@@ -126,7 +121,7 @@ class MOSEKDirect(DirectSolver):
                 self._mosek.streamtype.log, _process_stream)
 
         if self._keepfiles:
-            logger.info("Solver log file: %s" % (self._log_file,))
+            logger.info("Solver log file: {}".format(self._log_file))
 
         for key, option in self.options.items():
             try:
@@ -240,15 +235,17 @@ class MOSEKDirect(DirectSolver):
             return self._mosek.variabletype.type_int
         return self._mosek.variabletype.type_cont
 
-    def _mosek_bounds(self, lb, ub, constant=0.0):
-        if lb is None:
-            lb = -float('inf')
-        if ub is None:
-            ub = float('inf')
-        lb -= constant
-        ub -= constant
-        bound_key = (lb != -float('inf')) + 2*(ub != float('inf')) + (lb == ub)
-        return lb, ub, self._bound_type_map[bound_key]
+    def _mosek_bounds(self, lb, ub, fixed_bool):
+        if fixed_bool:
+            return self._mosek.boundkey.fx
+        if lb == -float('inf'):
+            if ub == float('inf'):
+                return self._mosek.boundkey.fr
+            else:
+                return self._mosek.boundkey.up
+        elif ub == float('inf'):
+            return self._mosek.boundkey.lo
+        return self._mosek.boundkey.ra
 
     def _add_var(self, var):
         """
@@ -278,8 +275,12 @@ class MOSEKDirect(DirectSolver):
         vnames = tuple(self._symbol_map.getSymbol(
             v, self._labeler) for v in var_seq)
         vtypes = tuple(map(self._mosek_vartype_from_var, var_seq))
-        lbs, ubs, bound_types = zip(*tuple(self._mosek_bounds(
-            *p.bounds) for p in var_seq))
+        lbs = tuple(-float('inf') if value(v.lb) is None else value(v.lb)
+                    for v in var_seq)
+        ubs = tuple(float('inf') if value(v.ub) is None else value(v.ub)
+                    for v in var_seq)
+        fxs = tuple(v.is_fixed() for v in var_seq)
+        bound_types = tuple(map(self._mosek_bounds, lbs, ubs, fxs))
         self._solver_model.appendvars(len(var_seq))
         var_ids = range(var_num,
                         var_num + len(var_seq))
@@ -320,7 +321,6 @@ class MOSEKDirect(DirectSolver):
         """
         if not con_seq:
             return
-
         active_seq = tuple(filter(operator.attrgetter('active'), con_seq))
         if len(active_seq) != len(con_seq):
             logger.warning("Inactive constraints will be skipped.")
@@ -346,10 +346,12 @@ class MOSEKDirect(DirectSolver):
             arow, qexp, referenced_vars = zip(*lq_data)
             q_is, q_js, q_vals = zip(*qexp)
             l_ids, l_coefs, constants = zip(*arow)
-            lbs, ubs, bound_types = zip(*tuple(self._mosek_bounds(
-                value(lq_all[i].lower),
-                value(lq_all[i].upper),
-                constants[i]) for i in range(num_lq)))
+            lbs = tuple(-float('inf') if value(lq_all[i].lower) is None else value(
+                lq_all[i].lower) - constants[i] for i in range(num_lq))
+            ubs = tuple(float('inf') if value(lq_all[i].upper) is None else value(
+                lq_all[i].upper) - constants[i] for i in range(num_lq))
+            fxs = tuple(c.equality for c in lq_all)
+            bound_types = tuple(map(self._mosek_bounds, lbs, ubs, fxs))
             sub = range(con_num, con_num + num_lq)
             sub_names = tuple(self._symbol_map.getSymbol(c, self._labeler)
                               for c in lq_all)

@@ -12,7 +12,7 @@ import operator
 import itertools
 import pyomo.core.base.var
 import pyomo.core.base.constraint
-from pyomo.core.expr.numvalue import (is_fixed, value)
+from pyomo.core import is_fixed, value
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
@@ -123,9 +123,9 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
         ----------
         *solver_cons: Constraint (scalar Constraint or single _ConstraintData)
         """
-        lq_cons = list(itertools.filterfalse(
+        lq_cons = tuple(itertools.filterfalse(
             lambda x: isinstance(x, _ConicBase), solver_cons))
-        cone_cons = list(
+        cone_cons = tuple(
             filter(lambda x: isinstance(x, _ConicBase), solver_cons))
         try:
             lq = []
@@ -180,9 +180,13 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
             var_ids = []
             for v in solver_vars:
                 var_ids.append(self._pyomo_var_to_solver_var_map[v])
-            vtypes = list(map(self._mosek_vartype_from_var, solver_vars))
-            lbs, ubs, bound_types = zip(*[self._mosek_bounds(
-                *p.bounds) for p in solver_vars])
+            vtypes = tuple(map(self._mosek_vartype_from_var, solver_vars))
+            lbs = tuple(-float('inf') if value(v.lb) is None else value(v.lb)
+                        for v in solver_vars)
+            ubs = tuple(float('inf') if value(v.ub) is None else value(v.ub)
+                        for v in solver_vars)
+            fxs = tuple(v.is_fixed() for v in solver_vars)
+            bound_types = tuple(map(self._mosek_bounds, lbs, ubs, fxs))
             self._solver_model.putvartypelist(var_ids, vtypes)
             self._solver_model.putvarboundlist(var_ids, bound_types, lbs, ubs)
         except KeyError:
