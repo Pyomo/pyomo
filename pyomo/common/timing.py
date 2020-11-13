@@ -38,6 +38,9 @@ def report_timing(stream=True):
         for h in _logger.handlers:
             _logger.removeHandler(h)
 
+class _NotSpecified(object): pass
+
+
 _construction_logger = logging.getLogger('pyomo.common.timing.construction')
 
 
@@ -50,7 +53,7 @@ class ConstructionTimer(object):
     def report(self):
         # Record the elapsed time, as some log handlers may not
         # immediately generate the messge string
-        self.timer = self.timer.toc(msg="")
+        self.timer = self.timer.toc(msg=None)
         _construction_logger.info(self)
 
     def __str__(self):
@@ -102,7 +105,7 @@ class TransformationTimer(object):
     def report(self):
         # Record the elapsed time, as some log handlers may not
         # immediately generate the message string
-        self.timer = self.timer.toc(msg="")
+        self.timer = self.timer.toc(msg=None)
         _transform_logger.info(self)
 
     def __str__(self):
@@ -162,42 +165,43 @@ class TicTocTimer(object):
         self._start_count = 0
         self._cumul = 0
 
-    def tic(self, msg=None, ostream=None, logger=None):
+    def tic(self, msg=_NotSpecified, ostream=None, logger=None):
         """Reset the tic/toc delta timer.
 
         This resets the reference time from which the next delta time is
         calculated to the current time.
 
         Args:
-            msg (str): The message to print out.  If :const:`None`
-                (default), then prints out "Resetting the tic/toc delta
-                timer"; if it evaluates to :const:`False` (:const:`0`,
-                :const:`False`, :const:`""`) then no message is printed.
+            msg (str): The message to print out.  If not specified, then
+                prints out "Resetting the tic/toc delta timer"; if it
+                evaluates to :const:`False` (:const:`0`, :const:`False`,
+                :const:`""`) then no message is printed.
             ostream (FILE): an optional output stream (overrides the ostream
                 provided when the class was constructed).
             logger (Logger): an optional output stream using the python
                 logging package (overrides the ostream provided when the
                 class was constructed). Note: timing logged using logger.info
+
         """
         self._lastTime = _time_source()
-        if msg is None:
+        if msg is _NotSpecified:
             msg = "Resetting the tic/toc delta timer"
         if msg:
             self.toc(msg=msg, delta=False, ostream=ostream, logger=logger)
 
 
-    def toc(self, msg=None, delta=True, ostream=None, logger=None):
+    def toc(self, msg=_NotSpecified, delta=True, ostream=None, logger=None):
         """Print out the elapsed time.
 
         This resets the reference time from which the next delta time is
         calculated to the current time.
 
         Args:
-            msg (str): The message to print out.  If :const:`None`
-                (default), then print out the file name, line number,
-                and function that called this method; if it evaluates to
-                :const:`False` (:const:`0`, :const:`False`, :const:`""`)
-                then no message is printed.
+            msg (str): The message to print out.  If not specified, then
+                print out the file name, line number, and function that
+                called this method; if it evaluates to :const:`False`
+                (:const:`0`, :const:`False`, :const:`""`) then no
+                message is printed.
             delta (bool): print out the elapsed wall clock time since
                 the last call to :meth:`tic` or :meth:`toc`
                 (:const:`True` (default)) or since the module was first
@@ -207,9 +211,10 @@ class TicTocTimer(object):
             logger (Logger): an optional output stream using the python
                 logging package (overrides the ostream provided when the
                 class was constructed). Note: timing logged using logger.info
+
         """
 
-        if msg is None:
+        if msg is _NotSpecified:
             msg = 'File "%s", line %s in %s' % \
                   traceback.extract_stack(limit=2)[0][:3]
 
