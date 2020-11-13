@@ -14,7 +14,7 @@
 import os
 
 import pyutilib.th as unittest
-from pyutilib.common import ApplicationError
+from pyomo.common.errors import ApplicationError
 
 from pyomo.opt.base import UnknownSolver
 from pyomo.opt.base.solvers import SolverFactory

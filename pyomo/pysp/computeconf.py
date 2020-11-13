@@ -15,7 +15,7 @@ import math
 import time
 import traceback
 
-from pyutilib.common import ApplicationError
+from pyomo.common.errors import ApplicationError
 
 from pyomo.core import minimize
 # this is a hack, in order to pick up the UndefinedData class. this is
