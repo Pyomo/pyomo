@@ -16,7 +16,7 @@ import inspect
 import uuid
 from math import fabs, sqrt
 
-import pyutilib.common
+from pyomo.common.errors import ApplicationError
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core import Var, Set, BooleanSet, IntegerSet, Suffix, value, minimize, maximize
@@ -4241,7 +4241,7 @@ class ProgressiveHedging(_PHBase):
                     print("")
                     self._current_iteration -= 1
                     break
-                except pyutilib.common._exceptions.ApplicationError:
+                except ApplicationError:
                     print("")
                     print(" ** Caught ApplicationError exception. "
                           "Attempting to gracefully exit PH")
