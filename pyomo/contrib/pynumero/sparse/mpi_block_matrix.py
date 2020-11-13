@@ -81,6 +81,11 @@ class MPIBlockMatrix(BaseBlockMatrix):
                     owned by all processes the rank is -1. Blocks that are
                     None should be owned by all processes.
     mpi_comm : MPI communicator
+    assert_correct_owners: bool
+                           If True, then checks will be performed to ensure
+                           that processor owners are consistent. This check
+                           requires communication. If False, this check is 
+                           skipped.
     """
 
     def __init__(self,
