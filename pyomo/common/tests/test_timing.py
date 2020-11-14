@@ -129,12 +129,13 @@ class TestTiming(unittest.TestCase):
         ref -= time.time()
         time.sleep(0.1)
 
-        # Note: pypy on GHA frequently has timing differences of 0.021s
+        # Note: pypy on GHA frequently has timing differences of >0.02s
         # for the following tests
         RES = 4e-2
 
         with capture_output() as out:
             delta = timer.toc()
+            timer.stop()
             ref += time.time()
         self.assertAlmostEqual(ref, delta, delta=RES)
         #self.assertAlmostEqual(0, timer.toc(None), delta=RES)
