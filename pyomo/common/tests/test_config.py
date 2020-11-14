@@ -22,6 +22,8 @@
 #  Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
 #  license for use of this work by or on behalf of the U.S. government.
 #  ___________________________________________________________________________
+
+import argparse
 import os
 import sys
 import os.path
@@ -35,7 +37,7 @@ def yaml_load(arg):
     return yaml.load(arg, **yaml_load_args)
 
 from pyomo.common.config import (
-    ConfigBlock, ConfigValue,
+    ConfigDict, ConfigValue,
     ConfigList, MarkImmutable,
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
@@ -52,7 +54,7 @@ def _display(obj, *args):
 
 class TestConfigDomains(unittest.TestCase):
     def test_PositiveInt(self):
-        c = ConfigBlock()
+        c = ConfigDict()
         c.declare('a', ConfigValue(5, PositiveInt))
         self.assertEqual(c.a, 5)
         c.a = 4.
@@ -73,7 +75,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, 6)
 
     def test_NegativeInt(self):
-        c = ConfigBlock()
+        c = ConfigDict()
         c.declare('a', ConfigValue(-5, NegativeInt))
         self.assertEqual(c.a, -5)
         c.a = -4.
@@ -94,7 +96,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, -6)
 
     def test_NonPositiveInt(self):
-        c = ConfigBlock()
+        c = ConfigDict()
         c.declare('a', ConfigValue(-5, NonPositiveInt))
         self.assertEqual(c.a, -5)
         c.a = -4.
@@ -114,7 +116,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, 0)
 
     def test_NonNegativeInt(self):
-        c = ConfigBlock()
+        c = ConfigDict()
         c.declare('a', ConfigValue(5, NonNegativeInt))
         self.assertEqual(c.a, 5)
         c.a = 4.
@@ -134,7 +136,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, 0)
 
     def test_PositiveFloat(self):
-        c = ConfigBlock()
+        c = ConfigDict()
         c.declare('a', ConfigValue(5, PositiveFloat))
         self.assertEqual(c.a, 5)
         c.a = 4.
@@ -154,7 +156,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, 2.6)
 
     def test_NegativeFloat(self):
-        c = ConfigBlock()
+        c = ConfigDict()
         c.declare('a', ConfigValue(-5, NegativeFloat))
         self.assertEqual(c.a, -5)
         c.a = -4.
@@ -174,7 +176,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, -2.6)
 
     def test_NonPositiveFloat(self):
-        c = ConfigBlock()
+        c = ConfigDict()
         c.declare('a', ConfigValue(-5, NonPositiveFloat))
         self.assertEqual(c.a, -5)
         c.a = -4.
@@ -193,7 +195,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, 0)
 
     def test_NonNegativeFloat(self):
-        c = ConfigBlock()
+        c = ConfigDict()
         c.declare('a', ConfigValue(5, NonNegativeFloat))
         self.assertEqual(c.a, 5)
         c.a = 4.
@@ -212,7 +214,7 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(c.a, 0)
 
     def test_In(self):
-        c = ConfigBlock()
+        c = ConfigDict()
         c.declare('a', ConfigValue(None, In([1,3,5])))
         self.assertEqual(c.a, None)
         c.a = 3
@@ -247,7 +249,7 @@ class TestConfigDomains(unittest.TestCase):
                 x = cwd[:2] + x
             return x.replace('/',os.path.sep)
         cwd = os.getcwd() + os.path.sep
-        c = ConfigBlock()
+        c = ConfigDict()
 
         c.declare('a', ConfigValue(None, Path()))
         self.assertEqual(c.a, None)
@@ -349,7 +351,7 @@ class TestConfigDomains(unittest.TestCase):
                 x = cwd[:2] + x
             return x.replace('/',os.path.sep)
         cwd = os.getcwd() + os.path.sep
-        c = ConfigBlock()
+        c = ConfigDict()
 
         c.declare('a', ConfigValue(None, PathList()))
         self.assertEqual(c.a, None)
@@ -386,7 +388,7 @@ class TestConfigDomains(unittest.TestCase):
 
 class TestImmutableConfigValue(unittest.TestCase):
     def test_immutable_config_value(self):
-        config = ConfigBlock()
+        config = ConfigDict()
         config.declare('a', ConfigValue(default=1, domain=int))
         config.declare('b', ConfigValue(default=1, domain=int))
         config.a = 2
@@ -434,16 +436,16 @@ class TestConfig(unittest.TestCase):
         self.original_environ = os.environ
         os.environ["COLUMNS"] = "80"
 
-        self.config = config = ConfigBlock(
+        self.config = config = ConfigDict(
             "Basic configuration for Flushing models", implicit=True)
-        net = config.declare('network', ConfigBlock())
+        net = config.declare('network', ConfigDict())
         net.declare('epanet file',
                     ConfigValue('Net3.inp', str, 'EPANET network inp file',
                                 None)).declare_as_argument(dest='epanet')
 
         sc = config.declare(
             'scenario',
-            ConfigBlock(
+            ConfigDict(
                 "Single scenario block", implicit=True, implicit_domain=str))
         sc.declare('scenario file', ConfigValue(
             'Net3.tsg', str,
@@ -478,12 +480,12 @@ class TestConfig(unittest.TestCase):
         config.declare('nodes', ConfigList(
             [], ConfigValue(0, int, 'Node ID', None), "List of node IDs", None))
 
-        im = config.declare('impact', ConfigBlock())
+        im = config.declare('impact', ConfigDict())
         im.declare('metric', ConfigValue(
             'MC', str, 'Population or network based impact metric', None))
 
-        fl = config.declare('flushing', ConfigBlock())
-        n = fl.declare('flush nodes', ConfigBlock())
+        fl = config.declare('flushing', ConfigDict())
+        n = fl.declare('flush nodes', ConfigDict())
         n.declare('feasible nodes', ConfigValue(
             'ALL', str, 'ALL, NZD, NONE, list or filename', None))
         n.declare('infeasible nodes', ConfigValue(
@@ -497,7 +499,7 @@ class TestConfig(unittest.TestCase):
         n.declare('duration', ConfigValue(600, float, 'Time [min] for flushing',
                                           None))
 
-        v = fl.declare('close valves', ConfigBlock())
+        v = fl.declare('close valves', ConfigDict())
         v.declare('feasible pipes', ConfigValue(
             'ALL', str, 'ALL, DIAM min max [inch], NONE, list or filename',
             None))
@@ -781,15 +783,15 @@ flushing:
 
     def test_display_userdata_block(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
-        self.config.add("bar", ConfigBlock())
+        self.config.add("bar", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_display_userdata_block_nonDefault(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
-        self.config.add("bar", ConfigBlock(implicit=True)) \
-                   .add("baz", ConfigBlock())
+        self.config.add("bar", ConfigDict(implicit=True)) \
+                   .add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(test, "bar:\n")
@@ -845,13 +847,13 @@ scenarios[1].detection""")
 scenarios[1].detection""")
 
     def test_unusedUserValues_topBlock(self):
-        self.config.add('foo', ConfigBlock())
+        self.config.add('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_unusedUserValues_subBlock(self):
-        self.config['scenario'].add('foo', ConfigBlock())
+        self.config['scenario'].add('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
         self.assertEqual(test, """scenario
@@ -912,13 +914,13 @@ scenarios[1].merlion
 scenarios[1].detection""")
 
     def test_UserValues_topBlock(self):
-        self.config.add('foo', ConfigBlock())
+        self.config.add('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_UserValues_subBlock(self):
-        self.config['scenario'].add('foo', ConfigBlock())
+        self.config['scenario'].add('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
         self.assertEqual(test, """scenario
@@ -965,7 +967,7 @@ scenario.foo""")
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_block(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
-        self.config.add("bar", ConfigBlock())
+        self.config.add("bar", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(yaml_load(test), None)
@@ -973,8 +975,8 @@ scenario.foo""")
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_block_nonDefault(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
-        self.config.add("bar", ConfigBlock(implicit=True)) \
-                   .add("baz", ConfigBlock())
+        self.config.add("bar", ConfigDict(implicit=True)) \
+                   .add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(yaml_load(test), {'bar': None})
@@ -1030,14 +1032,9 @@ scenario.foo""")
         self.assertEqual(val, 50.0)
 
     def test_setValue_scalar_badDomain(self):
-        try:
+        with self.assertRaisesRegex(
+                ValueError, 'invalid value for configuration'):
             self.config['flushing']['flush nodes']['rate'] = 'a'
-        except ValueError:
-            pass
-        except:
-            raise
-        else:
-            self.fail('expected test to raise ValueError')
         val = self.config['flushing']['flush nodes']['rate']
         self.assertIs(type(val), float)
         self.assertEqual(val, 600.0)
@@ -1055,27 +1052,17 @@ scenario.foo""")
         self.assertEqual(val, [6])
 
     def test_setValue_scalarList_badDomain(self):
-        try:
+        with self.assertRaisesRegex(
+                ValueError, 'invalid value for configuration'):
             self.config['scenario']['detection'] = 50
-        except ValueError:
-            pass
-        except:
-            raise
-        else:
-            self.fail('expected test to raise ValueError')
         val = self.config['scenario']['detection']
         self.assertIs(type(val), list)
         self.assertEqual(val, [1, 2, 3])
 
     def test_setValue_scalarList_badSubDomain(self):
-        try:
+        with self.assertRaisesRegex(
+                ValueError, 'invalid value for configuration'):
             self.config['scenario']['detection'] = [5.5, 'a']
-        except ValueError:
-            pass
-        except:
-            raise
-        else:
-            self.fail('expected test to raise ValueError')
         val = self.config['scenario']['detection']
         self.assertIs(type(val), list)
         self.assertEqual(val, [1, 2, 3])
@@ -1093,14 +1080,9 @@ scenario.foo""")
         self.assertEqual(val, [10])
 
     def test_setValue_list_badSubDomain(self):
-        try:
+        with self.assertRaisesRegex(
+                ValueError, 'invalid value for configuration'):
             self.config['nodes'] = [5, 'a']
-        except ValueError:
-            pass
-        except:
-            raise
-        else:
-            self.fail('expected test to raise ValueError')
         val = self.config['nodes'].value()
         self.assertIs(type(val), list)
         self.assertEqual(val, [])
@@ -1152,14 +1134,10 @@ scenario.foo""")
 
     def test_setValue_block_noImplicit(self):
         _test = {'epanet file': 'no_file.inp', 'foo': 1}
-        try:
+        with self.assertRaisesRegex(
+                ValueError, "key 'foo' not defined for ConfigDict "
+                "'network' and implicit"):
             self.config['network'] = _test
-        except ValueError:
-            pass
-        except:
-            raise
-        else:
-            self.fail("Expected test to raise ValueError")
         self.assertEqual(self._reference, self.config.value())
 
     def test_setValue_block_implicit(self):
@@ -1188,24 +1166,15 @@ scenario.foo""")
 
     def test_setValue_block_badDomain(self):
         _test = {'merlion': True, 'detection': ['a'], 'foo': 1, 'a': 1}
-        try:
+        with self.assertRaisesRegex(
+                ValueError, 'invalid value for configuration'):
             self.config['scenario'] = _test
-        except ValueError:
-            pass
-        except:
-            raise
-        else:
-            self.fail('expected test to raise ValueError')
         self.assertEqual(self._reference, self.config.value())
 
-        try:
+        with self.assertRaisesRegex(
+                ValueError, 'Expected dict value for scenario.set_value, '
+                'found list'):
             self.config['scenario'] = []
-        except ValueError:
-            pass
-        except:
-            raise
-        else:
-            self.fail('expected test to raise ValueError')
         self.assertEqual(self._reference, self.config.value())
 
     def test_default_function(self):
@@ -1216,21 +1185,13 @@ scenario.foo""")
         c.reset()
         self.assertEqual(c.value(), 10)
 
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "<lambda>\(\) takes exactly 1 argument \(0 given\)"):
             c = ConfigValue(default=lambda x: 10 * x, domain=int)
-        except TypeError:
-            pass
-        else:
-            self.fail("Expected type error")
 
-        try:
+        with self.assertRaisesRegex(
+                ValueError, 'invalid value for configuration'):
             c = ConfigValue('a', domain=int)
-        except ValueError:
-            pass
-        except:
-            raise
-        else:
-            self.fail("Expected casting a to int to raise a value error")
 
     def test_getItem_setItem(self):
         # a freshly-initialized object should not be accessed
@@ -1264,7 +1225,7 @@ scenario.foo""")
         self.assertTrue(self.config['scenario'].get('detection')._userSet)
 
     def test_delitem(self):
-        config = ConfigBlock(implicit=True)
+        config = ConfigDict(implicit=True)
         config.declare('bar', ConfigValue())
         self.assertEqual(sorted(config.keys()), ['bar'])
         config.foo = 5
@@ -1411,7 +1372,7 @@ endBlock{}
         self.assertEquals(
             self.config.get('fubar', 'bogus').value(), 'bogus')
 
-        cfg = ConfigBlock()
+        cfg = ConfigDict()
         cfg.declare('foo', ConfigValue(1, int))
         self.assertEqual( cfg.get('foo', 5).value(), 1 )
         self.assertEqual( len(cfg), 1 )
@@ -1419,7 +1380,7 @@ endBlock{}
         self.assertEqual( cfg.get('bar',None).value(), None )
         self.assertEqual( len(cfg), 1 )
 
-        cfg = ConfigBlock(implicit=True)
+        cfg = ConfigDict(implicit=True)
         cfg.declare('foo', ConfigValue(1, int))
         self.assertEqual( cfg.get('foo', 5).value(), 1 )
         self.assertEqual( len(cfg), 1 )
@@ -1429,7 +1390,7 @@ endBlock{}
         self.assertIs( cfg.get('baz', None).value(), None )
         self.assertEqual( len(cfg), 1 )
 
-        cfg = ConfigBlock( implicit=True,
+        cfg = ConfigDict( implicit=True,
                            implicit_domain=ConfigList(domain=str) )
         cfg.declare('foo', ConfigValue(1, int))
         self.assertEqual( cfg.get('foo', 5).value(), 1 )
@@ -1441,7 +1402,7 @@ endBlock{}
         self.assertEqual( len(cfg), 1 )
 
     def test_setdefault(self):
-        cfg = ConfigBlock()
+        cfg = ConfigDict()
         cfg.declare('foo', ConfigValue(1, int))
         self.assertEqual( cfg.setdefault('foo', 5).value(), 1 )
         self.assertEqual( len(cfg), 1 )
@@ -1449,7 +1410,7 @@ endBlock{}
                                 cfg.setdefault, 'bar', 0)
         self.assertEqual( len(cfg), 1 )
 
-        cfg = ConfigBlock(implicit=True)
+        cfg = ConfigDict(implicit=True)
         cfg.declare('foo', ConfigValue(1, int))
         self.assertEqual( cfg.setdefault('foo', 5).value(), 1 )
         self.assertEqual( len(cfg), 1 )
@@ -1458,7 +1419,7 @@ endBlock{}
         self.assertEqual( cfg.setdefault('baz').value(), None )
         self.assertEqual( len(cfg), 3 )
 
-        cfg = ConfigBlock( implicit=True,
+        cfg = ConfigDict( implicit=True,
                            implicit_domain=ConfigList(domain=str) )
         cfg.declare('foo', ConfigValue(1, int))
         self.assertEqual( cfg.setdefault('foo', 5).value(), 1 )
@@ -1580,7 +1541,7 @@ endBlock{}
 """)
 
     def test_list_get(self):
-        X = ConfigBlock(implicit=True)
+        X = ConfigDict(implicit=True)
         X.config = ConfigList()
         self.assertEqual(_display(X, 'userdata'), "")
         self.assertIs(X.config.get(0), None )
@@ -1590,7 +1551,7 @@ endBlock{}
         # get() shouldn't change the userdata flag...
         self.assertEqual(_display(X, 'userdata'), "")
 
-        X = ConfigBlock(implicit=True)
+        X = ConfigDict(implicit=True)
         X.config = ConfigList([42], int)
         self.assertEqual(_display(X, 'userdata'), "")
         val = X.config.get(0)
@@ -1615,29 +1576,25 @@ endBlock{}
 
         # this should ONLY change the userSet flag on the item (and not
         # the list)
-        X = ConfigBlock(implicit=True)
+        X = ConfigDict(implicit=True)
         X.config = ConfigList([42], int)
         X.config[0] = 20
         self.assertEqual(_display(X, 'userdata'), "  - 20\n")
 
         # This should change both...
-        X = ConfigBlock(implicit=True)
+        X = ConfigDict(implicit=True)
         X.config = ConfigList([42], int)
         X.config.append(20)
         self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
 
     def test_implicit_entries(self):
-        config = ConfigBlock()
-        try:
+        config = ConfigDict()
+        with self.assertRaisesRegexp(
+                ValueError, "Key 'test' not defined in ConfigDict '' "
+                "and Dict disallows implicit entries"):
             config['test'] = 5
-            self.fail(
-                "Expected ConfigBlock to throw a ValueError for implicit declarations")
-        except ValueError:
-            self.assertEqual(sys.exc_info()[1].args, (
-                "Key 'test' not defined in Config Block '' and Block disallows implicit entries",
-            ))
 
-        config = ConfigBlock(implicit=True)
+        config = ConfigDict(implicit=True)
         config['implicit_1'] = 5
         config.declare('formal', ConfigValue(42, int))
         config['implicit_2'] = 5
@@ -1649,10 +1606,6 @@ endBlock{}
         self.assertEqual(['formal'], list(config.iterkeys()))
 
     def test_argparse_help(self):
-        try:
-            import argparse
-        except ImportError:
-            self.skipTest("argparse not available")
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
         help = parser.format_help()
@@ -1674,10 +1627,6 @@ Scenario definition:
         self.config['scenario'].declare('epanet', ConfigValue(
             True, bool, 'Use EPANET as the Water quality model',
             None)).declare_as_argument(group='Scenario definition')
-        try:
-            import argparse
-        except ImportError:
-            self.skipTest("argparse not available")
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
         help = parser.format_help()
@@ -1699,10 +1648,6 @@ Scenario definition:
 """, help)
 
     def test_argparse_import(self):
-        try:
-            import argparse
-        except ImportError:
-            self.skipTest("argparse not available")
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
 
@@ -1734,10 +1679,6 @@ Scenario definition:
         self.assertEqual('foo', self.config['network']['epanet file'])
 
     def test_argparse_subparsers(self):
-        try:
-            import argparse
-        except ImportError:
-            self.skipTest("argparse not available")
         parser = argparse.ArgumentParser(prog='tester')
         subp = parser.add_subparsers(title="Subcommands").add_parser('flushing')
 
@@ -1789,9 +1730,9 @@ Node information:
 """, help)
 
     def test_getattr_setattr(self):
-        config = ConfigBlock()
+        config = ConfigDict()
         foo = config.declare(
-            'foo', ConfigBlock(
+            'foo', ConfigDict(
                 implicit=True, implicit_domain=int))
         foo.declare('explicit_bar', ConfigValue(0, int))
 
@@ -1808,29 +1749,18 @@ Node information:
         self.assertEqual(20, foo['implicit bar'])
         self.assertEqual(20, foo.implicit_bar)
 
-        try:
+        with self.assertRaisesRegexp(
+                ValueError, "Key 'baz' not defined in ConfigDict '' "
+                "and Dict disallows implicit entries"):
             config.baz = 10
-        except ValueError:
-            pass
-        except:
-            raise
-        else:
-            self.fail(
-                "Expected implicit assignment to explicit block to raise ValueError")
 
-        try:
+        with self.assertRaisesRegexp(
+                AttributeError, "Unknown attribute 'baz'"):
             a = config.baz
-        except AttributeError:
-            pass
-        except:
-            raise
-        else:
-            self.fail(
-                "Expected implicit assignment to explicit block to raise ValueError")
 
 
     def test_nonString_keys(self):
-        config = ConfigBlock(implicit=True)
+        config = ConfigDict(implicit=True)
         config.declare(5, ConfigValue(50, int))
         self.assertIn(5, config)
         self.assertIn('5', config)
@@ -1872,7 +1802,7 @@ Node information:
         self.assertEqual(config.get('5').value(), 5000)
 
     def test_set_value(self):
-        config = ConfigBlock()
+        config = ConfigDict()
         config.declare('a b', ConfigValue())
         config.declare('a_c', ConfigValue())
         config.declare('a d e', ConfigValue())
@@ -1883,7 +1813,7 @@ Node information:
         self.assertEqual(config.a_d_e, 30)
 
     def test_call_options(self):
-        config = ConfigBlock(description="base description",
+        config = ConfigDict(description="base description",
                              doc="base doc",
                              visibility=1,
                              implicit=True)
@@ -1891,7 +1821,7 @@ Node information:
         config.declare("b", config.get("a")(2))
         config.declare("c", config.get("a")(domain=float, doc="c doc"))
         config.d = 0
-        config.e = ConfigBlock(implicit=True)
+        config.e = ConfigDict(implicit=True)
         config.e.a = 0
 
         reference_template = """# base description
