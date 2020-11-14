@@ -115,8 +115,8 @@ class TestTiming(unittest.TestCase):
         ref = 0
         ref -= time.time()
         time.sleep(0.1)
-        ref += time.time()
         timer.stop()
+        ref += time.time()
         cumul_stop1 = timer.toc(None)
         with self.assertRaisesRegex(
                 RuntimeError,
@@ -128,10 +128,10 @@ class TestTiming(unittest.TestCase):
         timer.start()
         ref -= time.time()
         time.sleep(0.1)
-        ref += time.time()
 
         with capture_output() as out:
             delta = timer.toc()
+            ref += time.time()
         self.assertAlmostEqual(ref, delta, delta=RES)
         #self.assertAlmostEqual(0, timer.toc(None), delta=RES)
         self.assertRegex(
