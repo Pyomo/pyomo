@@ -295,7 +295,7 @@ class _HierarchicalHelper(object):
             name_formatter = '{name:<' + str(sum(stage_identifier_lengths)) + '}'
             other_time = self.total_time
             sub_stage_identifier_lengths = stage_identifier_lengths[1:]
-            for name, timer in self.timers.items():
+            for name, timer in sorted(self.timers.items()):
                 if self.total_time > 0:
                     _percent = timer.total_time / self.total_time * 100
                 else:
@@ -509,7 +509,7 @@ class HierarchicalTimer(object):
         underline = '-' * (sum(stage_identifier_lengths) + 36) + '\n'
         s += underline
         sub_stage_identifier_lengths = stage_identifier_lengths[1:]
-        for name, timer in self.timers.items():
+        for name, timer in sorted(self.timers.items()):
             s += ( name_formatter + '{ncalls:>9d} {cumtime:>9.3f} '
                    '{percall:>9.3f} {percent:>6.1f}\n').format(
                        name=name,
