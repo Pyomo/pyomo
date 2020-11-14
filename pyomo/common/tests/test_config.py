@@ -2,19 +2,26 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________ 
+#  ___________________________________________________________________________
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
+#  This software is distributed under the 3-clause BSD License.
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
-
+#
+#  The configuration test case was originally developed as part of the
+#  Water Security Toolkit (WST)
+#  Copyright (c) 2012 Sandia Corporation.
+#  This software is distributed under the Revised (3-clause) BSD License.
+#  Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
+#  license for use of this work by or on behalf of the U.S. government.
+#  ___________________________________________________________________________
 import os
 import sys
 import os.path
@@ -23,17 +30,9 @@ import pyutilib.th as unittest
 
 from six import PY3, StringIO
 
-try:
-    import yaml
-    using_yaml = True
-    if int(yaml.__version__.split('.')[0]) < 5:
-        def yaml_load(arg):
-            return yaml.load(arg)
-    else:
-        def yaml_load(arg):
-            return yaml.load(arg, Loader=yaml.FullLoader)
-except ImportError:
-    using_yaml = False
+from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
+def yaml_load(arg):
+    return yaml.load(arg, **yaml_load_args)
 
 from pyomo.common.config import (
     ConfigBlock, ConfigValue,
@@ -43,9 +42,15 @@ from pyomo.common.config import (
     In, Path, PathList, ConfigEnum
 )
 
-currdir = os.path.dirname(os.path.abspath(__file__))
 
-class TestConfig(unittest.TestCase):
+# Utility to redirect display() to a string
+def _display(obj, *args):
+    test = StringIO()
+    obj.display(ostream=test, *args)
+    return test.getvalue()
+
+
+class TestConfigDomains(unittest.TestCase):
     def test_PositiveInt(self):
         c = ConfigBlock()
         c.declare('a', ConfigValue(5, PositiveInt))
@@ -298,7 +303,7 @@ class TestConfig(unittest.TestCase):
         c.d = "${CWD}/a/b/c"
         self.assertTrue(os.path.sep in c.d)
         self.assertEqual(c.d, norm(cwd+'a/b/c'))
-        
+
         c.d_base = '/my/dir'
         c.d = "/a/b/c"
         self.assertTrue(os.path.sep in c.d)
@@ -379,13 +384,6 @@ class TestConfig(unittest.TestCase):
                 TestEnum.ITEM_ONE)
 
 
-# Utility to redirect display() to a string
-def _display(obj, *args):
-    test = StringIO()
-    obj.display(ostream=test, *args)
-    return test.getvalue()
-
-
 class TestImmutableConfigValue(unittest.TestCase):
     def test_immutable_config_value(self):
         config = ConfigBlock()
@@ -428,7 +426,7 @@ class TestImmutableConfigValue(unittest.TestCase):
         self.assertEqual(config3.a, 1)
 
 
-class Test(unittest.TestCase):
+class TestConfig(unittest.TestCase):
 
     def setUp(self):
         # Save the original environment, then force a fixed column width
@@ -926,40 +924,35 @@ scenarios[1].detection""")
         self.assertEqual(test, """scenario
 scenario.foo""")
 
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplayAndValue_default(self):
-        if not using_yaml:
-            self.skipTest("Cannot execute test because PyYAML is not available")
         test = _display(self.config)
         sys.stdout.write(test)
         self.assertEqual(yaml_load(test), self.config.value())
 
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplayAndValue_list(self):
-        if not using_yaml:
-            self.skipTest("Cannot execute test because PyYAML is not available")
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = _display(self.config)
         sys.stdout.write(test)
         self.assertEqual(yaml_load(test), self.config.value())
 
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_default(self):
-        if not using_yaml:
-            self.skipTest("Cannot execute test because PyYAML is not available")
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(yaml_load(test), None)
 
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_list(self):
-        if not using_yaml:
-            self.skipTest("Cannot execute test because PyYAML is not available")
         self.config['scenarios'].append()
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(yaml_load(test), {'scenarios': [None]})
 
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_list_nonDefault(self):
-        if not using_yaml:
-            self.skipTest("Cannot execute test because PyYAML is not available")
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = _display(self.config,'userdata')
@@ -969,18 +962,16 @@ scenario.foo""")
                                   [None, {'merlion': True,
                                           'detection': []}]})
 
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_block(self):
-        if not using_yaml:
-            self.skipTest("Cannot execute test because PyYAML is not available")
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigBlock())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(yaml_load(test), None)
 
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_block_nonDefault(self):
-        if not using_yaml:
-            self.skipTest("Cannot execute test because PyYAML is not available")
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigBlock(implicit=True)) \
                    .add("baz", ConfigBlock())
@@ -1945,6 +1936,7 @@ c: 1.0
         self.assertEqual(mod_copy._doc, "new doc")
         self.assertEqual(mod_copy._description, "new description")
         self.assertEqual(mod_copy._visibility, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
