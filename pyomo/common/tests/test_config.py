@@ -1186,7 +1186,7 @@ scenario.foo""")
         self.assertEqual(c.value(), 10)
 
         with self.assertRaisesRegex(
-                TypeError, "<lambda>\(\) takes exactly 1 argument \(0 given\)"):
+                TypeError, "<lambda>\(\) .* argument"):
             c = ConfigValue(default=lambda x: 10 * x, domain=int)
 
         with self.assertRaisesRegex(
