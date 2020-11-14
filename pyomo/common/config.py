@@ -15,6 +15,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 
+import argparse
 import os
 import platform
 import enum
@@ -25,11 +26,14 @@ from textwrap import wrap
 import logging
 import pickle
 
+if six.PY3:
+    import builtins as _builtins
+else:
+    import __builtin__ as _builtins
+
 from six.moves import xrange
 
 logger = logging.getLogger('pyomo.common.config')
-
-__all__ = ('ConfigDict', 'ConfigBlock', 'ConfigList', 'ConfigValue')
 
 if 'PYOMO_CONFIG_DIR' in os.environ:
     PYOMO_CONFIG_DIR = os.path.abspath(os.environ['PYOMO_CONFIG_DIR'])
@@ -170,10 +174,10 @@ class PathList(Path):
             return [ super(PathList, self).__call__(data) ]
 
 
-def add_docstring_list(docstring, configblock, indent_by=4):
+def add_docstring_list(docstring, configdict, indent_by=4):
     """Returns the docstring with a formatted configuration arguments listing."""
     return docstring + (" " * indent_by).join(
-        configblock.generate_documentation(
+        configdict.generate_documentation(
             block_start="Keyword Arguments\n-----------------\n",
             block_end="",
             item_start="%s\n",
@@ -590,17 +594,6 @@ def _dump(*args, **kwds):
     globals()['_dump'] = dump
     return dump(*args, **kwds)
 
-try:
-    import argparse
-    argparse_is_available = True
-except ImportError:
-    argparse_is_available = False
-
-try:
-    import builtins as _builtins
-except ImportError:
-    import __builtin__ as _builtins
-
 
 def _munge_name(name, space_to_dash=True):
     if space_to_dash:
@@ -811,7 +804,7 @@ class ConfigBase(object):
                 logger.warn("implicit_domain ignored by __call__(): "
                             "class %s is not a ConfigDict" % (type(self),))
 
-        # Copy over any other object-specific information (mostly Block
+        # Copy over any other object-specific information (mostly Dict
         # definitions)
         ans = self.__class__(**kwds)
         if isinstance(self, ConfigDict):
@@ -832,7 +825,7 @@ class ConfigBase(object):
         return ans
 
     def name(self, fully_qualified=False):
-        # Special case for the top-level block
+        # Special case for the top-level dict
         if self._name is None:
             return ""
         elif fully_qualified and self._parent is not None:
@@ -984,7 +977,6 @@ class ConfigBase(object):
                                                        False)
             _parser.add_argument(*_args, default=argparse.SUPPRESS, **_kwds)
 
-        assert (argparse_is_available)
         for level, prefix, value, obj in self._data_collector(None, ""):
             if obj._argparse is None:
                 continue
@@ -1272,7 +1264,7 @@ class MarkImmutable(object):
 
     Examples
     --------
-    >>> config = ConfigBlock()
+    >>> config = ConfigDict()
     >>> config.declare('a', ConfigValue(default=1, domain=int))
     >>> config.declare('b', ConfigValue(default=1, domain=int))
     >>> locker = MarkImmutable(config.get('a'), config.get('b'))
@@ -1642,16 +1634,16 @@ class ConfigDict(ConfigBase):
         name = str(name)
         if config._parent is not None:
             raise ValueError(
-                "config '%s' is already assigned to Config Block '%s'; "
+                "config '%s' is already assigned to ConfigDict '%s'; "
                 "cannot reassign to '%s'" %
                 (name, config._parent.name(True), self.name(True)))
         if name in self._data:
             raise ValueError(
-                "duplicate config '%s' defined for Config Block '%s'" %
+                "duplicate config '%s' defined for ConfigDict '%s'" %
                 (name, self.name(True)))
         if '.' in name or '[' in name or ']' in name:
             raise ValueError(
-                "Illegal character in config '%s' for config Block '%s': "
+                "Illegal character in config '%s' for ConfigDict '%s': "
                 "'.[]' are not allowed." % (name, self.name(True)))
         self._data[name] = config
         self._decl_order.append(name)
@@ -1680,8 +1672,8 @@ class ConfigDict(ConfigBase):
 
     def add(self, name, config):
         if not self._implicit_declaration:
-            raise ValueError("Key '%s' not defined in Config Block '%s'"
-                             " and Block disallows implicit entries" %
+            raise ValueError("Key '%s' not defined in ConfigDict '%s'"
+                             " and Dict disallows implicit entries" %
                              (name, self.name(True)))
 
         if self._implicit_domain is None:
@@ -1729,7 +1721,7 @@ class ConfigDict(ConfigBase):
                         _implicit.append(key)
                     else:
                         raise ValueError(
-                            "key '%s' not defined for Config Block '%s' and "
+                            "key '%s' not defined for ConfigDict '%s' and "
                             "implicit (undefined) keys are not allowed" %
                             (key, self.name(True)))
 
@@ -1782,7 +1774,7 @@ class ConfigDict(ConfigBase):
                                                      visibility, docMode):
                 yield v
 
-# Backwards compatibility: ConfigDick was originally named ConfigBlock.
+# Backwards compatibility: ConfigDict was originally named ConfigBlock.
 ConfigBlock = ConfigDict
 
 # In Python3, the items(), etc methods of dict-like things return
