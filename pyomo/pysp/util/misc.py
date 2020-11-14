@@ -22,7 +22,7 @@ import argparse
 
 from pyutilib.misc import PauseGC, import_file
 from pyutilib.services import TempfileManager
-from pyutilib.common import ApplicationError
+from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import ConverterError
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.plugin import (ExtensionPoint,

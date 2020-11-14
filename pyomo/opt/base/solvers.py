@@ -20,7 +20,7 @@ import logging
 
 from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.common import Factory
-from pyutilib.common import ApplicationError
+from pyomo.common.errors import ApplicationError
 from pyutilib.misc import Options, quote_split
 
 from pyomo.opt.base.problem import ProblemConfigFactory
