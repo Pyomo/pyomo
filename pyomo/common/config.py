@@ -2,11 +2,11 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________ 
+#  ___________________________________________________________________________
 #
 #  This module was originally developed as part of the PyUtilib project
 #  Copyright (c) 2008 Sandia Corporation.
@@ -1267,7 +1267,7 @@ class MarkImmutable(object):
     Parameters
     ----------
     config_value: ConfigValue
-        The ConfigValue instances that should be marked immutable. 
+        The ConfigValue instances that should be marked immutable.
         Note that multiple instances of ConfigValue can be passed.
 
     Examples
@@ -1276,8 +1276,8 @@ class MarkImmutable(object):
     >>> config.declare('a', ConfigValue(default=1, domain=int))
     >>> config.declare('b', ConfigValue(default=1, domain=int))
     >>> locker = MarkImmutable(config.get('a'), config.get('b'))
-    
-    Now, config.a and config.b cannot be changed. To make them mutable again, 
+
+    Now, config.a and config.b cannot be changed. To make them mutable again,
 
     >>> locker.release_lock()
     """
