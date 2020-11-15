@@ -20,7 +20,7 @@ from pyomo.core.expr import current as EXPR
 from math import fabs
 from pyomo.repn import generate_standard_repn
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
@@ -131,7 +131,8 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
         if config.add_regularization == "level_L1":
             solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
         elif config.add_regularization == "level_L_infinity":
-            solve_data.mip.MindtPy_utils.del_component("L_infinity_objective_function")
+            solve_data.mip.MindtPy_utils.del_component(
+                "L_infinity_objective_function")
 
     return solve_data.mip, master_mip_results
 
@@ -392,20 +393,21 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
     elif regularization_problem:
         if config.add_regularization == "level_L1":
             MindtPy.loa_proj_mip_obj = generate_norm1_objective_function(solve_data.mip,
-                                                                           solve_data.best_solution_found,
-                                                                           discrete_only=False)
+                                                                         solve_data.best_solution_found,
+                                                                         discrete_only=False)
         elif config.add_regularization == "level_L2":
             MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
                                                                            solve_data.best_solution_found,
                                                                            discrete_only=False)
         elif config.add_regularization == "level_L_infinity":
             MindtPy.loa_proj_mip_obj = generate_norm_inf_objective_function(solve_data.mip,
-                                                                           solve_data.best_solution_found,
-                                                                           discrete_only=False)
-        # elif config.add_regularization == "grad_lag":
-        #     MindtPy.loa_proj_mip_obj = 
-        # elif config.add_regularization == "hess_lag":
-        #     MindtPy.loa_proj_mip_obj = 
+                                                                            solve_data.best_solution_found,
+                                                                            discrete_only=False)
+        elif config.add_regularization in {"grad_lag", "hess_lag"}:
+            MindtPy.loa_proj_mip_obj = generate_lag_objective_function(solve_data.mip,
+                                                                       solve_data.best_solution_found,
+                                                                       config,
+                                                                       discrete_only=False)
         if solve_data.objective_sense == minimize:
             MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
                 expr=MindtPy.objective_value <= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.LB)
