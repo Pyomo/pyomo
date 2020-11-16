@@ -394,7 +394,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 v.value for v in fixed_nlp.MindtPy_utils.variable_list)
             self.add_lazy_no_good_cuts(var_values, solve_data, config, opt)
         if config.use_tabu_list:
-            solve_data.tabu_list.add(tuple(round(v.value) for v in fixed_nlp.MindtPy_utils.discrete_variable_list))
+            solve_data.tabu_list.append(
+                tuple(round(v.value) for v in fixed_nlp.MindtPy_utils.discrete_variable_list))
 
     def handle_lazy_subproblem_infeasible(self, fixed_nlp, solve_data, config, opt):
         """

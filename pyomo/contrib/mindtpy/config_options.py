@@ -336,6 +336,7 @@ def _add_feas_pump_configs(CONFIG):
         description="The coefficient in the norm constraint, correspond to the Beta in the paper."
     ))
 
+
 def check_config(config):
     # configuration confirmation
     if config.single_tree:
@@ -362,10 +363,11 @@ def check_config(config):
     elif config.strategy == "feas_pump":  # feasibility pump alone
         config.init_strategy = "feas_pump"
         config.iteration_limit = 0
+    if config.init_strategy == "feas_pump":
         # TODO: Choose one from the following two
         config.add_no_good_cuts = False
         config.use_tabu_list = True
-        
+
     if config.nlp_solver == "baron":
         config.use_dual = False
     # if ecp tolerance is not provided use bound tolerance
@@ -375,5 +377,7 @@ def check_config(config):
     if config.solver_tee:
         config.mip_solver_tee = True
         config.nlp_solver_tee = True
+    if config.add_no_good_cuts:
+        config.integer_to_binary = True
     if config.use_tabu_list:
         config.mip_solver = 'cplex_persistent'

@@ -81,7 +81,7 @@ class MindtPySolver(object):
         solve_data.curr_int_sol = []
         solve_data.prev_int_sol = []
         solve_data.should_terminate = False
-        
+
         check_config(config)
 
         # if the objective function is a constant, dual bound constraint is not added.
@@ -170,7 +170,7 @@ class MindtPySolver(object):
             if config.strategy == 'GOA' and (config.add_no_good_cuts or config.use_tabu_list):
                 solve_data.num_no_good_cuts_added = {}
             if config.use_tabu_list:
-                solve_data.tabu_list = set()
+                solve_data.tabu_list = []
 
             # Set of NLP iterations for which cuts were generated
             lin.nlp_iters = Set(dimen=1)

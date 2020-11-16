@@ -132,12 +132,12 @@ def solve_master(solve_data, config, feas_pump=False):
         masteropt.options["threads"] = config.threads
     if config.use_tabu_list:
         tabulist = masteropt._solver_model.register_callback(
-            tabu_list.IncumbentCallback_cplex)
+            IncumbentCallback_cplex)
         tabulist.solve_data = solve_data
         tabulist.opt = masteropt
         masteropt._solver_model.parameters.preprocessing.reduce.set(1)
-        # If the callback is used to reject incumbents, the user must set the 
-        # parameter c.parameters.preprocessing.reduce either to the value 1 (one) 
+        # If the callback is used to reject incumbents, the user must set the
+        # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
         # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
         masteropt._solver_model.set_warning_stream(None)
         masteropt._solver_model.set_log_stream(None)
