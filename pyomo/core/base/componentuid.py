@@ -63,15 +63,13 @@ class ComponentUID(object):
             if context is not None:
                 raise ValueError("Context is not allowed when initializing a "
                                  "ComponentUID object from a string type")
-            self._cids = tuple(self.parse_cuid(component))
+            self._cids = tuple(self._parse_cuid(component))
         else:
             self._cids = tuple(self._generate_cuid(
                 component, cuid_buffer=cuid_buffer, context=context))
 
     def __str__(self):
-        """
-        TODO
-        """
+        "Return a 'nicely formatted' string representation of the CUID"
         a = ""
         for name, args in self._cids:
             a += '.' + self._safe_str(repr(name))
@@ -83,9 +81,7 @@ class ComponentUID(object):
         return a[1:]  # Strip off the leading '.'
 
     def __repr__(self):
-        """
-        TODO
-        """
+        "Return an 'unambiguous' string representation of the CUID"
         a = ""
         for name, args in self._cids:
             a += '.' + repr(name)
@@ -122,12 +118,11 @@ class ComponentUID(object):
             setattr(self,key,val)
 
     def __hash__(self):
-        """
-        TODO
-        """
+        """Return a deterministic hash for this ComponentUID"""
         try:
             return hash(self._cids)
         except TypeError:
+            # Special handling for unhashable data (slices)
             return hash(tuple(
                 (name, tuple(
                     (slice, x.start, x.stop, x.step)
@@ -135,8 +130,19 @@ class ComponentUID(object):
                     for x in idx)) for name, idx in self._cids))
 
     def __lt__(self, other):
-        """
-        TODO
+        """Return True if this CUID <= the 'other' CUID
+
+        This method defines a lexicographic sorting order for
+        ComponentUID objects.  Nominally this is equivalent to sorting
+        tuples or strings (elements are compared in order, with the
+        first difference determining the ordering; longer tuples / lists
+        are sorted after shorter ones).  This includes special handling
+        for slice and ellipsis, where slice is sorted after any specific
+        index, and ellipsis is sorted after everything else.
+
+        Following Python 3 convention, this will raise a TypeError if
+        `other` is not a ComponentUID.
+
         """
         try:
             other_cids = other._cids
@@ -168,26 +174,22 @@ class ComponentUID(object):
         return False
 
     def __le__(self, other):
-        """
-        TODO
-        """
+        "Return True if this CUID <= the 'other' CUID"
         return self < other or self == other
 
     def __gt__(self, other):
-        """
-        TODO
-        """
+        "Return True if this CUID > the 'other' CUID"
         return not (self <= other)
 
     def __ge__(self, other):
-        """
-        TODO
-        """
+        "Return True if this CUID >= the 'other' CUID"
         return not (self < other)
 
     def __eq__(self, other):
-        """
-        TODO
+        """Return True is this CUID is exactly equal to `other`
+
+        This will return False (and not raise an exception) if `other`
+        is not a ComponentUID.
         """
         try:
             other_cids = other._cids
@@ -196,8 +198,10 @@ class ComponentUID(object):
         return self._cids == other_cids
 
     def __ne__(self, other):
-        """
-        TODO
+        """Return True is this CUID is not exactly equal to `other`
+
+        This will return True (and not raise an exception) if `other`
+        is not a ComponentUID.
         """
         return not self.__eq__(other)
 
@@ -263,9 +267,7 @@ class ComponentUID(object):
         return cuid_strings
 
     def _generate_cuid(self, component, cuid_buffer=None, context=None):
-        """
-        TODO
-        """
+        "Return the list of (name, idx) pairs for the specified component"
         model = component.model()
         if context is None:
             context = model
@@ -298,9 +300,17 @@ class ComponentUID(object):
         rcuid.reverse()
         return rcuid
 
-    def parse_cuid(self, label):
-        """
-        TODO
+    def _parse_cuid(self, label):
+        """Parse a string/component name and yield name, idx pairs
+
+        This attempts to parse a string (nominally returned by
+        get_repr()) to generate the sequence of (name, idx) pairs for
+        the _cuids data structure.
+
+        This first attempts to parse the string using the "new" (v2)
+        repr format and falls back on the "old" (v1) format inthe event
+        of a parse failure.
+
         """
         try:
             return self._parse_cuid_v2(label)
@@ -312,7 +322,6 @@ class ComponentUID(object):
             ComponentUID._lex = ply.lex.lex()
             ComponentUID._lex.linepos = []
 
-        cuids = []
         name = None
         idx = []
         in_idx = False
@@ -323,7 +332,7 @@ class ComponentUID(object):
                 break
             if tok.type == '.':
                 assert not in_idx
-                cuids.append((name, tuple(idx)))
+                yield (name, tuple(idx))
                 name = None
                 idx = []
             elif tok.type == '[':
@@ -345,8 +354,7 @@ class ComponentUID(object):
                 assert name is None
                 name = tok.value
         assert not in_idx
-        cuids.append((name, tuple(idx)))
-        return cuids
+        yield (name, tuple(idx))
             
     def _parse_cuid_v1(self, label):
         cList = label.split('.')
@@ -414,9 +422,7 @@ class ComponentUID(object):
         return obj
 
     def list_components(self, block):
-        """
-        TODO
-        """
+        "Generator returning all components matching this ComponentUID"
         obj = self._resolve_cuid(block)
         if obj is None:
             # The initial generation of a component failed
@@ -432,8 +438,11 @@ class ComponentUID(object):
             yield obj
 
     def matches(self, component, context=None):
-        """
-        TODO
+        """Return True if this ComponentUID matches specified component
+
+        This is equivalent to:
+
+            `component in ComponentSet(self.list_components())`
         """
         for i, (name, idx) in enumerate(self._generate_cuid(component)):
             if i == len(self._cids):
