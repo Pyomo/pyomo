@@ -63,7 +63,10 @@ class ComponentUID(object):
             if context is not None:
                 raise ValueError("Context is not allowed when initializing a "
                                  "ComponentUID object from a string type")
-            self._cids = tuple(self._parse_cuid(component))
+            try:
+                self._cids = tuple(self._parse_cuid_v2(component))
+            except (OSError, IOError):
+                self._cids = tuple(self._parse_cuid_v1(component))
         else:
             self._cids = tuple(self._generate_cuid(
                 component, cuid_buffer=cuid_buffer, context=context))
@@ -300,24 +303,14 @@ class ComponentUID(object):
         rcuid.reverse()
         return rcuid
 
-    def _parse_cuid(self, label):
-        """Parse a string/component name and yield name, idx pairs
+    def _parse_cuid_v2(self, label):
+        """Parse a string (v2 repr format) and yield name, idx pairs
 
         This attempts to parse a string (nominally returned by
         get_repr()) to generate the sequence of (name, idx) pairs for
         the _cuids data structure.
 
-        This first attempts to parse the string using the "new" (v2)
-        repr format and falls back on the "old" (v1) format inthe event
-        of a parse failure.
-
         """
-        try:
-            return self._parse_cuid_v2(label)
-        except (OSError, IOError):
-            return self._parse_cuid_v1(label)
-
-    def _parse_cuid_v2(self, label):
         if ComponentUID._lex is None:
             ComponentUID._lex = ply.lex.lex()
             ComponentUID._lex.linepos = []
@@ -357,6 +350,13 @@ class ComponentUID(object):
         yield (name, tuple(idx))
             
     def _parse_cuid_v1(self, label):
+        """Parse a string (v1 repr format) and yield name, idx pairs
+
+        This attempts to parse a string (nominally returned by
+        get_repr()) to generate the sequence of (name, idx) pairs for
+        the _cuids data structure.
+
+        """
         cList = label.split('.')
         for c in cList:
             if c[-1] == ']':
