@@ -131,7 +131,7 @@ class TestTiming(unittest.TestCase):
 
         # Note: pypy on GHA frequently has timing differences of >0.02s
         # for the following tests
-        RES = 4e-2
+        RES = 5e-2
 
         with capture_output() as out:
             delta = timer.toc()
