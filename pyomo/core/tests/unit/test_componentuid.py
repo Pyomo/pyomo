@@ -41,85 +41,85 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID(self.m.b[1,'2'].c.a[3])
         self.assertEqual(
             cuid._cids,
-            (('a',(3,)), ('c',tuple()), ('b',(1,'2'))) )
+            (('b',(1,'2')), ('c',tuple()), ('a',(3,))) )
 
     def test_genFromComponent_indexed(self):
         cuid = ComponentUID(self.m.b[1,'2'].c.a)
         self.assertEqual(
             cuid._cids,
-            (('a',()), ('c',tuple()), ('b',(1,'2'))) )
+            (('b',(1,'2')), ('c',tuple()), ('a',())) )
 
     def test_parseFromString(self):
         cuid = ComponentUID('b[1,2].c.a[2]')
         self.assertEqual(
             cuid._cids,
-            (('a',(2,)), ('c',tuple()), ('b',(1,2))) )
+            (('b',(1,2)), ('c',tuple()), ('a',(2,))) )
 
     def test_parseFromString_singleQuote(self):
         cuid = ComponentUID('b[1,\'2\'].c.a[2]')
         self.assertEqual(
             cuid._cids,
-            (('a',(2,)), ('c',tuple()), ('b',(1,'2'))) )
+            (('b',(1,'2')), ('c',tuple()), ('a',(2,))) )
 
     def test_parseFromString_doubleQuote(self):
         cuid = ComponentUID('b[1,\"2\"].c.a[2]')
         self.assertEqual(
             cuid._cids,
-            (('a',(2,)), ('c',tuple()), ('b',(1,'2'))) )
+            (('b',(1,'2')), ('c',tuple()), ('a',(2,))) )
 
     def test_parseFromString_typeID(self):
         cuid = ComponentUID('b[#1,$2].c.a[2]')
         self.assertEqual(
             cuid._cids,
-            (('a',(2,)), ('c',tuple()), ('b',(1,'2'))) )
+            (('b',(1,'2')), ('c',tuple()), ('a',(2,))) )
 
     def test_parseFromString_wildcard_1(self):
         cuid = ComponentUID('b[**].c.a[*]')
         self.assertEqual(
             cuid._cids,
-            (('a',(_star,)), ('c',tuple()), ('b',(Ellipsis,))) )
+            (('b',(Ellipsis,)), ('c',tuple()), ('a',(_star,))) )
 
     def test_parseFromString_wildcard_2(self):
         cuid = ComponentUID('b[*,*].c.a[*]')
         self.assertEqual(
             cuid._cids,
-            (('a',(_star,)), ('c',tuple()), ('b',(_star, _star))) )
+            (('b',(_star, _star)), ('c',tuple()), ('a',(_star,))) )
 
     def test_parseFromRepr(self):
         cuid = ComponentUID('b:1,2.c.a:2')
         self.assertEqual(
             cuid._cids,
-            (('a',(2,)), ('c',tuple()), ('b',(1,2))) )
+            (('b',(1,2)), ('c',tuple()), ('a',(2,))) )
 
     def test_parseFromRepr_singleQuote(self):
         cuid = ComponentUID('b:1,\'2\'.c.a:2')
         self.assertEqual(
             cuid._cids,
-            (('a',(2,)), ('c',tuple()), ('b',(1,'2'))) )
+            (('b',(1,'2')), ('c',tuple()), ('a',(2,))) )
 
     def test_parseFromRepr_doubleQuote(self):
         cuid = ComponentUID('b:1,\"2\".c.a:2')
         self.assertEqual(
             cuid._cids,
-            (('a',(2,)), ('c',tuple()), ('b',(1,'2'))) )
+            (('b',(1,'2')), ('c',tuple()), ('a',(2,))) )
 
     def test_parseFromRepr_typeID(self):
         cuid = ComponentUID('b:#1,$2.c.a:2')
         self.assertEqual(
             cuid._cids,
-            (('a',(2,)), ('c',tuple()), ('b',(1,'2'))) )
+            (('b',(1,'2')), ('c',tuple()), ('a',(2,))) )
 
     def test_parseFromRepr_wildcard_1(self):
         cuid = ComponentUID('b:**.c.a:*')
         self.assertEqual(
             cuid._cids,
-            (('a',(_star,)), ('c',tuple()), ('b',(Ellipsis,))) )
+            (('b',(Ellipsis,)), ('c',tuple()), ('a',(_star,))) )
 
     def test_parseFromRepr_wildcard_2(self):
         cuid = ComponentUID('b:*,*.c.a:*')
         self.assertEqual(
             cuid._cids,
-            (('a',(_star,)), ('c',tuple()), ('b',(_star, _star))) )
+            (('b',(_star, _star)), ('c',tuple()), ('a',(_star,))) )
 
     def test_find_component_deprecated(self):
         ref = self.m.b[1,'2'].c.a[3]

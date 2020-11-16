@@ -73,7 +73,7 @@ class ComponentUID(object):
         TODO
         """
         a = ""
-        for name, args in reversed(self._cids):
+        for name, args in self._cids:
             a += '.' + self._safe_str(repr(name))
             if len(args) == 0:
                 continue
@@ -87,7 +87,7 @@ class ComponentUID(object):
         TODO
         """
         a = ""
-        for name, args in reversed(self._cids):
+        for name, args in self._cids:
             a += '.' + repr(name)
             if len(args) == 0:
                 continue
@@ -99,7 +99,7 @@ class ComponentUID(object):
     def get_repr(self, version=2):
         if version == 1:
             a = ""
-            for name, args in reversed(self._cids):
+            for name, args in self._cids:
                 a += '.' + name
                 if len(args) == 0:
                     continue
@@ -273,6 +273,7 @@ class ComponentUID(object):
         # if component.is_indexed():
         #     yield( component.local_name, (Ellipsis,))
         #     component = component.parent_block()
+        rcuid = []
         while component is not context:
             if component is model:
                 raise ValueError("Context '%s' does not apply to component "
@@ -280,7 +281,7 @@ class ComponentUID(object):
                                            orig_component.name))
             c = component.parent_component()
             if c is component:
-                yield ( c.local_name, () )
+                rcuid.append(( c.local_name, () ))
             elif cuid_buffer is not None:
                 if id(component) not in cuid_buffer:
                     for idx, obj in iteritems(c):
@@ -288,11 +289,14 @@ class ComponentUID(object):
                             c.local_name,
                             idx if idx.__class__ is tuple else (idx,)
                         )
-                yield cuid_buffer[id(component)]
+                rcuid.append(cuid_buffer[id(component)])
             else:
                 idx = component.index()
-                yield c.local_name, idx if idx.__class__ is tuple else (idx,)
+                rcuid.append((c.local_name,
+                             idx if idx.__class__ is tuple else (idx,)))
             component = component.parent_block()
+        rcuid.reverse()
+        return rcuid
 
     def parse_cuid(self, label):
         """
@@ -342,12 +346,11 @@ class ComponentUID(object):
                 name = tok.value
         assert not in_idx
         cuids.append((name, tuple(idx)))
-        cuids.reverse()
         return cuids
             
     def _parse_cuid_v1(self, label):
         cList = label.split('.')
-        for c in reversed(cList):
+        for c in cList:
             if c[-1] == ']':
                 c_info = c[:-1].split('[',1)
             else:
@@ -379,7 +382,7 @@ class ComponentUID(object):
 
     def _resolve_cuid(self, block):
         obj = block
-        for name, idx in reversed(self._cids):
+        for name, idx in self._cids:
             try:
                 if len(idx):
                     obj = getattr(obj, name)[idx]
