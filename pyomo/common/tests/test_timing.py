@@ -34,12 +34,12 @@ class TestTiming(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2])
 
-        ref = """
+        ref = r"""
            (0(\.\d+)?) seconds to construct Block ConcreteModel; 1 index total
            (0(\.\d+)?) seconds to construct RangeSet FiniteSimpleRangeSet; 1 index total
            (0(\.\d+)?) seconds to construct Var x; 2 indices total
            (0(\.\d+)?) seconds to construct Suffix Suffix; 1 index total
-           .*(0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars (in-place)
+           (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)
            """.strip()
 
         xfrm = TransformationFactory('core.relax_integer_vars')
@@ -52,6 +52,7 @@ class TestTiming(unittest.TestCase):
                 m.x = Var(m.r)
                 xfrm.apply_to(m)
             result = out.getvalue().strip()
+            self.maxDiff = None
             for l, r in zip(result.splitlines(), ref.splitlines()):
                 print(l, r)
                 self.assertRegex(l.strip(), r.strip())
