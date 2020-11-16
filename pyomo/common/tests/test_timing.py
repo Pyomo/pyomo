@@ -54,7 +54,7 @@ class TestTiming(unittest.TestCase):
             result = out.getvalue().strip()
             self.maxDiff = None
             for l in result.splitlines():
-                self.assertRegex(str(l.strip()), "(0(\.\d+)?) seconds .*?")
+                self.assertRegex(str(l.strip()), str(r.strip()))
             # self.assertRegex(out.getvalue().strip(), ref)
         finally:
             report_timing(False)
