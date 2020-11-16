@@ -37,6 +37,9 @@ jobs:
         os: [ubuntu-18.04]
         python: [3.8]
         other: [""]
+        # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
+        # build error is resolved:
+        # https://github.com/Pyomo/pyomo/issues/1710
 
         include:
         - os: ubuntu-18.04
