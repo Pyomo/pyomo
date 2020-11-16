@@ -282,7 +282,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         self.assertRaisesRegexp(
             ValueError,
-            "key 'notakwd' not defined for Config Block*",
+            "key 'notakwd' not defined for ConfigDict ''",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,
             notakwd="I want a feasible model"

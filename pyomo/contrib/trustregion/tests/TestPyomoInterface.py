@@ -11,7 +11,7 @@
 #!/usr/bin/env python
 
 import pyutilib.th as unittest
-from pyutilib.misc.config import ConfigBlock
+from pyomo.common.config import ConfigBlock
 
 from pyomo.core.expr.current import identify_variables
 from pyomo.environ import ConcreteModel, Var, Reals, Objective, Constraint, ExternalFunction, SolverFactory, value, sqrt, sin

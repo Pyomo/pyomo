@@ -704,7 +704,7 @@ arguments (which have been ignored):"""
         # If someone passed a rule for creating the instance, fire the
         # rule before constructing the components.
         if instance._rule is not None:
-            instance._rule(instance)
+            instance._rule(instance, next(iter(self.index_set())))
 
         if namespaces:
             _namespaces = list(namespaces)
