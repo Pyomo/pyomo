@@ -313,7 +313,6 @@ class ComponentUID(object):
         """
         if ComponentUID._lex is None:
             ComponentUID._lex = ply.lex.lex()
-            ComponentUID._lex.linepos = []
 
         name = None
         idx = []
@@ -373,16 +372,11 @@ class ComponentUID(object):
                     elif val[0] == '$':
                         idx[i] = str(val[1:])
                     elif val[0] == '#':
-                        idx[i] = int(val[1:])
+                        idx[i] = _int_or_float(val[1:])
                     elif val[0] in  "\"'" and val[-1] == val[0]:
                         idx[i] = val[1:-1]
                     elif _re_number.match(val):
-                        _num = float(val)
-                        try:
-                            _int = int(_num)
-                        except:
-                            _int = 0
-                        idx[i] = _int if _int == _num else _num
+                        idx[i] = _int_or_float(val)
                 if len(idx) == 1 and idx[0] == '**':
                     yield ( c_info[0], (Ellipsis,) )
                 else:
@@ -472,6 +466,13 @@ class ComponentUID(object):
         return i+1 == len(self._cids)
 
 
+def _int_or_float(n):
+    _num = float(n)
+    try:
+        _int = int(n)
+    except:
+        _int = 0  # a random int
+    return _int if _num == _int else _num
 
 # Known escape sequences:
 #   \U{8}: unicode 8-digit hex codes
@@ -488,7 +489,7 @@ def _match_escape(match):
     return codecs.decode(match.group(0), 'unicode-escape')
 
 _re_number = re.compile(
-    r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?')
+    r'(?:[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?|-?inf|nan)')
 
 # Ignore whitespace (space, tab, and linefeed)
 t_ignore = " \t\r"
@@ -504,14 +505,9 @@ tokens = [
 
 # Numbers only appear in getitem lists, so they must be followed by a
 # delimiter token (one of ' ,]')
-@ply.lex.TOKEN(r'(?:'+_re_number.pattern+r'|-?inf|nan)(?=[\s\],])')
+@ply.lex.TOKEN(_re_number.pattern+r'(?=[\s\],])')
 def t_NUMBER(t):
-    _num = float(t.value)
-    try:
-        _int = int(_num)
-    except:
-        _int = 0  # a random int
-    t.value = _int if _num == _int else _num
+    t.value = _int_or_float(t.value)
     return t
 
 @ply.lex.TOKEN(r'[a-zA-Z_][a-zA-Z_0-9]*')
@@ -532,14 +528,8 @@ def t_STAR(t):
         t.value = Ellipsis
     return t
 
-def _lex_token_column(t):
-    # Returns the column number within a line 
-    i = bisect.bisect_left(t.lexer.linepos, t.lexpos)
-    if i:
-        return t.lexpos - t.lexer.linepos[i-1]
-    return t.lexpos
-
 # Error handling rule
 def t_error(t):
-    raise IOError("ERROR: Token %s Value %s Line %s Column %s"
-                  % (t.type, t.value, t.lineno, _lex_token_column(t)))
+    # Note this parser does not allow "\n", so lexpos is the column number
+    raise IOError("ERROR: Token '%s' Line %s Column %s"
+                  % (t.value, t.lineno, t.lexpos+1))
