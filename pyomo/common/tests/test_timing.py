@@ -39,7 +39,7 @@ class TestTiming(unittest.TestCase):
            (0(\.\d+)?) seconds to construct RangeSet FiniteSimpleRangeSet; 1 index total
            (0(\.\d+)?) seconds to construct Var x; 2 indices total
            (0(\.\d+)?) seconds to construct Suffix Suffix; 1 index total
-           (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)
+           (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars (in-place)
            """.strip()
 
         xfrm = TransformationFactory('core.relax_integer_vars')
@@ -53,7 +53,7 @@ class TestTiming(unittest.TestCase):
                 xfrm.apply_to(m)
             result = out.getvalue().strip()
             self.maxDiff = None
-            for l in result.splitlines():
+            for l, r in zip(result.splitlines(), ref.splitlines()):
                 self.assertRegex(str(l.strip()), str(r.strip()))
             # self.assertRegex(out.getvalue().strip(), ref)
         finally:
