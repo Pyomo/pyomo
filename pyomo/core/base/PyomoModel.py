@@ -832,7 +832,7 @@ from solvers are immediately loaded into the original model instance.""")
                     else:
                         assert isinstance(component, Component)
                         clen = 1
-                    print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
+                    print("    %%6.%df seconds required to construct component=%s; %d indices total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
                     tmp_clone_counter = expr_common.clone_counter
