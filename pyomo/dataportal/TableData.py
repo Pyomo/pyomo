@@ -12,7 +12,7 @@ __all__ = ['TableData']
 
 from six.moves import xrange
 
-from pyutilib.misc import Options
+from pyomo.common.collections import Options
 from pyomo.dataportal.process_data import _process_data
 
 

@@ -38,7 +38,7 @@ def configure_glpk_direct():
         print("Import of glpk failed - glpk message="+str(e)+"\n")
         glpk_python_api_exists = False
 
-from pyutilib.misc import Bunch, Options
+from pyomo.common.collections import Bunch, Options
 
 from pyomo.opt.base import OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory

@@ -22,9 +22,10 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyutilib.misc import Container, PauseGC
+from pyutilib.misc import PauseGC
 
 from pyomo.common import timing, PyomoAPIFactory
+from pyomo.common.collections import Container
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.plugin import ExtensionPoint

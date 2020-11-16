@@ -21,3 +21,5 @@ else:
 from .orderedset import OrderedDict, OrderedSet
 from .component_map import ComponentMap
 from .component_set import ComponentSet
+
+from pyutilib.misc import Bunch, Container, Options
