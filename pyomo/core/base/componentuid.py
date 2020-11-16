@@ -459,9 +459,9 @@ class ComponentUID(object):
                     if len(idx) < len(s_idx) - 1:
                         return False
                     for _k in range(-1, j-len(s_idx), -1):
-                        if s_idx[k].__class__ is slice:
+                        if s_idx[_k].__class__ is slice:
                             continue
-                        elif s_idx[k] != idx[k]:
+                        elif s_idx[_k] != idx[_k]:
                             return False
                     # Everything after the elipsis matched, so we can
                     # move on to the next level.
