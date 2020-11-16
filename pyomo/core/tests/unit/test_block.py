@@ -2509,5 +2509,82 @@ class TestBlock(unittest.TestCase):
         m.b = ScalarConcreteBlock(rule=_rule)
         self.assertEqual(_buf, [1])
 
+    def test_abstract_construction(self):
+        m = AbstractModel()
+        m.I = Set()
+        def b_rule(b, i):
+            b.p = Param(default=i)
+            b.J = Set(initialize=range(i))
+        m.b = Block(m.I, rule=b_rule)
+
+        i = m.create_instance({None: {
+            'I': {None: [1,2,3,4]},
+            'b': {1: {'p': {None: 10}, 'J': {None: [7,8]}},
+                  2: {'p': {None: 12}},
+                  3: {'J': {None: [9]}},
+              }
+        }})
+        self.assertEqual(list(i.I), [1,2,3,4])
+        self.assertEqual(len(i.b), 4)
+        self.assertEqual(list(i.b[1].J), [7,8])
+        self.assertEqual(list(i.b[2].J), [0,1])
+        self.assertEqual(list(i.b[3].J), [9])
+        self.assertEqual(list(i.b[4].J), [0,1,2,3])
+        self.assertEqual(value(i.b[1].p), 10)
+        self.assertEqual(value(i.b[2].p), 12)
+        self.assertEqual(value(i.b[3].p), 3)
+        self.assertEqual(value(i.b[4].p), 4)
+
+    def test_abstract_transfer_construction(self):
+        m = AbstractModel()
+        m.I = Set()
+        def b_rule(_b, i):
+            b = Block()
+            b.p = Param(default=i)
+            b.J = Set(initialize=range(i))
+            return b
+        m.b = Block(m.I, rule=b_rule)
+
+        i = m.create_instance({None: {
+            'I': {None: [1,2,3,4]},
+            'b': {1: {'p': {None: 10}, 'J': {None: [7,8]}},
+                  2: {'p': {None: 12}},
+                  3: {'J': {None: [9]}},
+              }
+        }})
+        self.assertEqual(list(i.I), [1,2,3,4])
+        self.assertEqual(len(i.b), 4)
+        self.assertEqual(list(i.b[1].J), [7,8])
+        self.assertEqual(list(i.b[2].J), [0,1])
+        self.assertEqual(list(i.b[3].J), [9])
+        self.assertEqual(list(i.b[4].J), [0,1,2,3])
+        self.assertEqual(value(i.b[1].p), 10)
+        self.assertEqual(value(i.b[2].p), 12)
+        self.assertEqual(value(i.b[3].p), 3)
+        self.assertEqual(value(i.b[4].p), 4)
+
+    def test_deprecated_options(self):
+        m = ConcreteModel()
+        def b_rule(b, a=None):
+            b.p = Param(initialize=a)
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+            m.b = Block(rule=b_rule, options={'a': 5})
+        self.assertIn("The Block 'options=' keyword is deprecated.",
+                      OUTPUT.getvalue())
+        self.assertEqual(value(m.b.p), 5)
+
+        m = ConcreteModel()
+        def b_rule(b, i, **kwds):
+            b.p = Param(initialize=kwds.get('a', {}).get(i, 0))
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+            m.b = Block([1,2,3], rule=b_rule, options={'a': {1:5, 2:10}})
+        self.assertIn("The Block 'options=' keyword is deprecated.",
+                      OUTPUT.getvalue())
+        self.assertEqual(value(m.b[1].p), 5)
+        self.assertEqual(value(m.b[2].p), 10)
+        self.assertEqual(value(m.b[3].p), 0)
+
 if __name__ == "__main__":
     unittest.main()
