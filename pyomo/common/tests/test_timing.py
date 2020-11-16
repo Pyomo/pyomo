@@ -51,12 +51,7 @@ class TestTiming(unittest.TestCase):
                 m.r = RangeSet(2)
                 m.x = Var(m.r)
                 xfrm.apply_to(m)
-            result = out.getvalue().strip()
-            self.maxDiff = None
-            for l, r in zip(result.splitlines(), ref.splitlines()):
-                print(l, r)
-                self.assertRegex(l.strip(), r.strip())
-            # self.assertRegex(out.getvalue().strip(), ref)
+            self.assertRegex(out.getvalue().strip(), ref)
         finally:
             report_timing(False)
 
@@ -67,7 +62,7 @@ class TestTiming(unittest.TestCase):
             m.r = RangeSet(2)
             m.x = Var(m.r)
             xfrm.apply_to(m)
-            self.assertEqual(os.getvalue().strip(), ref)
+            self.assertRegex(os.getvalue().strip(), ref)
         finally:
             report_timing(False)
         buf = StringIO()
@@ -76,7 +71,7 @@ class TestTiming(unittest.TestCase):
             m.r = RangeSet(2)
             m.x = Var(m.r)
             xfrm.apply_to(m)
-            self.assertEqual(os.getvalue().strip(), ref)
+            self.assertRegex(os.getvalue().strip(), ref)
             self.assertEqual(buf.getvalue().strip(), "")
 
     def test_TicTocTimer_tictoc(self):
