@@ -62,7 +62,6 @@ def build_compression_matrix(compression_mask):
             block = compression_mask.get_block(ndx)
             sub_matrix = build_compression_matrix(block)
             res.set_block(ndx, ndx, sub_matrix)
-        res.broadcast_block_sizes()
         return res
 
 

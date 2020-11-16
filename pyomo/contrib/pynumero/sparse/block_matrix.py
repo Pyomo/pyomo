@@ -728,6 +728,10 @@ class BlockMatrix(BaseBlockMatrix):
 
         """
         result = BlockMatrix(self.bshape[0], self.bshape[1])
+        result._brow_lengths = self._brow_lengths.copy()
+        result._bcol_lengths = self._bcol_lengths.copy()
+        result._undefined_brows = set(self._undefined_brows)
+        result._undefined_bcols = set(self._undefined_bcols)
         ii, jj = np.nonzero(self._block_mask)
         if deep:
             for i, j in zip(ii, jj):
