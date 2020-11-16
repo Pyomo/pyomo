@@ -34,7 +34,7 @@ else:
                  "Symbolic differentiation is not available")
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
-    '''
+
     def test_OA_8PP_level_L1(self):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
@@ -156,6 +156,8 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+    '''
+    # bug
 
     def test_OA_ConstraintQualificationExample_integer_cut_level_L1(self):
         with SolverFactory('mindtpy') as opt:
@@ -167,10 +169,12 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 add_no_good_cuts=True,
+                                tee=True
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+    '''
 
     def test_OA_OnlineDocExample_level_L1(self):
         with SolverFactory('mindtpy') as opt:
@@ -211,7 +215,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 add_regularization="level_L1",
                                 mip_solver=required_solvers[1],
-                                nlp_solver='baron',
+                                nlp_solver=required_solvers[0],
                                 init_strategy='initial_binary',
                                 level_coef=0.4
                                 )
@@ -396,7 +400,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 add_regularization="level_L2",
                                 mip_solver=required_solvers[1],
-                                nlp_solver='baron',
+                                nlp_solver=required_solvers[0],
                                 init_strategy='initial_binary',
                                 level_coef=0.4
                                 )
@@ -505,6 +509,7 @@ class TestMindtPy(unittest.TestCase):
             print(
                 '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, L_infinity)')
             results = opt.solve(model, strategy='OA',
+                                add_regularization="level_L_infinity",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 add_no_good_cuts=True,
@@ -583,7 +588,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 add_regularization="level_L_infinity",
                                 mip_solver=required_solvers[1],
-                                nlp_solver='baron',
+                                nlp_solver=required_solvers[0],
                                 init_strategy='initial_binary',
                                 level_coef=0.4
                                 )
@@ -592,38 +597,366 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.obj.expr), -56.981, places=2)
 
-    def test_OA_MINLP4_simple_level_grad_lag_L_infinity(self):
+    def test_OA_8PP_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print(
+                '\n Solving 8PP problem with Level-based Outer Approximation(grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                bound_tolerance=1E-5
+                                )
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_OA_8PP_init_max_binary_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print(
+                '\n Solving 8PP problem with Level-based Outer Approximation(max_binary, grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                init_strategy='max_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_OA_MINLP_simple_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP()
+            print(
+                '\n Solving MINLP_simple problem with Level-based Outer Approximation(grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
+
+    def test_OA_MINLP2_simple_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP2()
+            print(
+                '\n Solving MINLP2_simple problem with Level-based Outer Approximation(grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
+
+    def test_OA_MINLP3_simple_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP3()
+            print(
+                '\n Solving MINLP3_simple problem with Level-based Outer Approximation(grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
+
+    def test_OA_Proposal_grad_lag(self):
+        # A little difference from the proposal slides
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            print(
+                '\n Solving Proposal problem with Level-based Outer Approximation(grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                )
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
+
+    def test_OA_Proposal_with_int_cuts_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            print(
+                '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_no_good_cuts=True,
+                                integer_to_binary=True,
+                                )
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
+
+    def test_OA_ConstraintQualificationExample_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = ConstraintQualificationExample()
+            print(
+                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0]
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    def test_OA_ConstraintQualificationExample_integer_cut_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = ConstraintQualificationExample()
+            print(
+                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(no-good cuts, grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_no_good_cuts=True,
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    def test_OA_OnlineDocExample_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print(
+                '\n Solving Online Doc Example with Level-based Outer Approximation(grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="grad_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0]
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), 2.438447, places=2)
+
+    def test_OA_MINLP4_simple_grad_lag(self):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L_infinity)')
+                '\n Solving Online Doc Example with Level-based Outer Approximation(grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization="grad_lag",
-                                mip_solver='cplex',
-                                nlp_solver='ipopt',
-                                init_strategy='initial_binary',
-                                level_coef=0.4,
                                 equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                level_coef=0.4
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(
                 value(model.obj.expr), -56.981, places=2)
-    '''
 
-    def test_OA_MINLP4_simple_level_hess_lag_L_infinity(self):
+    def test_OA_8PP_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print(
+                '\n Solving 8PP problem with Level-based Outer Approximation(hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                bound_tolerance=1E-5
+                                )
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_OA_8PP_init_max_binary_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print(
+                '\n Solving 8PP problem with Level-based Outer Approximation(max_binary, hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                init_strategy='max_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_OA_MINLP_simple_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP()
+            print(
+                '\n Solving MINLP_simple problem with Level-based Outer Approximation(hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
+
+    def test_OA_MINLP2_simple_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP2()
+            print(
+                '\n Solving MINLP2_simple problem with Level-based Outer Approximation(hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
+
+    def test_OA_MINLP3_simple_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP3()
+            print(
+                '\n Solving MINLP3_simple problem with Level-based Outer Approximation(hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
+
+    def test_OA_Proposal_hess_lag(self):
+        # A little difference from the proposal slides
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            print(
+                '\n Solving Proposal problem with Level-based Outer Approximation(hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                )
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
+
+    def test_OA_Proposal_with_int_cuts_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            print(
+                '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_no_good_cuts=True,
+                                integer_to_binary=True
+                                )
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
+
+    def test_OA_ConstraintQualificationExample_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = ConstraintQualificationExample()
+            print(
+                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0]
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    def test_OA_ConstraintQualificationExample_integer_cut_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = ConstraintQualificationExample()
+            print(
+                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(no-good cuts, hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                add_no_good_cuts=True,
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    def test_OA_OnlineDocExample_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print(
+                '\n Solving Online Doc Example with Level-based Outer Approximation(hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization="hess_lag",
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0]
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), 2.438447, places=2)
+
+    def test_OA_MINLP4_simple_hess_lag(self):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L_infinity)')
+                '\n Solving Online Doc Example with Level-based Outer Approximation(hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization="hess_lag",
-                                mip_solver='gurobi',
-                                nlp_solver='ipopt',
-                                init_strategy='initial_binary',
-                                level_coef=0.4,
                                 equality_relaxation=True,
-                                tee=True
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                level_coef=0.4
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
