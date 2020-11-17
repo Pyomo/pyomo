@@ -166,7 +166,7 @@ class TestComponentUID(unittest.TestCase):
             list(cuid._parse_cuid_v2('a[\n].b:'))
 
     def test_escapeChars(self):
-        ref = r"'b'['a\n.b\\'].'x'"
+        ref = r"b['a\n.b\\'].x"
         cuid = ComponentUID(ref)
         self.assertEqual(
             cuid._cids,
@@ -185,7 +185,7 @@ class TestComponentUID(unittest.TestCase):
         m.b = Block([inf, 'inf'])
 
         m.b[inf].x = x = Var()
-        ref = r"'b'[inf].'x'"
+        ref = r"b[inf].x"
 
         cuid = ComponentUID(x)
         self.assertEqual(
@@ -194,7 +194,7 @@ class TestComponentUID(unittest.TestCase):
 
         self.assertTrue(cuid.matches(x))
         self.assertEqual(repr(ComponentUID(x)), ref)
-        self.assertEqual(str(ComponentUID(x)), r'b[inf].x')
+        self.assertEqual(str(ComponentUID(x)), ref)
 
         cuid = ComponentUID(ref)
         self.assertEqual(
@@ -203,7 +203,7 @@ class TestComponentUID(unittest.TestCase):
 
         self.assertTrue(cuid.matches(x))
         self.assertEqual(repr(ComponentUID(x)), ref)
-        self.assertEqual(str(ComponentUID(x)), r'b[inf].x')
+        self.assertEqual(str(ComponentUID(x)), ref)
 
         ref = r"b:#inf.x"
         cuid = ComponentUID(ref)
@@ -213,11 +213,11 @@ class TestComponentUID(unittest.TestCase):
 
         self.assertTrue(cuid.matches(x))
         self.assertEqual(ComponentUID(x).get_repr(1), ref)
-        self.assertEqual(str(ComponentUID(x)), r'b[inf].x')
+        self.assertEqual(str(ComponentUID(x)), r"b[inf].x")
 
         #
         m.b['inf'].x = x = Var()
-        ref = r"'b'['inf'].'x'"
+        ref = r"b['inf'].x"
         #
 
         cuid = ComponentUID(x)
@@ -227,7 +227,7 @@ class TestComponentUID(unittest.TestCase):
 
         self.assertTrue(cuid.matches(x))
         self.assertEqual(repr(ComponentUID(x)), ref)
-        self.assertEqual(str(ComponentUID(x)), r"b['inf'].x")
+        self.assertEqual(str(ComponentUID(x)), ref)
 
         cuid = ComponentUID(ref)
         self.assertEqual(
@@ -236,7 +236,7 @@ class TestComponentUID(unittest.TestCase):
 
         self.assertTrue(cuid.matches(x))
         self.assertEqual(repr(ComponentUID(x)), ref)
-        self.assertEqual(str(ComponentUID(x)), r"b['inf'].x")
+        self.assertEqual(str(ComponentUID(x)), ref)
 
         ref = r"b:$inf.x"
         cuid = ComponentUID(ref)
@@ -301,7 +301,7 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID(self.m.b[1,'2'].c.a[3])
         s = "b[1,'2'].c.a[3]"
         r1 = "b:#1,$2.c.a:#3"
-        r2 = "'b'[1,'2'].'c'.'a'[3]"
+        r2 = "b[1,'2'].c.a[3]"
         self.assertEqual(str(cuid), s)
         self.assertEqual(repr(cuid), r2)
         self.assertEqual(cuid.get_repr(1), r1)
@@ -314,7 +314,7 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID('b:$1,2.c.a:#3')
         s = "b['1',2].c.a[3]"
         r1 = "b:$1,#2.c.a:#3"
-        r2 = "'b'['1',2].'c'.'a'[3]"
+        r2 = "b['1',2].c.a[3]"
         self.assertEqual(str(cuid), s)
         self.assertEqual(repr(cuid), r2)
         self.assertEqual(cuid.get_repr(1), r1)
@@ -324,7 +324,7 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID('b:**.c.a:*')
         s = 'b[**].c.a[*]'
         r1 = "b:**.c.a:*"
-        r2 = "'b'[**].'c'.'a'[*]"
+        r2 = "b[**].c.a[*]"
         self.assertEqual(str(cuid), s)
         self.assertEqual(repr(cuid), r2)
         self.assertEqual(cuid.get_repr(1), r1)
@@ -334,7 +334,7 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID('b:*,*.c.a:**')
         s = 'b[*,*].c.a[**]'
         r1 = "b:*,*.c.a:**"
-        r2 = "'b'[*,*].'c'.'a'[**]"
+        r2 = "b[*,*].c.a[**]"
         self.assertEqual(str(cuid), s)
         self.assertEqual(repr(cuid), r2)
         self.assertEqual(cuid.get_repr(1), r1)
@@ -689,6 +689,17 @@ class TestComponentUID(unittest.TestCase):
                     model.V[3,4]]:
             self.assertEqual(ComponentUID(obj).get_repr(1), cuids[0][obj])
             self.assertEqual(repr(ComponentUID(obj)), cuids[1][obj])
+        #
+        # Things that are only supported by the v2 format
+        #
+        model = Block(concrete=True)
+        model.add_component('v tuple', Var(Any, dense=False))
+        model.component('v tuple')[(1,)]
+        cuids = ComponentUID.generate_cuid_string_map(model)
+        self.assertEqual(len(cuids), 3)
+        for obj in [
+                model.component('v tuple')[(1,)]]:
+            self.assertEqual(repr(ComponentUID(obj)), cuids[obj])
 
     def test_pickle(self):
         a = ComponentUID("b[1,'2'].c")
@@ -725,8 +736,8 @@ class TestComponentUID(unittest.TestCase):
         self.assertIs(ComponentUID('c[2]').find_component_on(m), m.c[2])
         self.assertEqual(len(m.c), 4)
 
-        self.assertEqual(repr(ComponentUID(m.c[0])), "'c'[0]")
-        self.assertEqual(repr(ComponentUID(m.c[(1,)])), "'c'[(1,)]")
+        self.assertEqual(repr(ComponentUID(m.c[0])), "c[0]")
+        self.assertEqual(repr(ComponentUID(m.c[(1,)])), "c[(1,)]")
         self.assertEqual(str(ComponentUID(m.c[0])), "c[0]")
         self.assertEqual(str(ComponentUID(m.c[(1,)])), "c[(1,)]")
 

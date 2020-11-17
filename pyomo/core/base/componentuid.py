@@ -104,17 +104,8 @@ class ComponentUID(object):
                 a += '[' + ','.join(self._safe_str(x) for x in args) + ']'
         return a[1:]  # Strip off the leading '.'
 
-    def __repr__(self):
-        "Return an 'unambiguous' string representation of the CUID"
-        a = ""
-        for name, args in self._cids:
-            a += '.' + repr(name)
-            if len(args) == 0:
-                continue
-            a += '[' + ','.join(
-                self._repr_map.get(x.__class__, str)(x)
-                for x in args) + ']'
-        return a[1:]  # Strip off the leading '.'
+    # str() is sufficiently safe / unique to be usable as repr()
+    __repr__ = __str__
 
     def get_repr(self, version=2):
         if version == 1:
@@ -243,12 +234,12 @@ class ComponentUID(object):
 
         def _record_indexed_object_cuid_strings_v2(obj, cuid_str):
             for idx, data in iteritems(obj):
-                if idx.__class__ is tuple:
+                if idx.__class__ is tuple and len(idx) > 1:
                     cuid_strings[data] = cuid_str + '[' + ','.join(
-                        repr(x) for x in idx) + ']'
+                        ComponentUID._safe_str(x) for x in idx) + ']'
                 else:
                     cuid_strings[data] \
-                        = cuid_str + '[' + repr(idx) + ']'
+                        = cuid_str + '[' + ComponentUID._safe_str(idx) + ']'
 
         _record_indexed_object_cuid_strings = {
             1: _record_indexed_object_cuid_strings_v1,
@@ -257,7 +248,7 @@ class ComponentUID(object):
         tDict = {int: '#', float: '#', str: '$'}
         _record_name = {
             1: str,
-            2: repr,
+            2: ComponentUID._safe_str,
         }[repr_version]
 
         model = block.model()
