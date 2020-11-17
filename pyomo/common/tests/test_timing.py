@@ -34,13 +34,13 @@ class TestTiming(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2])
 
-        ref = """
-           0 seconds to construct Block ConcreteModel; 1 index total
-           0 seconds to construct RangeSet FiniteSimpleRangeSet; 1 index total
-           0 seconds to construct Var x; 2 indicies total
-           0 seconds to construct Suffix Suffix; 1 index total
-           0 seconds to apply Transformation RelaxIntegerVars (in-place)
-""".strip()
+        ref = r"""
+           (0(\.\d+)?) seconds to construct Block ConcreteModel; 1 index total
+           (0(\.\d+)?) seconds to construct RangeSet FiniteSimpleRangeSet; 1 index total
+           (0(\.\d+)?) seconds to construct Var x; 2 indices total
+           (0(\.\d+)?) seconds to construct Suffix Suffix; 1 index total
+           (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)
+           """.strip()
 
         xfrm = TransformationFactory('core.relax_integer_vars')
 
@@ -51,7 +51,10 @@ class TestTiming(unittest.TestCase):
                 m.r = RangeSet(2)
                 m.x = Var(m.r)
                 xfrm.apply_to(m)
-            self.assertEqual(out.getvalue().strip(), ref)
+            result = out.getvalue().strip()
+            self.maxDiff = None
+            for l, r in zip(result.splitlines(), ref.splitlines()):
+                self.assertRegex(str(l.strip()), str(r.strip()))
         finally:
             report_timing(False)
 
@@ -62,7 +65,10 @@ class TestTiming(unittest.TestCase):
             m.r = RangeSet(2)
             m.x = Var(m.r)
             xfrm.apply_to(m)
-            self.assertEqual(os.getvalue().strip(), ref)
+            result = os.getvalue().strip()
+            self.maxDiff = None
+            for l, r in zip(result.splitlines(), ref.splitlines()):
+                self.assertRegex(str(l.strip()), str(r.strip()))
         finally:
             report_timing(False)
         buf = StringIO()
@@ -71,7 +77,10 @@ class TestTiming(unittest.TestCase):
             m.r = RangeSet(2)
             m.x = Var(m.r)
             xfrm.apply_to(m)
-            self.assertEqual(os.getvalue().strip(), ref)
+            result = os.getvalue().strip()
+            self.maxDiff = None
+            for l, r in zip(result.splitlines(), ref.splitlines()):
+                self.assertRegex(str(l.strip()), str(r.strip()))
             self.assertEqual(buf.getvalue().strip(), "")
 
     def test_TicTocTimer_tictoc(self):
@@ -131,7 +140,7 @@ class TestTiming(unittest.TestCase):
 
         # Note: pypy on GHA frequently has timing differences of >0.02s
         # for the following tests
-        RES = 4e-2
+        RES = 5e-2
 
         with capture_output() as out:
             delta = timer.toc()
