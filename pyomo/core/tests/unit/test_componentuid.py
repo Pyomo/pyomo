@@ -804,13 +804,9 @@ class TestComponentUID(unittest.TestCase):
         m.b[idx].x = Var()
         cuid = ComponentUID(m.b[idx].x)
         # Note that the pickle string for namedtuple changes between
-        # Python 2 and 3, so we will check against both
-        self.assertIn(str(cuid), {
-            r"b[|b'\x80\x02cpyomo.core.tests.unit.test_componentuid\n_Foo"
-            r"\nq\x00K\x01X\x01\x00\x00\x00aq\x01\x86q\x02\x81q\x03.'].x",
-            r"b[|'\x80\x02cpyomo.core.tests.unit.test_componentuid\n_Foo"
-            r"\nq\x01K\x01U\x01a\x86\x81q\x02.'].x"
-        })
+        # Python 2, 3, and pypy, so we will just check the non-pickle
+        # data part
+        self.assertRegex(str(cuid), r"^b\[\|b?(['\"]).*\.\1\]\.x$")
 
         self.assertIs(cuid.find_component_on(m), m.b[idx].x)
         tmp = ComponentUID(str(cuid))
@@ -825,16 +821,10 @@ class TestComponentUID(unittest.TestCase):
         idx = datetime(1,2,3)
         m.b[idx].x = Var()
         cuid = ComponentUID(m.b[idx].x)
-        # Note that the pickle string for datetime changes between
-        # Python 2 and 3, so we will check against both
-        self.assertIn(str(cuid), {
-            r"b[|b'\x80\x02cdatetime\ndatetime\nq\x00c_codecs\nencode\nq"
-            r"\x01X\n\x00\x00\x00\x00\x01\x02\x03\x00\x00\x00\x00\x00\x00"
-            r"q\x02X\x06\x00\x00\x00latin1q\x03\x86q\x04Rq\x05\x85q\x06"
-            r"Rq\x07.'].x",
-            r"b[|'\x80\x02cdatetime\ndatetime\nq\x01U\n\x00\x01\x02\x03"
-            r"\x00\x00\x00\x00\x00\x00\x85Rq\x02.'].x"
-        })
+        # Note that the pickle string for namedtuple changes between
+        # Python 2, 3, and pypy, so we will just check the non-pickle
+        # data part
+        self.assertRegex(str(cuid), r"^b\[\|b?(['\"]).*\.\1\]\.x$")
         self.assertIs(cuid.find_component_on(m), m.b[idx].x)
         tmp = ComponentUID(str(cuid))
         self.assertIsNot(cuid, tmp)

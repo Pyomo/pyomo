@@ -557,7 +557,8 @@ def t_STAR(t):
         t.value = Ellipsis
     return t
 
-@ply.lex.TOKEN(r'\|b?'+_re_quoted_str)
+@ply.lex.TOKEN(r'\|b?'+"|".join([
+    _re_quoted_str, _re_quoted_str.replace("'",'"')]))
 def t_PICKLE(t):
     start = 3 if t.value[1] == 'b' else 2
     unescaped = _re_escape_sequences.sub(_match_escape, t.value[start:-1])
