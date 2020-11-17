@@ -742,7 +742,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns a copy of the MPIBlockVector
         """
-        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm)
+        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm, assert_correct_owners=False)
         result._block_vector = self._block_vector.copy(order=order)
         result._brow_lengths = self._brow_lengths.copy()
         result._undefined_brows = set(self._undefined_brows)

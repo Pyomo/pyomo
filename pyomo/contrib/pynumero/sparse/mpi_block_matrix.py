@@ -271,7 +271,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         m = self.bshape[0]
         n = self.bshape[1]
-        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw)
+        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw, assert_correct_owners=False)
         result._block_matrix = self._block_matrix.transpose()
         return result
 
