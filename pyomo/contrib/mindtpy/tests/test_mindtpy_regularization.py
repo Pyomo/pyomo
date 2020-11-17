@@ -156,8 +156,6 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
-    '''
-    # bug
 
     def test_OA_ConstraintQualificationExample_integer_cut_level_L1(self):
         with SolverFactory('mindtpy') as opt:
@@ -174,7 +172,6 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
-    '''
 
     def test_OA_OnlineDocExample_level_L1(self):
         with SolverFactory('mindtpy') as opt:
