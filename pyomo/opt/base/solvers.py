@@ -18,7 +18,7 @@ import sys
 import time
 import logging
 
-from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
+from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.common import Factory
 from pyomo.common.errors import ApplicationError
 from pyutilib.misc import Options, quote_split
