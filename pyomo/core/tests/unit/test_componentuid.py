@@ -575,13 +575,15 @@ class TestComponentUID(unittest.TestCase):
         setattr(model.B['a'],'.k', Var())
         model.B[2].b = Block()
         model.B[2].b.x = Var()
+        model.add_component('c tuple', Constraint(Any))
+        model.component('c tuple')[(1,)] = model.x >= 0
 
         cuids = (
             ComponentUID.generate_cuid_string_map(model, repr_version=1),
             ComponentUID.generate_cuid_string_map(model),
         )
-        self.assertEqual(len(cuids[0]), 27)
-        self.assertEqual(len(cuids[1]), 27)
+        self.assertEqual(len(cuids[0]), 29)
+        self.assertEqual(len(cuids[1]), 29)
         for obj in [model,
                     model.x,
                     model.y,
@@ -608,7 +610,8 @@ class TestComponentUID(unittest.TestCase):
                     getattr(model.B['a'],'.k'),
                     model.B[2],
                     model.B[2].b,
-                    model.B[2].b.x]:
+                    model.B[2].b.x,
+                    model.component('c tuple')[(1,)]]:
             self.assertEqual(ComponentUID(obj).get_repr(1), cuids[0][obj])
             self.assertEqual(repr(ComponentUID(obj)), cuids[1][obj])
 
@@ -617,8 +620,8 @@ class TestComponentUID(unittest.TestCase):
                                                   repr_version=1),
             ComponentUID.generate_cuid_string_map(model, descend_into=False),
         )
-        self.assertEqual(len(cuids[0]), 16)
-        self.assertEqual(len(cuids[1]), 16)
+        self.assertEqual(len(cuids[0]), 18)
+        self.assertEqual(len(cuids[1]), 18)
         for obj in [model,
                     model.x,
                     model.y,
@@ -634,7 +637,8 @@ class TestComponentUID(unittest.TestCase):
                     model.B,
                     model.B_index,
                     model.B['a'],
-                    model.B[2]]:
+                    model.B[2],
+                    model.component('c tuple')[(1,)]]:
             self.assertEqual(ComponentUID(obj).get_repr(1), cuids[0][obj])
             self.assertEqual(repr(ComponentUID(obj)), cuids[1][obj])
 
@@ -689,17 +693,6 @@ class TestComponentUID(unittest.TestCase):
                     model.V[3,4]]:
             self.assertEqual(ComponentUID(obj).get_repr(1), cuids[0][obj])
             self.assertEqual(repr(ComponentUID(obj)), cuids[1][obj])
-        #
-        # Things that are only supported by the v2 format
-        #
-        model = Block(concrete=True)
-        model.add_component('v tuple', Var(Any, dense=False))
-        model.component('v tuple')[(1,)]
-        cuids = ComponentUID.generate_cuid_string_map(model)
-        self.assertEqual(len(cuids), 3)
-        for obj in [
-                model.component('v tuple')[(1,)]]:
-            self.assertEqual(repr(ComponentUID(obj)), cuids[obj])
 
     def test_pickle(self):
         a = ComponentUID("b[1,'2'].c")

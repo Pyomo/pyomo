@@ -109,13 +109,14 @@ class ComponentUID(object):
 
     def get_repr(self, version=2):
         if version == 1:
+            _unknown = lambda x: '?'+str(x)
             a = ""
             for name, args in self._cids:
                 a += '.' + name
                 if len(args) == 0:
                     continue
                 a += ':' + ','.join(
-                    self._repr_v1_map.get(x.__class__, str)(x)
+                    self._repr_v1_map.get(x.__class__, _unknown)(x)
                     for x in args)
             return a[1:]  # Strip off the leading '.'
         elif version == 2:
@@ -224,13 +225,16 @@ class ComponentUID(object):
     def generate_cuid_string_map(block, ctype=None, descend_into=True,
                                  repr_version=2):
         def _record_indexed_object_cuid_strings_v1(obj, cuid_str):
+            _unknown = lambda x: '?'+str(x)
             for idx, data in iteritems(obj):
-                if idx.__class__ is tuple:
+                if idx.__class__ is tuple and len(idx) > 1:
                     cuid_strings[data] = cuid_str + ':' + ','.join(
-                        tDict.get(type(x), '?') + str(x) for x in idx)
+                        ComponentUID._repr_v1_map.get(x.__class__, _unknown)(x)
+                        for x in idx)
                 else:
                     cuid_strings[data] \
-                        = cuid_str + ':' + tDict.get(type(idx), '?') + str(idx)
+                        = cuid_str + ':' + ComponentUID._repr_v1_map.get(
+                            idx.__class__, _unknown)(idx)
 
         def _record_indexed_object_cuid_strings_v2(obj, cuid_str):
             for idx, data in iteritems(obj):
@@ -245,7 +249,6 @@ class ComponentUID(object):
             1: _record_indexed_object_cuid_strings_v1,
             2: _record_indexed_object_cuid_strings_v2,
         }[repr_version]
-        tDict = {int: '#', float: '#', str: '$'}
         _record_name = {
             1: str,
             2: ComponentUID._safe_str,
