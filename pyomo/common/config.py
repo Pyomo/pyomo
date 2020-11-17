@@ -57,6 +57,10 @@ ADVANCED_OPTION = 1
 DEVELOPER_OPTION = 2
 
 def PositiveInt(val):
+    """Domain validation function admitting strictly positive integers
+
+    This domain will admit positive integers, as well as any types that are convertible to positive integers.
+    """
     ans = int(val)
     # We want to give an error for floating point numbers...
     if ans != float(val) or ans <= 0:
@@ -65,6 +69,10 @@ def PositiveInt(val):
     return ans
 
 def NegativeInt(val):
+    """Domain validation function admitting strictly negative integers
+
+    This domain will admit negative integers, as well as any types that are convertible to negative integers.
+    """
     ans = int(val)
     if ans != float(val) or ans >= 0:
         raise ValueError(
@@ -72,6 +80,10 @@ def NegativeInt(val):
     return ans
 
 def NonPositiveInt(val):
+    """Domain validation function admitting non-positive integers (smaller than or equal to zero)
+
+    This domain will admit non-positive integers, as well as any types that are convertible to non-positive integers.
+    """
     ans = int(val)
     if ans != float(val) or ans > 0:
         raise ValueError(
@@ -79,6 +91,10 @@ def NonPositiveInt(val):
     return ans
 
 def NonNegativeInt(val):
+    """Domain validation function admitting non-negative integers (greater than or equal to zero)
+
+    This domain will admit non-negative integers, as well as any types that are convertible to non-negative integers.
+    """
     ans = int(val)
     if ans != float(val) or ans < 0:
         raise ValueError(
@@ -86,6 +102,10 @@ def NonNegativeInt(val):
     return ans
 
 def PositiveFloat(val):
+    """Domain validation function admitting strictly positive floating point numbers
+
+    This domain will admit positive floating point numbers, as well as any types that are convertible to positive floating point numbers.
+    """
     ans = float(val)
     if ans <= 0:
         raise ValueError(
@@ -93,6 +113,10 @@ def PositiveFloat(val):
     return ans
 
 def NegativeFloat(val):
+    """Domain validation function admitting strictly negative floating point numbers
+
+    This domain will admit negative floating point numbers, as well as any types that are convertible to negative floating point numbers.
+    """
     ans = float(val)
     if ans >= 0:
         raise ValueError(
@@ -100,6 +124,10 @@ def NegativeFloat(val):
     return ans
 
 def NonPositiveFloat(val):
+    """Domain validation function admitting strictly non-positive floating point numbers (smaller than or equal to zero)
+
+    This domain will admit non-positive floating point numbers, as well as any types that are convertible to non-positive floating point numbers.
+    """
     ans = float(val)
     if ans > 0:
         raise ValueError(
@@ -107,6 +135,10 @@ def NonPositiveFloat(val):
     return ans
 
 def NonNegativeFloat(val):
+    """Domain validation function admitting strictly non-negative floating point numbers (greater than or equal to zero)
+
+    This domain will admit non-negative floating point numbers, as well as any types that are convertible to non-negative floating point numbers.
+    """
     ans = float(val)
     if ans < 0:
         raise ValueError(
@@ -115,6 +147,7 @@ def NonNegativeFloat(val):
 
 
 class In(object):
+    """Domain validation function admitting a list of possible values that a variable can be assigned to."""
     def __init__(self, domain, cast=None):
         self._domain = domain
         self._cast = cast

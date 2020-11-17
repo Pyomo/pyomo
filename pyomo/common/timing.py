@@ -80,7 +80,7 @@ class ConstructionTimer(object):
                                 _type,
                                 name,
                                 idx,
-                                'indicies' if idx > 1 else 'index',
+                                'indices' if idx > 1 else 'index',
                             ) % total_time
         except TypeError:
             return "ConstructionTimer object for %s %s; %s elapsed seconds" % (

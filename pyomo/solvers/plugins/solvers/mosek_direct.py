@@ -11,7 +11,6 @@
 import logging
 import re
 import sys
-from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
@@ -28,7 +27,7 @@ from pyomo.core.kernel.conic import (_ConicBase,
                                      dual_exponential,
                                      dual_power)
 from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus

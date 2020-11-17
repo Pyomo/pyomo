@@ -9,10 +9,10 @@
 #  ___________________________________________________________________________
 
 import time
-import pyutilib.misc
 import pyomo.opt
 from pyomo.opt import SolverFactory
 from pyomo.core import TransformationFactory
+from pyomo.common.collections import Bunch
 
 
 @SolverFactory.register('mpec_minlp', doc='MPEC solver transforms to a MINLP')
@@ -83,7 +83,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
             #
             # Return the sub-solver return condition value and log
             #
-            return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None),
+            return Bunch(rc=getattr(opt,'_rc', None),
                                        log=getattr(opt,'_log',None))
 
     def _postsolve(self):
