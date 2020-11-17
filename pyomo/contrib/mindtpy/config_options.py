@@ -38,7 +38,8 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("add_regularization", ConfigValue(
         default=None,
-        domain=In(["level_L1", "level_L2", "level_L_infinity", "grad_lag", "hess_lag"]),
+        domain=In(["level_L1", "level_L2", "level_L_infinity",
+                   "grad_lag", "hess_lag"]),
         description="add regularization",
         doc="solving a projection problem before solve the fixed subproblem"
             "the objective function of the projection problem."
@@ -170,7 +171,8 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("heuristic_nonconvex", ConfigValue(
         default=False,
-        description="use dual solution from the nlp solver and slack variables to add OA cuts for equality constraints.",
+        description="use dual solution from the NLP solver and slack variables to add OA cuts for equality constraints (Equality relaxation)"
+                    "and minimize the sum of the slack variables (Augmented Penalty)",
         domain=bool
     ))
 
@@ -350,5 +352,5 @@ def _add_loa_configs(CONFIG):
         default=0.5,
         domain=PositiveFloat,
         description="the coefficient in the projection master problem"
-            "represents how much the linear approximation of the MINLP problem is trusted."
+        "represents how much the linear approximation of the MINLP problem is trusted."
     ))
