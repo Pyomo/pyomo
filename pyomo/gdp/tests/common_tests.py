@@ -538,7 +538,7 @@ def check_targets_cannot_be_cuids(self, transformation):
     self.assertRaisesRegexp(
         ValueError,
         "invalid value for configuration 'targets':\n"
-        "\tFailed casting \['disjunction'\]\n"
+        "\tFailed casting \[disjunction\]\n"
         "\tto target_list\n"
         "\tError: Expected Component or list of Components."
         "\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
