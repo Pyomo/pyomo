@@ -12,8 +12,8 @@ import sys
 import logging
 
 import pyutilib.th as unittest
-from pyutilib.misc import Options
 
+from pyomo.common.collections import Options
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solver_cases

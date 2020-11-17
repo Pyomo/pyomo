@@ -10,10 +10,9 @@
 
 import logging
 
-from pyutilib.misc import Options
-
 from pyomo.opt.base.solvers import SolverFactory
 from pyomo.common import Executable
+from pyomo.common.collections import Options
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 logger = logging.getLogger('pyomo.solvers')

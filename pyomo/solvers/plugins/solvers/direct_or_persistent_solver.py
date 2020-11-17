@@ -16,10 +16,10 @@ from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 import pyutilib.services
 import pyomo.common
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet, Options
 import pyomo.opt.base.solvers
 from pyomo.opt.base.formats import ResultsFormat
-from pyutilib.misc import Options
+
 
 class DirectOrPersistentSolver(OptSolver):
     """
