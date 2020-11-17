@@ -14,7 +14,9 @@ from six import StringIO
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.environ import ConcreteModel, Block, Var, Set, Param, ComponentUID
+from pyomo.environ import (
+    ConcreteModel, Block, Var, Set, Param, Constraint, Any, ComponentUID,
+)
 from pyomo.common.log import LoggingIntercept
 
 _star = slice(None)
@@ -657,6 +659,77 @@ class TestComponentUID(unittest.TestCase):
         self.assertIsNot(a,b)
         self.assertEqual(a,b)
 
+    def test_findComponentOn_nestedTuples(self):
+        # Tests for #1069
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(Any)
+        m.c[0] = m.x >= 0
+        m.c[(1,)] = m.x >= 1
+        m.c[(2,)] = m.x >= 2
+        m.c[2] = m.x >= 3
+        self.assertIs(ComponentUID(m.c[0]).find_component_on(m), m.c[0])
+        self.assertIs(ComponentUID('c[0]').find_component_on(m), m.c[0])
+        self.assertIsNone(ComponentUID('c[(0,)]').find_component_on(m))
+        self.assertIs(ComponentUID(m.c[(1,)]).find_component_on(m), m.c[(1,)])
+        self.assertIs(ComponentUID('c[(1,)]').find_component_on(m), m.c[(1,)])
+        self.assertIsNone(ComponentUID('c[1]').find_component_on(m))
+        self.assertIs(ComponentUID('c[(2,)]').find_component_on(m), m.c[(2,)])
+        self.assertIs(ComponentUID('c[2]').find_component_on(m), m.c[2])
+        self.assertEqual(len(m.c), 4)
+
+        self.assertEqual(repr(ComponentUID(m.c[0])), "'c'[0]")
+        self.assertEqual(repr(ComponentUID(m.c[(1,)])), "'c'[(1,)]")
+        self.assertEqual(str(ComponentUID(m.c[0])), "c[0]")
+        self.assertEqual(str(ComponentUID(m.c[(1,)])), "c[(1,)]")
+
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint([0,1])
+        m.c[0] = m.x >= 0
+        m.c[(1,)] = m.x >= 1
+        self.assertIs(ComponentUID(m.c[0]).find_component_on(m), m.c[0])
+        self.assertIs(ComponentUID(m.c[(0,)]).find_component_on(m), m.c[0])
+        self.assertIs(ComponentUID('c[0]').find_component_on(m), m.c[0])
+        self.assertIs(ComponentUID('c[(0,)]').find_component_on(m), m.c[0])
+        self.assertIs(ComponentUID(m.c[1]).find_component_on(m), m.c[1])
+        self.assertIs(ComponentUID(m.c[(1,)]).find_component_on(m), m.c[1])
+        self.assertIs(ComponentUID('c[(1,)]').find_component_on(m), m.c[1])
+        self.assertIs(ComponentUID('c[1]').find_component_on(m), m.c[1])
+        self.assertEqual(len(m.c), 2)
+
+        m = ConcreteModel()
+        m.b = Block(Any)
+        m.b[0].c = Block(Any)
+        m.b[0].c[0].x = Var()
+        m.b[(1,)].c = Block(Any)
+        m.b[(1,)].c[(1,)].x = Var()
+        ref = m.b[0].c[0].x
+        self.assertIs(ComponentUID(ref).find_component_on(m), ref)
+        ref = 'm.b[0].c[(0,)].x'
+        self.assertIsNone(ComponentUID(ref).find_component_on(m))
+        ref = m.b[(1,)].c[(1,)].x
+        self.assertIs(ComponentUID(ref).find_component_on(m), ref)
+        ref = 'm.b[(1,)].c[1].x'
+        self.assertIsNone(ComponentUID(ref).find_component_on(m))
+
+        buf = {}
+        ref = m.b[0].c[0].x
+        self.assertIs(
+            ComponentUID(ref, cuid_buffer=buf).find_component_on(m), ref)
+        self.assertEqual(len(buf), 3)
+        ref = 'm.b[0].c[(0,)].x'
+        self.assertIsNone(
+            ComponentUID(ref, cuid_buffer=buf).find_component_on(m))
+        self.assertEqual(len(buf), 3)
+        ref = m.b[(1,)].c[(1,)].x
+        self.assertIs(
+            ComponentUID(ref, cuid_buffer=buf).find_component_on(m), ref)
+        self.assertEqual(len(buf), 4)
+        ref = 'm.b[(1,)].c[1].x'
+        self.assertIsNone(
+            ComponentUID(ref, cuid_buffer=buf).find_component_on(m))
+        self.assertEqual(len(buf), 4)
 
 if __name__ == "__main__":
     unittest.main()

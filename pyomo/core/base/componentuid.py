@@ -40,6 +40,9 @@ class ComponentUID(object):
 
     __slots__ = ( '_cids', )
 
+    def _safe_str_tuple(x):
+        return '(' + ','.join(ComponentUID._safe_str(_) for _ in x) + ',)'
+
     _lex = None
     _repr_map = {
         slice: lambda x: '*',
@@ -47,6 +50,7 @@ class ComponentUID(object):
         int: repr,
         float: repr,
         str: repr,
+        tuple: _safe_str_tuple,
     }
     _repr_v1_map = {
         slice: lambda x: '*',
@@ -75,12 +79,9 @@ class ComponentUID(object):
         "Return a 'nicely formatted' string representation of the CUID"
         a = ""
         for name, args in self._cids:
-            a += '.' + self._safe_str(repr(name))
-            if len(args) == 0:
-                continue
-            a += '[' + ','.join(
-                self._safe_str(self._repr_map.get(x.__class__, str)(x))
-                for x in args) + ']'
+            a += '.' + self._safe_str(name)
+            if args:
+                a += '[' + ','.join(self._safe_str(x) for x in args) + ']'
         return a[1:]  # Strip off the leading '.'
 
     def __repr__(self):
@@ -210,11 +211,14 @@ class ComponentUID(object):
 
     @staticmethod
     def _safe_str(x):
-        if len(x) < 2 or x[0] not in '"\'' or x[0] != x[-1]:
-            return x
-        if any(_ in x for _ in ('\\ ' + literals)):
-            return x
-        return x[1:-1]
+        if not isinstance(x, string_types):
+            return ComponentUID._repr_map.get(
+                x.__class__, str)(x)
+        else:
+            x = repr(x)
+            if any(_ in x for _ in ('\\ ' + literals)):
+                return x
+            return x[1:-1]
 
     @staticmethod
     def generate_cuid_string_map(block, ctype=None, descend_into=True,
@@ -290,15 +294,15 @@ class ComponentUID(object):
             elif cuid_buffer is not None:
                 if id(component) not in cuid_buffer:
                     for idx, obj in iteritems(c):
-                        cuid_buffer[id(obj)] = (
-                            c.local_name,
-                            idx if idx.__class__ is tuple else (idx,)
-                        )
+                        if idx.__class__ is not tuple or len(idx) == 1:
+                            idx = (idx,)
+                        cuid_buffer[id(obj)] = (c.local_name, idx)
                 rcuid.append(cuid_buffer[id(component)])
             else:
                 idx = component.index()
-                rcuid.append((c.local_name,
-                             idx if idx.__class__ is tuple else (idx,)))
+                if idx.__class__ is not tuple or len(idx) == 1:
+                    idx = (idx,)
+                rcuid.append((c.local_name, idx))
             component = component.parent_block()
         rcuid.reverse()
         return rcuid
@@ -315,38 +319,43 @@ class ComponentUID(object):
             ComponentUID._lex = ply.lex.lex()
 
         name = None
-        idx = []
-        in_idx = False
+        idx_stack = []
+        idx = ()
         self._lex.input(label)
         while True:
             tok = self._lex.token()
             if not tok:
                 break
             if tok.type == '.':
-                assert not in_idx
-                yield (name, tuple(idx))
+                assert not idx_stack
+                yield (name, idx)
                 name = None
-                idx = []
+                idx = ()
             elif tok.type == '[':
-                assert not in_idx
-                in_idx = True
+                idx_stack.append([])
             elif tok.type == ']':
-                assert in_idx
-                in_idx = False
-            elif in_idx: # starting a component
+                idx = tuple(idx_stack.pop())
+                assert not idx_stack
+            elif tok.type == '(':
+                assert idx_stack
+                idx_stack.append([])
+            elif tok.type == ')':
+                tmp = tuple(idx_stack.pop())
+                idx_stack[-1].append(tmp)
+            elif idx_stack: # processing a component index
                 if tok.type == ',':
                     pass
                 elif tok.type == 'STAR':
-                    idx.append(tok.value)
+                    idx_stack[-1].append(tok.value)
                 else:
                     assert tok.type in {'WORD','STRING','NUMBER'}
-                    idx.append(tok.value)
+                    idx_stack[-1].append(tok.value)
             else:
                 assert tok.type in {'WORD','STRING'}
                 assert name is None
                 name = tok.value
-        assert not in_idx
-        yield (name, tuple(idx))
+        assert not idx_stack
+        yield (name, idx)
             
     def _parse_cuid_v1(self, label):
         """Parse a string (v1 repr format) and yield name, idx pairs
@@ -386,10 +395,12 @@ class ComponentUID(object):
         obj = block
         for name, idx in self._cids:
             try:
-                if len(idx):
-                    obj = getattr(obj, name)[idx]
-                else:
+                if not idx:
                     obj = getattr(obj, name)
+                elif len(idx) == 1:
+                    obj = getattr(obj, name)[idx[0]]
+                else:
+                    obj = getattr(obj, name)[idx]
             except KeyError:
                 return None
             except AttributeError:
@@ -494,7 +505,7 @@ _re_number = re.compile(
 # Ignore whitespace (space, tab, and linefeed)
 t_ignore = " \t\r"
 
-literals = '[],.'
+literals = '()[],.'
 
 tokens = [
     "WORD",   # unquoted string
