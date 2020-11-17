@@ -13,12 +13,16 @@ import codecs
 import re
 import ply.lex
 
-from six import string_types, iteritems
+from six import PY2, string_types, iteritems
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
 from pyomo.common.deprecation import deprecated
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+
+class _PickleEllipsis(object):
+    "A work around for the non-pigklability of Ellipsis in Python 2"
+    pass
 
 class ComponentUID(object):
     """
@@ -125,11 +129,21 @@ class ComponentUID(object):
             raise ValueError("Invalid repr version '%s'; expected 1 or 2"
                              % (version,))
 
-
     def __getstate__(self):
-        return {x:getattr(self, x) for x in ComponentUID.__slots__}
+        ans = {x:getattr(self, x) for x in ComponentUID.__slots__}
+        if PY2:
+            # Ellipsis is not picklable
+            ans['_cids'] = tuple(
+                (k, tuple(_PickleEllipsis if i is Ellipsis else i
+                          for i in v)) for k,v in ans['_cids'])
+        return ans
 
     def __setstate__(self, state):
+        if PY2:
+            # Ellipsis is not picklable
+            state['_cids'] = tuple(
+                (k, tuple(Ellipsis if i is _PickleEllipsis else i
+                          for i in v)) for k,v in state['_cids'])
         for key, val in iteritems(state):
             setattr(self,key,val)
 
@@ -543,11 +557,15 @@ def t_STAR(t):
         t.value = Ellipsis
     return t
 
-@ply.lex.TOKEN(r'\|b'+_re_quoted_str)
+@ply.lex.TOKEN(r'\|b?'+_re_quoted_str)
 def t_PICKLE(t):
-    t.value = pickle.loads(
-        bytes(ord(_) for _ in _re_escape_sequences.sub(
-            _match_escape, t.value[3:-1])))
+    start = 3 if t.value[1] == 'b' else 2
+    unescaped = _re_escape_sequences.sub(_match_escape, t.value[start:-1])
+    if PY2:
+        rawstr = unescaped.encode('latin-1')
+    else:
+        rawstr = bytes(list(ord(_) for _ in unescaped))
+    t.value = pickle.loads(rawstr)
     return t
 
 # Error handling rule
