@@ -899,6 +899,12 @@ class _BlockData(ActiveComponentData):
             next = next.parent_block()
         return ans
 
+    def find_component(self, label_or_component):
+        """
+        Return a block component given a name.
+        """
+        return ComponentUID(label_or_component).find_component_on(self)
+
     def add_component(self, name, val):
         """
         Add a component 'name' to the block.
@@ -1906,12 +1912,6 @@ class Block(ActiveIndexedComponent):
         # if obj is Block.Skip and idx is not None:
         #   del self._data[idx]
         return _block
-
-    def find_component(self, label_or_component):
-        """
-        Return a block component given a name.
-        """
-        return ComponentUID(label_or_component).find_component_on(self)
 
     def construct(self, data=None):
         """
