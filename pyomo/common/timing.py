@@ -328,6 +328,12 @@ class _HierarchicalHelper(object):
             s += underline.replace('-', '=')
         return s
 
+    def get_timers(self, res, prefix):
+        for name, timer in self.timers.items():
+            _name = prefix + '.' + name
+            res.append(_name)
+            timer.get_timers(res, _name)
+
 
 class HierarchicalTimer(object):
     """A class for hierarchical timing.
@@ -630,3 +636,16 @@ class HierarchicalTimer(object):
             return timer.total_time / total_time * 100
         else:
             return float('nan')
+
+    def get_timers(self):
+        """
+        Returns
+        -------
+        identifiers: list of str
+            Returns a list of all timer identifiers
+        """
+        res = list()
+        for name, timer in self.timers.items():
+            res.append(name)
+            timer.get_timers(res, name)
+        return res
