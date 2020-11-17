@@ -15,7 +15,7 @@ from six.moves import xrange
 import weakref
 
 from pyutilib.misc import reset_redirect, setup_redirect
-from pyutilib.misc.timing import toc
+from pyomo.common.timing import toc
 
 from pyomo.core import (
     minimize, value, TransformationFactory,
