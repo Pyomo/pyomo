@@ -543,8 +543,9 @@ def t_NUMBER(t):
 def t_WORD(t):
     return t
 
-_re_quoted_str = r"'(?:[^'\\]|\\.)*'"
-@ply.lex.TOKEN("|".join([_re_quoted_str, _re_quoted_str.replace("'",'"')]))
+_quoted_str = r"'(?:[^'\\]|\\.)*'"
+_general_str = "|".join([_quoted_str, _quoted_str.replace("'",'"')])
+@ply.lex.TOKEN(_general_str)
 def t_STRING(t):
     t.value = _re_escape_sequences.sub(_match_escape, t.value[1:-1])
     return t
@@ -557,8 +558,7 @@ def t_STAR(t):
         t.value = Ellipsis
     return t
 
-@ply.lex.TOKEN(r'\|b?'+"|".join([
-    _re_quoted_str, _re_quoted_str.replace("'",'"')]))
+@ply.lex.TOKEN(r'\|b?(?:'+_general_str+")")
 def t_PICKLE(t):
     start = 3 if t.value[1] == 'b' else 2
     unescaped = _re_escape_sequences.sub(_match_escape, t.value[start:-1])
