@@ -37,12 +37,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-18.04, macos-latest, windows-latest]
         python: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
         other: [""]
+        # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
+        # build error is resolved:
+        # https://github.com/Pyomo/pyomo/issues/1710
 
         include:
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
           TARGET: linux
           PYENV: pip
 
@@ -55,7 +58,7 @@ jobs:
           PYENV: conda
           PACKAGES: glpk
 
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
           python: 3.7
           other: /mpi
           mpi: 3
@@ -64,7 +67,7 @@ jobs:
           PYENV: conda
           PACKAGES: mpi4py openmpi
 
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
           python: 3.9
           other: /slim
           slim: 1
@@ -72,7 +75,7 @@ jobs:
           TARGET: linux
           PYENV: pip
 
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
           python: 3.6
           other: /cython
           setup_options: --with-cython
@@ -491,10 +494,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-18.04, macos-latest, windows-latest]
 
         include:
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
           TARGET: linux
         - os: macos-latest
           TARGET: osx
