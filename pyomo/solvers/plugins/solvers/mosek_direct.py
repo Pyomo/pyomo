@@ -20,6 +20,7 @@ from pyutilib.services import TempfileManager
 from pyomo.core import is_fixed, value, minimize, maximize
 from pyomo.repn import generate_standard_repn
 from pyomo.core.base.suffix import Suffix
+from pyomo.opt.base.solvers import OptSolver
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import \
     DirectOrPersistentSolver
@@ -32,6 +33,7 @@ from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 logger = logging.getLogger('pyomo.solvers')
+inf = float('inf')
 
 
 class DegreeError(ValueError):
@@ -44,6 +46,32 @@ def _is_numeric(x):
     except ValueError:
         return False
     return True
+
+
+@SolverFactory.register('mosek', doc='The MOSEK LP/QP/SOCP/MIP solver')
+class MOSEK(OptSolver):
+    """
+    The MOSEK LP/QP/SOCP/MIP solver
+    """
+
+    def __new__(cls, *args, **kwds):
+        mode = kwds.pop('solver_io', 'direct')
+        if mode in {'python', 'direct'}:
+            opt = SolverFactory('mosek_direct', **kwds)
+            if opt is None:
+                logger.error(
+                    'MOSEK\'s Optimizer API for python is not installed.')
+            return opt
+        if mode == 'persistent':
+            opt = SolverFactory('mosek_persistent', **kwds)
+            if opt is None:
+                logger.error(
+                    'MOSEK\'s Optimizer API for python is not installed.')
+            return opt
+        else:
+            logger.error(
+                'Unknown solver interface: \"{}\"'.format(mode))
+            return None
 
 
 @SolverFactory.register('mosek_direct', doc='Direct python interface to MOSEK')
@@ -126,8 +154,8 @@ class MOSEKDirect(DirectSolver):
         for key, option in self.options.items():
             try:
                 param = key.split('.')
-                if 'mosek' in param:
-                    param.remove('mosek')
+                if param[0] == 'mosek':
+                    param.pop(0)
                 param = getattr(self._mosek, param[0])(param[1])
                 if 'sparam' in key.split('.'):
                     self._solver_model.putstrparam(param, option)
@@ -136,8 +164,8 @@ class MOSEKDirect(DirectSolver):
                 elif 'iparam' in key.split('.'):
                     if isinstance(option, str):
                         option = option.split('.')
-                        if 'mosek' in option:
-                            option.remove('mosek')
+                        if option[0] == 'mosek':
+                            option.pop('mosek')
                         option = getattr(self._mosek, option[0])(option[1])
                     else:
                         self._solver_model.putintparam(param, option)
@@ -238,12 +266,12 @@ class MOSEKDirect(DirectSolver):
     def _mosek_bounds(self, lb, ub, fixed_bool):
         if fixed_bool:
             return self._mosek.boundkey.fx
-        if lb == -float('inf'):
-            if ub == float('inf'):
+        if lb == -inf:
+            if ub == inf:
                 return self._mosek.boundkey.fr
             else:
                 return self._mosek.boundkey.up
-        elif ub == float('inf'):
+        elif ub == inf:
             return self._mosek.boundkey.lo
         return self._mosek.boundkey.ra
 
@@ -275,9 +303,9 @@ class MOSEKDirect(DirectSolver):
         vnames = tuple(self._symbol_map.getSymbol(
             v, self._labeler) for v in var_seq)
         vtypes = tuple(map(self._mosek_vartype_from_var, var_seq))
-        lbs = tuple(-float('inf') if value(v.lb) is None else value(v.lb)
+        lbs = tuple(-inf if value(v.lb) is None else value(v.lb)
                     for v in var_seq)
-        ubs = tuple(float('inf') if value(v.ub) is None else value(v.ub)
+        ubs = tuple(inf if value(v.ub) is None else value(v.ub)
                     for v in var_seq)
         fxs = tuple(v.is_fixed() for v in var_seq)
         bound_types = tuple(map(self._mosek_bounds, lbs, ubs, fxs))
@@ -317,7 +345,7 @@ class MOSEKDirect(DirectSolver):
 
         Parameters
         ----------
-        con_seq: list of Constraint (scalar Constraint or single _ConstraintData)
+        con_seq: tuple/list of Constraint (scalar Constraint or single _ConstraintData)
         """
         if not con_seq:
             return
@@ -346,9 +374,9 @@ class MOSEKDirect(DirectSolver):
             arow, qexp, referenced_vars = zip(*lq_data)
             q_is, q_js, q_vals = zip(*qexp)
             l_ids, l_coefs, constants = zip(*arow)
-            lbs = tuple(-float('inf') if value(lq_all[i].lower) is None else value(
+            lbs = tuple(-inf if value(lq_all[i].lower) is None else value(
                 lq_all[i].lower) - constants[i] for i in range(num_lq))
-            ubs = tuple(float('inf') if value(lq_all[i].upper) is None else value(
+            ubs = tuple(inf if value(lq_all[i].upper) is None else value(
                 lq_all[i].upper) - constants[i] for i in range(num_lq))
             fxs = tuple(c.equality for c in lq_all)
             bound_types = tuple(map(self._mosek_bounds, lbs, ubs, fxs))
@@ -903,7 +931,7 @@ class MOSEKDirect(DirectSolver):
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
         cone_map = self._pyomo_cone_to_solver_cone_map
-        reverse_cone_map = self._solver_cone_to_pyomo_cone_map
+        #reverse_cone_map = self._solver_cone_to_pyomo_cone_map
         dual = self._pyomo_model.dual
 
         if objs_to_load is None:

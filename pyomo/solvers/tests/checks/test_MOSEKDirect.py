@@ -38,6 +38,16 @@ class MOSEKDirectTests(unittest.TestCase):
     def tearDown(self):
         sys.stderr = self.stderr
 
+    def test_interface_call(self):
+
+        interface_instance = type(pyo.SolverFactory('mosek_direct'))
+        alt_1 = pyo.SolverFactory('mosek')
+        alt_2 = pyo.SolverFactory('mosek', solver_io='python')
+        alt_3 = pyo.SolverFactory('mosek', solver_io='direct')
+        self.assertIsInstance(alt_1, interface_instance)
+        self.assertIsInstance(alt_2, interface_instance)
+        self.assertIsInstance(alt_3, interface_instance)
+
     def test_infeasible_lp(self):
 
         model = pyo.ConcreteModel()
