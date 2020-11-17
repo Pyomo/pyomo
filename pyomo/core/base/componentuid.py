@@ -16,6 +16,7 @@ import ply.lex
 from six import string_types, iteritems
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.dependencies import pickle
 from pyomo.common.deprecation import deprecated
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 
@@ -42,6 +43,25 @@ class ComponentUID(object):
 
     def _safe_str_tuple(x):
         return '(' + ','.join(ComponentUID._safe_str(_) for _ in x) + ',)'
+
+    @staticmethod
+    def _pickle(x):
+        return '|'+repr(pickle.dumps(x, protocol=2))
+
+    @staticmethod
+    def _safe_str(x):
+        if not isinstance(x, string_types):
+            return ComponentUID._repr_map.get(
+                x.__class__, ComponentUID._pickle)(x)
+        else:
+            x = repr(x)
+            if x[1] == '|':
+                return x
+            if any(_ in x for _ in ('\\ ' + literals)):
+                return x
+            if _re_number.match(x[1:-1]):
+                return x
+            return x[1:-1]
 
     _lex = None
     _repr_map = {
@@ -210,17 +230,6 @@ class ComponentUID(object):
         return not self.__eq__(other)
 
     @staticmethod
-    def _safe_str(x):
-        if not isinstance(x, string_types):
-            return ComponentUID._repr_map.get(
-                x.__class__, str)(x)
-        else:
-            x = repr(x)
-            if any(_ in x for _ in ('\\ ' + literals)):
-                return x
-            return x[1:-1]
-
-    @staticmethod
     def generate_cuid_string_map(block, ctype=None, descend_into=True,
                                  repr_version=2):
         def _record_indexed_object_cuid_strings_v1(obj, cuid_str):
@@ -348,7 +357,7 @@ class ComponentUID(object):
                 elif tok.type == 'STAR':
                     idx_stack[-1].append(tok.value)
                 else:
-                    assert tok.type in {'WORD','STRING','NUMBER'}
+                    assert tok.type in {'WORD','STRING','NUMBER','PICKLE'}
                     idx_stack[-1].append(tok.value)
             else:
                 assert tok.type in {'WORD','STRING'}
@@ -512,6 +521,7 @@ tokens = [
     "STRING", # quoted string
     "NUMBER", # raw number
     "STAR",   # either * or **
+    "PICKLE", # a pickled index object
 ]
 
 # Numbers only appear in getitem lists, so they must be followed by a
@@ -525,8 +535,8 @@ def t_NUMBER(t):
 def t_WORD(t):
     return t
 
-_re_quoted_str = r'"(?:[^"\\]|\\.)*"'
-@ply.lex.TOKEN("|".join([_re_quoted_str, _re_quoted_str.replace('"',"'")]))
+_re_quoted_str = r"'(?:[^'\\]|\\.)*'"
+@ply.lex.TOKEN("|".join([_re_quoted_str, _re_quoted_str.replace("'",'"')]))
 def t_STRING(t):
     t.value = _re_escape_sequences.sub(_match_escape, t.value[1:-1])
     return t
@@ -537,6 +547,13 @@ def t_STAR(t):
         t.value = slice(None)
     else:
         t.value = Ellipsis
+    return t
+
+@ply.lex.TOKEN(r'\|b'+_re_quoted_str)
+def t_PICKLE(t):
+    t.value = pickle.loads(
+        bytes(ord(_) for _ in _re_escape_sequences.sub(
+            _match_escape, t.value[3:-1])))
     return t
 
 # Error handling rule

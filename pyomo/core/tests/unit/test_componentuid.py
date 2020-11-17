@@ -12,6 +12,8 @@
 #
 from six import StringIO
 import pickle
+from collections import namedtuple
+from datetime import datetime
 
 import pyutilib.th as unittest
 from pyomo.environ import (
@@ -20,6 +22,8 @@ from pyomo.environ import (
 from pyomo.common.log import LoggingIntercept
 
 _star = slice(None)
+
+_Foo = namedtuple('_Foo', ['x','yy'])
 
 class TestComponentUID(unittest.TestCase):
 
@@ -178,10 +182,20 @@ class TestComponentUID(unittest.TestCase):
     def test_nonIntNumber(self):
         inf = float('inf')
         m = ConcreteModel()
-        m.b = Block([inf])
-        m.b[inf].x = x = Var()
+        m.b = Block([inf, 'inf'])
 
+        m.b[inf].x = x = Var()
         ref = r"'b'[inf].'x'"
+
+        cuid = ComponentUID(x)
+        self.assertEqual(
+            cuid._cids,
+            (('b',(inf,)), ('x',tuple())) )
+
+        self.assertTrue(cuid.matches(x))
+        self.assertEqual(repr(ComponentUID(x)), ref)
+        self.assertEqual(str(ComponentUID(x)), r'b[inf].x')
+
         cuid = ComponentUID(ref)
         self.assertEqual(
             cuid._cids,
@@ -200,6 +214,39 @@ class TestComponentUID(unittest.TestCase):
         self.assertTrue(cuid.matches(x))
         self.assertEqual(ComponentUID(x).get_repr(1), ref)
         self.assertEqual(str(ComponentUID(x)), r'b[inf].x')
+
+        #
+        m.b['inf'].x = x = Var()
+        ref = r"'b'['inf'].'x'"
+        #
+
+        cuid = ComponentUID(x)
+        self.assertEqual(
+            cuid._cids,
+            (('b',('inf',)), ('x',tuple())) )
+
+        self.assertTrue(cuid.matches(x))
+        self.assertEqual(repr(ComponentUID(x)), ref)
+        self.assertEqual(str(ComponentUID(x)), r"b['inf'].x")
+
+        cuid = ComponentUID(ref)
+        self.assertEqual(
+            cuid._cids,
+            (('b',('inf',)), ('x',tuple())) )
+
+        self.assertTrue(cuid.matches(x))
+        self.assertEqual(repr(ComponentUID(x)), ref)
+        self.assertEqual(str(ComponentUID(x)), r"b['inf'].x")
+
+        ref = r"b:$inf.x"
+        cuid = ComponentUID(ref)
+        self.assertEqual(
+            cuid._cids,
+            (('b',('inf',)), ('x',tuple())) )
+
+        self.assertTrue(cuid.matches(x))
+        self.assertEqual(ComponentUID(x).get_repr(1), ref)
+        self.assertEqual(str(ComponentUID(x)), r"b['inf'].x")
 
 
     def test_find_component_deprecated(self):
@@ -252,7 +299,7 @@ class TestComponentUID(unittest.TestCase):
 
     def test_printers_1(self):
         cuid = ComponentUID(self.m.b[1,'2'].c.a[3])
-        s = 'b[1,2].c.a[3]'
+        s = "b[1,'2'].c.a[3]"
         r1 = "b:#1,$2.c.a:#3"
         r2 = "'b'[1,'2'].'c'.'a'[3]"
         self.assertEqual(str(cuid), s)
@@ -265,7 +312,7 @@ class TestComponentUID(unittest.TestCase):
 
     def test_printers_2(self):
         cuid = ComponentUID('b:$1,2.c.a:#3')
-        s = 'b[1,2].c.a[3]'
+        s = "b['1',2].c.a[3]"
         r1 = "b:$1,#2.c.a:#3"
         r2 = "'b'['1',2].'c'.'a'[3]"
         self.assertEqual(str(cuid), s)
@@ -730,6 +777,62 @@ class TestComponentUID(unittest.TestCase):
         self.assertIsNone(
             ComponentUID(ref, cuid_buffer=buf).find_component_on(m))
         self.assertEqual(len(buf), 4)
+
+    def test_pickle_index(self):
+        m = ConcreteModel()
+        m.b = Block(Any)
+
+        idx = "|b'foo'"
+        m.b[idx].x = Var()
+        cuid = ComponentUID(m.b[idx].x)
+        self.assertEqual(str(cuid), 'b["|b\'foo\'"].x')
+        self.assertIs(cuid.find_component_on(m), m.b[idx].x)
+        tmp = ComponentUID(str(cuid))
+        self.assertIsNot(cuid, tmp)
+        self.assertEqual(cuid, tmp)
+        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+        tmp = pickle.loads(pickle.dumps(cuid))
+        self.assertIsNot(cuid, tmp)
+        self.assertEqual(cuid, tmp)
+        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+
+        idx = _Foo(1,'a')
+        m.b[idx].x = Var()
+        cuid = ComponentUID(m.b[idx].x)
+        self.assertEqual(
+            str(cuid),
+            r"b[|b'\x80\x02cpyomo.core.tests.unit.test_componentuid\n_Foo"
+            r"\nq\x00K\x01X\x01\x00\x00\x00aq\x01\x86q\x02\x81q\x03.'].x")
+        self.assertIs(cuid.find_component_on(m), m.b[idx].x)
+        tmp = ComponentUID(str(cuid))
+        self.assertIsNot(cuid, tmp)
+        self.assertEqual(cuid, tmp)
+        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+        tmp = pickle.loads(pickle.dumps(cuid))
+        self.assertIsNot(cuid, tmp)
+        self.assertEqual(cuid, tmp)
+        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+
+        idx = datetime(1,2,3)
+        m.b[idx].x = Var()
+        cuid = ComponentUID(m.b[idx].x)
+        self.assertEqual(
+            str(cuid),
+            r"b[|b'\x80\x02cdatetime\ndatetime\nq\x00c_codecs\nencode\nq"
+            r"\x01X\n\x00\x00\x00\x00\x01\x02\x03\x00\x00\x00\x00\x00\x00"
+            r"q\x02X\x06\x00\x00\x00latin1q\x03\x86q\x04Rq\x05\x85q\x06"
+            r"Rq\x07.'].x")
+        self.assertIs(cuid.find_component_on(m), m.b[idx].x)
+        tmp = ComponentUID(str(cuid))
+        self.assertIsNot(cuid, tmp)
+        self.assertEqual(cuid, tmp)
+        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+        tmp = pickle.loads(pickle.dumps(cuid))
+        self.assertIsNot(cuid, tmp)
+        self.assertEqual(cuid, tmp)
+        self.assertIs(tmp.find_component_on(m), m.b[idx].x)
+
+        self.assertEqual(len(m.b), 3)
 
 if __name__ == "__main__":
     unittest.main()
