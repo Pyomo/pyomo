@@ -98,28 +98,12 @@ class MPIBlockMatrix(BaseBlockMatrix):
         shape = (nbrows, nbcols)
         self._block_matrix = BlockMatrix(nbrows, nbcols)
         self._mpiw = mpi_comm
-        self._rank_owner = np.zeros(shape, dtype=np.int64)
-        self._owned_mask = np.zeros(shape, dtype=bool)
-        self._unique_owned_mask = np.zeros(shape, dtype=bool)
-
         rank = self._mpiw.Get_rank()
+        self._rank_owner = np.asarray(rank_ownership, dtype=np.int)
+        self._owned_mask = np.bitwise_or(self._rank_owner == rank, self._rank_owner < 0)
+        self._unique_owned_mask = self._rank_owner == rank
 
-        if isinstance(rank_ownership, list):
-            rank_ownership = np.asarray(rank_ownership, dtype=np.int64)
-        if not isinstance(rank_ownership, np.ndarray):
-            raise RuntimeError('rank_ownership must be a list of lists or a numpy array')
         assert rank_ownership.ndim == 2, 'rank_ownership must be of size 2'
-
-        for i in range(nbrows):
-            for j in range(nbcols):
-                owner = rank_ownership[i, j]
-                assert owner < self._mpiw.Get_size(), \
-                    'rank owner out of range'
-                self._rank_owner[i, j] = owner
-                if rank == owner or owner < 0:
-                    self._owned_mask[i, j] = True
-                    if owner == rank:
-                        self._unique_owned_mask[i, j] = True
 
         # Note: this requires communication but is disabled when assertions
         # are turned off
