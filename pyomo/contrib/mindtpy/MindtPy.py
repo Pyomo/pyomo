@@ -121,6 +121,8 @@ class MindtPySolver(object):
         if config.solver_tee:
             config.mip_solver_tee = True
             config.nlp_solver_tee = True
+        if config.add_regularization in {'grad_lag', 'hess_lag'}:
+            config.equality_relaxation = True
         if config.heuristic_nonconvex:
             config.equality_relaxation = True
             config.add_slack = True
