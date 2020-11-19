@@ -192,8 +192,10 @@ class ComponentUID(object):
                     if self_i is Ellipsis:
                         return False
                     if other_i.__class__ is slice:
-                        return True
-                    if self_i.__class__ is slice:
+                        # If both are slices, fall through to use '<' below
+                        if self_i.__class__ is not slice:
+                            return True
+                    elif self_i.__class__ is slice:
                         return False
                     try:
                         return self_i < other_i
