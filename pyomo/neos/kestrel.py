@@ -149,7 +149,7 @@ class kestrelAMPL:
             result = self.neos.ping()
             logger.info("OK.")
         except (socket.error, xmlrpclib.ProtocolError,
-                six.moves.http_clientBadStatusLine):
+                six.moves.http_client.BadStatusLine):
             e = sys.exc_info()[1]
             self.neos = None
             logger.info("Fail.")
