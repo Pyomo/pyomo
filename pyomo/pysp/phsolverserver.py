@@ -17,7 +17,7 @@ from optparse import OptionParser
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
-from pyutilib.misc import PauseGC, import_file
+from pyutilib.misc import import_file
 from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
@@ -25,6 +25,7 @@ from pyutilib.pyro import (TaskWorker,
 from pyomo.core import Var, Suffix, Constraint
 from pyomo.opt import UndefinedData
 from pyomo.common import pyomo_command
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,

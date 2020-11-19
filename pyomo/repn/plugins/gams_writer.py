@@ -14,8 +14,7 @@
 
 from six import StringIO, string_types, iteritems
 
-from pyutilib.misc import PauseGC
-
+from pyomo.common.gc_manager import PauseGC
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (
     value, as_numeric, native_types, native_numeric_types,

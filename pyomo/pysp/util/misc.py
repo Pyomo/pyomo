@@ -20,9 +20,10 @@ import subprocess
 import inspect
 import argparse
 
-from pyutilib.misc import PauseGC, import_file
+from pyutilib.misc import import_file
 from pyutilib.services import TempfileManager
 from pyomo.common.errors import ApplicationError
+from pyomo.common.gc_manager import PauseGC
 from pyomo.opt.base import ConverterError
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.plugin import (ExtensionPoint,
