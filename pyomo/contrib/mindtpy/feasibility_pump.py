@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from pyomo.core import (Var, Objective, Reals, minimize,
-                        RangeSet, Constraint, Block, sqrt, TransformationFactory, ComponentMap, value)
+from pyomo.core import (minimize, Constraint,
+                        TransformationFactory, SolverStatus, value)
 from pyomo.core.base.constraint import ConstraintList
 from pyomo.opt import SolverFactory, SolutionStatus, SolverResults
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
@@ -207,7 +207,7 @@ def feas_pump_loop(solve_data, config):
         else:
             raise ValueError(
                 'MindtPy unable to handle NLP subproblem termination '
-                'condition of {}'.format(termination_condition))
+                'condition of {}'.format(fp_nlp_result.solver.termination_condition))
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
