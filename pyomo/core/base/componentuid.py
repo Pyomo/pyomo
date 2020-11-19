@@ -314,10 +314,11 @@ class ComponentUID(object):
                 rcuid.append(( c.local_name, () ))
             elif cuid_buffer is not None:
                 if id(component) not in cuid_buffer:
+                    c_local_name = c.local_name
                     for idx, obj in iteritems(c):
                         if idx.__class__ is not tuple or len(idx) == 1:
                             idx = (idx,)
-                        cuid_buffer[id(obj)] = (c.local_name, idx)
+                        cuid_buffer[id(obj)] = (c_local_name, idx)
                 rcuid.append(cuid_buffer[id(component)])
             else:
                 idx = component.index()
