@@ -19,7 +19,7 @@ from weakref import ref as weakref_ref
 from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
-from pyomo.common.deprecation import deprecated, relocated_class
+from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 
