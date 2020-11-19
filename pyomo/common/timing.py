@@ -160,8 +160,8 @@ class TicTocTimer(object):
     """
     def __init__(self, ostream=_NotSpecified, logger=None):
         self._lastTime = self._loadTime = _time_source()
-        self._ostream = ostream
-        self._logger = logger
+        self.ostream = ostream
+        self.logger = logger
         self._start_count = 0
         self._cumul = 0
 
@@ -237,12 +237,12 @@ class TicTocTimer(object):
 
         if msg is not None:
             if logger is _NotSpecified:
-                logger = self._logger
+                logger = self.logger
             if logger is not None:
                 logger.info(msg)
 
             if ostream is _NotSpecified:
-                ostream = self._ostream
+                ostream = self.ostream
                 if ostream is _NotSpecified and logger is None:
                     ostream = sys.stdout
             if ostream is not None:
