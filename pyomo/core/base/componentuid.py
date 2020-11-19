@@ -45,6 +45,7 @@ class ComponentUID(object):
 
     __slots__ = ( '_cids', )
 
+    @staticmethod
     def _safe_str_tuple(x):
         return '(' + ','.join(ComponentUID._safe_str(_) for _ in x) + ',)'
 
@@ -74,7 +75,8 @@ class ComponentUID(object):
         int: repr,
         float: repr,
         str: repr,
-        tuple: _safe_str_tuple,
+        # Note: the function is unbound at this point; extract with __func__
+        tuple: _safe_str_tuple.__func__,
     }
     _repr_v1_map = {
         slice: lambda x: '*',
