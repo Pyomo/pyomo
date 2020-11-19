@@ -167,7 +167,6 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 add_no_good_cuts=True,
-                                tee=True
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)

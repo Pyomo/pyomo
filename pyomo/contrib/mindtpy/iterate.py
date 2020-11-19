@@ -367,7 +367,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
                 MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()
         if config.add_regularization and MindtPy.find_component('MindtPy_oa_obj') is None:
-            solve_data.mip_original_obj.activate()
+            MindtPy.objective_list[-1].activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.
         if isinstance(masteropt, PersistentSolver):

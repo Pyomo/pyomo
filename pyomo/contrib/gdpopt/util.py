@@ -173,6 +173,7 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         # Add the new variable and constraint to the working lists
         util_blk.variable_list.append(util_blk.objective_value)
         util_blk.constraint_list.append(util_blk.objective_constr)
+        util_blk.objective_list.append(util_blk.objective)
 
 
 def a_logger(str_or_logger):
@@ -294,6 +295,11 @@ def build_ordered_component_lists(model, solve_data):
             model.component_data_objects(
                 ctype=Disjunction, active=True,
                 descend_into=(Disjunct, Block))))
+    setattr(
+        util_blk, 'objective_list', list(
+            model.component_data_objects(
+                ctype=Objective, active=True,
+                descend_into=(Block))))
 
     # Identify the non-fixed variables in (potentially) active constraints and
     # objective functions

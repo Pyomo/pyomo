@@ -41,8 +41,6 @@ def MindtPy_initialize_master(solve_data, config):
         var_bound_add(solve_data, config)
 
     m = solve_data.mip = solve_data.working_model.clone()
-    solve_data.mip_original_obj = next(
-        solve_data.mip.component_data_objects(Objective, active=True))
     next(solve_data.mip.component_data_objects(
         Objective, active=True)).deactivate()
 
