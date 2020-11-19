@@ -217,7 +217,7 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
             master_mip.MindtPy_utils.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
-        if MindtPy.obj.sense == minimize:
+        if solve_data.objective_sense == minimize:
             solve_data.LB = max(
                 value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
@@ -259,9 +259,7 @@ def handle_master_infeasible(master_mip, solve_data, config):
             'quality cuts.')
     # TODO no-good cuts for single tree case
     # set optimistic bound to infinity
-    main_objective = next(
-        master_mip.component_data_objects(Objective, active=True))
-    if main_objective.sense == minimize:
+    if solve_data.objective_sense == minimize:
         solve_data.LB_progress.append(solve_data.LB)
     else:
         solve_data.UB_progress.append(solve_data.UB)
@@ -298,17 +296,17 @@ def handle_master_max_timelimit(master_mip, solve_data, config):
         master_mip.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    if MindtPy.obj.sense == minimize:
+    if solve_data.objective_sense == minimize:
         solve_data.LB = max(
-            value(MindtPy.obj.expr), solve_data.LB)
+            value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
         solve_data.LB_progress.append(solve_data.LB)
     else:
         solve_data.UB = min(
-            value(MindtPy.obj.expr), solve_data.UB)
+            value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
         solve_data.UB_progress.append(solve_data.UB)
     config.logger.info(
         'MIP %s: OBJ: %s  LB: %s  UB: %s'
-        % (solve_data.mip_iter, value(MindtPy.obj.expr),
+        % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
            solve_data.LB, solve_data.UB))
 
 
@@ -334,10 +332,8 @@ def handle_master_unbounded(master_mip, solve_data, config):
         'Master MILP was unbounded. '
         'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
         'You can change this bound with the option obj_bound.'.format(config.obj_bound))
-    main_objective = next(
-        master_mip.component_data_objects(Objective, active=True))
     MindtPy.objective_bound = Constraint(
-        expr=(-config.obj_bound, main_objective.expr, config.obj_bound))
+        expr=(-config.obj_bound, MindtPy.MindtPy_oa_obj.expr, config.obj_bound))
     with SuppressInfeasibleWarning():
         opt = SolverFactory(config.mip_solver)
         if isinstance(opt, PersistentSolver):

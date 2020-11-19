@@ -307,8 +307,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         """
         # proceed. Just need integer values
         MindtPy = master_mip.MindtPy_utils
-        main_objective = next(
-            master_mip.component_data_objects(Objective, active=True))
 
         # this value copy is useful since we need to fix subproblem based on the solution of the master problem
         self.copy_lazy_var_list_values(opt,
@@ -317,7 +315,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                        config)
         # if config.strategy == 'GOA':
         # if not config.add_no_good_cuts:
-        if main_objective.sense == minimize:
+        if solve_data.objective_sense == minimize:
             solve_data.LB = max(
                 self.get_best_objective_value(), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
@@ -355,21 +353,21 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         else:
             dual_values = None
 
-        main_objective = next(
-            fixed_nlp.component_data_objects(Objective, active=True))
-        if main_objective.sense == minimize:
-            solve_data.UB = min(value(main_objective.expr), solve_data.UB)
+        if solve_data.objective_sense == minimize:
+            solve_data.UB = min(
+                value(fixed_nlp.MindtPy_utils.objective_list[-1].expr), solve_data.UB)
             solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
         else:
-            solve_data.LB = max(value(main_objective.expr), solve_data.LB)
+            solve_data.LB = max(
+                value(fixed_nlp.MindtPy_utils.objective_list[-1].expr), solve_data.LB)
             solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
 
         config.logger.info(
             'NLP {}: OBJ: {}  LB: {}  UB: {}'
             .format(solve_data.nlp_iter,
-                    value(main_objective.expr),
+                    value(fixed_nlp.MindtPy_utils.objective_list[-1].expr),
                     solve_data.LB, solve_data.UB))
 
         if solve_data.solution_improved:

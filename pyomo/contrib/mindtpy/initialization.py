@@ -136,13 +136,12 @@ def init_rNLP(solve_data, config):
         if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
             config.logger.info(
                 'relaxed NLP is not solved to optimality.')
-        main_objective = next(m.component_data_objects(Objective, active=True))
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.equality_relaxation else None
         # Add OA cut
         # This covers the case when the Lower bound does not exist.
         # TODO: should we use the bound of the rNLP here?
-        if main_objective.sense == minimize:
+        if solve_data.objective_sense == minimize:
             if not math.isnan(results.problem.lower_bound):
                 solve_data.LB = results.problem.lower_bound
                 solve_data.LB_progress.append(results.problem.lower_bound)
@@ -151,7 +150,7 @@ def init_rNLP(solve_data, config):
             solve_data.UB_progress.append(results.problem.upper_bound)
         config.logger.info(
             'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
-            % (value(main_objective.expr), solve_data.LB, solve_data.UB))
+            % (value(MindtPy.objective_list[-1].expr), solve_data.LB, solve_data.UB))
         if config.strategy in {'OA', 'GOA', 'feas_pump'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,

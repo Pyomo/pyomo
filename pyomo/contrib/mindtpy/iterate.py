@@ -32,9 +32,6 @@ def MindtPy_iteration_loop(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
-    working_model = solve_data.working_model
-    main_objective = next(
-        working_model.component_data_objects(Objective, active=True))
     last_iter_cuts = False
     while solve_data.mip_iter < config.iteration_limit:
 
@@ -112,7 +109,7 @@ def MindtPy_iteration_loop(solve_data, config):
         # if config.strategy == 'PSC':
         #     # If the hybrid algorithm is not making progress, switch to OA.
         #     progress_required = 1E-6
-        #     if main_objective.sense == minimize:
+        #     if solve_data.objective_sense == minimize:
         #         log = solve_data.LB_progress
         #         sign_adjust = 1
         #     else:
@@ -382,9 +379,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             masteropt.options["threads"] = config.threads
         master_mip_results = masteropt.solve(
             solve_data.mip, tee=config.mip_solver_tee, **mip_args)
-        main_objective = next(
-            solve_data.working_model.component_data_objects(Objective, active=True))
-        if main_objective.sense == minimize:
+        if solve_data.objective_sense == minimize:
             solve_data.LB = max(
                 [master_mip_results.problem.lower_bound] + solve_data.LB_progress[:-1])
             solve_data.LB_progress.append(solve_data.LB)

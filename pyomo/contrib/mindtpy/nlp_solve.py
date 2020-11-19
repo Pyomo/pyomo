@@ -61,7 +61,7 @@ def solve_subproblem(solve_data, config):
         # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
         evaluation_error = False
         for c in fixed_nlp.component_data_objects(ctype=Constraint, active=True,
-                                                descend_into=True):
+                                                  descend_into=True):
             # We prefer to include the upper bound as the right hand side since we are
             # considering c by default a (hopefully) convex function, which would make
             # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
@@ -139,20 +139,20 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
     else:
         dual_values = None
 
-    main_objective = next(
-        fixed_nlp.component_data_objects(Objective, active=True))
-    if main_objective.sense == minimize:
-        solve_data.UB = min(value(main_objective.expr), solve_data.UB)
+    if solve_data.objective_sense == minimize:
+        solve_data.UB = min(
+            value(fixed_nlp.MindtPy_utils.objective_list[-1].expr), solve_data.UB)
         solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
         solve_data.UB_progress.append(solve_data.UB)
     else:
-        solve_data.LB = max(value(main_objective.expr), solve_data.LB)
+        solve_data.LB = max(
+            value(fixed_nlp.MindtPy_utils.objective_list[-1].expr), solve_data.LB)
         solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
         solve_data.LB_progress.append(solve_data.LB)
     config.logger.info(
         'Fixed NLP {}: OBJ: {}  LB: {}  UB: {}'
         .format(solve_data.nlp_iter if not feas_pump else solve_data.fp_iter,
-                value(main_objective.expr),
+                value(fixed_nlp.MindtPy_utils.objective_list[-1].expr),
                 solve_data.LB, solve_data.UB))
 
     if solve_data.solution_improved:
@@ -172,7 +172,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
             if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut') is not None:
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
                     'improving_objective_cut')
-            if main_objective.sense == minimize:
+            if solve_data.objective_sense == minimize:
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
                                                                                                       <= solve_data.UB - config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
             else:

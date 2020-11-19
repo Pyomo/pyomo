@@ -309,9 +309,7 @@ def generate_lag_objective_function(model, setpoint_model, config, discrete_only
     for var in temp_model.MindtPy_utils.variable_list:
         if var.is_integer():
             var.unfix()
-    main_objective = next(
-        temp_model.component_data_objects(Objective, descend_into=False))
-    main_objective.activate()
+    temp_model.MindtPy_utils.objective_list[0].activate()
     temp_model.MindtPy_utils.deactivate()
     TransformationFactory('core.relax_integer_vars').apply_to(temp_model)
     # TODO: PyNumero does not support discrete variables
