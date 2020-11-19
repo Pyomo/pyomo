@@ -21,7 +21,7 @@ from pyomo.common.deprecation import deprecated
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 
 class _PickleEllipsis(object):
-    "A work around for the non-pigklability of Ellipsis in Python 2"
+    "A work around for the non-picklability of Ellipsis in Python 2"
     pass
 
 class ComponentUID(object):
