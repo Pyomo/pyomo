@@ -19,27 +19,15 @@ from weakref import ref as weakref_ref
 from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecated, relocated_class
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 
 logger = logging.getLogger('pyomo.core')
 
-if sys.version_info[:2] < (3,7):
-    # For backwards compatibility, we will import the ComponentUID class here
-    from pyomo.core.base.componentuid import ComponentUID
-else:
-    # For python 3.7+, we can issue a deprecation warning
-    def __getattr__(name):
-        if name == 'ComponentUID':
-            deprecation_warning('the ComponentUID class has been moved to '
-                                'pyomo.core.base.componentuid',
-                                version='TBD')
-            from pyomo.core.base.componentuid import ComponentUID
-            globals()[name] = ComponentUID
-            return ComponentUID
-        raise AttributeError("module %s has no attribute %s"
-                             % (__name__, name))
+relocated_module_attribute(
+    'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
+    version='TBD')
 
 def _name_index_generator(idx):
     """
@@ -1023,5 +1011,4 @@ class ActiveComponentData(ComponentData):
     def deactivate(self):
         """Set the active attribute to False"""
         self._active = False
-
 
