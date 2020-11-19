@@ -369,8 +369,7 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
     MindtPy.del_component('MindtPy_oa_obj')
 
     if feas_pump:
-        if MindtPy.find_component('feas_pump_mip_obj') is not None:
-            MindtPy.del_component('feas_pump_mip_obj')
+        MindtPy.del_component('feas_pump_mip_obj')
         if config.fp_master_norm == 'L1':
             MindtPy.feas_pump_mip_obj = generate_norm1_objective_function(
                 solve_data.mip,
@@ -426,8 +425,7 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
 
         if config.use_dual_bound:
             # Delete previously added dual bound constraint
-            if MindtPy.MindtPy_linear_cuts.find_component('dual_bound') is not None:
-                MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
+            MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
             if solve_data.objective_sense == minimize:
                 MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
                     expr=MindtPy.objective_list[-1].expr +

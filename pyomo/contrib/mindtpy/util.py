@@ -239,8 +239,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm1 objective function for models with different number of variables"
-    if model.MindtPy_utils.find_component('L1_objective_function') is not None:
-        model.MindtPy_utils.del_component('L1_objective_function')
+    model.MindtPy_utils.del_component('L1_objective_function')
     obj_blk = model.MindtPy_utils.L1_objective_function = Block()
     obj_blk.L1_obj_idx = RangeSet(len(model_vars))
     obj_blk.L1_obj_var = Var(
@@ -279,8 +278,7 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm Infinity objective function for models with different number of variables"
-    if model.MindtPy_utils.find_component('L_infinity_objective_function') is not None:
-        model.MindtPy_utils.del_component('L_infinity_objective_function')
+    model.MindtPy_utils.del_component('L_infinity_objective_function')
     obj_blk = model.MindtPy_utils.L_infinity_objective_function = Block()
     obj_blk.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
     obj_blk.abs_reformulation = ConstraintList()

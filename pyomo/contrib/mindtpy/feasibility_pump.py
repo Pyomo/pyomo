@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
-from pyomo.core import (minimize, Constraint,
-                        TransformationFactory, SolverStatus, value)
+from pyomo.core import (minimize, Constraint, TransformationFactory, value)
 from pyomo.core.base.constraint import ConstraintList
-from pyomo.opt import SolverFactory, SolutionStatus, SolverResults
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, copy_var_list_values, is_feasible
-from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
-                                             handle_subproblem_optimal, handle_subproblem_infeasible,
-                                             handle_subproblem_other_termination)
-from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
+from pyomo.opt import SolverFactory, SolutionStatus, SolverResults, SolverStatus
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, get_main_elapsed_time, copy_var_list_values
+from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_subproblem_optimal
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function
-from pyomo.contrib.mindtpy.mip_solve import solve_master, handle_master_optimal
-from pyomo.util.infeasible import log_infeasible_constraints
-
+from pyomo.contrib.mindtpy.mip_solve import solve_master
 from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
 
 
@@ -150,7 +144,6 @@ def feas_pump_loop(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
-    working_model = solve_data.working_model
     while solve_data.fp_iter < config.fp_iteration_limit:
 
         config.logger.info(
@@ -184,8 +177,8 @@ def feas_pump_loop(solve_data, config):
             config.logger.warning('Unexpected result of FP-MIP')
             break
 
-            # Solve NLP subproblem
-            # The constraint linearization happens in the handlers
+        # Solve NLP subproblem
+        # The constraint linearization happens in the handlers
         fp_nlp, fp_nlp_result = solve_feas_pump_subproblem(
             solve_data, config)
 
@@ -211,7 +204,7 @@ def feas_pump_loop(solve_data, config):
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
-    solve_data.mip.MindtPy_utils.feas_pump_mip_obj.deactivate()
+    solve_data.mip.MindtPy_utils.del_component('feas_pump_mip_obj')
 
     if config.fp_master_norm == 'L1':
         solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
@@ -220,8 +213,8 @@ def feas_pump_loop(solve_data, config):
             "L_infinity_objective_function")
 
     # deactivate the improving_objective_cut
-    if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut') is not None:
-        solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut.deactivate()
+    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
+        'improving_objective_cut')
     if not config.fp_transfercuts:
         for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts:
             c.deactivate()

@@ -169,9 +169,8 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
 
         # add obj increasing constraint for feas_pump
         if feas_pump:
-            if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut') is not None:
-                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
-                    'improving_objective_cut')
+            solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
+                'improving_objective_cut')
             if solve_data.objective_sense == minimize:
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
                                                                                                       <= solve_data.UB - config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
@@ -179,7 +178,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
                                                                                                       >= solve_data.LB + config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
 
-            # Add the linear cut
+    # Add the linear cut
     if config.strategy == 'OA' or feas_pump:
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
