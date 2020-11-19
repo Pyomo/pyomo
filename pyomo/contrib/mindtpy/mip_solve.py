@@ -3,22 +3,13 @@
 from __future__ import division
 
 from pyomo.contrib.gdpopt.util import copy_var_list_values
-from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
+from pyomo.core import Constraint, Expression, Objective, minimize, value
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, time_code
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
-                                             handle_subproblem_optimal, handle_subproblem_infeasible,
-                                             handle_subproblem_other_termination, solve_feasibility_subproblem)
-from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables
-from math import copysign
-from pyomo.environ import *
-from pyomo.core import Constraint, minimize, value
-from pyomo.core.expr import current as EXPR
-from math import fabs
-from pyomo.repn import generate_standard_repn
+from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function
 

@@ -4,11 +4,9 @@ from __future__ import division
 
 from math import copysign
 
-from pyomo.core import Constraint, minimize, value, TransformationFactory, Block, ConstraintList
+from pyomo.core import minimize, value
 from pyomo.core.expr import current as EXPR
-from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, time_code
-from pyomo.core.expr.taylor_series import taylor_series_expansion
-from pyomo.core.expr import differentiate
+from pyomo.contrib.gdpopt.util import identify_variables, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 

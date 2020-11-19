@@ -2,7 +2,7 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
+from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_master,
                                              handle_master_optimal, handle_master_infeasible, handle_master_other_conditions)
@@ -12,7 +12,7 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
 from pyomo.core import minimize, maximize, Objective, Var
 from pyomo.opt.results import ProblemSense
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time, indent, time_code
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import time_code

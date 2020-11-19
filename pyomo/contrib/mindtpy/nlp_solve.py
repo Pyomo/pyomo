@@ -7,13 +7,11 @@ from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_no_good_cuts, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
-from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
-                        minimize, value)
+from pyomo.core import (Constraint, Objective,
+                        TransformationFactory, minimize, value)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverResults, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
-from pyomo.opt.results import ProblemSense
-from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
 
 
 def solve_subproblem(solve_data, config):
