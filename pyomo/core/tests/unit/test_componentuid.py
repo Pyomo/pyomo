@@ -10,15 +10,17 @@
 #
 # Unit Tests for ComponentUID
 #
-from six import StringIO
 import pickle
+import sys
 from collections import namedtuple
 from datetime import datetime
+from six import StringIO, itervalues
 
 import pyutilib.th as unittest
 from pyomo.environ import (
     ConcreteModel, Block, Var, Set, Param, Constraint, Any, ComponentUID,
 )
+from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.common.log import LoggingIntercept
 
 _star = slice(None)
@@ -268,12 +270,40 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID(ref)
         self.assertTrue(cuid.find_component_on(self.m) is ref)
 
-    def test_find_wildcard_not_exists_2(self):
+    def test_find_wildcard(self):
         cuid = ComponentUID('b:1,$2.c.a:*')
-        self.assertIsNone(cuid.find_component_on(self.m))
+        comp = cuid.find_component_on(self.m)
+        self.assertIs(comp.ctype, Param)
+        cList = list(itervalues(comp))
+        self.assertEqual(len(cList), 3)
+        self.assertEqual(cList, list(self.m.b[1,'2'].c.a[:]))
 
-    def test_find_wildcard_not_exists_3(self):
         cuid = ComponentUID('b[*,*]')
+        comp = cuid.find_component_on(self.m)
+        self.assertIs(comp.ctype, Block)
+        cList = list(itervalues(comp))
+        self.assertEqual(len(cList), 9)
+        self.assertEqual(cList, list(self.m.b.values()))
+
+    def test_find_wildcard_partial_exists(self):
+        # proper Reference: to ComponentData
+        cuid = ComponentUID('b[*,*].c.a[**]')
+        comp = cuid.find_component_on(self.m)
+        self.assertIs(comp.ctype, Param)
+        cList = list(itervalues(comp))
+        self.assertEqual(len(cList), 3)
+        self.assertEqual(cList, list(self.m.b[1,'2'].c.a[:]))
+
+        # improper Reference: to IndexedComponent
+        cuid = ComponentUID('b[*,*].c.a')
+        comp = cuid.find_component_on(self.m)
+        self.assertIs(comp.ctype, IndexedComponent)
+        cList = list(itervalues(comp))
+        self.assertEqual(len(cList), 1)
+        self.assertIs(cList[0], self.m.b[1,'2'].c.a)
+
+    def test_find_wildcard_not_exists(self):
+        cuid = ComponentUID('b[*,*].c.x')
         self.assertIsNone(cuid.find_component_on(self.m))
 
     # def test_find_implicit_exists(self):
@@ -836,6 +866,26 @@ class TestComponentUID(unittest.TestCase):
         self.assertIs(tmp.find_component_on(m), m.b[idx].x)
 
         self.assertEqual(len(m.b), 3)
+
+    def test_deprecated_ComponentUID_location(self):
+        import pyomo.core.base.component as comp
+        self.assertNotIn('ComponentUID', dir(comp))
+
+        warning = "DEPRECATED: the 'ComponentUID' class has been moved to " \
+                  "'pyomo.core.base.componentuid.ComponentUID'"
+        OUT = StringIO()
+        with LoggingIntercept(OUT, 'pyomo.core'):
+            from pyomo.core.base.component import ComponentUID \
+                as old_ComponentUID
+        self.assertIn(warning, OUT.getvalue().replace('\n', ' '))
+
+        self.assertIs(old_ComponentUID, ComponentUID)
+        self.assertIs(old_ComponentUID, ComponentUID)
+
+        OUT = StringIO()
+        with LoggingIntercept(OUT, 'pyomo.core'):
+            self.assertIs(comp.ComponentUID, ComponentUID)
+        self.assertEqual("", OUT.getvalue())
 
 if __name__ == "__main__":
     unittest.main()

@@ -19,6 +19,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
 from pyomo.common.deprecation import deprecated
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.reference import Reference
 
 class _PickleEllipsis(object):
     "A work around for the non-picklability of Ellipsis in Python 2"
@@ -441,11 +442,18 @@ class ComponentUID(object):
         Return the (unique) component in the block.  If the CUID contains
         a wildcard in the last component, then returns that component.  If
         there are wildcards elsewhere (or the last component was a partial
-        slice), then returns None.  See list_components below.
+        slice), then returns a reference.  See also list_components below.
         """
         obj = self._resolve_cuid(block)
         if isinstance(obj, IndexedComponent_slice):
-            return None
+            # Suppress slice iteration exceptions
+            obj.key_errors_generate_exceptions = False
+            obj.attribute_errors_generate_exceptions = False
+            obj = Reference(obj)
+            try:
+                next(iter(obj))
+            except StopIteration:
+                obj = None
         return obj
 
     def list_components(self, block):
