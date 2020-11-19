@@ -32,7 +32,8 @@ def _default_msg(user_msg, version, remove_in, func=None):
     return user_msg
 
 
-def deprecation_warning(msg, logger='pyomo.core', version=None, remove_in=None):
+def deprecation_warning(msg, logger='pyomo.core', version=None,
+                        remove_in=None, calling_frame=None):
     """Standardized formatter for deprecation warnings
 
     This is a standardized routine for formatting deprecation warnings
@@ -41,13 +42,21 @@ def deprecation_warning(msg, logger='pyomo.core', version=None, remove_in=None):
     Args:
         msg (str): the deprecation message to format
     """
-    msg = textwrap.fill('DEPRECATED: %s' % (_default_msg(msg, version, remove_in),),
-                        width=70)
-    try:
-        caller = inspect.getframeinfo(inspect.stack()[2][0])
-        msg += "\n(called from %s:%s)" % (caller.filename.strip(), caller.lineno)
-    except:
-        pass
+    msg = textwrap.fill(
+        'DEPRECATED: %s' % (_default_msg(msg, version, remove_in),),
+        width=70)
+    if calling_frame is None:
+        try:
+            g = globals()
+            calling_frame = inspect.currentframe().f_back
+            while calling_frame is not None and calling_frame.f_globals is g:
+                calling_frame = calling_frame.f_back
+        except:
+            pass
+    if calling_frame is not None:
+        info = inspect.getframeinfo(calling_frame)
+        msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
+
     logging.getLogger(logger).warning(msg)
 
 
