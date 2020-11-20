@@ -386,8 +386,21 @@ class CuttingPlane_Transformation(Transformation):
     solver_options : dictionary of options to pass to the solver
     stream_solver : Whether or not to display solver output
     verbose : Enable verbose output from cuttingplanes algorithm
-    minimum_improvement_threshold : Minimum difference in relaxed BigM objective
+    cuts_name : Optional name for the IndexedConstraint containing the projected
+                cuts (must be a unique name with respect to the instance)
+    minimum_improvement_threshold : Stopping criterion based on improvement in
+                                    Big-M relaxation. This is the minimum 
+                                    difference in relaxed BigM objective
                                     values between consecutive iterations
+    separation_objective_threshold : Stopping criterion based on separation 
+                                     objective. If separation objective is not 
+                                     at least this large, cut generation will 
+                                     terminate.
+    cut_filtering_threshold : Stopping criterion based on effectiveness of the 
+                              generated cut: This is the amount by which 
+                              a cut must be violated at the relaxed bigM 
+                              solution in order to be added to the bigM model
+    max_number_of_cuts : The maximum number of cuts to add to the big-M model
     norm : norm to use in the objective of the separation problem
     tighten_relaxation : callback to modify the GDP model before the hull 
                          relaxation is taken (e.g. could be used to perform 
@@ -396,8 +409,6 @@ class CuttingPlane_Transformation(Transformation):
                   problems
     post_process_cut : callback to perform post-processing on created cuts
     back_off_problem_tolerance : tolerance to use while post-processing
-    cut_filtering_threshold : Amount by which cut is violated at the relaxed bigM
-                              solution in order to be added to the bigM model
     zero_tolerance : Tolerance at which a float will be considered 0 when
                      using Fourier-Motzkin elimination to create cuts.
     do_integer_arithmetic : Whether or not to require Fourier-Motzkin elimination
@@ -451,7 +462,7 @@ class CuttingPlane_Transformation(Transformation):
         generated in the last iteration.  
         """
     ))
-    CONFIG.declare('separation_objective_threhold', ConfigValue(
+    CONFIG.declare('separation_objective_threshold', ConfigValue(
         default=0.01,
         domain=PositiveFloat,
         description="Threshold value used to decide when to stop adding cuts: "
@@ -932,7 +943,7 @@ class CuttingPlane_Transformation(Transformation):
             # so close to zero that the resulting cut is likely to have
             # numerical issues.
             if value(transBlock_rHull.separation_objective) < \
-               self._config.separation_objective_threhold:
+               self._config.separation_objective_threshold:
                 break
 
             cuts = self._config.create_cuts(transBlock_rHull, var_info,
