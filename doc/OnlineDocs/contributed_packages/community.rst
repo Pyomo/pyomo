@@ -341,7 +341,7 @@ We can see an example for the three separate graphs created by these three funct
 
         Now, we print the edge list and the adjacency list:
         Edge List:
-        >>> for line in nx.generate_edgelist(string_model_graph): print(line)  # doctest: +NORMALIZE_WHITESPACE
+        >>> for line in nx.generate_edgelist(string_model_graph): print(line)  # doctest: +SKIP
         c1 c2 {'weight': 2}
         c1 c3 {'weight': 1}
         c2 c3 {'weight': 1}
