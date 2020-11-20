@@ -33,6 +33,7 @@ from pyutilib.pyro import using_pyro4, TaskProcessingError
 from pyomo.common.errors import ApplicationError
 from pyomo.common import pyomo_command
 from pyomo.opt.base import SolverFactory, ConverterError
+from pyomo.common.collections import Bunch
 
 import six
 
@@ -43,7 +44,7 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
     def process(self, data):
         self._worker_task_return_queue = self._current_task_client
-        data = pyutilib.misc.Bunch(**data)
+        data = Bunch(**data)
 
         if hasattr(data, 'action') and \
            data.action == 'Pyomo_pyro_mip_server_shutdown':

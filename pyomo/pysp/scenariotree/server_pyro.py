@@ -23,8 +23,7 @@ try:
 except:                                           #pragma:nocover
     import pickle
 
-from pyutilib.misc import Bunch
-
+from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import attempt_import, dill, dill_available
 from pyomo.common import pyomo_command
 from pyomo.pysp.util.misc import (parse_command_line,
@@ -357,7 +356,7 @@ def exec_scenariotreeserver(options):
         #NOTE: this should perhaps be command-line driven, so it can
         #      be disabled if desired.
         print("ScenarioTreeServerPyro aborted. Sending shutdown request.")
-        shutdown_pyro_components(host=options.pyro_host,
+        pyu_pyro.shutdown_pyro_components(host=options.pyro_host,
                                  port=options.pyro_port,
                                  num_retries=0)
         raise

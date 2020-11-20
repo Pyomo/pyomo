@@ -16,7 +16,7 @@ import time
 import logging
 
 from pyomo.common.errors import ApplicationError
-from pyutilib.misc import Bunch
+from pyomo.common.collections import Bunch
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 

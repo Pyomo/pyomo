@@ -19,9 +19,10 @@ from os.path import abspath, dirname
 from pyutilib.pyro import using_pyro4
 import pyutilib.th as unittest
 import pyutilib.services
-from pyutilib.misc import Options
+from pyomo.common.collections import Options
 import pyomo.opt
-from pyomo.environ import ConcreteModel, RangeSet, Var, Objective, Constraint, sum_product
+from pyomo.environ import (ConcreteModel, RangeSet, Var,
+                           Objective, Constraint, sum_product)
 import pyomo.scripting.pyro_mip_server
 
 

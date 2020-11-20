@@ -22,9 +22,10 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyutilib.misc import Container, PauseGC
+from pyutilib.misc import PauseGC
 
 from pyomo.common import timing, PyomoAPIFactory
+from pyomo.common.collections import Container
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.plugin import ExtensionPoint
@@ -832,7 +833,7 @@ from solvers are immediately loaded into the original model instance.""")
                     else:
                         assert isinstance(component, Component)
                         clen = 1
-                    print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
+                    print("    %%6.%df seconds required to construct component=%s; %d indices total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
                     tmp_clone_counter = expr_common.clone_counter

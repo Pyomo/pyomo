@@ -12,7 +12,7 @@ import json
 import sys
 import argparse
 
-from pyutilib.misc import Options
+from pyomo.common.collections import Options
 from pyomo.opt import ProblemConfigFactory, guess_format
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 

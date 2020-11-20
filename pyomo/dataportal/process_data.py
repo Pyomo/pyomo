@@ -13,7 +13,7 @@ import re
 import copy
 import logging
 
-from pyutilib.misc import  Options
+from pyomo.common.collections import  Options
 from pyomo.common.errors import ApplicationError
 from pyutilib.misc import flatten
 
