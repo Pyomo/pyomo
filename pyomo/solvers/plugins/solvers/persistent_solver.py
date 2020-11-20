@@ -18,8 +18,8 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
 
-from pyutilib.common import ApplicationError
-from pyutilib.misc import Options
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Options
 
 import time
 import logging

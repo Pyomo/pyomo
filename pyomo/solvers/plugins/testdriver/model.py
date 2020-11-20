@@ -18,6 +18,7 @@ import pyutilib.autotest
 import pyomo.common
 
 import pyomo.common.plugin
+from pyomo.common.errors import ApplicationError
 import pyomo.opt
 
 old_tempdir = None
@@ -34,7 +35,7 @@ class PyomoTestDriver(pyomo.common.plugin.Plugin):
         try:
             cls.pico_convert =  pyomo.common.Executable("pico_convert")
             cls.pico_convert_available= cls.pico_convert.available()
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             cls.pico_convert_available=False
 
     def tearDownClass(self, cls, options):

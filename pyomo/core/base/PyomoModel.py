@@ -22,9 +22,10 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyutilib.misc import Container, PauseGC
+from pyutilib.misc import PauseGC
 
 from pyomo.common import timing, PyomoAPIFactory
+from pyomo.common.collections import Container
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.plugin import ExtensionPoint
@@ -282,7 +283,7 @@ class ModelSolutions(object):
                 ignore_invalid_labels=ignore_invalid_labels,
                 ignore_fixed_vars=ignore_fixed_vars)
 
-    def store_to(self, results, cuid=False):
+    def store_to(self, results, cuid=False, skip_stale_vars=False):
         """
         Return a Solution() object that is populated with the values in the model.
         """
@@ -313,7 +314,7 @@ class ModelSolutions(object):
                 soln.objective[ sm.getSymbol(obj, labeler) ] = vals
             entry = soln_._entry['variable']
             for obj in instance.component_data_objects(Var, active=True):
-                if obj.stale:
+                if obj.stale and skip_stale_vars:
                     continue
                 vals = entry.get(id(obj), None)
                 if vals is None:
@@ -703,7 +704,7 @@ arguments (which have been ignored):"""
         # If someone passed a rule for creating the instance, fire the
         # rule before constructing the components.
         if instance._rule is not None:
-            instance._rule(instance)
+            instance._rule(instance, next(iter(self.index_set())))
 
         if namespaces:
             _namespaces = list(namespaces)
@@ -832,7 +833,7 @@ from solvers are immediately loaded into the original model instance.""")
                     else:
                         assert isinstance(component, Component)
                         clen = 1
-                    print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
+                    print("    %%6.%df seconds required to construct component=%s; %d indices total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
                     tmp_clone_counter = expr_common.clone_counter

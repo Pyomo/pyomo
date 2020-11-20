@@ -13,8 +13,7 @@ __all__ = ['pyomo2lp', 'pyomo2nl', 'pyomo2dakota']
 import os
 import sys
 
-from pyutilib.misc import Options, Container
-
+from pyomo.common.collections import Options, Container
 from pyomo.opt import ProblemFormat
 from pyomo.core.base import (Objective,
                              Var,

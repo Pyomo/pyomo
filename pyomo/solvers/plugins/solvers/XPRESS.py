@@ -14,8 +14,9 @@ import re
 import logging
 
 from pyomo.common import Executable
-from pyutilib.common import ApplicationError
-from pyutilib.misc import Options, Bunch, yaml_fix
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Options, Bunch
+from pyutilib.misc import yaml_fix
 from pyutilib.services import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver

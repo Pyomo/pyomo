@@ -18,10 +18,11 @@ import sys
 import time
 import logging
 
-from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
+from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.common import Factory
-from pyutilib.common import ApplicationError
-from pyutilib.misc import Options, quote_split
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Options
+from pyutilib.misc import quote_split
 
 from pyomo.opt.base.problem import ProblemConfigFactory
 from pyomo.opt.base.convert import convert_problem

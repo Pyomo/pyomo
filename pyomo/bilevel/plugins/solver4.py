@@ -9,9 +9,9 @@
 #  ___________________________________________________________________________
 
 import time
-import pyutilib.misc
 import pyomo.opt
 from pyomo.core import TransformationFactory, Var, Set
+from pyomo.common.collections import Bunch
 
 
 @pyomo.opt.SolverFactory.register('bilevel_bqp',
@@ -99,7 +99,7 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
         #
         # Return the sub-solver return condition value and log
         #
-        return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None),
+        return Bunch(rc=getattr(opt,'_rc', None),
                                    log=getattr(opt,'_log',None))
 
     def _postsolve(self):

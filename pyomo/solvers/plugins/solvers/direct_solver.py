@@ -16,8 +16,8 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.suffix import import_suffix_generator
-from pyutilib.common import ApplicationError
-from pyutilib.misc import Options
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Options
 
 logger = logging.getLogger('pyomo.solvers')
 
