@@ -43,9 +43,11 @@ class TestPyomoUnittest(unittest.TestCase):
         with self.assertRaisesRegex(self.failureException, '1 !~= 0.999'):
             self.assertStructuredAlmostEqual(a, b, places=6)
 
-        self.assertStructuredAlmostEqual(10, 10.01, reltol=1e-3)
         with self.assertRaisesRegex(self.failureException, '10 !~= 10.01'):
             self.assertStructuredAlmostEqual(10, 10.01, abstol=1e-3)
+        self.assertStructuredAlmostEqual(10, 10.01, reltol=1e-3)
+        with self.assertRaisesRegex(self.failureException, '10 !~= 10.01'):
+            self.assertStructuredAlmostEqual(10, 10.01, delta=1e-3)
 
     def test_assertStructuredAlmostEqual_errorChecking(self):
         with self.assertRaisesRegex(
