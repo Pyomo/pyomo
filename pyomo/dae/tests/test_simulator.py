@@ -13,7 +13,7 @@ import pyutilib.th as unittest
 
 from pyomo.core.expr import current as EXPR
 from pyomo.environ import (
-    ConcreteModel, RangeSet, Param, Var, Set, value, Constraint, 
+    ConcreteModel, Param, Var, Set, Constraint, 
     sin, log, sqrt, TransformationFactory)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error

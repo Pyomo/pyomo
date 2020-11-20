@@ -13,13 +13,10 @@ import os
 from os.path import join, dirname, abspath
 import time
 import subprocess
-import difflib
-import filecmp
 import shutil
 import sys
 
 from pyutilib.pyro import using_pyro3, using_pyro4
-import pyutilib.services
 import pyutilib.th as unittest
 
 from pyomo.common.dependencies import networkx_available as have_networkx
@@ -27,10 +24,8 @@ from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
                                   _kill)
-import pyomo.environ
 from pyomo.opt import check_available_solvers
 
-from six import StringIO
 
 have_dot = True
 try:

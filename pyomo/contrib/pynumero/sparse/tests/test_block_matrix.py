@@ -328,7 +328,7 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(r.toarray(), dense_res))
 
         with self.assertRaises(Exception) as context:
-            mm = A_block.__radd__(A_block.toarray())
+            mm = A_block.toarray() + A_block
 
         with self.assertRaises(Exception) as context:
             mm = A_block + A_block.toarray()

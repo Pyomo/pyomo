@@ -108,6 +108,7 @@ information.
 #    * Extend external function interface to support units for the arguments in addition to the function itself
 
 import six
+import sys
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_numeric_types
@@ -1108,7 +1109,7 @@ class UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             return (pyomo_unit, pint_unit)
 
         raise TypeError('An unhandled expression node type: {} was encountered while retrieving the'
-                        ' units of expression'.format(str(node_type), str(node)))
+                ' units of expression {}'.format(str(type(node)), str(node)))
 
 
 class PyomoUnitsContainer(object):

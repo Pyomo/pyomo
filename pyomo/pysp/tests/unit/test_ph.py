@@ -15,7 +15,6 @@
 import os
 import sys
 import subprocess
-import time
 from os.path import abspath, dirname
 
 try:
@@ -38,7 +37,6 @@ baseline_dir = this_test_file_directory+"baselines"+os.sep
 #
 import pyutilib.misc
 import pyutilib.th as unittest
-import pyutilib.services
 from pyutilib.pyro import using_pyro3, using_pyro4
 
 from pyomo.pysp.util.misc import (_get_test_nameserver,
@@ -49,6 +47,7 @@ import pyomo.opt
 import pyomo.pysp
 import pyomo.pysp.phinit
 import pyomo.pysp.ef_writer_script
+import pyomo.environ
 
 _diff_tolerance = 1e-5
 _diff_tolerance_relaxed = 1e-3

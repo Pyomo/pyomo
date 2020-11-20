@@ -1,22 +1,35 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Initialization functions."""
 from __future__ import division
-
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
+                                       copy_var_list_values, get_main_elapsed_time)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
 from pyomo.contrib.mindtpy.util import calc_jacobians, var_bound_add
 from pyomo.core import (ConstraintList, Objective,
-                        TransformationFactory, maximize, minimize, value, Var)
-from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverFactory
+                        TransformationFactory, maximize, minimize,
+                        value, Var)
+from pyomo.opt import SolverFactory, TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
-                                             handle_subproblem_optimal, handle_subproblem_infeasible,
+                                             handle_subproblem_optimal,
+                                             handle_subproblem_infeasible,
                                              handle_subproblem_other_termination)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
 import math
 from pyomo.contrib.mindtpy.feasibility_pump import feas_pump_loop
+import logging
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def MindtPy_initialize_master(solve_data, config):

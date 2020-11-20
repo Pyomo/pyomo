@@ -10,7 +10,7 @@
 
 # Routines to collect data in a structured format
 
-from pyutilib.misc import Bunch
+from pyomo.common.collections import Bunch
 from pyomo.core.base import  Var, Constraint, Objective, maximize, minimize
 from pyomo.repn.standard_repn import generate_standard_repn
 

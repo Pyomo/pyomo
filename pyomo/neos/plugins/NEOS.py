@@ -10,12 +10,11 @@
 
 import logging
 
-import pyutilib.misc
-import pyutilib.services
+from pyutilib.services import TempfileManager
 
-from pyomo.opt.base import *
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.opt.base import SolverFactory, ProblemFormat, ResultsFormat
+from pyomo.opt.solver import SystemCallSolver
+from pyomo.common.collections import Bunch
 
 logger = logging.getLogger('pyomo.neos')
 
@@ -38,10 +37,10 @@ class NEOSRemoteSolver(SystemCallSolver):
         populated by NEOS.
         """
         if self._log_file is None:
-           self._log_file = pyutilib.services.TempfileManager.\
+           self._log_file = TempfileManager.\
                             create_tempfile(suffix=".neos.log")
         if self._soln_file is None:
-           self._soln_file = pyutilib.services.TempfileManager.\
+           self._soln_file = TempfileManager.\
                              create_tempfile(suffix=".neos.sol")
            self._results_file = self._soln_file
 
@@ -55,7 +54,7 @@ class NEOSRemoteSolver(SystemCallSolver):
             if self._problem_files is not []:
                 logger.info("Solver problem files: %s" % (self._problem_files,))
 
-        return pyutilib.misc.Bunch(cmd="", log_file=self._log_file, env="")
+        return Bunch(cmd="", log_file=self._log_file, env="")
 
     def _default_executable(self):
         return True

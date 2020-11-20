@@ -625,5 +625,4 @@ def main(args=None):
 
 if __name__ == "__main__":
 
-    import sys
     sys.exit(main(args=sys.argv[1:]))

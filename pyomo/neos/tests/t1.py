@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Objective, Constraint, maximize
 
 M = ConcreteModel()
 M.x = Var(bounds=(0,1))

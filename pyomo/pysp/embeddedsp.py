@@ -16,13 +16,11 @@ import math
 
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr import current as EXPR
-import pyomo.core.base.param
 from pyomo.core.base import ComponentUID
-from pyomo.core.base.numvalue import is_fixed, is_constant
 from pyomo.core.base.block import (Block,
                                    SortComponents,
                                    generate_cuid_names)
-from pyomo.core.base.var import Var, _VarData
+from pyomo.core.base.var import Var
 from pyomo.core.base.objective import (Objective,
                                        _ObjectiveData)
 from pyomo.core.base.constraint import (Constraint,
@@ -37,7 +35,6 @@ from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticConstraintBodyAnnotation,
                                     StochasticObjectiveAnnotation,
                                     StochasticVariableBoundsAnnotation)
-from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
 from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
 from pyomo.pysp.scenariotree.manager import \

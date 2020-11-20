@@ -1,6 +1,17 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
+
+import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.core import (Block, Constraint,
                         Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
@@ -11,6 +22,8 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.gdpopt.util import copy_var_list_values
 import numpy as np
+
+logger = logging.getLogger('pyomo.contrib')
 
 
 class MindtPySolveData(object):

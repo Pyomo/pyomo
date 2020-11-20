@@ -11,7 +11,6 @@
 
 __all__ = ["SolverManager_PHPyro"]
 
-import sys
 import time
 import itertools
 from collections import defaultdict
@@ -20,12 +19,10 @@ import pyutilib.pyro
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyutilib.pyro import Pyro as _pyro
 from pyutilib.pyro.util import _connection_problem
-from pyomo.opt.parallel.manager import *
-from pyomo.opt.parallel.async_solver import *
+from pyomo.opt.parallel.manager import AsynchronousActionManager, ActionStatus
+from pyomo.opt.parallel.async_solver import SolverManagerFactory, AsynchronousSolverManager
 
-import six
 from six import advance_iterator, iteritems, itervalues
-from six.moves import xrange
 
 #
 # a specialized asynchronous solver manager for Progressive Hedging.

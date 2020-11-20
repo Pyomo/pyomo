@@ -27,7 +27,6 @@ from pyomo.core.expr.template_expr import (
     substitute_template_with_value,
 )
 
-import six
 
 class TestTemplateExpressions(unittest.TestCase):
     def setUp(self):

@@ -8,13 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.misc import *
-
-from pyomo.common.plugin import *
+from pyomo.common.plugin import implements, SingletonPlugin
 from pyomo.pysp import phextension
 
-from pyomo.core import *
-import pyomo.opt
+from pyomo.core import Suffix
+from pyomo.opt import WriterFactory
 
 import os
 import sys
@@ -50,7 +48,7 @@ class schuripwriter(SingletonPlugin):
         os.system("rm -rf "+output_directory_name)
         os.mkdir(output_directory_name)        
 
-        nl_writer = pyomo.opt.WriterFactory('nl')
+        nl_writer = WriterFactory('nl')
 
         root_node = ph._scenario_tree.findRootNode()
 

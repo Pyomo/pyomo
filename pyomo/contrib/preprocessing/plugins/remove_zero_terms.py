@@ -1,8 +1,16 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # -*- coding: UTF-8 -*-
 """Transformation to remove zero terms from constraints."""
 from __future__ import division
-
-import textwrap
 
 from pyomo.core import quicksum
 from pyomo.core.base.constraint import Constraint
@@ -10,7 +18,6 @@ from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.expr import current as EXPR
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
-from pyutilib.math.util import isclose
 
 
 @TransformationFactory.register(

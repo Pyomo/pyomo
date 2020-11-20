@@ -12,11 +12,10 @@ import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
 import logging
 
-from pyomo.environ import *
-from pyomo.core.base import constraint
+from pyomo.environ import TransformationFactory, Block, Set, Constraint, Var, RealSet, ComponentMap, value, log, ConcreteModel, Any, Suffix, SolverFactory
 from pyomo.repn import generate_standard_repn
 
-from pyomo.gdp import *
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
@@ -25,7 +24,7 @@ linear_solvers = pyomo.opt.check_available_solvers(
     'glpk','cbc','gurobi','cplex')
 
 import random
-from six import iteritems, iterkeys, StringIO
+from six import iteritems, StringIO
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 

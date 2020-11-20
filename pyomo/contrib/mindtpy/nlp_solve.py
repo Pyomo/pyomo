@@ -1,7 +1,16 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Solution of NLP subproblems."""
 from __future__ import division
-
+import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_no_good_cuts, add_affine_cuts)
@@ -12,6 +21,8 @@ from pyomo.core import (Constraint, Objective,
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverResults, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def solve_subproblem(solve_data, config):
@@ -187,9 +198,11 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
         add_affine_cuts(solve_data, config)
-    elif config.strategy == 'PSC':
-        add_psc_cut(solve_data, config)
+    # elif config.strategy == 'PSC':
+    #     # !!THIS SEEMS LIKE A BUG!! - mrmundt #
+    #     add_psc_cut(solve_data, config)
     # elif config.strategy == 'GBD':
+    #     # !!THIS SEEMS LIKE A BUG!! - mrmundt #
     #     add_gbd_cut(solve_data, config)
 
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)

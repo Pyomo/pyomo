@@ -14,16 +14,15 @@ __all__ = ('OptSolver',
            'check_available_solvers')
 
 import re
-import os
 import sys
 import time
 import logging
 
-from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
+from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.common import Factory
-import pyutilib.common
-import pyutilib.misc
-import pyutilib.services
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Options
+from pyutilib.misc import quote_split
 
 from pyomo.opt.base.problem import ProblemConfigFactory
 from pyomo.opt.base.convert import convert_problem
@@ -95,8 +94,7 @@ class UnknownSolver(object):
     def available(self, exception_flag=True):
         """Determine if this optimizer is available."""
         if exception_flag:
-            from pyutilib.common import ApplicationError
-            raise pyutilib.common.ApplicationError("Solver (%s) not available" % str(self.name))
+            raise ApplicationError("Solver (%s) not available" % str(self.name))
         return False
 
     def warm_start_capable(self):
@@ -343,7 +341,7 @@ class OptSolver(object):
         # through the solve command. Everything else is reset inside
         # presolve
         #
-        self.options = pyutilib.misc.Options()
+        self.options = Options()
         if 'options' in kwds and not kwds['options'] is None:
             for key in kwds['options']:
                 setattr(self.options, key, kwds['options'][key])
@@ -392,7 +390,7 @@ class OptSolver(object):
 
         # We define no capabilities for the generic solver; base
         # classes must override this
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Options()
 
     @staticmethod
     def _options_string_to_dict(istr):
@@ -402,7 +400,7 @@ class OptSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        tokens = pyutilib.misc.quote_split('[ ]+',istr)
+        tokens = quote_split('[ ]+',istr)
         for token in tokens:
             index = token.find('=')
             if index == -1:
@@ -560,7 +558,7 @@ class OptSolver(object):
 
         orig_options = self.options
 
-        self.options = pyutilib.misc.Options()
+        self.options = Options()
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
         self.options.update(
@@ -596,7 +594,7 @@ class OptSolver(object):
                         "See the solver log above for diagnostic information." )
                 elif hasattr(_status, 'log') and _status.log:
                     logger.error("Solver log:\n" + str(_status.log))
-                raise pyutilib.common.ApplicationError(
+                raise ApplicationError(
                     "Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
             if self._report_timing:
@@ -787,7 +785,7 @@ class OptSolver(object):
         a Pyomo model instance object.
         """
         if not self._allow_callbacks:
-            raise pyutilib.common.ApplicationError(
+            raise ApplicationError(
                 "Callbacks disabled for solver %s" % self.name)
         if callback_fn is None:
             if name in self._callback:

@@ -1,4 +1,15 @@
 # -*- coding: utf-8 -*-
+
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Implementation of the MindtPy solver.
 
 The MindtPy (MINLP Decomposition Toolkit) solver applies a variety of
@@ -30,7 +41,7 @@ from pyomo.contrib.mindtpy.util import MindtPySolveData, model_is_valid
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Set, Suffix, Var, VarList, TransformationFactory, Objective)
 from pyomo.opt import SolverFactory, SolverResults
-from pyutilib.misc import Container
+from pyomo.common.collections import Container
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 

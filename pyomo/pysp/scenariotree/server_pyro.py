@@ -13,11 +13,8 @@ __all__ = ("ScenarioTreeServerPyro",
 
 import os
 import six
-from six import iteritems
 import sys
 import socket
-import copy
-import argparse
 import logging
 import traceback
 import base64
@@ -26,26 +23,17 @@ try:
 except:                                           #pragma:nocover
     import pickle
 
-import pyutilib.misc
-from pyutilib.misc import PauseGC
-
+from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import attempt_import, dill, dill_available
 from pyomo.common import pyomo_command
-from pyomo.opt import (SolverFactory,
-                       TerminationCondition,
-                       SolutionStatus)
-
-from pyomo.opt.parallel.manager import ActionManagerError
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command,
                                   load_external_module)
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_declare_common_option,
                                     safe_register_common_option,
                                     safe_register_unique_option,
                                     _domain_tuple_of_str)
-from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.scenariotree.tree_structure import \
     ScenarioTree
 from pyomo.pysp.scenariotree.instance_factory import \
@@ -158,7 +146,7 @@ class ScenarioTreeServerPyro(pyu_pyro.TaskWorker):
                 traceback.format_exc()))
 
     def _process(self, data):
-        data = pyutilib.misc.Bunch(**data)
+        data = Bunch(**data)
         result = None
         if not data.action.startswith('ScenarioTreeServerPyro_'):
             #with PauseGC() as pgc:
@@ -368,7 +356,7 @@ def exec_scenariotreeserver(options):
         #NOTE: this should perhaps be command-line driven, so it can
         #      be disabled if desired.
         print("ScenarioTreeServerPyro aborted. Sending shutdown request.")
-        shutdown_pyro_components(host=options.pyro_host,
+        pyu_pyro.shutdown_pyro_components(host=options.pyro_host,
                                  port=options.pyro_port,
                                  num_retries=0)
         raise

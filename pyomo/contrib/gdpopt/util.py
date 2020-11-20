@@ -7,10 +7,9 @@ from contextlib import contextmanager
 from math import fabs
 
 import six
-from pyutilib.misc import Container
 
 from pyomo.common import deprecated
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, Container
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick

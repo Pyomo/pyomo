@@ -1,7 +1,16 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Iteration loop for MindtPy."""
 from __future__ import division
-
+import logging
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_master,
@@ -9,13 +18,14 @@ from pyomo.contrib.mindtpy.mip_solve import (solve_master,
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
                                              handle_subproblem_optimal, handle_subproblem_infeasible,
                                              handle_subproblem_other_termination)
-from pyomo.core import minimize, maximize, Objective, Var
-from pyomo.opt.results import ProblemSense
+from pyomo.core import minimize, maximize, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import time_code
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def MindtPy_iteration_loop(solve_data, config):

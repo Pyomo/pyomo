@@ -15,21 +15,15 @@ from __future__ import division, print_function, absolute_import
 
 __author__ = "John Eslick"
 
-import time
 import os
-import warnings
 import logging
-import threading
-import datetime
-import json
-import sys
 try:
     from IPython import get_ipython
 except ImportError:
     def get_ipython():
         raise AttributeError("IPython not available")
 import pyomo.contrib.viewer.report as rpt
-import pyomo.environ as pe
+import pyomo.environ as pyo
 
 _log = logging.getLogger(__name__)
 
@@ -70,7 +64,7 @@ def get_mainwindow(model=None, show=True, testing=False):
             model.  If no model is provided a new ConcreteModel is created
     """
     if model is None:
-        model = pe.ConcreteModel(name="Default")
+        model = pyo.ConcreteModel(name="Default")
     ui = MainWindow(model=model, testing=testing)
     try:
         get_ipython().events.register('post_execute', ui.refresh_on_execute)

@@ -29,13 +29,11 @@ __all__ = ['pyomo_callback',
         ]
 
 import logging
-import pyutilib.misc
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import unique_component_name
 from pyomo.common import Factory
 from pyomo.common.plugin import (
-    alias, implements, Interface, Plugin, PluginFactory, CreatePluginFactory,
-    PluginError, ExtensionPoint )
+    implements, Interface, Plugin, CreatePluginFactory, ExtensionPoint )
 from pyomo.common.timing import TransformationTimer
 
 logger = logging.getLogger('pyomo.core')

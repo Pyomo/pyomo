@@ -10,11 +10,10 @@
 
 __all__ = ['test_solver_cases', 'available_solvers']
 
-import os
 import six
 import logging
 
-from pyutilib.misc import Options
+from pyomo.common.collections import Options
 from pyomo.opt import SolverFactory
 from pyomo.opt.base.solvers import UnknownSolver
 
