@@ -37,13 +37,8 @@ class PauseGC(object):
     def __init__(self, pause=True):
         self.reenable_gc = False
         if pause:
-            try:
-                self.reenable_gc = gc.isenabled()
-                gc.disable()
-            except NotImplementedError:
-                # This will only happen if the Python implementation
-                # doesn't support disabling the GC.
-                pass
+            self.reenable_gc = gc.isenabled()
+            gc.disable()
 
     def __enter__(self):
         return self
