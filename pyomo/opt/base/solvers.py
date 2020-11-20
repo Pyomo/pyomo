@@ -116,7 +116,6 @@ class UnknownSolver(object):
         return self.available()
 
     def __getattr__(self, attr):
-        print(attr)
         self._solver_error(attr)
 
     def _solver_error(self, method_name):

@@ -60,6 +60,33 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
     def _warm_start(self):
         MOSEKDirect._warm_start(self)
 
+    def add_vars(self, var_seq):
+        """
+        Add multiple variables to the MOSEK task object in one method call.
+
+        This will keep any existing model components intact.
+
+        Parameters
+        ----------
+        var_seq: tuple/list of Var
+        """
+        self._add_vars(var_seq)
+
+    def add_constraints(self, con_seq):
+        """
+        Add multiple constraints to the MOSEK task object in one method call.
+
+        This will keep any existing model components intact.
+
+        NOTE: If this method is used to add cones, then the cones should be 
+        passed as constraints. Use the add_block method for conic_domains.
+
+        Parameters
+        ----------
+        con_seq: tuple/list of Constraint (scalar Constraint or single _ConstraintData)
+        """
+        self._add_constraints(con_seq)
+
     def remove_var(self, solver_var):
         """
         Remove a single variable from the model as well as the MOSEK task.

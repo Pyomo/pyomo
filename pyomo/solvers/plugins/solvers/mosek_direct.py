@@ -276,27 +276,9 @@ class MOSEKDirect(DirectSolver):
         return self._mosek.boundkey.ra
 
     def _add_var(self, var):
-        """
-        Prepare and pass one variable to MOSEK.
+        self._add_vars((var,))
 
-        This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        var: Var
-        """
-        self.add_vars((var,))
-
-    def add_vars(self, var_seq):
-        """ 
-        Prepare variables and pass them to MOSEK in one method call.
-
-        This will keep any existing model components intact.
-
-        Parameters
-        ----------
-        var_seq: tuple/list of Var
-        """
+    def _add_vars(self, var_seq):
         if not var_seq:
             return
         var_num = self._solver_model.getnumvar()
@@ -320,33 +302,9 @@ class MOSEKDirect(DirectSolver):
         self._referenced_variables.update(zip(var_seq, [0]*len(var_seq)))
 
     def _add_constraint(self, con):
-        """
-        Prepare and pass one constraint to MOSEK.
+        self._add_constraints((con,))
 
-        This will keep any existing model components intact.
-
-        If this method is used to add a cone, then the cone should be 
-        passed as a constraint. Use the add_block method for conic_domains.
-
-        Parameters
-        ----------
-        con: Constraint (scalar Constraint or single _ConstraintData)
-        """
-        self.add_constraints((con,))
-
-    def add_constraints(self, con_seq):
-        """
-        Prepare constraints and pass them to MOSEK in one method call.
-
-        This will keep any existing model components intact.
-
-        If this method is used to add cones, then the cones should be 
-        passed as constraints. Use the add_block method for conic_domains.
-
-        Parameters
-        ----------
-        con_seq: tuple/list of Constraint (scalar Constraint or single _ConstraintData)
-        """
+    def _add_constraints(self, con_seq):
         if not con_seq:
             return
         active_seq = tuple(filter(operator.attrgetter('active'), con_seq))
@@ -462,7 +420,7 @@ class MOSEKDirect(DirectSolver):
 
     def _add_block(self, block):
         """
-        Overrides the _add_block method to utilize add_vars/add_constraints.
+        Overrides the _add_block method to utilize _add_vars/_add_constraints.
 
         This will keep any existing model components intact.
 
@@ -477,7 +435,7 @@ class MOSEKDirect(DirectSolver):
             ctype=pyomo.core.base.var.Var,
             descend_into=True, active=True,
             sort=True))
-        self.add_vars(var_seq)
+        self._add_vars(var_seq)
         for sub_block in block.block_data_objects(descend_into=True,
                                                   active=True):
             con_list = []
@@ -491,7 +449,7 @@ class MOSEKDirect(DirectSolver):
                     assert not con.equality
                     continue  # non-binding, so skip
                 con_list.append(con)
-            self.add_constraints(con_list)
+            self._add_constraints(con_list)
 
             for con in sub_block.component_data_objects(
                     ctype=pyomo.core.base.sos.SOSConstraint,
