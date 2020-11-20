@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.gc_manager import PauseGC
+import gc
 
 import pyutilib.th as unittest
 
