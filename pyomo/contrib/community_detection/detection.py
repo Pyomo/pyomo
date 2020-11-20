@@ -29,7 +29,6 @@ community_louvain, community_louvain_available = attempt_import(
 
 # Import matplotlib
 plt = matplotlib.pyplot
-cm = matplotlib.cm
 
 
 def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
@@ -436,7 +435,7 @@ class CommunityMap(object):
                 pos = nx.spring_layout(model_graph)
 
         # Define color_map
-        color_map = cm.get_cmap('viridis', len(numbered_community_map))
+        color_map = plt.cm.get_cmap('viridis', len(numbered_community_map))
 
         # Create the figure and draw the graph
         fig = plt.figure()
@@ -466,9 +465,7 @@ class CommunityMap(object):
             plt.show()
         else:
             plt.savefig(filename)
-
-        # Close the figure
-        plt.close()
+            plt.close()
 
         # Return the figure and pos, the position dictionary used for the graph layout
         return fig, pos
