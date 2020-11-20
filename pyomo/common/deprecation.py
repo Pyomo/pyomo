@@ -178,7 +178,7 @@ class _ModuleGetattrBackport_35(types.ModuleType):
 def relocated_module_attribute(local, target, version, remove_in=None):
     """Provide a deprecation path for moved / renamed module attributes
 
-    This runction declares that a local module attribute has been moved
+    This function declares that a local module attribute has been moved
     to another location.  For Python 3.7+, it leverages a
     module.__getattr__ method to manage the deferred import of the
     object from the new location (on request), as well as emitting the
