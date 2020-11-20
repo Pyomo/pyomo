@@ -304,7 +304,7 @@ def generate_lag_objective_function(model, setpoint_model, config, discrete_only
     temp_model.MindtPy_utils.objective_list[0].activate()
     temp_model.MindtPy_utils.deactivate()
     TransformationFactory('core.relax_integer_vars').apply_to(temp_model)
-    # TODO: PyNumero does not support discrete variables
+    # Note: PyNumero does not support discrete variables
     # So PyomoNLP should operate on setpoint_model
 
     # Implementation 1
