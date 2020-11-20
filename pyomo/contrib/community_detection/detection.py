@@ -307,7 +307,7 @@ class CommunityMap(object):
     def items(self):
         return self.community_map.items()
 
-    def visualize_model_graph(self, type_of_graph='constraint', pos=None):
+    def visualize_model_graph(self, type_of_graph='constraint', filename=None, pos=None):
         """
         This function draws a graph of the communities for a Pyomo model.
 
@@ -322,6 +322,8 @@ class CommunityMap(object):
             'constraint' draws a graph with constraint nodes,
             'variable' draws a graph with variable nodes,
             'bipartite' draws a bipartite graph (with both constraint and variable nodes)
+        filename: str, optional
+            a string that specifies a path for the model graph illustration to be saved
         pos: dict, optional
             a dictionary that maps node keys to their positions on the illustration
 
@@ -339,6 +341,9 @@ class CommunityMap(object):
         assert type_of_graph in ('bipartite', 'constraint', 'variable'), \
             "Invalid graph type specified: 'type_of_graph=%s' - Valid values: " \
             "'bipartite', 'constraint', 'variable'" % type_of_graph
+
+        assert isinstance(filename, (type(None), str)), "Invalid value for filename: 'filename=%s' - filename " \
+                                                        "must be a string" % filename
 
         # No assert statement for pos; the NetworkX function can handle issues with the pos argument
 
@@ -456,6 +461,14 @@ class CommunityMap(object):
         # Make the subtitle
         subtitle_font_size = 11
         plt.title(subtitle_naming_dict[type_of_graph], fontsize=subtitle_font_size)
+
+        if filename is None:
+            plt.show()
+        else:
+            plt.savefig(filename)
+
+        # Close the figure
+        plt.close()
 
         # Return the figure and pos, the position dictionary used for the graph layout
         return fig, pos
