@@ -93,7 +93,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
                  nbcols,
                  rank_ownership,
                  mpi_comm,
-                 assert_correct_owners=True):
+                 assert_correct_owners=False):
 
         shape = (nbrows, nbcols)
         self._block_matrix = BlockMatrix(nbrows, nbcols)
@@ -555,7 +555,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         m, n = self.bshape
-        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
+        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw, assert_correct_owners=False)
         result._block_matrix = self._block_matrix.copy()
         return result
 
@@ -1148,7 +1148,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # create vector
         bv = MPIBlockVector(bm,
                             col_ownership,
-                            self._mpiw)
+                            self._mpiw,
+                            assert_correct_owners=False)
 
         # compute offset columns
         offset = 0
@@ -1198,7 +1199,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # create vector
         bv = MPIBlockVector(bn,
                             row_ownership,
-                            self._mpiw)
+                            self._mpiw,
+                            assert_correct_owners=False)
         # compute offset columns
         offset = 0
         if brow > 0:
@@ -1220,7 +1222,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return bv
 
     @staticmethod
-    def fromBlockMatrix(block_matrix, rank_ownership, mpi_comm):
+    def fromBlockMatrix(block_matrix, rank_ownership, mpi_comm, assert_correct_owners=False):
         """
         Creates a parallel MPIBlockMatrix from blockmatrix
 
@@ -1243,7 +1245,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         mat = MPIBlockMatrix(bm,
                              bn,
                              rank_ownership,
-                             mpi_comm)
+                             mpi_comm,
+                             assert_correct_owners=assert_correct_owners)
 
         # populate matrix
         for i in range(bm):

@@ -84,7 +84,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         An MPI communicator. Tyically MPI.COMM_WORLD
     """
 
-    def __new__(cls, nblocks, rank_owner, mpi_comm, assert_correct_owners=True):
+    def __new__(cls, nblocks, rank_owner, mpi_comm, assert_correct_owners=False):
 
         assert isinstance(nblocks, int)
         assert len(rank_owner) == nblocks
@@ -123,7 +123,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
         return obj
 
-    def __init__(self, nblocks, rank_owner, mpi_comm, assert_correct_owners=True):
+    def __init__(self, nblocks, rank_owner, mpi_comm, assert_correct_owners=False):
         # Note: this requires communication but is disabled when assertions
         # are turned off
         if assert_correct_owners:
@@ -556,7 +556,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the indices of the elements that are non-zero.
         """
-        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership, mpi_comm=self.mpi_comm)
+        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership,
+                                mpi_comm=self.mpi_comm, assert_correct_owners=False)
         assert_block_structure(self)
         for i in self._owned_blocks:
             result.set_block(i, self._block_vector.get_block(i).nonzero()[0])
@@ -613,7 +614,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         assert out is None, 'Out keyword not supported'
         assert_block_structure(self)
-        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership, mpi_comm=self.mpi_comm)
+        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership,
+                                mpi_comm=self.mpi_comm, assert_correct_owners=False)
         if isinstance(condition, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -723,7 +725,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         -------
         MPIBlockVector
         """
-        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm)
+        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm, assert_correct_owners=False)
         result._block_vector = self._block_vector.clone(copy=copy)
         result._brow_lengths = self._brow_lengths.copy()
         result._undefined_brows = set(self._undefined_brows)
@@ -808,7 +810,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         elif isinstance(other, BlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
-            return self.dot(other.toMPIBlockVector(self.rank_ownership, self.mpi_comm))
+            return self.dot(other.toMPIBlockVector(self.rank_ownership, self.mpi_comm, assert_correct_owners=False))
         elif isinstance(other, np.ndarray):
             other_bv = self.copy_structure()
             other_bv.copyfrom(other)
