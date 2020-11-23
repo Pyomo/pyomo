@@ -102,19 +102,12 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         assert np.all(obj._rank_owner < comm_size)
 
         # Determine which blocks are owned by this processor
-        obj._owned_blocks = list()
-        obj._unique_owned_blocks = list()
-        obj._owned_mask = np.zeros(nblocks, dtype=bool)
-        for i, owner in enumerate(obj._rank_owner):
-            if owner == rank or owner < 0:
-                obj._owned_blocks.append(i)
-                obj._owned_mask[i] = True
-                if owner == rank:
-                    obj._unique_owned_blocks.append(i)
+        obj._owned_mask = np.bitwise_or(obj._rank_owner == rank, obj._rank_owner < 0)
+        unique_owned_mask = obj._rank_owner == rank
+        obj._unique_owned_blocks = unique_owned_mask.nonzero()[0]
+        obj._owned_blocks = obj._owned_mask.nonzero()[0]
 
         # containers that facilitate looping
-        obj._owned_blocks = np.array(obj._owned_blocks, dtype=np.int)
-        obj._unique_owned_blocks = np.array(obj._unique_owned_blocks, dtype=np.int)
         obj._brow_lengths = np.empty(nblocks, dtype=np.float64)
         obj._brow_lengths.fill(np.nan)
         obj._undefined_brows = set(obj._owned_blocks)
