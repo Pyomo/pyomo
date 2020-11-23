@@ -103,7 +103,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         self._owned_mask = np.bitwise_or(self._rank_owner == rank, self._rank_owner < 0)
         self._unique_owned_mask = self._rank_owner == rank
 
-        assert rank_ownership.ndim == 2, 'rank_ownership must be of size 2'
+        assert self._rank_owner.ndim == 2, 'rank_ownership must be of size 2'
 
         # Note: this requires communication but is disabled when assertions
         # are turned off
