@@ -55,7 +55,7 @@ def solve_conic():
     m.o = pmo.objective(m.k[0].x[0] + m.k[1].x[0] - m.x,
                         sense=pmo.maximize)
 
-    mosek = pmo.SolverFactory("mosek")
+    mosek = pmo.SolverFactory("mosek_direct")
     result = mosek.solve(m)
     assert str(result.solver.termination_condition) == "optimal"
     print("conic solution:")
