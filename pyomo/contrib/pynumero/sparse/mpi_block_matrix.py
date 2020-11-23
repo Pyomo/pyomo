@@ -572,7 +572,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         m, n = self.bshape
-        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
+        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw, assert_correct_owners=False)
         result._block_matrix = self._block_matrix.copy_structure()
         return result
 
@@ -580,7 +580,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
     # Note: this requires communication
     def _assert_correct_owners(self, root=0):
-
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
 
