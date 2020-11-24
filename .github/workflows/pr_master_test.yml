@@ -70,6 +70,14 @@ jobs:
           PACKAGES: mpi4py openmpi
 
         - os: ubuntu-18.04
+          python: 3.8
+          other: /conda
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: conda
+          PACKAGES: mpi4py openmpi
+
+        - os: ubuntu-18.04
           python: 3.9
           other: /slim
           slim: 1
