@@ -66,7 +66,7 @@ class PHPyroWorker(TaskWorker):
         result = None
         if data.action == "release":
 
-            del self._phsolverserver_map[name]
+            del self._phsolverserver_map[data.object_name]
             result = True
 
         elif data.action == "initialize":
