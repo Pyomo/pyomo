@@ -314,6 +314,7 @@ def generate_lag_objective_function(model, setpoint_model, config, discrete_only
     for var in temp_model.MindtPy_utils.variable_list:
         if var.is_integer():
             var.unfix()
+    # objective_list[0] is the original objective function, not in MindtPy_utils block
     temp_model.MindtPy_utils.objective_list[0].activate()
     temp_model.MindtPy_utils.deactivate()
     TransformationFactory('core.relax_integer_vars').apply_to(temp_model)

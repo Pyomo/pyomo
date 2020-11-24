@@ -158,9 +158,10 @@ def init_rNLP(solve_data, config):
         elif not math.isnan(results.problem.upper_bound):
             solve_data.UB = results.problem.upper_bound
             solve_data.UB_progress.append(results.problem.upper_bound)
+        main_objective = MindtPy.objective_list[-1]
         config.logger.info(
             'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
-            % (value(MindtPy.objective_list[-1].expr), solve_data.LB, solve_data.UB))
+            % (value(main_objective.expr), solve_data.LB, solve_data.UB))
         if config.strategy in {'OA', 'GOA', 'feas_pump'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,

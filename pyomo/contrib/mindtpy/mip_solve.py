@@ -417,9 +417,9 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
             MindtPy.MindtPy_penalty_expr = Expression(
                 expr=sign_adjust * config.OA_penalty_factor * sum(
                     v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
-
+        main_objective = MindtPy.objective_list[-1]
         MindtPy.mip_obj = Objective(
-            expr=MindtPy.objective_list[-1].expr +
+            expr=main_objective.expr +
             (MindtPy.MindtPy_penalty_expr if config.add_slack else 0),
             sense=solve_data.objective_sense)
 
@@ -428,11 +428,11 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
             MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
             if solve_data.objective_sense == minimize:
                 MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=MindtPy.objective_list[-1].expr +
+                    expr=main_objective.expr +
                     (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) >= solve_data.LB,
                     doc='Objective function expression should improve on the best found dual bound')
             else:
                 MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
-                    expr=MindtPy.objective_list[-1].expr +
+                    expr=main_objective.expr +
                     (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) <= solve_data.UB,
                     doc='Objective function expression should improve on the best found dual bound')
