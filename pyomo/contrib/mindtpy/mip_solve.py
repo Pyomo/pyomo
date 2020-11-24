@@ -171,15 +171,15 @@ def handle_master_optimal(master_mip, solve_data, config, update_bound=True):
     if update_bound:
         if solve_data.objective_sense == minimize:
             solve_data.LB = max(
-                value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
+                value(MindtPy.mip_obj.expr), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(
-                value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
+                value(MindtPy.mip_obj.expr), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
-            % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
+            % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),
                solve_data.LB, solve_data.UB))
 
 
@@ -219,15 +219,15 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
             config)
         if solve_data.objective_sense == minimize:
             solve_data.LB = max(
-                value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
+                value(MindtPy.mip_obj.expr), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(
-                value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
+                value(MindtPy.mip_obj.expr), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
-            % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
+            % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),
                solve_data.LB, solve_data.UB))
     else:
         raise ValueError(
@@ -298,15 +298,15 @@ def handle_master_max_timelimit(master_mip, solve_data, config):
         config)
     if solve_data.objective_sense == minimize:
         solve_data.LB = max(
-            value(MindtPy.MindtPy_oa_obj.expr), solve_data.LB)
+            value(MindtPy.mip_obj.expr), solve_data.LB)
         solve_data.LB_progress.append(solve_data.LB)
     else:
         solve_data.UB = min(
-            value(MindtPy.MindtPy_oa_obj.expr), solve_data.UB)
+            value(MindtPy.mip_obj.expr), solve_data.UB)
         solve_data.UB_progress.append(solve_data.UB)
     config.logger.info(
         'MIP %s: OBJ: %s  LB: %s  UB: %s'
-        % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr),
+        % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),
            solve_data.LB, solve_data.UB))
 
 
@@ -333,7 +333,7 @@ def handle_master_unbounded(master_mip, solve_data, config):
         'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
         'You can change this bound with the option obj_bound.'.format(config.obj_bound))
     MindtPy.objective_bound = Constraint(
-        expr=(-config.obj_bound, MindtPy.MindtPy_oa_obj.expr, config.obj_bound))
+        expr=(-config.obj_bound, MindtPy.mip_obj.expr, config.obj_bound))
     with SuppressInfeasibleWarning():
         opt = SolverFactory(config.mip_solver)
         if isinstance(opt, PersistentSolver):
@@ -366,7 +366,7 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
     MindtPy.MindtPy_linear_cuts.activate()
 
     sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
-    MindtPy.del_component('MindtPy_oa_obj')
+    MindtPy.del_component('mip_obj')
 
     if feas_pump:
         MindtPy.del_component('feas_pump_mip_obj')
@@ -418,7 +418,7 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
                 expr=sign_adjust * config.OA_penalty_factor * sum(
                     v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
 
-        MindtPy.MindtPy_oa_obj = Objective(
+        MindtPy.mip_obj = Objective(
             expr=MindtPy.objective_list[-1].expr +
             (MindtPy.MindtPy_penalty_expr if config.add_slack else 0),
             sense=solve_data.objective_sense)

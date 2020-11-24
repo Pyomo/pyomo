@@ -333,7 +333,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  Bound: %s  LB: %s  UB: %s'
-            % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr), self.get_best_objective_value(),
+            % (solve_data.mip_iter, value(MindtPy.mip_obj.expr), self.get_best_objective_value(),
                solve_data.LB, solve_data.UB))
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
