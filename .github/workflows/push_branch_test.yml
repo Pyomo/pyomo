@@ -243,6 +243,8 @@ jobs:
             || echo "WARNING: Gurobi is not available"
         pip install --cache-dir cache/pip xpress \
             || echo "WARNING: Xpress Community Edition is not available"
+        pip install --cache-dir cache/pip z3-solver \
+            || echo "WARNING: Z3 Solver is not available"
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
@@ -261,10 +263,12 @@ jobs:
         conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
         # Note: CPLEX 12.9 (the last version in conda that supports
         #    Python 2.7) causes a seg fault in the tests.
-        conda install -q -y -c ibmdecisionoptimization cplex=12.10 \
+        conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
             || echo "WARNING: CPLEX Community Edition is not available"
         conda install -q -y -c fico-xpress xpress \
             || echo "WARNING: Xpress Community Edition is not available"
+        conda install -q -y -c coda-forge pymumps \
+            || echo "WARNING: PyMUMPS is not available"
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
