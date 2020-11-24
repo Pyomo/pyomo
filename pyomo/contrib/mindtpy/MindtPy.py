@@ -127,10 +127,12 @@ class MindtPySolver(object):
             config.mip_solver_tee = True
             config.nlp_solver_tee = True
         if config.add_regularization in {'grad_lag', 'hess_lag'}:
-            config.equality_relaxation = True
+            config.calculate_dual = True
         if config.heuristic_nonconvex:
             config.equality_relaxation = True
             config.add_slack = True
+        if config.equality_relaxation:
+            config.calculate_dual = True
 
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))

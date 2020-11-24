@@ -84,7 +84,7 @@ def model_is_valid(solve_data, config):
                          tee=config.mip_solver_tee, **config.mip_solver_args)
             return False
 
-    if not hasattr(m, 'dual') and config.equality_relaxation:  # Set up dual value reporting
+    if not hasattr(m, 'dual') and config.calculate_dual:  # Set up dual value reporting
         m.dual = Suffix(direction=Suffix.IMPORT)
 
     # TODO if any continuous variables are multiplied with binary ones,

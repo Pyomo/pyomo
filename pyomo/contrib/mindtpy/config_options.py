@@ -159,6 +159,11 @@ def _get_MindtPy_config():
         description="use dual solution from the nlp solver to add OA cuts for equality constraints.",
         domain=bool
     ))
+    CONFIG.declare("calculate_dual", ConfigValue(
+        default=False,
+        description="calculate duals of the NLP subproblem",
+        domain=bool
+    ))
     CONFIG.declare("use_fbbt", ConfigValue(
         default=False,
         description="use fbbt to tighten the feasible region of the problem",

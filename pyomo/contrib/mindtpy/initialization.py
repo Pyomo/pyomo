@@ -55,7 +55,7 @@ def MindtPy_initialize_master(solve_data, config):
         Objective, active=True)).deactivate()
 
     MindtPy = m.MindtPy_utils
-    if config.equality_relaxation:
+    if config.calculate_dual:
         m.dual.deactivate()
 
     if config.init_strategy == 'feas_pump':
@@ -147,7 +147,7 @@ def init_rNLP(solve_data, config):
             config.logger.info(
                 'relaxed NLP is not solved to optimality.')
         dual_values = list(
-            m.dual[c] for c in MindtPy.constraint_list) if config.equality_relaxation else None
+            m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual else None
         # Add OA cut
         # This covers the case when the Lower bound does not exist.
         # TODO: should we use the bound of the rNLP here?
@@ -211,7 +211,7 @@ def init_max_binaries(solve_data, config):
         contains the specific configurations for the algorithm
     """
     m = solve_data.working_model.clone()
-    if config.equality_relaxation:
+    if config.calculate_dual:
         m.dual.deactivate()
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1
