@@ -229,6 +229,8 @@ jobs:
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
         pip install --cache-dir cache/pip cplex \
             || echo "WARNING: CPLEX Community Edition is not available"
+        pip install --cache-dir cache/pip -i https://pypi.gurobi.com gurobipy \
+            || echo "WARNING: Gurobi is not available"
         pip install --cache-dir cache/pip xpress \
             || echo "WARNING: Xpress Community Edition is not available"
         python -c 'import sys; print("PYTHON_EXE=%s" \
