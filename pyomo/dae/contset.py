@@ -244,7 +244,7 @@ class ContinuousSet(SortedSimpleSet):
             raise ValueError("ContinuousSet '%s' must have at least two values"
                              " indicating the range over which a differential "
                              "equation is to be discretized" % self.name)
-        self._fe = sorted(self)
+        self._fe = list(self)
         timer.report()
 
     def find_nearest_index(self, target, tolerance=None):
