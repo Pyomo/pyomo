@@ -105,7 +105,6 @@ We'll first use a model from `Allman et al, 2019`_ :
     >>> from pyomo.contrib.mindtpy.tests.eight_process_problem import EightProcessFlowsheet
     >>> from pyomo.core import ConcreteModel, Var, Constraint
     >>> import networkx as nx
-    >>> import copy
 
     Let's define a model for our use
     >>> def decode_model_1():
