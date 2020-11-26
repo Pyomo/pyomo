@@ -69,7 +69,7 @@ def generate_finite_elements(ds, nfe):
 
 
 def _add_point(ds):
-    sortds = sorted(ds)
+    sortds = list(ds)
     maxstep = sortds[1] - sortds[0]
     maxloc = 0
     for i in range(2, len(sortds)):
@@ -85,7 +85,7 @@ def generate_colloc_points(ds, tau):
     This function adds collocation points between the finite elements
     in the differential set
     """
-    fes = sorted(ds)
+    fes = list(ds)
     for i in range(1, len(fes)):
         h = fes[i] - fes[i - 1]
         for j in range(len(tau)):
@@ -360,7 +360,7 @@ def create_access_function(var):
 def create_partial_expression(scheme, expr, ind, loc):
     """
     This method returns a function which applies a discretization scheme
-    to an expression along a particular indexind set. This is admittedly a
+    to an expression along a particular indexing set. This is admittedly a
     convoluted looking implementation. The idea is that we only apply a
     discretization scheme to one indexing set at a time but we also want
     the function to be expanded over any other indexing sets.
@@ -403,13 +403,13 @@ def add_continuity_equations(block, d, i, loc):
         afinal = s.get_discretization_info()['afinal']
 
         def _fun(i):
-            tmp = sorted(s)
-            idx = tmp.index(i)
+            tmp = list(s)
+            idx = s.ord(i)-1
             low = s.get_lower_element_boundary(i)
             if i != low or idx == 0:
                 raise IndexError("list index out of range")
             low = s.get_lower_element_boundary(tmp[idx - 1])
-            lowidx = tmp.index(low)
+            lowidx = s.ord(low)-1
             return sum(v(tmp[lowidx + j]) * afinal[j] for j in range(ncp + 1))
         return _fun
     expr = create_partial_expression(_cont_exp, create_access_function(svar),
@@ -498,8 +498,8 @@ def _get_idx(l, ds, n, i, k):
     points and is not separated into finite elements and collocation
     points.
     """
-    t = sorted(ds)
-    tmp = t.index(ds._fe[i])
+    t = list(ds)
+    tmp = ds.ord(ds._fe[i])-1
     tik = t[tmp + k]
     if n is None:
         return tik
