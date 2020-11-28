@@ -127,7 +127,7 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
     if regularization_problem:
         solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
         solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
-            'obj_limit')
+            'obj_reg_estimate')
         if config.add_regularization == "level_L1":
             solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
         elif config.add_regularization == "level_L_infinity":
@@ -404,10 +404,10 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
                                                                        config,
                                                                        discrete_only=False)
         if solve_data.objective_sense == minimize:
-            MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
+            MindtPy.MindtPy_linear_cuts.obj_reg_estimate = Constraint(
                 expr=MindtPy.objective_value <= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.LB)
         else:
-            MindtPy.MindtPy_linear_cuts.obj_limit = Constraint(
+            MindtPy.MindtPy_linear_cuts.obj_reg_estimate = Constraint(
                 expr=MindtPy.objective_value >= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.UB)
 
     else:
