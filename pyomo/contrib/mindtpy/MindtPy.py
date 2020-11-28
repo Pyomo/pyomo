@@ -90,6 +90,7 @@ class MindtPySolver(object):
         solve_data.curr_int_sol = []
         solve_data.prev_int_sol = []
         solve_data.should_terminate = False
+        solve_data.integer_list = []
 
         # configuration confirmation
         if config.single_tree:

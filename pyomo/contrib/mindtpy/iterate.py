@@ -300,14 +300,15 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         for var in solve_data.mip.component_data_objects(ctype=Var):
             if var.is_integer():
                 temp.append(int(round(var.value)))
-        solve_data.curr_int_sol = temp
+        solve_data.curr_int_sol = tuple(temp)
 
-        if solve_data.curr_int_sol == solve_data.prev_int_sol:
+        if solve_data.curr_int_sol in set(solve_data.integer_list):
             config.logger.info(
                 'Cycling happens after {} master iterations. '
+                'The same combination is obtained in iteration {} '
                 'This issue happens when the NLP subproblem violates constraint qualification. '
                 'Convergence to optimal solution is not guaranteed.'
-                .format(solve_data.mip_iter))
+                .format(solve_data.mip_iter, solve_data.integer_list.index(solve_data.curr_int_sol)))
             config.logger.info(
                 'Final bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))
@@ -315,7 +316,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
             solve_data.results.solver.termination_condition = tc.feasible
             return True
 
-        solve_data.prev_int_sol = solve_data.curr_int_sol
+        solve_data.integer_list.append(solve_data.curr_int_sol)
 
     # if not algorithm_is_making_progress(solve_data, config):
     #     config.logger.debug(
