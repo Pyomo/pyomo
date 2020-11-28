@@ -322,6 +322,7 @@ def generate_lag_objective_function(model, setpoint_model, config, discrete_only
     # So PyomoNLP should operate on setpoint_model
 
     # Implementation 1
+    # First calculate jacobin and hessian without assigning variable and constraint sequence, then use get_primal_indices to get the indices.
     nlp = PyomoNLP(temp_model)
     obj_grad = nlp.evaluate_grad_objective().reshape(-1, 1)
     jac = nlp.evaluate_jacobian().toarray()
@@ -332,29 +333,33 @@ def generate_lag_objective_function(model, setpoint_model, config, discrete_only
                            temp_var in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]))
 
     # Implementation 2
+    # Use extract_submatrix_jacobian and extract_submatrix_hessian_lag function to assigning variable and constraint sequence
     # nlp = PyomoNLP(temp_model)
     # obj_grad = nlp.extract_subvector_grad_objective(
     #     temp_model.MindtPy_utils.variable_list[:-1])
     # jac = nlp.extract_submatrix_jacobian(temp_model.MindtPy_utils.variable_list[:-1],
     #                                      temp_model.MindtPy_utils.constraint_list[:-1]).toarray()
-    # hess_lag = nlp.extract_submatrix_hessian_lag(temp_model.MindtPy_utils.variable_list[:-1],
-    #                                              temp_model.MindtPy_utils.variable_list[:-1]).toarray()
     # dual_values = np.array(list(
     #     temp_model.dual[c] for c in temp_model.MindtPy_utils.constraint_list[:-1]))
     # jac_lag = obj_grad + jac.transpose().dot(dual_values)
     # first_order_term = sum(jac_lag[i] * (var - var.value)
     #                        for i, var in enumerate(model.MindtPy_utils.variable_list[:-1]))
-    # second_order_term = 0.5 * sum((var_i - var_i.value) * float(hess_lag[i][j]) * (var_j - var_j.value)
-    #                               for i, var_i in enumerate(model.MindtPy_utils.variable_list[:-1])
-    #                               for j, var_j in enumerate(model.MindtPy_utils.variable_list[:-1]))
 
     if config.add_regularization == "grad_lag":
         return Objective(expr=first_order_term, sense=minimize)
     elif config.add_regularization == "hess_lag":
+        # Implementation 1
         hess_lag = nlp.evaluate_hessian_lag().toarray()
         second_order_term = 0.5 * sum((var_i - var_i.value) * float(hess_lag[nlp.get_primal_indices([temp_var_i])[0]][nlp.get_primal_indices([temp_var_j])[0]]) * (var_j - var_j.value)
                                       for var_i, temp_var_i in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
                                       for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]))
+
+        # Implementation 2
+        # hess_lag = nlp.extract_submatrix_hessian_lag(temp_model.MindtPy_utils.variable_list[:-1],
+        #                                              temp_model.MindtPy_utils.variable_list[:-1]).toarray()
+        # second_order_term = 0.5 * sum((var_i - var_i.value) * float(hess_lag[i][j]) * (var_j - var_j.value)
+        #                               for i, var_i in enumerate(model.MindtPy_utils.variable_list[:-1])
+        #                               for j, var_j in enumerate(model.MindtPy_utils.variable_list[:-1]))
         return Objective(expr=first_order_term + second_order_term, sense=minimize)
 
 
