@@ -360,8 +360,10 @@ def generate_lag_objective_function(model, setpoint_model, config, discrete_only
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
     """
-    This function generates objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
+    This function generates constraint (PF-OA master problem) for minimum Norm1 distance to setpoint_model
+    Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
+    Ref: Paper "A storm of feasibility pumps for nonconvex MINLP" Eq. (16)
 
     Parameters
     ----------
