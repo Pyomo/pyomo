@@ -110,6 +110,7 @@ def solve_subproblem(solve_data, config):
     if config.nlp_solver == 'gams':
         nlp_args['add_options'] = nlp_args.get('add_options', [])
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
+        nlp_args['warmstart'] = True
     with SuppressInfeasibleWarning():
         with time_code(solve_data.timing, 'fixed subproblem'):
             results = nlpopt.solve(
@@ -351,6 +352,7 @@ def solve_feasibility_subproblem(solve_data, config):
             if config.nlp_solver == 'gams':
                 nlp_args['add_options'] = nlp_args.get('add_options', [])
                 nlp_args['add_options'].append('option reslim=%s;' % remaining)
+                nlp_args['warmstart'] = True
             with time_code(solve_data.timing, 'feasibility subproblem'):
                 feas_soln = nlpopt.solve(
                     feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)

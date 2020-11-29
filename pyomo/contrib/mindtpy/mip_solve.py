@@ -93,6 +93,7 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
         mip_args['add_options'] = mip_args.get('add_options', [])
         mip_args['add_options'].append('option optcr=0.001;')
         mip_args['add_options'].append('option reslim=%s;' % remaining)
+        mip_args['warmstart'] = True
     # elif config.mip_solver == 'glpk':
     #     masteropt.options['timelimit'] = remaining
     try:
