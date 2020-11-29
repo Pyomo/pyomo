@@ -242,8 +242,8 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm1 objective function for models with different number of variables"
-    model.MindtPy_utils.del_component('L1_objective_function')
-    obj_blk = model.MindtPy_utils.L1_objective_function = Block()
+    model.MindtPy_utils.del_component('L1_obj')
+    obj_blk = model.MindtPy_utils.L1_obj = Block()
     obj_blk.L1_obj_idx = RangeSet(len(model_vars))
     obj_blk.L1_obj_var = Var(
         obj_blk.L1_obj_idx, domain=Reals, bounds=(0, None))

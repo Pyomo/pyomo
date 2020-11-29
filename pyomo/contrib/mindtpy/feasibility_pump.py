@@ -216,7 +216,7 @@ def feas_pump_loop(solve_data, config):
     solve_data.mip.MindtPy_utils.del_component('feas_pump_mip_obj')
 
     if config.fp_master_norm == 'L1':
-        solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
+        solve_data.mip.MindtPy_utils.del_component("L1_obj")
     elif config.fp_master_norm == 'L_infinity':
         solve_data.mip.MindtPy_utils.del_component(
             "L_infinity_obj")
