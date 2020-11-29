@@ -49,7 +49,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem using feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
@@ -62,7 +62,7 @@ class TestMindtPy(unittest.TestCase):
             model = EightProcessFlowsheet(convex=True)
             print(
                 '\n Solving 8PP problem using feasibility pump with squared Norm2 in mip projection problem')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[2],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5,
@@ -76,7 +76,7 @@ class TestMindtPy(unittest.TestCase):
             model = EightProcessFlowsheet(convex=True)
             print(
                 '\n Solving 8PP problem using feasibility pump with Norm infinity in mip projection problem')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5,
@@ -90,7 +90,7 @@ class TestMindtPy(unittest.TestCase):
             model = EightProcessFlowsheet(convex=True)
             print(
                 '\n Solving 8PP problem using feasibility pump with Norm infinity in mip projection problem')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5,
@@ -104,7 +104,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print('\n Solving 8PP problem using feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
@@ -116,7 +116,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = Feasibility_Pump1()
             print('\n Solving Feasibility_Pump1 with feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
@@ -128,7 +128,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = Feasibility_Pump2()
             print('\n Solving Feasibility_Pump2 with feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-3,
@@ -141,7 +141,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print('\n Solving SimpleMINLP2 using feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=30)
@@ -153,7 +153,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print('\n Solving SimpleMINLP3 using feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=30)
@@ -165,7 +165,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print('\n Solving ProposalModel using feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=30)
@@ -178,7 +178,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print('\n Solving OnlineDocExample using feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=0)
@@ -190,7 +190,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print('\n Solving ProposalModel using feasibility pump')
-            results = opt.solve(model, strategy='feas_pump',
+            results = opt.solve(model, strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=30)
@@ -205,7 +205,7 @@ class TestMindtPy(unittest.TestCase):
             model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem using FP-OA')
             results = opt.solve(model, strategy='OA',
-                                init_strategy='feas_pump',
+                                init_strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
@@ -219,7 +219,7 @@ class TestMindtPy(unittest.TestCase):
             model = SimpleMINLP()
             print('\n Solving 8PP problem using FP-OA')
             results = opt.solve(model, strategy='OA',
-                                init_strategy='feas_pump',
+                                init_strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
@@ -233,7 +233,7 @@ class TestMindtPy(unittest.TestCase):
             model = Feasibility_Pump1()
             print('\n Solving Feasibility_Pump1 with FP-OA')
             results = opt.solve(model, strategy='OA',
-                                init_strategy='feas_pump',
+                                init_strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
@@ -247,7 +247,7 @@ class TestMindtPy(unittest.TestCase):
             model = SimpleMINLP2()
             print('\n Solving SimpleMINLP2 using FP-OA')
             results = opt.solve(model, strategy='OA',
-                                init_strategy='feas_pump',
+                                init_strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=30)
@@ -261,7 +261,7 @@ class TestMindtPy(unittest.TestCase):
             model = SimpleMINLP3()
             print('\n Solving SimpleMINLP3 using FP-OA')
             results = opt.solve(model, strategy='OA',
-                                init_strategy='feas_pump',
+                                init_strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=30)
@@ -276,7 +276,7 @@ class TestMindtPy(unittest.TestCase):
             model = ProposalModel()
             print('\n Solving ProposalModel using FP-OA')
             results = opt.solve(model, strategy='OA',
-                                init_strategy='feas_pump',
+                                init_strategy="FP",
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 iteration_limit=30)

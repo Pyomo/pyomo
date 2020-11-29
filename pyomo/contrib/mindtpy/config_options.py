@@ -29,7 +29,7 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("strategy", ConfigValue(
         default="OA",
-        domain=In(["OA", "GBD", "ECP", "PSC", "GOA", "feas_pump"]),
+        domain=In(["OA", "GBD", "ECP", "PSC", "GOA", "FP"]),
         description="Decomposition strategy",
         doc="MINLP Decomposition strategy to be applied to the method. "
             "Currently available Outer Approximation (OA), Extended Cutting "
@@ -46,7 +46,7 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare("init_strategy", ConfigValue(
         default=None,
-        domain=In(["rNLP", "initial_binary", "max_binary", "feas_pump"]),
+        domain=In(["rNLP", "initial_binary", "max_binary", "FP"]),
         description="Initialization strategy",
         doc="Initialization strategy used by any method. Currently the "
             "continuous relaxation of the MINLP (rNLP), solve a maximal "
@@ -188,7 +188,7 @@ def _get_MindtPy_config():
 
     _add_subsolver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
-    _add_feas_pump_configs(CONFIG)
+    _add_fp_configs(CONFIG)
     _add_bound_configs(CONFIG)
     _add_loa_configs(CONFIG)
     return CONFIG
@@ -302,7 +302,7 @@ def _add_bound_configs(CONFIG):
     ))
 
 
-def _add_feas_pump_configs(CONFIG):
+def _add_fp_configs(CONFIG):
     CONFIG.declare("fp_cutoffdecr", ConfigValue(
         default=1E-1,
         domain=PositiveFloat,
@@ -388,10 +388,10 @@ def check_config(config):
         config.integer_to_binary = True
         config.equality_relaxation = False
         config.use_fbbt = True
-    elif config.strategy == "feas_pump":  # feasibility pump alone
-        config.init_strategy = "feas_pump"
+    elif config.strategy == "FP":  # feasibility pump alone
+        config.init_strategy = "FP"
         config.iteration_limit = 0
-    if config.init_strategy == "feas_pump":
+    if config.init_strategy == "FP":
         # TODO: Choose one from the following two
         config.add_no_good_cuts = True
         config.use_tabu_list = False

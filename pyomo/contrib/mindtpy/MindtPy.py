@@ -117,7 +117,7 @@ class MindtPySolver(object):
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
             process_objective(solve_data, config,
-                              move_linear_objective=(config.init_strategy == 'feas_pump'
+                              move_linear_objective=(config.init_strategy == "FP"
                                                      or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp)
 
@@ -167,7 +167,7 @@ class MindtPySolver(object):
             solve_data.nlp_iter = 0
             solve_data.mip_iter = 0
             solve_data.mip_subiter = 0
-            if config.init_strategy == "feas_pump":
+            if config.init_strategy == "FP":
                 solve_data.fp_iter = 1
 
             # set up bounds
