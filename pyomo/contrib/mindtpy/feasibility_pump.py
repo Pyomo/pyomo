@@ -165,7 +165,7 @@ def feas_pump_loop(solve_data, config):
         if feas_master_results.solver.termination_condition is tc.optimal:
             config.logger.info(
                 'FP-MIP %s: Distance-OBJ: %s'
-                % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.feas_pump_mip_obj)))
+                % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.fp_mip_obj)))
         elif feas_master_results.solver.termination_condition is tc.maxTimeLimit:
             config.logger.warning('FP-MIP reaches max TimeLimit')
             solve_data.results.solver.termination_condition = tc.maxTimeLimit
@@ -213,7 +213,7 @@ def feas_pump_loop(solve_data, config):
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
-    solve_data.mip.MindtPy_utils.del_component('feas_pump_mip_obj')
+    solve_data.mip.MindtPy_utils.del_component('fp_mip_obj')
 
     if config.fp_master_norm == 'L1':
         solve_data.mip.MindtPy_utils.del_component("L1_obj")
@@ -222,7 +222,7 @@ def feas_pump_loop(solve_data, config):
             "L_infinity_obj")
 
     # deactivate the improving_objective_cut
-    # solve_data.mip.MindtPy_utils.del_component('feas_pump_mip_obj')
+    # solve_data.mip.MindtPy_utils.del_component('fp_mip_obj')
     # solve_data.mip.MindtPy_utils.objective.activate()
     solve_data.mip.MindtPy_utils.cuts.del_component(
         'improving_objective_cut')

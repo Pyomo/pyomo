@@ -386,19 +386,19 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
     MindtPy.del_component('mip_obj')
 
     if feas_pump:
-        MindtPy.del_component('feas_pump_mip_obj')
+        MindtPy.del_component('fp_mip_obj')
         if config.fp_master_norm == 'L1':
-            MindtPy.feas_pump_mip_obj = generate_norm1_objective_function(
+            MindtPy.fp_mip_obj = generate_norm1_objective_function(
                 solve_data.mip,
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
         elif config.fp_master_norm == 'L2':
-            MindtPy.feas_pump_mip_obj = generate_norm2sq_objective_function(
+            MindtPy.fp_mip_obj = generate_norm2sq_objective_function(
                 solve_data.mip,
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
         elif config.fp_master_norm == 'L_infinity':
-            MindtPy.feas_pump_mip_obj = generate_norm_inf_objective_function(
+            MindtPy.fp_mip_obj = generate_norm_inf_objective_function(
                 solve_data.mip,
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
