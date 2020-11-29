@@ -28,7 +28,7 @@ tabu_list, tabu_list_available = attempt_import(
     'pyomo.contrib.mindtpy.tabu_list')
 
 
-def solve_master(solve_data, config, feas_pump=False, regularization_problem=False):
+def solve_master(solve_data, config, fp=False, regularization_problem=False):
     """
     This function solves the MIP master problem
 
@@ -45,12 +45,12 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
         the MIP stored in solve_data
     master_mip_results: Pyomo results object
         result from solving the master MIP
-    feas_pump: Bool
+    fp: Bool
         generate the feasibility pump projection master problem
     regularization_problem: Bool
         generate the LOA projection master problem
     """
-    if feas_pump:
+    if fp:
         config.logger.info('FP-MIP %s: Solve master problem.' %
                            (solve_data.fp_iter,))
     elif regularization_problem:
@@ -62,7 +62,7 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
                            (solve_data.mip_iter,))
 
     # setup master problem
-    setup_master(solve_data, config, feas_pump, regularization_problem)
+    setup_master(solve_data, config, fp, regularization_problem)
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
     if config.nlp_solver == 'ipopt':
@@ -359,7 +359,7 @@ def handle_master_unbounded(master_mip, solve_data, config):
             master_mip, tee=config.mip_solver_tee, **config.mip_solver_args)
 
 
-def setup_master(solve_data, config, feas_pump, regularization_problem):
+def setup_master(solve_data, config, fp, regularization_problem):
     """
     Set up master problem/master projection problem for OA, ECP, Feasibility Pump and LOA methods.
 
@@ -369,7 +369,7 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm
-    feas_pump: Bool
+    fp: Bool
         generate the feasibility pump projection master problem
     regularization_problem: Bool
         generate the LOA projection master problem
@@ -385,7 +385,7 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
     sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
     MindtPy.del_component('mip_obj')
 
-    if feas_pump:
+    if fp:
         MindtPy.del_component('fp_mip_obj')
         if config.fp_master_norm == 'L1':
             MindtPy.fp_mip_obj = generate_norm1_objective_function(

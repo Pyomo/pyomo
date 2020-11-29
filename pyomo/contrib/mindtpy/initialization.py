@@ -25,7 +25,7 @@ from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
                                              handle_subproblem_infeasible,
                                              handle_subproblem_other_termination)
 import math
-from pyomo.contrib.mindtpy.feasibility_pump import feas_pump_loop
+from pyomo.contrib.mindtpy.feasibility_pump import fp_loop
 import logging
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
@@ -111,7 +111,7 @@ def MindtPy_initialize_master(solve_data, config):
                                                     solve_data, config)
     elif config.init_strategy == "FP":
         init_rNLP(solve_data, config)
-        feas_pump_loop(solve_data, config)
+        fp_loop(solve_data, config)
 
 
 def init_rNLP(solve_data, config):

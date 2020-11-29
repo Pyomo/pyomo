@@ -19,7 +19,7 @@ from pyomo.contrib.mindtpy.mip_solve import solve_master
 from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
 
 
-def feas_pump_converged(solve_data, config, discrete_only=True):
+def fp_converged(solve_data, config, discrete_only=True):
     """Calculates the euclidean norm between the discretes in the mip and nlp models"""
     distance = (max((nlp_var.value - milp_var.value)**2
                     for (nlp_var, milp_var) in
@@ -30,7 +30,7 @@ def feas_pump_converged(solve_data, config, discrete_only=True):
     return distance <= config.fp_projzerotol
 
 
-def solve_feas_pump_subproblem(solve_data, config):
+def solve_fp_subproblem(solve_data, config):
     """
     Solves the feasibility pump NLP
 
@@ -110,7 +110,7 @@ def solve_feas_pump_subproblem(solve_data, config):
     return fp_nlp, results
 
 
-def handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config):
+def handle_fp_subproblem_optimal(fp_nlp, solve_data, config):
     """Copies result to working model, updates bound, adds OA cut, no_good cut
     and increasing objective cut and stores best solution if new one is best
     Also calculates the duals
@@ -122,9 +122,9 @@ def handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config):
         ignore_integrality=True)
     add_orthogonality_cuts(solve_data, config)
 
-    # if OA-like or feas_pump converged, update Upper bound,
-    # add no_good cuts and increasing objective cuts (feas_pump)
-    if feas_pump_converged(solve_data, config, discrete_only=config.fp_discrete_only):
+    # if OA-like or fp converged, update Upper bound,
+    # add no_good cuts and increasing objective cuts (fp)
+    if fp_converged(solve_data, config, discrete_only=config.fp_discrete_only):
         copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
                              solve_data.working_model.MindtPy_utils.variable_list,
                              config)
@@ -132,13 +132,13 @@ def handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config):
             solve_data, config)
         if fixed_nlp_results.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             handle_subproblem_optimal(
-                fixed_nlp, solve_data, config, feas_pump=True)
+                fixed_nlp, solve_data, config, fp=True)
         else:
             config.logger.error("Feasibility pump fixed nlp is infeasible, something might be wrong. "
                                 "There might be a problem with the precisions - the feasibility pump seems to have converged")
 
 
-def feas_pump_loop(solve_data, config):
+def fp_loop(solve_data, config):
     """
     Feasibility pump loop 
 
@@ -161,7 +161,7 @@ def feas_pump_loop(solve_data, config):
         solve_data.mip_subiter = 0
         # solve MILP master problem
         feas_master, feas_master_results = solve_master(
-            solve_data, config, feas_pump=True)
+            solve_data, config, fp=True)
         if feas_master_results.solver.termination_condition is tc.optimal:
             config.logger.info(
                 'FP-MIP %s: Distance-OBJ: %s'
@@ -188,13 +188,13 @@ def feas_pump_loop(solve_data, config):
 
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
-        fp_nlp, fp_nlp_result = solve_feas_pump_subproblem(
+        fp_nlp, fp_nlp_result = solve_fp_subproblem(
             solve_data, config)
 
         if fp_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             config.logger.info('FP-NLP %s: Distance-OBJ: %s'
                                % (solve_data.fp_iter, value(fp_nlp.MindtPy_utils.fp_nlp_obj)))
-            handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config)
+            handle_fp_subproblem_optimal(fp_nlp, solve_data, config)
         elif fp_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
             config.logger.error("Feasibility pump NLP subproblem infeasible")
             solve_data.should_terminate = True

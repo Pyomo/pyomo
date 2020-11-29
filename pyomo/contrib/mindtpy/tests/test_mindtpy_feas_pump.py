@@ -136,7 +136,7 @@ class TestMindtPy(unittest.TestCase):
             log_infeasible_constraints(model)
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
-    def test_feas_pump_MINLP2_simple(self):
+    def test_fp_MINLP2_simple(self):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
@@ -148,7 +148,7 @@ class TestMindtPy(unittest.TestCase):
 
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
-    def test_feas_pump_MINLP3_simple(self):
+    def test_fp_MINLP3_simple(self):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
@@ -160,7 +160,7 @@ class TestMindtPy(unittest.TestCase):
 
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
-    def test_feas_pump_Proposal(self):
+    def test_fp_Proposal(self):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
@@ -172,7 +172,7 @@ class TestMindtPy(unittest.TestCase):
 
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
-    def test_feas_pump_OnlineDocExample(self):
+    def test_fp_OnlineDocExample(self):
         """Test the feasibility pump algorithm."""
         """TODO: bug fix"""
         with SolverFactory('mindtpy') as opt:
@@ -184,7 +184,7 @@ class TestMindtPy(unittest.TestCase):
                                 iteration_limit=0)
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
-    def test_feas_pump_ConstraintQualificationExample(self):
+    def test_fp_ConstraintQualificationExample(self):
         """Test the feasibility pump algorithm."""
         # TODO: bug fix
         with SolverFactory('mindtpy') as opt:

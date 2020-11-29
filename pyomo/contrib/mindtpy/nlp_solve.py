@@ -121,7 +121,7 @@ def solve_subproblem(solve_data, config):
 # The next few functions deal with handling the solution we get from the above NLP solver function
 
 
-def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
+def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
     """
     This function copies the result of the NLP solver function ('solve_subproblem') to the working model, updates
     the bounds, adds OA and no-good cuts, and then stores the new solution if it is the new best solution. This
@@ -159,7 +159,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
         solve_data.LB_progress.append(solve_data.LB)
     config.logger.info(
         'Fixed NLP {}: OBJ: {}  LB: {}  UB: {}'
-        .format(solve_data.nlp_iter if not feas_pump else solve_data.fp_iter, value(main_objective.expr),
+        .format(solve_data.nlp_iter if not fp else solve_data.fp_iter, value(main_objective.expr),
                 solve_data.LB, solve_data.UB))
 
     if solve_data.solution_improved:
@@ -174,8 +174,8 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
                 solve_data.num_no_good_cuts_added.update(
                     {solve_data.LB: len(solve_data.mip.MindtPy_utils.cuts.no_good_cuts)})
 
-        # add obj increasing constraint for feas_pump
-        if feas_pump:
+        # add obj increasing constraint for fp
+        if fp:
             solve_data.mip.MindtPy_utils.cuts.del_component(
                 'improving_objective_cut')
             if solve_data.objective_sense == minimize:
@@ -186,7 +186,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
                                                                                        >= solve_data.LB + config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
 
     # Add the linear cut
-    if config.strategy == 'OA' or feas_pump:
+    if config.strategy == 'OA' or fp:
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
