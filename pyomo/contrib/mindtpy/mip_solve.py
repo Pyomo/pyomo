@@ -142,7 +142,7 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
 
     if regularization_problem:
         solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
-        solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
+        solve_data.mip.MindtPy_utils.cuts.del_component(
             'obj_reg_estimate')
         if config.add_regularization == "level_L1":
             solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
@@ -380,7 +380,7 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
         if c.body.polynomial_degree() not in (1, 0):
             c.deactivate()
 
-    MindtPy.MindtPy_linear_cuts.activate()
+    MindtPy.cuts.activate()
 
     sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
     MindtPy.del_component('mip_obj')
@@ -421,10 +421,10 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
                                                                        config,
                                                                        discrete_only=False)
         if solve_data.objective_sense == minimize:
-            MindtPy.MindtPy_linear_cuts.obj_reg_estimate = Constraint(
+            MindtPy.cuts.obj_reg_estimate = Constraint(
                 expr=MindtPy.objective_value <= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.LB)
         else:
-            MindtPy.MindtPy_linear_cuts.obj_reg_estimate = Constraint(
+            MindtPy.cuts.obj_reg_estimate = Constraint(
                 expr=MindtPy.objective_value >= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.UB)
 
     else:
@@ -433,7 +433,7 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
 
             MindtPy.aug_penalty_expr = Expression(
                 expr=sign_adjust * config.OA_penalty_factor * sum(
-                    v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
+                    v for v in MindtPy.cuts.slack_vars[...]))
         main_objective = MindtPy.objective_list[-1]
         MindtPy.mip_obj = Objective(
             expr=main_objective.expr +
@@ -442,14 +442,14 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
 
         if config.use_dual_bound:
             # Delete previously added dual bound constraint
-            MindtPy.MindtPy_linear_cuts.del_component('dual_bound')
+            MindtPy.cuts.del_component('dual_bound')
             if solve_data.objective_sense == minimize:
-                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                MindtPy.cuts.dual_bound = Constraint(
                     expr=main_objective.expr +
                     (MindtPy.aug_penalty_expr if config.add_slack else 0) >= solve_data.LB,
                     doc='Objective function expression should improve on the best found dual bound')
             else:
-                MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
+                MindtPy.cuts.dual_bound = Constraint(
                     expr=main_objective.expr +
                     (MindtPy.aug_penalty_expr if config.add_slack else 0) <= solve_data.UB,
                     doc='Objective function expression should improve on the best found dual bound')

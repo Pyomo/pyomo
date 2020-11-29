@@ -57,8 +57,8 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                 sign_adjust = -1 if solve_data.objective_sense == minimize else 1
                 rhs = constr.lower
                 if config.add_slack:
-                    slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
-                target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                    slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
+                target_model.MindtPy_utils.cuts.oa_cuts.add(
                     expr=copysign(1, sign_adjust * dual_values[index])
                     * (sum(value(jacs[constr][var]) * (var - value(var))
                            for var in list(EXPR.identify_variables(constr.body)))
@@ -71,9 +71,9 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                         or (linearize_violated and constr.uslack() < 0) \
                         or (config.linearize_inactive and constr.uslack() > 0):
                     if config.add_slack:
-                        slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+                        slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
 
-                    target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                    target_model.MindtPy_utils.cuts.oa_cuts.add(
                         expr=(sum(value(jacs[constr][var])*(var - var.value)
                                   for var in constr_vars) + value(constr.body)
                               - (slack_var if config.add_slack else 0)
@@ -85,9 +85,9 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                         or (linearize_violated and constr.lslack() < 0) \
                         or (config.linearize_inactive and constr.lslack() > 0):
                     if config.add_slack:
-                        slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+                        slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
 
-                    target_model.MindtPy_utils.MindtPy_linear_cuts.oa_cuts.add(
+                    target_model.MindtPy_utils.cuts.oa_cuts.add(
                         expr=(sum(value(jacs[constr][var])*(var - var.value)
                                   for var in constr_vars) + value(constr.body)
                               + (slack_var if config.add_slack else 0)
@@ -144,9 +144,9 @@ def add_ecp_cuts(target_model, solve_data, config,
                         or (linearize_violated and upper_slack < 0) \
                         or (config.linearize_inactive and upper_slack > 0):
                     if config.add_slack:
-                        slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+                        slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
 
-                    target_model.MindtPy_utils.MindtPy_linear_cuts.ecp_cuts.add(
+                    target_model.MindtPy_utils.cuts.ecp_cuts.add(
                         expr=(sum(value(jacs[constr][var])*(var - var.value)
                                   for var in constr_vars)
                               - (slack_var if config.add_slack else 0)
@@ -167,9 +167,9 @@ def add_ecp_cuts(target_model, solve_data, config,
                         or (linearize_violated and lower_slack < 0) \
                         or (config.linearize_inactive and lower_slack > 0):
                     if config.add_slack:
-                        slack_var = target_model.MindtPy_utils.MindtPy_linear_cuts.slack_vars.add()
+                        slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
 
-                    target_model.MindtPy_utils.MindtPy_linear_cuts.ecp_cuts.add(
+                    target_model.MindtPy_utils.cuts.ecp_cuts.add(
                         expr=(sum(value(jacs[constr][var])*(var - var.value)
                                   for var in constr_vars)
                               + (slack_var if config.add_slack else 0)
@@ -226,7 +226,7 @@ def add_no_good_cuts(var_values, solve_data, config, feasible=False):
                    sum(v for v in binary_vars
                        if value(abs(v)) <= int_tol) >= 1)
 
-        MindtPy.MindtPy_linear_cuts.no_good_cuts.add(expr=int_cut)
+        MindtPy.cuts.no_good_cuts.add(expr=int_cut)
 
 
 def add_affine_cuts(solve_data, config):
@@ -290,7 +290,7 @@ def add_affine_cuts(solve_data, config):
             lb_int = max(constr.lower, mc_eqn.lower()
                          ) if constr.has_lb() else mc_eqn.lower()
 
-            aff_cuts = m.MindtPy_utils.MindtPy_linear_cuts.aff_cuts
+            aff_cuts = m.MindtPy_utils.cuts.aff_cuts
             if concave_cut_valid:
                 concave_cut = sum(ccSlope[var] * (var - var.value)
                                   for var in vars_in_constr

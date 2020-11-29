@@ -58,28 +58,28 @@ def MindtPy_initialize_master(solve_data, config):
         m.dual.deactivate()
 
     if config.init_strategy == 'feas_pump':
-        MindtPy.MindtPy_linear_cuts.fp_orthogonality_cuts = ConstraintList(
+        MindtPy.cuts.fp_orthogonality_cuts = ConstraintList(
             doc='Orthogonality cuts in feasibility pump')
         if config.fp_projcuts:
-            solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts = ConstraintList(
+            solve_data.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
                 doc='Orthogonality cuts in feasibility pump')
     if config.strategy == 'OA' or config.init_strategy == 'feas_pump':
         calc_jacobians(solve_data, config)  # preload jacobians
-        MindtPy.MindtPy_linear_cuts.oa_cuts = ConstraintList(
+        MindtPy.cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts')
     elif config.strategy == 'ECP':
         calc_jacobians(solve_data, config)  # preload jacobians
-        MindtPy.MindtPy_linear_cuts.ecp_cuts = ConstraintList(
+        MindtPy.cuts.ecp_cuts = ConstraintList(
             doc='Extended Cutting Planes')
     elif config.strategy == 'GOA':
-        MindtPy.MindtPy_linear_cuts.aff_cuts = ConstraintList(
+        MindtPy.cuts.aff_cuts = ConstraintList(
             doc='Affine cuts')
     # elif config.strategy == 'PSC':
     #     detect_nonlinear_vars(solve_data, config)
-    #     MindtPy.MindtPy_linear_cuts.psc_cuts = ConstraintList(
+    #     MindtPy.cuts.psc_cuts = ConstraintList(
     #         doc='Partial surrogate cuts')
     # elif config.strategy == 'GBD':
-    #     MindtPy.MindtPy_linear_cuts.gbd_cuts = ConstraintList(
+    #     MindtPy.cuts.gbd_cuts = ConstraintList(
     #         doc='Generalized Benders cuts')
 
     # Set default initialization_strategy

@@ -379,8 +379,8 @@ def bound_fix(solve_data, config, last_iter_cuts):
                     valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
                 if config.add_no_good_cuts:
                     for i in range(valid_no_good_cuts_num+1, len(
-                            MindtPy.MindtPy_linear_cuts.no_good_cuts)+1):
-                        MindtPy.MindtPy_linear_cuts.no_good_cuts[i].deactivate(
+                            MindtPy.cuts.no_good_cuts)+1):
+                        MindtPy.cuts.no_good_cuts[i].deactivate(
                         )
                 if config.use_tabu_list:
                     solve_data.tabu_list = solve_data.tabu_list[:valid_no_good_cuts_num]
@@ -390,8 +390,8 @@ def bound_fix(solve_data, config, last_iter_cuts):
             # Only deactive the last OA cuts may not be correct.
             # Since integer solution may also be cut off by OA cuts due to calculation approximation.
             if config.add_no_good_cuts:
-                MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
-                    MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()
+                MindtPy.cuts.no_good_cuts[len(
+                    MindtPy.cuts.no_good_cuts)].deactivate()
             if config.use_tabu_list:
                 solve_data.tabu_list = solve_data.tabu_list[:-1]
         if config.add_regularization and MindtPy.find_component('mip_obj') is None:

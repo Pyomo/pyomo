@@ -85,7 +85,7 @@ def solve_feas_pump_subproblem(solve_data, config):
     MindtPy.feas_pump_nlp_obj = generate_norm2sq_objective_function(
         fp_nlp, solve_data.mip, discrete_only=config.fp_discrete_only)
 
-    MindtPy.MindtPy_linear_cuts.deactivate()
+    MindtPy.cuts.deactivate()
     TransformationFactory('core.relax_integer_vars').apply_to(fp_nlp)
     try:
         TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
@@ -171,7 +171,7 @@ def feas_pump_loop(solve_data, config):
             solve_data.results.solver.termination_condition = tc.maxTimeLimit
         elif feas_master_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
-            no_good_cuts = solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts
+            no_good_cuts = solve_data.mip.MindtPy_utils.cuts.no_good_cuts
             if no_good_cuts.__len__() > 0:
                 no_good_cuts[no_good_cuts.__len__()].deactivate()
             break
@@ -224,15 +224,15 @@ def feas_pump_loop(solve_data, config):
     # deactivate the improving_objective_cut
     # solve_data.mip.MindtPy_utils.del_component('feas_pump_mip_obj')
     # solve_data.mip.MindtPy_utils.objective.activate()
-    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
+    solve_data.mip.MindtPy_utils.cuts.del_component(
         'improving_objective_cut')
     if not config.fp_transfercuts:
-        for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts:
+        for c in solve_data.mip.MindtPy_utils.cuts.oa_cuts:
             c.deactivate()
-        for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts:
+        for c in solve_data.mip.MindtPy_utils.cuts.no_good_cuts:
             c.deactivate()
     if config.fp_projcuts:
-        solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.del_component(
+        solve_data.working_model.MindtPy_utils.cuts.del_component(
             'fp_orthogonality_cuts')
 
 
@@ -253,10 +253,10 @@ def add_orthogonality_cuts(solve_data, config):
     nlp_integer_vars = solve_data.working_model.MindtPy_utils.discrete_variable_list
     orthogonality_cut = sum((nlp_v.value-mip_v.value)*(mip_v-nlp_v.value)
                             for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
-    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.add(
+    solve_data.mip.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
         orthogonality_cut)
     if config.fp_projcuts:
         orthogonality_cut = sum((nlp_v.value-mip_v.value)*(nlp_v-nlp_v.value)
                                 for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
-        solve_data.working_model.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.add(
+        solve_data.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
             orthogonality_cut)

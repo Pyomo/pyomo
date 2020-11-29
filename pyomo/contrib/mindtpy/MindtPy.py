@@ -146,7 +146,7 @@ class MindtPySolver(object):
 
             # Create a model block in which to store the generated linear
             # constraints. Do not leave the constraints on by default.
-            lin = MindtPy.MindtPy_linear_cuts = Block()
+            lin = MindtPy.cuts = Block()
             lin.deactivate()
 
             # no-good cuts exclude particular discrete decisions
