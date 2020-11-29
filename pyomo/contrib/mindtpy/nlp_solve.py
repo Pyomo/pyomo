@@ -337,18 +337,18 @@ def solve_feasibility_subproblem(solve_data, config):
     for constr in feas_subproblem.MindtPy_utils.nonlinear_constraint_list:
         constr.deactivate()
 
-    MindtPy.MindtPy_feas.activate()
+    MindtPy.feas_opt.activate()
     if config.feasibility_norm == 'L1':
         MindtPy.MindtPy_feas_obj = Objective(
-            expr=sum(s for s in MindtPy.MindtPy_feas.slack_var[...]),
+            expr=sum(s for s in MindtPy.feas_opt.slack_var[...]),
             sense=minimize)
     elif config.feasibility_norm == 'L2':
         MindtPy.MindtPy_feas_obj = Objective(
-            expr=sum(s*s for s in MindtPy.MindtPy_feas.slack_var[...]),
+            expr=sum(s*s for s in MindtPy.feas_opt.slack_var[...]),
             sense=minimize)
     else:
         MindtPy.MindtPy_feas_obj = Objective(
-            expr=MindtPy.MindtPy_feas.slack_var,
+            expr=MindtPy.feas_opt.slack_var,
             sense=minimize)
     TransformationFactory('core.fix_integer_vars').apply_to(feas_subproblem)
     with SuppressInfeasibleWarning():

@@ -138,22 +138,22 @@ def add_feas_slacks(m, config):
     for i, constr in enumerate(MindtPy.nonlinear_constraint_list, 1):
         if constr.has_ub():
             if config.feasibility_norm in {'L1', 'L2'}:
-                MindtPy.MindtPy_feas.feas_constraints.add(
+                MindtPy.feas_opt.feas_constraints.add(
                     constr.body - constr.upper
-                    <= MindtPy.MindtPy_feas.slack_var[i])
+                    <= MindtPy.feas_opt.slack_var[i])
             else:
-                MindtPy.MindtPy_feas.feas_constraints.add(
+                MindtPy.feas_opt.feas_constraints.add(
                     constr.body - constr.upper
-                    <= MindtPy.MindtPy_feas.slack_var)
+                    <= MindtPy.feas_opt.slack_var)
         if constr.has_lb():
             if config.feasibility_norm in {'L1', 'L2'}:
-                MindtPy.MindtPy_feas.feas_constraints.add(
+                MindtPy.feas_opt.feas_constraints.add(
                     constr.body - constr.lower
-                    >= -MindtPy.MindtPy_feas.slack_var[i])
+                    >= -MindtPy.feas_opt.slack_var[i])
             else:
-                MindtPy.MindtPy_feas.feas_constraints.add(
+                MindtPy.feas_opt.feas_constraints.add(
                     constr.body - constr.lower
-                    >= -MindtPy.MindtPy_feas.slack_var)
+                    >= -MindtPy.feas_opt.slack_var)
 
 
 def var_bound_add(solve_data, config):
@@ -205,7 +205,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v[1].is_integer()) if discrete_only \
         else (lambda v: v[1].name != 'MindtPy_utils.objective_value' and
-              'MindtPy_utils.MindtPy_feas.slack_var' not in v[1].name)
+              'MindtPy_utils.feas_opt.slack_var' not in v[1].name)
 
     model_vars, setpoint_vars = zip(*filter(var_filter,
                                             zip(model.component_data_objects(Var),
@@ -236,7 +236,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: v.name != 'MindtPy_utils.objective_value' and
-              'MindtPy_utils.MindtPy_feas.slack_var' not in v.name)
+              'MindtPy_utils.feas_opt.slack_var' not in v.name)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
@@ -275,7 +275,7 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: v.name != 'MindtPy_utils.objective_value' and
-              'MindtPy_utils.MindtPy_feas.slack_var' not in v.name)
+              'MindtPy_utils.feas_opt.slack_var' not in v.name)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))

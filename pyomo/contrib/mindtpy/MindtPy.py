@@ -139,7 +139,7 @@ class MindtPySolver(object):
 
             # Create a model block in which to store the generated feasibility
             # slack constraints. Do not leave the constraints on by default.
-            feas = MindtPy.MindtPy_feas = Block()
+            feas = MindtPy.feas_opt = Block()
             feas.deactivate()
             feas.feas_constraints = ConstraintList(
                 doc='Feasibility Problem Constraints')
