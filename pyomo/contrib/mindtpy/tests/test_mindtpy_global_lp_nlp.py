@@ -153,8 +153,8 @@ class TestMindtPy(unittest.TestCase):
                                 add_no_good_cuts=True,
                                 use_mcpp=True,
                                 single_tree=True)
-            self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_GOA_Proposal(self):
