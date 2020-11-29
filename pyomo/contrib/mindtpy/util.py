@@ -247,12 +247,12 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     obj_blk.L1_obj_idx = RangeSet(len(model_vars))
     obj_blk.L1_obj_var = Var(
         obj_blk.L1_obj_idx, domain=Reals, bounds=(0, None))
-    obj_blk.abs_reformulation = ConstraintList()
+    obj_blk.abs_reform = ConstraintList()
     for idx, v_model, v_setpoint in zip(obj_blk.L1_obj_idx, model_vars,
                                         setpoint_vars):
-        obj_blk.abs_reformulation.add(
+        obj_blk.abs_reform.add(
             expr=v_model - v_setpoint.value >= -obj_blk.L1_obj_var[idx])
-        obj_blk.abs_reformulation.add(
+        obj_blk.abs_reform.add(
             expr=v_model - v_setpoint.value <= obj_blk.L1_obj_var[idx])
 
     return Objective(expr=sum(obj_blk.L1_obj_var[idx] for idx in obj_blk.L1_obj_idx))
@@ -284,12 +284,12 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     model.MindtPy_utils.del_component('L_infinity_obj')
     obj_blk = model.MindtPy_utils.L_infinity_obj = Block()
     obj_blk.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
-    obj_blk.abs_reformulation = ConstraintList()
+    obj_blk.abs_reform = ConstraintList()
     for v_model, v_setpoint in zip(model_vars,
                                    setpoint_vars):
-        obj_blk.abs_reformulation.add(
+        obj_blk.abs_reform.add(
             expr=v_model - v_setpoint.value >= -obj_blk.L_infinity_obj_var)
-        obj_blk.abs_reformulation.add(
+        obj_blk.abs_reform.add(
             expr=v_model - v_setpoint.value <= obj_blk.L_infinity_obj_var)
 
     return Objective(expr=obj_blk.L_infinity_obj_var)
@@ -387,12 +387,12 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     norm_constraint_blk.L1_slack_idx = RangeSet(len(model_vars))
     norm_constraint_blk.L1_slack_var = Var(
         norm_constraint_blk.L1_slack_idx, domain=Reals, bounds=(0, None))
-    norm_constraint_blk.abs_reformulation = ConstraintList()
+    norm_constraint_blk.abs_reform = ConstraintList()
     for idx, v_model, v_setpoint in zip(norm_constraint_blk.L1_slack_idx, model_vars,
                                         setpoint_vars):
-        norm_constraint_blk.abs_reformulation.add(
+        norm_constraint_blk.abs_reform.add(
             expr=v_model - v_setpoint.value >= -norm_constraint_blk.L1_slack_var[idx])
-        norm_constraint_blk.abs_reformulation.add(
+        norm_constraint_blk.abs_reform.add(
             expr=v_model - v_setpoint.value <= norm_constraint_blk.L1_slack_var[idx])
     rhs = config.fp_norm_constraint_coef * \
         sum(abs(v_model.value-v_setpoint.value)
