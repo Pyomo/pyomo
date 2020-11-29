@@ -429,15 +429,15 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
 
     else:
         if config.add_slack:
-            MindtPy.del_component('MindtPy_penalty_expr')
+            MindtPy.del_component('aug_penalty_expr')
 
-            MindtPy.MindtPy_penalty_expr = Expression(
+            MindtPy.aug_penalty_expr = Expression(
                 expr=sign_adjust * config.OA_penalty_factor * sum(
                     v for v in MindtPy.MindtPy_linear_cuts.slack_vars[...]))
         main_objective = MindtPy.objective_list[-1]
         MindtPy.mip_obj = Objective(
             expr=main_objective.expr +
-            (MindtPy.MindtPy_penalty_expr if config.add_slack else 0),
+            (MindtPy.aug_penalty_expr if config.add_slack else 0),
             sense=solve_data.objective_sense)
 
         if config.use_dual_bound:
@@ -446,10 +446,10 @@ def setup_master(solve_data, config, feas_pump, regularization_problem):
             if solve_data.objective_sense == minimize:
                 MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
                     expr=main_objective.expr +
-                    (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) >= solve_data.LB,
+                    (MindtPy.aug_penalty_expr if config.add_slack else 0) >= solve_data.LB,
                     doc='Objective function expression should improve on the best found dual bound')
             else:
                 MindtPy.MindtPy_linear_cuts.dual_bound = Constraint(
                     expr=main_objective.expr +
-                    (MindtPy.MindtPy_penalty_expr if config.add_slack else 0) <= solve_data.UB,
+                    (MindtPy.aug_penalty_expr if config.add_slack else 0) <= solve_data.UB,
                     doc='Objective function expression should improve on the best found dual bound')
