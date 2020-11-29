@@ -339,15 +339,15 @@ def solve_feasibility_subproblem(solve_data, config):
 
     MindtPy.feas_opt.activate()
     if config.feasibility_norm == 'L1':
-        MindtPy.MindtPy_feas_obj = Objective(
+        MindtPy.feas_obj = Objective(
             expr=sum(s for s in MindtPy.feas_opt.slack_var[...]),
             sense=minimize)
     elif config.feasibility_norm == 'L2':
-        MindtPy.MindtPy_feas_obj = Objective(
+        MindtPy.feas_obj = Objective(
             expr=sum(s*s for s in MindtPy.feas_opt.slack_var[...]),
             sense=minimize)
     else:
-        MindtPy.MindtPy_feas_obj = Objective(
+        MindtPy.feas_obj = Objective(
             expr=MindtPy.feas_opt.slack_var,
             sense=minimize)
     TransformationFactory('core.fix_integer_vars').apply_to(feas_subproblem)
@@ -398,9 +398,9 @@ def solve_feasibility_subproblem(solve_data, config):
         solve_data.results.solver.status = SolverStatus.error
         return feas_subproblem, feas_soln
 
-    if value(MindtPy.MindtPy_feas_obj.expr) <= config.zero_tolerance:
+    if value(MindtPy.feas_obj.expr) <= config.zero_tolerance:
         config.logger.warning("The objective value %.4E of feasibility problem is less than zero_tolerance. "
                               "This indicates that the nlp subproblem is feasible, although it is found infeasible in the previous step. "
-                              "Check the nlp solver output" % value(MindtPy.MindtPy_feas_obj.expr))
+                              "Check the nlp solver output" % value(MindtPy.feas_obj.expr))
 
     return feas_subproblem, feas_soln
