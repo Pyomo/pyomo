@@ -24,6 +24,7 @@ from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import time_code
+from pyomo.contrib.mindtpy.tabu_list import IncumbentCallback_cplex
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -159,7 +160,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if config.add_no_good_cuts and config.strategy is not 'feas_pump' and not solve_data.should_terminate:
+    if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy is not 'feas_pump' and not solve_data.should_terminate:
         bound_fix(solve_data, config, last_iter_cuts)
 
 
@@ -376,20 +377,41 @@ def bound_fix(solve_data, config, last_iter_cuts):
                     valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
                 else:
                     valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
-                for i in range(valid_no_good_cuts_num+1, len(
-                        MindtPy.MindtPy_linear_cuts.no_good_cuts)+1):
-                    MindtPy.MindtPy_linear_cuts.no_good_cuts[i].deactivate()
+                if config.add_no_good_cuts:
+                    for i in range(valid_no_good_cuts_num+1, len(
+                            MindtPy.MindtPy_linear_cuts.no_good_cuts)+1):
+                        MindtPy.MindtPy_linear_cuts.no_good_cuts[i].deactivate(
+                        )
+                if config.use_tabu_list:
+                    solve_data.tabu_list = solve_data.tabu_list[:valid_no_good_cuts_num]
             except KeyError:
                 config.logger.info('No-good cut deactivate failed.')
         elif config.strategy == 'OA':
-            MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
-                MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()
+            # Only deactive the last OA cuts may not be correct.
+            # Since integer solution may also be cut off by OA cuts due to calculation approximation.
+            if config.add_no_good_cuts:
+                MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
+                    MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()
+            if config.use_tabu_list:
+                solve_data.tabu_list = solve_data.tabu_list[:-1]
         if config.add_regularization and MindtPy.find_component('mip_obj') is None:
             MindtPy.objective_list[-1].activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.
         if isinstance(masteropt, PersistentSolver):
             masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
+        if config.use_tabu_list:
+            tabulist = masteropt._solver_model.register_callback(
+                IncumbentCallback_cplex)
+            tabulist.solve_data = solve_data
+            tabulist.opt = masteropt
+            masteropt._solver_model.parameters.preprocessing.reduce.set(1)
+            # If the callback is used to reject incumbents, the user must set the
+            # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
+            # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
+            masteropt._solver_model.set_warning_stream(None)
+            masteropt._solver_model.set_log_stream(None)
+            masteropt._solver_model.set_error_stream(None)
         mip_args = dict(config.mip_solver_args)
         elapsed = get_main_elapsed_time(solve_data.timing)
         remaining = int(max(config.time_limit - elapsed, 1))

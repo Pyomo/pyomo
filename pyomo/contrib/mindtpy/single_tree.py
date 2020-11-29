@@ -376,7 +376,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.best_solution_found = fixed_nlp.clone()
             solve_data.best_solution_found_time = get_main_elapsed_time(
                 solve_data.timing)
-            if config.add_no_good_cuts:
+            if config.add_no_good_cuts or config.use_tabu_list:
                 if solve_data.results.problem.sense == ProblemSense.minimize:
                     solve_data.stored_bound.update(
                         {solve_data.UB: solve_data.LB})
@@ -399,6 +399,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             var_values = list(
                 v.value for v in fixed_nlp.MindtPy_utils.variable_list)
             self.add_lazy_no_good_cuts(var_values, solve_data, config, opt)
+        if config.use_tabu_list:
+            solve_data.tabu_list.append(
+                tuple(round(v.value) for v in fixed_nlp.MindtPy_utils.discrete_variable_list))
 
     def handle_lazy_subproblem_infeasible(self, fixed_nlp, solve_data, config, opt):
         """
@@ -476,7 +479,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
     def __call__(self):
         """
         This is an inherent function in LazyConstraintCallback in cplex. 
-        This funtion is call whenever the a integer solution is found during the branch and bound process
+        This function is called whenever the a integer solution is found during the branch and bound process
         """
         solve_data = self.solve_data
         config = self.config

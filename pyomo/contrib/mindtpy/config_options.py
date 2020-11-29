@@ -108,6 +108,11 @@ def _get_MindtPy_config():
                     "Note that 'integer_to_binary' flag needs to be used to apply it to actual integers and not just binaries.",
         domain=bool
     ))
+    CONFIG.declare("use_tabu_list", ConfigValue(
+        default=False,
+        description="Use tabu list and incumbent callback to disallow same integer solution again.",
+        domain=bool
+    ))
     CONFIG.declare("add_affine_cuts", ConfigValue(
         default=False,
         description="Add affine cuts drive from MC++",
@@ -359,3 +364,99 @@ def _add_loa_configs(CONFIG):
         description="the coefficient in the projection master problem"
         "represents how much the linear approximation of the MINLP problem is trusted."
     ))
+
+
+def check_config(config):
+    # # configuration confirmation
+    # if config.single_tree:
+    #     config.iteration_limit = 1
+    #     config.add_slack = False
+    #     config.add_no_good_cuts = False
+    #     config.use_tabu_list = False
+    #     config.mip_solver = 'cplex_persistent'
+    #     config.logger.info(
+    #         "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
+    # # if the slacks fix to zero, just don't add them
+    # if config.max_slack == 0.0:
+    #     config.add_slack = False
+
+    # if config.strategy == "GOA":
+    #     # TODO: Choose one from the following two
+    #     config.add_no_good_cuts = False
+    #     config.use_tabu_list = True
+    #     config.add_slack = False
+    #     config.use_mcpp = True
+    #     config.integer_to_binary = True
+    #     config.use_dual = False
+    #     config.use_fbbt = True
+    # elif config.strategy == "feas_pump":  # feasibility pump alone
+    #     config.init_strategy = "feas_pump"
+    #     config.iteration_limit = 0
+    # if config.init_strategy == "feas_pump":
+    #     # TODO: Choose one from the following two
+    #     config.add_no_good_cuts = False
+    #     config.use_tabu_list = True
+
+    # if config.nlp_solver == "baron":
+    #     config.use_dual = False
+    # # if ecp tolerance is not provided use bound tolerance
+    # if config.ecp_tolerance is None:
+    #     config.ecp_tolerance = config.bound_tolerance
+
+    # if config.solver_tee:
+    #     config.mip_solver_tee = True
+    #     config.nlp_solver_tee = True
+    # if config.add_no_good_cuts:
+    #     config.integer_to_binary = True
+    # if config.use_tabu_list:
+    #     config.mip_solver = 'cplex_persistent'
+
+    # configuration confirmation
+    if config.single_tree:
+        config.iteration_limit = 1
+        config.add_slack = False
+        config.add_no_good_cuts = False
+        config.use_tabu_list = False
+        config.mip_solver = 'cplex_persistent'
+        config.logger.info(
+            "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
+    # if the slacks fix to zero, just don't add them
+    if config.max_slack == 0.0:
+        config.add_slack = False
+
+    if config.strategy == "GOA":
+        config.add_no_good_cuts = True
+        config.use_tabu_list = False
+        config.add_slack = False
+        config.use_mcpp = True
+        config.integer_to_binary = True
+        config.equality_relaxation = False
+        config.use_fbbt = True
+    elif config.strategy == "feas_pump":  # feasibility pump alone
+        config.init_strategy = "feas_pump"
+        config.iteration_limit = 0
+    if config.init_strategy == "feas_pump":
+        # TODO: Choose one from the following two
+        config.add_no_good_cuts = True
+        config.use_tabu_list = False
+
+    if config.nlp_solver == "baron" or (config.nlp_solver == "gams" and config.nlp_solver_args['solver'] == "baron"):
+        config.equality_relaxation = False
+    # if ecp tolerance is not provided use bound tolerance
+    if config.ecp_tolerance is None:
+        config.ecp_tolerance = config.bound_tolerance
+
+    if config.solver_tee:
+        config.mip_solver_tee = True
+        config.nlp_solver_tee = True
+    if config.add_regularization in {'grad_lag', 'hess_lag'}:
+        config.calculate_dual = True
+    if config.heuristic_nonconvex:
+        config.equality_relaxation = True
+        config.add_slack = True
+    if config.equality_relaxation:
+        config.calculate_dual = True
+    if config.add_no_good_cuts:
+        config.integer_to_binary = True
+    if config.use_tabu_list:
+        config.mip_solver = 'cplex_persistent'

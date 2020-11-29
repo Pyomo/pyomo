@@ -132,8 +132,6 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-3,
-                                # tee=True,
-                                # solver_tee=True
                                 )
             log_infeasible_constraints(model)
             self.assertTrue(is_feasible(model, self.get_config(opt)))
@@ -199,6 +197,7 @@ class TestMindtPy(unittest.TestCase):
 
             self.assertTrue(is_feasible(model, self.get_config(opt)))
     """Test FP-OA"""
+    # oa cuts will cut off integer solutions.
 
     def test_FP_OA_8PP(self):
         """Test the FP-OA algorithm."""

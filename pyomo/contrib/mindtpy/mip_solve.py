@@ -19,11 +19,13 @@ from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbound
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function
-
+from pyomo.contrib.mindtpy.tabu_list import IncumbentCallback_cplex
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
+tabu_list, tabu_list_available = attempt_import(
+    'pyomo.contrib.mindtpy.tabu_list')
 
 
 def solve_master(solve_data, config, feas_pump=False, regularization_problem=False):
@@ -86,6 +88,18 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
         masteropt.options['timelimit'] = config.time_limit
     if config.threads > 0:
         masteropt.options["threads"] = config.threads
+    if config.use_tabu_list:
+        tabulist = masteropt._solver_model.register_callback(
+            IncumbentCallback_cplex)
+        tabulist.solve_data = solve_data
+        tabulist.opt = masteropt
+        masteropt._solver_model.parameters.preprocessing.reduce.set(1)
+        # If the callback is used to reject incumbents, the user must set the
+        # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
+        # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
+        masteropt._solver_model.set_warning_stream(None)
+        masteropt._solver_model.set_log_stream(None)
+        masteropt._solver_model.set_error_stream(None)
     mip_args = dict(config.mip_solver_args)
     elapsed = get_main_elapsed_time(solve_data.timing)
     remaining = int(max(config.time_limit - elapsed, 1))
@@ -124,6 +138,7 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
         # resolve with a solver option flag on.
         master_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
             solve_data.mip, config)
+        return solve_data.mip, master_mip_results
 
     if regularization_problem:
         solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')

@@ -41,7 +41,7 @@ from pyomo.core import (Block, ConstraintList, NonNegativeReals,
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.common.collections import Container
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -90,48 +90,7 @@ class MindtPySolver(object):
         solve_data.should_terminate = False
         solve_data.integer_list = []
 
-        # configuration confirmation
-        if config.single_tree:
-            config.iteration_limit = 1
-            config.add_slack = False
-            config.add_no_good_cuts = False
-            config.mip_solver = 'cplex_persistent'
-            config.logger.info(
-                "Single tree implementation is activated. The defalt MIP solver is 'cplex_persistent'")
-        # if the slacks fix to zero, just don't add them
-        if config.max_slack == 0.0:
-            config.add_slack = False
-
-        if config.strategy == "GOA":
-            config.add_no_good_cuts = True
-            config.add_slack = False
-            config.use_mcpp = True
-            config.integer_to_binary = True
-            config.equality_relaxation = False
-            config.use_fbbt = True
-        elif config.strategy == "feas_pump":  # feasibility pump alone
-            config.init_strategy = "feas_pump"
-            config.iteration_limit = 0
-            config.add_no_good_cuts = True
-        if config.init_strategy == "feas_pump":
-            solve_data.fp_iter = 1
-
-        if config.nlp_solver == "baron" or (config.nlp_solver == "gams" and config.nlp_solver_args['solver']):
-            config.equality_relaxation = False
-        # if ecp tolerance is not provided use bound tolerance
-        if config.ecp_tolerance is None:
-            config.ecp_tolerance = config.bound_tolerance
-
-        if config.solver_tee:
-            config.mip_solver_tee = True
-            config.nlp_solver_tee = True
-        if config.add_regularization in {'grad_lag', 'hess_lag'}:
-            config.calculate_dual = True
-        if config.heuristic_nonconvex:
-            config.equality_relaxation = True
-            config.add_slack = True
-        if config.equality_relaxation:
-            config.calculate_dual = True
+        check_config(config)
 
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
@@ -208,16 +167,20 @@ class MindtPySolver(object):
             solve_data.nlp_iter = 0
             solve_data.mip_iter = 0
             solve_data.mip_subiter = 0
+            if config.init_strategy == "feas_pump":
+                solve_data.fp_iter = 1
 
             # set up bounds
             solve_data.LB = float('-inf')
             solve_data.UB = float('inf')
             solve_data.LB_progress = [solve_data.LB]
             solve_data.UB_progress = [solve_data.UB]
-            if config.single_tree and config.add_no_good_cuts:
+            if config.single_tree and (config.add_no_good_cuts or config.use_tabu_list):
                 solve_data.stored_bound = {}
-            if config.strategy == 'GOA' and config.add_no_good_cuts:
+            if config.strategy == 'GOA' and (config.add_no_good_cuts or config.use_tabu_list):
                 solve_data.num_no_good_cuts_added = {}
+            if config.use_tabu_list:
+                solve_data.tabu_list = []
 
             # Set of NLP iterations for which cuts were generated
             lin.nlp_iters = Set(dimen=1)
@@ -258,7 +221,6 @@ class MindtPySolver(object):
             # Algorithm main loop
             with time_code(solve_data.timing, 'main loop'):
                 MindtPy_iteration_loop(solve_data, config)
-
             if solve_data.best_solution_found is not None:
                 # Update values in original model
                 copy_var_list_values(

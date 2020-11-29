@@ -222,6 +222,8 @@ def feas_pump_loop(solve_data, config):
             "L_infinity_objective_function")
 
     # deactivate the improving_objective_cut
+    # solve_data.mip.MindtPy_utils.del_component('feas_pump_mip_obj')
+    # solve_data.mip.MindtPy_utils.objective.activate()
     solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
         'improving_objective_cut')
     if not config.fp_transfercuts:
