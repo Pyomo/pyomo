@@ -148,7 +148,7 @@ def solve_master(solve_data, config, feas_pump=False, regularization_problem=Fal
             solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
         elif config.add_regularization == "level_L_infinity":
             solve_data.mip.MindtPy_utils.del_component(
-                "L_infinity_objective_function")
+                "L_infinity_obj")
 
     return solve_data.mip, master_mip_results
 

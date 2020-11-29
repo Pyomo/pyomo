@@ -219,7 +219,7 @@ def feas_pump_loop(solve_data, config):
         solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
     elif config.fp_master_norm == 'L_infinity':
         solve_data.mip.MindtPy_utils.del_component(
-            "L_infinity_objective_function")
+            "L_infinity_obj")
 
     # deactivate the improving_objective_cut
     # solve_data.mip.MindtPy_utils.del_component('feas_pump_mip_obj')

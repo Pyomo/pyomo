@@ -281,8 +281,8 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm Infinity objective function for models with different number of variables"
-    model.MindtPy_utils.del_component('L_infinity_objective_function')
-    obj_blk = model.MindtPy_utils.L_infinity_objective_function = Block()
+    model.MindtPy_utils.del_component('L_infinity_obj')
+    obj_blk = model.MindtPy_utils.L_infinity_obj = Block()
     obj_blk.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
     obj_blk.abs_reformulation = ConstraintList()
     for v_model, v_setpoint in zip(model_vars,
