@@ -191,7 +191,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
         add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
-    elif config.strategy == "GOA":
+    elif config.strategy == 'GOA':
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
@@ -259,9 +259,9 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
         copy_var_list_values(feas_subproblem.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
-        if config.strategy == "OA":
+        if config.strategy == 'OA':
             add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
-        elif config.strategy == "GOA":
+        elif config.strategy == 'GOA':
             add_affine_cuts(solve_data, config)
     # Add a no-good cut to exclude this discrete option
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
@@ -399,8 +399,8 @@ def solve_feasibility_subproblem(solve_data, config):
         return feas_subproblem, feas_soln
 
     if value(MindtPy.feas_obj.expr) <= config.zero_tolerance:
-        config.logger.warning("The objective value %.4E of feasibility problem is less than zero_tolerance. "
-                              "This indicates that the nlp subproblem is feasible, although it is found infeasible in the previous step. "
-                              "Check the nlp solver output" % value(MindtPy.feas_obj.expr))
+        config.logger.warning('The objective value %.4E of feasibility problem is less than zero_tolerance. '
+                              'This indicates that the nlp subproblem is feasible, although it is found infeasible in the previous step. '
+                              'Check the nlp solver output' % value(MindtPy.feas_obj.expr))
 
     return feas_subproblem, feas_soln

@@ -198,7 +198,7 @@ def add_no_good_cuts(var_values, solve_data, config, feasible=False):
         return
     with time_code(solve_data.timing, 'no_good cut generation'):
 
-        config.logger.info("Adding no_good cuts")
+        config.logger.info('Adding no_good cuts')
 
         m = solve_data.mip
         MindtPy = m.MindtPy_utils
@@ -242,7 +242,7 @@ def add_affine_cuts(solve_data, config):
     """
     with time_code(solve_data.timing, 'Affine cut generation'):
         m = solve_data.mip
-        config.logger.info("Adding affine cuts")
+        config.logger.info('Adding affine cuts')
         counter = 0
 
         for constr in m.MindtPy_utils.nonlinear_constraint_list:
@@ -256,7 +256,7 @@ def add_affine_cuts(solve_data, config):
                 mc_eqn = mc(constr.body)
             except MCPP_Error as e:
                 config.logger.debug(
-                    "Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
+                    'Skipping constraint %s due to MCPP error %s' % (constr.name, str(e)))
                 continue  # skip to the next constraint
 
             ccSlope = mc_eqn.subcc()
@@ -304,4 +304,4 @@ def add_affine_cuts(solve_data, config):
                 aff_cuts.add(expr=convex_cut)
                 counter += 1
 
-        config.logger.info("Added %s affine cuts" % counter)
+        config.logger.info('Added %s affine cuts' % counter)

@@ -67,7 +67,7 @@ def solve_fp_subproblem(solve_data, config):
             expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
 
     # Add norm_constraint, which guarantees the monotonicity of the norm objective value sequence of all iterations
-    # Ref: Paper "A storm of feasibility pumps for nonconvex MINLP"
+    # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'
     if config.fp_norm_constraint:
         if config.fp_master_norm == 'L1':
             generate_norm1_norm_constraint(
@@ -134,8 +134,8 @@ def handle_fp_subproblem_optimal(fp_nlp, solve_data, config):
             handle_subproblem_optimal(
                 fixed_nlp, solve_data, config, fp=True)
         else:
-            config.logger.error("Feasibility pump fixed nlp is infeasible, something might be wrong. "
-                                "There might be a problem with the precisions - the feasibility pump seems to have converged")
+            config.logger.error('Feasibility pump fixed nlp is infeasible, something might be wrong. '
+                                'There might be a problem with the precisions - the feasibility pump seems to have converged')
 
 
 def fp_loop(solve_data, config):
@@ -196,7 +196,7 @@ def fp_loop(solve_data, config):
                                % (solve_data.fp_iter, value(fp_nlp.MindtPy_utils.fp_nlp_obj)))
             handle_fp_subproblem_optimal(fp_nlp, solve_data, config)
         elif fp_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
-            config.logger.error("Feasibility pump NLP subproblem infeasible")
+            config.logger.error('Feasibility pump NLP subproblem infeasible')
             solve_data.should_terminate = True
             solve_data.results.solver.status = SolverStatus.error
             return
@@ -216,10 +216,10 @@ def fp_loop(solve_data, config):
     solve_data.mip.MindtPy_utils.del_component('fp_mip_obj')
 
     if config.fp_master_norm == 'L1':
-        solve_data.mip.MindtPy_utils.del_component("L1_obj")
+        solve_data.mip.MindtPy_utils.del_component('L1_obj')
     elif config.fp_master_norm == 'L_infinity':
         solve_data.mip.MindtPy_utils.del_component(
-            "L_infinity_obj")
+            'L_infinity_obj')
 
     # deactivate the improving_objective_cut
     # solve_data.mip.MindtPy_utils.del_component('fp_mip_obj')

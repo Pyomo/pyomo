@@ -66,20 +66,20 @@ def model_is_valid(solve_data, config):
         if (any(c.body.polynomial_degree() not in (1, 0) for c in MindtPy.constraint_list) or
                 obj.expr.polynomial_degree() not in (1, 0)):
             config.logger.info(
-                "Your model is an NLP (nonlinear program). "
-                "Using NLP solver %s to solve." % config.nlp_solver)
+                'Your model is an NLP (nonlinear program). '
+                'Using NLP solver %s to solve.' % config.nlp_solver)
             SolverFactory(config.nlp_solver).solve(
                 solve_data.original_model, tee=config.nlp_solver_tee, **config.nlp_solver_args)
             return False
         else:
             config.logger.info(
-                "Your model is an LP (linear program). "
-                "Using LP solver %s to solve." % config.mip_solver)
+                'Your model is an LP (linear program). '
+                'Using LP solver %s to solve.' % config.mip_solver)
             masteropt = SolverFactory(config.mip_solver)
             if isinstance(masteropt, PersistentSolver):
                 masteropt.set_instance(solve_data.original_model)
             if config.threads > 0:
-                masteropt.options["threads"] = config.threads
+                masteropt.options['threads'] = config.threads
             masteropt.solve(solve_data.original_model,
                             tee=config.mip_solver_tee, **config.mip_solver_args)
             return False
@@ -109,9 +109,9 @@ def calc_jacobians(solve_data, config):
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
     solve_data.jacobians = ComponentMap()
-    if config.differentiate_mode == "reverse_symbolic":
+    if config.differentiate_mode == 'reverse_symbolic':
         mode = differentiate.Modes.reverse_symbolic
-    elif config.differentiate_mode == "sympy":
+    elif config.differentiate_mode == 'sympy':
         mode = differentiate.Modes.sympy
     for c in solve_data.mip.MindtPy_utils.nonlinear_constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
@@ -211,7 +211,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
                                             zip(model.component_data_objects(Var),
                                                 setpoint_model.component_data_objects(Var))))
     assert len(model_vars) == len(
-        setpoint_vars), "Trying to generate Squared Norm2 objective function for models with different number of variables"
+        setpoint_vars), 'Trying to generate Squared Norm2 objective function for models with different number of variables'
 
     return Objective(expr=(
         sum([(model_var - setpoint_var.value)**2
@@ -241,7 +241,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
-        setpoint_vars), "Trying to generate Norm1 objective function for models with different number of variables"
+        setpoint_vars), 'Trying to generate Norm1 objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L1_obj')
     obj_blk = model.MindtPy_utils.L1_obj = Block()
     obj_blk.L1_obj_idx = RangeSet(len(model_vars))
@@ -280,7 +280,7 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
-        setpoint_vars), "Trying to generate Norm Infinity objective function for models with different number of variables"
+        setpoint_vars), 'Trying to generate Norm Infinity objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L_infinity_obj')
     obj_blk = model.MindtPy_utils.L_infinity_obj = Block()
     obj_blk.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
@@ -341,9 +341,9 @@ def generate_lag_objective_function(model, setpoint_model, config, discrete_only
     # first_order_term = sum(jac_lag[i] * (var - var.value)
     #                        for i, var in enumerate(model.MindtPy_utils.variable_list[:-1]))
 
-    if config.add_regularization == "grad_lag":
+    if config.add_regularization == 'grad_lag':
         return Objective(expr=first_order_term, sense=minimize)
-    elif config.add_regularization == "hess_lag":
+    elif config.add_regularization == 'hess_lag':
         # Implementation 1
         hess_lag = nlp.evaluate_hessian_lag().toarray()
         second_order_term = 0.5 * sum((var_i - var_i.value) * float(hess_lag[nlp.get_primal_indices([temp_var_i])[0]][nlp.get_primal_indices([temp_var_j])[0]]) * (var_j - var_j.value)
@@ -364,7 +364,7 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     This function generates constraint (PF-OA master problem) for minimum Norm1 distance to setpoint_model
     Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
-    Ref: Paper "A storm of feasibility pumps for nonconvex MINLP" Eq. (16)
+    Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP' Eq. (16)
 
     Parameters
     ----------
@@ -382,7 +382,7 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
-        setpoint_vars), "Trying to generate Norm1 norm constraint for models with different number of variables"
+        setpoint_vars), 'Trying to generate Norm1 norm constraint for models with different number of variables'
     norm_constraint_blk = model.MindtPy_utils.L1_norm_constraint = Block()
     norm_constraint_blk.L1_slack_idx = RangeSet(len(model_vars))
     norm_constraint_blk.L1_slack_var = Var(

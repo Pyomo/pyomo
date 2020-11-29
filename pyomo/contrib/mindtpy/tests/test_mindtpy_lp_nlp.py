@@ -30,10 +30,10 @@ else:
 
 
 @unittest.skipIf(not subsolvers_available,
-                 "Required subsolvers %s are not available"
+                 'Required subsolvers %s are not available'
                  % (required_solvers,))
 @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                 "Symbolic differentiation is not available")
+                 'Symbolic differentiation is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
@@ -175,5 +175,5 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEquals(value(model.obj.expr), 0.66555, places=2)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

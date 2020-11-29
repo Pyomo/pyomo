@@ -160,7 +160,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy is not "FP" and not solve_data.should_terminate:
+    if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy is not 'FP' and not solve_data.should_terminate:
         bound_fix(solve_data, config, last_iter_cuts)
 
 
@@ -419,7 +419,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             mip_args['add_options'] = mip_args.get('add_options', [])
             mip_args['add_options'].append('option optcr=0.001;')
         if config.threads > 0:
-            masteropt.options["threads"] = config.threads
+            masteropt.options['threads'] = config.threads
         master_mip_results = masteropt.solve(
             solve_data.mip, tee=config.mip_solver_tee, **mip_args)
         if solve_data.objective_sense == minimize:

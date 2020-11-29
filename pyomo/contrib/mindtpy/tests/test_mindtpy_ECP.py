@@ -27,10 +27,10 @@ else:
 
 
 @unittest.skipIf(not subsolvers_available,
-                 "Required subsolvers %s are not available"
+                 'Required subsolvers %s are not available'
                  % (required_solvers,))
 @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                 "Symbolic differentiation is not available")
+                 'Symbolic differentiation is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
@@ -178,7 +178,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='ECP',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0], bound_tolerance=1e-3,
-                                feasibility_norm="L_infinity"
+                                feasibility_norm='L_infinity'
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -286,5 +286,5 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(value(model.obj.expr), 14.83, places=1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

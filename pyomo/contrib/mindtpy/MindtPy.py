@@ -100,7 +100,7 @@ class MindtPySolver(object):
         if config.use_fbbt:
             fbbt(model)
             config.logger.info(
-                "Use the fbbt to tighten the bounds of variables")
+                'Use the fbbt to tighten the bounds of variables')
 
         solve_data.original_model = model
         solve_data.working_model = model.clone()
@@ -112,12 +112,12 @@ class MindtPySolver(object):
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 lower_logger_level_to(config.logger, new_logging_level), \
                 create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
-            config.logger.info("---Starting MindtPy---")
+            config.logger.info('---Starting MindtPy---')
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
             process_objective(solve_data, config,
-                              move_linear_objective=(config.init_strategy == "FP"
+                              move_linear_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp)
 
@@ -167,7 +167,7 @@ class MindtPySolver(object):
             solve_data.nlp_iter = 0
             solve_data.mip_iter = 0
             solve_data.mip_subiter = 0
-            if config.init_strategy == "FP":
+            if config.init_strategy == 'FP':
                 solve_data.fp_iter = 1
 
             # set up bounds
@@ -190,7 +190,7 @@ class MindtPySolver(object):
 
             if config.feasibility_norm == 'L1' or config.feasibility_norm == 'L2':
                 feas.nl_constraint_set = RangeSet(len(MindtPy.nonlinear_constraint_list),
-                                                  doc="Integer index set over the nonlinear constraints.")
+                                                  doc='Integer index set over the nonlinear constraints.')
                 # Create slack variables for feasibility problem
                 feas.slack_var = Var(feas.nl_constraint_set,
                                      domain=NonNegativeReals, initialize=1)
@@ -248,7 +248,7 @@ class MindtPySolver(object):
         return solve_data.results
 
     #
-    # Support "with" statements.
+    # Support 'with' statements.
     #
     def __enter__(self):
         return self

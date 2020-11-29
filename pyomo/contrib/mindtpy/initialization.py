@@ -57,13 +57,13 @@ def MindtPy_initialize_master(solve_data, config):
     if config.calculate_dual:
         m.dual.deactivate()
 
-    if config.init_strategy == "FP":
+    if config.init_strategy == 'FP':
         MindtPy.cuts.fp_orthogonality_cuts = ConstraintList(
             doc='Orthogonality cuts in feasibility pump')
         if config.fp_projcuts:
             solve_data.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
                 doc='Orthogonality cuts in feasibility pump')
-    if config.strategy == 'OA' or config.init_strategy == "FP":
+    if config.strategy == 'OA' or config.init_strategy == 'FP':
         calc_jacobians(solve_data, config)  # preload jacobians
         MindtPy.cuts.oa_cuts = ConstraintList(
             doc='Outer approximation cuts')
@@ -109,7 +109,7 @@ def MindtPy_initialize_master(solve_data, config):
             else:
                 handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                     solve_data, config)
-    elif config.init_strategy == "FP":
+    elif config.init_strategy == 'FP':
         init_rNLP(solve_data, config)
         fp_loop(solve_data, config)
 
@@ -128,7 +128,7 @@ def init_rNLP(solve_data, config):
     """
     m = solve_data.working_model.clone()
     config.logger.info(
-        "Relaxed NLP: Solve relaxed integrality")
+        'Relaxed NLP: Solve relaxed integrality')
     MindtPy = m.MindtPy_utils
     TransformationFactory('core.relax_integer_vars').apply_to(m)
     nlp_args = dict(config.nlp_solver_args)
@@ -161,11 +161,11 @@ def init_rNLP(solve_data, config):
         config.logger.info(
             'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
             % (value(main_objective.expr), solve_data.LB, solve_data.UB))
-        if config.strategy in {'OA', 'GOA', "FP"}:
+        if config.strategy in {'OA', 'GOA', 'FP'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
-            if config.init_strategy == "FP":
+            if config.init_strategy == 'FP':
                 copy_var_list_values(m.MindtPy_utils.variable_list,
                                      solve_data.working_model.MindtPy_utils.variable_list,
                                      config, ignore_integrality=True)
@@ -215,7 +215,7 @@ def init_max_binaries(solve_data, config):
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1
     config.logger.info(
-        "MILP %s: maximize value of binaries" %
+        'MILP %s: maximize value of binaries' %
         (solve_data.mip_iter))
     for c in MindtPy.nonlinear_constraint_list:
         c.deactivate()

@@ -100,7 +100,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             linearized constraint has been violated
         """
 
-        config.logger.info("Adding OA cuts")
+        config.logger.info('Adding OA cuts')
         with time_code(solve_data.timing, 'OA cut generation'):
             for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
                 if constr.body.polynomial_degree() in (0, 1):
@@ -120,7 +120,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant
                     self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                             sense="L",
+                             sense='L',
                              rhs=cplex_rhs)
                 else:  # Inequality constraint (possibly two-sided)
                     if constr.has_ub() \
@@ -135,7 +135,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                         cplex_expr, _ = opt._get_expr_from_pyomo_expr(
                             pyomo_expr)
                         self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                                 sense="L",
+                                 sense='L',
                                  rhs=constr.upper.value + cplex_rhs)
                     if constr.has_lb() \
                         and (linearize_active and abs(constr.lslack()) < config.bound_tolerance) \
@@ -148,7 +148,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                         cplex_expr, _ = opt._get_expr_from_pyomo_expr(
                             pyomo_expr)
                         self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
-                                 sense="G",
+                                 sense='G',
                                  rhs=constr.lower.value + cplex_rhs)
 
     def add_lazy_affine_cuts(self, solve_data, config, opt):
@@ -166,7 +166,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         """
         with time_code(solve_data.timing, 'Affine cut generation'):
             m = solve_data.mip
-            config.logger.info("Adding affine cuts")
+            config.logger.info('Adding affine cuts')
             counter = 0
 
             for constr in m.MindtPy_utils.nonlinear_constraint_list:
@@ -181,7 +181,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     mc_eqn = mc(constr.body)
                 except MCPP_Error as e:
                     config.logger.debug(
-                        "Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
+                        'Skipping constraint %s due to MCPP error %s' % (constr.name, str(e)))
                     continue  # skip to the next constraint
                 # TODO: check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
                 ccSlope = mc_eqn.subcc()
@@ -223,7 +223,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     cplex_concave_cut, _ = opt._get_expr_from_pyomo_expr(
                         pyomo_concave_cut)
                     self.add(constraint=cplex.SparsePair(ind=cplex_concave_cut.variables, val=cplex_concave_cut.coefficients),
-                             sense="G",
+                             sense='G',
                              rhs=lb_int - cplex_concave_rhs)
                     counter += 1
                 if convex_cut_valid:
@@ -235,11 +235,11 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     cplex_convex_cut, _ = opt._get_expr_from_pyomo_expr(
                         pyomo_convex_cut)
                     self.add(constraint=cplex.SparsePair(ind=cplex_convex_cut.variables, val=cplex_convex_cut.coefficients),
-                             sense="L",
+                             sense='L',
                              rhs=ub_int - cplex_convex_rhs)
                     counter += 1
 
-            config.logger.info("Added %s affine cuts" % counter)
+            config.logger.info('Added %s affine cuts' % counter)
 
     def add_lazy_no_good_cuts(self, var_values, solve_data, config, opt, feasible=False):
         """
@@ -261,7 +261,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         if not config.add_no_good_cuts:
             return
 
-        config.logger.info("Adding no-good cuts")
+        config.logger.info('Adding no-good cuts')
         with time_code(solve_data.timing, 'No-good cut generation'):
             m = solve_data.mip
             MindtPy = m.MindtPy_utils
@@ -292,7 +292,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 pyomo_no_good_cut)
 
             self.add(constraint=cplex.SparsePair(ind=cplex_no_good_cut.variables, val=cplex_no_good_cut.coefficients),
-                     sense="G",
+                     sense='G',
                      rhs=1 - cplex_no_good_rhs)
 
     def handle_lazy_master_feasible_solution(self, master_mip, solve_data, config, opt):

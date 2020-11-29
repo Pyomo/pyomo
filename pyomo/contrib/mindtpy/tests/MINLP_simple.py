@@ -43,8 +43,8 @@ class SimpleMINLP(ConcreteModel):
         m = self
 
         """Set declarations"""
-        I = m.I = RangeSet(1, 2, doc="continuous variables")
-        J = m.J = RangeSet(1, 3, doc="discrete variables")
+        I = m.I = RangeSet(1, 2, doc='continuous variables')
+        J = m.J = RangeSet(1, 3, doc='discrete variables')
 
         # initial point information for discrete variables
         initY = {

@@ -87,7 +87,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
         masteropt._solver_model.set_error_stream(None)
         masteropt.options['timelimit'] = config.time_limit
     if config.threads > 0:
-        masteropt.options["threads"] = config.threads
+        masteropt.options['threads'] = config.threads
     if config.use_tabu_list:
         tabulist = masteropt._solver_model.register_callback(
             IncumbentCallback_cplex)
@@ -115,10 +115,10 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
             master_mip_results = masteropt.solve(
                 solve_data.mip, tee=config.mip_solver_tee, **mip_args)
     except ValueError:
-        config.logger.warning("ValueError: Cannot load a SolverResults object with bad status: error. "
-                              "MIP solver failed. This usually happens in the single-tree GOA algorithm. "
+        config.logger.warning('ValueError: Cannot load a SolverResults object with bad status: error. '
+                              'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
                               "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
-                              "No integer solution is found, so the cplex solver will report an error status. ")
+                              'No integer solution is found, so the cplex solver will report an error status. ')
         return None, None
 
     if master_mip_results.solver.termination_condition is tc.optimal:
@@ -144,11 +144,11 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
         solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
         solve_data.mip.MindtPy_utils.cuts.del_component(
             'obj_reg_estimate')
-        if config.add_regularization == "level_L1":
-            solve_data.mip.MindtPy_utils.del_component("L1_obj")
-        elif config.add_regularization == "level_L_infinity":
+        if config.add_regularization == 'level_L1':
+            solve_data.mip.MindtPy_utils.del_component('L1_obj')
+        elif config.add_regularization == 'level_L_infinity':
             solve_data.mip.MindtPy_utils.del_component(
-                "L_infinity_obj")
+                'L_infinity_obj')
 
     return solve_data.mip, master_mip_results
 
@@ -403,19 +403,19 @@ def setup_master(solve_data, config, fp, regularization_problem):
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
     elif regularization_problem:
-        if config.add_regularization == "level_L1":
+        if config.add_regularization == 'level_L1':
             MindtPy.loa_proj_mip_obj = generate_norm1_objective_function(solve_data.mip,
                                                                          solve_data.best_solution_found,
                                                                          discrete_only=False)
-        elif config.add_regularization == "level_L2":
+        elif config.add_regularization == 'level_L2':
             MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(solve_data.mip,
                                                                            solve_data.best_solution_found,
                                                                            discrete_only=False)
-        elif config.add_regularization == "level_L_infinity":
+        elif config.add_regularization == 'level_L_infinity':
             MindtPy.loa_proj_mip_obj = generate_norm_inf_objective_function(solve_data.mip,
                                                                             solve_data.best_solution_found,
                                                                             discrete_only=False)
-        elif config.add_regularization in {"grad_lag", "hess_lag"}:
+        elif config.add_regularization in {'grad_lag', 'hess_lag'}:
             MindtPy.loa_proj_mip_obj = generate_lag_objective_function(solve_data.mip,
                                                                        solve_data.best_solution_found,
                                                                        config,

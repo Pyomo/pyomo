@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Example 1 in paper "A Feasibility Pump for mixed integer nonlinear programs"
+"""Example 1 in paper 'A Feasibility Pump for mixed integer nonlinear programs'
 
 Ref:
     Bonami P, Cornuéjols G, Lodi A, et al. A feasibility pump for mixed integer nonlinear programs[J]. Mathematical Programming, 2009, 119(2): 331-352.
