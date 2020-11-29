@@ -82,7 +82,7 @@ def solve_feas_pump_subproblem(solve_data, config):
             for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list):
                 fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
 
-    MindtPy.feas_pump_nlp_obj = generate_norm2sq_objective_function(
+    MindtPy.fp_nlp_obj = generate_norm2sq_objective_function(
         fp_nlp, solve_data.mip, discrete_only=config.fp_discrete_only)
 
     MindtPy.cuts.deactivate()
@@ -193,7 +193,7 @@ def feas_pump_loop(solve_data, config):
 
         if fp_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             config.logger.info('FP-NLP %s: Distance-OBJ: %s'
-                               % (solve_data.fp_iter, value(fp_nlp.MindtPy_utils.feas_pump_nlp_obj)))
+                               % (solve_data.fp_iter, value(fp_nlp.MindtPy_utils.fp_nlp_obj)))
             handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config)
         elif fp_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
             config.logger.error("Feasibility pump NLP subproblem infeasible")
