@@ -9,9 +9,8 @@
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
-import pyutilib.misc
 
-from pyomo.common import *
+from pyomo.common import PyomoAPIData, pyomo_api, PyomoAPIFactory
 from pyomo.common.log import LoggingIntercept
 
 from six import StringIO

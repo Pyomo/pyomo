@@ -1,4 +1,15 @@
 # -*- coding: utf-8 -*-
+
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Implementation of the MindtPy solver.
 
 The MindtPy (MINLP Decomposition Toolkit) solver applies a variety of
@@ -20,19 +31,15 @@ rigorous. Questions: Please make a post at StackOverflow and/or David Bernal
 """
 from __future__ import division
 import logging
-from pyomo.contrib.gdpopt.util import (
-    copy_var_list_values,
-    create_utility_block, time_code,
-    setup_results_object, process_objective, lower_logger_level_to)
+from pyomo.contrib.gdpopt.util import (copy_var_list_values, create_utility_block,
+                                       time_code, setup_results_object, process_objective, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import (
-    MindtPySolveData, model_is_valid)
-from pyomo.core import (
-    Block, ConstraintList, NonNegativeReals, RangeSet, Set, Suffix, Var,
-    VarList, TransformationFactory, Objective)
+from pyomo.contrib.mindtpy.util import MindtPySolveData, model_is_valid
+from pyomo.core import (Block, ConstraintList, NonNegativeReals,
+                        Set, Suffix, Var, VarList, TransformationFactory, Objective, RangeSet)
 from pyomo.opt import SolverFactory, SolverResults
-from pyutilib.misc import Container
+from pyomo.common.collections import Container
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 
@@ -81,6 +88,7 @@ class MindtPySolver(object):
         solve_data.curr_int_sol = []
         solve_data.prev_int_sol = []
         solve_data.should_terminate = False
+        solve_data.integer_list = []
 
         # configuration confirmation
         if config.single_tree:
@@ -99,7 +107,7 @@ class MindtPySolver(object):
             config.add_slack = False
             config.use_mcpp = True
             config.integer_to_binary = True
-            config.use_dual = False
+            config.equality_relaxation = False
             config.use_fbbt = True
         elif config.strategy == "feas_pump":  # feasibility pump alone
             config.init_strategy = "feas_pump"
@@ -108,8 +116,8 @@ class MindtPySolver(object):
         if config.init_strategy == "feas_pump":
             solve_data.fp_iter = 1
 
-        if config.nlp_solver == "baron":
-            config.use_dual = False
+        if config.nlp_solver == "baron" or (config.nlp_solver == "gams" and config.nlp_solver_args['solver']):
+            config.equality_relaxation = False
         # if ecp tolerance is not provided use bound tolerance
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.bound_tolerance
@@ -117,6 +125,13 @@ class MindtPySolver(object):
         if config.solver_tee:
             config.mip_solver_tee = True
             config.nlp_solver_tee = True
+        if config.add_regularization in {'grad_lag', 'hess_lag'}:
+            config.calculate_dual = True
+        if config.heuristic_nonconvex:
+            config.equality_relaxation = True
+            config.add_slack = True
+        if config.equality_relaxation:
+            config.calculate_dual = True
 
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
@@ -143,7 +158,9 @@ class MindtPySolver(object):
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
             process_objective(solve_data, config,
-                              move_linear_objective=(config.init_strategy == 'feas_pump'), use_mcpp=config.use_mcpp)
+                              move_linear_objective=(config.init_strategy == 'feas_pump'
+                                                     or config.add_regularization is not None),
+                              use_mcpp=config.use_mcpp)
 
             # Save model initial values.
             solve_data.initial_var_values = list(

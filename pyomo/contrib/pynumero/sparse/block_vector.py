@@ -1387,7 +1387,6 @@ class BlockVector(np.ndarray, BaseBlockVector):
         # populate blocks in the right spaces
         for bid in mpi_bv.owned_blocks:
             mpi_bv.set_block(bid, self.get_block(bid))
-        mpi_bv.broadcast_block_sizes()
 
         return mpi_bv
 

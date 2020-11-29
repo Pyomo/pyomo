@@ -16,8 +16,8 @@ class ProposalModel(ConcreteModel):
         super(ProposalModel, self).__init__(*args, **kwargs)
         m = self
 
-        m.x = Var(domain=Reals, bounds=(0, 20), initialize=4)
-        m.y = Var(domain=Integers, bounds=(0, 20), initialize=2)
+        m.x = Var(domain=Reals, bounds=(0, 20), initialize=1)
+        m.y = Var(domain=Integers, bounds=(0, 20), initialize=4)
 
         m.c1 = Constraint(expr=m.x**2/20.0 + m.y <= 20)
         m.c2 = Constraint(expr=(m.x-1)**2/40.0 - m.y <= -4)

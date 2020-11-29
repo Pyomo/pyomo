@@ -1,11 +1,23 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Cut generation."""
 from __future__ import division
+import logging
 from math import copysign
-from pyomo.core import Constraint, minimize, value, TransformationFactory, Block, ConstraintList
+from pyomo.core import minimize, value
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.gdpopt.util import identify_variables, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def add_oa_cuts(target_model, dual_values, solve_data, config,
@@ -41,7 +53,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             jacs = solve_data.jacobians
 
             # Equality constraint (makes the problem nonconvex)
-            if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower and config.use_dual:
+            if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower and config.equality_relaxation:
                 sign_adjust = -1 if solve_data.objective_sense == minimize else 1
                 rhs = constr.lower
                 if config.add_slack:

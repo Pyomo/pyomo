@@ -12,7 +12,6 @@ from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
 import six
-from six.moves import xrange as range
 
 if six.PY3:
     from collections.abc import Sequence as collections_Sequence

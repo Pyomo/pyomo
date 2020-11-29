@@ -1,7 +1,16 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Iteration loop for MindtPy."""
 from __future__ import division
-
+import logging
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_master,
@@ -9,12 +18,14 @@ from pyomo.contrib.mindtpy.mip_solve import (solve_master,
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
                                              handle_subproblem_optimal, handle_subproblem_infeasible,
                                              handle_subproblem_other_termination)
-from pyomo.core import minimize, Objective, Var
+from pyomo.core import minimize, maximize, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import time_code
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def MindtPy_iteration_loop(solve_data, config):
@@ -31,9 +42,6 @@ def MindtPy_iteration_loop(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
-    working_model = solve_data.working_model
-    main_objective = next(
-        working_model.component_data_objects(Objective, active=True))
     last_iter_cuts = False
     while solve_data.mip_iter < config.iteration_limit:
 
@@ -66,6 +74,16 @@ def MindtPy_iteration_loop(solve_data, config):
                 break
         else:
             raise NotImplementedError()
+
+        # regularization is activated after the first feasible solution is found.
+        if config.add_regularization is not None and solve_data.best_solution_found is not None:
+            # the master problem might be unbounded, regularization is activated only when a valid bound is provided.
+            if (solve_data.objective_sense == minimize and solve_data.LB != float('-inf')) or (solve_data.objective_sense == maximize and solve_data.UB != float('inf')):
+                master_mip, master_mip_results = solve_master(
+                    solve_data, config, regularization_problem=True)
+                if master_mip_results.solver.termination_condition is tc.optimal:
+                    handle_master_optimal(
+                        master_mip, solve_data, config, update_bound=False)
 
         if algorithm_should_terminate(solve_data, config, check_cycling=True):
             last_iter_cuts = False
@@ -107,7 +125,7 @@ def MindtPy_iteration_loop(solve_data, config):
         # if config.strategy == 'PSC':
         #     # If the hybrid algorithm is not making progress, switch to OA.
         #     progress_required = 1E-6
-        #     if main_objective.sense == minimize:
+        #     if solve_data.objective_sense == minimize:
         #         log = solve_data.LB_progress
         #         sign_adjust = 1
         #     else:
@@ -287,14 +305,15 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         for var in solve_data.mip.component_data_objects(ctype=Var):
             if var.is_integer():
                 temp.append(int(round(var.value)))
-        solve_data.curr_int_sol = temp
+        solve_data.curr_int_sol = tuple(temp)
 
-        if solve_data.curr_int_sol == solve_data.prev_int_sol:
+        if solve_data.curr_int_sol in set(solve_data.integer_list):
             config.logger.info(
                 'Cycling happens after {} master iterations. '
+                'The same combination is obtained in iteration {} '
                 'This issue happens when the NLP subproblem violates constraint qualification. '
                 'Convergence to optimal solution is not guaranteed.'
-                .format(solve_data.mip_iter))
+                .format(solve_data.mip_iter, solve_data.integer_list.index(solve_data.curr_int_sol)))
             config.logger.info(
                 'Final bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))
@@ -302,7 +321,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
             solve_data.results.solver.termination_condition = tc.feasible
             return True
 
-        solve_data.prev_int_sol = solve_data.curr_int_sol
+        solve_data.integer_list.append(solve_data.curr_int_sol)
 
     # if not algorithm_is_making_progress(solve_data, config):
     #     config.logger.debug(
@@ -365,7 +384,8 @@ def bound_fix(solve_data, config, last_iter_cuts):
         elif config.strategy == 'OA':
             MindtPy.MindtPy_linear_cuts.no_good_cuts[len(
                 MindtPy.MindtPy_linear_cuts.no_good_cuts)].deactivate()
-        # MindtPy.MindtPy_linear_cuts.oa_cuts.activate()
+        if config.add_regularization and MindtPy.find_component('mip_obj') is None:
+            MindtPy.objective_list[-1].activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.
         if isinstance(masteropt, PersistentSolver):
@@ -380,9 +400,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             masteropt.options["threads"] = config.threads
         master_mip_results = masteropt.solve(
             solve_data.mip, tee=config.mip_solver_tee, **mip_args)
-        main_objective = next(
-            solve_data.working_model.component_data_objects(Objective, active=True))
-        if main_objective.sense == minimize:
+        if solve_data.objective_sense == minimize:
             solve_data.LB = max(
                 [master_mip_results.problem.lower_bound] + solve_data.LB_progress[:-1])
             solve_data.LB_progress.append(solve_data.LB)

@@ -1,6 +1,14 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Tests for the MindtPy solver."""
-from math import fabs
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \
@@ -11,11 +19,9 @@ from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
 from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
-from pyomo.environ import SolverFactory, value
-from pyomo.environ import *
+from pyomo.environ import SolverFactory, value, maximize
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
-from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 
 required_solvers = ('ipopt', 'glpk')
@@ -37,13 +43,29 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_8PP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet(convex=False)
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with Outer Approximation')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5)
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_OA_8PP_nonconvex(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=False)
+            print('\n Solving nonconvex 8PP problem with Outer Approximation')
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                bound_tolerance=1E-5,
+                                heuristic_nonconvex=True)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -57,7 +79,8 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0])
+                                nlp_solver=required_solvers[0],
+                                heuristic_nonconvex=True,)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -71,7 +94,8 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                feasibility_norm='L2')
+                                feasibility_norm='L2',
+                                heuristic_nonconvex=True,)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -85,7 +109,8 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                differentiate_mode='sympy')
+                                differentiate_mode='sympy',
+                                heuristic_nonconvex=True,)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -94,7 +119,7 @@ class TestMindtPy(unittest.TestCase):
     # def test_PSC(self):
     #     """Test the partial surrogate cuts decomposition algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
+    #         model = EightProcessFlowsheet(convex=True)
     #         print('\n Solving problem with Partial Surrogate Cuts')
     #         opt.solve(model, strategy='PSC',
     #                   init_strategy='rNLP', mip_solver=required_solvers[1],
@@ -107,7 +132,7 @@ class TestMindtPy(unittest.TestCase):
     # def test_GBD(self):
     #     """Test the generalized Benders Decomposition algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
+    #         model = EightProcessFlowsheet(convex=True)
     #         print('\n Solving problem with Generalized Benders Decomposition')
     #         opt.solve(model, strategy='GBD',
     #                   init_strategy='rNLP', mip_solver=required_solvers[1],
@@ -120,7 +145,7 @@ class TestMindtPy(unittest.TestCase):
     # def test_ECP(self):
     #     """Test the Extended Cutting Planes algorithm."""
     #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet()
+    #         model = EightProcessFlowsheet(convex=True)
     #         print('\n Solving problem with Extended Cutting Planes')
     #         opt.solve(model, strategy='ECP',
     #                   init_strategy='rNLP', mip_solver=required_solvers[1],
@@ -314,7 +339,7 @@ class TestMindtPy(unittest.TestCase):
     def test_rNLP_add_slack(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print(
                 '\n Test rNLP initialize strategy and add_slack to improve code coverage')
             opt.solve(model, strategy='OA',

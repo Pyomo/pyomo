@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pickle
 
 import pyutilib.th as unittest
@@ -7,7 +17,7 @@ from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
                                       is_potentially_variable)
-import pyomo.kernel
+from pyomo.kernel import pprint
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
 from pyomo.core.tests.unit.kernel.test_tuple_container import \
@@ -23,27 +33,24 @@ from pyomo.core.kernel.parameter import (IParameter,
                                          parameter_list)
 from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.block import block
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet)
 
 class Test_parameter(unittest.TestCase):
 
     def test_pprint(self):
-        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         p = parameter()
-        pyomo.kernel.pprint(p)
+        pprint(p)
         b = block()
         b.p = p
-        pyomo.kernel.pprint(p)
-        pyomo.kernel.pprint(b)
+        pprint(p)
+        pprint(b)
         m = block()
         m.b = b
-        pyomo.kernel.pprint(p)
-        pyomo.kernel.pprint(b)
-        pyomo.kernel.pprint(m)
+        pprint(p)
+        pprint(b)
+        pprint(m)
 
     def test_ctype(self):
         p = parameter()
@@ -134,21 +141,20 @@ class Test_parameter(unittest.TestCase):
 class Test_functional_value(unittest.TestCase):
 
     def test_pprint(self):
-        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         f = functional_value()
-        pyomo.kernel.pprint(f)
+        pprint(f)
         b = block()
         b.f = f
-        pyomo.kernel.pprint(f)
-        pyomo.kernel.pprint(b)
+        pprint(f)
+        pprint(b)
         m = block()
         m.b = b
-        pyomo.kernel.pprint(f)
-        pyomo.kernel.pprint(b)
-        pyomo.kernel.pprint(m)
+        pprint(f)
+        pprint(b)
+        pprint(m)
 
     def test_ctype(self):
         f = functional_value()

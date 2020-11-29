@@ -7,14 +7,19 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import os
 import sys
 from os.path import dirname, abspath
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
-from pyomo.opt import *
+from pyomo.environ import (ConcreteModel, Var, Objective, RangeSet,
+                           Constraint, Reals, NonNegativeIntegers,
+                           NonNegativeReals, Integers, Binary,
+                           maximize, minimize)
+from pyomo.opt import (SolverFactory, ProblemSense,
+                       TerminationCondition, SolverStatus)
 
 cbc_available = SolverFactory('cbc', solver_io='lp').available(exception_flag=False)
 

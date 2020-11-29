@@ -1,19 +1,34 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Initialization functions."""
 from __future__ import division
-import math
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
+                                       copy_var_list_values, get_main_elapsed_time)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts
+from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
 from pyomo.contrib.mindtpy.util import calc_jacobians, var_bound_add
 from pyomo.core import (ConstraintList, Objective,
-                        TransformationFactory, maximize, minimize, value, Var)
-from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverFactory
+                        TransformationFactory, maximize, minimize,
+                        value, Var)
+from pyomo.opt import SolverFactory, TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
-                                             handle_subproblem_optimal, handle_subproblem_infeasible,
+                                             handle_subproblem_optimal,
+                                             handle_subproblem_infeasible,
                                              handle_subproblem_other_termination)
+import math
 from pyomo.contrib.mindtpy.feasibility_pump import feas_pump_loop
+import logging
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -35,8 +50,11 @@ def MindtPy_initialize_master(solve_data, config):
         var_bound_add(solve_data, config)
 
     m = solve_data.mip = solve_data.working_model.clone()
+    next(solve_data.mip.component_data_objects(
+        Objective, active=True)).deactivate()
+
     MindtPy = m.MindtPy_utils
-    if config.use_dual:
+    if config.calculate_dual:
         m.dual.deactivate()
 
     if config.init_strategy == 'feas_pump':
@@ -127,17 +145,19 @@ def init_rNLP(solve_data, config):
         if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
             config.logger.info(
                 'relaxed NLP is not solved to optimality.')
-        main_objective = next(m.component_data_objects(Objective, active=True))
         dual_values = list(
-            m.dual[c] for c in MindtPy.constraint_list) if config.use_dual else None
+            m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual else None
         # Add OA cut
         # This covers the case when the Lower bound does not exist.
         # TODO: should we use the bound of the rNLP here?
-        if main_objective.sense == minimize:
+        if solve_data.objective_sense == minimize:
             if not math.isnan(results.problem.lower_bound):
                 solve_data.LB = results.problem.lower_bound
+                solve_data.LB_progress.append(results.problem.lower_bound)
         elif not math.isnan(results.problem.upper_bound):
             solve_data.UB = results.problem.upper_bound
+            solve_data.UB_progress.append(results.problem.upper_bound)
+        main_objective = MindtPy.objective_list[-1]
         config.logger.info(
             'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
             % (value(main_objective.expr), solve_data.LB, solve_data.UB))
@@ -146,7 +166,6 @@ def init_rNLP(solve_data, config):
                                  solve_data.mip.MindtPy_utils.variable_list,
                                  config, ignore_integrality=True)
             if config.init_strategy == 'feas_pump':
-                # TODO：remove here
                 copy_var_list_values(m.MindtPy_utils.variable_list,
                                      solve_data.working_model.MindtPy_utils.variable_list,
                                      config, ignore_integrality=True)
@@ -191,7 +210,7 @@ def init_max_binaries(solve_data, config):
         contains the specific configurations for the algorithm
     """
     m = solve_data.working_model.clone()
-    if config.use_dual:
+    if config.calculate_dual:
         m.dual.deactivate()
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1

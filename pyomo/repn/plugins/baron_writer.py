@@ -15,15 +15,13 @@
 import itertools
 import logging
 import math
-from six import iteritems, StringIO, iterkeys
-from six.moves import xrange
-from pyutilib.math import isclose
+from six import iteritems, StringIO
 
 from pyomo.common.collections import OrderedSet
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.core.expr.numvalue import (
-    is_fixed, value, native_numeric_types, native_types, nonpyomo_leaf_types,
+    value, native_numeric_types, native_types, nonpyomo_leaf_types,
 )
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import (SortComponents,
@@ -32,10 +30,8 @@ from pyomo.core.base import (SortComponents,
                              NumericLabeler,
                              Constraint,
                              Objective,
-                             Var, Param)
+                             Param)
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.set_types import *
-from pyomo.core.kernel.base import ICategorizedObject
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
 import pyomo.core.base.suffix

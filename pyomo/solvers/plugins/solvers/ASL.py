@@ -12,17 +12,18 @@
 import os
 import six
 
-import pyomo.common
-import pyutilib.common
-import pyutilib.misc
+from pyomo.common import Executable
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Options, Bunch
+from pyutilib.services import TempfileManager
+from pyutilib.subprocess import run
 
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
-from pyomo.core.base import TransformationFactory
+from pyomo.opt.base import ProblemFormat, ResultsFormat
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.solver import SystemCallSolver
 from pyomo.core.kernel.block import IBlock
 from pyomo.solvers.mockmip import MockMIP
+from pyomo.core import TransformationFactory
 
 import logging
 logger = logging.getLogger('pyomo.solvers')
@@ -53,7 +54,7 @@ class ASL(SystemCallSolver):
         #
         # Note: Undefined capabilities default to 'None'
         #
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Options()
         self._capabilities.linear = True
         self._capabilities.integer = True
         self._capabilities.quadratic_objective = True
@@ -76,7 +77,7 @@ class ASL(SystemCallSolver):
             logger.warning(
                 "No solver option specified for ASL solver interface")
             return None
-        executable = pyomo.common.Executable(self.options.solver)
+        executable = Executable(self.options.solver)
         if not executable:
             logger.warning(
                 "Could not locate the '%s' executable, which is required "
@@ -92,7 +93,7 @@ class ASL(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = pyutilib.subprocess.run( [solver_exec,"-v"], timelimit=1 )
+        results = run( [solver_exec,"-v"], timelimit=1 )
         return _extract_version(results[1])
 
     def create_command_line(self, executable, problem_files):
@@ -103,7 +104,7 @@ class ASL(SystemCallSolver):
         #
         solver_name = os.path.basename(self.options.solver)
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                              create_tempfile(suffix="_%s.log" % solver_name)
 
         #
@@ -171,7 +172,7 @@ class ASL(SystemCallSolver):
         # Merge with any options coming in through the environment
         env[envstr] = " ".join(opt)
 
-        return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
+        return Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def _presolve(self, *args, **kwds):
         if (not isinstance(args[0], six.string_types)) and \
@@ -214,7 +215,7 @@ class MockASL(ASL,MockMIP):
     def __init__(self, **kwds):
         try:
             ASL.__init__(self,**kwds)
-        except pyutilib.common.ApplicationError: #pragma:nocover
+        except ApplicationError: #pragma:nocover
             pass                        #pragma:nocover
         MockMIP.__init__(self,"asl")
         self._assert_available = True

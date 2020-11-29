@@ -23,11 +23,11 @@ import inspect
 
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
-from pyomo.core.expr import current as EXPR
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
-                                               UnindexedComponent_set)
+                                               UnindexedComponent_set,
+                                               _get_indexed_component_data_name)
 from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer

@@ -31,6 +31,7 @@ except ImportError:
 from pyomo.contrib.pynumero.algorithms.solvers.pyomo_ext_cyipopt import ExternalInputOutputModel, PyomoExternalCyIpoptProblem
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptSolver
 
+
 class PressureDropModel(ExternalInputOutputModel):
     def __init__(self):
         self._Pin = None
@@ -55,6 +56,7 @@ class PressureDropModel(ExternalInputOutputModel):
                [1, -self._F**2, -self._F**2, -2*self._F*(self._c1 + self._c2)]]
         jac = np.asarray(jac, dtype=np.float64)
         return spa.coo_matrix(jac)
+
 
 class TestExternalInputOutputModel(unittest.TestCase):
 

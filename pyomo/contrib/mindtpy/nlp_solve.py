@@ -1,19 +1,28 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Solution of NLP subproblems."""
 from __future__ import division
-
+import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_no_good_cuts, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks
 from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
-from pyomo.core import (Constraint, Objective, TransformationFactory, Var,
-                        minimize, value)
+from pyomo.core import (Constraint, Objective,
+                        TransformationFactory, minimize, value)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverResults, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
-from pyomo.opt.results import ProblemSense
-from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def solve_subproblem(solve_data, config):
@@ -48,45 +57,42 @@ def solve_subproblem(solve_data, config):
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
 
     MindtPy.MindtPy_linear_cuts.deactivate()
-    # TODO: Do we really need to calculate tmp_duals by default?
-    # if config.use_dual and (config.strategy in {'OA', 'ECP', 'LOA'} or config.init_strategy == 'feas_pump'):
-    fixed_nlp.tmp_duals = ComponentMap()
-    # tem_duals are used to add oa cuts for nonlinear equality constraint.
-    # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
-    # The values of the duals are computed as follows: (Complementary Slackness)
-    #
-    # | constraint | c_geq | status at x1 | tmp_dual (violation) |
-    # |------------|-------|--------------|----------------------|
-    # | g(x) <= b  | -1    | g(x1) <= b   | 0                    |
-    # | g(x) <= b  | -1    | g(x1) > b    | g(x1) - b            |
-    # | g(x) >= b  | +1    | g(x1) >= b   | 0                    |
-    # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
-    evaluation_error = False
-    for c in fixed_nlp.component_data_objects(ctype=Constraint, active=True,
-                                              descend_into=True):
-        # We prefer to include the upper bound as the right hand side since we are
-        # considering c by default a (hopefully) convex function, which would make
-        # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
-        # if we don't have to
-        rhs = c.upper if c.has_ub() else c.lower
-        c_geq = -1 if c.has_ub() else 1
-        # c_leq = 1 if c.has_ub else -1
-        try:
-            fixed_nlp.tmp_duals[c] = c_geq * max(
-                0, c_geq*(rhs - value(c.body)))
-        except (ValueError, OverflowError, AttributeError) as error:
-            # AttributeError is included to condition when value(c.body) belongs to complex type
-            fixed_nlp.tmp_duals[c] = None
-            evaluation_error = True
-    if evaluation_error:
-        for nlp_var, orig_val in zip(
-                MindtPy.variable_list,
-                solve_data.initial_var_values):
-            if not nlp_var.fixed and not nlp_var.is_binary():
-                nlp_var.value = orig_val
-        # fixed_nlp.tmp_duals[c] = c_leq * max(
-        #     0, c_leq*(value(c.body) - rhs))
-        # TODO: change logic to c_leq based on benchmarking
+    if config.calculate_dual:
+        fixed_nlp.tmp_duals = ComponentMap()
+        # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
+        # The values of the duals are computed as follows: (Complementary Slackness)
+        #
+        # | constraint | c_geq | status at x1 | tmp_dual (violation) |
+        # |------------|-------|--------------|----------------------|
+        # | g(x) <= b  | -1    | g(x1) <= b   | 0                    |
+        # | g(x) <= b  | -1    | g(x1) > b    | g(x1) - b            |
+        # | g(x) >= b  | +1    | g(x1) >= b   | 0                    |
+        # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
+        evaluation_error = False
+        for c in fixed_nlp.component_data_objects(ctype=Constraint, active=True,
+                                                  descend_into=True):
+            # We prefer to include the upper bound as the right hand side since we are
+            # considering c by default a (hopefully) convex function, which would make
+            # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
+            # if we don't have to
+            rhs = c.upper if c.has_ub() else c.lower
+            c_geq = -1 if c.has_ub() else 1
+            # c_leq = 1 if c.has_ub else -1
+            try:
+                fixed_nlp.tmp_duals[c] = c_geq * max(
+                    0, c_geq*(rhs - value(c.body)))
+            except (ValueError, OverflowError) as error:
+                fixed_nlp.tmp_duals[c] = None
+                evaluation_error = True
+        if evaluation_error:
+            for nlp_var, orig_val in zip(
+                    MindtPy.variable_list,
+                    solve_data.initial_var_values):
+                if not nlp_var.fixed and not nlp_var.is_binary():
+                    nlp_var.value = orig_val
+            # fixed_nlp.tmp_duals[c] = c_leq * max(
+            #     0, c_leq*(value(c.body) - rhs))
+            # TODO: change logic to c_leq based on benchmarking
     try:
         TransformationFactory('contrib.deactivate_trivial_constraints')\
             .apply_to(fixed_nlp, tmp=True, ignore_infeasible=False)
@@ -104,6 +110,7 @@ def solve_subproblem(solve_data, config):
     if config.nlp_solver == 'gams':
         nlp_args['add_options'] = nlp_args.get('add_options', [])
         nlp_args['add_options'].append('option reslim=%s;' % remaining)
+        nlp_args['warmstart'] = True
     with SuppressInfeasibleWarning():
         with time_code(solve_data.timing, 'fixed subproblem'):
             results = nlpopt.solve(
@@ -133,7 +140,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
         fixed_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    if config.use_dual:
+    if config.calculate_dual:
         for c in fixed_nlp.tmp_duals:
             if fixed_nlp.dual.get(c, None) is None:
                 fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
@@ -141,10 +148,8 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
                            for c in fixed_nlp.MindtPy_utils.constraint_list)
     else:
         dual_values = None
-
-    main_objective = next(
-        fixed_nlp.component_data_objects(Objective, active=True))
-    if main_objective.sense == minimize:
+    main_objective = fixed_nlp.MindtPy_utils.objective_list[-1]
+    if solve_data.objective_sense == minimize:
         solve_data.UB = min(value(main_objective.expr), solve_data.UB)
         solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
         solve_data.UB_progress.append(solve_data.UB)
@@ -154,8 +159,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
         solve_data.LB_progress.append(solve_data.LB)
     config.logger.info(
         'Fixed NLP {}: OBJ: {}  LB: {}  UB: {}'
-        .format(solve_data.nlp_iter if not feas_pump else solve_data.fp_iter,
-                value(main_objective.expr),
+        .format(solve_data.nlp_iter if not feas_pump else solve_data.fp_iter, value(main_objective.expr),
                 solve_data.LB, solve_data.UB))
 
     if solve_data.solution_improved:
@@ -163,7 +167,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
         solve_data.best_solution_found_time = get_main_elapsed_time(
             solve_data.timing)
         if config.strategy == 'GOA':
-            if solve_data.results.problem.sense == ProblemSense.minimize:
+            if solve_data.objective_sense == minimize:
                 solve_data.num_no_good_cuts_added.update(
                     {solve_data.UB: len(solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.no_good_cuts)})
             else:
@@ -172,17 +176,16 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
 
         # add obj increasing constraint for feas_pump
         if feas_pump:
-            if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut') is not None:
-                solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
-                    'improving_objective_cut')
-            if main_objective.sense == minimize:
+            solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
+                'improving_objective_cut')
+            if solve_data.objective_sense == minimize:
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
                                                                                                       <= solve_data.UB - config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
             else:
                 solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
                                                                                                       >= solve_data.LB + config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
 
-            # Add the linear cut
+    # Add the linear cut
     if config.strategy == 'OA' or feas_pump:
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
@@ -194,8 +197,10 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, feas_pump=False):
                              config)
         add_affine_cuts(solve_data, config)
     # elif config.strategy == 'PSC':
+    #     # !!THIS SEEMS LIKE A BUG!! - mrmundt #
     #     add_psc_cut(solve_data, config)
     # elif config.strategy == 'GBD':
+    #     # !!THIS SEEMS LIKE A BUG!! - mrmundt #
     #     add_gbd_cut(solve_data, config)
 
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
@@ -222,7 +227,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
     # TODO try something else? Reinitialize with different initial
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
-    if config.use_dual:
+    if config.calculate_dual:
         for c in fixed_nlp.component_data_objects(ctype=Constraint):
             rhs = c.upper if c. has_ub() else c.lower
             c_geq = -1 if c.has_ub() else 1
@@ -345,6 +350,7 @@ def solve_feasibility_subproblem(solve_data, config):
             if config.nlp_solver == 'gams':
                 nlp_args['add_options'] = nlp_args.get('add_options', [])
                 nlp_args['add_options'].append('option reslim=%s;' % remaining)
+                nlp_args['warmstart'] = True
             with time_code(solve_data.timing, 'feasibility subproblem'):
                 feas_soln = nlpopt.solve(
                     feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)
@@ -381,14 +387,6 @@ def solve_feasibility_subproblem(solve_data, config):
         solve_data.should_terminate = True
         solve_data.results.solver.status = SolverStatus.error
         return feas_subproblem, feas_soln
-
-    duals = [0 for _ in MindtPy.constraint_list]
-
-    for i, c in enumerate(MindtPy.constraint_list):
-        rhs = c.upper if c. has_ub() else c.lower
-        c_geq = -1 if c.has_ub() else 1
-        duals[i] = c_geq * max(
-            0, c_geq * (rhs - value(c.body)))
 
     if value(MindtPy.MindtPy_feas_obj.expr) <= config.zero_tolerance:
         config.logger.warning("The objective value %.4E of feasibility problem is less than zero_tolerance. "

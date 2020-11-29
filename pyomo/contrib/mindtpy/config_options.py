@@ -36,6 +36,14 @@ def _get_MindtPy_config():
             "Plane (ECP), Partial Surrogate Cuts (PSC), and Generalized "
             "Benders Decomposition (GBD)."
     ))
+    CONFIG.declare("add_regularization", ConfigValue(
+        default=None,
+        domain=In(["level_L1", "level_L2", "level_L_infinity",
+                   "grad_lag", "hess_lag"]),
+        description="add regularization",
+        doc="solving a projection problem before solve the fixed subproblem"
+            "the objective function of the projection problem."
+    ))
     CONFIG.declare("init_strategy", ConfigValue(
         default=None,
         domain=In(["rNLP", "initial_binary", "max_binary", "feas_pump"]),
@@ -146,9 +154,14 @@ def _get_MindtPy_config():
         description="use package MC++ to set a bound for variable 'objective_value', which is introduced when the original problem's objective function is nonlinear.",
         domain=bool
     ))
-    CONFIG.declare("use_dual", ConfigValue(
-        default=True,
+    CONFIG.declare("equality_relaxation", ConfigValue(
+        default=False,
         description="use dual solution from the nlp solver to add OA cuts for equality constraints.",
+        domain=bool
+    ))
+    CONFIG.declare("calculate_dual", ConfigValue(
+        default=False,
+        description="calculate duals of the NLP subproblem",
         domain=bool
     ))
     CONFIG.declare("use_fbbt", ConfigValue(
@@ -161,11 +174,18 @@ def _get_MindtPy_config():
         description="add dual bound constraint to enforce the objective satisfies best-found dual bound",
         domain=bool
     ))
+    CONFIG.declare("heuristic_nonconvex", ConfigValue(
+        default=False,
+        description="use dual solution from the NLP solver and slack variables to add OA cuts for equality constraints (Equality relaxation)"
+                    "and minimize the sum of the slack variables (Augmented Penalty)",
+        domain=bool
+    ))
 
     _add_subsolver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
     _add_feas_pump_configs(CONFIG)
     _add_bound_configs(CONFIG)
+    _add_loa_configs(CONFIG)
     return CONFIG
 
 
@@ -329,4 +349,13 @@ def _add_feas_pump_configs(CONFIG):
         default=1,
         domain=PositiveFloat,
         description="The coefficient in the norm constraint, correspond to the Beta in the paper."
+    ))
+
+
+def _add_loa_configs(CONFIG):
+    CONFIG.declare("level_coef", ConfigValue(
+        default=0.5,
+        domain=PositiveFloat,
+        description="the coefficient in the projection master problem"
+        "represents how much the linear approximation of the MINLP problem is trusted."
     ))

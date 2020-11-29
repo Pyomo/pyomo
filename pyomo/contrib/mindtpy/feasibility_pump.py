@@ -1,11 +1,18 @@
-# -*- coding: utf-8 -*-
-from pyomo.core import (Objective, minimize, Constraint,
-                        TransformationFactory, value)
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+from pyomo.core import (minimize, Constraint, TransformationFactory, value)
 from pyomo.core.base.constraint import ConstraintList
-from pyomo.opt import SolverFactory, SolutionStatus, SolverResults
+from pyomo.opt import SolverFactory, SolutionStatus, SolverResults, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, get_main_elapsed_time, copy_var_list_values
-from pyomo.contrib.mindtpy.nlp_solve import (
-    solve_subproblem, handle_subproblem_optimal)
+from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_subproblem_optimal
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function
 from pyomo.contrib.mindtpy.mip_solve import solve_master
@@ -51,10 +58,8 @@ def solve_feas_pump_subproblem(solve_data, config):
                        % (solve_data.fp_iter,))
 
     # Set up NLP
-    main_objective = next(
-        fp_nlp.component_data_objects(Objective, active=True))
-    main_objective.deactivate()
-    if main_objective.sense == minimize:
+    fp_nlp.MindtPy_utils.objective_list[-1].deactivate()
+    if solve_data.objective_sense == minimize:
         fp_nlp.improving_objective_cut = Constraint(
             expr=fp_nlp.MindtPy_utils.objective_value <= solve_data.UB)
     else:
@@ -125,8 +130,6 @@ def handle_feas_pump_subproblem_optimal(fp_nlp, solve_data, config):
                              config)
         fixed_nlp, fixed_nlp_results = solve_subproblem(
             solve_data, config)
-        main_objective = next(
-            fixed_nlp.component_data_objects(Objective, active=True))
         if fixed_nlp_results.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             handle_subproblem_optimal(
                 fixed_nlp, solve_data, config, feas_pump=True)
@@ -149,9 +152,6 @@ def feas_pump_loop(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
-    working_model = solve_data.working_model
-    main_objective = next(
-        working_model.component_data_objects(Objective, active=True))
     while solve_data.fp_iter < config.fp_iteration_limit:
 
         config.logger.info(
@@ -186,8 +186,8 @@ def feas_pump_loop(solve_data, config):
             config.logger.warning('Unexpected result of FP-MIP')
             break
 
-            # Solve NLP subproblem
-            # The constraint linearization happens in the handlers
+        # Solve NLP subproblem
+        # The constraint linearization happens in the handlers
         fp_nlp, fp_nlp_result = solve_feas_pump_subproblem(
             solve_data, config)
 
@@ -209,14 +209,21 @@ def feas_pump_loop(solve_data, config):
         else:
             raise ValueError(
                 'MindtPy unable to handle NLP subproblem termination '
-                'condition of {}'.format(termination_condition))
+                'condition of {}'.format(fp_nlp_result.solver.termination_condition))
         # Call the NLP post-solve callback
         config.call_after_subproblem_solve(fp_nlp, solve_data)
         solve_data.fp_iter += 1
-    # solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.fp_orthogonality_cuts.deactivate()
+    solve_data.mip.MindtPy_utils.del_component('feas_pump_mip_obj')
+
+    if config.fp_master_norm == 'L1':
+        solve_data.mip.MindtPy_utils.del_component("L1_objective_function")
+    elif config.fp_master_norm == 'L_infinity':
+        solve_data.mip.MindtPy_utils.del_component(
+            "L_infinity_objective_function")
+
     # deactivate the improving_objective_cut
-    if solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.find_component('improving_objective_cut') is not None:
-        solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.improving_objective_cut.deactivate()
+    solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.del_component(
+        'improving_objective_cut')
     if not config.fp_transfercuts:
         for c in solve_data.mip.MindtPy_utils.MindtPy_linear_cuts.oa_cuts:
             c.deactivate()

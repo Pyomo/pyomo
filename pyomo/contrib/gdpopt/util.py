@@ -7,10 +7,9 @@ from contextlib import contextmanager
 from math import fabs
 
 import six
-from pyutilib.misc import Container
 
 from pyomo.common import deprecated
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, Container
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -174,6 +173,7 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         util_blk.variable_list.append(util_blk.objective_value)
         util_blk.continuous_variable_list.append(util_blk.objective_value)
         util_blk.constraint_list.append(util_blk.objective_constr)
+        util_blk.objective_list.append(util_blk.objective)
         if util_blk.objective_constr.body.polynomial_degree() in (0, 1):
             util_blk.linear_constraint_list.append(util_blk.objective_constr)
         else:
@@ -311,6 +311,11 @@ def build_ordered_component_lists(model, solve_data):
             model.component_data_objects(
                 ctype=Disjunction, active=True,
                 descend_into=(Disjunct, Block))))
+    setattr(
+        util_blk, 'objective_list', list(
+            model.component_data_objects(
+                ctype=Objective, active=True,
+                descend_into=(Block))))
 
     # Identify the non-fixed variables in (potentially) active constraints and
     # objective functions

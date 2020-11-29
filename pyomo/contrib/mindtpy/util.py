@@ -1,14 +1,29 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
+
 import logging
-from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.core import (Block, Constraint, Objective,
-                        Reals, Suffix, Var, RangeSet, ConstraintList)
+from pyomo.common.collections import ComponentMap
+from pyomo.core import (Block, Constraint,
+                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.contrib.gdpopt.util import copy_var_list_values
+import numpy as np
+
+logger = logging.getLogger('pyomo.contrib')
 
 
 class MindtPySolveData(object):
@@ -69,7 +84,7 @@ def model_is_valid(solve_data, config):
                             tee=config.mip_solver_tee, **config.mip_solver_args)
             return False
 
-    if not hasattr(m, 'dual') and config.use_dual:  # Set up dual value reporting
+    if not hasattr(m, 'dual') and config.calculate_dual:  # Set up dual value reporting
         m.dual = Suffix(direction=Suffix.IMPORT)
 
     # TODO if any continuous variables are multiplied with binary ones,
@@ -187,8 +202,10 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     discrete_only: Bool
         only optimize on distance between the discrete variables
     """
+    # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v[1].is_integer()) if discrete_only \
-        else (lambda v: True)
+        else (lambda v: v[1].name != 'MindtPy_utils.objective_value' and
+              'MindtPy_utils.MindtPy_feas.slack_var' not in v[1].name)
 
     model_vars, setpoint_vars = zip(*filter(var_filter,
                                             zip(model.component_data_objects(Var),
@@ -216,16 +233,16 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     discrete_only: Bool
         only optimize on distance between the discrete variables
     """
-
+    # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
-        else (lambda v: True)
+        else (lambda v: v.name != 'MindtPy_utils.objective_value' and
+              'MindtPy_utils.MindtPy_feas.slack_var' not in v.name)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm1 objective function for models with different number of variables"
-    if model.MindtPy_utils.find_component('L1_objective_function') is not None:
-        model.MindtPy_utils.del_component('L1_objective_function')
+    model.MindtPy_utils.del_component('L1_objective_function')
     obj_blk = model.MindtPy_utils.L1_objective_function = Block()
     obj_blk.L1_obj_idx = RangeSet(len(model_vars))
     obj_blk.L1_obj_var = Var(
@@ -255,16 +272,16 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     discrete_only: Bool
         only optimize on distance between the discrete variables
     """
-
+    # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
-        else (lambda v: True)
+        else (lambda v: v.name != 'MindtPy_utils.objective_value' and
+              'MindtPy_utils.MindtPy_feas.slack_var' not in v.name)
     model_vars = list(filter(var_filter, model.component_data_objects(Var)))
     setpoint_vars = list(
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm Infinity objective function for models with different number of variables"
-    if model.MindtPy_utils.find_component('L_infinity_objective_function') is not None:
-        model.MindtPy_utils.del_component('L_infinity_objective_function')
+    model.MindtPy_utils.del_component('L_infinity_objective_function')
     obj_blk = model.MindtPy_utils.L_infinity_objective_function = Block()
     obj_blk.L_infinity_obj_var = Var(domain=Reals, bounds=(0, None))
     obj_blk.abs_reformulation = ConstraintList()
@@ -278,10 +295,76 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     return Objective(expr=obj_blk.L_infinity_obj_var)
 
 
+def generate_lag_objective_function(model, setpoint_model, config, discrete_only=False):
+    """The function generate the objective of
+
+    Args:
+        model ([type]): [description]
+        setpoint_model ([type]): [description]
+        discrete_only (bool, optional): [description]. Defaults to False.
+    """
+    copy_var_list_values(setpoint_model.MindtPy_utils.variable_list,
+                         model.MindtPy_utils.variable_list,
+                         config)
+    temp_model = setpoint_model.clone()
+    for var in temp_model.MindtPy_utils.variable_list:
+        if var.is_integer():
+            var.unfix()
+    # objective_list[0] is the original objective function, not in MindtPy_utils block
+    temp_model.MindtPy_utils.objective_list[0].activate()
+    temp_model.MindtPy_utils.deactivate()
+    TransformationFactory('core.relax_integer_vars').apply_to(temp_model)
+    # Note: PyNumero does not support discrete variables
+    # So PyomoNLP should operate on setpoint_model
+
+    # Implementation 1
+    # First calculate jacobin and hessian without assigning variable and constraint sequence, then use get_primal_indices to get the indices.
+    nlp = PyomoNLP(temp_model)
+    obj_grad = nlp.evaluate_grad_objective().reshape(-1, 1)
+    jac = nlp.evaluate_jacobian().toarray()
+    dual_values = np.array(list(
+        temp_model.dual[c] for c in nlp.get_pyomo_constraints())).reshape(-1, 1)
+    jac_lag = obj_grad + jac.transpose().dot(dual_values)
+    first_order_term = sum(float(jac_lag[nlp.get_primal_indices([temp_var])[0]]) * (var - var.value) for var,
+                           temp_var in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]))
+
+    # Implementation 2
+    # Use extract_submatrix_jacobian and extract_submatrix_hessian_lag function to assigning variable and constraint sequence
+    # nlp = PyomoNLP(temp_model)
+    # obj_grad = nlp.extract_subvector_grad_objective(
+    #     temp_model.MindtPy_utils.variable_list[:-1])
+    # jac = nlp.extract_submatrix_jacobian(temp_model.MindtPy_utils.variable_list[:-1],
+    #                                      temp_model.MindtPy_utils.constraint_list[:-1]).toarray()
+    # dual_values = np.array(list(
+    #     temp_model.dual[c] for c in temp_model.MindtPy_utils.constraint_list[:-1]))
+    # jac_lag = obj_grad + jac.transpose().dot(dual_values)
+    # first_order_term = sum(jac_lag[i] * (var - var.value)
+    #                        for i, var in enumerate(model.MindtPy_utils.variable_list[:-1]))
+
+    if config.add_regularization == "grad_lag":
+        return Objective(expr=first_order_term, sense=minimize)
+    elif config.add_regularization == "hess_lag":
+        # Implementation 1
+        hess_lag = nlp.evaluate_hessian_lag().toarray()
+        second_order_term = 0.5 * sum((var_i - var_i.value) * float(hess_lag[nlp.get_primal_indices([temp_var_i])[0]][nlp.get_primal_indices([temp_var_j])[0]]) * (var_j - var_j.value)
+                                      for var_i, temp_var_i in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
+                                      for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]))
+
+        # Implementation 2
+        # hess_lag = nlp.extract_submatrix_hessian_lag(temp_model.MindtPy_utils.variable_list[:-1],
+        #                                              temp_model.MindtPy_utils.variable_list[:-1]).toarray()
+        # second_order_term = 0.5 * sum((var_i - var_i.value) * float(hess_lag[i][j]) * (var_j - var_j.value)
+        #                               for i, var_i in enumerate(model.MindtPy_utils.variable_list[:-1])
+        #                               for j, var_j in enumerate(model.MindtPy_utils.variable_list[:-1]))
+        return Objective(expr=first_order_term + second_order_term, sense=minimize)
+
+
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
     """
-    This function generates objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
+    This function generates constraint (PF-OA master problem) for minimum Norm1 distance to setpoint_model
+    Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
+    Ref: Paper "A storm of feasibility pumps for nonconvex MINLP" Eq. (16)
 
     Parameters
     ----------
@@ -300,8 +383,6 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
         filter(var_filter, setpoint_model.component_data_objects(Var)))
     assert len(model_vars) == len(
         setpoint_vars), "Trying to generate Norm1 norm constraint for models with different number of variables"
-    # if model.MindtPy_utils.find_component('L1_objective_function') is not None:
-    #     model.MindtPy_utils.del_component('L1_objective_function')
     norm_constraint_blk = model.MindtPy_utils.L1_norm_constraint = Block()
     norm_constraint_blk.L1_slack_idx = RangeSet(len(model_vars))
     norm_constraint_blk.L1_slack_var = Var(

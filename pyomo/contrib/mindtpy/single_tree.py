@@ -1,18 +1,30 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from __future__ import division
-from pyomo.core import Constraint, Objective, minimize, value
+from pyomo.core import Constraint, minimize, value
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
 from math import copysign
-from pyomo.environ import *
+import pyomo.environ as pyo
 from pyomo.core.expr import current as EXPR
 from math import fabs
 from pyomo.repn import generate_standard_repn
+import logging
 import cplex
 from cplex.callbacks import LazyConstraintCallback
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.opt.results import ProblemSense
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 class LazyOACallback_cplex(LazyConstraintCallback):
@@ -90,9 +102,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         config.logger.info("Adding OA cuts")
         with time_code(solve_data.timing, 'OA cut generation'):
-            for (constr, dual_value) in zip(target_model.MindtPy_utils.constraint_list,
-                                            dual_values):
-                # TODO: here the index is correlated to the duals, try if this can be fixed when temp duals are removed.
+            for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
                 if constr.body.polynomial_degree() in (0, 1):
                     continue
 
@@ -105,7 +115,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     rhs = constr.lower
 
                     # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
-                    pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (
+                    pyomo_expr = copysign(1, sign_adjust * dual_values[index]) * (sum(value(jacs[constr][var]) * (
                         var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant
@@ -303,8 +313,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         """
         # proceed. Just need integer values
         MindtPy = master_mip.MindtPy_utils
-        main_objective = next(
-            master_mip.component_data_objects(Objective, active=True))
 
         # this value copy is useful since we need to fix subproblem based on the solution of the master problem
         self.copy_lazy_var_list_values(opt,
@@ -313,7 +321,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                        config)
         # if config.strategy == 'GOA':
         # if not config.add_no_good_cuts:
-        if main_objective.sense == minimize:
+        if solve_data.objective_sense == minimize:
             solve_data.LB = max(
                 self.get_best_objective_value(), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
@@ -323,7 +331,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  Bound: %s  LB: %s  UB: %s'
-            % (solve_data.mip_iter, value(MindtPy.MindtPy_oa_obj.expr), self.get_best_objective_value(),
+            % (solve_data.mip_iter, value(MindtPy.mip_obj.expr), self.get_best_objective_value(),
                solve_data.LB, solve_data.UB))
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
@@ -342,7 +350,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         opt: SolverFactory
             the mip solver
         """
-        if config.use_dual:
+        if config.calculate_dual:
             for c in fixed_nlp.tmp_duals:
                 if fixed_nlp.dual.get(c, None) is None:
                     fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
@@ -350,10 +358,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                for c in fixed_nlp.MindtPy_utils.constraint_list)
         else:
             dual_values = None
-
-        main_objective = next(
-            fixed_nlp.component_data_objects(Objective, active=True))
-        if main_objective.sense == minimize:
+        main_objective = fixed_nlp.MindtPy_utils.objective_list[-1]
+        if solve_data.objective_sense == minimize:
             solve_data.UB = min(value(main_objective.expr), solve_data.UB)
             solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
@@ -364,9 +370,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         config.logger.info(
             'NLP {}: OBJ: {}  LB: {}  UB: {}'
-            .format(solve_data.nlp_iter,
-                    value(main_objective.expr),
-                    solve_data.LB, solve_data.UB))
+            .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB))
 
         if solve_data.solution_improved:
             solve_data.best_solution_found = fixed_nlp.clone()
@@ -412,7 +416,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         # TODO try something else? Reinitialize with different initial
         # value?
         config.logger.info('NLP subproblem was locally infeasible.')
-        if config.use_dual:
+        if config.calculate_dual:
             for c in fixed_nlp.component_data_objects(ctype=Constraint):
                 rhs = ((0 if c.upper is None else c.upper)
                        + (0 if c.lower is None else c.lower))
