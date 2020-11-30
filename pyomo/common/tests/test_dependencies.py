@@ -273,7 +273,25 @@ class TestDependencies(unittest.TestCase):
         self.assertEqual(version.version, pyo_ver)
         self.assertTrue(inspect.ismodule(pyo))
         self.assertTrue(inspect.ismodule(dm))
-        
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "deferred_submodules is only valid if defer_check==True"):
+            mod, mod_available \
+                = attempt_import('nonexisting.module', defer_check=False,
+                                 deferred_submodules={'submod': None})
+
+        mod, mod_available \
+            = attempt_import('nonexisting.module', defer_check=True,
+                             deferred_submodules={'submod.subsubmod': None})
+        self.assertIs(type(mod), DeferredImportModule)
+        self.assertFalse(mod_available)
+        _mod = mod_available._module
+        self.assertIs(type(_mod), ModuleUnavailable)
+        self.assertTrue(hasattr(_mod, 'submod'))
+        self.assertIs(type(_mod.submod), ModuleUnavailable)
+        self.assertTrue(hasattr(_mod.submod, 'subsubmod'))
+        self.assertIs(type(_mod.submod.subsubmod), ModuleUnavailable)
 
 if __name__ == '__main__':
     unittest.main()

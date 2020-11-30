@@ -142,14 +142,27 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                 self._available = False
                 raise
 
+            # If this module was not found, then we need to check for
+            # deferred submodules and resolve them as well
+            if self._deferred_submodules and \
+               type(self._module) is ModuleUnavailable:
+                err = self._module._error_message_
+                for submod in self._deferred_submodules:
+                    refmod = self._module
+                    for name in submod.split('.')[1:]:
+                        setattr(refmod, name, ModuleUnavailable(err))
+                        refmod = getattr(refmod, name)
+
             # Replace myself in the original globals() where I was
             # declared
             self.replace_self_in_globals(self._original_globals)
 
         # Replace myself in the caller globals (to avoid calls to
         # this method in the future)
-        _globals = inspect.currentframe().f_back.f_back.f_globals
-        self.replace_self_in_globals(_globals)
+        _frame = inspect.currentframe().f_back
+        while _frame.f_globals is globals():
+            _frame = _frame.f_back
+        self.replace_self_in_globals(_frame.f_globals)
 
     def replace_self_in_globals(self, _globals):
         for name in self._names:
@@ -343,6 +356,10 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
             importer=importer,
             deferred_submodules=deferred)
         return DeferredImportModule(indicator, deferred, None), indicator
+
+    if deferred_submodules:
+        raise ValueError(
+            "deferred_submodules is only valid if defer_check==True")
 
     try:
         if importer is None:
