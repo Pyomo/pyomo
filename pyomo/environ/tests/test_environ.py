@@ -131,6 +131,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'cPickle',
             'csv',
             'ctypes',
+            'decimal',
             'glob',
             'inspect',
             'json',
@@ -149,6 +150,7 @@ class TestPyomoEnviron(unittest.TestCase):
             # From PyUtilib
             'difflib',
             'gzip',
+            'imp',
             'runpy',
             'tarfile',
             'zipfile',
