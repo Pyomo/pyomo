@@ -120,9 +120,27 @@ class TestPyomoEnviron(unittest.TestCase):
         # Spot-check the (known) worst offenders.  The following are
         # modules from the "standard" library.  Their order in the list
         # of slow-loading TPLs can vary from platform to platform.
-        ref = {'tempfile', 'logging', 'ctypes', 'ssl', 'argparse',
-               'textwrap', 'inspect', 'xml', 'platform', 'uuid',
-               'optparse', 'filecmp'}
+        ref = {
+            'argparse',
+            'csv',
+            'ctypes',
+            'inspect',
+            'logging',
+            'platform',
+            'textwrap',
+            'tempfile',
+            'xml',
+            # From PySP
+            'filecmp',
+            'optparse',
+            'shelve',
+            'uuid',
+            # From PyUtilib
+            'difflib',
+            'runpy',
+            'tarfile',
+            'zipfile',
+        }
         # Non-standard-library TPLs that Pyomo will load unconditionally
         ref.add('six')
         ref.add('ply')
