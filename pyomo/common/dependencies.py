@@ -150,7 +150,8 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                 for submod in self._deferred_submodules:
                     refmod = self._module
                     for name in submod.split('.')[1:]:
-                        setattr(refmod, name, ModuleUnavailable(err))
+                        if not hasattr(refmod, name):
+                            setattr(refmod, name, ModuleUnavailable(err))
                         refmod = getattr(refmod, name)
 
             # Replace myself in the original globals() where I was
