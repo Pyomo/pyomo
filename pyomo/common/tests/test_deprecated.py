@@ -309,7 +309,7 @@ class TestRelocated(unittest.TestCase):
         # Before we test multiple relocated objects, verify that it will
         # handle the import of a new module
         warning = "DEPRECATED: the 'myFoo' class has been moved to " \
-                  "'pyomo.common.tests.relocated.Bar"
+                  "'pyomo.common.tests.relocated.Bar'"
         OUT = StringIO()
         with LoggingIntercept(OUT, 'pyomo.core'):
             from pyomo.common.tests.test_deprecated import myFoo
@@ -327,7 +327,7 @@ class TestRelocated(unittest.TestCase):
         self.assertNotIn('Foo_2', dir(relocated))
 
         warning = "DEPRECATED: the 'Foo_2' class has been moved to " \
-                  "'pyomo.common.tests.relocated.Bar"
+                  "'pyomo.common.tests.relocated.Bar'"
 
         OUT = StringIO()
         with LoggingIntercept(OUT, 'pyomo.core'):
@@ -340,7 +340,7 @@ class TestRelocated(unittest.TestCase):
         self.assertIs(relocated.Foo_2, relocated.Bar)
 
         warning = "DEPRECATED: the 'Foo' class has been moved to " \
-                  "'pyomo.common.tests.test_deprecated.Bar"
+                  "'pyomo.common.tests.test_deprecated.Bar'"
 
         OUT = StringIO()
         with LoggingIntercept(OUT, 'pyomo.core'):

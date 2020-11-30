@@ -221,7 +221,7 @@ class ComponentUID(object):
         return not (self < other)
 
     def __eq__(self, other):
-        """Return True is this CUID is exactly equal to `other`
+        """Return True if this CUID is exactly equal to `other`
 
         This will return False (and not raise an exception) if `other`
         is not a ComponentUID.
@@ -233,7 +233,7 @@ class ComponentUID(object):
         return self._cids == other_cids
 
     def __ne__(self, other):
-        """Return True is this CUID is not exactly equal to `other`
+        """Return True if this CUID is not exactly equal to `other`
 
         This will return True (and not raise an exception) if `other`
         is not a ComponentUID.
@@ -301,9 +301,6 @@ class ComponentUID(object):
         if context is None:
             context = model
         orig_component = component
-        # if component.is_indexed():
-        #     yield( component.local_name, (Ellipsis,))
-        #     component = component.parent_block()
         rcuid = []
         while component is not context:
             if component is model:

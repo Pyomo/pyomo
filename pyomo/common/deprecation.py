@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Decorator for deprecating functions."""
 
 import logging
@@ -125,7 +135,7 @@ class _ModuleGetattrBackport_27(object):
     Beginning in Python 3.7, modules support the declaration of a
     module-scoped __getattr__ and __dir__ to allow for the dynamic
     resolution of module attributes.  This class wraps the module class
-    and implements implements `__getattr__`.  As it declares no local
+    and implements `__getattr__`.  As it declares no local
     attributes, all module attribute accesses incur a slight runtime
     penalty (one extra function call).
 
@@ -222,7 +232,7 @@ def relocated_module_attribute(local, target, version, remove_in=None):
             # If you run across a case where this assertion fails
             # (because someone else has messed with the module type), we
             # could add logic to use the _ModuleGetattrBackport_27 class
-            # to wrap the module.  Hoever, as I believe that this will
+            # to wrap the module.  However, as I believe that this will
             # never happen in Pyomo, it is not worth adding unused
             # functionality at this point
             assert _module.__class__ is types.ModuleType
