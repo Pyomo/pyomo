@@ -66,7 +66,7 @@ class PHPyroWorker(TaskWorker):
         result = None
         if data.action == "release":
 
-            del self._phsolverserver_map[name]
+            del self._phsolverserver_map[data.object_name]
             result = True
 
         elif data.action == "initialize":
@@ -781,7 +781,7 @@ class _PHSolverServer(_PHBase):
             auxilliary_values["solve_time"], auxilliary_values["pyomo_solve_time"] = \
                 extract_solve_times(results, default=None)
 
-            auxilliary_values['solution_status'] = solution0.status.key
+            auxilliary_values['solution_status'] = solution0.status.name
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 
