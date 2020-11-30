@@ -312,7 +312,8 @@ class CommunityMap(object):
 
         The type_of_graph parameter is used to create either a variable-node graph, constraint-node graph, or
         bipartite graph of the Pyomo model. Then, the nodes are colored based on the communities they are in - which
-        is based on the community map (self.community_map).
+        is based on the community map (self.community_map). A filename can be provided to save the figure, otherwise
+        the figure is illustrated with matplotlib.
 
         Parameters
         ----------
@@ -329,7 +330,7 @@ class CommunityMap(object):
         Returns
         -------
         fig: matplotlib figure
-            the figure for the model graph drawing - can be illustrated by calling 'plt.show()'
+            the figure for the model graph drawing
         pos: dict
             a dictionary that maps node keys to their positions on the illustration - can be used to create consistent
             layouts for graphs of a given model

@@ -612,7 +612,7 @@ class TestDecomposition(unittest.TestCase):
         model = decode_model_1()
         community_map_object = detect_communities(model)
 
-        fig, pos = community_map_object.visualize_model_graph()
+        fig, pos = community_map_object.visualize_model_graph(filename='test_visualize_model_graph_1')
         correct_pos_dict_length = 5
 
         self.assertTrue(isinstance(pos, dict))
@@ -623,7 +623,8 @@ class TestDecomposition(unittest.TestCase):
         model = decode_model_2()
         community_map_object = detect_communities(model)
 
-        fig, pos = community_map_object.visualize_model_graph(type_of_graph='bipartite')
+        fig, pos = community_map_object.visualize_model_graph(type_of_graph='bipartite',
+                                                              filename='test_visualize_model_graph_2')
         correct_pos_dict_length = 13
 
         self.assertTrue(isinstance(pos, dict))
@@ -635,31 +636,33 @@ class TestDecomposition(unittest.TestCase):
         model = m = m_class.model
 
         community_map_object = cmo = detect_communities(model, random_seed=5)
+        correct_partition = {3: 0, 4: 1, 5: 0, 6: 0, 7: 1, 8: 0}
+        correct_components = {'b[0].B[2].c', 'b[0].c2[1]', 'b[0].c1[3]', 'equality_constraint_list[1]',
+                              'b[1].c2[2]', 'b[1].x', 'b[0].x', 'b[0].y', 'b[0].z', 'b[0].obj[2]', 'b[1].c1[2]'}
 
-        # Test the number of blocks
         structured_model = cmo.generate_structured_model()
         self.assertIsInstance(structured_model, Block)
-        self.assertEqual(2, len(cmo.community_map),
-                         len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
 
-        # Test what components have been created
         all_components = set([str(component) for component in structured_model.component_data_objects(
             ctype=(Var, Constraint, Objective, ConstraintList), active=cmo.use_only_active_components,
             descend_into=True)])
 
-        correct_components_1 = {'b[0].B[2].c', 'b[0].c2[1]', 'b[0].c1[3]', 'equality_constraint_list[1]', 'b[1].c2[2]',
-                                'b[1].x', 'b[0].x', 'b[0].y', 'b[0].z', 'b[0].obj[2]', 'b[1].c1[2]'}
+        if cmo.graph_partition == correct_partition:
+            # Test the number of blocks
+            self.assertEqual(2, len(cmo.community_map),
+                             len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
 
-        correct_components_2 = {'b[0].c1[2]', 'b[0].c2[2]', 'b[1].y', 'b[1].z', 'equality_constraint_list[1]',
-                                'b[1].obj[2]', 'b[1].c1[3]', 'b[1].c2[1]', 'b[1].B[2].c'}
+            # Test what components have been created
+            self.assertEqual(all_components, correct_components)
 
-        self.assertTrue(all_components == correct_components_1 or all_components == correct_components_2)
+            # Basic test for the replacement of variables
+            for objective in structured_model.component_data_objects(ctype=Objective, descend_into=True):
+                objective_expr = str(objective.expr)  # This for loop should execute once (only one active objective)
+            correct_objective_expr = '- b[0].x + b[0].y + b[0].z'
+            self.assertEqual(correct_objective_expr, objective_expr)
 
-        # Basic test for the replacement of variables
-        for objective in structured_model.component_data_objects(ctype=Objective, descend_into=True):
-            objective_expr = str(objective.expr)  # This for loop should only execute once (only one active objective)
-        correct_objective_expr = '- b[0].x + b[0].y + b[0].z'
-        self.assertEqual(correct_objective_expr, objective_expr)
+        self.assertEqual(len(correct_partition), len(cmo.graph_partition))
+        self.assertEqual(len(correct_components), len(all_components))
 
     def test_generate_structured_model_2(self):
         m_class = LP_inactive_index()
@@ -668,28 +671,36 @@ class TestDecomposition(unittest.TestCase):
 
         community_map_object = cmo = detect_communities(model, with_objective=False, random_seed=5)
 
-        # Test the number of blocks
-        structured_model = cmo.generate_structured_model()
-        self.assertIsInstance(structured_model, Block)
-        self.assertEqual(3, len(cmo.community_map),
-                         len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
-
-        # Test what components have been created
-        all_components = set([str(component) for component in structured_model.component_data_objects(
-            ctype=(Var, Constraint, Objective, ConstraintList), active=cmo.use_only_active_components,
-            descend_into=True)])
+        print(cmo.graph_partition)
+        correct_partition = cmo.graph_partition
         correct_components = {'b[2].B[2].c', 'b[1].y', 'z', 'b[0].c1[2]', 'b[1].c1[3]', 'obj[2]',
                               'equality_constraint_list[3]', 'b[0].x', 'b[1].c2[1]', 'b[2].z', 'x',
                               'equality_constraint_list[1]', 'b[0].c2[2]', 'y', 'equality_constraint_list[2]'}
-        # TODO - Make this test a bit more thorough (len was used bc of inconsistent community detection for different
-        #  versions of Python)
-        self.assertEqual(len(correct_components), len(all_components))
 
-        # Basic test for the replacement of variables
-        for objective in structured_model.component_data_objects(ctype=Objective, descend_into=True):
-            objective_expr = str(objective.expr)  # This for loop should only execute once (only one active objective)
-        correct_objective_expr = '- x + y + z'
-        self.assertEqual(correct_objective_expr, objective_expr)
+        structured_model = cmo.generate_structured_model()
+        self.assertIsInstance(structured_model, Block)
+
+        all_components = set([str(component) for component in structured_model.component_data_objects(
+            ctype=(Var, Constraint, Objective, ConstraintList), active=cmo.use_only_active_components,
+            descend_into=True)])
+
+        if cmo.graph_partition == correct_partition:
+            # Test the number of blocks
+            self.assertEqual(3, len(cmo.community_map),
+                             len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
+
+            # Test what components have been created
+            self.assertEqual(correct_components, all_components)
+
+            # Basic test for the replacement of variables
+            for objective in structured_model.component_data_objects(ctype=Objective, descend_into=True):
+                objective_expr = str(
+                    objective.expr)  # This for loop should only execute once (only one active objective)
+            correct_objective_expr = '- x + y + z'
+            self.assertEqual(correct_objective_expr, objective_expr)
+
+        self.assertEqual(len(correct_partition), len(cmo.graph_partition))
+        self.assertEqual(len(correct_components), len(all_components))
 
     # The next 2 tests have been commented out because they were used to show that the Louvain community detection is
     # inconsistent on different Python versions, but we no longer want these tests to fail every time we push changes
