@@ -670,9 +670,7 @@ class TestDecomposition(unittest.TestCase):
         model = m = m_class.model
 
         community_map_object = cmo = detect_communities(model, with_objective=False, random_seed=5)
-
-        print(cmo.graph_partition)
-        correct_partition = cmo.graph_partition
+        correct_partition = {3: 0, 4: 1, 5: 1, 6: 0, 7: 2}
         correct_components = {'b[2].B[2].c', 'b[1].y', 'z', 'b[0].c1[2]', 'b[1].c1[3]', 'obj[2]',
                               'equality_constraint_list[3]', 'b[0].x', 'b[1].c2[1]', 'b[2].z', 'x',
                               'equality_constraint_list[1]', 'b[0].c2[2]', 'y', 'equality_constraint_list[2]'}
