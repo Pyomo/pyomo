@@ -16,7 +16,7 @@ import logging
 
 from six import iteritems
 
-from pyutilib.misc import PauseGC
+from pyomo.common.gc_manager import PauseGC
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.core.base import \

@@ -12,7 +12,6 @@
 import logging
 import weakref
 
-import pyutilib.misc
 from pyomo.core.base.set_types import Any
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -20,6 +19,7 @@ from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.repn.standard_repn import StandardRepn
 from pyomo.core.base.constraint import (IndexedConstraint,
                                         _ConstraintData)
+from pyomo.common.gc_manager import PauseGC
 
 import six
 from six.moves import xrange
@@ -361,7 +361,7 @@ class MatrixConstraint(collections_Mapping,
         self._constructed = True
 
         ref = weakref.ref(self)
-        with pyutilib.misc.PauseGC():
+        with PauseGC():
             self._data = tuple(_MatrixConstraintData(i, ref)
                                for i in xrange(len(self._lower)))
 
