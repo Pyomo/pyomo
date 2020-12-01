@@ -28,7 +28,8 @@ community_louvain, community_louvain_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
 # Import matplotlib
-plt = matplotlib.pyplot
+if matplotlib_available:
+    plt = matplotlib.pyplot
 
 
 def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,

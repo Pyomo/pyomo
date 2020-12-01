@@ -22,7 +22,7 @@ from pyomo.common.dependencies import networkx_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Objective, Var, Integers, minimize, RangeSet, Block, ConstraintList
 from pyomo.contrib.community_detection.detection import detect_communities, CommunityMap, \
-    community_louvain_available, matplotlib_available, community_louvain
+    community_louvain_available, matplotlib_available, community_louvain, matplotlib
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
@@ -30,6 +30,8 @@ from pyomo.solvers.tests.models.QP_simple import QP_simple
 from pyomo.solvers.tests.models.LP_inactive_index import LP_inactive_index
 from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
 
+if matplotlib_available:
+    matplotlib.use('Agg')  # added to avoid $DISPLAY errors on Travis (from parmest)
 
 @unittest.skipUnless(community_louvain_available, "'community' package from 'python-louvain' is not available.")
 @unittest.skipUnless(networkx_available, "networkx is not available.")
