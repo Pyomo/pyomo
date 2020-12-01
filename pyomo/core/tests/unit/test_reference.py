@@ -18,7 +18,10 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 from six import itervalues, StringIO, iterkeys, iteritems
 
-from pyomo.environ import ConcreteModel, Block, Var, Set, RangeSet, Param, value
+from pyomo.environ import (
+    ConcreteModel, Block, Var, Set, RangeSet, Param, value,
+)
+from pyomo.common.collections import OrderedDict, ComponentSet
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set import SetProduct, UnorderedSetOf
 from pyomo.core.base.indexed_component import (
@@ -752,6 +755,47 @@ class TestReference(unittest.TestCase):
         self.assertEqual(value(_y), 20)
         self.assertEqual(value(ref_y[2]), 20)
         self.assertEqual(value(m.b[2].y), 20)
+
+    def test_reference_to_dict(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1,2,3])
+        m.r = Reference({1: m.x, 'a': m.y[2], 3: m.y[1]})
+        self.assertFalse(m.r.index_set().isordered())
+        self.assertEqual(len(m.r), 3)
+        self.assertEqual(set(m.r.keys()), {1,3,'a'})
+        self.assertEqual( ComponentSet(m.r.values()),
+                          ComponentSet([m.x, m.y[2], m.y[1]]) )
+        # You can delete something from the reference
+        del m.r[1]
+        self.assertEqual(len(m.r), 2)
+        self.assertEqual(set(m.r.keys()), {3,'a'})
+        self.assertEqual( ComponentSet(m.r.values()),
+                          ComponentSet([m.y[2], m.y[1]]) )
+        # But not add it back
+        with self.assertRaisesRegex(
+                KeyError, "Index '1' is not valid for indexed component 'r'"):
+            m.r[1] = m.x
+
+    def test_reference_to_list(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1,2,3])
+        m.r = Reference([m.x, m.y[2], m.y[1]])
+        self.assertTrue(m.r.index_set().isordered())
+        self.assertEqual(len(m.r), 3)
+        self.assertEqual(list(m.r.keys()), [0,1,2])
+        self.assertEqual(list(m.r.values()), [m.x, m.y[2], m.y[1]])
+        # You can delete something from the reference
+        del m.r[1]
+        self.assertEqual(len(m.r), 2)
+        self.assertEqual(list(m.r.keys()), [0,2])
+        self.assertEqual(list(m.r.values()), [m.x, m.y[1]])
+        # But not add it back
+        with self.assertRaisesRegex(
+                KeyError, "Index '1' is not valid for indexed component 'r'"):
+            m.r[1] = m.x
+
 
 if __name__ == "__main__":
     unittest.main()

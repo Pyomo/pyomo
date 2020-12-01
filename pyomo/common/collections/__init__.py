@@ -13,10 +13,12 @@ if _PY3:
     from collections.abc import MutableMapping as MutableMapping
     from collections.abc import Mapping as Mapping
     from collections.abc import Sequence as Sequence
+    from collections.abc import Set as Set
 else:
     from collections import MutableMapping as MutableMapping
     from collections import Mapping as Mapping
     from collections import Sequence as Sequence
+    from collections import Set as Set
 
 from .orderedset import OrderedDict, OrderedSet
 from .component_map import ComponentMap

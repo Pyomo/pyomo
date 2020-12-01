@@ -10,7 +10,10 @@
 
 from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
-from pyomo.core.base.set import SetOf, _SetDataBase
+from pyomo.common.collections import (
+    OrderedDict, Mapping, MutableMapping, Set as collections_Set, Sequence,
+)
+from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set
@@ -20,14 +23,7 @@ from pyomo.core.base.indexed_component_slice import (
 )
 
 import six
-from six import iteritems, advance_iterator
-
-if six.PY3:
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Set as collections_Set
-else:
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Set as collections_Set
+from six import iteritems, itervalues, advance_iterator
 
 _NotSpecified = object()
 
@@ -139,7 +135,7 @@ class _fill_in_known_wildcards(object):
 class SliceEllipsisLookupError(Exception):
     pass
 
-class _ReferenceDict(collections_MutableMapping):
+class _ReferenceDict(MutableMapping):
     """A dict-like object whose values are defined by a slice.
 
     This implements a dict-like object whose keys and values are defined
@@ -507,17 +503,32 @@ def Reference(reference, ctype=_NotSpecified):
 
     """
     if isinstance(reference, IndexedComponent_slice):
-        pass
+        _data = _ReferenceDict(reference)
+        _iter = iter(reference)
+        slice_idx = []
+        index = None
     elif isinstance(reference, Component):
         reference = reference[...]
+        _data = _ReferenceDict(reference)
+        _iter = iter(reference)
+        slice_idx = []
+        index = None
+    elif isinstance(reference, Mapping):
+        _data = dict(reference)
+        _iter = itervalues(_data)
+        slice_idx = None
+        index = SetOf(_data)
+    elif isinstance(reference, Sequence):
+        _data = OrderedDict(enumerate(reference))
+        _iter = itervalues(_data)
+        slice_idx = None
+        index = OrderedSetOf(_data)
     else:
         raise TypeError(
             "First argument to Reference constructors must be a "
             "component or component slice (received %s)"
             % (type(reference).__name__,))
 
-    _data = _ReferenceDict(reference)
-    _iter = iter(reference)
     if ctype is _NotSpecified:
         ctypes = set()
     else:
@@ -525,7 +536,7 @@ def Reference(reference, ctype=_NotSpecified):
         # list to improve our chances of avoiding a scan of the entire
         # Reference
         ctypes = set((1,2))
-    index = []
+
     for obj in _iter:
         ctypes.add(obj.ctype)
         if not isinstance(obj, ComponentData):
@@ -537,25 +548,27 @@ def Reference(reference, ctype=_NotSpecified):
             # things like pprint().  Of course, all of this logic is
             # skipped if the User knows better and forced a ctype on us.
             ctypes.add(0)
-        if index is not None:
-            index = _identify_wildcard_sets(_iter._iter_stack, index)
+        if slice_idx is not None:
+            slice_idx = _identify_wildcard_sets(_iter._iter_stack, slice_idx)
         # Note that we want to walk the entire slice, unless we can
         # prove that BOTH there aren't common indexing sets AND there is
         # more than one ctype.
         elif len(ctypes) > 1:
             break
-    if not index:
-        index = SetOf(_ReferenceSet(reference))
-    else:
-        wildcards = sum((sorted(iteritems(lvl)) for lvl in index
-                         if lvl is not None), [])
-        index = wildcards[0][1]
-        if not isinstance(index, _SetDataBase):
-            index = SetOf(index)
-        for lvl, idx in wildcards[1:]:
-            if not isinstance(idx, _SetDataBase):
-                idx = SetOf(idx)
-            index = index * idx
+
+    if index is None:
+        if not slice_idx:
+            index = SetOf(_ReferenceSet(reference))
+        else:
+            wildcards = sum((sorted(iteritems(lvl)) for lvl in slice_idx
+                             if lvl is not None), [])
+            index = wildcards[0][1]
+            if not isinstance(index, _SetDataBase):
+                index = SetOf(index)
+            for lvl, idx in wildcards[1:]:
+                if not isinstance(idx, _SetDataBase):
+                    idx = SetOf(idx)
+                index = index * idx
     if ctype is _NotSpecified:
         if len(ctypes) == 1:
             ctype = ctypes.pop()
