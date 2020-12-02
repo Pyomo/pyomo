@@ -402,10 +402,10 @@ def _identify_wildcard_sets(iter_stack, index):
     # Walk the iter_stack that led to the current item and try to
     # identify the component wildcard sets
     #
-    # `tmp` will be a list of dicts mirroring the iter_stack. Each
+    # `wildcard_stack` will be a list of dicts mirroring the iter_stack. Each
     # dict maps position within that level's component's "subsets"
     # list to the set at that position if it is a wildcard set.
-    tmp = [None]*len(iter_stack)
+    wildcard_stack = [None]*len(iter_stack)
     for i, level in enumerate(iter_stack):
         if level is not None:
             offset = 0
@@ -452,13 +452,13 @@ def _identify_wildcard_sets(iter_stack, index):
             #
             #if offset != level.explicit_index_count:
             #    return None
-            tmp[i] = wildcard_sets
+            wildcard_stack[i] = wildcard_sets
     if not index:
         # index is an empty list, i.e. no wildcard sets
         # have been previously identified.
-        # `tmp` will serve as the basis for comparison for future
-        # components' wildcard sets.
-        return tmp
+        # `wildcard_stack` will serve as the basis for comparison for
+        # future components' wildcard sets.
+        return wildcard_stack
 
     # For objects to have "the same" wildcard sets, the same sets must
     # be sliced at the same coordinates of their "subsets list" at the
@@ -469,9 +469,9 @@ def _identify_wildcard_sets(iter_stack, index):
     # However, I can't see a way to actually create any of these
     # situations (i.e., I can't test them).  Assertions are left in for
     # defensive programming.
-    assert len(index) == len(tmp)
+    assert len(index) == len(wildcard_stack)
 
-    for i, level in enumerate(tmp):
+    for i, level in enumerate(wildcard_stack):
         assert (index[i] is None) == (level is None)
         # No slices at this level in the slice
         if level is None:
