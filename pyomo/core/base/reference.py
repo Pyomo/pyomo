@@ -132,7 +132,7 @@ class _fill_in_known_wildcards(object):
                            % ( self.base_key, ))
 
 
-class SliceEllipsisLookupError(Exception):
+class SliceEllipsisLookupError(LookupError):
     pass
 
 class _ReferenceDict(MutableMapping):
@@ -156,8 +156,6 @@ class _ReferenceDict(MutableMapping):
         try:
             advance_iterator(self._get_iter(self._slice, key))
             return True
-        except (StopIteration, KeyError):
-            return False
         except SliceEllipsisLookupError:
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
@@ -167,14 +165,14 @@ class _ReferenceDict(MutableMapping):
                 if _iter.get_last_index_wildcards() == key:
                     return True
             return False
+        except (StopIteration, LookupError):
+            return False
 
     def __getitem__(self, key):
         try:
             return advance_iterator(
                 self._get_iter(self._slice, key, get_if_not_present=True)
             )
-        except StopIteration:
-            raise KeyError("KeyError: %s" % (key,))
         except SliceEllipsisLookupError:
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
@@ -183,6 +181,8 @@ class _ReferenceDict(MutableMapping):
             for item in _iter:
                 if _iter.get_last_index_wildcards() == key:
                     return item
+            raise KeyError("KeyError: %s" % (key,))
+        except (StopIteration, LookupError):
             raise KeyError("KeyError: %s" % (key,))
 
     def __setitem__(self, key, val):
@@ -315,8 +315,6 @@ class _ReferenceSet(collections_Set):
         try:
             advance_iterator(self._get_iter(self._slice, key))
             return True
-        except (StopIteration, KeyError):
-            return False
         except SliceEllipsisLookupError:
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
@@ -325,6 +323,8 @@ class _ReferenceSet(collections_Set):
             for item in _iter:
                 if _iter.get_last_index_wildcards() == key:
                     return True
+            return False
+        except (StopIteration, LookupError):
             return False
 
     def __iter__(self):

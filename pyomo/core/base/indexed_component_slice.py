@@ -468,7 +468,7 @@ class _IndexedComponent_slice_iter(object):
                 elif _call[0] == IndexedComponent_slice.get_item:
                     try:
                         _comp = _comp.__getitem__( _call[1] )
-                    except KeyError:
+                    except LookupError:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
                         # allow users to (silently) ignore any key

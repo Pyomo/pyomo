@@ -102,6 +102,13 @@ class TestReferenceDict(unittest.TestCase):
         self._lookupTester(m.jb[...].x[:], (1,2), m.jb[1].x[2])
         self._lookupTester(m.jb[...].x[:], (2,3,2), m.jb[2,3].x[2])
 
+        rd = _ReferenceDict(m.jb[:,:,:].x[:])
+        with self.assertRaises(KeyError):
+            rd[2,3,4,2]
+        rd = _ReferenceDict(m.b[:,4].x[:])
+        with self.assertRaises(KeyError):
+            rd[1,0]
+
     def test_len(self):
         m = self.m
 
