@@ -250,10 +250,9 @@ def get_location_set_map(index, index_set):
         sub_coord = n_subsets - sub_coord - 1
         dimen = sub.dimen
         if dimen is None:
-            if (dimen_none_set is not sub or
-                    dimen_none_set_coord != sub_coord):
+            if dimen_none_set_coord != sub_coord:
                 # Make sure this set is the same one we encountered
-                # earlier.
+                # earlier. It is sufficient to check the coordinate.
                 raise RuntimeError(
                 'Cannot get locations when multiple sets of dimen==None '
                 'are present.'
