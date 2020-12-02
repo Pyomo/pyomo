@@ -224,12 +224,16 @@ class _ReferenceDict(collections_MutableMapping):
     def __setitem__(self, key, val):
         tmp = self._slice.duplicate()
         op = tmp._call_stack[-1][0]
+        # Replace the bottom of the slice's call stack
+        # with the appropriate `set_item` call.
         if op == IndexedComponent_slice.get_item:
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.set_item,
                 tmp._call_stack[-1][1],
                 val )
         elif op == IndexedComponent_slice.slice_info:
+            # Note that this replaces the top of the stack
+            # and will require deferred iteration.
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.set_item,
                 tmp._call_stack[-1][1],

@@ -175,7 +175,7 @@ class IndexedComponent_slice(object):
 
         This supports notation similar to:
 
-            del model.b[:].c.x[1,:] = 5
+            model.b[:].c.x[1,:] = 5
 
         and immediately evaluates the slice.
         """
@@ -411,7 +411,7 @@ class _NotIterable(object): pass
 class _IndexedComponent_slice_iter(object):
     def __init__(self, component_slice, advance_iter=_advance_iter,
                  iter_over_index=False):
-        # _iter_stack holds a list of elements X where X is either an
+        # _iter_stack holds a list of elements X where X is either a
         # _slice_generator iterator (if this level in the hierarchy is a
         # slice) or None (if this level is either a SimpleComponent,
         # attribute, method, or is explicitly indexed).
@@ -421,20 +421,22 @@ class _IndexedComponent_slice_iter(object):
         call_stack = self._slice._call_stack
         call_stack_len = self._slice._len
         self._iter_stack = [None]*call_stack_len
-        # Initialize the base of the `_iter_stack`:
+        # Initialize the top of the `_iter_stack`:
         if call_stack[0][0] == IndexedComponent_slice.slice_info:
-            # Base is a generator for the "lowest-level slice"
+            # Base is a generator for the "highest-level slice"
             self._iter_stack[0] = _slice_generator(
                 *call_stack[0][1], iter_over_index=self._iter_over_index)
             # call_stack[0][1] is a (fixed, sliced, ellipsis) tuple, where
             # fixed and sliced are dicts.
         elif call_stack[0][0] == IndexedComponent_slice.set_item:
+            # This is a special case that happens when calling
+            # `_ReferenceDict.__setitem__` when the call stack consists
+            # of only a `slice_info` entry.
+            # This case is for some reason incompatible with the default
+            # case for `set_item` in `__next__` below, so we set the
+            # iterator to `_NotIterable` for special handling.
             assert call_stack_len == 1
-            # defer creating the iterator until later
             self._iter_stack[0] = _NotIterable # Something not None
-            # Initializing to _NotIterable is necessary to avoid an
-            # error when we walk to the base of the call stack, but why
-            # would `set_item` appear at the base of the call stack?
         else:
             raise DeveloperError("Unexpected call_stack flag encountered: %s"
                                  % call_stack[0][0])
@@ -468,10 +470,16 @@ class _IndexedComponent_slice_iter(object):
             # Get the next element in the deepest active slice
             try:
                 if self._iter_stack[idx] is _NotIterable:
-                    # When does this happen?
-                    # If we have "deferred creation of the iterator"
-                    # because the _call_stack consists only of a
-                    # set_attr...
+                    # This happens when attempting a `set_item` call on
+                    # a `_ReferenceDict` whose slice consists of only a 
+                    # `slice_info` entry.
+                    # E.g.
+                    #     ref = Reference(m.x[:])
+                    #     ref._data[1] = 2
+                    # but not
+                    #     ref = Reference(m.b[:].x[:])
+                    #     ref._data['a',1] = 2
+                    #
                     _comp = self._slice._call_stack[0][1][0]
                     # _comp is the component in the slice_info entry
                     # of the call stack
@@ -579,8 +587,9 @@ class _IndexedComponent_slice_iter(object):
                             self._iter_stack[idx] = None
                             break
                     else:
-                        # Unclear to me when this would be necessary...
-                        # -RBP
+                        # `_comp` is a fully qualified component.
+                        # Signal that we are done with this level of
+                        # the iteration.
                         self._iter_stack[idx] = None
                 elif _call[0] == IndexedComponent_slice.call:
                     try:
@@ -620,6 +629,8 @@ class _IndexedComponent_slice_iter(object):
                             raise
                         break
                 elif _call[0] == IndexedComponent_slice.set_item:
+                    # `set_item` must always appear at the bottom of the
+                    # call stack:
                     assert idx == self._slice._len - 1
                     # We have a somewhat unusual situation when someone
                     # makes a _ReferenceDict to m.x[:] and then wants to
@@ -641,6 +652,7 @@ class _IndexedComponent_slice_iter(object):
                             # (i.e._fill_in_known_wildcards) is complete
                             self.advance_iter.check_complete()
                             _comp[_iter.last_index] = _call[2]
+
                     # The problem here is that _call[1] may be a slice.
                     # If it is, but we are in something like a
                     # _ReferenceDict, where the caller actually wants a
