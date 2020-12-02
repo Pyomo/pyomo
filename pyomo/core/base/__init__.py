@@ -64,7 +64,8 @@ from pyomo.core.base.label import (CuidLabeler,
 #
 # Components
 #
-from pyomo.core.base.component import (name, Component, ComponentUID)
+from pyomo.core.base.component import (name, Component)
+from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.action import BuildAction
 from pyomo.core.base.check import BuildCheck
 from pyomo.core.base.set import (

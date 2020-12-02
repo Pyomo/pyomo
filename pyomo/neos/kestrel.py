@@ -21,7 +21,6 @@ import six
 import sys
 import time
 import socket
-import gzip
 import base64
 import tempfile
 import logging
@@ -35,6 +34,7 @@ def _xmlrpclib_importer():
         import xmlrpc.client as xmlrpclib
     return xmlrpclib
 xmlrpclib = attempt_import('xmlrpclib', importer=_xmlrpclib_importer)[0]
+gzip = attempt_import('gzip')[0]
 
 logger = logging.getLogger('pyomo.neos')
 
