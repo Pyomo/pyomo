@@ -164,3 +164,142 @@ class NotAnIndex(object):
     """
     pass
 
+def _fill_indices_from_product(partial_index_list, product):
+    """ 
+    `partial_index_list` is a list of indices, each corresponding to a
+    set. If an entry in `partial_index_list` is `NotAnIndex`, that
+    slot will get filled in by an entry from `setprod`.
+
+    `product` is a `SetProduct` with as many "factors" as there are
+    missing indices in `partial_index_list`.
+    """
+    # We will manipulate `normalize_index.flatten`.
+    # Store its original value so we can reset it when we're done.
+    _normalize_index_flatten = normalize_index.flatten
+    normalize_index.flatten = False
+    for index in product:
+        # Since `normalize_index.flatten` is False, `index` is a
+        # scalar or (tuple of (scalars or tuples)). Conveniently,
+        # each entry in the tuple belongs to a single factor set.
+        #
+        # To simplify some later code we convert scalar to tuple.
+        if type(index) is not tuple:
+            index = (index,)
+        # We need to generate a new index for every entry of `product`,
+        # and want to reuse `partial_index_list` as a starting point,
+        # so we copy it here.
+        filled_index = partial_index_list.copy()
+        j = 0
+        for i, val in enumerate(filled_index):
+            if val is NotAnIndex:
+                filled_index[i] = index[j]
+                # We have made `index` a tuple so the above is valid.
+                j += 1
+        # Make sure `partial_index_list` has the same number of vacancies
+        # as `product` has factors. Not _strictly_ necessary.
+        assert j == len(index)
+        filled_index = tuple(filled_index)
+
+        normalize_index.flatten = True
+        # `filled_index` can now be used in a rational way...
+        yield filled_index
+        normalize_index.flatten = False
+        # Want to get the unflattened factors when we advance the
+        # `product` iterator.
+
+    # Reset `normalize_index.flatten`
+    normalize_index.flatten = _normalize_index_flatten
+
+def generate_sliced_components(b, index_stack, _slice, sets, ctype):
+    """
+    `b` is a _BlockData object.
+
+    `index_stack` is a list of indices "above" `b` in the
+    hierarchy. Note that `b` is a data object, so any index
+    of its parent component should be included in the stack.
+
+    `_slice` is the slice generated so far. Our goal here is to
+    yield extensions to `_slice` at this level of the hierarchy.
+
+    `ctype` is the type we are looking for.
+    """
+    for c in b.component_objects(ctype, descend_into=False):
+        subsets = list(c.index_set().subsets())
+        temp_idx = [get_slice_for_set(s) if s in sets else NotAnIndex
+                for s in subsets]
+        new_sets = [s for s in subsets if s in sets]
+        other_sets = [s for s in subsets if s not in sets]
+        sliced_sets = index_stack + new_sets
+
+        c_is_indexed = not (len(other_sets) == 1 and
+                other_sets[0] is UnindexedComponent_set)
+        # Why not just c.is_indexed()
+
+        # We have extended our "index stack;" now we must extend
+        # our slice.
+
+        if other_sets and c_is_indexed:
+            cross_prod = other_sets[0]
+            for s in other_sets[1:]:
+                cross_prod *= s
+
+            for new_index in _fill_indices_from_product(temp_idx, cross_prod):
+                c_slice = getattr(_slice, c.local_name)[new_index]
+                yield sliced_sets, c_slice
+        else:
+            # `c` is indexed only by sets we would like to slice.
+            # At this point we could just yield sliced_sets, new_slice
+            idx = Ellipsis if c_is_indexed else None
+            c_slice = getattr(_slice, c.local_name)[idx]
+            # ^ This could fail if we try to apply the same code to
+            # data objects rather than just simple components.
+            yield sliced_sets, c_slice
+
+    # We now descend into subblocks
+    for sub in b.component_objects(pyo.Block, descend_into=False):
+        subsets = list(sub.index_set().subsets())
+        temp_idx = [get_slice_for_set(s) if s in sets else NotAnIndex
+                for s in subsets]
+        new_sets = [s for s in subsets if s in sets]
+        other_sets = [s for s in subsets if s not in sets]
+
+        # Extend stack with new matched indices.
+        index_stack.extend(new_sets)
+
+        if other_sets:
+            cross_prod = other_sets[0]
+            for s in other_sets[1:]:
+                cross_prod *= s
+
+            for new_index in _fill_indices_from_product(temp_idx, cross_prod):
+                sub_slice = getattr(_slice, sub.local_name)[new_index]
+                if type(sub_slice) is IndexedComponent_slice:
+                    # Get the first index of the sliced subblock to descend
+                    # into. TODO: Should probably allow some "representative
+                    # index" to be specified for each set so we don't miss
+                    # components that are skipped at endpoints.
+                    data = next(iter(sub_slice))
+                else:
+                    # sub_slice is a block data object
+                    data = sub_slice
+                for st, v in generate_sliced_components(data, index_stack,
+                        sub_slice, sets, ctype):
+                    yield tuple(st), v
+        else:
+            # Either sub is a simple component, or we are slicing
+            # all of its sets.
+            idx = Ellipsis if new_sets else None
+            sub_slice = getattr(_slice, sub.local_name)[idx]
+            data = next(iter(sub_slice))
+            # ^ This works as sub_slice is either a slice or a simple
+            # component.
+            for st, v in generate_sliced_components(data, index_stack,
+                    sub_slice, sets, ctype):
+                yield tuple(st), v
+
+        # pop the index sets of the block whose sub-components
+        # we just finished iterating over.
+        for s in subsets:
+            if s in sets:
+                index_stack.pop()
+
