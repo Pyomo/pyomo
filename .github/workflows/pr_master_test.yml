@@ -70,7 +70,7 @@ jobs:
           PACKAGES: mpi4py openmpi
 
         - os: ubuntu-18.04
-          python: 3.8
+          python: 3.7
           other: /conda
           skip_doctest: 1
           TARGET: linux
@@ -276,7 +276,7 @@ jobs:
             || echo "WARNING: CPLEX Community Edition is not available"
         conda install -q -y -c fico-xpress xpress \
             || echo "WARNING: Xpress Community Edition is not available"
-        conda install -q -y -c coda-forge pymumps \
+        conda install -q -y -c conda-forge pymumps \
             || echo "WARNING: PyMUMPS is not available"
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
