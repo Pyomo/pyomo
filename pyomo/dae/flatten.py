@@ -303,3 +303,30 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
             if s in sets:
                 index_stack.pop()
 
+def flatten_components_along_sets(m, sets, ctype, index_stack=None):
+    if index_stack is None:
+        index_stack = []
+    # Using these two `OrderedDict`s is a workaround because I can't
+    # reliably use tuples of components as keys in a `ComponentMap`.
+    sets_dict = OrderedDict()
+    comps_dict = OrderedDict()
+    for sets, _slice in walk_recursive(m, index_stack, sets=sets, _slice=m):
+        # Note that sets should always be a tuple, never a scalar
+        key = tuple(id(c) for c in sets)
+        if key not in sets_dict:
+            if len(key) == 0:
+                sets_dict[key] = (UnindexedComponent_set,)
+            else:
+                sets_dict[key] = sets
+        if key not in comps_dict:
+            comps_dict[key] = []
+        if len(key) == 0:
+            comps_dict[key].append(_slice)
+        else:
+            comps_dict[key].append(pyo.Reference(_slice))
+    # list-of-tuples of Sets:
+    sets_list = list(sets for sets in sets_dict.values())
+    # list-of-lists of components:
+    comps_list = list(comps for comps in comps_dict.values())
+    return sets_list, comps_list
+
