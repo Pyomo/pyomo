@@ -424,18 +424,18 @@ def _identify_wildcard_sets(iter_stack, index):
                     return None
                 # `wild` is the number of coordinates of this set (which
                 # may be multi-dimensional) that have been sliced.
-                wild = sum( 1 for k in range(s.dimen)
+                wildcard_count = sum( 1 for k in range(s.dimen)
                             if k+offset not in level.fixed )
                 # `k+offset` is a position in the "total" (flattened)
                 # index tuple.
                 # All the _slice_generator's information is in terms
                 # of this total index tuple.
-                if wild == s.dimen:
+                if wildcard_count == s.dimen:
                     # Every coordinate of this subset is covered by a
                     # wildcard. This could happen because of explicit
                     # slices or an ellipsis.
                     wildcard_sets[j] = s
-                elif wild != 0:
+                elif wildcard_count != 0:
                     # This subset is "touched" by an explicit slice, but
                     # the whole set is not (i.e. there is a fixed
                     # component to this subset).  Therefore, as we
