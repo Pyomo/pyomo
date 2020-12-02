@@ -184,9 +184,6 @@ def _fill_indices_from_product(partial_index_list, product):
     # Store its original value so we can reset it when we're done.
     _normalize_index_flatten = normalize_index.flatten
     normalize_index.flatten = False
-    # Note that `product` is not necessarily a `SetProduct`. It could
-    # by a simple set of any dimension.
-    is_product = isinstance(product, SetProduct)
     for index in product:
         # Since `normalize_index.flatten` is False, `index` is a
         # scalar or (tuple of (scalars or tuples)). Conveniently,
@@ -195,7 +192,7 @@ def _fill_indices_from_product(partial_index_list, product):
         # be a nested product.
         #
         # To simplify some later code we convert scalar to tuple.
-        if type(index) is not tuple or not is_product:
+        if type(index) is not tuple:
             index = (index,)
         # We need to generate a new index for every entry of `product`,
         # and want to reuse `partial_index_list` as a starting point,
@@ -251,17 +248,31 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
         # our slice.
 
         if other_sets and c_is_indexed:
-#            cross_prod = other_sets[0]
             cross_prod = other_sets[0].cross(*other_sets[1:])
-#            for s in other_sets[1:]:
-#                cross_prod *= s
+            # The original implementation was to pick an arbitrary index
+            # from the "flattened sets" and slice all the other indices.
+            # Then for each index in the slice would 
 
             # Note that `cross_prod` is not necessarily a cross product.
             # This will be checked and handled in the `_fill_indices...`
             # function.
+            # With the new implementation, cross_prod _is_ a cross product.
             for new_index in _fill_indices_from_product(temp_idx, cross_prod):
-                c_slice = getattr(_slice, c.local_name)[new_index]
-                yield sliced_sets, c_slice
+                try:
+                    c_slice = getattr(_slice, c.local_name)[new_index]
+                    if type(c_slice) is IndexedComponent_slice:
+                        next(iter(c_slice.duplicate()))
+                    yield sliced_sets, c_slice
+                except StopIteration:
+                    # We have an empty slice for some reason, e.g.
+                    # a coordinate of `new_index` from the cross
+                    # product was skipped in the original component.
+                    pass
+                except KeyError:
+                    # We are creating scalar components from a product of
+                    # sets. Components may be undefined for certain indices.
+                    # We want to simply skip that index and move on.
+                    pass
         else:
             # `c` is indexed only by sets we would like to slice.
             # At this point we could just yield sliced_sets, new_slice
