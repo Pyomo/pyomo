@@ -191,6 +191,8 @@ def _fill_indices_from_product(partial_index_list, product):
         # Since `normalize_index.flatten` is False, `index` is a
         # scalar or (tuple of (scalars or tuples)). Conveniently,
         # each entry in the tuple belongs to a single factor set.
+        # ^ This is not even close to true, because `product` could
+        # be a nested product.
         #
         # To simplify some later code we convert scalar to tuple.
         if type(index) is not tuple or not is_product:
@@ -249,9 +251,10 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
         # our slice.
 
         if other_sets and c_is_indexed:
-            cross_prod = other_sets[0]
-            for s in other_sets[1:]:
-                cross_prod *= s
+#            cross_prod = other_sets[0]
+            cross_prod = other_sets[0].cross(*other_sets[1:])
+#            for s in other_sets[1:]:
+#                cross_prod *= s
 
             # Note that `cross_prod` is not necessarily a cross product.
             # This will be checked and handled in the `_fill_indices...`
