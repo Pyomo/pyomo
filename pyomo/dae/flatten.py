@@ -7,139 +7,146 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.core.base import Block, Var, Reference
+from pyomo.core.base import Block, Reference
+from pyomo.common.collections import ComponentSet
 from pyomo.core.base.block import SubclassOf
-from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
-
-
-def generate_time_only_slices(obj, time):
-    o_sets = obj.index_set().subsets()
-    # Given a potentially complex set, determine the index of the TIME
-    # set, as well as all other "fixed" indices.  We will even support a
-    # single Set with dimen==None (using ellipsis in the slice).
-    ellipsis_idx = None
-    time_idx = None
-    regular_idx = []
-    idx = 0
-    for s in o_sets:
-        if s is time:
-            time_idx = idx
-            idx += 1
-        elif s.dimen is not None:
-            for sub_idx in range(s.dimen):
-                regular_idx.append(idx+sub_idx)
-            idx += s.dimen
-        elif ellipsis_idx is None:
-            ellipsis_idx = idx
-            idx += 1
-        else:
-            raise RuntimeError(
-                "We can only handle a single Set with dimen=None")
-    # To support Sets with dimen==None (using ellipsis), we need to have
-    # all fixed/time indices be positive if they appear before the
-    # ellipsis and negative (counting from the end of the list) if they
-    # are after the ellipsis.
-    if ellipsis_idx:
-        if time_idx > ellipsis_idx:
-            time_idx = time_idx - idx
-        regular_idx = [ i - idx if i > ellipsis_idx else i
-                      for i in fixed_idx ]
-    # We now form a temporary slice that slices over all the regular
-    # indices for a fixed value of the time index.
-    tmp_sliced = {i: slice(None) for i in regular_idx}
-    tmp_fixed = {time_idx: time.first()}
-    tmp_ellipsis = ellipsis_idx
-    _slice = IndexedComponent_slice(
-        obj, tmp_fixed, tmp_sliced, tmp_ellipsis
-    )
-    # For each combination of regular indices, we can generate a single
-    # slice over the time index
-    time_sliced = [time_idx]
-    for key in _slice.wildcard_keys():
-        if type(key) is not tuple:
-            key = (key,)
-        time_fixed = dict(
-            (i, val) if i<time_idx else (i+1, val)
-            for i,val in enumerate(key)
+from pyomo.core.base.set import SetProduct
+from pyomo.core.base.indexed_component import (
+        UnindexedComponent_set,
+        normalize_index,
         )
-        yield IndexedComponent_slice(obj, time_fixed, time_sliced, None)
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from collections import OrderedDict
 
-
-def generate_time_indexed_block_slices(block, time, ctype):
-    # TODO: We should probably do a sanity check that time does not
-    # appear in any sub-block / var indices.
-    queue = list( generate_time_only_slices(block, time) )
-    while queue:
-        _slice = queue.pop(0)
-        # Pick a random block from this slice (i.e. TIME == TIME.first())
-        #
-        # TODO: we should probably check that the OTHER blocks
-        # in the time set have the same variables.
-        b = next(iter(_slice))
-        # Any sub-blocks must be put on the queue to descend into and
-        # process
-        for sub_b in b.component_objects(Block, descend_into=False):
-            _name = sub_b.local_name
-            for idx in sub_b:
-                queue.append(_slice.component(_name)[idx])
-        # Any Vars must be mapped to slices and returned
-        for v in b.component_objects(ctype, descend_into=False):
-            _name = v.local_name
-            for idx in v:
-                yield _slice.component(_name)[idx]
-        
-
-def flatten_dae_components(model, time, ctype):
-    """
-    This function takes in a (hierarchical, block-structured) Pyomo
-    model and a `ContinuousSet` and returns two lists of "flattened"
-    components. The first is a list of all `_ComponentData` that are not
-    indexed by the `ContinuousSet` and the second is a list of
-    `Reference` components such that each reference is indexed only by
-    the specified `ContinuousSet`. This function is convenient for
-    identifying components that are implicitly indexed by the
-    `ContinuousSet`, for example, a singleton `Component` living on a 
-    `Block` that is indexed by the `ContinuousSet`.
-
-    Parameters
-    ----------
-    model : Concrete Pyomo model
-
-    time : ``pyomo.dae.ContinuousSet``
-
-    ctype : Pyomo Component type
-
-    Returns
-    -------
-    Two lists
-    """
-    assert time.model() is model.model()
-
-    block_queue = [model]
-    regular_comps = []
-    time_indexed_comps = []
-    while block_queue:
-        b = block_queue.pop(0)
-        b_sets = b.index_set().subsets()
-        if time in b_sets:
-            for _slice in generate_time_indexed_block_slices(b, time, ctype):
-                time_indexed_comps.append(Reference(_slice))
-            continue
-        for blkdata in b.values():
-            block_queue.extend(
-                blkdata.component_objects(Block, descend_into=False)
-            )
-        for blkdata in b.values():
-            for v in blkdata.component_objects(SubclassOf(ctype), 
-                    descend_into=False):
-                v_sets = v.index_set().subsets()
-                if time in v_sets:
-                    for _slice in generate_time_only_slices(v, time):
-                        time_indexed_comps.append(Reference(_slice))
-                else:
-                    regular_comps.extend(v.values())
-
-    return regular_comps, time_indexed_comps
+#
+#def generate_time_only_slices(obj, time):
+#    o_sets = obj.index_set().subsets()
+#    # Given a potentially complex set, determine the index of the TIME
+#    # set, as well as all other "fixed" indices.  We will even support a
+#    # single Set with dimen==None (using ellipsis in the slice).
+#    ellipsis_idx = None
+#    time_idx = None
+#    regular_idx = []
+#    idx = 0
+#    for s in o_sets:
+#        if s is time:
+#            time_idx = idx
+#            idx += 1
+#        elif s.dimen is not None:
+#            for sub_idx in range(s.dimen):
+#                regular_idx.append(idx+sub_idx)
+#            idx += s.dimen
+#        elif ellipsis_idx is None:
+#            ellipsis_idx = idx
+#            idx += 1
+#        else:
+#            raise RuntimeError(
+#                "We can only handle a single Set with dimen=None")
+#    # To support Sets with dimen==None (using ellipsis), we need to have
+#    # all fixed/time indices be positive if they appear before the
+#    # ellipsis and negative (counting from the end of the list) if they
+#    # are after the ellipsis.
+#    if ellipsis_idx:
+#        if time_idx > ellipsis_idx:
+#            time_idx = time_idx - idx
+#        regular_idx = [ i - idx if i > ellipsis_idx else i
+#                      for i in fixed_idx ]
+#    # We now form a temporary slice that slices over all the regular
+#    # indices for a fixed value of the time index.
+#    tmp_sliced = {i: slice(None) for i in regular_idx}
+#    tmp_fixed = {time_idx: time.first()}
+#    tmp_ellipsis = ellipsis_idx
+#    _slice = IndexedComponent_slice(
+#        obj, tmp_fixed, tmp_sliced, tmp_ellipsis
+#    )
+#    # For each combination of regular indices, we can generate a single
+#    # slice over the time index
+#    time_sliced = [time_idx]
+#    for key in _slice.wildcard_keys():
+#        if type(key) is not tuple:
+#            key = (key,)
+#        time_fixed = dict(
+#            (i, val) if i<time_idx else (i+1, val)
+#            for i,val in enumerate(key)
+#        )
+#        yield IndexedComponent_slice(obj, time_fixed, time_sliced, None)
+#
+#
+#def generate_time_indexed_block_slices(block, time, ctype):
+#    # TODO: We should probably do a sanity check that time does not
+#    # appear in any sub-block / var indices.
+#    queue = list( generate_time_only_slices(block, time) )
+#    while queue:
+#        _slice = queue.pop(0)
+#        # Pick a random block from this slice (i.e. TIME == TIME.first())
+#        #
+#        # TODO: we should probably check that the OTHER blocks
+#        # in the time set have the same variables.
+#        b = next(iter(_slice))
+#        # Any sub-blocks must be put on the queue to descend into and
+#        # process
+#        for sub_b in b.component_objects(Block, descend_into=False):
+#            _name = sub_b.local_name
+#            for idx in sub_b:
+#                queue.append(_slice.component(_name)[idx])
+#        # Any Vars must be mapped to slices and returned
+#        for v in b.component_objects(ctype, descend_into=False):
+#            _name = v.local_name
+#            for idx in v:
+#                yield _slice.component(_name)[idx]
+#        
+#
+#def flatten_dae_components(model, time, ctype):
+#    """
+#    This function takes in a (hierarchical, block-structured) Pyomo
+#    model and a `ContinuousSet` and returns two lists of "flattened"
+#    components. The first is a list of all `_ComponentData` that are not
+#    indexed by the `ContinuousSet` and the second is a list of
+#    `Reference` components such that each reference is indexed only by
+#    the specified `ContinuousSet`. This function is convenient for
+#    identifying components that are implicitly indexed by the
+#    `ContinuousSet`, for example, a singleton `Component` living on a 
+#    `Block` that is indexed by the `ContinuousSet`.
+#
+#    Parameters
+#    ----------
+#    model : Concrete Pyomo model
+#
+#    time : ``pyomo.dae.ContinuousSet``
+#
+#    ctype : Pyomo Component type
+#
+#    Returns
+#    -------
+#    Two lists
+#    """
+#    assert time.model() is model.model()
+#
+#    block_queue = [model]
+#    regular_comps = []
+#    time_indexed_comps = []
+#    while block_queue:
+#        b = block_queue.pop(0)
+#        b_sets = b.index_set().subsets()
+#        if time in b_sets:
+#            for _slice in generate_time_indexed_block_slices(b, time, ctype):
+#                time_indexed_comps.append(Reference(_slice))
+#            continue
+#        for blkdata in b.values():
+#            block_queue.extend(
+#                blkdata.component_objects(Block, descend_into=False)
+#            )
+#        for blkdata in b.values():
+#            for v in blkdata.component_objects(SubclassOf(ctype), 
+#                    descend_into=False):
+#                v_sets = v.index_set().subsets()
+#                if time in v_sets:
+#                    for _slice in generate_time_only_slices(v, time):
+#                        time_indexed_comps.append(Reference(_slice))
+#                else:
+#                    regular_comps.extend(v.values())
+#
+#    return regular_comps, time_indexed_comps
 
 def get_slice_for_set(s):
     if s.dimen != 0:
@@ -177,13 +184,16 @@ def _fill_indices_from_product(partial_index_list, product):
     # Store its original value so we can reset it when we're done.
     _normalize_index_flatten = normalize_index.flatten
     normalize_index.flatten = False
+    # Note that `product` is not necessarily a `SetProduct`. It could
+    # by a simple set of any dimension.
+    is_product = isinstance(product, SetProduct)
     for index in product:
         # Since `normalize_index.flatten` is False, `index` is a
         # scalar or (tuple of (scalars or tuples)). Conveniently,
         # each entry in the tuple belongs to a single factor set.
         #
         # To simplify some later code we convert scalar to tuple.
-        if type(index) is not tuple:
+        if type(index) is not tuple or not is_product:
             index = (index,)
         # We need to generate a new index for every entry of `product`,
         # and want to reuse `partial_index_list` as a starting point,
@@ -243,6 +253,9 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
             for s in other_sets[1:]:
                 cross_prod *= s
 
+            # Note that `cross_prod` is not necessarily a cross product.
+            # This will be checked and handled in the `_fill_indices...`
+            # function.
             for new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 c_slice = getattr(_slice, c.local_name)[new_index]
                 yield sliced_sets, c_slice
@@ -256,7 +269,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
             yield sliced_sets, c_slice
 
     # We now descend into subblocks
-    for sub in b.component_objects(pyo.Block, descend_into=False):
+    for sub in b.component_objects(Block, descend_into=False):
         subsets = list(sub.index_set().subsets())
         temp_idx = [get_slice_for_set(s) if s in sets else NotAnIndex
                 for s in subsets]
@@ -310,23 +323,43 @@ def flatten_components_along_sets(m, sets, ctype, index_stack=None):
     # reliably use tuples of components as keys in a `ComponentMap`.
     sets_dict = OrderedDict()
     comps_dict = OrderedDict()
-    for sets, _slice in walk_recursive(m, index_stack, sets=sets, _slice=m):
+    for index_sets, _slice in generate_sliced_components(m, index_stack, m, sets, ctype):
         # Note that sets should always be a tuple, never a scalar
-        key = tuple(id(c) for c in sets)
+        key = tuple(id(c) for c in index_sets)
         if key not in sets_dict:
             if len(key) == 0:
                 sets_dict[key] = (UnindexedComponent_set,)
             else:
-                sets_dict[key] = sets
+                sets_dict[key] = index_sets
         if key not in comps_dict:
             comps_dict[key] = []
         if len(key) == 0:
             comps_dict[key].append(_slice)
         else:
-            comps_dict[key].append(pyo.Reference(_slice))
+            comps_dict[key].append(Reference(_slice))
     # list-of-tuples of Sets:
     sets_list = list(sets for sets in sets_dict.values())
     # list-of-lists of components:
     comps_list = list(comps for comps in comps_dict.values())
     return sets_list, comps_list
 
+def flatten_dae_components(model, time, ctype):
+    target = ComponentSet((time,))
+    sets_list, comps_list = flatten_components_along_sets(model, target, ctype)
+    # Initialize these variables as, if no components of either category are
+    # found, we expect to get an empty list.
+    scalar_comps = []
+    dae_comps = []
+    for sets, comps in zip(sets_list, comps_list):
+        if len(sets) == 1 and sets[0] is time:
+            dae_comps = comps
+        elif len(sets) == 0 or (len(sets) == 1 and 
+                sets[0] is UnindexedComponent_set):
+            scalar_comps = comps
+        else:
+            raise RuntimeError(
+                "Invalid model for `flatten_dae_components`.\n"
+                "This can happen if your model has components that are\n"
+                "indexed by time (explicitly or implicitly) multiple times."
+                )
+    return scalar_comps, dae_comps
