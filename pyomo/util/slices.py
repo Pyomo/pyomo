@@ -15,21 +15,6 @@ from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common.collections import ComponentSet, ComponentMap
 
-def _get_index_if_present(comp):
-    if hasattr(comp, 'index'):
-        return comp.index()
-    else:
-        return None
-
-def _generate_subsets(setprod):
-    if hasattr(setprod, 'subsets'):
-        for sub in setprod.subsets():
-            yield sub
-    else:
-        # setprod is not a SetProduct. 
-        # Its only "subset" is itself
-        yield setprod
-
 def _to_iterable(source):
     iterable_scalars = six.string_types + (six.binary_type, six.text_type)
     if isinstance(source, iterable_scalars):
@@ -60,7 +45,9 @@ def get_component_call_stack(comp, context=None):
 
     Returns:
     --------
-    `list` : Contains the necessary method calls and their arguments
+    `list` : Contains the necessary method calls and their arguments.
+             Note that the calls should be applied in reverse order.
+             This is the opposite direction as in IndexedComponent_slice.
 
     """
     # If comp is context, an empty call stack is returned.
@@ -74,11 +61,11 @@ def get_component_call_stack(comp, context=None):
             # We are done
             break
 
-        # Add (get_item, index) to the call stack
-        index = _get_index_if_present(comp)
-        if index is not None:
-            call_stack.append((IndexedComponent_slice.get_item, index))
         parent_component = comp.parent_component()
+        # Add (get_item, index) to the call stack
+        if parent_component.is_indexed() and parent_component is not comp:
+            # I.e. `comp` is a data object
+            call_stack.append((IndexedComponent_slice.get_item, comp.index()))
 
         if parent_component is context:
             # We are done
@@ -232,7 +219,7 @@ def get_location_set_map(index, index_set):
             # the info we need is actually more simple to obtain.
             )
 
-    subsets = list(_generate_subsets(index_set))
+    subsets = list(index_set.subsets())
 
     n_subsets = len(subsets)
 
