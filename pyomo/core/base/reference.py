@@ -115,7 +115,7 @@ class _fill_in_known_wildcards(object):
             # _slice corresponds to some sliced entry in the call/iter stacks
             # that contains the information describing the slice.
             # Here we fill in an index with the fixed indices from the slice
-            # the wildcard indices from the provided key.
+            # and the wildcard indices from the provided key.
         except IndexError:
             # Occurs if we try to pop from an empty list.
             raise KeyError(
@@ -391,6 +391,9 @@ class _ReferenceSet(collections_Set):
 
 
 def _identify_wildcard_sets(iter_stack, index):
+    # This function only makes sense if 
+    # normalize_index.flatten is True.
+    #
     # if we have already decided that there isn't a common index for the
     # slices, there is nothing more we can do.  Bail.
     if index is None:
@@ -408,15 +411,12 @@ def _identify_wildcard_sets(iter_stack, index):
             offset = 0
             # `offset` is the position, within the total index tuple,
             # of the first coordinate of a set.
-            # This function seems to only make sense if 
-            # normalize_index.flatten is True.
             wildcard_sets = {}
-            # `wildcard_sets` maps position in the "subsets list"
-            # to its set if that set is a wildcard?
+            # `wildcard_sets` maps position in the current level's
+            # "subsets list" to its set if that set is a wildcard.
             for j,s in enumerate(level.component.index_set().subsets()):
                 # Iterate over the sets that could possibly be wildcards
                 if s is UnindexedComponent_set:
-                    # Why is this treated as a wildcard? (How is this used?)
                     wildcard_sets[j] = s
                     offset += 1
                     continue
@@ -431,9 +431,9 @@ def _identify_wildcard_sets(iter_stack, index):
                 # All the _slice_generator's information is in terms
                 # of this total index tuple.
                 if wild == s.dimen:
-                    # Every coordinate of set is covered by a wildcard.
-                    # This could happen because of explicit slices or
-                    # an ellipsis.
+                    # Every coordinate of this subset is covered by a
+                    # wildcard. This could happen because of explicit
+                    # slices or an ellipsis.
                     wildcard_sets[j] = s
                 elif wild != 0:
                     # This subset is "touched" by an explicit slice, but

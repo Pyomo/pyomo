@@ -452,7 +452,9 @@ class _IndexedComponent_slice_iter(object):
     def __next__(self):
         """Return the next element in the slice."""
         # In each call to this function, idx will initially point
-        # to the top of the stack.
+        # to the bottom of the stack.
+        # NOTE: This stack grows downward, just like the model to
+        # which it refers.
         idx = len(self._iter_stack)-1
         while True:
             # Flush out any non-slice levels.  Since we initialize
@@ -467,7 +469,7 @@ class _IndexedComponent_slice_iter(object):
             # iterator.
             while self._iter_stack[idx] is None:
                 idx -= 1
-            # Get the next element in the deepest active slice
+            # Get the next element in the highest-level active slice
             try:
                 if self._iter_stack[idx] is _NotIterable:
                     # This happens when attempting a `set_item` call on
@@ -497,9 +499,9 @@ class _IndexedComponent_slice_iter(object):
                     # the _slice_generator (_iter_stack[idx]) returns
                     # components rather than indices.
                     # The _slice_generator is able to know about its
-                    # component because it was created from a "lower-
+                    # component because it was created from a "higher-
                     # level" component/slice in the call/iter stack.
-                    # A lower-level iterator may still be active, and
+                    # A higher-level iterator may still be active, and
                     # this _slice_generator will need to be regenerated
                     # when/if that iterator is advanced.
                     idx += 1
@@ -508,9 +510,6 @@ class _IndexedComponent_slice_iter(object):
                 if not idx:
                     # Top-level iterator is done.  We are done.
                     # (This is how the infinite loop terminates!)
-                    #
-                    # How does StopIteration get raised if bottom of
-                    # stack is not a _slice_generator?
                     raise
                 # Reset the _slice_generator to None in order to
                 # expose the "next-highest iterator"
@@ -596,8 +595,6 @@ class _IndexedComponent_slice_iter(object):
                         # Assume the callable "comp" in our hierarchy
                         # returns a component:
                         _comp = _comp( *(_call[1]), **(_call[2]) )
-                        # The only callable "comp" here should be
-                        # the `component` method, right? -RBP
                     except:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
@@ -773,13 +770,13 @@ class _IndexedComponent_slice_iter(object):
     def get_last_index_wildcards(self):
         """
         Get a tuple of the values in the wildcard positions for 
-        the most recent indices checked by each _slice_generator
+        the most recent indices used by each _slice_generator
         in the iter stack.
         """
         # This method is how we iterate over keys.
         ans = sum(
             ( tuple( x.last_index[i]
-                # last_index is the most recent index checked
+                # last_index is the most recent index used
                 # by a certain _slice_generator.
                      for i in range(len(x.last_index))
                      if i not in x.fixed )
