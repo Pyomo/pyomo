@@ -68,8 +68,10 @@ def solve_fp_subproblem(solve_data, config):
 
     # Add norm_constraint, which guarantees the monotonicity of the norm objective value sequence of all iterations
     # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'
+    # the norm type is consistant with the norm obj of the FP-master problem.
     if config.fp_norm_constraint:
         if config.fp_master_norm == 'L1':
+            # TODO: check if we can access the block defined in FP-master probelm
             generate_norm1_norm_constraint(
                 fp_nlp, solve_data.mip, config, discrete_only=True)
         elif config.fp_master_norm == 'L2':
