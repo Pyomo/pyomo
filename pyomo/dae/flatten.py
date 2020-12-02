@@ -140,3 +140,27 @@ def flatten_dae_components(model, time, ctype):
                     regular_comps.extend(v.values())
 
     return regular_comps, time_indexed_comps
+
+def get_slice_for_set(s):
+    if s.dimen != 0:
+        if not normalize_index.flatten:
+            return slice(None)
+        else:
+            if s.dimen is not None:
+                # We will arrive here and fail for sets of dimension
+                # UnknownSetDimen.
+                return (slice(None),)*s.dimen
+            else:
+                return (Ellipsis,)
+    else:
+        # Case for e.g. UnindexedComponent_set
+        return None
+
+class NotAnIndex(object):
+    """ 
+    `None` is a valid index, so we use a dummy class to 
+    denote a slot that needs to get filled with indices
+    from our product.
+    """
+    pass
+
