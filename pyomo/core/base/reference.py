@@ -526,7 +526,7 @@ def Reference(reference, ctype=_NotSpecified):
     else:
         raise TypeError(
             "First argument to Reference constructors must be a "
-            "component or component slice (received %s)"
+            "component, component slice, Sequence, or Mapping (received %s)"
             % (type(reference).__name__,))
 
     if ctype is _NotSpecified:

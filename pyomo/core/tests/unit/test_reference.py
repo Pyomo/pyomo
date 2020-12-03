@@ -373,19 +373,19 @@ class TestReference(unittest.TestCase):
         self.assertRaisesRegexp(
             TypeError,
             "First argument to Reference constructors must be a "
-            "component or component slice \(received Foo",
+            "component, component slice, Sequence, or Mapping \(received Foo",
             Reference, Foo()
             )
         self.assertRaisesRegexp(
             TypeError,
             "First argument to Reference constructors must be a "
-            "component or component slice \(received int",
+            "component, component slice, Sequence, or Mapping \(received int",
             Reference, 5
             )
         self.assertRaisesRegexp(
             TypeError,
             "First argument to Reference constructors must be a "
-            "component or component slice \(received None",
+            "component, component slice, Sequence, or Mapping \(received None",
             Reference, None
             )
 
