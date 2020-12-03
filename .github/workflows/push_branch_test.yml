@@ -327,6 +327,8 @@ jobs:
         fi
         cd $IPOPT_DIR
         tar -xzi < $IPOPT_TAR
+        echo ""
+        echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
 
     - name: Install GAMS
@@ -363,6 +365,8 @@ jobs:
                 "-q -d $GAMS_DIR" -Wait
             mv $GAMS_DIR/*/* $GAMS_DIR/.
         }
+        echo ""
+        echo "$GAMS_DIR"
         ls -l $GAMS_DIR
 
     - name: Install GAMS Python bindings
@@ -408,6 +412,8 @@ jobs:
             unzip -q $INSTALLER
             mv baron-* $BARON_DIR
         }
+        echo ""
+        echo "$BARON_DIR"
         ls -l $BARON_DIR
 
     - name: Install GJH_ASL_JSON
@@ -430,6 +436,8 @@ jobs:
             mv bin "$INSTALL_DIR/bin"
         fi
         cp -rp "$INSTALL_DIR/bin" "$GJH_DIR"
+        echo ""
+        echo "$GJH_DIR"
         ls -l $GJH_DIR
 
     - name: Install Pyomo and PyUtilib
@@ -481,6 +489,7 @@ jobs:
 
     - name: Report pyomo plugin information
       run: |
+        echo "$PATH"
         pyomo help --solvers || exit 1
         pyomo help --transformations || exit 1
         pyomo help --writers || exit 1
