@@ -27,7 +27,7 @@ env:
       pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd
       python-louvain
   PYTHON_NUMPY_PKGS: >
-      numpy scipy pyodbc pandas matplotlib seaborn
+      numpy scipy pyodbc pandas matplotlib seaborn numdifftools
   CACHE_VER: v3
 
 jobs:
@@ -246,14 +246,17 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
-        pip install --cache-dir cache/pip cplex \
-            || echo "WARNING: CPLEX Community Edition is not available"
-        pip install --cache-dir cache/pip -i https://pypi.gurobi.com gurobipy \
-            || echo "WARNING: Gurobi is not available"
-        pip install --cache-dir cache/pip xpress \
-            || echo "WARNING: Xpress Community Edition is not available"
-        pip install --cache-dir cache/pip z3-solver \
-            || echo "WARNING: Z3 Solver is not available"
+        if test -z "${{matrix.slim}}"; then
+            pip install --cache-dir cache/pip cplex \
+                || echo "WARNING: CPLEX Community Edition is not available"
+            pip install --cache-dir cache/pip \
+                -i https://pypi.gurobi.com gurobipy \
+                || echo "WARNING: Gurobi is not available"
+            pip install --cache-dir cache/pip xpress \
+                || echo "WARNING: Xpress Community Edition is not available"
+            pip install --cache-dir cache/pip z3-solver \
+                || echo "WARNING: Z3 Solver is not available"
+        fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
@@ -270,14 +273,18 @@ jobs:
         conda list --show-channel-urls
         conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
         conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
-        # Note: CPLEX 12.9 (the last version in conda that supports
-        #    Python 2.7) causes a seg fault in the tests.
-        conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
-            || echo "WARNING: CPLEX Community Edition is not available"
-        conda install -q -y -c fico-xpress xpress \
-            || echo "WARNING: Xpress Community Edition is not available"
-        conda install -q -y -c conda-forge pymumps \
-            || echo "WARNING: PyMUMPS is not available"
+        if test -z "${{matrix.slim}}"; then
+            # Note: CPLEX 12.9 (the last version in conda that supports
+            #    Python 2.7) causes a seg fault in the tests.
+            conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
+                || echo "WARNING: CPLEX Community Edition is not available"
+            conda install -q -y -c fico-xpress xpress \
+                || echo "WARNING: Xpress Community Edition is not available"
+            for PKG in casadi cyipopt pymumps; do
+                conda install -q -y -c conda-forge $PKG \
+                    || echo "WARNING: $PKG is not available"
+            done
+        fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
@@ -292,6 +299,7 @@ jobs:
         echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
 
     - name: Install Ipopt
+      if: ! matrix.slim
       run: |
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
@@ -322,6 +330,7 @@ jobs:
         tar -xzi < $IPOPT_TAR
 
     - name: Install GAMS
+      if: ! matrix.slim
       # We install using Powershell because the GAMS installer hangs
       # when launched from bash on Windows
       shell: pwsh
@@ -356,6 +365,7 @@ jobs:
         }
 
     - name: Install GAMS Python bindings
+      if: ! matrix.slim
       run: |
         GAMS_DIR="${env:TPL_DIR}/gams"
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
@@ -368,6 +378,7 @@ jobs:
         fi
 
     - name: Install BARON
+      if: ! matrix.slim
       shell: pwsh
       run: |
         $BARON_DIR="${env:TPL_DIR}/baron"
@@ -398,7 +409,7 @@ jobs:
         }
 
     - name: Install GJH_ASL_JSON
-      if: matrix.TARGET != 'win'
+      if: ! matrix.slim && matrix.TARGET != 'win'
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "${GJH_DIR}" >> $GITHUB_PATH
