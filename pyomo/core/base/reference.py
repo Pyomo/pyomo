@@ -11,7 +11,8 @@
 from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
 from pyomo.common.collections import (
-    OrderedDict, Mapping, MutableMapping, Set as collections_Set, Sequence,
+    UserDict, OrderedDict, Mapping, MutableMapping,
+    Set as collections_Set, Sequence,
 )
 from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
@@ -292,6 +293,15 @@ if six.PY3:
     _ReferenceDict.items = _ReferenceDict.iteritems
     _ReferenceDict.values = _ReferenceDict.itervalues
 
+
+class _ReferenceDict_mapping(UserDict):
+    def __init__(self, data):
+        # Overwrite the internal dict to keep a reference to whatever
+        # mapping was passed in (potentially preserving the
+        # "orderedness" of the source dictionary).
+        self.data = data
+
+
 class _ReferenceSet(collections_Set):
     """A set-like object whose values are defined by a slice.
 
@@ -514,12 +524,12 @@ def Reference(reference, ctype=_NotSpecified):
         slice_idx = []
         index = None
     elif isinstance(reference, Mapping):
-        _data = dict(reference)
+        _data = _ReferenceDict_mapping(dict(reference))
         _iter = itervalues(_data)
         slice_idx = None
         index = SetOf(_data)
     elif isinstance(reference, Sequence):
-        _data = OrderedDict(enumerate(reference))
+        _data = _ReferenceDict_mapping(OrderedDict(enumerate(reference)))
         _iter = itervalues(_data)
         slice_idx = None
         index = OrderedSetOf(_data)
