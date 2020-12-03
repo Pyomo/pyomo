@@ -39,6 +39,7 @@ jobs:
         python: [3.8]
         other: [""]
         category: ["nightly"]
+        slim: [""]
         # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
         # build error is resolved:
         # https://github.com/Pyomo/pyomo/issues/1710
