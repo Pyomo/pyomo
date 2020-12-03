@@ -18,9 +18,9 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYTHON_REQUIRED_PKGS: >
-      ply six nose coverage
+      nose coverage
   PYTHON_BASE_PKGS: >
-      dill ipython networkx openpyxl pathos
+      ply six dill ipython networkx openpyxl pathos
       pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd
       python-louvain
   PYTHON_NUMPY_PKGS: >
