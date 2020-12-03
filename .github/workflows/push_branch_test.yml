@@ -327,7 +327,7 @@ jobs:
         fi
         cd $IPOPT_DIR
         tar -xzi < $IPOPT_TAR
-        ls $IPOPT_DIR
+        ls -l $IPOPT_DIR
 
     - name: Install GAMS
       if: ${{ ! matrix.slim }}
@@ -363,7 +363,7 @@ jobs:
                 "-q -d $GAMS_DIR" -Wait
             mv $GAMS_DIR/*/* $GAMS_DIR/.
         }
-        ls $GAMS_DIR
+        ls -l $GAMS_DIR
 
     - name: Install GAMS Python bindings
       if: ${{ ! matrix.slim }}
@@ -408,7 +408,7 @@ jobs:
             unzip -q $INSTALLER
             mv baron-* $BARON_DIR
         }
-        ls $BARON_DIR
+        ls -l $BARON_DIR
 
     - name: Install GJH_ASL_JSON
       if: ${{ ! matrix.slim && matrix.TARGET != 'win' }}
@@ -430,7 +430,7 @@ jobs:
             mv bin "$INSTALL_DIR/bin"
         fi
         cp -rp "$INSTALL_DIR/bin" "$GJH_DIR"
-        ls $GJH_DIR
+        ls -l $GJH_DIR
 
     - name: Install Pyomo and PyUtilib
       run: |
