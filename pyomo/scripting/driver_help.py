@@ -18,9 +18,9 @@ import logging
 import socket
 
 import pyutilib.subprocess
-from pyutilib.misc import Options
 
 import pyomo.common
+from pyomo.common.collections import Options
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -230,7 +230,8 @@ def help_environment():
         packages = []
         import pip
         for package in pip.get_installed_distributions():
-            packages.append( Options(name=package.project_name, version=package.version) )
+            packages.append(Options(name=package.project_name,
+                                    version=package.version))
         info.python.packages = packages
     except:
         pass

@@ -19,7 +19,7 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
 
 from pyomo.common.errors import ApplicationError
-from pyutilib.misc import Options
+from pyomo.common.collections import Options
 
 import time
 import logging

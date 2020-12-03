@@ -18,7 +18,7 @@ from os.path import abspath, dirname
 import logging
 from functools import reduce
 
-from pyutilib.misc import Bunch, Options
+from pyomo.common.collections import Bunch, Options
 import pyutilib.th as unittest
 import pyutilib.autotest
 import pyomo.misc.plugin

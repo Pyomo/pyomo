@@ -10,11 +10,11 @@
 
 import logging
 
-from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
 
 from pyomo.opt.base import SolverFactory, ProblemFormat, ResultsFormat
 from pyomo.opt.solver import SystemCallSolver
+from pyomo.common.collections import Bunch
 
 logger = logging.getLogger('pyomo.neos')
 

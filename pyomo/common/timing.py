@@ -80,7 +80,7 @@ class ConstructionTimer(object):
                                 _type,
                                 name,
                                 idx,
-                                'indicies' if idx > 1 else 'index',
+                                'indices' if idx > 1 else 'index',
                             ) % total_time
         except TypeError:
             return "ConstructionTimer object for %s %s; %s elapsed seconds" % (
@@ -127,17 +127,16 @@ class TransformationTimer(object):
 # TODO: Remove this bit for Pyomo 6.0 - we won't care about older versions
 if sys.version_info >= (3,3):
     # perf_counter is guaranteed to be monotonic and the most accurate timer
-    _time_source = time.perf_counter
-else:
+    default_timer = time.perf_counter
+elif sys.platform.startswith('win'):
     # On old Pythons, clock() is more accurate than time() on Windows
     # (.35us vs 15ms), but time() is more accurate than clock() on Linux
     # (1ns vs 1us).  It is unfortunate that time() is not monotonic, but
     # since the TicTocTimer is used for (potentially very accurate)
     # timers, we will sacrifice monotonicity on Linux for resolution.
-    if sys.platform.startswith('win'):
-        _time_source = time.clock
-    else:
-        _time_source = time.time
+    default_timer = time.clock
+else:
+    default_timer = time.time
 
 
 class TicTocTimer(object):
@@ -159,9 +158,9 @@ class TicTocTimer(object):
            logging package. Note: timing logged using logger.info
     """
     def __init__(self, ostream=_NotSpecified, logger=None):
-        self._lastTime = self._loadTime = _time_source()
-        self._ostream = ostream
-        self._logger = logger
+        self._lastTime = self._loadTime = default_timer()
+        self.ostream = ostream
+        self.logger = logger
         self._start_count = 0
         self._cumul = 0
 
@@ -183,7 +182,7 @@ class TicTocTimer(object):
                 class was constructed). Note: timing logged using logger.info
 
         """
-        self._lastTime = _time_source()
+        self._lastTime = default_timer()
         if msg is _NotSpecified:
             msg = "Resetting the tic/toc delta timer"
         if msg is not None:
@@ -218,11 +217,11 @@ class TicTocTimer(object):
             msg = 'File "%s", line %s in %s' % \
                   traceback.extract_stack(limit=2)[0][:3]
 
-        now = _time_source()
+        now = default_timer()
         if self._start_count or self._lastTime is None:
             ans = self._cumul
             if self._lastTime:
-                ans += _time_source() - self._lastTime
+                ans += default_timer() - self._lastTime
             if msg is not None:
                 msg = "[%8.2f|%4d] %s\n" % (ans, self._start_count, msg)
         elif delta:
@@ -237,12 +236,12 @@ class TicTocTimer(object):
 
         if msg is not None:
             if logger is _NotSpecified:
-                logger = self._logger
+                logger = self.logger
             if logger is not None:
                 logger.info(msg)
 
             if ostream is _NotSpecified:
-                ostream = self._ostream
+                ostream = self.ostream
                 if ostream is _NotSpecified and logger is None:
                     ostream = sys.stdout
             if ostream is not None:
@@ -252,7 +251,7 @@ class TicTocTimer(object):
 
     def stop(self):
         try:
-            delta = _time_source() - self._lastTime
+            delta = default_timer() - self._lastTime
         except TypeError:
             if self._lastTime is None:
                 raise RuntimeError(
@@ -266,7 +265,7 @@ class TicTocTimer(object):
         if self._lastTime:
             self.stop()
         self._start_count += 1
-        self._lastTime = _time_source()
+        self._lastTime = default_timer()
 
 _globalTimer = TicTocTimer()
 tic = _globalTimer.tic

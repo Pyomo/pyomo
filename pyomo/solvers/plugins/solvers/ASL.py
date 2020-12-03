@@ -14,7 +14,7 @@ import six
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyutilib.misc import Options, Bunch
+from pyomo.common.collections import Options, Bunch
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
@@ -200,7 +200,7 @@ class ASL(SystemCallSolver):
             from pyomo.mpec import Complementarity
             for cuid in self._instance._transformation_data['mpec.nl'].compl_cuids:
                 mpec=True
-                cobj = cuid.find_component(self._instance)
+                cobj = cuid.find_component_on(self._instance)
                 cobj.parent_block().reclassify_component_type(cobj, Complementarity)
         #
         self._instance = None

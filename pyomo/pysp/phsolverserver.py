@@ -16,8 +16,8 @@ import copy
 from optparse import OptionParser
 
 from pyomo.common.errors import ApplicationError
-import pyutilib.misc
-from pyutilib.misc import PauseGC
+from pyomo.common.collections import Bunch
+from pyutilib.misc import import_file
 from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
@@ -25,6 +25,7 @@ from pyutilib.pyro import (TaskWorker,
 from pyomo.core import Var, Suffix, Constraint
 from pyomo.opt import UndefinedData
 from pyomo.common import pyomo_command
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
@@ -62,11 +63,11 @@ class PHPyroWorker(TaskWorker):
 
     def process(self, data):
 
-        data = pyutilib.misc.Bunch(**data)
+        data = Bunch(**data)
         result = None
         if data.action == "release":
 
-            del self._phsolverserver_map[name]
+            del self._phsolverserver_map[data.object_name]
             result = True
 
         elif data.action == "initialize":
@@ -781,7 +782,7 @@ class _PHSolverServer(_PHBase):
             auxilliary_values["solve_time"], auxilliary_values["pyomo_solve_time"] = \
                 extract_solve_times(results, default=None)
 
-            auxilliary_values['solution_status'] = solution0.status.key
+            auxilliary_values['solution_status'] = solution0.status.name
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 
@@ -968,8 +969,8 @@ class _PHSolverServer(_PHBase):
         elif module_name in sys.modules:
             this_module = sys.modules[module_name]
         else:
-            this_module = pyutilib.misc.import_file(module_name,
-                                                    clear_cache=True)
+            this_module = import_file(module_name,
+                                      clear_cache=True)
             self._modules_imported[module_name] = this_module
 
         module_attrname = function_name
@@ -1344,7 +1345,7 @@ def exec_phsolverserver(options):
                 # make sure "." is in the PATH.
                 original_path = list(sys.path)
                 sys.path.insert(0,'.')
-                pyutilib.misc.import_file(this_extension)
+                import_file(this_extension)
                 print("Module successfully loaded")
                 sys.path[:] = original_path # restore to what it was
 
