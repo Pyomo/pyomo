@@ -42,7 +42,6 @@ jobs:
         python: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
         other: [""]
         category: ["nightly"]
-        slim: [""]
         # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
         # build error is resolved:
         # https://github.com/Pyomo/pyomo/issues/1710
@@ -300,7 +299,7 @@ jobs:
         echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
 
     - name: Install Ipopt
-      if: ! matrix.slim
+      if: ${{ ! matrix.slim }}
       run: |
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
@@ -332,7 +331,7 @@ jobs:
         ls $IPOPT_DIR
 
     - name: Install GAMS
-      if: ! matrix.slim
+      if: ${{ ! matrix.slim }}
       # We install using Powershell because the GAMS installer hangs
       # when launched from bash on Windows
       shell: pwsh
@@ -368,7 +367,7 @@ jobs:
         ls $GAMS_DIR
 
     - name: Install GAMS Python bindings
-      if: ! matrix.slim
+      if: ${{ ! matrix.slim }}
       run: |
         GAMS_DIR="${env:TPL_DIR}/gams"
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
@@ -381,7 +380,7 @@ jobs:
         fi
 
     - name: Install BARON
-      if: ! matrix.slim
+      if: ${{ ! matrix.slim }}
       shell: pwsh
       run: |
         $BARON_DIR="${env:TPL_DIR}/baron"
@@ -413,7 +412,7 @@ jobs:
         ls $BARON_DIR
 
     - name: Install GJH_ASL_JSON
-      if: ! matrix.slim && matrix.TARGET != 'win'
+      if: ${{ ! matrix.slim && matrix.TARGET != 'win' }}
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "${GJH_DIR}" >> $GITHUB_PATH
