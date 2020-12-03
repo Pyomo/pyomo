@@ -12,6 +12,7 @@ import pyomo.common.unittest as unittest
 from pyutilib.misc.redirect_io import capture_output
 
 from six import StringIO
+import sys
 import time
 
 from pyomo.common.log import LoggingIntercept
@@ -138,9 +139,10 @@ class TestTiming(unittest.TestCase):
         ref -= time.time()
         time.sleep(0.1)
 
-        # Note: pypy on GHA frequently has timing differences of >0.02s
+        # Note: pypy on GHA frequently has timing differences of >0.05s
         # for the following tests
-        RES = 5e-2
+        if 'pypy_version_info' in dir(sys):
+            RES = 6.5e-2
 
         with capture_output() as out:
             delta = timer.toc()
