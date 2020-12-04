@@ -319,18 +319,24 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
 def _add_kaug_suffix(model, suffix_name, _direction):
     # _add_kaug_suffix checks the model to see if suffix_name already exists.
     # It adds suffix_name to the model for a given direction '_direction'.
-    suffix_checker = model.component(suffix_name)
+    suffix = model.component(suffix_name)
     if _direction == 'IMPORT':
-        if suffix_checker is None:
+        if suffix is None:
             setattr(model, suffix_name, Suffix(direction=Suffix.IMPORT))
         else:
+            if suffix.ctype is Suffix:
+                return
             model.del_component(suffix_name)
             setattr(model, suffix_name, Suffix(direction=Suffix.IMPORT))
+            model.add_component(unique_component_name(model, suffix_name), suffix)
     elif _direction == 'EXPORT':
-        if suffix_checker is None:
+        if suffix is None:
             setattr(model, suffix_name, Suffix(direction=Suffix.EXPORT))
         else:
+            if suffix.ctype is Suffix:
+                return
             model.del_component(suffix_name)
             setattr(model, suffix_name, Suffix(direction=Suffix.EXPORT))
+            model.add_component(unique_component_name(model, suffix_name), suffix)
     else:
         raise ValueError("_direction argument should be 'IMPORT' or 'EXPORT'")
