@@ -77,7 +77,8 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
 
     if type_of_community_map not in ('bipartite', 'constraint', 'variable'):
         raise TypeError(
-            "Invalid value for type_of_community_map: 'type_of_community_map=%s' - Valid values: 'bipartite', 'constraint', 'variable'" % type_of_community_map)
+            "Invalid value for type_of_community_map: 'type_of_community_map=%s' - "
+            "Valid values: 'bipartite', 'constraint', 'variable'" % type_of_community_map)
 
     if type(with_objective) != bool:
         raise TypeError(
@@ -90,14 +91,17 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
     if random_seed is not None:
         if type(random_seed) != int:
             raise TypeError(
-                "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed)
+                "Invalid value for random_seed: 'random_seed=%s' - "
+                "random_seed must be a non-negative integer" % random_seed)
         if random_seed < 0:
             raise ValueError(
-                "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed)
+                "Invalid value for random_seed: 'random_seed=%s' - "
+                "random_seed must be a non-negative integer" % random_seed)
 
     if use_only_active_components is not True and use_only_active_components is not None:
         raise TypeError(
-            "Invalid value for use_only_active_components: 'use_only_active_components=%s' - use_only_active_components must be True or None" % use_only_active_components)
+            "Invalid value for use_only_active_components: 'use_only_active_components=%s' - "
+            "use_only_active_components must be True or None" % use_only_active_components)
 
     # Generate model_graph (a NetworkX graph based on the given Pyomo optimization model),
     # number_component_map (a dictionary to convert the communities into lists of Pyomo components

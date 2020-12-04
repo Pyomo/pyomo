@@ -32,6 +32,7 @@ from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
 
 matplotlib.use('Agg')  # added to avoid $DISPLAY errors on Travis (from parmest)
 
+
 @unittest.skipUnless(community_louvain_available, "'community' package from 'python-louvain' is not available.")
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestDecomposition(unittest.TestCase):
