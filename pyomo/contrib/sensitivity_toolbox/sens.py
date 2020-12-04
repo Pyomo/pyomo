@@ -24,9 +24,9 @@ logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
             logger='pyomo.contrib.sensitivity_toolbox',
             version='TBD')
 def sipopt(instance, paramSubList, perturbList,
-           cloneModel=True, streamSoln=False, keepfiles=False):    
+           cloneModel=True, tee=False, keepfiles=False):    
     m = sensitivity_calculation('sipopt', instance, paramSubList, perturbList,
-         cloneModel, streamSoln, keepfiles, optarg=None)
+         cloneModel, tee, keepfiles, solver_options=None)
 
     return m
 
@@ -35,14 +35,14 @@ def sipopt(instance, paramSubList, perturbList,
             logger='pyomo.contrib.sensitivity_toolbox',
             version='TBD')
 def kaug(instance, paramSubList, perturbList,
-         cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
+         cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     m = sensitivity_calculation('kaug', instance, paramSubList, perturbList,
-         cloneModel, streamSoln, keepfiles, optarg)
+         cloneModel, tee, keepfiles, solver_options)
 
     return m
 
 def sensitivity_calculation(method, instance, paramSubList, perturbList,
-         cloneModel=True, streamSoln=False, keepfiles=False, optarg=None):
+         cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     """This function accepts a Pyomo ConcreteModel, a list of 
     parameters, along with their corresponding perturbation list. The model
     is then converted into the design structure required to call sipopt or
@@ -67,13 +67,13 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
         indicator to clone the model. If set to False, the original
         model will be altered
 
-    streamSoln: bool, optional
+    tee: bool, optional
         indicator to stream IPOPT solution
 
     keepfiles: bool, optional
         preserve solver interface files
             
-    optarg : dictionary, optional
+    solver_options : dictionary, optional
         ipopt solver options dictionary object for method = 'kaug' (default=None)
     
     Returns
@@ -102,34 +102,34 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
         length(paramSubList) must equal length(perturbList)
     ValueError
         paramSubList will not map to perturbList
-    ImportError
+    RuntimeError
         ipopt binary must be available
-    ImportError
+    RuntimeError
         k_aug binary must be available
-    ImportError
+    RuntimeError
         dotsens binary must be available
     Exception
         kaug does not support inequality constraints
     """
     # Verify User Inputs    
     if method == 'sipopt':
-        opt = SolverFactory('ipopt_sens', solver_io='nl')
-        if not opt.available(False):
-            raise ImportError('ipopt_sens is not available')
+        ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
+        if not ipopt_sens.available(False):
+            raise RuntimeError('ipopt_sens is not available')
         # set sIPOPT data
-        opt.options['run_sens'] = 'yes'
+        ipopt_sens.options['run_sens'] = 'yes'
     elif method == 'kaug':
         ipopt = SolverFactory('ipopt',solver_io='nl')
-        if optarg is not None:
-            ipopt.options = optarg
+        if solver_options is not None:
+            ipopt.options = solver_options
         kaug = SolverFactory('k_aug',solver_io='nl')
         dotsens = SolverFactory('dot_sens',solver_io='nl')
         if not ipopt.available(False):
-            raise ImportError('ipopt is not available')
+            raise RuntimeError('ipopt is not available')
         if not kaug.available(False):
-            raise ImportError('k_aug is not available')
+            raise RuntimeError('k_aug is not available')
         if not dotsens.available(False):
-            raise ImportError('dotsens is not available')
+            raise RuntimeError('dotsens is not available')
         
         for cc in list(instance.component_data_objects(Constraint, 
                                    active=True,
@@ -284,15 +284,14 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
     
     if method == 'sipopt':
         # Send the model to the ipopt_sens and collect the solution
-        results = opt.solve(m, keepfiles=keepfiles, tee=streamSoln)
+        results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
     elif method == 'kaug':
-        m.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
-        m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
-        m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
-        m.ipopt_zL_in = Suffix(direction=Suffix.EXPORT)
-        m.ipopt_zU_in = Suffix(direction=Suffix.EXPORT)    
-        m.dcdp = Suffix(direction=Suffix.EXPORT)  #: the constraint "order"  (integer >0)
-        m.DeltaP = Suffix(direction=Suffix.EXPORT)  #: the parameter values difference (float)
+        kaug_suffix = {'ipopt_zL_out':'IMPORT','ipopt_zU_out':'IMPORT', 
+                       'ipopt_zL_in':'EXPORT','ipopt_zU_in':'EXPORT',
+                        'dcdp':'EXPORT','DeltaP':'EXPORT'}
+        for _suffix in kaug_suffix.keys():
+            _add_kaug_suffix(m, _suffix, kaug_suffix[_suffix])
+            
         kk = 1
         for ii in paramDataList:
             m.dcdp[b.paramConst[kk]] = kk
@@ -301,18 +300,37 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
         
                     
         logger.info("ipopt starts")
-        ipopt.solve(m, tee=streamSoln)
+        ipopt.solve(m, tee=tee)
         m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
         m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
         logger.debug("ipopt completed")
         #: k_aug
         logger.info("k_aug starts")
         kaug.options['dsdp_mode'] = ""  #: sensitivity mode!
-        kaug.solve(m, tee=streamSoln)
+        kaug.solve(m, tee=tee)
         logger.debug("k_aug completed")
         dotsens.options["dsdp_mode"] = ""
         logger.info("dotsens starts")
-        dotsens.solve(m, tee=streamSoln) 
+        dotsens.solve(m, tee=tee) 
         logger.debug("dotsens completed")
                 
     return m        
+
+def _add_kaug_suffix(model, suffix_name, _direction):
+    # _add_kaug_suffix checks the model to see if suffix_name already exists.
+    # It adds suffix_name to the model for a given direction '_direction'.
+    suffix_checker = model.component(suffix_name)
+    if _direction == 'IMPORT':
+        if suffix_checker is None:
+            setattr(model, suffix_name, Suffix(direction=Suffix.IMPORT))
+        else:
+            model.del_component(suffix_name)
+            setattr(model, suffix_name, Suffix(direction=Suffix.IMPORT))
+    elif _direction == 'EXPORT':
+        if suffix_checker is None:
+            setattr(model, suffix_name, Suffix(direction=Suffix.EXPORT))
+        else:
+            model.del_component(suffix_name)
+            setattr(model, suffix_name, Suffix(direction=Suffix.EXPORT))
+    else:
+        raise ValueError("_direction argument should be 'IMPORT' or 'EXPORT'")

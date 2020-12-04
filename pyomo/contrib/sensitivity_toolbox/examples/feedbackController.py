@@ -21,7 +21,7 @@ from pyomo.environ import (ConcreteModel, Param, Var, Objective, Constraint,
                            Suffix, value, TransformationFactory, SolverFactory)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.simulator import Simulator
-from pyomo.contrib.sensitivity_toolbox.sens import sipopt
+from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
 def create_model():
     m = ConcreteModel()
@@ -118,8 +118,8 @@ if __name__ == '__main__':
 
     m.perturbed_a = Param(initialize=-0.25)
     m.perturbed_H = Param(initialize=0.55)
-    m_sipopt = sipopt(m,[m.a,m.H],
+    m_sipopt = sensitivity_calculation('sipopt', m,[m.a,m.H],
                       [m.perturbed_a,m.perturbed_H],
                       cloneModel=True,
-                      streamSoln=True)
+                      tee=True)
 

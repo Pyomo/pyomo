@@ -54,7 +54,7 @@ def run_example(print_flag=True):
 
     m_sipopt = sensitivity_calculation('sipopt',m,[m.eta1,m.eta2],
                                        [m.perturbed_eta1,m.perturbed_eta2],
-                                       streamSoln=True)
+                                       tee=True)
     
 
     
