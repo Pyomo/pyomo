@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import copy
-from six import PY3, iteritems, iterkeys, advance_iterator
+from six import iteritems, iterkeys, advance_iterator
 from pyomo.common import DeveloperError
 
 class IndexedComponent_slice(object):

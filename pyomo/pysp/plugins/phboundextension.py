@@ -14,16 +14,10 @@
 from __future__ import division
 
 import os
-import logging
-import copy
 
-import pyomo.common.plugin
+from pyomo.common.plugin import implements, alias, SingletonPlugin
 from pyomo.pysp import phextension
 from pyomo.core.base import minimize
-from pyomo.opt import UndefinedData
-
-from operator import itemgetter
-from six import iteritems
 
 from pyomo.pysp.phboundbase import (_PHBoundBase,
                                     ExtractInternalNodeSolutionsforInner)
@@ -319,11 +313,11 @@ class _PHBoundExtensionImpl(_PHBoundBase):
         self.ReportBoundHistory()
         self.ReportBestBound()
 
-class phboundextension(pyomo.common.plugin.SingletonPlugin, _PHBoundExtensionImpl):
+class phboundextension(SingletonPlugin, _PHBoundExtensionImpl):
 
-    pyomo.common.plugin.implements(phextension.IPHExtension)
+    implements(phextension.IPHExtension)
 
-    pyomo.common.plugin.alias("phboundextension")
+    alias("phboundextension")
 
     def __init__(self):
 

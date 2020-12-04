@@ -16,14 +16,12 @@ import io
 import os
 import sys
 import time
-import shutil
 import logging
 import traceback
 
 import pyutilib.subprocess
 import pyutilib.services
 
-from pyomo.core import maximize
 from pyomo.opt import (TerminationCondition,
                        SolverStatus,
                        SolutionStatus)
@@ -38,11 +36,8 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     _domain_must_be_str)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
-from pyomo.pysp.scenariotree.manager import \
-    (InvocationType,
-     ScenarioTreeManagerFactory)
+from pyomo.pysp.scenariotree.manager import ScenarioTreeManagerFactory
 import pyomo.pysp.convert.ddsip
-from pyomo.pysp.embeddedsp import EmbeddedSP
 from pyomo.pysp.solvers.spsolver import (SPSolverResults,
                                          SPSolverFactory)
 from pyomo.pysp.solvers.spsolvershellcommand import \

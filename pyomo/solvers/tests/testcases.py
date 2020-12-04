@@ -12,12 +12,11 @@ import sys
 import logging
 
 import pyutilib.th as unittest
-from pyutilib.misc import Options
 
+from pyomo.common.collections import Options
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solver_cases
-import pyomo.kernel
 from pyomo.core.kernel.block import IBlock
 
 # For expected failures that appear in all known version
@@ -46,15 +45,15 @@ MissingSuffixFailures = {}
 # MOSEK
 #
 
-ExpectedFailures['mosek', 'python', 'QCP_simple'] = \
+ExpectedFailures['mosek_direct', 'python', 'QCP_simple'] = \
     (lambda v: True,
      "Conic constraints not yet handled by this interface")
 
-ExpectedFailures['mosek', 'python', 'QCP_simple_nosuffixes'] = \
+ExpectedFailures['mosek_direct', 'python', 'QCP_simple_nosuffixes'] = \
     (lambda v: True,
      "Conic constraints not yet handled by this interface")
 
-ExpectedFailures['mosek', 'python', 'MIQCP_simple'] = \
+ExpectedFailures['mosek_direct', 'python', 'MIQCP_simple'] = \
     (lambda v: True,
      "Conic constraints not yet handled by this interface")
 #

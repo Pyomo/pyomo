@@ -12,8 +12,8 @@ import sys
 import re
 import textwrap
 
-from pyomo.common.plugin import *
-from pyomo.checker import *
+from pyomo.common.plugin import SingletonPlugin, implements, ExtensionPoint
+from pyomo.checker import IModelChecker, IPreCheckHook, IPostCheckHook
 
 
 class PyomoModelChecker(SingletonPlugin):

@@ -17,7 +17,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Param, Set
 from pyomo.core.base.indexed_component import normalize_index
 
 class TestSimpleVar(unittest.TestCase):

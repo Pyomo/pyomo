@@ -1,14 +1,25 @@
-import pyomo.environ
-from pyomo.core import *
-from pyomo.gdp import *
-from pyomo.opt import SolverFactory
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+from pyomo.core import TransformationFactory, Var, NonNegativeReals, Constraint, Objective, Block, value
+
+from six import iterkeys
 
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 from pyomo.common.config import ConfigBlock, ConfigValue
-from pyomo.core.base.component import ComponentUID
-from pyomo.core.base import Constraint, _ConstraintData
+from pyomo.core.base import ComponentUID
+from pyomo.core.base.constraint import _ConstraintData
 from pyomo.common.deprecation import deprecation_warning
+
+NAME_BUFFER = {}
 
 def target_list(x):
     deprecation_msg = ("In future releases ComponentUID targets will no "
@@ -46,6 +57,9 @@ def target_list(x):
             "Expected Constraint or list of Constraints."
             "\n\tRecieved %s" % (type(x),))
 
+import logging
+logger = logging.getLogger('pyomo.core')
+
 
 @TransformationFactory.register('core.add_slack_variables', \
           doc="Create a model where we add slack variables to every constraint "
@@ -72,6 +86,13 @@ class AddSlackVariables(NonIsomorphicTransformation):
         super(AddSlackVariables, self).__init__(**kwds)
 
     def _apply_to(self, instance, **kwds):
+        try:
+            assert not NAME_BUFFER
+            self._apply_to_impl(instance, **kwds)
+        finally:
+            NAME_BUFFER.clear()
+
+    def _apply_to_impl(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
         targets = config.targets
@@ -116,10 +137,12 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 raise RuntimeError("Lower bound exceeds upper bound in "
                                    "constraint %s" % cons.name)
             if not cons.active: continue
+            cons_name = cons.getname(fully_qualified=True,
+                                     name_buffer=NAME_BUFFER)
             if cons.lower is not None:
                 # we add positive slack variable to body:
                 # declare positive slack
-                varName = "_slack_plus_" + cons.name
+                varName = "_slack_plus_" + cons_name
                 posSlack = Var(within=NonNegativeReals)
                 xblock.add_component(varName, posSlack)
                 # add positive slack to body expression
@@ -129,7 +152,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
             if cons.upper is not None:
                 # we subtract a positive slack variable from the body:
                 # declare slack
-                varName = "_slack_minus_" + cons.name
+                varName = "_slack_minus_" + cons_name
                 negSlack = Var(within=NonNegativeReals)
                 xblock.add_component(varName, negSlack)
                 # add negative slack to body expression

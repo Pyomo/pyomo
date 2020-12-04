@@ -10,13 +10,15 @@
 
 import os
 
-import pyomo.common
-import pyutilib.misc
+from pyomo.common import Executable
+from pyomo.common.collections import Options, Bunch
+from pyutilib.services import TempfileManager
+from pyutilib.subprocess import run
 
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.opt.base import ProblemFormat, ResultsFormat
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import SolverStatus, SolverResults, TerminationCondition
+from pyomo.opt.solver import  SystemCallSolver
 
 import logging
 logger = logging.getLogger('pyomo.solvers')
@@ -49,7 +51,7 @@ class IPOPT(SystemCallSolver):
         self.set_problem_format(ProblemFormat.nl)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Options()
         self._capabilities.linear = True
         self._capabilities.integer = False
         self._capabilities.quadratic_objective = True
@@ -61,7 +63,7 @@ class IPOPT(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = pyomo.common.Executable("ipopt")
+        executable = Executable("ipopt")
         if not executable:
             logger.warning("Could not locate the 'ipopt' executable, "
                            "which is required for solver %s" % self.name)
@@ -76,7 +78,7 @@ class IPOPT(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = pyutilib.subprocess.run( [solver_exec,"-v"], timelimit=1 )
+        results = run( [solver_exec,"-v"], timelimit=1 )
         return _extract_version(results[1])
 
     def create_command_line(self, executable, problem_files):
@@ -88,7 +90,7 @@ class IPOPT(SystemCallSolver):
         # Define log file
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                              create_tempfile(suffix="_ipopt.log")
 
         fname = problem_files[0]
@@ -170,7 +172,7 @@ class IPOPT(SystemCallSolver):
                                                 default_of_name))
 
             # Now write the new options file
-            options_filename = pyutilib.services.TempfileManager.\
+            options_filename = TempfileManager.\
                                create_tempfile(suffix="_ipopt.opt")
             with open(options_filename, "w") as f:
                 for key, val in of_opt:
@@ -185,7 +187,7 @@ class IPOPT(SystemCallSolver):
         # Merge with any options coming in through the environment
         env[envstr] = " ".join(env_opt)
 
-        return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
+        return Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def process_output(self, rc):
         if os.path.exists(self._results_file):

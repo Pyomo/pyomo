@@ -1,10 +1,22 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyomo.environ as pyo
 from pyomo.opt import check_optimal_termination
 from pyomo.common.dependencies import attempt_import
 from .interface import InteriorPointInterface
 from .linalg.scipy_interface import ScipyInterface
 
-np, numpy_available = attempt_import('numpy', 'Interior point requires numpy', minimum_version='1.13.0')
+np, numpy_available = attempt_import('numpy',
+                                     'Interior point requires numpy',
+                                     minimum_version='1.13.0')
 
 
 # Todo: This function currently used IPOPT for the initial solve - should accept solver
@@ -56,7 +68,7 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
 
     # create the ipopt solver
     solver = pyo.SolverFactory('ipopt')
-    
+
     # copy additional solver options
     if solver_options is not None:
         for key in solver_options:
@@ -101,7 +113,7 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     # check that none of the independent variables are at their bounds
     for v in ind_vardatas:
         if (v.has_lb() and pyo.value(v) - v.lb <= bound_tolerance) or \
-           (v.has_ub() and v.ub - pyo.value(b) <= bound_tolerance):
+           (v.has_ub() and v.ub - pyo.value(v) <= bound_tolerance):
                 raise ValueError("Independent variable: {} has a solution value that is near"
                                  " its bound (according to tolerance). The reduced hessian"
                                  " computation does not support this at this time. All"

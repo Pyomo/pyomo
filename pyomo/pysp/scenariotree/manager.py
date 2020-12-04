@@ -34,8 +34,7 @@ from pyomo.opt import (UndefinedData,
                        SolutionStatus)
 from pyomo.opt.parallel.manager import ActionHandle
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
-from pyomo.pysp.util.config import (PySPConfigValue,
-                                    PySPConfigBlock,
+from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_common_option,
                                     safe_register_common_option,
                                     _domain_must_be_str,
@@ -3485,7 +3484,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
              (invocation_type == InvocationType.OnBundles):
 
             _get_worker_func = None
-            _inocation_type = None
+            _invocation_type = None
             if invocation_type == InvocationType.OnScenarios:
                 _get_worker_func = self.get_worker_for_scenario
                 _invocation_type = InvocationType.OnScenarios
@@ -3563,7 +3562,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                                  % (invocation_type))
 
             _get_worker_func = None
-            _inocation_type = None
+            _invocation_type = None
             if invocation_type == InvocationType.OnScenariosChained:
                 _get_worker_func = self.get_worker_for_scenario
                 _invocation_type = InvocationType.OnScenariosChained

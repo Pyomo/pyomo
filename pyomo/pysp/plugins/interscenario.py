@@ -14,8 +14,8 @@ from six import iterkeys, iteritems, StringIO
 from six.moves import xrange
 import weakref
 
-import pyutilib
-from pyutilib.misc.timing import tic, toc
+from pyutilib.misc import reset_redirect, setup_redirect
+from pyomo.common.timing import toc
 
 from pyomo.core import (
     minimize, value, TransformationFactory,
@@ -31,10 +31,7 @@ from pyomo.common.plugin import SingletonPlugin, implements
 
 from pyomo.repn.standard_repn import (preprocess_block_constraints,
                                       preprocess_block_objectives)
-from pyomo.pysp.phsolverserverutils import (
-    InvocationType,
-    transmit_external_function_invocation,
-    transmit_external_function_invocation_to_worker )
+from pyomo.pysp.phsolverserverutils import InvocationType
 from pyomo.pysp.convergence import NormalizedTermDiffConvergence
 
 import logging
@@ -277,7 +274,7 @@ def solve_separation_problem(solver, model, fallback):
 
     #SOLVE
     output_buffer = StringIO()
-    pyutilib.misc.setup_redirect(output_buffer)
+    setup_redirect(output_buffer)
     try:
         results = solver.solve(model, tee=True)
     except:
@@ -286,7 +283,7 @@ def solve_separation_problem(solver, model, fallback):
         logger.warning("Solver log:\n%s" % output_buffer.getvalue())
         raise
     finally:
-        pyutilib.misc.reset_redirect()
+        reset_redirect()
 
     ss = results.solver.status
     tc = results.solver.termination_condition
@@ -364,7 +361,7 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
             for i, (_sep, _par) in iteritems(cut)
             if abs(_sep) > epsilon*max(1,_par)
         )
-        if expr is not 0:
+        if expr != 0:
             _cutlist.add( expr >= 0 )
 
     for cut in incumbent_cuts:
@@ -479,7 +476,7 @@ def solve_fixed_scenario_solutions(
 
         toc("preprocessed scenario %s" % ( scenario_or_bundle._name, ))
         output_buffer = StringIO()
-        pyutilib.misc.setup_redirect(output_buffer)
+        setup_redirect(output_buffer)
         try:
             results = ph._solver.solve(model, tee=True) # warmstart=True)
         except:
@@ -488,7 +485,7 @@ def solve_fixed_scenario_solutions(
             logger.warning("Solver log:\n%s" % output_buffer.getvalue())
             raise
         finally:
-            pyutilib.misc.reset_redirect()
+            reset_redirect()
         toc("solved solution from scenario set %s on scenario %s" %
             ( scenario_name_list, scenario_or_bundle._name, ))
 

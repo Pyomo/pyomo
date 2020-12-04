@@ -8,5 +8,5 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.repn.standard_repn import *
-from pyomo.repn.standard_aux import *
+from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
+from pyomo.repn.standard_aux import compute_standard_repn
