@@ -440,3 +440,8 @@ dill, dill_available = attempt_import('dill')
 matplotlib, matplotlib_available = attempt_import(
     'matplotlib', only_catch_importerror=False, callback=_finalize_matplotlib,
     deferred_submodules={'pyplot': ['plt']})
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle

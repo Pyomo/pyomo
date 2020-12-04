@@ -43,7 +43,8 @@ from pyomo.core.base.plugin import IPyomoPresolver
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.set import Set
-from pyomo.core.base.component import Component, ComponentUID
+from pyomo.core.base.componentuid import ComponentUID
+from pyomo.core.base.component import Component
 from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 

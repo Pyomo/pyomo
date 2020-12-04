@@ -29,7 +29,7 @@ opt = SolverFactory('ipopt_sens', solver_io='nl')
 class TestSensitivityToolbox(unittest.TestCase):
 
     #test arguments
-    @unittest.skipIf(not opt.available(False), "ipopt_sense is not available")
+    @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_bad_arg(self):
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0,1))
