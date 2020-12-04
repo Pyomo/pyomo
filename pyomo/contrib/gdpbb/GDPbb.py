@@ -10,10 +10,8 @@ import heapq
 import logging
 import traceback
 
-from pyutilib.misc import Container
-
 from pyomo.common import deprecated
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, Container
 from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveInt)
 from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level, \
     setup_results_object, get_main_elapsed_time, process_objective

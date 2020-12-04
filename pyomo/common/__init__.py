@@ -12,9 +12,7 @@
 # set up as soon as possible
 from . import log
 
-from pyutilib.factory.factory import (
-    Factory, CachedFactory
-)
+from .factory import Factory
 
 from .fileutils import (
     Executable, Library,

@@ -9,10 +9,10 @@
 #  ___________________________________________________________________________
 
 import time
-import pyutilib.misc
 import pyomo.opt
 from pyomo.opt import SolverFactory
 from pyomo.core import TransformationFactory
+from pyomo.common.collections import Bunch
 
 
 @SolverFactory.register('mpec_nlp', doc='MPEC solver that optimizes a nonlinear transformation')
@@ -74,7 +74,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
             #
             from pyomo.mpec import Complementarity
             for cuid in self._instance._transformation_data['mpec.simple_nonlinear'].compl_cuids:
-                cobj = cuid.find_component(self._instance)
+                cobj = cuid.find_component_on(self._instance)
                 cobj.parent_block().reclassify_component_type(cobj, Complementarity)
             #
             # Update timing
@@ -84,7 +84,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
             #
             # Return the sub-solver return condition value and log
             #
-            return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None),
+            return Bunch(rc=getattr(opt,'_rc', None),
                                        log=getattr(opt,'_log',None))
 
     def _postsolve(self):

@@ -18,28 +18,33 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYTHON_REQUIRED_PKGS: >
-      ply six nose coverage
+      nose coverage
   PYTHON_BASE_PKGS: >
-      dill ipython networkx openpyxl pathos
+      ply six dill ipython networkx openpyxl pathos
       pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd
       python-louvain
   PYTHON_NUMPY_PKGS: >
-      numpy scipy pyodbc pandas matplotlib seaborn
+      numpy scipy pyodbc pandas matplotlib seaborn numdifftools
   CACHE_VER: v3
 
 jobs:
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-18.04]
         python: [3.8]
         other: [""]
+        category: ["nightly"]
+        # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
+        # build error is resolved:
+        # https://github.com/Pyomo/pyomo/issues/1710
 
         include:
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
           TARGET: linux
           PYENV: pip
 
@@ -54,7 +59,7 @@ jobs:
           PYENV: conda
           PACKAGES: glpk
 
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
           python: 3.7
           other: /mpi
           mpi: 3
@@ -63,7 +68,15 @@ jobs:
           PYENV: conda
           PACKAGES: mpi4py openmpi
 
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
+          python: 3.7
+          other: /conda
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: conda
+          PACKAGES: mpi4py openmpi
+
+        - os: ubuntu-18.04
           python: 3.9
           other: /slim
           slim: 1
@@ -71,7 +84,15 @@ jobs:
           TARGET: linux
           PYENV: pip
 
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
+          python: 3.6
+          other: /parallel
+          category: parallel
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-18.04
           python: 3.6
           other: /cython
           setup_options: --with-cython
@@ -224,10 +245,17 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
-        pip install --cache-dir cache/pip cplex \
-            || echo "WARNING: CPLEX Community Edition is not available"
-        pip install --cache-dir cache/pip xpress \
-            || echo "WARNING: Xpress Community Edition is not available"
+        if test -z "${{matrix.slim}}"; then
+            pip install --cache-dir cache/pip cplex \
+                || echo "WARNING: CPLEX Community Edition is not available"
+            pip install --cache-dir cache/pip \
+                -i https://pypi.gurobi.com gurobipy \
+                || echo "WARNING: Gurobi is not available"
+            pip install --cache-dir cache/pip xpress \
+                || echo "WARNING: Xpress Community Edition is not available"
+            pip install --cache-dir cache/pip z3-solver \
+                || echo "WARNING: Z3 Solver is not available"
+        fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
@@ -244,12 +272,18 @@ jobs:
         conda list --show-channel-urls
         conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
         conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
-        # Note: CPLEX 12.9 (the last version in conda that supports
-        #    Python 2.7) causes a seg fault in the tests.
-        conda install -q -y -c ibmdecisionoptimization cplex=12.10 \
-            || echo "WARNING: CPLEX Community Edition is not available"
-        conda install -q -y -c fico-xpress xpress \
-            || echo "WARNING: Xpress Community Edition is not available"
+        if test -z "${{matrix.slim}}"; then
+            # Note: CPLEX 12.9 (the last version in conda that supports
+            #    Python 2.7) causes a seg fault in the tests.
+            conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
+                || echo "WARNING: CPLEX Community Edition is not available"
+            conda install -q -y -c fico-xpress xpress \
+                || echo "WARNING: Xpress Community Edition is not available"
+            for PKG in casadi cyipopt pymumps; do
+                conda install -q -y -c conda-forge $PKG \
+                    || echo "WARNING: $PKG is not available"
+            done
+        fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
@@ -264,6 +298,7 @@ jobs:
         echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
 
     - name: Install Ipopt
+      if: ${{ ! matrix.slim }}
       run: |
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
@@ -292,18 +327,25 @@ jobs:
         fi
         cd $IPOPT_DIR
         tar -xzi < $IPOPT_TAR
+        echo ""
+        echo "$IPOPT_DIR"
+        ls -l $IPOPT_DIR
 
     - name: Install GAMS
+      if: ${{ ! matrix.slim }}
       # We install using Powershell because the GAMS installer hangs
       # when launched from bash on Windows
       shell: pwsh
       run: |
-        $GAMS_DIR="${env:TPL_DIR}/gams"
-        echo "$GAMS_DIR" >> $GITHUB_PATH
-        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
-        echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:$GAMS_DIR" >> $GITHUB_ENV
-        $INSTALLER="${env:DOWNLOAD_DIR}/gams_install.exe"
-        $URL="https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
+        $GAMS_DIR = "${env:TPL_DIR}/gams"
+        echo "$GAMS_DIR" | `
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        echo "LD_LIBRARY_PATH=${env:LD_LIBRARY_PATH}:$GAMS_DIR" `
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
@@ -326,8 +368,12 @@ jobs:
                 "-q -d $GAMS_DIR" -Wait
             mv $GAMS_DIR/*/* $GAMS_DIR/.
         }
+        echo ""
+        echo "$GAMS_DIR"
+        ls -l $GAMS_DIR
 
     - name: Install GAMS Python bindings
+      if: ${{ ! matrix.slim }}
       run: |
         GAMS_DIR="${env:TPL_DIR}/gams"
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
@@ -340,11 +386,13 @@ jobs:
         fi
 
     - name: Install BARON
+      if: ${{ ! matrix.slim }}
       shell: pwsh
       run: |
-        $BARON_DIR="${env:TPL_DIR}/baron"
-        echo "$BARON_DIR" >> $GITHUB_PATH
-        $URL="https://www.minlp.com/downloads/xecs/baron/current/"
+        $BARON_DIR = "${env:TPL_DIR}/baron"
+        echo "$BARON_DIR" | `
+            Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $URL = "https://www.minlp.com/downloads/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
             $URL += "baron-win64.exe"
@@ -368,9 +416,12 @@ jobs:
             unzip -q $INSTALLER
             mv baron-* $BARON_DIR
         }
+        echo ""
+        echo "$BARON_DIR"
+        ls -l $BARON_DIR
 
     - name: Install GJH_ASL_JSON
-      if: matrix.TARGET != 'win'
+      if: ${{ ! matrix.slim && matrix.TARGET != 'win' }}
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "${GJH_DIR}" >> $GITHUB_PATH
@@ -389,6 +440,9 @@ jobs:
             mv bin "$INSTALL_DIR/bin"
         fi
         cp -rp "$INSTALL_DIR/bin" "$GJH_DIR"
+        echo ""
+        echo "$GJH_DIR"
+        ls -l $GJH_DIR
 
     - name: Install Pyomo and PyUtilib
       run: |
@@ -439,6 +493,7 @@ jobs:
 
     - name: Report pyomo plugin information
       run: |
+        echo "$PATH"
         pyomo help --solvers || exit 1
         pyomo help --transformations || exit 1
         pyomo help --writers || exit 1
@@ -446,7 +501,8 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
-        test.pyomo -v --cat="nightly" pyomo `pwd`/pyomo-model-libraries
+        test.pyomo -v --cat="${{matrix.category}}" \
+            pyomo `pwd`/pyomo-model-libraries
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
@@ -487,13 +543,14 @@ jobs:
     needs: build
     if: always() # run even if a build job fails
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-18.04, macos-latest, windows-latest]
 
         include:
-        - os: ubuntu-latest
+        - os: ubuntu-18.04
           TARGET: linux
         - os: macos-latest
           TARGET: osx

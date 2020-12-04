@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -28,8 +28,8 @@ diff_tol = 1e-3
 
 
 @unittest.skipIf(not mosek_available,
-                 "The 'mosek' python bindings are not available")
-class MosekDirectTests(unittest.TestCase):
+                 "MOSEK's python bindings are not available")
+class MOSEKDirectTests(unittest.TestCase):
 
     def setUp(self):
         self.stderr = sys.stderr
@@ -37,6 +37,16 @@ class MosekDirectTests(unittest.TestCase):
 
     def tearDown(self):
         sys.stderr = self.stderr
+
+    def test_interface_call(self):
+
+        interface_instance = type(pyo.SolverFactory('mosek_direct'))
+        alt_1 = pyo.SolverFactory('mosek')
+        alt_2 = pyo.SolverFactory('mosek', solver_io='python')
+        alt_3 = pyo.SolverFactory('mosek', solver_io='direct')
+        self.assertIsInstance(alt_1, interface_instance)
+        self.assertIsInstance(alt_2, interface_instance)
+        self.assertIsInstance(alt_3, interface_instance)
 
     def test_infeasible_lp(self):
 
@@ -46,7 +56,7 @@ class MosekDirectTests(unittest.TestCase):
         model.C2 = pyo.Constraint(expr=model.X == 2)
         model.O = pyo.Objective(expr=model.X)
 
-        opt = pyo.SolverFactory("mosek")
+        opt = pyo.SolverFactory("mosek_direct")
         results = opt.solve(model)
 
         self.assertIn(results.solver.termination_condition,
@@ -59,7 +69,7 @@ class MosekDirectTests(unittest.TestCase):
         model.X = pyo.Var()
         model.O = pyo.Objective(expr=model.X)
 
-        opt = pyo.SolverFactory("mosek")
+        opt = pyo.SolverFactory("mosek_direct")
         results = opt.solve(model)
 
         self.assertIn(results.solver.termination_condition,
@@ -72,7 +82,7 @@ class MosekDirectTests(unittest.TestCase):
         model.X = pyo.Var(within=pyo.NonNegativeReals)
         model.O = pyo.Objective(expr=model.X)
 
-        opt = pyo.SolverFactory("mosek")
+        opt = pyo.SolverFactory("mosek_direct")
         results = opt.solve(model, load_solutions=False)
 
         self.assertEqual(results.solution.status,
@@ -89,7 +99,7 @@ class MosekDirectTests(unittest.TestCase):
 
         model.O = pyo.Objective(expr=model.X + model.Y)
 
-        opt = pyo.SolverFactory("mosek")
+        opt = pyo.SolverFactory("mosek_direct")
         results = opt.solve(model, suffixes=['dual'], load_solutions=False)
 
         model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
@@ -106,7 +116,7 @@ class MosekDirectTests(unittest.TestCase):
         model.C2 = pyo.Constraint(expr=model.X == 2)
         model.O = pyo.Objective(expr=model.X)
 
-        opt = pyo.SolverFactory("mosek")
+        opt = pyo.SolverFactory("mosek_direct")
         results = opt.solve(model)
 
         self.assertIn(results.solver.termination_condition,
@@ -120,7 +130,7 @@ class MosekDirectTests(unittest.TestCase):
         model.O = pyo.Objective(expr=model.X)
 
         instance = model.create_instance()
-        opt = pyo.SolverFactory("mosek")
+        opt = pyo.SolverFactory("mosek_direct")
         results = opt.solve(instance)
 
         self.assertIn(results.solver.termination_condition,
@@ -133,19 +143,7 @@ class MosekDirectTests(unittest.TestCase):
         model.X = pyo.Var(within=pyo.NonNegativeIntegers)
         model.O = pyo.Objective(expr=model.X)
 
-        opt = pyo.SolverFactory("mosek")
-        results = opt.solve(model, load_solutions=False)
-
-        self.assertEqual(results.solution.status,
-                         SolutionStatus.optimal)
-
-    def test_optimal_mip(self):
-
-        model = pyo.ConcreteModel()
-        model.X = pyo.Var(within=pyo.NonNegativeIntegers)
-        model.O = pyo.Objective(expr=model.X)
-
-        opt = pyo.SolverFactory("mosek")
+        opt = pyo.SolverFactory("mosek_direct")
         results = opt.solve(model, load_solutions=False)
 
         self.assertEqual(results.solution.status,
@@ -180,7 +178,7 @@ class MosekDirectTests(unittest.TestCase):
         model.c.body += b.r1 + b.r2
         del b
 
-        if mosek_version >= (9,0,0):
+        if mosek_version >= (9, 0, 0):
             b = model.primal_exponential = pmo.block()
             b.x1 = pmo.variable(lb=0)
             b.x2 = pmo.variable()
@@ -228,11 +226,12 @@ class MosekDirectTests(unittest.TestCase):
             model.o.expr += b.r1 + b.r2
             model.c.body += b.r1 + b.r2
 
-        opt = pmo.SolverFactory("mosek")
+        opt = pmo.SolverFactory("mosek_direct")
         results = opt.solve(model)
 
         self.assertEqual(results.solution.status,
                          SolutionStatus.optimal)
+
 
 if __name__ == "__main__":
     unittest.main()

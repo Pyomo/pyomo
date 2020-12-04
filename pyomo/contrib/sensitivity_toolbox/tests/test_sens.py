@@ -116,7 +116,6 @@ class FunctionDeprecationTest(unittest.TestCase):
 
 class TestSensitivityToolbox(unittest.TestCase):
 
-    # test arguments
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_bad_arg(self):
         m = ConcreteModel()

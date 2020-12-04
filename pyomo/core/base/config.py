@@ -11,9 +11,8 @@
 import os
 import json
 
-from pyutilib.misc.config import ConfigBase
 from pyomo.common.config import (
-    ConfigBlock, ConfigValue, ADVANCED_OPTION, PYOMO_CONFIG_DIR,
+    ConfigBase, ConfigBlock, ConfigValue, ADVANCED_OPTION, PYOMO_CONFIG_DIR,
 )
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import logging
