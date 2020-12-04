@@ -384,14 +384,15 @@ class _slice_generator(object):
                 # mechanism (e.g., Param)
                 if (not self.iter_over_index) or index in self.component:
                     # If iter_over_index is False, we are iterating over
-                    # the component ("filled-in" indices only).
+                    # the component ("filled-in" indices only).  Since
                     # `advance_iter` was called on the component iter,
-                    # so we're pretty sure index is in component.
+                    # we already know index is in self.component.
                     return self.component[index]
                 else:
-                    # If iter_over_index is True, we don't need to make sure
-                    # index is in component, so we just return None in this
-                    # case.
+                    # If iter_over_index is True, we need to return
+                    # something even when index is not actually in
+                    # self.component.  We will (arbitrarily) return
+                    # None.
                     return None
 
 # Backwards compatibility
@@ -421,9 +422,11 @@ class _IndexedComponent_slice_iter(object):
         call_stack = self._slice._call_stack
         call_stack_len = self._slice._len
         self._iter_stack = [None]*call_stack_len
-        # Initialize the top of the `_iter_stack`:
+        # Initialize the top of the `_iter_stack` (deepest part of the
+        # model hierarchy):
         if call_stack[0][0] == IndexedComponent_slice.slice_info:
-            # Base is a generator for the "highest-level slice"
+            # The root of the _iter_stack is a generator for the
+            # "highest-level slice" (slice closest to the model() block)
             self._iter_stack[0] = _slice_generator(
                 *call_stack[0][1], iter_over_index=self._iter_over_index)
             # call_stack[0][1] is a (fixed, sliced, ellipsis) tuple, where
@@ -431,10 +434,11 @@ class _IndexedComponent_slice_iter(object):
         elif call_stack[0][0] == IndexedComponent_slice.set_item:
             # This is a special case that happens when calling
             # `_ReferenceDict.__setitem__` when the call stack consists
-            # of only a `slice_info` entry.
-            # This case is for some reason incompatible with the default
-            # case for `set_item` in `__next__` below, so we set the
-            # iterator to `_NotIterable` for special handling.
+            # of only a `set_item` entry.  We need to initialize the
+            # root of _iter_stack to something other than None (so it
+            # doesn't immediately get "popped" off.  However, set_item
+            # is not an iterable thing, so we will will use a type flag
+            # to signal this case to __next__below.
             assert call_stack_len == 1
             self._iter_stack[0] = _NotIterable # Something not None
         else:
@@ -453,23 +457,23 @@ class _IndexedComponent_slice_iter(object):
         """Return the next element in the slice."""
         # In each call to this function, idx will initially point
         # to the bottom of the stack.
-        # NOTE: This stack grows downward, just like the model to
-        # which it refers.
+        #
+        # NOTE: We refer to this stack as growing "downward", just like
+        # the model hierarchy to which it refers.
         idx = len(self._iter_stack)-1
         while True:
             # Flush out any non-slice levels.  Since we initialize
             # _iter_stack with None, in the first call this will
-            # immediately walk down to the beginning of the _iter_stack
+            # immediately walk up to the beginning of the _iter_stack
             #
-            # On subsequent calls, we walk down to the nearest active
-            # iterator, which is left over if the last call to this
-            # function encountered a slice. Previous iterators could
-            # be active as well, but we wait to deal with them until
-            # we have (temporarily) exhausted the "highest level"
-            # iterator.
+            # On subsequent calls, we will walk up only as far as the
+            # "deepest" active (non-exhausted) iterator. Higher-level
+            # iterators could still be active as well, but those index
+            # values will remain constant until we have exhausted this
+            # "deepest" iterator.
             while self._iter_stack[idx] is None:
                 idx -= 1
-            # Get the next element in the highest-level active slice
+            # Get the next element in the deepest iterator (active slice)
             try:
                 if self._iter_stack[idx] is _NotIterable:
                     # This happens when attempting a `set_item` call on
@@ -486,18 +490,19 @@ class _IndexedComponent_slice_iter(object):
                     # _comp is the component in the slice_info entry
                     # of the call stack
                 else:
-                    # Advance the "most recent active iterator"
+                    # Advance the "deepest active iterator"
                     _comp = self.advance_iter(self._iter_stack[idx])
-                    # advance_iter knows which wildcard indices
-                    # we're looking for, if any
+                    # Note that if we are looking for a specific
+                    # wildcard index, that data is stored in
+                    # advance_iter() and will be automatically inserted.
                     #
-                    # _comp is part of the component we're looking for
-                    # The rest of the component will be located using
-                    # the remainder of the iter stack.
+                    # _comp is "local" part of the component we're
+                    # looking for.  The rest of the component will be
+                    # located using the remainder of the iter stack.
                     #
-                    # Note that _comp is actually a component, because
+                    # Note that _comp is actually a component data, because
                     # the _slice_generator (_iter_stack[idx]) returns
-                    # components rather than indices.
+                    # component datas rather than indices.
                     # The _slice_generator is able to know about its
                     # component because it was created from a "higher-
                     # level" component/slice in the call/iter stack.
@@ -506,25 +511,27 @@ class _IndexedComponent_slice_iter(object):
                     # when/if that iterator is advanced.
                     idx += 1
             except StopIteration:
-                # We have expired the most recent iterator.
+                # We have exhausted the iterator at this level of the
+                # stack
                 if not idx:
                     # Top-level iterator is done.  We are done.
                     # (This is how the infinite loop terminates!)
                     raise
-                # Reset the _slice_generator to None in order to
-                # expose the "next-highest iterator"
+                # Reset the _slice_generator to None so that the next
+                # iteration will walk up to - and advance - the
+                # "next-highest level" iterator.
                 self._iter_stack[idx] = None
-
-                # Does decrementing the index do anything here?
-                # We are going to reset it anyway at the beginning 
-                # of the next loop execution...
+                # Trivial optimization: we now know that the
+                # _iter_stack[idx] is None, so we can preemptively
+                # decrement idx in preparatioon for the next iteration
+                # of this loop.
                 idx -= 1
                 continue
 
-            # Walk to the end of the iter/call stacks, constructing
-            # a component to return along the way.
-            # All higher levels in the iter_stack should be None
-            # at this point.
+            # Walk to the end of the iter/call stacks, constructing a
+            # component to return along the way.  The _iter_stack for
+            # all of these levels from idx to the end of the list are
+            # known to be None at this point.
             while idx < self._slice._len:
                 _call = self._slice._call_stack[idx]
                 if _call[0] == IndexedComponent_slice.get_attribute:
@@ -544,7 +551,7 @@ class _IndexedComponent_slice_iter(object):
                         break
                 elif _call[0] == IndexedComponent_slice.get_item:
                     try:
-                        # Get the component specified by an index:
+                        # Get the specified index for the current component:
                         _comp = _comp.__getitem__( _call[1] )
                     except KeyError:
                         # Since we are slicing, we may only be
@@ -569,14 +576,14 @@ class _IndexedComponent_slice_iter(object):
                             iter_over_index=self._iter_over_index
                         )
                         try:
-                            # Advance to get the first component defined by
-                            # this slice:
+                            # Advance to get the first component defined
+                            # by this slice (so that we have a concrete
+                            # context that we can use to decend further
+                            # down the model hierarchy):
                             _comp = self.advance_iter(self._iter_stack[idx])
-                            # We then continue building our component,
-                            # potentially returning something. Next time we
-                            # enter this function, this iterator will still
-                            # be here. We will expire it in the outer loop
-                            # before potentially "recreating" it.
+                            # Note that the iterator will remained
+                            # cached for subsequent calls to __next__()
+                            # (when it will eventually be exhausted).
                         except StopIteration:
                             # We got a slicer, but the slicer doesn't
                             # match anything.  We should break here,
@@ -586,9 +593,12 @@ class _IndexedComponent_slice_iter(object):
                             self._iter_stack[idx] = None
                             break
                     else:
-                        # `_comp` is a fully qualified component.
-                        # Signal that we are done with this level of
-                        # the iteration.
+                        # `_comp` is a fully qualified component data (i.e.,
+                        # not a slice).  Record None in the _iter_stack
+                        # so we note that this level in the stack is not
+                        # defined by an iterator (i.e., subsequent calls
+                        # should immediately "pop" this level off the
+                        # stack and proceed to the next higher level.
                         self._iter_stack[idx] = None
                 elif _call[0] == IndexedComponent_slice.call:
                     try:
@@ -606,7 +616,8 @@ class _IndexedComponent_slice_iter(object):
                             raise
                         break
                 elif _call[0] == IndexedComponent_slice.set_attribute:
-                    # set_attribute should only appear at top of call stack
+                    # set_attribute should only appear at the deepest
+                    # point (end) of the call stack
                     assert idx == self._slice._len - 1
                     try:
                         # set attribute of this component:
@@ -626,8 +637,8 @@ class _IndexedComponent_slice_iter(object):
                             raise
                         break
                 elif _call[0] == IndexedComponent_slice.set_item:
-                    # `set_item` must always appear at the bottom of the
-                    # call stack:
+                    # `set_item` must always appear at the deepest
+                    # point (end) of the call stack
                     assert idx == self._slice._len - 1
                     # We have a somewhat unusual situation when someone
                     # makes a _ReferenceDict to m.x[:] and then wants to
@@ -768,16 +779,19 @@ class _IndexedComponent_slice_iter(object):
             return ans
 
     def get_last_index_wildcards(self):
-        """
-        Get a tuple of the values in the wildcard positions for 
-        the most recent indices used by each _slice_generator
-        in the iter stack.
+        """Get a tuple of the values in the wildcard positions for the most
+        recent indices corresponding to the last component returned by
+        each _slice_generator in the iter stack.
+
         """
         # This method is how we iterate over keys.
+        #
+        # last_index is the index corresponding to the most recent
+        # component data returned by the corresponding _slice_generator.
+        # Extract the indices corresponding to the wildcard positions
+        # for that slice.
         ans = sum(
             ( tuple( x.last_index[i]
-                # last_index is the most recent index used
-                # by a certain _slice_generator.
                      for i in range(len(x.last_index))
                      if i not in x.fixed )
               for x in self._iter_stack if x is not None ),
