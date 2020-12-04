@@ -28,8 +28,7 @@ community_louvain, community_louvain_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
 
 # Import matplotlib
-if matplotlib_available:
-    plt = matplotlib.pyplot
+plt = matplotlib.pyplot
 
 
 def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
@@ -73,25 +72,32 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
     """
 
     # Check that all arguments are of the correct type
-    assert isinstance(model, ConcreteModel), "Invalid model: 'model=%s' - model must be an instance of " \
-                                             "ConcreteModel" % model
+    if not isinstance(model, ConcreteModel):
+        raise TypeError("Invalid model: 'model=%s' - model must be an instance of ConcreteModel" % model)
 
-    assert type_of_community_map in ('bipartite', 'constraint', 'variable'), \
-        "Invalid value for type_of_community_map: 'type_of_community_map=%s' - Valid values: 'bipartite', " \
-        "'constraint', 'variable'" % type_of_community_map
+    if type_of_community_map not in ('bipartite', 'constraint', 'variable'):
+        raise TypeError(
+            "Invalid value for type_of_community_map: 'type_of_community_map=%s' - Valid values: 'bipartite', 'constraint', 'variable'" % type_of_community_map)
 
-    assert type(with_objective) == bool, "Invalid value for with_objective: 'with_objective=%s' - with_objective " \
-                                         "must be a Boolean" % with_objective
+    if type(with_objective) != bool:
+        raise TypeError(
+            "Invalid value for with_objective: 'with_objective=%s' - with_objective must be a Boolean" % with_objective)
 
-    assert type(weighted_graph) == bool, "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph " \
-                                         "must be a Boolean" % weighted_graph
+    if type(weighted_graph) != bool:
+        raise TypeError(
+            "Invalid value for weighted_graph: 'weighted_graph=%s' - weighted_graph must be a Boolean" % weighted_graph)
 
-    assert random_seed is None or (type(random_seed) == int and random_seed >= 0), \
-        "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed
+    if random_seed is not None:
+        if type(random_seed) != int:
+            raise TypeError(
+                "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed)
+        if random_seed < 0:
+            raise ValueError(
+                "Invalid value for random_seed: 'random_seed=%s' - random_seed must be a non-negative integer" % random_seed)
 
-    assert use_only_active_components is True or use_only_active_components is None, \
-        "Invalid value for use_only_active_components: 'use_only_active_components=%s' - use_only_active_components " \
-        "must be True or None" % use_only_active_components
+    if use_only_active_components is not True and use_only_active_components is not None:
+        raise TypeError(
+            "Invalid value for use_only_active_components: 'use_only_active_components=%s' - use_only_active_components must be True or None" % use_only_active_components)
 
     # Generate model_graph (a NetworkX graph based on the given Pyomo optimization model),
     # number_component_map (a dictionary to convert the communities into lists of Pyomo components

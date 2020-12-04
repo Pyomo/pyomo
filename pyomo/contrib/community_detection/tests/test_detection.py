@@ -30,8 +30,7 @@ from pyomo.solvers.tests.models.QP_simple import QP_simple
 from pyomo.solvers.tests.models.LP_inactive_index import LP_inactive_index
 from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
 
-if matplotlib_available:
-    matplotlib.use('Agg')  # added to avoid $DISPLAY errors on Travis (from parmest)
+matplotlib.use('Agg')  # added to avoid $DISPLAY errors on Travis (from parmest)
 
 @unittest.skipUnless(community_louvain_available, "'community' package from 'python-louvain' is not available.")
 @unittest.skipUnless(networkx_available, "networkx is not available.")
@@ -575,36 +574,41 @@ class TestDecomposition(unittest.TestCase):
                       "only one community was found", output.getvalue())
 
         model = 'foo'
-        with self.assertRaisesRegex(AssertionError, "Invalid model: 'model=%s' - model must be an instance of "
-                                                    "ConcreteModel" % model):
+        with self.assertRaisesRegex(TypeError, "Invalid model: 'model=%s' - model must be an instance of "
+                                               "ConcreteModel" % model):
             detect_communities(model)
 
         model = create_model_6()
 
         type_of_community_map = 'foo'
-        with self.assertRaisesRegex(AssertionError, "Invalid value for type_of_community_map: "
-                                                    "'type_of_community_map=%s' - Valid values: 'bipartite', "
-                                                    "'constraint', 'variable'"
-                                                    % type_of_community_map):
+        with self.assertRaisesRegex(TypeError, "Invalid value for type_of_community_map: "
+                                               "'type_of_community_map=%s' - Valid values: 'bipartite', "
+                                               "'constraint', 'variable'"
+                                               % type_of_community_map):
             detect_communities(model, type_of_community_map=type_of_community_map)
 
         with_objective = 'foo'
-        with self.assertRaisesRegex(AssertionError, "Invalid value for with_objective: 'with_objective=%s' - "
-                                                    "with_objective must be a Boolean" % with_objective):
+        with self.assertRaisesRegex(TypeError, "Invalid value for with_objective: 'with_objective=%s' - "
+                                               "with_objective must be a Boolean" % with_objective):
             detect_communities(model, with_objective=with_objective)
 
         weighted_graph = 'foo'
-        with self.assertRaisesRegex(AssertionError, "Invalid value for weighted_graph: 'weighted_graph=%s' - "
-                                                    "weighted_graph must be a Boolean" % weighted_graph):
+        with self.assertRaisesRegex(TypeError, "Invalid value for weighted_graph: 'weighted_graph=%s' - "
+                                               "weighted_graph must be a Boolean" % weighted_graph):
             detect_communities(model, weighted_graph=weighted_graph)
 
         random_seed = 'foo'
-        with self.assertRaisesRegex(AssertionError, "Invalid value for random_seed: 'random_seed=%s' - random_seed "
-                                                    "must be a non-negative integer" % random_seed):
+        with self.assertRaisesRegex(TypeError, "Invalid value for random_seed: 'random_seed=%s' - random_seed "
+                                               "must be a non-negative integer" % random_seed):
+            detect_communities(model, random_seed=random_seed)
+
+        random_seed = -1
+        with self.assertRaisesRegex(ValueError, "Invalid value for random_seed: 'random_seed=%s' - random_seed "
+                                                "must be a non-negative integer" % random_seed):
             detect_communities(model, random_seed=random_seed)
 
         use_only_active_components = 'foo'
-        with self.assertRaisesRegex(AssertionError,
+        with self.assertRaisesRegex(TypeError,
                                     "Invalid value for use_only_active_components: 'use_only_active_components=%s' "
                                     "- use_only_active_components must be True or None" % use_only_active_components):
             detect_communities(model, use_only_active_components=use_only_active_components)
