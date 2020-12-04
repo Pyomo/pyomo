@@ -15,13 +15,15 @@ import time
 import logging
 import subprocess
 
-import pyomo.common
-import pyutilib.misc
+from pyomo.common import Executable
+from pyomo.common.collections import Options, Bunch
+from pyutilib.services import TempfileManager
+from pyutilib.subprocess import run
 
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import SolverStatus, TerminationCondition, SolutionStatus, ProblemSense, Solution
+from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
@@ -108,7 +110,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Options()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -190,7 +192,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
 
         # if the first argument is a string (representing a filename),
         # then we don't have an instance => the solver is being applied
@@ -216,7 +218,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             # and the warm start file-name is (obviously) needed there.
             if self._warm_start_file_name is None:
                 assert not user_warmstart
-                self._warm_start_file_name = pyutilib.services.TempfileManager.\
+                self._warm_start_file_name = TempfileManager.\
                                              create_tempfile(suffix = '.gurobi.mst')
 
         # let the base class handle any remaining keywords/actions.
@@ -244,9 +246,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
     def _default_executable(self):
         if sys.platform == 'win32':
-            executable = pyomo.common.Executable("gurobi.bat")
+            executable = Executable("gurobi.bat")
         else:
-            executable = pyomo.common.Executable("gurobi.sh")
+            executable = Executable("gurobi.sh")
         if not executable:
             logger.warning("Could not locate the 'gurobi' executable, "
                            "which is required for solver %s" % self.name)
@@ -262,7 +264,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         if solver_exec is None:
             return _extract_version('')
         f = StringIO()
-        results = pyutilib.subprocess.run([solver_exec],
+        results = run([solver_exec],
                                           stdin=('from gurobipy import *; '
                                                  'print(gurobi.version()); exit()'),
                                           ostream=f)
@@ -285,7 +287,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # The log file in CPLEX contains the solution trace, but the solver status can be found in the solution file.
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                             create_tempfile(suffix = '.gurobi.log')
 
         #
@@ -293,7 +295,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # As indicated above, contains (in XML) both the solution and solver status.
         #
         if self._soln_file is None:
-            self._soln_file = pyutilib.services.TempfileManager.\
+            self._soln_file = TempfileManager.\
                               create_tempfile(suffix = '.gurobi.txt')
 
         #
@@ -336,7 +338,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
         if self._keepfiles:
-            script_fname = pyutilib.services.TempfileManager.create_tempfile(suffix = '.gurobi.script')
+            script_fname = TempfileManager.create_tempfile(suffix = '.gurobi.script')
             script_file = open(script_fname, 'w')
             script_file.write( script )
             script_file.close()
@@ -353,7 +355,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch(cmd=cmd, script=script,
+        return Bunch(cmd=cmd, script=script,
                                    log_file=self._log_file, env=None)
 
     def process_logfile(self):
@@ -532,6 +534,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # manager, created populated *directly* by this plugin. does not
         # include, for example, the execution script. but does include
         # the warm-start file.
-        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         return results

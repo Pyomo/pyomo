@@ -39,8 +39,7 @@ from pyomo.core.kernel.variable import (IVariable,
                                         variable_tuple,
                                         variable_dict,
                                         variable)
-from pyomo.core.kernel.constraint import (constraint,
-                                          constraint_list,
+from pyomo.core.kernel.constraint import (constraint_list,
                                           constraint_tuple,
                                           linear_constraint)
 from pyomo.core.kernel.sos import sos2
@@ -52,8 +51,7 @@ from pyomo.core.kernel.piecewise_library.util import \
      generate_gray_code,
      PiecewiseValidationError)
 
-import six
-from six.moves import xrange, zip
+from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
 

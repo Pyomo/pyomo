@@ -1,5 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Tests for the MindtPy solver."""
-from math import fabs
 import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \

@@ -11,12 +11,11 @@
 # Unit Tests for indexed components
 #
 
-import os
 import pickle
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.environ import Var, Block, ConcreteModel, RangeSet, Set
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 

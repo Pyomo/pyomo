@@ -25,6 +25,9 @@
 #
 # DISABLE_COVERAGE: if nonempty, then coverage analysis is disabled
 #
+# PYOMO_SETUP_ARGS: passed to the 'python setup.py develop' command
+#     (e.g., to specify --with-cython)
+#
 # PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions" command
 #     (e.g., to set up local SSL certificate authorities)
 #
@@ -52,16 +55,21 @@ MODE="$1"
 if test -z "$MODE" -o "$MODE" == setup; then
     # Clean old PYC files and remove any previous virtualenv
     echo "#"
-    echo "# Cleaning out old .pyc files"
+    echo "# Removing python virtual environment"
     echo "#"
     rm -rf ${WORKSPACE}/python
-    find ${WORKSPACE}/pyomo -name \*.pyc -delete
-    find ${WORKSPACE}/pyutilib -name \*.pyc -delete
+    echo "#"
+    echo "# Cleaning out old .pyc and cython files"
+    echo "#"
+    for EXT in pyc pyx pyd so dylib dll; do
+        find ${WORKSPACE}/pyomo -name \*.$EXT -delete
+        find ${WORKSPACE}/pyutilib -name \*.$EXT -delete
+    done
 
     # Set up the local lpython
     echo ""
     echo "#"
-    echo "# Setting up virutal environment"
+    echo "# Setting up virtual environment"
     echo "#"
     virtualenv python $VENV_SYSTEM_PACKAGES --clear
     # Put the venv at the beginning of the PATH
@@ -81,7 +89,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     python setup.py develop || exit 1
     popd
     pushd "$WORKSPACE/pyomo" || exit 1
-    python setup.py develop || exit 1
+    python setup.py develop $PYOMO_SETUP_ARGS || exit 1
     popd
     #
     # DO NOT install pyomo-model-libraries

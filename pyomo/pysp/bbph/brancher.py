@@ -7,19 +7,16 @@
 
 outputfilename = "brancherout.p"
 
-import sys
 import time
 import os
 import pickle # so we can send index across with its type (I hope)
 
 import pyomo.common.plugin
-from pyomo.core import *
 from pyomo.pysp import phextension
-from pyomo.pysp.phutils import *
-from pyomo.pysp.generators import \
-    scenario_tree_node_variables_generator_noinstances
 import pyomo.solvers.plugins.smanager.phpyro
 from pyomo.pysp import phsolverserverutils
+
+from six import iteritems
 
 thisfile = os.path.abspath(__file__)
 

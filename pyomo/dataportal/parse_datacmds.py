@@ -20,10 +20,8 @@ import ply.yacc as yacc
 from inspect import getfile, currentframe
 from six.moves import xrange
 
-from pyutilib.misc import flatten_list, import_file
-
-from pyomo.common import config
-from pyomo.common.fileutils import this_file_dir, this_file
+from pyutilib.misc import flatten_list
+from pyomo.common.fileutils import this_file
 
 _re_number = r'[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?'
 

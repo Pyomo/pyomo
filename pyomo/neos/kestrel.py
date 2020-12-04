@@ -21,12 +21,9 @@ import six
 import sys
 import time
 import socket
-import gzip
 import base64
 import tempfile
 import logging
-
-from six.moves.http_client import BadStatusLine
 
 from pyomo.common.dependencies import attempt_import
 
@@ -37,6 +34,7 @@ def _xmlrpclib_importer():
         import xmlrpc.client as xmlrpclib
     return xmlrpclib
 xmlrpclib = attempt_import('xmlrpclib', importer=_xmlrpclib_importer)[0]
+gzip = attempt_import('gzip')[0]
 
 logger = logging.getLogger('pyomo.neos')
 
@@ -150,7 +148,8 @@ class kestrelAMPL:
         try:
             result = self.neos.ping()
             logger.info("OK.")
-        except (socket.error, xmlrpclib.ProtocolError, BadStatusLine):
+        except (socket.error, xmlrpclib.ProtocolError,
+                six.moves.http_client.BadStatusLine):
             e = sys.exc_info()[1]
             self.neos = None
             logger.info("Fail.")

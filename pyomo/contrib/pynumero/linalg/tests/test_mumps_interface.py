@@ -14,14 +14,14 @@ try:
 except ImportError:
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run linear solver tests")
 
-try:
-    from pyomo.contrib.pynumero.linalg.mumps_interface import MumpsCentralizedAssembledLinearSolver
-except ImportError:
-    raise unittest.SkipTest("Pynumero needs pymumps to run linear solver tests")
+from pyomo.contrib.pynumero.linalg.mumps_interface import (
+    mumps_available, MumpsCentralizedAssembledLinearSolver
+)
 
 from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
 
-
+@unittest.skipIf(not mumps_available,
+                 "Pynumero needs pymumps to run linear solver tests")
 class TestMumpsLinearSolver(unittest.TestCase):
     def test_mumps_linear_solver(self):
         A = np.array([[ 1,  7,  3],

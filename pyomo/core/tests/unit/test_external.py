@@ -8,12 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-import os
+
 import pyutilib.th as unittest
 
 from pyomo.common.getGSL import find_GSL
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Objective, SolverFactory, value
 from pyomo.core.base.external import (PythonCallbackFunction,
+                                      ExternalFunction,
                                       AMPLExternalFunction)
 from pyomo.opt import check_available_solvers
 

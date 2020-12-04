@@ -9,19 +9,14 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr.numvalue import as_numeric
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _abstract_readwrite_property,
-     _abstract_readonly_property)
-from pyomo.core.kernel.container_utils import \
-    define_simple_containers
+from pyomo.core.kernel.base import _abstract_readwrite_property
+from pyomo.core.kernel.container_utils import define_simple_containers
 from pyomo.core.kernel.expression import IExpression
-
-import six
 
 # Constants used to define the optimization sense
 minimize=1
 maximize=-1
+
 
 class IObjective(IExpression):
     """
@@ -45,6 +40,7 @@ class IObjective(IExpression):
 
     def is_minimizing(self):
         return self.sense == minimize
+
 
 class objective(IObjective):
     """An optimization objective."""
@@ -73,6 +69,7 @@ class objective(IObjective):
     @property
     def expr(self):
         return self._expr
+
     @expr.setter
     def expr(self, expr):
         self._expr = as_numeric(expr) if (expr is not None) else None
@@ -84,6 +81,7 @@ class objective(IObjective):
     @property
     def sense(self):
         return self._sense
+
     @sense.setter
     def sense(self, sense):
         """Set the sense (direction) of this objective."""
@@ -95,6 +93,7 @@ class objective(IObjective):
                 "Objective sense must be set to one of: "
                 "[minimize (%s), maximize (%s)]. Invalid "
                 "value: %s'" % (minimize, maximize, sense))
+
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module

@@ -1,23 +1,35 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Initialization functions."""
 from __future__ import division
-
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, copy_var_list_values, get_main_elapsed_time
-from pyomo.contrib.mindtpy.cut_generation import (
-    add_oa_cuts, add_affine_cuts, add_objective_linearization,
-)
+import logging
+from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
+                                       copy_var_list_values,
+                                       get_main_elapsed_time)
+from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
+                                                  add_affine_cuts)
 from pyomo.contrib.mindtpy.nlp_solve import solve_NLP_subproblem
 from pyomo.contrib.mindtpy.util import (calc_jacobians)
 from pyomo.core import (ConstraintList, Objective,
-                        TransformationFactory, maximize, minimize, value, Var)
-from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverFactory
+                        TransformationFactory, maximize, minimize,
+                        value, Var,)
+from pyomo.opt import SolverFactory, TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
+from pyomo.contrib.mindtpy.nlp_solve import (handle_NLP_subproblem_optimal,
+                                             handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
 from pyomo.contrib.mindtpy.util import var_bound_add
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
 import math
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def MindtPy_initialize_master(solve_data, config):
@@ -223,10 +235,10 @@ def init_max_binaries(solve_data, config):
             'MILP master problem is infeasible. '
             'Problem may have no more feasible '
             'binary configurations.')
-    elif subprob_terminate_cond is tc.maxTimeLimit:
+    elif solve_terminate_cond is tc.maxTimeLimit:
         config.logger.info(
             'NLP subproblem failed to converge within time limit.')
-    elif subprob_terminate_cond is tc.maxIterations:
+    elif solve_terminate_cond is tc.maxIterations:
         config.logger.info(
             'NLP subproblem failed to converge within iteration limit.')
     else:

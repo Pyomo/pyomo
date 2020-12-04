@@ -8,9 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import abc
-import six
-
 # These classes are for checking types consistently and raising errors
 
 
@@ -172,10 +169,10 @@ class BaseBlockMatrix(object):
         msg = "setdiag not implemented for {}".format(self.__class__.__name__)
         raise NotImplementedError(msg)
 
-    def transpose(*axes):
+    def transpose(self, *axes):
         msg = "transpose not implemented for {}".format(self.__class__.__name__)
         raise NotImplementedError(msg)
 
-    def tostring(order='C'):
+    def tostring(self, order='C'):
         msg = "tostring not implemented for {}".format(self.__class__.__name__)
         raise NotImplementedError(msg)

@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
@@ -6,14 +16,17 @@ from six import StringIO
 from pyomo.common.log import LoggingIntercept
 
 import pyutilib.th as unittest
-import pyutilib.services
 import random
 
-import pyomo.opt
-from pyomo.environ import *
+from pyomo.opt import check_available_solvers
+from pyomo.environ import (ConcreteModel, Set, Objective, 
+                           Constraint, Var, Block, Param,
+                           NonNegativeReals, TransformationFactory, ComponentUID, 
+                           inequality)
+
 import pyomo.core.expr.current as EXPR
 
-solvers = pyomo.opt.check_available_solvers('glpk')
+solvers = check_available_solvers('glpk')
 
 
 class TestAddSlacks(unittest.TestCase):
@@ -269,7 +282,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         self.assertRaisesRegexp(
             ValueError,
-            "key 'notakwd' not defined for Config Block*",
+            "key 'notakwd' not defined for ConfigDict ''",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,
             notakwd="I want a feasible model"
