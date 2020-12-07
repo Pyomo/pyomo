@@ -1094,7 +1094,7 @@ class _ComponentUID(object):
         return a
 
     def __getstate__(self):
-        return {x:getattr(self, x) for x in ComponentUID.__slots__}
+        return {x:getattr(self, x) for x in _ComponentUID.__slots__}
 
     def __setstate__(self, state):
         for key, val in iteritems(state):
@@ -1220,7 +1220,7 @@ class _ComponentUID(object):
         as required by _cid entries. Slices and ellipses are
         converted to wildcard notation.
         """
-        tDict = ComponentUID.tDict
+        tDict = _ComponentUID.tDict
         if idx.__class__ is not tuple:
             idx = (idx,)
         if idx == (Ellipsis,):
@@ -1408,7 +1408,7 @@ class _ComponentUID(object):
         if context is None:
             context = model
         orig_component = component
-        tDict = ComponentUID.tDict
+        tDict = _ComponentUID.tDict
         if not hasattr(component, '_component'):
             yield ( component.local_name, '**', None )
             component = component.parent_block()
@@ -1440,8 +1440,8 @@ class _ComponentUID(object):
         cList = label.split('.')
         # NOTE: This split is not safe for labels that include
         # decimal indices.
-        tKeys = ComponentUID.tKeys
-        tDict = ComponentUID.tDict
+        tKeys = _ComponentUID.tKeys
+        tDict = _ComponentUID.tDict
         for c in reversed(cList):
             if c[-1] == ']':
                 c_info = c[:-1].split('[',1)
@@ -1460,7 +1460,7 @@ class _ComponentUID(object):
                         _type += val[0]
                         idx[i] = tDict[val[0]](val[1:])
                     elif val[0] in  "\"'" and val[-1] == val[0]:
-                        _type += ComponentUID.tDict[str]
+                        _type += _ComponentUID.tDict[str]
                         idx[i] = val[1:-1]
                     else:
                         _type += '.'
@@ -1492,7 +1492,7 @@ class _ComponentUID(object):
             except KeyError:
                 if '.' not in types:
                     return None
-                tList = ComponentUID.tList
+                tList = _ComponentUID.tList
                 def _checkIntArgs(_idx, _t, _i):
                     if _i == -1:
                         try:
@@ -1540,7 +1540,7 @@ class _ComponentUID(object):
                 yield ans
         else:
             all =  idx == '**'
-            tList = ComponentUID.tList
+            tList = _ComponentUID.tList
             for target_idx, target_obj in iteritems(obj):
                 if not all and idx != target_idx:
                     _idx, _types = self._partial_cuid_from_index(target_idx)
@@ -1581,7 +1581,7 @@ class _ComponentUID(object):
         """
         TODO
         """
-        tList = ComponentUID.tList
+        tList = _ComponentUID.tList
         for i, (name, idx, types) in enumerate(self._generate_cuid(component)):
             if i == len(self._cids):
                 return False
@@ -1614,7 +1614,7 @@ class _ComponentUID(object):
 # WEH - What does it mean to initialize this dictionary outside
 #       of the definition of this class?  Is tList populated
 #       with all components???
-ComponentUID.tDict.update( (ComponentUID.tKeys[i], v)
-                           for i,v in enumerate(ComponentUID.tList) )
-ComponentUID.tDict.update( (v, ComponentUID.tKeys[i])
-                           for i,v in enumerate(ComponentUID.tList) )
+_ComponentUID.tDict.update( (_ComponentUID.tKeys[i], v)
+                           for i,v in enumerate(_ComponentUID.tList) )
+_ComponentUID.tDict.update( (v, _ComponentUID.tKeys[i])
+                           for i,v in enumerate(_ComponentUID.tList) )
