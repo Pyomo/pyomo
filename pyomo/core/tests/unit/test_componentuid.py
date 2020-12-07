@@ -19,6 +19,7 @@ from six import StringIO, itervalues
 import pyutilib.th as unittest
 from pyomo.environ import (
     ConcreteModel, Block, Var, Set, Param, Constraint, Any, ComponentUID,
+    Reference,
 )
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.common.log import LoggingIntercept
@@ -886,6 +887,347 @@ class TestComponentUID(unittest.TestCase):
         with LoggingIntercept(OUT, 'pyomo.core'):
             self.assertIs(comp.ComponentUID, ComponentUID)
         self.assertEqual("", OUT.getvalue())
+
+    def _slice_model(self):
+        m = ConcreteModel()
+    
+        m.d1_1 = Set(initialize=[1,2,3])
+        m.d1_2 = Set(initialize=['a','b','c'])
+        m.d1_3 = Set(initialize=[1.1,1.2,1.3])
+        m.d2 = Set(initialize=[('a',1), ('b',2)])
+        m.dn = Set(initialize=[('c',3), ('d',4,5)], dimen=None)
+    
+        @m.Block()
+        def b(b):
+    
+            b.b = Block()
+            
+            @b.Block(m.d1_1)
+            def b1(b1, i):
+                b1.v = Var()
+                b1.v1 = Var(m.d1_3)
+                b1.v2 = Var(m.d1_1, m.d1_2)
+                b1.vn = Var(m.dn, m.d1_2)
+    
+            @b.Block(m.d1_1, m.d1_2)
+            def b2(b2, i, j):
+                b2.v = Var()
+                b2.v1 = Var(m.d1_3)
+                b2.v2 = Var(m.d1_1, m.d1_2)
+                b2.vn = Var(m.d1_1, m.dn, m.d1_2)
+    
+            @b.Block(m.d1_3, m.d2)
+            def b3(b3, i, j, k):
+                b3.v = Var()
+                b3.v1 = Var(m.d1_3)
+                b3.v2 = Var(m.d1_1, m.d1_2)
+                b3.vn = Var(m.d1_1, m.dn, m.d2)
+    
+            # Don't think I can define a dim-None Block with
+            # a rule unless normalize_index.flatten is False.
+            b.bn = Block(m.d1_2, m.dn, m.d2)
+            # NOTE: These blocks are only defined for 'a', ('a',1)
+            # in the first and last "subsets"
+            b.bn['a','c',3,'a',1].v = Var()
+            b.bn['a','c',3,'a',1].v1 = Var(m.d1_3)
+            b.bn['a','c',3,'a',1].v2 = Var(m.d1_1, m.d1_2)
+            b.bn['a','c',3,'a',1].vn = Var(m.d1_1, m.dn, m.d2)
+            b.bn['a','d',4,5,'a',1].v = Var()
+            b.bn['a','d',4,5,'a',1].v1 = Var(m.d1_3)
+            b.bn['a','d',4,5,'a',1].v2 = Var(m.d1_1, m.d1_2)
+            b.bn['a','d',4,5,'a',1].vn = Var(m.d1_1, m.dn, m.d2)
+    
+        return m
+    
+    def assertListSameComponents(self, m, cuid1, cuid2):
+        self.assertTrue(cuid1.list_components(m))
+        self.assertEqual(
+                len(list(cuid1.list_components(m))),
+                len(list(cuid2.list_components(m)))
+                )
+        for c1, c2 in zip(
+                cuid1.list_components(m),
+                cuid2.list_components(m),
+                ):
+            self.assertIs(c1, c2)
+
+    def test_cuid_from_slice_1(self):
+        """
+        These are slices over a single level of the hierarchy.
+        """
+        m = self._slice_model()
+
+        _slice = m.b[:]
+        cuid_str = ComponentUID('b[*]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+
+        _slice = m.b.b1[:]
+        cuid_str = ComponentUID('b.b1[*]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+
+        _slice = m.b.b1[...]
+        cuid_str = ComponentUID('b.b1[**]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+
+        _slice = m.b.b2[:,'a']
+        cuid_str = ComponentUID('b.b2[*,a]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[...]
+        cuid_str = ComponentUID('b.b2[**]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+
+        _slice = m.b.b3[1.1,:,2]
+        cuid_str = ComponentUID('b.b3[1.1,*,2]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b3[:,:,'b']
+        cuid_str = ComponentUID('b.b3[*,*,b]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b3[1.1,...]
+        cuid_str = ComponentUID('b.b3[1.1,**]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b3[...]
+        cuid_str = ComponentUID('b.b3[**]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+
+        _slice = m.b.bn['a',:,:,'a',1]
+        cuid_str = ComponentUID('b.bn[a,*,*,a,1]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.bn['a','c',3,:,:]
+        cuid_str = ComponentUID('b.bn[a,c,3,*,*]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.bn[...]
+        cuid_str = ComponentUID('b.bn[**]')
+        cuid = ComponentUID(_slice)
+        self.assertEqual(cuid, cuid_str)
+
+    def test_cuid_from_slice_2(self):
+        """
+        These are slices that describe a component
+        at a "deeper level" than the original slice.
+        """
+        m = self._slice_model()
+
+        _slice = m.b[:].b
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b[*].b')
+        self.assertEqual(cuid, cuid_str)
+
+        _slice = m.b[:].b1[:].v
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b[*].b1[*].v')
+        self.assertEqual(cuid, cuid_str)
+
+        _slice = m.b.b2[2,:].v
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[2,*].v')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[2,:].v1[:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[2,*].v1[*]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[2,:].v1[1.1]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[2,*].v1[1.1]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertEqual(cuid, cuid_str)
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[2,:].vn[1,...,:,'b']
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[2,*].vn[1,**,*,b]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[2,:].vn[...,'b']
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[2,*].vn[**,b]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[2,:].vn[...,...]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[2,*].vn[**,**]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        with self.assertRaisesRegex(IndexError, r'.*simple slices.*'):
+            self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[2,:].vn[...]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[2,*].vn[**]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[...].v2[:,'a']
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[**].v2[*,a]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b3[:,'a',:].v1
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b3[*,a,*].v1')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b3[:,'a',:].v2[1,'a']
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b3[*,a,*].v2[1,a]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b3[:,'a',:].v2[1,:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b3[*,a,*].v2[1,*]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b3[:,'a',:].vn[1,:,:,'a',1]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b3[*,a,*].vn[1,*,*,a,1]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.bn['a','c',3,:,:].vn[1,:,3,'a',:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.bn[a,c,3,*,*].vn[1,*,3,a,*]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.bn[...].vn[1,:,3,'a',:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.bn[**].vn[1,*,3,a,*]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.bn[...].vn
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.bn[**].vn')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.bn[...].vn[...]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.bn[**].vn[**]')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+    def test_cuid_from_slice_with_call(self):
+        m = self._slice_model()
+
+        _slice = m.b.component('b2')[:,'a'].v2[1,:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[*,a].v2[1,*]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        # This works as find_component is not in the 
+        # _call_stack of the slice.
+        _slice = m.b.find_component('b2')[:,'a'].v2[1,:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[*,a].v2[1,*]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b[:].component('b2')
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b[*].b2')
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b[:].component('b2','b1')
+        with self.assertRaisesRegex(NotImplementedError,
+                '.*multiple arguments.*'):
+            cuid = ComponentUID(_slice)
+
+#        _slice = m.b[:].bad_call('b2')[:,'a']
+#        with self.assertRaisesRegex(NotImplementedError,
+#                'any method other than `component`'):
+#            cuid = ComponentUID(_slice)
+# Unclear how I should test this error. Would need a slice object with
+# a call to attribute other than component in the call stack, but any
+# call to another attribute will get iterated over immediately.
+#
+# Also unclear how I should test for the proper exception if set/del
+# calls are (somehow) present in the call stack.
+
+        _slice = m.b[:].component('b2', kwd=None)
+        with self.assertRaisesRegex(NotImplementedError,
+                '.*call that contains keywords.*'):
+            cuid = ComponentUID(_slice)
+
+        _slice = m.b.b2[:,'a'].component('vn')[:,'c',3,:,:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[*,a].vn[*,c,3,*,*]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[1,'a'].component('vn')[:,'c',3,:,:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[1,a].vn[*,c,3,*,*]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[...].component('vn')[:,'c',3,:,:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[**].vn[*,c,3,*,*]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b.b2[:,'a'].component('vn')[...]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b.b2[*,a].vn[**]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertEqual(str(cuid), str(cuid_str))
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+    def test_two_getitem(self):
+        m = self._slice_model()
+        m.b.comp = Reference(m.b.b1[:].v1)
+        _slice = m.b[:].comp[1][1.1]
+        with self.assertRaisesRegex(NotImplementedError,
+                r'.*Two `get_item` calls.*'):
+            cuid = ComponentUID(_slice)
 
 if __name__ == "__main__":
     unittest.main()
