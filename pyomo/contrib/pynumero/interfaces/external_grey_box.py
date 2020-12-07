@@ -382,14 +382,7 @@ class _ExternalGreyBoxModelHelper(object):
         # to the indices corresponding to the full Pyomo model
         # so we create that here
         self._eq_jac_primal_jcol = None
-        if self._ex_model.n_equality_constraints() > 0:
-            jac = self._ex_model.evaluate_jacobian_equality_constraints()
-            self._eq_jac_primal_jcol = self._inputs_to_primals_map[jac.col]
-
         self._outputs_jac_primal_jcol = None
-        if self._ex_model.n_outputs() > 0:
-            jac = self._ex_model.evaluate_jacobian_outputs()
-            self._outputs_jac_primal_jcol = self._inputs_to_primals_map[jac.col]
 
         # create the irow, jcol, nnz structure for the
         # output variable portion of h(u)-o=0
@@ -449,6 +442,12 @@ class _ExternalGreyBoxModelHelper(object):
         eq_jac = None
         if self._ex_model.n_equality_constraints() > 0:
             eq_jac = self._ex_model.evaluate_jacobian_equality_constraints()
+            if self._eq_jac_primal_jcol is None:
+                # The first time through, we won't have created the
+                # mapping of external primals ('u') to the full space
+                # primals ('x')
+                self._eq_jac_primal_jcol = self._inputs_to_primals_map[
+                    eq_jac.col]
             # map the columns from the inputs "u" back to the full primals "x"
             eq_jac = coo_matrix(
                 (eq_jac.data, (eq_jac.row, self._eq_jac_primal_jcol)),
@@ -460,6 +459,9 @@ class _ExternalGreyBoxModelHelper(object):
 
             row = outputs_jac.row
             # map the columns from the inputs "u" back to the full primals "x"
+            if self._outputs_jac_primal_jcol is None:
+                self._outputs_jac_primal_jcol = self._inputs_to_primals_map[
+                    outputs_jac.col]
             col = self._outputs_jac_primal_jcol
             data = outputs_jac.data
 
