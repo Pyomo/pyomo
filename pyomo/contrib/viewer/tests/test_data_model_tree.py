@@ -13,7 +13,7 @@ Test data model tree for QTreeView.  These tests need PyQt.
 """
 
 import pyutilib.th as unittest
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Reals, Block, Expression, ExternalFunction, sin, sqrt
 from pyomo.contrib.viewer.model_browser import ComponentDataModel
 try:
     no_pyqt = False

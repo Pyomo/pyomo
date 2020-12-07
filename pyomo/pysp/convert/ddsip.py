@@ -18,10 +18,7 @@ import logging
 from pyomo.opt import WriterFactory
 from pyomo.common.collections import ComponentMap
 from pyomo.core.base.numvalue import value, as_numeric
-from pyomo.core.base.block import (Block,
-                                   _BlockData,
-                                   SortComponents)
-from pyomo.core.base.var import Var, _VarData
+from pyomo.core.base.var import _VarData
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base import TextLabeler, NumericLabeler
 from pyomo.pysp.scenariotree.manager import InvocationType
@@ -36,8 +33,7 @@ from pyomo.pysp.convert.smps import (map_variable_stages,
                                      _safe_remove_file,
                                      _no_negative_zero,
                                      _deterministic_check_value,
-                                     _deterministic_check_constant,
-                                     ProblemStats)
+                                     _deterministic_check_constant)
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option,
@@ -47,8 +43,9 @@ from pyomo.pysp.scenariotree.manager import \
     (ScenarioTreeManagerClientSerial,
      ScenarioTreeManagerClientPyro)
 from pyomo.pysp.util.misc import launch_command
+import pyomo.environ
 
-from six import iteritems, itervalues
+from six import iteritems
 
 thisfile = os.path.abspath(__file__)
 
@@ -106,7 +103,6 @@ def _convert_external_setup_without_cleanup(
         firststage_var_suffix,
         enforce_derived_nonanticipativity,
         io_options):
-    import pyomo.environ
     assert os.path.exists(output_directory)
 
     io_options = dict(io_options)
@@ -1065,7 +1061,6 @@ def convertddsip_register_options(options=None):
 #
 
 def run_convertddsip(options):
-    import pyomo.environ
 
     if not os.path.exists(options.output_directory):
         os.makedirs(options.output_directory)

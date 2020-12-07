@@ -10,31 +10,22 @@
 
 import gc
 import logging
-import pickle
 import sys
 import time
 import inspect
 import uuid
-from operator import itemgetter
 from math import fabs, sqrt
 
-try:
-    from guppy import hpy
-    guppy_available = True
-except ImportError:
-    guppy_available = False
+from pyomo.common.errors import ApplicationError
 
-import pyutilib.common
-
-from pyomo.core import *
+from pyomo.common.dependencies import attempt_import
+from pyomo.core import Var, Set, BooleanSet, IntegerSet, Suffix, value, minimize, maximize
 from pyomo.opt import (UndefinedData,
-                       ProblemFormat,
                        undefined,
                        SolverFactory,
                        SolverStatus,
                        TerminationCondition,
-                       SolutionStatus,
-                       SolverStatus)
+                       SolutionStatus)
 
 import pyomo.pysp.convergence
 from pyomo.pysp.phboundbase import (_PHBoundBase,
@@ -67,6 +58,9 @@ from pyomo.opt.parallel.local import SolverManager_Serial
 
 from six import iterkeys, itervalues, iteritems
 from six.moves import xrange
+
+guppy, guppy_available = attempt_import('guppy')
+
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -1162,7 +1156,7 @@ class _PHBase(object):
     #
     # a utility intended for folks who are brave enough to script
     # variable bounds setting in a python file.  same functionality as
-    # above, but applied to all indicies of the variable, in all
+    # above, but applied to all indices of the variable, in all
     # scenarios.
     #
     """
@@ -1945,10 +1939,10 @@ class ProgressiveHedging(_PHBase):
         # and in that order.
         def convert_value_string_to_number(s):
             try:
-                return float(s)
+                return int(s)
             except ValueError:
                 try:
-                    return int(s)
+                    return float(s)
                 except ValueError:
                     return s
 
@@ -2143,7 +2137,7 @@ class ProgressiveHedging(_PHBase):
                 self._mapped_module_name[sys_modules_key] = module_name
 
 
-        # a set of all valid PH iteration indicies is generally useful for plug-ins, so create it here.
+        # a set of all valid PH iteration indices is generally useful for plug-ins, so create it here.
         self._iteration_index_set = Set(name="PHIterations")
         self._iteration_index_set.construct()
         for i in range(0,self._max_iterations + 1):
@@ -4247,7 +4241,7 @@ class ProgressiveHedging(_PHBase):
                     print("")
                     self._current_iteration -= 1
                     break
-                except pyutilib.common._exceptions.ApplicationError:
+                except ApplicationError:
                     print("")
                     print(" ** Caught ApplicationError exception. "
                           "Attempting to gracefully exit PH")
@@ -4379,7 +4373,7 @@ class ProgressiveHedging(_PHBase):
                 # gather and report memory statistics (for leak
                 # detection purposes) if specified.
                 if (guppy_available) and (self._profile_memory >= 1):
-                    print(hpy().heap())
+                    print(guppy.hpy().heap())
 
                     #print "New (persistent) objects constructed during PH iteration "+str(self._current_iteration)+":"
                     #memory_tracker.print_diff(summary1=summary_last_iteration,

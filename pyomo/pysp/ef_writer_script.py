@@ -12,17 +12,12 @@ import os
 import logging
 import sys
 import time
-import itertools
-import math
-
-import pyutilib.misc
-from pyutilib.pyro import shutdown_pyro_components
+import argparse
 
 import pyomo.solvers
 from pyomo.common.dependencies import yaml
 from pyomo.common import pyomo_command
 from pyomo.opt import (SolverFactory,
-                       TerminationCondition,
                        undefined,
                        UndefinedData,
                        ProblemFormat,
@@ -36,14 +31,10 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     safe_register_unique_option,
                                     safe_declare_common_option,
                                     safe_declare_unique_option,
-                                    _domain_percent,
                                     _domain_nonnegative,
-                                    _domain_nonnegative_integer,
-                                    _domain_positive_integer,
                                     _domain_must_be_str,
                                     _domain_unit_interval,
                                     _domain_tuple_of_str,
-                                    _domain_tuple_of_str_or_dict,
                                     _output_options_group_title,
                                     _extension_options_group_title,
                                     _deprecated_options_group_title)
@@ -52,8 +43,7 @@ from pyomo.pysp.util.misc import (parse_command_line,
                                   sort_extensions_by_precedence)
 from pyomo.pysp.phutils import find_active_objective
 from pyomo.pysp.scenariotree.manager_solver import \
-    (ScenarioTreeManager,
-     ScenarioTreeManagerClientSerial)
+    (ScenarioTreeManagerClientSerial)
 from pyomo.pysp.solutionioextensions import \
     (IPySPSolutionSaverExtension,
      IPySPSolutionLoaderExtension)
@@ -629,8 +619,7 @@ def runef_register_options(options=None):
     safe_register_common_option(options,
                                 "pyro_shutdown_workers")
 
-    class _DeprecatedActivateJSONIOSolutionSaver(
-            pyutilib.misc.config.argparse.Action):
+    class _DeprecatedActivateJSONIOSolutionSaver(argparse.Action):
         def __init__(self, option_strings, dest, nargs=None, **kwargs):
             if nargs is not None:
                 raise ValueError("nargs not allowed")

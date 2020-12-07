@@ -20,7 +20,7 @@ else:
     import string
     _translate = string.translate
 
-from pyomo.core.base.component import ComponentUID
+from pyomo.core.base.componentuid import ComponentUID
 
 # This module provides some basic functionality for generating labels
 # from pyomo names, which often contain characters such as "[" and "]"

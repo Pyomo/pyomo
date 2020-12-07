@@ -1,8 +1,18 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr import current as _expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value
-from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
+from pyomo.core.expr.current import exp, log, sin, cos
 import math
 
 

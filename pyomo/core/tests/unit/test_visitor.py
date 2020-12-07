@@ -11,53 +11,30 @@
 # Unit Tests for expression generation
 #
 
-import copy
-import pickle
-import math
 import os
-import re
-import six
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 from pyutilib.th import nottest
 
-from pyomo.environ import *
-import pyomo.kernel
-from pyomo.common.log import LoggingIntercept
-from pyomo.core.expr.numvalue import (
-    native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, 
-    is_potentially_variable,
-)
+from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Expression, ExternalFunction, VarList, sum_product, inequality, quicksum, sin, tanh
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types
 from pyomo.core.expr.numeric_expr import (
-    ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
-    ProductExpression, DivisionExpression, NegationExpression,
-    MonomialTermExpression, LinearExpression,
-    NPV_NegationExpression, NPV_ProductExpression, NPV_DivisionExpression,
-    NPV_PowExpression,
-    decompose_term, clone_counter,
-    _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
-    LinearDecompositionError,
-)
-import pyomo.core.expr.logical_expr as logical_expr
-from pyomo.core.expr.logical_expr import (
-    InequalityExpression, EqualityExpression, RangedExpression,
-)
+    SumExpression, ProductExpression, 
+    MonomialTermExpression, LinearExpression)
 from pyomo.core.expr.visitor import (
     FixedExpressionError, NonConstantExpressionError,
     StreamBasedExpressionVisitor, ExpressionReplacementVisitor,
     evaluate_expression, expression_to_string, replace_expressions,
-    clone_expression, sizeof_expression,
+    sizeof_expression,
     identify_variables, identify_components, identify_mutable_parameters,
 )
-from pyomo.core.expr.current import Expr_if
-from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
-from pyomo.core.base.label import *
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.common.log import LoggingIntercept
+from six import StringIO
 
 
 class TestExpressionUtilities(unittest.TestCase):
@@ -758,7 +735,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
                 return False, [child]
-        os = six.StringIO()
+        os = StringIO()
         with LoggingIntercept(os, 'pyomo'):
             walker = StreamBasedExpressionVisitor(beforeChild=before)
         self.assertIn(
@@ -938,7 +915,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         def after(node, child):
             counts[2] += 1
 
-        os = six.StringIO()
+        os = StringIO()
         with LoggingIntercept(os, 'pyomo'):
             walker = StreamBasedExpressionVisitor(
                 beforeChild=before, acceptChildResult=accept, afterChild=after)
@@ -1170,7 +1147,7 @@ Finalize""")
                                 % (name(child), name(node)))
             def finalizeResult(self, result):
                 self.ans.append("Finalize")
-        os = six.StringIO()
+        os = StringIO()
         with LoggingIntercept(os, 'pyomo'):
             walker = all_callbacks()
         self.assertIn(

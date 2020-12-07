@@ -7,12 +7,11 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from pyomo.common.fileutils import find_library
 import numpy.ctypeslib as npct
 import numpy as np
-import platform
 import ctypes
-import sys
 import os
 
 class _NotSet:

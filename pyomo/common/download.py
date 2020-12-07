@@ -9,15 +9,12 @@
 #  ___________________________________________________________________________
 
 import argparse
-import gzip
 import io
 import logging
 import os
 import platform
 import re
-import ssl
 import sys
-import zipfile
 
 from pyutilib.subprocess import run
 
@@ -28,6 +25,9 @@ import pyomo.common
 from pyomo.common.dependencies import attempt_import
 
 request = attempt_import('six.moves.urllib.request')[0]
+ssl = attempt_import('ssl')[0]
+zipfile = attempt_import('zipfile')[0]
+gzip = attempt_import('gzip')[0]
 distro, distro_available = attempt_import('distro')
 
 logger = logging.getLogger('pyomo.common.download')
@@ -333,7 +333,6 @@ class FileDownloader(object):
                 % (self._fname,))
         zip_file = zipfile.ZipFile(io.BytesIO(self.retrieve_url(url)))
         # Simple sanity checks
-        names = []
         for info in zip_file.infolist():
             f = info.filename
             if f[0] in '\\/' or '..' in f:

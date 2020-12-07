@@ -17,40 +17,26 @@ import traceback
 import types
 import time
 import json
-from six import itervalues, iterkeys, iteritems
-from six.moves import xrange
+from six import iteritems
 from pyomo.common import pyomo_api
 
-try:
-    import cProfile as profile
-except ImportError:
-    import profile
-try:
-    import pstats
-    pstats_available=True
-except ImportError:
-    pstats_available=False
-
-from pyutilib.misc import Options
-memory_data = Options()
-
-import pyutilib.misc
-from pyutilib.misc import Container
 from pyutilib.services import TempfileManager
+from pyutilib.misc import import_file, setup_redirect, reset_redirect
 
 from pyomo.common.dependencies import (
     yaml, yaml_available, yaml_load_args,
     pympler, pympler_available,
 )
 from pyomo.common.plugin import ExtensionPoint, Plugin, implements
+from pyomo.common.collections import Container, Options
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.dataportal import DataPortal
-from pyomo.core import *
-from pyomo.core.base import TextLabeler
-import pyomo.core.base
+from pyomo.core import IPyomoScriptCreateModel, IPyomoScriptCreateDataPortal, IPyomoScriptPrintModel, IPyomoScriptModifyInstance, IPyomoScriptPrintInstance, IPyomoScriptSaveInstance, IPyomoScriptPrintResults, IPyomoScriptSaveResults, IPyomoScriptPostprocess, IPyomoScriptPreprocess, Model, TransformationFactory, Suffix, display
 
+
+memory_data = Options()
 # Importing IPython is slow; defer the import to the point that it is
 # actually needed.
 IPython_available = None
@@ -173,7 +159,7 @@ def apply_preprocessing(data, parser=None):
     Returned:
         error: This is true if an error has occurred.
     """
-    data.local = pyutilib.misc.Options()
+    data.local = Options()
     #
     if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Applying Pyomo preprocessing actions\n' % (time.time()-start_time))
@@ -192,7 +178,7 @@ def apply_preprocessing(data, parser=None):
     #
     if not data.options.preprocess is None:
         for config_value in data.options.preprocess:
-            preprocess = pyutilib.misc.import_file(config_value, clear_cache=True)
+            preprocess = import_file(config_value, clear_cache=True)
     #
     for ep in ExtensionPoint(IPyomoScriptPreprocess):
         ep.apply( options=data.options )
@@ -205,7 +191,7 @@ def apply_preprocessing(data, parser=None):
     #
     filter_excepthook=True
     tick = time.time()
-    data.local.usermodel = pyutilib.misc.import_file(data.options.model.filename, clear_cache=True)
+    data.local.usermodel = import_file(data.options.model.filename, clear_cache=True)
     data.local.time_initial_import = time.time()-tick
     filter_excepthook=False
 
@@ -290,7 +276,8 @@ def create_model(data):
         else:
             model_options = data.options.model.options.value()
             tick = time.time()
-            model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
+            model = ep.service().apply( options = Container(*data.options),
+                                       model_options=Container(*model_options) )
             if data.options.runtime.report_timing is True:
                 print("      %6.2f seconds required to construct instance" % (time.time() - tick))
                 data.local.time_initial_import = None
@@ -366,7 +353,7 @@ def create_model(data):
                                                  profile_memory=data.options.runtime.profile_memory,
                                                  report_timing=data.options.runtime.report_timing)
             elif suffix == "py":
-                userdata = pyutilib.misc.import_file(data.options.data.files[0], clear_cache=True)
+                userdata = import_file(data.options.data.files[0], clear_cache=True)
                 if "modeldata" in dir(userdata):
                     if len(ep) == 1:
                         msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
@@ -488,9 +475,8 @@ def create_model(data):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following Pyomo instance creation" % mem_used)
 
-    return pyutilib.misc.Options(
-                    model=model, instance=instance,
-                    smap_id=smap_id, filename=fname, local=data.local )
+    return Options(model=model, instance=instance,
+                   smap_id=smap_id, filename=fname, local=data.local )
 
 @pyomo_api(namespace='pyomo.script')
 def apply_optimizer(data, instance=None):
@@ -635,7 +621,7 @@ def apply_optimizer(data, instance=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following optimization" % mem_used)
 
-    return pyutilib.misc.Options(results=results, opt=solver, local=data.local)
+    return Options(results=results, opt=solver, local=data.local)
 
 
 @pyomo_api(namespace='pyomo.script')
@@ -740,7 +726,7 @@ def apply_postprocessing(data, instance=None, results=None):
 
     # options are of type ConfigValue, not raw strings / atomics.
     for config_value in data.options.postprocess:
-        postprocess = pyutilib.misc.import_file(config_value, clear_cache=True)
+        postprocess = import_file(config_value, clear_cache=True)
         if "pyomo_postprocess" in dir(postprocess):
             postprocess.pyomo_postprocess(data.options, instance,results)
 
@@ -831,7 +817,7 @@ def configure_loggers(options=None, shutdown=False):
             configure_loggers.fileLogger = None
             # TBD: This seems dangerous in Windows, as the process will
             # have multiple open file handles pointint to the same file.
-            pyutilib.misc.reset_redirect()
+            reset_redirect()
 
     #
     # Configure the logger
@@ -861,7 +847,7 @@ def configure_loggers(options=None, shutdown=False):
         logging.getLogger('pyutilib').addHandler(configure_loggers.fileLogger)
         # TBD: This seems dangerous in Windows, as the process will
         # have multiple open file handles pointint to the same file.
-        pyutilib.misc.setup_redirect(options.runtime.logfile)
+        setup_redirect(options.runtime.logfile)
 
 configure_loggers.fileLogger = None
 
@@ -906,7 +892,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             else:
                 _options = parser.parse_args(args=args)
             # Replace the parser options object with a pyutilib.misc.Options object
-            options = pyutilib.misc.Options()
+            options = Options()
             for key in dir(_options):
                 if key[0] != '_':
                     val = getattr(_options, key)
@@ -926,11 +912,19 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
     TempfileManager.push()
     pcount = options.runtime.profile_count
     if pcount > 0:
-        if not pstats_available:
-            msg = "Cannot use the 'profile' option.  The Python 'pstats' "    \
-                  'package cannot be imported!'
+        # Defer import of profiling packages until we know that they
+        # are needed
+        try:
+            try:
+                import cProfile as profile
+            except ImportError:
+                import profile
+            import pstats
+        except ImportError:
             configure_loggers(shutdown=True)
-            raise ValueError(msg)
+            raise ValueError(
+                "Cannot use the 'profile' option: the Python "
+                "'profile' or 'pstats' package cannot be imported!")
         tfile = TempfileManager.create_tempfile(suffix=".profile")
         tmp = profile.runctx(
           command.__name__ + '(options=options,parser=parser)', command.__globals__, locals(), tfile

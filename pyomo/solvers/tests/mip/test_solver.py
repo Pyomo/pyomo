@@ -18,7 +18,6 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 import pyutilib.services
-import pyutilib.common
 
 import pyomo.opt
 import pyomo.solvers.plugins.solvers
@@ -83,7 +82,6 @@ class OptSolverDebug(unittest.TestCase):
         ans = pyomo.opt.SolverFactory("stest2")
         # No exception should be generated
         ans.available()
-
 
 
 if __name__ == "__main__":

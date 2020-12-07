@@ -17,9 +17,8 @@
 # 
 # min J(u) = (1/2)*H*x^2(T)+\int_0^T ((1/4)*u^2(t)dt)
 
-from pyomo.environ import * 
-from pyomo.core import TransformationFactory
-from pyomo.opt import SolverFactory
+from pyomo.environ import (ConcreteModel, Param, Var, Objective, Constraint,
+                           Suffix, value, TransformationFactory, SolverFactory)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.simulator import Simulator
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt
