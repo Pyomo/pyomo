@@ -485,7 +485,6 @@ class Estimator(object):
         
             # Generate the extensive form of the stochastic program using pysp
             self.ef_instance = stsolver.make_ef()
-            self.ef_instance.pprint()
 
             # need_gap is a holdover from solve_ef in rapper.py. Would we ever want
             # need_gap = True with parmest?
