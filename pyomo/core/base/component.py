@@ -22,7 +22,6 @@ import pyomo.common
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
-from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 
 logger = logging.getLogger('pyomo.core')
 
@@ -1012,3 +1011,4 @@ class ActiveComponentData(ComponentData):
     def deactivate(self):
         """Set the active attribute to False"""
         self._active = False
+
