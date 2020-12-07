@@ -447,7 +447,7 @@ class PyomoGreyBoxNLP(NLP):
         # Now that we know the total number of columns, create the
         # necessary greybox helper objects
         self._external_greybox_helpers = \
-            [_ExternalGreyBoxModelHelper(data, self._vardata_to_idx, self.init_primals()) for data in greybox_data]
+            [_ExternalGreyBoxModelHelper(data, self._vardata_to_idx) for data in greybox_data]
 
         # make sure the primal values get to the greybox models
         self.set_primals(self.get_primals())

@@ -327,7 +327,7 @@ class IndexedExternalGreyBoxBlock(Block):
 
 
 class _ExternalGreyBoxModelHelper(object):
-    def __init__(self, ex_grey_box_block, vardata_to_idx, initial_primal_values):
+    def __init__(self, ex_grey_box_block, vardata_to_idx):
         """This helper takes an ExternalGreyBoxModel and provides the residual
         and Jacobian computation.
 
@@ -351,7 +351,7 @@ class _ExternalGreyBoxModelHelper(object):
         """
         self._block = ex_grey_box_block
         self._ex_model = ex_grey_box_block.get_external_model()
-        self._n_primals = len(initial_primal_values)
+        self._n_primals = len(vardata_to_idx)
         n_inputs = len(self._block.inputs)
         n_outputs = len(self._block.outputs)
 
@@ -367,10 +367,6 @@ class _ExternalGreyBoxModelHelper(object):
             (vardata_to_idx[v] for v in itervalues(self._block.outputs)),
             dtype=np.int64, count=n_outputs)
 
-        # setup some structures for the jacobians
-        input_values = initial_primal_values[self._inputs_to_primals_map]
-        self._ex_model.set_input_values(input_values)
-
         if self._ex_model.n_outputs() == 0 and \
            self._ex_model.n_equality_constraints() == 0:
             raise ValueError(
@@ -383,12 +379,9 @@ class _ExternalGreyBoxModelHelper(object):
         # so we create that here
         self._eq_jac_primal_jcol = None
         self._outputs_jac_primal_jcol = None
-
-        # create the irow, jcol, nnz structure for the
-        # output variable portion of h(u)-o=0
-        self._additional_output_entries_irow = np.asarray(xrange(n_outputs))
-        self._additional_output_entries_jcol = self._outputs_to_primals_map
-        self._additional_output_entries_data = -1.0*np.ones(n_outputs)
+        self._additional_output_entries_irow = None
+        self._additional_output_entries_jcol = None
+        self._additional_output_entries_data = None
 
     def set_primals(self, primals):
         # map the full primals "x" to the inputs "u" and set
@@ -460,8 +453,18 @@ class _ExternalGreyBoxModelHelper(object):
             row = outputs_jac.row
             # map the columns from the inputs "u" back to the full primals "x"
             if self._outputs_jac_primal_jcol is None:
+                # The first time through, we won't have created the
+                # mapping of external outputs ('o') to the full space
+                # primals ('x')
                 self._outputs_jac_primal_jcol = self._inputs_to_primals_map[
                     outputs_jac.col]
+                
+                # We also need tocreate the irow, jcol, nnz structure for the
+                # output variable portion of h(u)-o=0
+                self._additional_output_entries_irow = np.asarray(xrange(self._ex_model.n_outputs()))
+                self._additional_output_entries_jcol = self._outputs_to_primals_map
+                self._additional_output_entries_data = -1.0*np.ones(self._ex_model.n_outputs())
+
             col = self._outputs_jac_primal_jcol
             data = outputs_jac.data
 
