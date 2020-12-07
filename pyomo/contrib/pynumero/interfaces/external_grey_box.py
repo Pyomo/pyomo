@@ -151,6 +151,24 @@ class ExternalGreyBoxModel(object):
         """
         pass
 
+    def set_equality_constraint_multipliers(self, eq_mult):
+        """
+        This method is called by the solver to set the current values
+        for the multipliers of the equality constraints. The derived
+        class must cache these if necessary for any subsequent calls
+        to evaluate_hessian_equality_constraints
+        """
+        pass
+
+    def set_output_constraint_multipliers(self, o_mult):
+        """
+        This method is called by the solver to set the current values
+        for the multipliers of the output constraints. The derived
+        class must cache these if necessary for any subsequent calls
+        to evaluate_hessian_outputs
+        """
+        pass
+
     def get_equality_constraint_scaling_factors(self):
         """
         This method is called by the solver interface to get desired
@@ -204,7 +222,30 @@ class ExternalGreyBoxModel(object):
         """
         raise NotImplementedError()
 
-    # ToDo: Hessians not yet handled
+    def evaluate_hessian_equality_constraints(self):
+        """
+        Compute the product of the equality constraint multipliers
+        with the hessian of the equality constraints.
+        E.g., y_eq^k is the vector of equality constraint multipliers
+        from set_equality_constraint_multipliers, w_eq(u)=0 are the 
+        equality constraints, and u^k are the vector of inputs from
+        set_inputs. This method must return
+        H_eq^k = sum_i (y_eq^k)_i * grad^2_{uu} w_eq(u^k)
+        """
+        pass
+
+    def evaluate_hessian_outputs(self):
+        """
+        Compute the product of the output constraint multipliers with the
+        hessian of the outputs. E.g., y_o^k is the vector of output
+        constraint multipliers from set_output_constraint_multipliers,
+        u^k are the vector of inputs from set_inputs, and w_o(u) is the
+        function that computes the vector of outputs at the values for
+        the input variables. This method must return
+        H_o^k = sum_i (y_o^k)_i * grad^2_{uu} w_o(u^k)
+        """
+        pass
+
 
 
 class ExternalGreyBoxBlockData(_BlockData):
