@@ -1,19 +1,25 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
-import logging
-from math import fabs, floor, log
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
-                                                  add_nogood_cuts, add_affine_cuts)
 
-from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.core import (Any, Binary, Block, Constraint, NonNegativeReals,
-                        Objective, Reals, Suffix, Var, minimize, value)
+import logging
+from pyomo.common.collections import ComponentMap
+from pyomo.core import Objective, Suffix
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.opt import SolverFactory
-from pyomo.opt.results import ProblemSense
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+
+logger = logging.getLogger('pyomo.contrib')
 
 
 class MindtPySolveData(object):
@@ -69,7 +75,7 @@ def model_is_valid(solve_data, config):
             if isinstance(mipopt, PersistentSolver):
                 mipopt.set_instance(solve_data.original_model)
             if config.threads > 0:
-                masteropt.options["threads"] = config.threads
+                mipopt.options["threads"] = config.threads
             mipopt.solve(solve_data.original_model,
                          tee=config.solver_tee, **config.mip_solver_args)
             return False

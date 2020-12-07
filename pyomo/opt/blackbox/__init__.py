@@ -8,6 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.opt.blackbox.point import *
-from pyomo.opt.blackbox.problem import *
+from pyomo.opt.blackbox.point import MixedIntVars, RealVars
+from pyomo.opt.blackbox.problem import (BlackBoxOptProblemIOFactory,
+                                        response_enum, OptProblem,
+                                        MixedIntOptProblem, RealOptProblem)
 import pyomo.opt.blackbox.solver

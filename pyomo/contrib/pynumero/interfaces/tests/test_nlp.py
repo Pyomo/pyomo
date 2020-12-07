@@ -7,6 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import pyutilib.th as unittest
 import os
 
@@ -22,15 +23,13 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run NLP tests")
 
 import pyomo.environ as pyo
-from pyomo.opt.base import WriterFactory
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP, AmplNLP
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import tempfile
 
-from scipy.sparse import coo_matrix
-
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix, \
     build_compression_mask_for_finite_values, full_to_compressed, compressed_to_full
+
 
 def create_pyomo_model1():
     m = pyo.ConcreteModel()

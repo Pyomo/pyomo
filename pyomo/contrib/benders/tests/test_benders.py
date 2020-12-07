@@ -1,6 +1,16 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyutilib.th as unittest
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
-import pyomo.environ as pe
+import pyomo.environ as pyo
 try:
     import mpi4py
     mpi4py_available = True
@@ -13,10 +23,10 @@ except:
     numpy_available = False
 
 
-ipopt_opt = pe.SolverFactory('ipopt')
+ipopt_opt = pyo.SolverFactory('ipopt')
 ipopt_available = ipopt_opt.available(exception_flag=False)
 
-cplex_opt = pe.SolverFactory('cplex_direct')
+cplex_opt = pyo.SolverFactory('cplex_direct')
 cplex_available = cplex_opt.available(exception_flag=False)
 
 
@@ -47,56 +57,56 @@ class MPITestBenders(unittest.TestCase):
                 self.scenario_probabilities['AboveAverageScenario'] = 0.3333
 
         def create_master(farmer):
-            m = pe.ConcreteModel()
+            m = pyo.ConcreteModel()
 
-            m.crops = pe.Set(initialize=farmer.crops, ordered=True)
-            m.scenarios = pe.Set(initialize=farmer.scenarios, ordered=True)
+            m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
+            m.scenarios = pyo.Set(initialize=farmer.scenarios, ordered=True)
 
-            m.devoted_acreage = pe.Var(m.crops, bounds=(0, farmer.total_acreage))
-            m.eta = pe.Var(m.scenarios)
+            m.devoted_acreage = pyo.Var(m.crops, bounds=(0, farmer.total_acreage))
+            m.eta = pyo.Var(m.scenarios)
             for s in m.scenarios:
                 m.eta[s].setlb(-432000 * farmer.scenario_probabilities[s])
 
-            m.total_acreage_con = pe.Constraint(expr=sum(m.devoted_acreage.values()) <= farmer.total_acreage)
+            m.total_acreage_con = pyo.Constraint(expr=sum(m.devoted_acreage.values()) <= farmer.total_acreage)
 
-            m.obj = pe.Objective(
+            m.obj = pyo.Objective(
                 expr=sum(farmer.PlantingCostPerAcre[crop] * m.devoted_acreage[crop] for crop in m.crops) + sum(
                     m.eta.values()))
             return m
 
         def create_subproblem(master, farmer, scenario):
-            m = pe.ConcreteModel()
+            m = pyo.ConcreteModel()
 
-            m.crops = pe.Set(initialize=farmer.crops, ordered=True)
+            m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
 
-            m.devoted_acreage = pe.Var(m.crops)
-            m.QuantitySubQuotaSold = pe.Var(m.crops, bounds=(0.0, None))
-            m.QuantitySuperQuotaSold = pe.Var(m.crops, bounds=(0.0, None))
-            m.QuantityPurchased = pe.Var(m.crops, bounds=(0.0, None))
+            m.devoted_acreage = pyo.Var(m.crops)
+            m.QuantitySubQuotaSold = pyo.Var(m.crops, bounds=(0.0, None))
+            m.QuantitySuperQuotaSold = pyo.Var(m.crops, bounds=(0.0, None))
+            m.QuantityPurchased = pyo.Var(m.crops, bounds=(0.0, None))
 
             def EnforceCattleFeedRequirement_rule(m, i):
                 return (farmer.CattleFeedRequirement[i] <= (farmer.crop_yield[scenario][i] * m.devoted_acreage[i]) +
                         m.QuantityPurchased[i] - m.QuantitySubQuotaSold[i] - m.QuantitySuperQuotaSold[i])
 
-            m.EnforceCattleFeedRequirement = pe.Constraint(m.crops, rule=EnforceCattleFeedRequirement_rule)
+            m.EnforceCattleFeedRequirement = pyo.Constraint(m.crops, rule=EnforceCattleFeedRequirement_rule)
 
             def LimitAmountSold_rule(m, i):
                 return m.QuantitySubQuotaSold[i] + m.QuantitySuperQuotaSold[i] - (
                             farmer.crop_yield[scenario][i] * m.devoted_acreage[i]) <= 0.0
 
-            m.LimitAmountSold = pe.Constraint(m.crops, rule=LimitAmountSold_rule)
+            m.LimitAmountSold = pyo.Constraint(m.crops, rule=LimitAmountSold_rule)
 
             def EnforceQuotas_rule(m, i):
                 return (0.0, m.QuantitySubQuotaSold[i], farmer.PriceQuota[i])
 
-            m.EnforceQuotas = pe.Constraint(m.crops, rule=EnforceQuotas_rule)
+            m.EnforceQuotas = pyo.Constraint(m.crops, rule=EnforceQuotas_rule)
 
             obj_expr = sum(farmer.PurchasePrice[crop] * m.QuantityPurchased[crop] for crop in m.crops)
             obj_expr -= sum(farmer.SubQuotaSellingPrice[crop] * m.QuantitySubQuotaSold[crop] for crop in m.crops)
             obj_expr -= sum(farmer.SuperQuotaSellingPrice[crop] * m.QuantitySuperQuotaSold[crop] for crop in m.crops)
-            m.obj = pe.Objective(expr=farmer.scenario_probabilities[scenario] * obj_expr)
+            m.obj = pyo.Objective(expr=farmer.scenario_probabilities[scenario] * obj_expr)
 
-            complicating_vars_map = pe.ComponentMap()
+            complicating_vars_map = pyo.ComponentMap()
             for crop in m.crops:
                 complicating_vars_map[master.devoted_acreage[crop]] = m.devoted_acreage[crop]
 
@@ -116,7 +126,7 @@ class MPITestBenders(unittest.TestCase):
                                      subproblem_fn_kwargs=subproblem_fn_kwargs,
                                      master_eta=m.eta[s],
                                      subproblem_solver='cplex_direct')
-        opt = pe.SolverFactory('cplex_direct')
+        opt = pyo.SolverFactory('cplex_direct')
 
         for i in range(30):
             res = opt.solve(m, tee=False)
@@ -133,22 +143,22 @@ class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, 'ipopt is not available.')
     def test_grothey(self):
         def create_master():
-            m = pe.ConcreteModel()
-            m.y = pe.Var(bounds=(1, None))
-            m.eta = pe.Var(bounds=(-10, None))
-            m.obj = pe.Objective(expr=m.y ** 2 + m.eta)
+            m = pyo.ConcreteModel()
+            m.y = pyo.Var(bounds=(1, None))
+            m.eta = pyo.Var(bounds=(-10, None))
+            m.obj = pyo.Objective(expr=m.y ** 2 + m.eta)
             return m
 
         def create_subproblem(master):
-            m = pe.ConcreteModel()
-            m.x1 = pe.Var()
-            m.x2 = pe.Var()
-            m.y = pe.Var()
-            m.obj = pe.Objective(expr=-m.x2)
-            m.c1 = pe.Constraint(expr=(m.x1 - 1) ** 2 + m.x2 ** 2 <= pe.log(m.y))
-            m.c2 = pe.Constraint(expr=(m.x1 + 1) ** 2 + m.x2 ** 2 <= pe.log(m.y))
+            m = pyo.ConcreteModel()
+            m.x1 = pyo.Var()
+            m.x2 = pyo.Var()
+            m.y = pyo.Var()
+            m.obj = pyo.Objective(expr=-m.x2)
+            m.c1 = pyo.Constraint(expr=(m.x1 - 1) ** 2 + m.x2 ** 2 <= pyo.log(m.y))
+            m.c2 = pyo.Constraint(expr=(m.x1 + 1) ** 2 + m.x2 ** 2 <= pyo.log(m.y))
 
-            complicating_vars_map = pe.ComponentMap()
+            complicating_vars_map = pyo.ComponentMap()
             complicating_vars_map[master.y] = m.y
 
             return m, complicating_vars_map
@@ -161,7 +171,7 @@ class MPITestBenders(unittest.TestCase):
                                  subproblem_fn_kwargs={'master': m},
                                  master_eta=m.eta,
                                  subproblem_solver='ipopt', )
-        opt = pe.SolverFactory('ipopt')
+        opt = pyo.SolverFactory('ipopt')
 
         for i in range(30):
             res = opt.solve(m, tee=False)
@@ -198,56 +208,56 @@ class MPITestBenders(unittest.TestCase):
                 self.scenario_probabilities['Scenario4'] = 0.25
 
         def create_master(farmer):
-            m = pe.ConcreteModel()
+            m = pyo.ConcreteModel()
 
-            m.crops = pe.Set(initialize=farmer.crops, ordered=True)
-            m.scenarios = pe.Set(initialize=farmer.scenarios, ordered=True)
+            m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
+            m.scenarios = pyo.Set(initialize=farmer.scenarios, ordered=True)
 
-            m.devoted_acreage = pe.Var(m.crops, bounds=(0, farmer.total_acreage))
-            m.eta = pe.Var(m.scenarios)
+            m.devoted_acreage = pyo.Var(m.crops, bounds=(0, farmer.total_acreage))
+            m.eta = pyo.Var(m.scenarios)
             for s in m.scenarios:
                 m.eta[s].setlb(-432000 * farmer.scenario_probabilities[s])
 
-            m.total_acreage_con = pe.Constraint(expr=sum(m.devoted_acreage.values()) <= farmer.total_acreage)
+            m.total_acreage_con = pyo.Constraint(expr=sum(m.devoted_acreage.values()) <= farmer.total_acreage)
 
-            m.obj = pe.Objective(
+            m.obj = pyo.Objective(
                 expr=sum(farmer.PlantingCostPerAcre[crop] * m.devoted_acreage[crop] for crop in m.crops) + sum(
                     m.eta.values()))
             return m
 
         def create_subproblem(master, farmer, scenario):
-            m = pe.ConcreteModel()
+            m = pyo.ConcreteModel()
 
-            m.crops = pe.Set(initialize=farmer.crops, ordered=True)
+            m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
 
-            m.devoted_acreage = pe.Var(m.crops)
-            m.QuantitySubQuotaSold = pe.Var(m.crops, bounds=(0.0, None))
-            m.QuantitySuperQuotaSold = pe.Var(m.crops, bounds=(0.0, None))
-            m.QuantityPurchased = pe.Var(m.crops, bounds=(0.0, None))
+            m.devoted_acreage = pyo.Var(m.crops)
+            m.QuantitySubQuotaSold = pyo.Var(m.crops, bounds=(0.0, None))
+            m.QuantitySuperQuotaSold = pyo.Var(m.crops, bounds=(0.0, None))
+            m.QuantityPurchased = pyo.Var(m.crops, bounds=(0.0, None))
 
             def EnforceCattleFeedRequirement_rule(m, i):
                 return (farmer.CattleFeedRequirement[i] <= (farmer.crop_yield[scenario][i] * m.devoted_acreage[i]) +
                         m.QuantityPurchased[i] - m.QuantitySubQuotaSold[i] - m.QuantitySuperQuotaSold[i])
 
-            m.EnforceCattleFeedRequirement = pe.Constraint(m.crops, rule=EnforceCattleFeedRequirement_rule)
+            m.EnforceCattleFeedRequirement = pyo.Constraint(m.crops, rule=EnforceCattleFeedRequirement_rule)
 
             def LimitAmountSold_rule(m, i):
                 return m.QuantitySubQuotaSold[i] + m.QuantitySuperQuotaSold[i] - (
                         farmer.crop_yield[scenario][i] * m.devoted_acreage[i]) <= 0.0
 
-            m.LimitAmountSold = pe.Constraint(m.crops, rule=LimitAmountSold_rule)
+            m.LimitAmountSold = pyo.Constraint(m.crops, rule=LimitAmountSold_rule)
 
             def EnforceQuotas_rule(m, i):
                 return (0.0, m.QuantitySubQuotaSold[i], farmer.PriceQuota[i])
 
-            m.EnforceQuotas = pe.Constraint(m.crops, rule=EnforceQuotas_rule)
+            m.EnforceQuotas = pyo.Constraint(m.crops, rule=EnforceQuotas_rule)
 
             obj_expr = sum(farmer.PurchasePrice[crop] * m.QuantityPurchased[crop] for crop in m.crops)
             obj_expr -= sum(farmer.SubQuotaSellingPrice[crop] * m.QuantitySubQuotaSold[crop] for crop in m.crops)
             obj_expr -= sum(farmer.SuperQuotaSellingPrice[crop] * m.QuantitySuperQuotaSold[crop] for crop in m.crops)
-            m.obj = pe.Objective(expr=farmer.scenario_probabilities[scenario] * obj_expr)
+            m.obj = pyo.Objective(expr=farmer.scenario_probabilities[scenario] * obj_expr)
 
-            complicating_vars_map = pe.ComponentMap()
+            complicating_vars_map = pyo.ComponentMap()
             for crop in m.crops:
                 complicating_vars_map[master.devoted_acreage[crop]] = m.devoted_acreage[crop]
 
@@ -267,7 +277,7 @@ class MPITestBenders(unittest.TestCase):
                                      subproblem_fn_kwargs=subproblem_fn_kwargs,
                                      master_eta=m.eta[s],
                                      subproblem_solver='cplex_direct')
-        opt = pe.SolverFactory('cplex_direct')
+        opt = pyo.SolverFactory('cplex_direct')
 
         for i in range(30):
             res = opt.solve(m, tee=False)

@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, SOSConstraint, NonNegativeReals, ConstraintList, sum_product
+from pyomo.core import ConcreteModel, Param, Var, Objective, Constraint, SOSConstraint, NonNegativeReals, ConstraintList, sum_product
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model

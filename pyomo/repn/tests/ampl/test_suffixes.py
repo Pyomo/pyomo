@@ -18,7 +18,7 @@ currdir = dirname(abspath(__file__))
 import pyutilib.th as unittest
 
 from pyomo.opt import ProblemFormat
-from pyomo.core import *
+from pyomo.core import ConcreteModel, Suffix, Var, Objective, Constraint, SOSConstraint, sum_product
 
 class TestSuffix(unittest.TestCase):
 

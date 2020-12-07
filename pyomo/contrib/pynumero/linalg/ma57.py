@@ -7,13 +7,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from pyomo.common.fileutils import find_library
 from pyomo.contrib.pynumero.linalg.utils import (validate_index,
         validate_value, _NotSet)
 import numpy.ctypeslib as npct
 import numpy as np
 import ctypes 
-import sys
 import os
 
 class MA57Interface(object):

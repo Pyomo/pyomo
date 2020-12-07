@@ -17,7 +17,7 @@ import json
 
 from pyutilib.misc import ArchiveReaderFactory
 
-from pyomo.common.plugin import *
+from pyomo.common.plugin import implements, alias, SingletonPlugin
 from pyomo.pysp import phextension
 from pyomo.pysp.phutils import indexToString
 from pyomo.pysp.phsolverserverutils import TransmitType

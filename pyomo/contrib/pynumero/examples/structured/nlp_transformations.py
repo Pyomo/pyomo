@@ -7,11 +7,12 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
 from pyomo.contrib.pynumero.sparse import empty_matrix
 
-from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
-import pyomo.environ as aml
+from scipy.sparse import coo_matrix, csr_matrix
+import pyomo.environ as pyo
 import numpy as np
 
 __all__ = ['AdmmNLP']
@@ -711,15 +712,15 @@ def compose_two_stage_stochastic_model(models, complicating_vars):
             assert len(v) == nz, 'all models must have same number of complicating variables'
         counter += 1
 
-    model = aml.ConcreteModel()
-    model.z = aml.Var(range(nz))
+    model = pyo.ConcreteModel()
+    model.z = pyo.Var(range(nz))
     model.scenario_names = sorted([name for name in models.keys()])
 
     obj = 0.0
 
     for i, j in enumerate(model.scenario_names):
         instance = models[j].clone()
-        model.add_component("{}_linking".format(j), aml.ConstraintList())
+        model.add_component("{}_linking".format(j), pyo.ConstraintList())
         model.add_component("{}".format(j), instance)
         linking = getattr(model, "{}_linking".format(j))
         x = complicating_vars[j]
@@ -727,16 +728,16 @@ def compose_two_stage_stochastic_model(models, complicating_vars):
         for k, var in enumerate(x):
             if var.is_indexed():
                 raise RuntimeError('indexed complicating variables not supported')
-            vid = aml.ComponentUID(var)
+            vid = pyo.ComponentUID(var)
             vv = vid.find_component_on(instance)
             linking.add(vv == model.z[k])
 
         # gets objective
-        objectives = instance.component_map(aml.Objective, active=True)
+        objectives = instance.component_map(pyo.Objective, active=True)
         if len(objectives) > 1:
             raise RuntimeError('Multiple objectives not supported')
         instance_obj = list(objectives.values())[0]
         obj += instance_obj.expr
         instance_obj.deactivate()
-    model.obj = aml.Objective(expr=obj)
+    model.obj = pyo.Objective(expr=obj)
     return model

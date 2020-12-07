@@ -200,8 +200,8 @@ class ResultsReader_sol(results.AbstractResultsReader):
                 if (unmasked_kind & 4) == 4:
                     convert_function = float
                 nvalues = int(line[2])
-                namelen = int(line[3])
-                tablen = int(line[4])
+                # namelen = int(line[3])
+                # tablen = int(line[4])
                 tabline = int(line[5])
                 suffix_name = fin.readline().strip()
                 if any(re.match(suf,suffix_name) for suf in suffixes):

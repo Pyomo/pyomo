@@ -1,6 +1,16 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Tests the integer to binary variable reformulation."""
 import pyutilib.th as unittest
-from pyomo.environ import ConcreteModel, Var, Integers, NonNegativeReals, value
+from pyomo.environ import ConcreteModel, Var, Integers, value
 from pyomo.environ import TransformationFactory as xfrm
 from pyomo.common.log import LoggingIntercept
 

@@ -18,9 +18,9 @@ import six
 
 from scipy.sparse import coo_matrix
 
-import pyutilib
-import pyomo
-import pyomo.core.base as aml
+from pyutilib.services import TempfileManager
+from pyomo.opt import WriterFactory
+import pyomo.core.base as pyo
 from pyomo.common.collections import ComponentMap
 from pyomo.common.env import CtypesEnviron
 from ..sparse.block_matrix import BlockMatrix
@@ -42,10 +42,10 @@ class PyomoNLP(AslNLP):
         pyomo_model: pyomo.environ.ConcreteModel
             Pyomo concrete model
         """
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
         try:
             # get the temp file names for the nl file
-            nl_file = pyutilib.services.TempfileManager.create_tempfile(
+            nl_file = TempfileManager.create_tempfile(
                 suffix='pynumero.nl')
 
             # The current AmplInterface code only supports a single
@@ -60,7 +60,7 @@ class PyomoNLP(AslNLP):
             #
             # This currently addresses issue #1217
             objectives = list(pyomo_model.component_data_objects(
-                ctype=aml.Objective, active=True, descend_into=True))
+                ctype=pyo.Objective, active=True, descend_into=True))
             if len(objectives) != 1:
                 raise NotImplementedError(
                     'The ASL interface and PyomoNLP in PyNumero currently '
@@ -70,7 +70,7 @@ class PyomoNLP(AslNLP):
             self._objective = objectives[0]
 
             # write the nl file for the Pyomo model and get the symbolMap
-            fname, symbolMap = pyomo.opt.WriterFactory('nl')(
+            fname, symbolMap = WriterFactory('nl')(
                 pyomo_model, nl_file, lambda x:True, {})
 
             # create component maps from vardata to idx and condata to idx
@@ -100,7 +100,7 @@ class PyomoNLP(AslNLP):
 
         finally:
             # delete the nl file
-            pyutilib.services.TempfileManager.pop()
+            TempfileManager.pop()
 
 
     def pyomo_model(self):
@@ -196,7 +196,7 @@ class PyomoNLP(AslNLP):
     def get_obj_scaling(self):
         obj = self.get_pyomo_objective()
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             if obj in scaling_suffix:
                 return scaling_suffix[obj]
             return 1.0
@@ -205,7 +205,7 @@ class PyomoNLP(AslNLP):
     # overloaded from NLP
     def get_primals_scaling(self):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             primals_scaling = np.ones(self.n_primals())
             for i,v in enumerate(self.get_pyomo_variables()):
                 if v in scaling_suffix:
@@ -216,7 +216,7 @@ class PyomoNLP(AslNLP):
     # overloaded from NLP
     def get_constraints_scaling(self):
         scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             constraints_scaling = np.ones(self.n_constraints())
             for i,c in enumerate(self.get_pyomo_constraints()):
                 if c in scaling_suffix:
@@ -318,7 +318,7 @@ class PyomoNLP(AslNLP):
             var.set_value(val)
         m = self.pyomo_model()
         model_suffixes = dict(
-            pyomo.core.base.suffix.active_import_suffix_generator(m))
+            pyo.suffix.active_import_suffix_generator(m))
         if 'dual' in model_suffixes:
             duals = self.get_duals()
             constraints = self.get_pyomo_constraints()
@@ -349,7 +349,7 @@ class PyomoGreyBoxNLP(NLP):
             for greybox in pyomo_model.component_objects(
                     ExternalGreyBoxBlock, descend_into=True):
                 greybox.parent_block().reclassify_component_type(
-                    greybox, aml.Block)
+                    greybox, pyo.Block)
                 greybox_components.append(greybox)
 
             self._pyomo_model = pyomo_model
@@ -415,7 +415,7 @@ class PyomoGreyBoxNLP(NLP):
             for nm in data._ex_model.output_names():
                 self._greybox_constraints_names.append('{}.{}_con'.format(block_name, nm))
 
-            for var in data.component_data_objects(aml.Var):
+            for var in data.component_data_objects(pyo.Var):
                 if var not in self._vardata_to_idx:
                     # there is a variable in the greybox block that
                     # is not in the NL - append this to the end
@@ -473,7 +473,7 @@ class PyomoGreyBoxNLP(NLP):
 
         self._primals_scaling = np.ones(self.n_primals())
         scaling_suffix = self._pyomo_nlp._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is aml.Suffix:
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
             need_scaling = True
             for i,v in enumerate(self.get_pyomo_variables()):
                 if v in scaling_suffix:
@@ -907,7 +907,7 @@ class PyomoGreyBoxNLP(NLP):
             var.set_value(val)
         m = self.pyomo_model()
         model_suffixes = dict(
-            pyomo.core.base.suffix.active_import_suffix_generator(m))
+            pyo.suffix.active_import_suffix_generator(m))
         if 'dual' in model_suffixes:
             model_suffixes['dual'].clear()
             # Until we sort out how to return the duals for the external

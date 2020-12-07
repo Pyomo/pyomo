@@ -19,29 +19,33 @@ from pyomo.common.dependencies import (
     pandas as pd, pandas_available,
     scipy, scipy_available,
 )
-parmest_available = numpy_available & pandas_available & scipy_available
 
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
+from pyomo.pysp.scenariotree import tree_structure
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
-    fit_rect_dist, fit_mvn_dist, fit_kde_dist
+from pyomo.contrib.parmest.graphics import (fit_rect_dist,
+                                            fit_mvn_dist,
+                                            fit_kde_dist)
+
+parmest_available = numpy_available & pandas_available & scipy_available
 
 if numpy_available and scipy_available:
     from pyomo.contrib.pynumero.asl import AmplInterface
     asl_available = AmplInterface.available()
 else:
-    asl_available=False
+    asl_available = False
 
 if asl_available:
     from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
 
 __version__ = 0.1
+
 
 #=============================================
 def _object_from_string(instance, vstr):
@@ -51,8 +55,8 @@ def _object_from_string(instance, vstr):
         instance: a concrete pyomo model
         vstr: a particular Var or Param (e.g. "pp.Keq_a[2]")
     output:
-        the object 
-    NOTE: We need to deal with blocks 
+        the object
+    NOTE: We need to deal with blocks
           and with indexes that might really be strings or ints
     """
     # pull off the index
@@ -460,9 +464,21 @@ class Estimator(object):
             tree_model.BootList = bootlist
         tree_model.cb_data = self.callback_data  # None is OK
 
-        stsolver = st.StochSolver(fsfile = "pyomo.contrib.parmest.parmest",
-                                  fsfct = "_pysp_instance_creation_callback",
-                                  tree_model = tree_model)
+        try:
+            # For structured models, it is important that we use the
+            # updated version of the CUID representation.  PySP (for
+            # backwards compatibility reasons, and so a ton of tests
+            # don't have to be updated) still defaults to the old
+            # representation.
+            _cuidver = tree_structure.CUID_repr_version
+            tree_structure.CUID_repr_version = 2
+            stsolver = st.StochSolver(
+                fsfile = "pyomo.contrib.parmest.parmest",
+                fsfct = "_pysp_instance_creation_callback",
+                tree_model = tree_model
+            )
+        finally:
+            tree_structure.CUID_repr_version = _cuidver
                 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
