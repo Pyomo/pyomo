@@ -34,6 +34,7 @@ from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticConstraintBodyAnnotation,
                                     StochasticObjectiveAnnotation,
                                     StochasticVariableBoundsAnnotation)
+from pyomo.pysp.scenariotree import tree_structure
 from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
 from pyomo.pysp.scenariotree.manager import \
@@ -399,7 +400,8 @@ class EmbeddedSP(object):
         self.time_stages = tuple(sorted(self.stage_to_variables_map))
         assert self.time_stages[0] == 1
         self.variable_symbols = ComponentUID.generate_cuid_string_map(
-            self.reference_model, ctype=Var, repr_version=1)
+            self.reference_model, ctype=Var,
+            repr_version=tree_structure.CUID_repr_version)
         # remove the parent blocks from this map
         keys_to_delete = []
         for var in self.variable_symbols:
