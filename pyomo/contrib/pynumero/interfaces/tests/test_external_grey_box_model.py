@@ -27,7 +27,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
     CyIpoptSolver, CyIpoptNLP, ipopt, ipopt_available,
 )
 
-from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock, _ExternalGreyBoxModelHelper
+from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
 from ..pyomo_nlp import PyomoGreyBoxNLP
 
 # set of external models for testing
