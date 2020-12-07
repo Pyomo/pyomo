@@ -190,7 +190,7 @@ SolverFactory = SolverFactoryClass('solver type')
 def check_available_solvers(*args):
     from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
     from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
-    from pyomo.solvers.plugins.solvers.mosek_direct import MosekDirect
+    from pyomo.solvers.plugins.solvers.mosek_direct import MOSEKDirect
 
     logging.disable(logging.WARNING)
 
@@ -210,8 +210,8 @@ def check_available_solvers(*args):
         elif (arg[0] == "baron") and \
            (not BARONSHELL.license_is_valid()):
             available = False
-        elif (arg[0] == "mosek") and \
-           (not MosekDirect.license_is_valid()):
+        elif (arg[0] == "mosek_direct" or arg[0] == "mosek_persistent") and \
+                (not MOSEKDirect.license_is_valid()):
             available = False
         else:
             available = \
