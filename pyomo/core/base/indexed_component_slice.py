@@ -423,7 +423,7 @@ class _IndexedComponent_slice_iter(object):
         self._iter_stack = [None]*call_stack_len
         # Initialize the top of the `_iter_stack`:
         if call_stack[0][0] == IndexedComponent_slice.slice_info:
-            # Base is a generator for the "highest-level slice"
+            # Top of stack is a generator for the "highest-level slice"
             self._iter_stack[0] = _slice_generator(
                 *call_stack[0][1], iter_over_index=self._iter_over_index)
             # call_stack[0][1] is a (fixed, sliced, ellipsis) tuple, where
@@ -459,7 +459,7 @@ class _IndexedComponent_slice_iter(object):
         while True:
             # Flush out any non-slice levels.  Since we initialize
             # _iter_stack with None, in the first call this will
-            # immediately walk down to the beginning of the _iter_stack
+            # immediately walk up to the beginning of the _iter_stack
             #
             # On subsequent calls, we walk down to the nearest active
             # iterator, which is left over if the last call to this
@@ -523,7 +523,7 @@ class _IndexedComponent_slice_iter(object):
 
             # Walk to the end of the iter/call stacks, constructing
             # a component to return along the way.
-            # All higher levels in the iter_stack should be None
+            # All lower levels in the iter_stack should be None
             # at this point.
             while idx < self._slice._len:
                 _call = self._slice._call_stack[idx]
