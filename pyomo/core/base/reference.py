@@ -228,7 +228,7 @@ class _ReferenceDict(collections_MutableMapping):
     def __setitem__(self, key, val):
         tmp = self._slice.duplicate()
         op = tmp._call_stack[-1][0]
-        # Replace the top of the duplicated slice's call stack (deepest
+        # Replace the end of the duplicated slice's call stack (deepest
         # level of the component hierarchy) with the appropriate
         # `set_item` call.  Then implement the actual __setitem__ by
         # advancing the duplicated iterator.
