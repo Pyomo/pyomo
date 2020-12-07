@@ -1,17 +1,8 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
+import sys
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.kernel import pprint
+import pyomo.kernel
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
 from pyomo.core.kernel.base import ICategorizedObject
@@ -22,13 +13,17 @@ from pyomo.core.kernel.suffix import (ISuffix,
                                       import_suffix_generator,
                                       local_suffix_generator,
                                       suffix_generator)
-from pyomo.core.kernel.variable import variable
+from pyomo.core.kernel.variable import (variable,
+                                        variable_dict)
 from pyomo.core.kernel.constraint import (constraint,
                                           constraint_list)
 from pyomo.core.kernel.block import (block,
                                      block_dict)
+from pyomo.core.kernel.set_types import (RealSet,
+                                         IntegerSet)
 
 import six
+from six import StringIO
 
 if six.PY3:
     from collections.abc import Mapping as collections_Mapping
@@ -41,6 +36,7 @@ else:
 class Test_suffix(unittest.TestCase):
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
@@ -49,18 +45,18 @@ class Test_suffix(unittest.TestCase):
         s = suffix()
         s[v] = 1
         s[clist] = None
-        pprint(s)
+        pyomo.kernel.pprint(s)
         b = block()
         b.s = s
-        pprint(s)
-        pprint(b)
+        pyomo.kernel.pprint(s)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pprint(s)
-        pprint(b)
-        pprint(m)
+        pyomo.kernel.pprint(s)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
-        pprint({'a': 1, 'b': 2})
+        pyomo.kernel.pprint({'a': 1, 'b': 2})
 
     def test_str(self):
         s = suffix()

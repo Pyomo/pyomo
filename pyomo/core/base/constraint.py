@@ -24,7 +24,8 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
                                       is_constant,
-                                      native_numeric_types)
+                                      native_numeric_types,
+                                      _sub)
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
@@ -493,14 +494,15 @@ class _GeneralConstraintData(_ConstraintData):
             self._upper = None
             self._equality = False
 
-            if expr is Constraint.Skip:
-                del self.parent_component()[self.index()]
-                return
-            elif expr is Constraint.Infeasible:
+            if expr is Constraint.Infeasible:
                 del self.parent_component()[self.index()]
                 raise ValueError(
                     "Constraint '%s' is always infeasible"
                     % (self.name,) )
+            elif ( expr is Constraint.Skip or
+                   expr is Constraint.Feasible ):
+                del self.parent_component()[self.index()]
+                return
             else:
                 raise ValueError(
                     "Constraint '%s' does not have a proper "
@@ -758,7 +760,7 @@ class Constraint(ActiveIndexedComponent):
 
     _ComponentDataClass = _GeneralConstraintData
     class Infeasible(object): pass
-    Feasible = ActiveIndexedComponent.Skip
+    class Feasible(object): pass
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
     Satisfied = Feasible

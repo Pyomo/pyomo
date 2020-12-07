@@ -12,6 +12,7 @@
 # Tests for Pyomo kernel examples
 #
 
+import os
 import glob
 import sys
 from os.path import basename, dirname, abspath, join
@@ -36,7 +37,7 @@ examples.extend(glob.glob(join(examplesdir,"mosek","*.py")))
 testing_solvers = {}
 testing_solvers['ipopt','nl'] = False
 testing_solvers['glpk','lp'] = False
-testing_solvers['mosek_direct','python'] = False
+testing_solvers['mosek','python'] = False
 def setUpModule():
     global testing_solvers
     import pyomo.environ
@@ -62,7 +63,7 @@ def create_test_method(example):
                 self.skipTest("Numpy or Scipy or Ipopt or Glpk is not available")
         elif "mosek" in example:
             if (not testing_solvers['ipopt','nl']) or \
-               (not testing_solvers['mosek_direct','python']):
+               (not testing_solvers['mosek','python']):
                 self.skipTest("Ipopt or Mosek is not available")
         rc, log = pyutilib.subprocess.run([sys.executable,example])
         self.assertEqual(rc, 0, msg=log)

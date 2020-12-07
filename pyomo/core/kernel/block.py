@@ -357,6 +357,7 @@ class block(IBlock):
                 value in the solution is consistent with the
                 value of a fixed variable.
         """
+        import pyomo.opt
         from pyomo.core.kernel.suffix import \
             import_suffix_generator
 

@@ -16,21 +16,13 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-from pyutilib.services import TempfileManager
+import pyutilib.services
 
-from pyomo.opt import check_available_solvers
-from pyomo.environ import (AbstractModel, Set, RangeSet, Objective, 
-                           Constraint, Var, Block, Integers, Boolean, 
-                           Binary, Reals, RealSet, NonNegativeIntegers,
-                           NonNegativeReals, NegativeReals, NegativeIntegers,
-                           PositiveReals, PositiveIntegers, NonPositiveIntegers,
-                           NonPositiveReals, TransformationFactory, SolverFactory,
-                           sum_product)
-from pyomo.core.plugins.transform.standard_form import StandardForm
-from pyomo.core.plugins.transform.nonnegative_transform import NonNegativeTransformation
+import pyomo.opt
+from pyomo.environ import *
 
 
-solvers = check_available_solvers('glpk')
+solvers = pyomo.opt.check_available_solvers('glpk')
 
 
 class Test(unittest.TestCase):
@@ -41,7 +33,7 @@ class Test(unittest.TestCase):
     def tearDown(self):
         if os.path.exists("unknown.lp"):
             os.unlink("unknown.lp")
-        TempfileManager.clear_tempfiles()
+        pyutilib.services.TempfileManager.clear_tempfiles()
         if os.path.exists(os.path.join(currdir,'result.yml')):
             os.remove(os.path.join(currdir,'result.yml'))
         self.model = None

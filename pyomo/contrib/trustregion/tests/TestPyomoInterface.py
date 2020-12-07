@@ -1,26 +1,16 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 #!/usr/bin/env python
 
 import pyutilib.th as unittest
-from pyomo.common.config import ConfigBlock
+from pyutilib.misc.config import ConfigBlock
 
 from pyomo.core.expr.current import identify_variables
-from pyomo.environ import ConcreteModel, Var, Reals, Objective, Constraint, ExternalFunction, SolverFactory, value, sqrt, sin
+from pyomo.environ import *
 from pyomo.opt import check_available_solvers
 
 try:
     import numpy
     numpy_available = True
-    from pyomo.contrib.trustregion.PyomoInterface import PyomoInterface
+    from pyomo.contrib.trustregion.PyomoInterface import *
 except:
     numpy_available = False
 

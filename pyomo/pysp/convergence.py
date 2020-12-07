@@ -14,7 +14,7 @@ from math import fabs
 from pyomo.pysp.generators import \
     scenario_tree_node_variables_generator_noinstances
 
-from six import iterkeys
+from six import iteritems, iterkeys
 
 #
 # This module contains a hierarchy of convergence "computers" for PH

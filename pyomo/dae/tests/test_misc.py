@@ -14,23 +14,15 @@ Unit Tests for pyomo.dae.misc
 import os
 from os.path import abspath, dirname
 
-from six import StringIO, iterkeys
+from six import StringIO
 
 import pyutilib.th as unittest
 
-from pyomo.environ import (
-    ConcreteModel, Set, Param, Var, Constraint, Expression, Block,
-    TransformationFactory, Piecewise, Objective, ExternalFunction,
-    Suffix, value,
-)
+from pyomo.environ import *
 from pyomo.common.collections import ComponentMap
 from pyomo.common.log import LoggingIntercept
-from pyomo.dae import ContinuousSet, DerivativeVar
-from pyomo.dae.misc import (
-    generate_finite_elements, generate_colloc_points,
-    update_contset_indexed_component, expand_components,
-    get_index_information,
-)
+from pyomo.dae import *
+from pyomo.dae.misc import *
 
 currdir = dirname(abspath(__file__)) + os.sep
 

@@ -7,29 +7,27 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
 from pyomo.contrib.pynumero.interfaces import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.nlp_compositions import TwoStageStochasticNLP
-from pyomo.contrib.pynumero.sparse import BlockSymMatrix
+from pyomo.contrib.pynumero.sparse import BlockSymMatrix, BlockVector
 import matplotlib.pylab as plt
-import pyomo.environ as pyo
+import pyomo.environ as aml
 import numpy as np
-
+import os
 
 def create_basic_dense_qp(G, A, b, c):
 
     nx = G.shape[0]
     nl = A.shape[0]
 
-    model = pyo.ConcreteModel()
+    model = aml.ConcreteModel()
     model.var_ids = range(nx)
     model.con_ids = range(nl)
-    model.x = pyo.Var(model.var_ids, initialize=0.0)
-
+    model.x = aml.Var(model.var_ids, initialize=0.0)
+    
     def equality_constraint_rule(m, i):
         return sum(A[i, j] * m.x[j] for j in m.var_ids) == b[i]
-    model.equalities = pyo.Constraint(model.con_ids,
-                                      rule=equality_constraint_rule)
+    model.equalities = aml.Constraint(model.con_ids, rule=equality_constraint_rule)
 
     def objective_rule(m):
         accum = 0.0
@@ -39,10 +37,9 @@ def create_basic_dense_qp(G, A, b, c):
         accum += sum(m.x[j] * c[j] for j in m.var_ids)
         return accum
 
-    model.obj = pyo.Objective(rule=objective_rule, sense=pyo.minimize)
+    model.obj = aml.Objective(rule=objective_rule, sense=aml.minimize)
 
     return model
-
 
 G = np.array([[6, 2, 1], [2, 5, 2], [1, 2, 4]])
 A = np.array([[1, 0, 1], [0, 1, 1]])

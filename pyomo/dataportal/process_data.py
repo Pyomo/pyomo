@@ -11,10 +11,11 @@
 import sys
 import re
 import copy
+import math
 import logging
 
-from pyomo.common.collections import  Options
-from pyomo.common.errors import ApplicationError
+from pyutilib.misc import quote_split, Options
+import pyutilib.common
 from pyutilib.misc import flatten
 
 from pyomo.dataportal.parse_datacmds import (
@@ -257,6 +258,7 @@ def _process_set_data(cmd, sname, _model):
         logger.debug("DEBUG: _process_set_data(start) %s",cmd)
     if len(cmd) == 0:
         return []
+    sd = sname
     ans=[]
     i=0
     template=None
@@ -547,7 +549,7 @@ def _apply_templates(cmd):
             nindex = len(tmp)
             template=tmp
             ilist = set()
-            for kk in range(nindex):
+            for kk in range(len(tmp)):
                 if tmp[kk] == '*':
                     ilist.add(kk)
         elif len(ilist) == 0:
@@ -856,7 +858,7 @@ def _process_load(cmd, _model, _data, _default, options=None):
         data = DataManagerFactory(tmp)
         if (data is None) or \
            isinstance(data, UnknownDataManager):
-            raise ApplicationError("Data manager '%s' is not available." % tmp)
+            raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % tmp)
     else:
         try:
             data = DataManagerFactory(options.using)
@@ -864,8 +866,9 @@ def _process_load(cmd, _model, _data, _default, options=None):
             data = None
         if (data is None) or \
            isinstance(data, UnknownDataManager):
-            raise ApplicationError("Data manager '%s' is not available." % options.using)
+            raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % options.using)
     set_name=None
+    param_name=None
     #
     # Create symbol map
     #

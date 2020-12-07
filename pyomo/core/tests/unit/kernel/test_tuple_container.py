@@ -18,7 +18,8 @@ from pyomo.core.kernel.base import \
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 from pyomo.core.kernel.tuple_container import TupleContainer
-from pyomo.core.kernel.block import (block,
+from pyomo.core.kernel.block import (IBlock,
+                                     block,
                                      block_list)
 
 import six

@@ -46,6 +46,7 @@ from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option,
+                                    safe_register_unique_option,
                                     safe_declare_common_option,
                                     safe_declare_unique_option,
                                     _domain_percent,
@@ -93,7 +94,7 @@ def EXTERNAL_activate_rootnode_costs(manager,
     assert len(manager.scenario_tree.stages) == 2
     assert scenario in manager.scenario_tree.scenarios
     rootnode = manager.scenario_tree.findRootNode()
-    nodecost_var = scenario._instance.find_component(
+    nodecost_var = instance.find_component(
         rootnode._cost_variable[0])[rootnode._cost_variable[1]]
     scenario._instance.find_component(
         "PYSP_BENDERS_NODE_COST_TERM_"+rootnode.name).set_value(nodecost_var)

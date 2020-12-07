@@ -17,10 +17,10 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.opt import check_available_solvers
-from pyomo.environ import ConcreteModel, Var, Objective, Constraint, SolverFactory
+import pyomo.opt
+from pyomo.environ import *
 
-solvers = check_available_solvers('glpk')
+solvers = pyomo.opt.check_available_solvers('glpk')
 
 @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
 class Test(unittest.TestCase):

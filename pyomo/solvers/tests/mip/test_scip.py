@@ -13,18 +13,19 @@ from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
 import pyutilib.th as unittest
-from pyutilib.services import TempfileManager
-from pyomo.opt import SolverFactory
-from pyomo.core import ConcreteModel, Var, Objective, Constraint
+import pyutilib.services
+
+import pyomo.opt
+from pyomo.core import *
 
 old_tempdir = None
 def setUpModule():
     global old_tempdir
-    old_tempdir = TempfileManager.tempdir
-    TempfileManager.tempdir = currdir
+    old_tempdir = pyutilib.services.TempfileManager.tempdir
+    pyutilib.services.TempfileManager.tempdir = currdir
 
 def tearDownModule():
-    TempfileManager.tempdir = old_tempdir
+    pyutilib.services.TempfileManager.tempdir = old_tempdir
 
 scip_available = False
 class Test(unittest.TestCase):
@@ -45,9 +46,9 @@ class Test(unittest.TestCase):
         global tmpdir
         tmpdir = os.getcwd()
         os.chdir(currdir)
-        TempfileManager.sequential_files(0)
+        pyutilib.services.TempfileManager.sequential_files(0)
 
-        self.scip = SolverFactory('scip', solver_io='nl')
+        self.scip = pyomo.opt.SolverFactory('scip', solver_io='nl')
 
         m = self.model = ConcreteModel()
         m.v = Var()
@@ -56,8 +57,8 @@ class Test(unittest.TestCase):
 
     def tearDown(self):
         global tmpdir
-        TempfileManager.clear_tempfiles()
-        TempfileManager.unique_files()
+        pyutilib.services.TempfileManager.clear_tempfiles()
+        pyutilib.services.TempfileManager.unique_files()
         os.chdir(tmpdir)
 
     def test_version_scip(self):

@@ -9,10 +9,11 @@
 
 __all__ = ("SPSolverShellCommand",)
 
+import os
 import logging
 import pprint
 
-import pyutilib.services
+import pyutilib.misc
 
 import pyomo.common
 from pyomo.pysp.solvers.spsolver import SPSolver

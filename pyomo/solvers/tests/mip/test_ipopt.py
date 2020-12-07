@@ -16,7 +16,7 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 import pyomo.opt
-from pyomo.core import ConcreteModel, RangeSet, Var, Param, Objective, ConstraintList, value, minimize
+from pyomo.core import *
 
 old_tempdir = None
 def setUpModule():

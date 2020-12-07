@@ -20,7 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.environ import AbstractModel, Param, Var, Constraint, value
+from pyomo.environ import *
 
 class TestMutable(unittest.TestCase):
     def test_mutable_constraint_upper(self):

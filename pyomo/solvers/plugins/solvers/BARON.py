@@ -8,23 +8,28 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import itertools
 import logging
 import os
 import subprocess
 import re
 import tempfile
 
-from pyomo.common import Executable
-from pyomo.common.collections import Options, Bunch
-from pyutilib.services import TempfileManager
-from pyutilib.subprocess import run
+import pyomo.common
+import pyutilib
+from pyutilib.misc import Options
 
-from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
-from pyomo.opt.base.solvers import _extract_version, SolverFactory
-from pyomo.opt.results import SolverResults, Solution, SolverStatus, TerminationCondition, SolutionStatus 
-from pyomo.opt.solver import SystemCallSolver
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import _extract_version
+from pyomo.opt.results import *
+from pyomo.opt.solver import *
+from pyomo.core.base import SortComponents
+from pyomo.core.base.objective import Objective
+from pyomo.core.base import Constraint
+from pyomo.core.base.set_types import *
+from pyomo.repn.plugins.baron_writer import ProblemWriter_bar
 
-from six.moves import zip
+from six.moves import xrange, zip
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -149,7 +154,7 @@ class BARONSHELL(SystemCallSolver):
             return True
 
     def _default_executable(self):
-        executable = Executable("baron")
+        executable = pyomo.common.Executable("baron")
         if not executable:
             logger.warning("Could not locate the 'baron' executable, "
                            "which is required for solver %s" % self.name)
@@ -168,7 +173,7 @@ class BARONSHELL(SystemCallSolver):
         else:
             fnames = self._get_dummy_input_files(check_license=False)
             try:
-                results = run([solver_exec, fnames[0]])
+                results = pyutilib.subprocess.run([solver_exec, fnames[0]])
                 return _extract_version(results[1])
             finally:
                 self._remove_dummy_input_files(fnames)
@@ -184,7 +189,7 @@ class BARONSHELL(SystemCallSolver):
         cmd = [executable, problem_files[0]]
         if self._timer:
             cmd.insert(0, self._timer)
-        return Bunch( cmd=cmd,
+        return pyutilib.misc.Bunch( cmd=cmd,
                                     log_file=self._log_file,
                                     env=None )
 
@@ -210,17 +215,17 @@ class BARONSHELL(SystemCallSolver):
         # Define log file
         #
         if self._log_file is None:
-            self._log_file = TempfileManager.\
+            self._log_file = pyutilib.services.TempfileManager.\
                             create_tempfile(suffix = '.baron.log')
 
         #
         # Define solution file
         #
         if self._soln_file is None:
-            self._soln_file = TempfileManager.\
+            self._soln_file = pyutilib.services.TempfileManager.\
                               create_tempfile(suffix = '.baron.soln')
 
-        self._tim_file = TempfileManager.\
+        self._tim_file = pyutilib.services.TempfileManager.\
                          create_tempfile(suffix = '.baron.tim')
 
         #
@@ -319,7 +324,7 @@ class BARONSHELL(SystemCallSolver):
         #         file will be excluded from the results object.
         #
 
-        # TODO: Is there a way to handle non-zero return values from baron?
+        # TODO: Is there a way to hanle non-zero return values from baron?
         #       Example: the "NonLinearity Error if POW expression"
         #       (caused by  x ^ y) when both x and y are variables
         #       causes an ugly python error and the solver log has a single

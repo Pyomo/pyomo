@@ -1,13 +1,3 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 # Ampl Car Example
 #
 # Modified pyomo.dae example to remove optimization, and set up PETSc solve
@@ -19,7 +9,8 @@
 # v(0)=0; v(tf)=0
 # -3<=a<=1
 
-from pyomo.environ import ConcreteModel, Param, Var, Constraint, Suffix, SolverFactory
+from pyomo.environ import *
+from pyomo.dae import *
 
 m = ConcreteModel()
 

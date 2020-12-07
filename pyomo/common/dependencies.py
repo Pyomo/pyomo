@@ -11,7 +11,6 @@
 import inspect
 import importlib
 import logging
-from six import iteritems
 
 class DeferredImportError(ImportError):
     pass
@@ -49,31 +48,12 @@ class DeferredImportModule(object):
     attributes on this object will raise a DeferredImportError
     exception.
     """
-    def __init__(self, indicator, deferred_submodules, submodule_name):
+    def __init__(self, indicator):
         self._indicator_flag = indicator
-        self._submodule_name = submodule_name
-
-        if not deferred_submodules:
-            return
-        if submodule_name is None:
-            submodule_name = ''
-        for name in deferred_submodules:
-            if not name.startswith(submodule_name + '.'):
-                continue
-            _local_name = name[(1+len(submodule_name)):]
-            if '.' in _local_name:
-                continue
-            setattr(self, _local_name, DeferredImportModule(
-                indicator, deferred_submodules,
-                submodule_name + '.' + _local_name))
 
     def __getattr__(self, attr):
         self._indicator_flag.resolve()
-        _mod = self._indicator_flag._module
-        if self._submodule_name:
-            for _sub in self._submodule_name[1:].split('.'):
-                _mod = getattr(_mod, _sub)
-        return getattr(_mod, attr)
+        return getattr(self._indicator_flag._module, attr)
 
 
 class _DeferredImportIndicatorBase(object):
@@ -104,8 +84,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
     """
 
     def __init__(self, name, alt_names, error_message, only_catch_importerror,
-                 minimum_version, original_globals, callback, importer,
-                 deferred_submodules):
+                 minimum_version, original_globals, callback, importer):
         self._names = [name]
         if alt_names:
             self._names += list(alt_names)
@@ -120,7 +99,6 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
         self._importer = importer
         self._module = None
         self._available = None
-        self._deferred_submodules = deferred_submodules
 
     def resolve(self):
         if self._module is None:
@@ -142,57 +120,24 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                 self._available = False
                 raise
 
-            # If this module was not found, then we need to check for
-            # deferred submodules and resolve them as well
-            if self._deferred_submodules and \
-               type(self._module) is ModuleUnavailable:
-                err = self._module._error_message_
-                for submod in self._deferred_submodules:
-                    refmod = self._module
-                    for name in submod.split('.')[1:]:
-                        try:
-                            refmod = getattr(refmod, name)
-                        except DeferredImportError:
-                            setattr(refmod, name, ModuleUnavailable(err))
-                            refmod = getattr(refmod, name)
-
             # Replace myself in the original globals() where I was
             # declared
             self.replace_self_in_globals(self._original_globals)
 
         # Replace myself in the caller globals (to avoid calls to
         # this method in the future)
-        _frame = inspect.currentframe().f_back
-        while _frame.f_globals is globals():
-            _frame = _frame.f_back
-        self.replace_self_in_globals(_frame.f_globals)
+        _globals = inspect.currentframe().f_back.f_back.f_globals
+        self.replace_self_in_globals(_globals)
 
     def replace_self_in_globals(self, _globals):
         for name in self._names:
             if ( name in _globals
                  and isinstance(_globals[name], DeferredImportModule)
-                 and _globals[name]._indicator_flag is self
-                 and _globals[name]._submodule_name is None ):
+                 and _globals[name]._indicator_flag is self ):
                 _globals[name] = self._module
             for flag_name in (name+'_available', 'has_'+name, 'have_'+name):
                 if flag_name in _globals and _globals[flag_name] is self:
                     _globals[flag_name] = self._available
-        if not self._deferred_submodules:
-            return
-        for submod, alt_names in iteritems(self._deferred_submodules):
-            _mod_path = submod.split('.')[1:]
-            _names = [_mod_path[-1]]
-            if alt_names:
-                _names.extend(alt_names)
-            for name in _names:
-                if ( name in _globals
-                     and isinstance(_globals[name], DeferredImportModule)
-                     and _globals[name]._indicator_flag is self
-                     and _globals[name]._submodule_name == submod ):
-                    _mod = self._module
-                    for _sub in _mod_path:
-                        _mod = getattr(_mod, _sub)
-                    _globals[name] = _mod
 
     def __nonzero__(self):
         self.resolve()
@@ -240,7 +185,7 @@ def check_min_version(module, min_version):
 
 def attempt_import(name, error_message=None, only_catch_importerror=True,
                    minimum_version=None, alt_names=None, callback=None,
-                   importer=None, defer_check=True, deferred_submodules=None):
+                   importer=None, defer_check=True):
 
     """Attempt to import the specified module.
 
@@ -307,13 +252,6 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
         flag.  The method will return instances of DeferredImportModule
         and DeferredImportIndicator.
 
-    deferred_submodules: dict, optional
-        If provided, a mapping of submodules to within this module that
-        can be accessed without triggering a deferred import of this
-        module, to a list of alternate names by which to look for the
-        submodule in the globals() namespaces.  For example, the
-        deferred_submodules for matplotlib is {'pyplot': ['plt']}
-
     Returns
     -------
     : module
@@ -328,26 +266,6 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
     # If we are going to defer the check until later, return the
     # deferred import module object
     if defer_check:
-        if deferred_submodules:
-            # Ensures all names begin with '.'
-            #
-            # Fill in any missing submodules.  For example, if a user
-            # provides {'foo.bar.baz': ['bz']}, then expand the dict to
-            # {'.foo': None, '.foo.bar': None, '.foo.bar.baz': ['bz']}
-            deferred = {}
-            for _submod, _alt in iteritems(deferred_submodules):
-                if _submod[0] != '.':
-                    _submod = '.' + _submod
-                _mod_path = _submod.split('.')
-                for i in range(len(_mod_path)):
-                    _test_mod = '.'.join(_mod_path[:i])
-                    if _test_mod not in deferred:
-                        deferred[_test_mod] = None
-                deferred[_submod] = _alt
-            deferred.pop('', None)
-        else:
-            deferred = None
-
         indicator = DeferredImportIndicator(
             name=name,
             alt_names=alt_names,
@@ -356,13 +274,8 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
             minimum_version=minimum_version,
             original_globals=inspect.currentframe().f_back.f_globals,
             callback=callback,
-            importer=importer,
-            deferred_submodules=deferred)
-        return DeferredImportModule(indicator, deferred, None), indicator
-
-    if deferred_submodules:
-        raise ValueError(
-            "deferred_submodules is only valid if defer_check==True")
+            importer=importer)
+        return DeferredImportModule(indicator), indicator
 
     try:
         if importer is None:
@@ -412,36 +325,20 @@ def _finalize_yaml(module, available):
 def _finalize_scipy(module, available):
     if available:
         # Import key subpackages that we will want to assume are present
-        import scipy.stats
         import scipy.sparse
         import scipy.spatial
+        import scipy.stats
 
 def _finalize_pympler(module, available):
     if available:
         # Import key subpackages that we will want to assume are present
         import pympler.muppy
 
-def _finalize_matplotlib(module, available):
-    if available:
-        import matplotlib.pyplot
-
 yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
 pympler, pympler_available = attempt_import(
     'pympler', callback=_finalize_pympler)
 numpy, numpy_available = attempt_import('numpy', alt_names=['np'])
-scipy, scipy_available = attempt_import(
-    'scipy', callback=_finalize_scipy, deferred_submodules={'stats':None})
+scipy, scipy_available = attempt_import('scipy', callback=_finalize_scipy)
 networkx, networkx_available = attempt_import('networkx', alt_names=['nx'])
 pandas, pandas_available = attempt_import('pandas', alt_names=['pd'])
 dill, dill_available = attempt_import('dill')
-
-# Note that matplotlib.pyplot can generate a runtime error on OSX when
-# not installed as a Framework (as is the case in the CI systems)
-matplotlib, matplotlib_available = attempt_import(
-    'matplotlib', only_catch_importerror=False, callback=_finalize_matplotlib,
-    deferred_submodules={'pyplot': ['plt']})
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle

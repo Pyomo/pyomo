@@ -13,9 +13,8 @@
 
 from math import fabs, log, exp
 from six.moves import xrange
-import sys
 
-from pyomo.core import Set, Constraint, Expression, BooleanSet, value
+from pyomo.core import *
 from pyomo.pysp.phutils import indexToString
 
 # IMPT: In general, the breakpoint computation codes can return a

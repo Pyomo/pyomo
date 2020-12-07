@@ -11,6 +11,7 @@
 import os
 from os.path import join, dirname, abspath
 import time
+import difflib
 import filecmp
 import shutil
 import subprocess
@@ -21,6 +22,9 @@ from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
                                   _kill)
+import pyomo.environ
+
+from six import StringIO
 
 thisdir = dirname(abspath(__file__))
 baselinedir = os.path.join(thisdir, "schuripopt_baselines")

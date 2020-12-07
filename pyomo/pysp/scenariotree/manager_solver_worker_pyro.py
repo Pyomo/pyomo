@@ -10,9 +10,13 @@
 
 __all__ = ("ScenarioTreeManagerSolverWorkerPyro",)
 
-from pyomo.opt import undefined
+import time
+
+from pyomo.opt import (SolverFactory,
+                       undefined)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
-from pyomo.pysp.util.config import PySPConfigBlock
+from pyomo.pysp.util.config import (PySPConfigBlock,
+                                    safe_declare_common_option)
 from pyomo.pysp.scenariotree.manager_worker_pyro import \
     ScenarioTreeManagerWorkerPyro
 from pyomo.pysp.scenariotree.manager_solver import \

@@ -12,11 +12,11 @@ import six
 
 import os.path
 
+import pyutilib.common
 import pyutilib.subprocess
 import pyomo.common
-from pyomo.common.errors import ApplicationError
 
-from pyomo.opt.base import ProblemFormat, ConverterError
+from pyomo.opt.base import *
 
 
 class PicoMIPConverter(object):
@@ -73,6 +73,6 @@ class PicoMIPConverter(object):
         print("Running command: "+cmd)
         pyutilib.subprocess.run(cmd)
         if not os.path.exists(output_filename):       #pragma:nocover
-            raise ApplicationError(\
+            raise pyutilib.common.ApplicationError(\
                     "Problem launching 'pico_convert' to create "+output_filename)
         return (output_filename,),None # no variable map at the moment

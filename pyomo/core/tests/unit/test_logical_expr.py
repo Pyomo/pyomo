@@ -20,7 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.environ import AbstractModel, ConcreteModel, Set, Var, Param, Constraint, inequality, display
+from pyomo.environ import *
 import pyomo.core.expr.logical_expr as logical_expr
 from pyomo.core.expr.logical_expr import (
     InequalityExpression, EqualityExpression, RangedExpression,

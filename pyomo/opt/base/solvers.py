@@ -14,15 +14,16 @@ __all__ = ('OptSolver',
            'check_available_solvers')
 
 import re
+import os
 import sys
 import time
 import logging
 
-from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
+from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.common import Factory
-from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options
-from pyutilib.misc import quote_split
+import pyutilib.common
+import pyutilib.misc
+import pyutilib.services
 
 from pyomo.opt.base.problem import ProblemConfigFactory
 from pyomo.opt.base.convert import convert_problem
@@ -94,7 +95,8 @@ class UnknownSolver(object):
     def available(self, exception_flag=True):
         """Determine if this optimizer is available."""
         if exception_flag:
-            raise ApplicationError("Solver (%s) not available" % str(self.name))
+            from pyutilib.common import ApplicationError
+            raise pyutilib.common.ApplicationError("Solver (%s) not available" % str(self.name))
         return False
 
     def warm_start_capable(self):
@@ -190,7 +192,7 @@ SolverFactory = SolverFactoryClass('solver type')
 def check_available_solvers(*args):
     from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
     from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
-    from pyomo.solvers.plugins.solvers.mosek_direct import MOSEKDirect
+    from pyomo.solvers.plugins.solvers.mosek_direct import MosekDirect
 
     logging.disable(logging.WARNING)
 
@@ -210,8 +212,8 @@ def check_available_solvers(*args):
         elif (arg[0] == "baron") and \
            (not BARONSHELL.license_is_valid()):
             available = False
-        elif (arg[0] == "mosek_direct" or arg[0] == "mosek_persistent") and \
-                (not MOSEKDirect.license_is_valid()):
+        elif (arg[0] == "mosek") and \
+           (not MosekDirect.license_is_valid()):
             available = False
         else:
             available = \
@@ -341,7 +343,7 @@ class OptSolver(object):
         # through the solve command. Everything else is reset inside
         # presolve
         #
-        self.options = Options()
+        self.options = pyutilib.misc.Options()
         if 'options' in kwds and not kwds['options'] is None:
             for key in kwds['options']:
                 setattr(self.options, key, kwds['options'][key])
@@ -390,7 +392,7 @@ class OptSolver(object):
 
         # We define no capabilities for the generic solver; base
         # classes must override this
-        self._capabilities = Options()
+        self._capabilities = pyutilib.misc.Options()
 
     @staticmethod
     def _options_string_to_dict(istr):
@@ -400,7 +402,7 @@ class OptSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        tokens = quote_split('[ ]+',istr)
+        tokens = pyutilib.misc.quote_split('[ ]+',istr)
         for token in tokens:
             index = token.find('=')
             if index == -1:
@@ -558,7 +560,7 @@ class OptSolver(object):
 
         orig_options = self.options
 
-        self.options = Options()
+        self.options = pyutilib.misc.Options()
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
         self.options.update(
@@ -594,7 +596,7 @@ class OptSolver(object):
                         "See the solver log above for diagnostic information." )
                 elif hasattr(_status, 'log') and _status.log:
                     logger.error("Solver log:\n" + str(_status.log))
-                raise ApplicationError(
+                raise pyutilib.common.ApplicationError(
                     "Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
             if self._report_timing:
@@ -785,7 +787,7 @@ class OptSolver(object):
         a Pyomo model instance object.
         """
         if not self._allow_callbacks:
-            raise ApplicationError(
+            raise pyutilib.common.ApplicationError(
                 "Callbacks disabled for solver %s" % self.name)
         if callback_fn is None:
             if name in self._callback:

@@ -10,7 +10,8 @@
 
 import os.path
 
-from pyomo.common.collections import Options
+from pyutilib.misc import Options
+
 from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.dataportal.process_data import _process_include
 

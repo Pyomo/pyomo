@@ -14,24 +14,26 @@ pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-from pyutilib.services import TempfileManager
+import pyutilib.services
+import pyutilib.common
 
 from pyomo.core import ConcreteModel
-from pyomo.opt import ResultsFormat, SolverResults, SolverFactory
+import pyomo.opt
+from pyomo.opt import ResultsFormat, ProblemFormat
 
 old_ignore_time = None
 old_tempdir = None
 def setUpModule():
     global old_tempdir
     global old_ignore_time
-    old_tempdir = TempfileManager.tempdir
-    old_ignore_time = SolverResults.default_print_options.ignore_time
-    SolverResults.default_print_options.ignore_time = True
-    TempfileManager.tempdir = currdir
+    old_tempdir = pyutilib.services.TempfileManager.tempdir
+    old_ignore_time = pyomo.opt.SolverResults.default_print_options.ignore_time
+    pyomo.opt.SolverResults.default_print_options.ignore_time = True
+    pyutilib.services.TempfileManager.tempdir = currdir
 
 def tearDownModule():
-    TempfileManager.tempdir = old_tempdir
-    SolverResults.default_print_options.ignore_time = old_ignore_time
+    pyutilib.services.TempfileManager.tempdir = old_tempdir
+    pyomo.opt.SolverResults.default_print_options.ignore_time = old_ignore_time
 
 cplexamp_available = False
 class mock_all(unittest.TestCase):
@@ -50,18 +52,18 @@ class mock_all(unittest.TestCase):
         global tmpdir
         tmpdir = os.getcwd()
         os.chdir(currdir)
-        TempfileManager.sequential_files(0)
+        pyutilib.services.TempfileManager.sequential_files(0)
         if flag:
             if not cplexamp_available:
                 self.skipTest("The 'cplexamp' command is not available")
-            self.asl = SolverFactory('asl:cplexamp')
+            self.asl = pyomo.opt.SolverFactory('asl:cplexamp')
         else:
-            self.asl = SolverFactory('_mock_asl:cplexamp')
+            self.asl = pyomo.opt.SolverFactory('_mock_asl:cplexamp')
 
     def tearDown(self):
         global tmpdir
-        TempfileManager.clear_tempfiles()
-        TempfileManager.unique_files()
+        pyutilib.services.TempfileManager.clear_tempfiles()
+        pyutilib.services.TempfileManager.unique_files()
         os.chdir(tmpdir)
         self.asl = None
 

@@ -15,11 +15,12 @@
 __all__ = ['sum_product', 'summation', 'dot_product', 'sequence', 'prod', 'quicksum']
 
 from six.moves import xrange
+from functools import reduce
+import operator
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.numeric_expr import decompose_term
 from pyomo.core.expr import current as EXPR
-from pyomo.core.base.var import Var
-from pyomo.core.base.expression import Expression
+import pyomo.core.base.var
 
 
 def prod(terms):
@@ -175,11 +176,11 @@ def sum_product(*args, **kwds):
     else:
         if nargs > 0:
             iarg=args[-1]
-            if not isinstance(iarg,Var) and not isinstance(iarg, Expression):
+            if not isinstance(iarg,pyomo.core.base.var.Var) and not isinstance(iarg, pyomo.core.base.expression.Expression):
                 raise ValueError("Error executing sum_product(): The last argument value must be a variable or expression object if no 'index' option is specified")
         else:
             iarg=denom[-1]
-            if not isinstance(iarg,Var) and not isinstance(iarg, Expression):
+            if not isinstance(iarg,pyomo.core.base.var.Var) and not isinstance(iarg, pyomo.core.base.expression.Expression):
                 raise ValueError("Error executing sum_product(): The last denom argument value must be a variable or expression object if no 'index' option is specified")
         index = iarg.index_set()
 
@@ -187,7 +188,7 @@ def sum_product(*args, **kwds):
     vars_ = []
     params_ = []
     for arg in args:
-        if isinstance(arg, Var):
+        if isinstance(arg, pyomo.core.base.var.Var):
             vars_.append(arg)
         else:
             params_.append(arg)

@@ -17,7 +17,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.environ import AbstractModel, ConcreteModel, Set, Var, Piecewise, Constraint 
+from pyomo.environ import *
 
 class TestMiscPiecewise(unittest.TestCase):
 

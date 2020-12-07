@@ -1,13 +1,3 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 # the matpolotlib stuff is to avoid $DISPLAY errors on Travis (DLW Oct 2018)
 try:
     import matplotlib
@@ -29,11 +19,16 @@ except:
 
 import pyutilib.th as unittest
 import os
+import sys
+
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.scenariocreator as sc
-import pyomo.contrib.parmest.examples.semibatch.scencreate as sbc
+import pyomo.contrib.parmest.graphics as graphics
+import pyomo.contrib.parmest as parmestbase
 import pyomo.environ as pyo
-from pyomo.environ import SolverFactory
+import pyomo.contrib.parmest.examples.semibatch.scencreate as sbc
+
+from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
 testdir = os.path.dirname(os.path.abspath(__file__))

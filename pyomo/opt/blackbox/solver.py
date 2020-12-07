@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.opt.base import OptSolver, ProblemFormat, ResultsFormat
+from pyomo.opt.base import *
 
 
 class COLINSolver(OptSolver):

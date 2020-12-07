@@ -22,7 +22,7 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from pyomo.environ import ConcreteModel, Var, Param, Objective, Constraint
+from pyomo.environ import *
 
 model = ConcreteModel()
 model.x = Var(bounds=(-1.0,1.0),initialize=1.0)

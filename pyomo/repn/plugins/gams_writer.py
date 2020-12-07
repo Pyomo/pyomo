@@ -13,16 +13,18 @@
 #
 
 from six import StringIO, string_types, iteritems
+from six.moves import xrange
 
-from pyomo.common.gc_manager import PauseGC
+from pyutilib.misc import PauseGC
+
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (
-    value, as_numeric, native_types, native_numeric_types,
+    is_fixed, value, as_numeric, native_types, native_numeric_types,
     nonpyomo_leaf_types,
 )
 from pyomo.core.base import (
-    SymbolMap, ShortNameLabeler, NumericLabeler, Constraint, 
-    Objective, Var, minimize, SortComponents)
+    SymbolMap, ShortNameLabeler, NumericLabeler, Block, Constraint, Expression,
+    Objective, Var, Param, minimize, Suffix, SortComponents)
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.opt import ProblemFormat

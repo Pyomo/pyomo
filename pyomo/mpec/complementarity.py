@@ -8,14 +8,18 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import iteritems
+import sys
+import inspect
+from six import iteritems, StringIO
 from collections import namedtuple
 
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_numeric
-from pyomo.core import Constraint, Var, Block, Set
+from pyomo.core.expr.numvalue import ZeroConstant, _sub, native_numeric_types, as_numeric
+from pyomo.core import *
 from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.core.base.numvalue import ZeroConstant, _sub
+from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.util import (
     disable_methods, Initializer, IndexedCallInitializer, CountedCallInitializer
@@ -192,7 +196,6 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('ctype', Complementarity)
-        kwargs.setdefault('dense', False)
         _init = tuple( _arg for _arg in (
             kwargs.pop('initialize', None),
             kwargs.pop('rule', None),

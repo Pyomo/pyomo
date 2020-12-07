@@ -1,22 +1,15 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
+import pickle
 
 import pyutilib.th as unittest
-import pyomo.environ as pyo
+import pyomo.environ as aml
 
 from pyomo.core.base.matrix_constraint import MatrixConstraint
-
+from pyomo.core.kernel.set_types import (RealSet,
+                                         IntegerSet)
 
 def _create_variable_list(size, **kwds):
     assert size > 0
-    return pyo.Var(pyo.RangeSet(0,size-1), **kwds)
+    return aml.Var(aml.RangeSet(0,size-1), **kwds)
 
 def _get_csr(m, n, value):
     data = [value] * (m * n)
@@ -29,7 +22,7 @@ def _get_csr(m, n, value):
 class TestMatrixConstraint(unittest.TestCase):
 
     def test_init(self):
-        m = pyo.ConcreteModel()
+        m = aml.ConcreteModel()
         m.v = _create_variable_list(3, initialize=1.0)
         data, indices, indptr = _get_csr(3,3,0.0)
         lb = [None] * 3
@@ -55,7 +48,7 @@ class TestMatrixConstraint(unittest.TestCase):
             self.assertEqual(c.has_lb(), False)
             self.assertEqual(c.has_ub(), False)
 
-        m = pyo.ConcreteModel()
+        m = aml.ConcreteModel()
         m.v = _create_variable_list(3, initialize=3)
         data, indices, indptr = _get_csr(2,3,1.0)
         m.c = MatrixConstraint(data, indices, indptr,
@@ -76,7 +69,7 @@ class TestMatrixConstraint(unittest.TestCase):
             self.assertEqual(c.equality, False)
 
 
-        m = pyo.ConcreteModel()
+        m = aml.ConcreteModel()
         m.v = _create_variable_list(3, initialize=3)
         data, indices, indptr = _get_csr(2,3,1.0)
         m.c = MatrixConstraint(data, indices, indptr,

@@ -15,14 +15,15 @@ import sys
 import time
 import logging
 
-from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Bunch
+import pyutilib.misc
+from pyutilib.common import ApplicationError, WindowsError
+from pyutilib.misc import Bunch
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
 import pyomo.common
-from pyomo.opt.base import ResultsFormat
-from pyomo.opt.base.solvers import OptSolver
+from pyomo.opt.base import *
+from pyomo.opt.base.solvers import *
 from pyomo.opt.results import SolverStatus, SolverResults
 
 logger = logging.getLogger('pyomo.opt')
@@ -306,7 +307,7 @@ class SystemCallSolver(OptSolver):
                 tee   = self._tee,
                 define_signal_handlers = self._define_signal_handlers
              )
-        except OSError:
+        except WindowsError:
             err = sys.exc_info()[1]
             msg = 'Could not execute the command: %s\tError message: %s'
             raise ApplicationError(msg % (command.cmd, err))

@@ -1,18 +1,8 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 import pickle
 import math
 
 import pyutilib.th as unittest
-from pyomo.kernel import pprint, IntegerSet
+import pyomo.kernel
 from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.core.kernel.constraint import (IConstraint,
                                           linear_constraint,
@@ -33,6 +23,7 @@ from pyomo.core.kernel.conic import (_build_linking_constraints,
                                      primal_power,
                                      dual_exponential,
                                      dual_power)
+from pyomo.kernel import IntegerSet
 
 class _conic_tester_base(object):
 
@@ -42,20 +33,21 @@ class _conic_tester_base(object):
         assert self._object_factory is not None
 
     def test_pprint(self):
+        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.
         c = self._object_factory()
-        pprint(c)
+        pyomo.kernel.pprint(c)
         b = block()
         b.c = c
-        pprint(c)
-        pprint(b)
+        pyomo.kernel.pprint(c)
+        pyomo.kernel.pprint(b)
         m = block()
         m.b = b
-        pprint(c)
-        pprint(b)
-        pprint(m)
+        pyomo.kernel.pprint(c)
+        pyomo.kernel.pprint(b)
+        pyomo.kernel.pprint(m)
 
     def test_type(self):
         c = self._object_factory()

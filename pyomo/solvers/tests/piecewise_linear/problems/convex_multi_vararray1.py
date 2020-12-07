@@ -20,7 +20,7 @@ f(x) = | 1     , -1 <= x <=  1
 
 """
 
-from pyomo.core import ConcreteModel, Var, Objective, Param, Piecewise, Constraint,  maximize, sum_product
+from pyomo.environ import *
 
 INDEX_SET1 = range(1,8)
 INDEX_SET2 = range(0,2)

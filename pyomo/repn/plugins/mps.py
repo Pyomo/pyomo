@@ -13,11 +13,13 @@
 #
 
 import logging
+import math
+import operator
 
-from six import iteritems, StringIO
+from six import iteritems, iterkeys, StringIO
 from six.moves import xrange
 
-from pyomo.common.gc_manager import PauseGC
+from pyutilib.misc import PauseGC
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
 from pyomo.core.base import \

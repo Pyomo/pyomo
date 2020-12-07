@@ -28,7 +28,8 @@ import pyutilib.th as unittest
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
-from pyomo.environ import SolverFactory, TransformationFactory
+import pyomo.scripting.pyomo_main as main
+from pyomo.environ import *
 
 from six import iteritems
 

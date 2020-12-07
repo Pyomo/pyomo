@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import AbstractModel, Var, NonNegativeReals
+from pyomo.environ import *
 
 model = AbstractModel()
 model.w = Var(within=NonNegativeReals)

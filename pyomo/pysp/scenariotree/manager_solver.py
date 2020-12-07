@@ -15,17 +15,21 @@ __all__ = ("ScenarioTreeManagerSolverClientSerial",
 # TODO: handle pyro as the solver manager when even when the
 #       pyro scenario tree manager is used
 
+import math
 import time
 import sys
 
 from pyutilib.pyro import shutdown_pyro_components
 from pyomo.opt import (SolverFactory,
                        SolverStatus,
+                       TerminationCondition,
                        SolutionStatus)
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.opt.parallel import SolverManagerFactory
-from pyomo.pysp.util.config import (PySPConfigBlock,
-                                    safe_declare_common_option)
+from pyomo.pysp.util.config import (PySPConfigValue,
+                                    PySPConfigBlock,
+                                    safe_declare_common_option,
+                                    safe_register_common_option)
 from pyomo.pysp.util.configured_object import \
     PySPConfiguredObject
 from pyomo.pysp.scenariotree.preprocessor import \
@@ -39,7 +43,7 @@ from pyomo.pysp.scenariotree.manager import \
      ScenarioTreeManagerClientPyro,
      ScenarioTreeSolveResults)
 
-from six import itervalues
+from six import itervalues, iteritems
 
 #
 # The ScenarioTreeManagerSolver interface adds additional

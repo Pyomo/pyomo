@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
-from pyomo.opt.base.problem import ProblemConfigFactory, BaseProblemConfig
+from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
+from pyomo.opt.base.problem import *
 
 
 @ProblemConfigFactory.register('default')

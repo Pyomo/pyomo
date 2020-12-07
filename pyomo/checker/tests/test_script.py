@@ -13,7 +13,7 @@ import tempfile
 
 import pyutilib.th as unittest
 
-from pyomo.checker import ModelScript
+from pyomo.checker import *
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 

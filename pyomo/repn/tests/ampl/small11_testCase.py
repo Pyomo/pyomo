@@ -20,7 +20,7 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from pyomo.environ import ConcreteModel, Var, Objective, Constraint, RangeSet
+from pyomo.environ import *
 model = ConcreteModel()
 
 n=3

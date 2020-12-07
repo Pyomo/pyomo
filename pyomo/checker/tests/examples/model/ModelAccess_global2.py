@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import ConcreteModel, Var, Constraint
+from pyomo.environ import *
 
 model = ConcreteModel()
 model.X = Var()

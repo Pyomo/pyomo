@@ -12,10 +12,11 @@
 # Test the mpec_nlp solver
 #
 
+import sys
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'mpec'))
+exdir = normpath(join(currdir,'..','..','..','examples','mpec'))
 
 import pyutilib.th as unittest
 
@@ -23,11 +24,11 @@ from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
 from pyomo.scripting.util import cleanup
+from pyomo.environ import *
 
 from six import iteritems
 
 solvers = pyomo.opt.check_available_solvers('ipopt')
-
 
 class CommonTests:
 

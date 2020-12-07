@@ -10,7 +10,7 @@
 
 __all__ = ['IPreCheckHook', 'IPostCheckHook']
 
-from pyomo.common.plugin import Interface
+from pyomo.common.plugin import *
 
 class IPreCheckHook(Interface):
 

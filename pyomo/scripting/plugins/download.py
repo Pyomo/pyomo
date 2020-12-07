@@ -10,6 +10,7 @@
 
 import logging
 import sys
+import traceback
 from pyomo.common.download import FileDownloader, DownloadFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 

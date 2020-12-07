@@ -11,6 +11,7 @@
 import operator
 import itertools
 
+import six
 from six.moves import xrange
 from six import advance_iterator
 

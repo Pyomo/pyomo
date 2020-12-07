@@ -1,17 +1,7 @@
 # -*- coding: utf-8 -*-
-
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 """Transformation to deactivate trivial constraints."""
 import logging
+import textwrap
 
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
@@ -21,7 +11,6 @@ from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
-logger = logging.getLogger('pyomo.contrib.preprocessing')
 
 @TransformationFactory.register(
         'contrib.deactivate_trivial_constraints',

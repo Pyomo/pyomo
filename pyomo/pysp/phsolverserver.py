@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import gc         # garbage collection control.
 import os
 import socket
 import sys
@@ -15,17 +16,16 @@ import time
 import copy
 from optparse import OptionParser
 
-from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Bunch
-from pyutilib.misc import import_file
+import pyutilib.common
+import pyutilib.misc
+from pyutilib.misc import PauseGC
 from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
 
-from pyomo.core import Var, Suffix, Constraint
+from pyomo.core import *
 from pyomo.opt import UndefinedData
 from pyomo.common import pyomo_command
-from pyomo.common.gc_manager import PauseGC
 from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
@@ -38,6 +38,7 @@ from pyomo.pysp.phsolverserverutils import (TransmitType,
 from pyomo.pysp.ph import _PHBase
 from pyomo.pysp.phutils import (reset_nonconverged_variables,
                                 reset_stage_cost_variables,
+                                find_active_objective,
                                 extract_solve_times)
 from pyomo.pysp.util.misc import launch_command
 
@@ -63,11 +64,11 @@ class PHPyroWorker(TaskWorker):
 
     def process(self, data):
 
-        data = Bunch(**data)
+        data = pyutilib.misc.Bunch(**data)
         result = None
         if data.action == "release":
 
-            del self._phsolverserver_map[data.object_name]
+            del self._phsolverserver_map[name]
             result = True
 
         elif data.action == "initialize":
@@ -782,7 +783,7 @@ class _PHSolverServer(_PHBase):
             auxilliary_values["solve_time"], auxilliary_values["pyomo_solve_time"] = \
                 extract_solve_times(results, default=None)
 
-            auxilliary_values['solution_status'] = solution0.status.name
+            auxilliary_values['solution_status'] = solution0.status.key
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 
@@ -969,8 +970,8 @@ class _PHSolverServer(_PHBase):
         elif module_name in sys.modules:
             this_module = sys.modules[module_name]
         else:
-            this_module = import_file(module_name,
-                                      clear_cache=True)
+            this_module = pyutilib.misc.import_file(module_name,
+                                                    clear_cache=True)
             self._modules_imported[module_name] = this_module
 
         module_attrname = function_name
@@ -1162,7 +1163,7 @@ class _PHSolverServer(_PHBase):
                                         data.warmstart,
                                         data.variable_transmission)
                     successful_solve = True
-                except ApplicationError as exc:
+                except pyutilib.common.ApplicationError as exc:
                     print("Solve failed for object=%s - this was attempt=%d"
                           % (data.name, attempts_so_far))
                     if (attempts_so_far == max_num_attempts):
@@ -1345,7 +1346,7 @@ def exec_phsolverserver(options):
                 # make sure "." is in the PATH.
                 original_path = list(sys.path)
                 sys.path.insert(0,'.')
-                import_file(this_extension)
+                pyutilib.misc.import_file(this_extension)
                 print("Module successfully loaded")
                 sys.path[:] = original_path # restore to what it was
 
@@ -1358,7 +1359,7 @@ def exec_phsolverserver(options):
             if module_to_find.rfind(".py"):
                 module_to_find = module_to_find.rstrip(".py")
             if module_to_find.find("/") != -1:
-                module_to_find = module_to_find.split("/")[-1]
+                module_to_find = string.split(module_to_find,"/")[-1]
 
             for name, obj in inspect.getmembers(sys.modules[module_to_find], inspect.isclass):
                 # the second condition gets around goofyness related to issubclass returning

@@ -11,6 +11,7 @@
 import logging
 import bisect
 from pyomo.common.timing import ConstructionTimer
+from pyomo.core import *
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.set import SortedSimpleSet
 from pyomo.core.base.numvalue import native_numeric_types
@@ -244,7 +245,7 @@ class ContinuousSet(SortedSimpleSet):
             raise ValueError("ContinuousSet '%s' must have at least two values"
                              " indicating the range over which a differential "
                              "equation is to be discretized" % self.name)
-        self._fe = list(self)
+        self._fe = sorted(self)
         timer.report()
 
     def find_nearest_index(self, target, tolerance=None):

@@ -29,11 +29,10 @@ except:
 
 import pyutilib.services
 import pyutilib.pyro
-from pyutilib.pyro import using_pyro4, TaskProcessingError
-from pyomo.common.errors import ApplicationError
+from pyutilib.pyro import using_pyro4
+import pyutilib.common
 from pyomo.common import pyomo_command
 from pyomo.opt.base import SolverFactory, ConverterError
-from pyomo.common.collections import Bunch
 
 import six
 
@@ -44,7 +43,7 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
     def process(self, data):
         self._worker_task_return_queue = self._current_task_client
-        data = Bunch(**data)
+        data = pyutilib.misc.Bunch(**data)
 
         if hasattr(data, 'action') and \
            data.action == 'Pyomo_pyro_mip_server_shutdown':
@@ -234,7 +233,7 @@ def main():
                 sys.stderr.write("CONVERTER ERROR:\n")
                 sys.stderr.write(str(sys.exc_info()[1])+"\n")
                 raise
-            except ApplicationError:
+            except pyutilib.common.ApplicationError:
                 sys.stderr.write("APPLICATION ERROR:\n")
                 sys.stderr.write(str(sys.exc_info()[1])+"\n")
                 raise

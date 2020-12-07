@@ -8,11 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import os
 import pyutilib.th as unittest
 import sys
 
 from importlib import import_module
-from six import StringIO
+from six import StringIO, PY3
 
 from pyomo.common.log import LoggingIntercept
 

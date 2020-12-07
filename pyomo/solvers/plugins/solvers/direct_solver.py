@@ -8,18 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import time
-import logging
-
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 from pyomo.core.base.block import _BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.suffix import import_suffix_generator
-from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options
+import pyutilib.misc
+import pyutilib.common
+import time
 
-logger = logging.getLogger('pyomo.solvers')
 
 class DirectSolver(DirectOrPersistentSolver):
     """
@@ -106,7 +103,7 @@ class DirectSolver(DirectOrPersistentSolver):
 
         orig_options = self.options
 
-        self.options = Options()
+        self.options = pyutilib.misc.Options()
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
         self.options.update(
@@ -142,7 +139,7 @@ class DirectSolver(DirectOrPersistentSolver):
                         "See the solver log above for diagnostic information." )
                 elif hasattr(_status, 'log') and _status.log:
                     logger.error("Solver log:\n" + str(_status.log))
-                raise ApplicationError(
+                raise pyutilib.common.ApplicationError(
                     "Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
             if self._report_timing:

@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import SolverFactory, ConcreteModel, Var, Constraint, Objective, Integers, Boolean
+from pyomo.environ import *
 import pyutilib.th as unittest
 from pyutilib.misc import capture_output
 

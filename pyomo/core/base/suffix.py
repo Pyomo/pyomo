@@ -13,6 +13,7 @@ __all__ = ('Suffix',
            'active_import_suffix_generator')
 
 import logging
+import pprint
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import ConstructionTimer

@@ -12,11 +12,8 @@ import sys
 
 import pyutilib.th as unittest
 
-from pyomo.environ import (ConcreteModel, AbstractModel, Var, Objective,
-                           Block, Constraint, Suffix, NonNegativeIntegers,
-                           NonNegativeReals, Integers, Binary, is_fixed,
-                           value)
-from pyomo.opt import SolverFactory, TerminationCondition, SolutionStatus
+from pyomo.environ import *
+from pyomo.opt import *
 from pyomo.solvers.plugins.solvers.cplex_direct import (_CplexExpr,
                                                         _LinearConstraintData,
                                                         _VariableData)

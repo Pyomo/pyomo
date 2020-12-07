@@ -27,6 +27,8 @@ benders_example_dir = \
 #
 import pyutilib.th as unittest
 
+import pyomo.opt
+
 def filter_fn(line):
     tmp = line.strip()
     return tmp.startswith('WARNING') and 'CBC' in tmp

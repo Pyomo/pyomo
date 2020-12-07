@@ -17,7 +17,7 @@
 # Test if variables in deactivated blocks are found
 #
 
-from pyomo.environ import ConcreteModel, Var, Block, Objective, Constraint
+from pyomo.environ import *
 
 model = ConcreteModel()
 

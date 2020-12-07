@@ -17,7 +17,7 @@ import sys
 import operator
 import traceback
 
-from pyomo.common.errors import ApplicationError
+import pyutilib.common
 
 from pyomo.opt import SolverManagerFactory
 
@@ -464,7 +464,7 @@ def main(args=None):
       msg = sys.exc_info()[1]
       print("IO ERROR:")
       print(msg)
-   except ApplicationError:
+   except pyutilib.common.ApplicationError:
       msg = sys.exc_info()[1]
       print("APPLICATION ERROR:")
       print(msg)

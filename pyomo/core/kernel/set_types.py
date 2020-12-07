@@ -9,6 +9,11 @@
 #  ___________________________________________________________________________
 
 import logging
+from weakref import ref as weakref_ref
+
+from pyomo.core.expr.numvalue import (native_numeric_types,
+                                        native_integer_types,
+                                        native_boolean_types)
 
 
 logger = logging.getLogger('pyomo.core')

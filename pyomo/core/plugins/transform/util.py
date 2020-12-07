@@ -13,7 +13,7 @@
 # """
 
 from inspect import isroutine
-from pyomo.core import Var, Objective, Constraint, Set, Param
+from pyomo.core import *
 
 
 def collectAbstractComponents(model):

@@ -11,13 +11,13 @@
 __all__ = ['UndefinedData', 'undefined', 'ignore', 'ScalarData', 'ListContainer', 'MapContainer', 'default_print_options', 'ScalarType']
 
 import copy
+import math
 
-from pyutilib.math import infinity
-from pyomo.common.collections import Bunch
+import pyutilib.math
+from pyutilib.misc import Bunch
 import enum
-from six import StringIO
+from six import iterkeys, itervalues, iteritems, advance_iterator, StringIO
 from six.moves import xrange
-
 try:
     unicode
 except NameError:
@@ -106,9 +106,9 @@ class ScalarData(object):
 
         value = self.yaml_fix(self.get_value())
 
-        if value is infinity:
+        if value is pyutilib.math.infinity:
             value = '.inf'
-        elif value is - infinity:
+        elif value is - pyutilib.math.infinity:
             value = '-.inf'
 
         if not option.schema and self.description is None and self.units is None:

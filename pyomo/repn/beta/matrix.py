@@ -18,7 +18,8 @@ from weakref import ref as weakref_ref
 
 from pyomo.core.base.set_types import Any
 from pyomo.core.base import (SortComponents,
-                             Var)
+                             Var,
+                             Constraint)
 from pyomo.core.base.numvalue import (is_fixed,
                                       value,
                                       ZeroConstant)
@@ -510,6 +511,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     def variables(self):
         """A tuple of variables comprising the constraint body."""
         comp = self.parent_component()
+        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         varmap = comp._varmap
@@ -526,6 +528,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     def coefficients(self):
         """A tuple of coefficients associated with the variables."""
         comp = self.parent_component()
+        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         vals = comp._vals
@@ -545,6 +548,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     def constant(self):
         """The constant value associated with the constraint body."""
         comp = self.parent_component()
+        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         vals = comp._vals

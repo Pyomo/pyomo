@@ -12,7 +12,7 @@
 __all__ = ['AsynchronousSolverManager', 'SolverManagerFactory']
 
 from pyomo.common import Factory
-from pyomo.opt.parallel.manager import AsynchronousActionManager
+from pyomo.opt.parallel.manager import *
 
 
 

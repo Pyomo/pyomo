@@ -8,6 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import AbstractModel
+from pyomo.environ import *
 
 model = AbstractModel

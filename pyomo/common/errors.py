@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.common import ApplicationError
-
 
 class PyomoException(Exception):
     """

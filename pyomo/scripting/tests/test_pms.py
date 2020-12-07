@@ -14,17 +14,18 @@ import pickle
 import base64
 import ast
 import os
+import sys
 from os.path import abspath, dirname
 
 from pyutilib.pyro import using_pyro4
 import pyutilib.th as unittest
 import pyutilib.services
-from pyomo.common.collections import Options
+from pyutilib.misc import Options
 import pyomo.opt
-from pyomo.environ import (ConcreteModel, RangeSet, Var,
-                           Objective, Constraint, sum_product)
+from pyomo.environ import *
 import pyomo.scripting.pyro_mip_server
 
+import six
 
 currdir = dirname(abspath(__file__))+os.sep
 

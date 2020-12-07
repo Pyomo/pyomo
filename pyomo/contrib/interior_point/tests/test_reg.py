@@ -1,15 +1,5 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
 import pyutilib.th as unittest
-import pyomo.environ as pyo
+import pyomo.environ as pe
 from pyomo.core.base import ConcreteModel, Var, Constraint, Objective
 from pyomo.common.dependencies import attempt_import
 
@@ -61,7 +51,7 @@ def make_model_2():
     m.x = Var(initialize=0.1, bounds=(0, 1))
     m.y = Var(initialize=0.1, bounds=(0, 1))
     m.obj = Objective(expr=-m.x**2 - m.y**2)
-    m.c = Constraint(expr=m.y <= pyo.exp(-m.x))
+    m.c = Constraint(expr=m.y <= pe.exp(-m.x))
     return m
 
 
@@ -113,7 +103,7 @@ class TestRegularization(unittest.TestCase):
         self.assertEqual(status, InteriorPointStatus.optimal)
         interface.load_primals_into_pyomo_model()
         self.assertAlmostEqual(m.x.value, 1)
-        self.assertAlmostEqual(m.y.value, pyo.exp(-1))
+        self.assertAlmostEqual(m.y.value, pe.exp(-1))
 
     @unittest.skipIf(not mumps_available, 'Mumps is not available')
     def test_mumps_2(self):

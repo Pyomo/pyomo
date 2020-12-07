@@ -20,7 +20,8 @@ currdir = dirname(abspath(__file__))+os.sep
 import platform
 
 import pyutilib.th as unittest
-from pyomo.environ import AbstractModel, ConcreteModel, Set, Param, Var, Constraint, Objective, Reals, NonNegativeReals, sum_product
+from pyomo.environ import *
+import pyomo.core.expr.current as EXPR
 
 
 using_pypy = platform.python_implementation() == "PyPy"

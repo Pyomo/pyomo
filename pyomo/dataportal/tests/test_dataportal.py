@@ -15,12 +15,11 @@ import os
 from os.path import abspath, dirname
 pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."
 
-import pyutilib.misc
+import pyutilib.common
 import pyutilib.th as unittest
 
-from pyomo.common.errors import ApplicationError
 from pyomo.dataportal.factory import DataManagerFactory
-from pyomo.environ import AbstractModel, ConcreteModel, Set, DataPortal, Param, Boolean, Any, value
+from pyomo.environ import *
 
 currdir=dirname(abspath(__file__))+os.sep
 example_dir=pyomo_dir+os.sep+".."+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep+"tab"+os.sep
@@ -66,7 +65,7 @@ class PyomoTableData(unittest.TestCase):
             td.read()
             td.close()
             self.assertEqual( td._info, ['set', 'X', ':=', ('A1', 2.0, 3.0, 4.0), ('A5', 6.0, 7.0, 8.0), ('A9', 10.0, 11.0, 12.0), ('A13', 14.0, 15.0, 16.0)])
-        except ApplicationError:
+        except pyutilib.common.ApplicationError:
             pass
 
     def test_read_param1(self):
@@ -77,7 +76,7 @@ class PyomoTableData(unittest.TestCase):
             td.read()
             td.close()
             self.assertEqual( td._info, ['param', ':', 'bb', 'cc', 'dd', ':=', 'A1', 2.0, 3.0, 4.0, 'A5', 6.0, 7.0, 8.0, 'A9', 10.0, 11.0, 12.0, 'A13', 14.0, 15.0, 16.0])
-        except ApplicationError:
+        except pyutilib.common.ApplicationError:
             pass
 
     def test_read_param2(self):
@@ -88,7 +87,7 @@ class PyomoTableData(unittest.TestCase):
             td.read()
             td.close()
             self.assertEqual( td._info, ['param', ':', 'X', ':', 'bb', 'cc', 'dd', ':=', 'A1', 2.0, 3.0, 4.0, 'A5', 6.0, 7.0, 8.0, 'A9', 10.0, 11.0, 12.0, 'A13', 14.0, 15.0, 16.0])
-        except ApplicationError:
+        except pyutilib.common.ApplicationError:
             pass
 
     def test_read_param3(self):
@@ -99,7 +98,7 @@ class PyomoTableData(unittest.TestCase):
             td.read()
             td.close()
             self.assertEqual( td._info, ['param', ':', 'X', ':', 'a', ':=', 'A1', 2.0, 3.0, 4.0, 'A5', 6.0, 7.0, 8.0, 'A9', 10.0, 11.0, 12.0, 'A13', 14.0, 15.0, 16.0])
-        except ApplicationError:
+        except pyutilib.common.ApplicationError:
             pass
 
     def test_read_param4(self):
@@ -110,7 +109,7 @@ class PyomoTableData(unittest.TestCase):
             td.read()
             td.close()
             self.assertEqual( td._info, ['param', ':', 'X', ':', 'a', 'b', ':=', 'A1', 2.0, 3.0, 4.0, 'A5', 6.0, 7.0, 8.0, 'A9', 10.0, 11.0, 12.0, 'A13', 14.0, 15.0, 16.0])
-        except ApplicationError:
+        except pyutilib.common.ApplicationError:
             pass
 
     def test_read_array1(self):
@@ -121,7 +120,7 @@ class PyomoTableData(unittest.TestCase):
             td.read()
             td.close()
             self.assertEqual( td._info, ['param', 'X', ':', 'bb', 'cc', 'dd', ':=', 'A1', 2.0, 3.0, 4.0, 'A5', 6.0, 7.0, 8.0, 'A9', 10.0, 11.0, 12.0, 'A13', 14.0, 15.0, 16.0])
-        except ApplicationError:
+        except pyutilib.common.ApplicationError:
             pass
 
     def test_read_array2(self):
@@ -132,7 +131,7 @@ class PyomoTableData(unittest.TestCase):
             td.read()
             td.close()
             self.assertEqual( td._info, ['param', 'X', '(tr)',':', 'bb', 'cc', 'dd', ':=', 'A1', 2.0, 3.0, 4.0, 'A5', 6.0, 7.0, 8.0, 'A9', 10.0, 11.0, 12.0, 'A13', 14.0, 15.0, 16.0])
-        except ApplicationError:
+        except pyutilib.common.ApplicationError:
             pass
 
     def test_error1(self):

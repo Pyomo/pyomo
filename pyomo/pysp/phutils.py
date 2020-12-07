@@ -8,7 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import Var, Block, Set, Objective, Constraint, SortComponents, SOSConstraint, Piecewise, BuildAction, Param, Any, Binary
+import sys
+
+from pyomo.core import *
+from pyomo.opt import ProblemFormat
 
 from pyomo.repn.standard_repn import (preprocess_block_objectives,
                                       preprocess_block_constraints,

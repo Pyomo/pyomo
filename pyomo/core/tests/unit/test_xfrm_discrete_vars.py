@@ -12,10 +12,9 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Suffix, Binary, TransformationFactory, SolverFactory, Reals
-from pyomo.opt import check_available_solvers
+from pyomo.environ import *
 
-solvers = check_available_solvers('cplex', 'gurobi', 'glpk')
+solvers = pyomo.opt.check_available_solvers('cplex', 'gurobi', 'glpk')
 
 def _generateModel():
     model = ConcreteModel()

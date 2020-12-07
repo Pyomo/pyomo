@@ -16,7 +16,8 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 from six.moves import xrange
 import pyutilib.th as unittest
-from pyomo.environ import ConcreteModel, AbstractModel, SOSConstraint, Var, Set
+from pyomo.core.base import IntegerSet
+from pyomo.environ import *
 
 
 class TestErrors(unittest.TestCase):

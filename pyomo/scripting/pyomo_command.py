@@ -8,8 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import sys
+import argparse
+
+from pyutilib.misc import Options, Container
+
+from pyomo.common import pyomo_command
 from pyomo.common.dependencies import pympler_available
-from pyomo.common.collections import Options, Container
 import pyomo.scripting.util
 from pyomo.core import ConcreteModel
 
@@ -304,7 +309,7 @@ def run_pyomo(options=Options(), parser=None):
             #      model(=None) results in an a different error related to
             #      task port values.  Not sure how to interpret that.
             pyomo.scripting.util.finalize(data,
-                                          model=ConcreteModel(),
+                                          model=ConcretModel(),
                                           instance=None,
                                           results=None)
             return Container()                                   #pragma:nocover

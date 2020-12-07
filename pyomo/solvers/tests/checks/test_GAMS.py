@@ -9,9 +9,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import ConcreteModel, Var, Objective, Constraint, maximize, Expression, log10
-from pyomo.opt import SolverFactory, TerminationCondition
-
+from pyomo.environ import *
 from pyomo.solvers.plugins.solvers.GAMS import (
     GAMSShell, GAMSDirect, gdxcc_available
 )

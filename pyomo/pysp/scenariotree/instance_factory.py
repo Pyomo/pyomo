@@ -11,6 +11,7 @@
 __all__ = ('ScenarioTreeInstanceFactory',)
 
 import os
+import time
 import posixpath
 import tempfile
 import shutil
@@ -18,7 +19,8 @@ import copy
 import logging
 
 from pyutilib.misc import (ArchiveReaderFactory,
-                           ArchiveReader)
+                           ArchiveReader,
+                           PauseGC)
 
 from pyomo.dataportal import DataPortal
 from pyomo.core import (Block,
@@ -26,8 +28,8 @@ from pyomo.core import (Block,
                         AbstractModel)
 from pyomo.core.base.block import _BlockData
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
-from pyomo.common.gc_manager import PauseGC
 from pyomo.common.plugin import ExtensionPoint
+from pyomo.pysp.phutils import _OLD_OUTPUT
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.tree_structure_model import \
     (CreateAbstractScenarioTreeModel,

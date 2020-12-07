@@ -17,13 +17,23 @@ import time
 import six
 import sys
 import subprocess
+import traceback
 import inspect
 import argparse
+# for profiling
+try:
+    import cProfile as profile
+except ImportError:
+    import profile
+try:
+    import pstats
+    pstats_available=True
+except ImportError:
+    pstats_available=False
 
-from pyutilib.misc import import_file
+from pyutilib.misc import PauseGC, import_file
 from pyutilib.services import TempfileManager
-from pyomo.common.errors import ApplicationError
-from pyomo.common.gc_manager import PauseGC
+import pyutilib.common
 from pyomo.opt.base import ConverterError
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.plugin import (ExtensionPoint,
@@ -297,20 +307,7 @@ def launch_command(command,
 
         rc = 0
 
-        if profile_count > 0:
-            # Defer import of profiling packages until we know that they
-            # are needed
-            try:
-                try:
-                    import cProfile as profile
-                except ImportError:
-                    import profile
-                import pstats
-            except ImportError:
-                configure_loggers(shutdown=True)
-                raise ValueError(
-                    "Cannot use the 'profile' option: the Python "
-                    "'profile' or 'pstats' package cannot be imported!")
+        if pstats_available and (profile_count > 0):
             #
             # Call the main routine with profiling.
             #
@@ -375,7 +372,7 @@ def launch_command(command,
                         sys.stderr.write(error_label+"CONVERTER ERROR:\n")
                         sys.stderr.write(str(sys.exc_info()[1])+"\n")
                         raise
-                    except ApplicationError:
+                    except pyutilib.common.ApplicationError:
                         sys.stderr.write(error_label+"APPLICATION ERROR:\n")
                         sys.stderr.write(str(sys.exc_info()[1])+"\n")
                         raise

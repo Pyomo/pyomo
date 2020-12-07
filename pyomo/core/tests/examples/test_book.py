@@ -22,6 +22,7 @@ import sys
 
 os.chdir(test_dir)
 sys.path.append(test_dir)
+#from test_book_examples import *
 
 if __name__ == "__main__":
     unittest.main()

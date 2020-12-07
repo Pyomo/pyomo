@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import Interface
+from pyomo.common.plugin import *
 
 
 class IModelChecker(Interface):

@@ -9,20 +9,22 @@
 #  ___________________________________________________________________________
 
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.PyomoModel import ConcreteModel
+from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.base.objective import Objective
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.suffix import import_suffix_generator
+from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import native_numeric_types
+import pyutilib.misc
+import pyutilib.common
+import time
+import logging
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
 
-from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options
-
-import time
-import logging
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -448,7 +450,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         orig_options = self.options
 
-        self.options = Options()
+        self.options = pyutilib.misc.Options()
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
         self.options.update(self._options_string_to_dict(kwds.pop('options_string', '')))
@@ -483,7 +485,7 @@ class PersistentSolver(DirectOrPersistentSolver):
                         "See the solver log above for diagnostic information.")
                 elif hasattr(_status, 'log') and _status.log:
                     logger.error("Solver log:\n" + str(_status.log))
-                raise ApplicationError(
+                raise pyutilib.common.ApplicationError(
                     "Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
             if self._report_timing:
