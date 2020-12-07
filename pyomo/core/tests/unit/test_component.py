@@ -96,7 +96,7 @@ class TestComponent(unittest.TestCase):
         self.assertEqual(correct_s, stream.getvalue())
 
 
-class TestComponentUID(unittest.TestCase):
+class _TestComponentUID(unittest.TestCase):
 
     def setUp(self):
         self.m = ConcreteModel()

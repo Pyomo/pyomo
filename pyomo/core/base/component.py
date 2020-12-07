@@ -1013,7 +1013,7 @@ class ActiveComponentData(ComponentData):
         """Set the active attribute to False"""
         self._active = False
 
-class ComponentUID(object):
+class _ComponentUID(object):
     """
     This class provides a system to generate "component unique
     identifiers".  Any component in a model can be described by a CUID,
