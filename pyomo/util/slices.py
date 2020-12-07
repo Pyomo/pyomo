@@ -17,14 +17,15 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 
 def _to_iterable(source):
     iterable_scalars = six.string_types + (six.binary_type, six.text_type)
-    if isinstance(source, iterable_scalars):
-        yield source
-    elif hasattr(source, '__iter__'):
-        for obj in source:
-            yield obj
+    if hasattr(source, '__iter__'):
+        if isinstance(source, iterable_scalars):
+            yield source
+        else:
+            for obj in source:
+                yield obj
     else:
         yield source
-    
+
 def get_component_call_stack(comp, context=None):
     """Get the call stack necessary to locate a `Component`
 
