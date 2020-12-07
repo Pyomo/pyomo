@@ -11,6 +11,7 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 import logging
+from pyomo.contrib.mindtpy.util import set_solver_options
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_master,
@@ -413,13 +414,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             masteropt._solver_model.set_log_stream(None)
             masteropt._solver_model.set_error_stream(None)
         mip_args = dict(config.mip_solver_args)
-        elapsed = get_main_elapsed_time(solve_data.timing)
-        remaining = int(max(config.time_limit - elapsed, 1))
-        if config.mip_solver == 'gams':
-            mip_args['add_options'] = mip_args.get('add_options', [])
-            mip_args['add_options'].append('option optcr=0.001;')
-        if config.threads > 0:
-            masteropt.options['threads'] = config.threads
+        set_solver_options(masteropt, solve_data, config, type='mip')
         master_mip_results = masteropt.solve(
             solve_data.mip, tee=config.mip_solver_tee, **mip_args)
         if solve_data.objective_sense == minimize:

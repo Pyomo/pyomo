@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWa
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options
 from pyomo.contrib.mindtpy.tabu_list import IncumbentCallback_cplex
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -85,9 +85,6 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
         masteropt._solver_model.set_warning_stream(None)
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
-        masteropt.options['timelimit'] = config.time_limit
-    if config.threads > 0:
-        masteropt.options['threads'] = config.threads
     if config.use_tabu_list:
         tabulist = masteropt._solver_model.register_callback(
             IncumbentCallback_cplex)
@@ -101,15 +98,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
     mip_args = dict(config.mip_solver_args)
-    elapsed = get_main_elapsed_time(solve_data.timing)
-    remaining = int(max(config.time_limit - elapsed, 1))
-    if config.mip_solver == 'gams':
-        mip_args['add_options'] = mip_args.get('add_options', [])
-        mip_args['add_options'].append('option optcr=0.001;')
-        mip_args['add_options'].append('option reslim=%s;' % remaining)
-        mip_args['warmstart'] = True
-    # elif config.mip_solver == 'glpk':
-    #     masteropt.options['timelimit'] = remaining
+    set_solver_options(masteropt, solve_data, config, type='mip')
     try:
         with time_code(solve_data.timing, 'master'):
             master_mip_results = masteropt.solve(
@@ -351,11 +340,12 @@ def handle_master_unbounded(master_mip, solve_data, config):
         'You can change this bound with the option obj_bound.'.format(config.obj_bound))
     MindtPy.objective_bound = Constraint(
         expr=(-config.obj_bound, MindtPy.mip_obj.expr, config.obj_bound))
+    masteropt = SolverFactory(config.mip_solver)
+    set_solver_options(masteropt, solve_data, config, type='mip')
+    if isinstance(masteropt, PersistentSolver):
+        masteropt.set_instance(master_mip)
     with SuppressInfeasibleWarning():
-        opt = SolverFactory(config.mip_solver)
-        if isinstance(opt, PersistentSolver):
-            opt.set_instance(master_mip)
-        master_mip_results = opt.solve(
+        master_mip_results = masteropt.solve(
             master_mip, tee=config.mip_solver_tee, **config.mip_solver_args)
 
 

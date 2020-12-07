@@ -14,7 +14,7 @@ from pyomo.opt import SolverFactory, SolutionStatus, SolverResults, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, get_main_elapsed_time, copy_var_list_values
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_subproblem_optimal
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function
+from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_solver_options
 from pyomo.contrib.mindtpy.mip_solve import solve_master
 from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
 
@@ -101,11 +101,7 @@ def solve_fp_subproblem(solve_data, config):
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
-    elapsed = get_main_elapsed_time(solve_data.timing)
-    remaining = int(max(config.time_limit - elapsed, 1))
-    if config.nlp_solver == 'gams':
-        nlp_args['add_options'] = nlp_args.get('add_options', [])
-        nlp_args['add_options'].append('option reslim=%s;' % remaining)
+    set_solver_options(nlpopt, solve_data, config, type='nlp')
     with SuppressInfeasibleWarning():
         results = nlpopt.solve(
             fp_nlp, tee=config.nlp_solver_tee, **nlp_args)

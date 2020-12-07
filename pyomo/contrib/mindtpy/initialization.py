@@ -14,7 +14,7 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
                                        copy_var_list_values, get_main_elapsed_time)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
-from pyomo.contrib.mindtpy.util import calc_jacobians, var_bound_add
+from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, var_bound_add
 from pyomo.core import (ConstraintList, Objective,
                         TransformationFactory, maximize, minimize,
                         value, Var)
@@ -132,14 +132,10 @@ def init_rNLP(solve_data, config):
     MindtPy = m.MindtPy_utils
     TransformationFactory('core.relax_integer_vars').apply_to(m)
     nlp_args = dict(config.nlp_solver_args)
-    elapsed = get_main_elapsed_time(solve_data.timing)
-    remaining = int(max(config.time_limit - elapsed, 1))
-    if config.nlp_solver == 'gams':
-        nlp_args['add_options'] = nlp_args.get('add_options', [])
-        nlp_args['add_options'].append('option reslim=%s;' % remaining)
+    nlpopt = SolverFactory(config.nlp_solver)
+    set_solver_options(nlpopt, solve_data, config, type='nlp')
     with SuppressInfeasibleWarning():
-        results = SolverFactory(config.nlp_solver).solve(
-            m, tee=config.nlp_solver_tee, **nlp_args)
+        results = nlpopt.solve(m, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
         if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
@@ -230,16 +226,12 @@ def init_max_binaries(solve_data, config):
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
-    opt = SolverFactory(config.mip_solver)
-    if isinstance(opt, PersistentSolver):
-        opt.set_instance(m)
+    mipopt = SolverFactory(config.mip_solver)
+    if isinstance(mipopt, PersistentSolver):
+        mipopt.set_instance(m)
     mip_args = dict(config.mip_solver_args)
-    elapsed = get_main_elapsed_time(solve_data.timing)
-    remaining = int(max(config.time_limit - elapsed, 1))
-    if config.mip_solver == 'gams':
-        mip_args['add_options'] = mip_args.get('add_options', [])
-        mip_args['add_options'].append('option optcr=0.001;')
-    results = opt.solve(m, tee=config.mip_solver_tee, **mip_args)
+    set_solver_options(mipopt, solve_data, config, type='mip')
+    results = mipopt.solve(m, tee=config.mip_solver_tee, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:

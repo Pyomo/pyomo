@@ -10,7 +10,6 @@
 
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
-
 import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.core import (Block, Constraint,
@@ -20,7 +19,7 @@ from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.gdpopt.util import copy_var_list_values
+from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time
 import numpy as np
 
 logger = logging.getLogger('pyomo.contrib')
@@ -68,7 +67,9 @@ def model_is_valid(solve_data, config):
             config.logger.info(
                 'Your model is an NLP (nonlinear program). '
                 'Using NLP solver %s to solve.' % config.nlp_solver)
-            SolverFactory(config.nlp_solver).solve(
+            nlpopt = SolverFactory(config.nlp_solver)
+            set_solver_options(nlpopt, solve_data, config, type='nlp')
+            nlpopt.solve(
                 solve_data.original_model, tee=config.nlp_solver_tee, **config.nlp_solver_args)
             return False
         else:
@@ -78,8 +79,7 @@ def model_is_valid(solve_data, config):
             masteropt = SolverFactory(config.mip_solver)
             if isinstance(masteropt, PersistentSolver):
                 masteropt.set_instance(solve_data.original_model)
-            if config.threads > 0:
-                masteropt.options['threads'] = config.threads
+            set_solver_options(masteropt, solve_data, config, type='mip')
             masteropt.solve(solve_data.original_model,
                             tee=config.mip_solver_tee, **config.mip_solver_args)
             return False
@@ -399,3 +399,37 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
             for v_model, v_setpoint in zip(model_vars, setpoint_vars))
     norm_constraint_blk.sum_slack = Constraint(
         expr=sum(norm_constraint_blk.L1_slack_var[idx] for idx in norm_constraint_blk.L1_slack_idx) <= rhs)
+
+
+def set_solver_options(opt, solve_data, config, type):
+    # TODO: integrate nlp_args here
+    # nlp_args = dict(config.nlp_solver_args)
+    elapsed = get_main_elapsed_time(solve_data.timing)
+    remaining = int(max(config.time_limit - elapsed, 1))
+    if type == 'mip':
+        solver_name = config.mip_solver
+        if config.threads > 0:
+            opt.options['threads'] = config.threads
+    elif type == 'nlp':
+        solver_name = config.nlp_solver
+    # TODO: opt.name doesn't work for GAMS
+    if solver_name in {'cplex', 'gurobi', 'gurobi_persistent'}:
+        opt.options['timelimit'] = remaining
+        opt.options['mipgap'] = 0.001
+    elif solver_name == 'cplex_persistent':
+        opt.options['timelimit'] = remaining
+        opt._solver_model.parameters.mip.tolerances.mipgap.set(0.001)
+    elif solver_name == 'glpk':
+        opt.options['tmlim'] = remaining
+        # opt.options['mipgap'] = 0.001
+    elif solver_name == 'baron':
+        opt.options['MaxTime'] = remaining
+    elif solver_name == 'ipopt':
+        opt.options['max_cpu_time'] = remaining
+    elif solver_name == 'gams':
+        if type == 'mip':
+            opt.options['add_options'] = ['option optcr=0.001;',
+                                          ('option reslim=%s;', remaining)]
+            opt['warmstart'] = True
+        elif type == 'nlp':
+            opt.options['add_options'] = [('option reslim=%s;', remaining)]

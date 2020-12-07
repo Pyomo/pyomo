@@ -14,7 +14,7 @@ import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_no_good_cuts, add_affine_cuts)
-from pyomo.contrib.mindtpy.util import add_feas_slacks
+from pyomo.contrib.mindtpy.util import add_feas_slacks, set_solver_options
 from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 from pyomo.core import (Constraint, Objective,
                         TransformationFactory, minimize, value)
@@ -105,12 +105,7 @@ def solve_subproblem(solve_data, config):
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
-    elapsed = get_main_elapsed_time(solve_data.timing)
-    remaining = int(max(config.time_limit - elapsed, 1))
-    if config.nlp_solver == 'gams':
-        nlp_args['add_options'] = nlp_args.get('add_options', [])
-        nlp_args['add_options'].append('option reslim=%s;' % remaining)
-        nlp_args['warmstart'] = True
+    set_solver_options(nlpopt, solve_data, config, type='nlp')
     with SuppressInfeasibleWarning():
         with time_code(solve_data.timing, 'fixed subproblem'):
             results = nlpopt.solve(
@@ -351,16 +346,11 @@ def solve_feasibility_subproblem(solve_data, config):
             expr=MindtPy.feas_opt.slack_var,
             sense=minimize)
     TransformationFactory('core.fix_integer_vars').apply_to(feas_subproblem)
+    nlpopt = SolverFactory(config.nlp_solver)
+    nlp_args = dict(config.nlp_solver_args)
+    set_solver_options(nlpopt, solve_data, config, type='nlp')
     with SuppressInfeasibleWarning():
         try:
-            nlpopt = SolverFactory(config.nlp_solver)
-            nlp_args = dict(config.nlp_solver_args)
-            elapsed = get_main_elapsed_time(solve_data.timing)
-            remaining = int(max(config.time_limit - elapsed, 1))
-            if config.nlp_solver == 'gams':
-                nlp_args['add_options'] = nlp_args.get('add_options', [])
-                nlp_args['add_options'].append('option reslim=%s;' % remaining)
-                nlp_args['warmstart'] = True
             with time_code(solve_data.timing, 'feasibility subproblem'):
                 feas_soln = nlpopt.solve(
                     feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)
