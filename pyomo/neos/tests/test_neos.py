@@ -12,7 +12,7 @@
 #
 
 import os
-from os.path import abspath, dirname, join
+from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))
 
 import pyutilib.th as unittest
@@ -23,8 +23,6 @@ from pyomo.scripting.util import cleanup
 from pyomo.neos.kestrel import kestrelAMPL
 
 import pyomo.environ as pyo
-
-from six import iteritems
 
 neos_available = False
 try:

@@ -17,7 +17,7 @@ from weakref import ref as weakref_ref
 
 import pyutilib.math
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base import Constraint
+from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types

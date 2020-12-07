@@ -14,12 +14,11 @@ from pyomo.network import Port, Arc
 from pyomo.network.foqus_graph import FOQUSGraph
 from pyomo.core import Constraint, value, Objective, Var, ConcreteModel, \
     Binary, minimize, Expression
-from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.collections import ComponentSet, ComponentMap, Options
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
-from pyutilib.misc import Options
-import copy, logging, time
-from six import iteritems, itervalues
+import logging, time
+from six import iteritems
 
 from pyomo.common.dependencies import (
     networkx as nx, networkx_available,

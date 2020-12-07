@@ -15,7 +15,6 @@ from .block_vector import NotFullyDefinedBlockVectorError
 from .block_vector import assert_block_structure as block_vector_assert_block_structure
 from mpi4py import MPI
 import numpy as np
-import copy as cp
 import operator
 
 __all__ = ['MPIBlockVector']

@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Component', 'ComponentUID', 'name']
-
 import logging
 import six
 import sys
@@ -21,12 +19,16 @@ from weakref import ref as weakref_ref
 from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
-from pyomo.common import deprecated
+from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 
 logger = logging.getLogger('pyomo.core')
+
+relocated_module_attribute(
+    'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
+    version='TBD')
 
 def _name_index_generator(idx):
     """
@@ -1010,7 +1012,6 @@ class ActiveComponentData(ComponentData):
     def deactivate(self):
         """Set the active attribute to False"""
         self._active = False
-
 
 class ComponentUID(object):
     """

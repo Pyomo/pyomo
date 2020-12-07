@@ -1,19 +1,36 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Iteration loop for MindtPy."""
 from __future__ import division
-
-from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts, add_ecp_cuts)
+import logging
+from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_OA_master,
-                                             handle_master_mip_optimal, handle_master_mip_infeasible, handle_master_mip_other_conditions)
+                                             handle_master_mip_optimal,
+                                             handle_master_mip_other_conditions,
+                                             handle_master_mip_infeasible)
+
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
+                                             handle_NLP_subproblem_optimal,
+                                             handle_NLP_subproblem_infeasible,
                                              handle_NLP_subproblem_other_termination)
+
 from pyomo.core import minimize, Objective, Var
 from pyomo.opt.results import ProblemSense
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time, indent
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
+
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def MindtPy_iteration_loop(solve_data, config):

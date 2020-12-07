@@ -16,9 +16,9 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-from six import itervalues, StringIO
+from six import itervalues, StringIO, iterkeys, iteritems
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Block, Var, Set, RangeSet, Param, value
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set import SetProduct, UnorderedSetOf
 from pyomo.core.base.indexed_component import (

@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from weakref import ref as weakref_ref
-from six import iteritems, iterkeys
+from six import iteritems
 
 class SymbolMap(object):
     """

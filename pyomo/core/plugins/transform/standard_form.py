@@ -8,16 +8,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+from pyomo.core import TransformationFactory
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.core.plugins.transform.nonnegative_transform import *
-from pyomo.core.plugins.transform.equality_transform import *
+from pyomo.core.plugins.transform.nonnegative_transform import NonNegativeTransformation
+from pyomo.core.plugins.transform.equality_transform import EqualityTransform
 
 
 @TransformationFactory.register("core.standard_form", doc="Create an equivalent LP model in standard form.")
 class StandardForm(IsomorphicTransformation):
     """
-    Produces a standard-form representation of the model. This form has 
+    Produces a standard-form representation of the model. This form has
     the coefficient matrix (A), the cost vector (c), and the
     constraint vector (b), where the 'standard form' problem is
 

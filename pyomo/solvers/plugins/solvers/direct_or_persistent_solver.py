@@ -13,12 +13,13 @@ from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-import pyutilib.common
+import pyutilib.services
 import pyomo.common
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import ComponentMap, ComponentSet, Options
 import pyomo.opt.base.solvers
 from pyomo.opt.base.formats import ResultsFormat
-from pyutilib.misc import Options
+
 
 class DirectOrPersistentSolver(OptSolver):
     """
@@ -294,7 +295,7 @@ class DirectOrPersistentSolver(OptSolver):
             return self._python_api_exists
         else:
             if self._python_api_exists is False:
-                raise pyutilib.common.ApplicationError(("No Python bindings available for {0} solver " +
+                raise ApplicationError(("No Python bindings available for {0} solver " +
                                                         "plugin").format(type(self)))
             else:
                 return True

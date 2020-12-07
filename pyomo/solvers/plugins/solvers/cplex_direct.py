@@ -12,10 +12,10 @@ import logging
 import re
 import six
 import sys
-import pyomo.common
-from pyutilib.misc import Bunch
+
 from pyutilib.services import TempfileManager
-from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
+from pyomo.core.base import Suffix, Var, Constraint, SOSConstraint, Objective
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
@@ -158,7 +158,7 @@ class CPLEXDirect(DirectSolver):
     def _apply_solver(self):
         if not self._save_results:
             for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
-                for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=False, active=True, sort=False):
+                for var in block.component_data_objects(ctype=Var, descend_into=False, active=True, sort=False):
                     var.stale = True
         # In recent versions of CPLEX it is helpful to manually open the
         # log file and then explicitly close it after CPLEX is finished.
@@ -370,7 +370,7 @@ class CPLEXDirect(DirectSolver):
     def _add_block(self, block):
         var_data = _VariableData(self._solver_model)
         for var in block.component_data_objects(
-            ctype=pyomo.core.base.var.Var, descend_into=True, active=True, sort=True
+            ctype=Var, descend_into=True, active=True, sort=True
         ):
             self._add_var(var, var_data)
         var_data.store_in_cplex()
@@ -378,7 +378,7 @@ class CPLEXDirect(DirectSolver):
         lin_con_data = _LinearConstraintData(self._solver_model)
         for sub_block in block.block_data_objects(descend_into=True, active=True):
             for con in sub_block.component_data_objects(
-                ctype=pyomo.core.base.constraint.Constraint,
+                ctype=Constraint,
                 descend_into=False,
                 active=True,
                 sort=True,
@@ -390,7 +390,7 @@ class CPLEXDirect(DirectSolver):
                 self._add_constraint(con, lin_con_data)
 
             for con in sub_block.component_data_objects(
-                ctype=pyomo.core.base.sos.SOSConstraint,
+                ctype=SOSConstraint,
                 descend_into=False,
                 active=True,
                 sort=True,
@@ -399,7 +399,7 @@ class CPLEXDirect(DirectSolver):
 
             obj_counter = 0
             for obj in sub_block.component_data_objects(
-                ctype=pyomo.core.base.objective.Objective,
+                ctype=Objective,
                 descend_into=False,
                 active=True,
             ):

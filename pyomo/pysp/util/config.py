@@ -20,10 +20,10 @@ import copy
 import logging
 import textwrap
 
-import pyutilib.misc.config
-from pyutilib.misc.config import (ConfigValue,
+from pyomo.common.config import (ConfigValue,
                                   ConfigBlock)
 from pyomo.core.base import maximize, minimize
+import argparse
 
 import six
 
@@ -2004,565 +2004,564 @@ _map_to_deprecated = {}
 _deprecated_block = \
     PySPConfigBlock("A collection of common deprecated PySP command-line options")
 _deprecated_options_group_title = "Deprecated Options"
-if pyutilib.misc.config.argparse_is_available:
 
-    #
-    # --model-directory
-    #
-    class _DeprecatedModelDirectory(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedModelDirectory, self).\
-                __init__(option_strings, dest, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--model-directory' command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use --model-location instead.")
-            setattr(namespace, 'CONFIGBLOCK.model_location', values)
+#
+# --model-directory
+#
+class _DeprecatedModelDirectory(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedModelDirectory, self).\
+            __init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--model-directory' command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use --model-location instead.")
+        setattr(namespace, 'CONFIGBLOCK.model_location', values)
 
-    def _warn_model_directory(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'model_directory' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'model_location'. "
-            "Please use 'model_location' instead.\n")
-        return _domain_must_be_str(val)
+def _warn_model_directory(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'model_directory' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'model_location'. "
+        "Please use 'model_location' instead.\n")
+    return _domain_must_be_str(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "model_directory",
-        PySPConfigValue(
-            None,
-            domain=_warn_model_directory,
-            description=(
-                "Deprecated alias for --model-location"
-            ),
-            doc=None,
-            visibility=1),
-        ap_args=("--model-directory",),
-        ap_kwds={'action':_DeprecatedModelDirectory},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['model_location'] = \
-        _deprecated_block.get('model_directory')
+safe_declare_unique_option(
+    _deprecated_block,
+    "model_directory",
+    PySPConfigValue(
+        None,
+        domain=_warn_model_directory,
+        description=(
+            "Deprecated alias for --model-location"
+        ),
+        doc=None,
+        visibility=1),
+    ap_args=("--model-directory",),
+    ap_kwds={'action':_DeprecatedModelDirectory},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['model_location'] = \
+    _deprecated_block.get('model_directory')
 
-    #
-    # -i, --instance-directory
-    #
-    class _DeprecatedInstanceDirectory(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedInstanceDirectory, self).\
-                __init__(option_strings, dest, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
+#
+# -i, --instance-directory
+#
+class _DeprecatedInstanceDirectory(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedInstanceDirectory, self).\
+            __init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
 #            logger.warning(
 #                "DEPRECATED: The '--instance-directory' ('-i') command-line "
 #                "option has been deprecated and will be removed "
 #                "in the future. Please use '--scenario-tree-location' ('-s') instead.")
-            setattr(namespace, 'CONFIGBLOCK.scenario_tree_location', values)
+        setattr(namespace, 'CONFIGBLOCK.scenario_tree_location', values)
 
-    def _warn_instance_directory(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'instance_directory' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'scenario_tree_location'. "
-            "Please use 'scenario_tree_location' instead.\n")
-        return _domain_must_be_str(val)
+def _warn_instance_directory(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'instance_directory' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'scenario_tree_location'. "
+        "Please use 'scenario_tree_location' instead.\n")
+    return _domain_must_be_str(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "instance_directory",
-        PySPConfigValue(
-            None,
-            domain=_warn_instance_directory,
-            description=(
-                "Deprecated alias for --scenario-tree-location, -s"
-            ),
-            doc=None,
-            visibility=1),
-        ap_args=("-i", "--instance-directory"),
-        ap_kwds={'action':_DeprecatedInstanceDirectory},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['scenario_tree_location'] = \
-        _deprecated_block.get('instance_directory')
+safe_declare_unique_option(
+    _deprecated_block,
+    "instance_directory",
+    PySPConfigValue(
+        None,
+        domain=_warn_instance_directory,
+        description=(
+            "Deprecated alias for --scenario-tree-location, -s"
+        ),
+        doc=None,
+        visibility=1),
+    ap_args=("-i", "--instance-directory"),
+    ap_kwds={'action':_DeprecatedInstanceDirectory},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['scenario_tree_location'] = \
+    _deprecated_block.get('instance_directory')
 
-    #
-    # --handshake-with-phpyro
-    #
+#
+# --handshake-with-phpyro
+#
 
-    class _DeprecatedHandshakeWithPHPyro(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedHandshakeWithPHPyro, self).\
-                __init__(option_strings, dest, nargs=0, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--handshake-with-phpyro command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--pyro-handshake-at-startup instead.")
-            setattr(namespace, 'CONFIGBLOCK.pyro_handshake_at_startup', True)
+class _DeprecatedHandshakeWithPHPyro(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedHandshakeWithPHPyro, self).\
+            __init__(option_strings, dest, nargs=0, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--handshake-with-phpyro command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--pyro-handshake-at-startup instead.")
+        setattr(namespace, 'CONFIGBLOCK.pyro_handshake_at_startup', True)
 
-    def _warn_handshake_with_phpyro(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'handshake_with_phpyro' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'pyro_handshake_at_startup'. "
-            "Please use 'pyro_handshake_at_startup' instead.\n")
-        return bool(val)
+def _warn_handshake_with_phpyro(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'handshake_with_phpyro' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'pyro_handshake_at_startup'. "
+        "Please use 'pyro_handshake_at_startup' instead.\n")
+    return bool(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "handshake_with_phpyro",
-        PySPConfigValue(
-            None,
-            domain=_warn_handshake_with_phpyro,
-            description=(
-                "Deprecated alias for --pyro-handshake-at-startup"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedHandshakeWithPHPyro},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['pyro_handshake_at_startup'] = \
-        _deprecated_block.get('handshake_with_phpyro')
+safe_declare_unique_option(
+    _deprecated_block,
+    "handshake_with_phpyro",
+    PySPConfigValue(
+        None,
+        domain=_warn_handshake_with_phpyro,
+        description=(
+            "Deprecated alias for --pyro-handshake-at-startup"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedHandshakeWithPHPyro},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['pyro_handshake_at_startup'] = \
+    _deprecated_block.get('handshake_with_phpyro')
 
-    #
-    # --phpyro-required-workers
-    #
+#
+# --phpyro-required-workers
+#
 
-    class _DeprecatedPHPyroRequiredWorkers(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedPHPyroRequiredWorkers, self).\
-                __init__(option_strings, dest, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--phpyro-required-workers command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--pyro-required-scenariotreeservers instead.")
-            setattr(namespace, 'CONFIGBLOCK.pyro_required_scenariotreeservers', values)
+class _DeprecatedPHPyroRequiredWorkers(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedPHPyroRequiredWorkers, self).\
+            __init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--phpyro-required-workers command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--pyro-required-scenariotreeservers instead.")
+        setattr(namespace, 'CONFIGBLOCK.pyro_required_scenariotreeservers', values)
 
-    def _warn_phpyro_required_workers(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'phpyro_required_workers' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'pyro_required_scenariotreeservers'. "
-            "Please use 'pyro_required_scenariotreeservers' instead.\n")
-        return _domain_nonnegative_integer(val)
+def _warn_phpyro_required_workers(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'phpyro_required_workers' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'pyro_required_scenariotreeservers'. "
+        "Please use 'pyro_required_scenariotreeservers' instead.\n")
+    return _domain_nonnegative_integer(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "phpyro_required_workers",
-        PySPConfigValue(
-            None,
-            domain=_warn_phpyro_required_workers,
-            description=(
-                "Deprecated alias for --pyro-required-scenariotreeservers"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedPHPyroRequiredWorkers},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['pyro_required_scenariotreeservers'] = \
-        _deprecated_block.get('phpyro_required_workers')
+safe_declare_unique_option(
+    _deprecated_block,
+    "phpyro_required_workers",
+    PySPConfigValue(
+        None,
+        domain=_warn_phpyro_required_workers,
+        description=(
+            "Deprecated alias for --pyro-required-scenariotreeservers"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedPHPyroRequiredWorkers},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['pyro_required_scenariotreeservers'] = \
+    _deprecated_block.get('phpyro_required_workers')
 
-    #
-    # --phpyro-workers-timeout
-    #
+#
+# --phpyro-workers-timeout
+#
 
-    class _DeprecatedPHPyroWorkersTimeout(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedPHPyroWorkersTimeout, self).\
-                __init__(option_strings, dest, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--phpyro-workers-timeout command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--pyro-find-scenariotreeservers-timeout instead.")
-            setattr(namespace, 'CONFIGBLOCK.pyro_find_scenariotreeservers_timeout', values)
+class _DeprecatedPHPyroWorkersTimeout(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedPHPyroWorkersTimeout, self).\
+            __init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--phpyro-workers-timeout command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--pyro-find-scenariotreeservers-timeout instead.")
+        setattr(namespace, 'CONFIGBLOCK.pyro_find_scenariotreeservers_timeout', values)
 
-    def _warn_phpyro_workers_timeout(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'phpyro_workers_timeout' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'pyro_find_scenariotreeservers_timeout'. "
-            "Please use 'pyro_find_scenariotreeservers_timeout' instead.\n")
-        return float(val)
+def _warn_phpyro_workers_timeout(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'phpyro_workers_timeout' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'pyro_find_scenariotreeservers_timeout'. "
+        "Please use 'pyro_find_scenariotreeservers_timeout' instead.\n")
+    return float(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "phpyro_workers_timeout",
-        PySPConfigValue(
-            None,
-            domain=_warn_phpyro_workers_timeout,
-            description=(
-                "Deprecated alias for --pyro-find-scenariotreeservers-timeout"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedPHPyroWorkersTimeout},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['pyro_find_scenariotreeservers_timeout'] = \
-        _deprecated_block.get('phpyro_workers_timeout')
+safe_declare_unique_option(
+    _deprecated_block,
+    "phpyro_workers_timeout",
+    PySPConfigValue(
+        None,
+        domain=_warn_phpyro_workers_timeout,
+        description=(
+            "Deprecated alias for --pyro-find-scenariotreeservers-timeout"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedPHPyroWorkersTimeout},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['pyro_find_scenariotreeservers_timeout'] = \
+    _deprecated_block.get('phpyro_workers_timeout')
 
-    #
-    # --phpyro-transmit-leaf-stage-variable-solutions
-    #
+#
+# --phpyro-transmit-leaf-stage-variable-solutions
+#
 
-    class _DeprecatedPHPyroTransmitLeafStageVariableSolutions(
-            pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedPHPyroTransmitLeafStageVariableSolutions, self).\
-                __init__(option_strings, dest, nargs=0, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--phpyro-transmit-leaf-stage-variable-solutions "
-                "command-line option has been deprecated and will be removed "
-                "in the future. Please use "
-                "'--pyro-transmit-leaf-stage-variable-solutions instead.")
-            setattr(namespace,
-                    'CONFIGBLOCK.pyro_transmit_leaf_stage_variable_solutions',
-                    True)
+class _DeprecatedPHPyroTransmitLeafStageVariableSolutions(
+        argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedPHPyroTransmitLeafStageVariableSolutions, self).\
+            __init__(option_strings, dest, nargs=0, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--phpyro-transmit-leaf-stage-variable-solutions "
+            "command-line option has been deprecated and will be removed "
+            "in the future. Please use "
+            "'--pyro-transmit-leaf-stage-variable-solutions instead.")
+        setattr(namespace,
+                'CONFIGBLOCK.pyro_transmit_leaf_stage_variable_solutions',
+                True)
 
-    def _warn_phpyro_transmit_leaf_stage_variable_solutions(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'phpyro_transmit_leaf_stage_variable_solutions' config "
-            "item will be ignored unless it is being used as a command-line option "
-            "where it can be redirected to "
-            "'pyro_transmit_leaf_stage_variable_solutions'. Please use "
-            "'pyro_transmit_leaf_stage_variable_solutions' instead.\n")
-        return bool(val)
+def _warn_phpyro_transmit_leaf_stage_variable_solutions(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'phpyro_transmit_leaf_stage_variable_solutions' config "
+        "item will be ignored unless it is being used as a command-line option "
+        "where it can be redirected to "
+        "'pyro_transmit_leaf_stage_variable_solutions'. Please use "
+        "'pyro_transmit_leaf_stage_variable_solutions' instead.\n")
+    return bool(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "phpyro_transmit_leaf_stage_variable_solutions",
-        PySPConfigValue(
-            None,
-            domain=_warn_phpyro_transmit_leaf_stage_variable_solutions,
-            description=(
-                "Deprecated alias for --pyro-transmit-leaf-stage-variable-solutions"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedPHPyroTransmitLeafStageVariableSolutions},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['pyro_transmit_leaf_stage_variable_solutions'] = \
-        _deprecated_block.get('phpyro_transmit_leaf_stage_variable_solutions')
+safe_declare_unique_option(
+    _deprecated_block,
+    "phpyro_transmit_leaf_stage_variable_solutions",
+    PySPConfigValue(
+        None,
+        domain=_warn_phpyro_transmit_leaf_stage_variable_solutions,
+        description=(
+            "Deprecated alias for --pyro-transmit-leaf-stage-variable-solutions"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedPHPyroTransmitLeafStageVariableSolutions},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['pyro_transmit_leaf_stage_variable_solutions'] = \
+    _deprecated_block.get('phpyro_transmit_leaf_stage_variable_solutions')
 
-    #
-    # --scenario-tree-seed
-    #
+#
+# --scenario-tree-seed
+#
 
-    class _DeprecatedScenarioTreeSeed(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedScenarioTreeSeed, self).\
-                __init__(option_strings, dest, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--scenario-tree-seed command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--scenario-tree-random-seed instead.")
-            setattr(namespace, 'CONFIGBLOCK.scenario_tree_random_seed', values)
+class _DeprecatedScenarioTreeSeed(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedScenarioTreeSeed, self).\
+            __init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--scenario-tree-seed command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--scenario-tree-random-seed instead.")
+        setattr(namespace, 'CONFIGBLOCK.scenario_tree_random_seed', values)
 
-    def _warn_scenario_tree_seed(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'scenario_tree_seed' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'scenario_tree_random_seed'. "
-            "Please use 'scenario_tree_random_seed' instead.\n")
-        return int(val)
+def _warn_scenario_tree_seed(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'scenario_tree_seed' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'scenario_tree_random_seed'. "
+        "Please use 'scenario_tree_random_seed' instead.\n")
+    return int(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "scenario_tree_seed",
-        PySPConfigValue(
-            None,
-            domain=_warn_scenario_tree_seed,
-            description=(
-                "Deprecated alias for --scenario-tree-random-seed"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedScenarioTreeSeed},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['scenario_tree_random_seed'] = \
-        _deprecated_block.get('scenario_tree_seed')
+safe_declare_unique_option(
+    _deprecated_block,
+    "scenario_tree_seed",
+    PySPConfigValue(
+        None,
+        domain=_warn_scenario_tree_seed,
+        description=(
+            "Deprecated alias for --scenario-tree-random-seed"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedScenarioTreeSeed},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['scenario_tree_random_seed'] = \
+    _deprecated_block.get('scenario_tree_seed')
 
-    #
-    # --scenario-mipgap
-    #
+#
+# --scenario-mipgap
+#
 
-    class _DeprecatedScenarioMipGap(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedScenarioMipGap, self).\
-                __init__(option_strings, dest, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--scenario-mipgap command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--mipgap instead.")
-            setattr(namespace, 'CONFIGBLOCK.mipgap', values)
+class _DeprecatedScenarioMipGap(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedScenarioMipGap, self).\
+            __init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--scenario-mipgap command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--mipgap instead.")
+        setattr(namespace, 'CONFIGBLOCK.mipgap', values)
 
-    def _warn_scenario_mipgap(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'scenario_mipgap' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'mipgap'. "
-            "Please use 'mipgap' instead.\n")
-        return _domain_unit_interval(val)
+def _warn_scenario_mipgap(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'scenario_mipgap' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'mipgap'. "
+        "Please use 'mipgap' instead.\n")
+    return _domain_unit_interval(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "scenario_mipgap",
-        PySPConfigValue(
-            None,
-            domain=_warn_scenario_mipgap,
-            description=(
-                "Deprecated alias for --mipgap"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedScenarioMipGap},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['mipgap'] = \
-        _deprecated_block.get('scenario_mipgap')
+safe_declare_unique_option(
+    _deprecated_block,
+    "scenario_mipgap",
+    PySPConfigValue(
+        None,
+        domain=_warn_scenario_mipgap,
+        description=(
+            "Deprecated alias for --mipgap"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedScenarioMipGap},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['mipgap'] = \
+    _deprecated_block.get('scenario_mipgap')
 
-    #
-    # --scenario-solver-options
-    #
+#
+# --scenario-solver-options
+#
 
-    class _DeprecatedScenarioSolverOptions(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedScenarioSolverOptions, self).\
-                __init__(option_strings, dest, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--scenario-solver-options command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--solver-options instead.")
-            current = getattr(namespace, 'CONFIGBLOCK.solver_options', values)
-            current.append(values)
+class _DeprecatedScenarioSolverOptions(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedScenarioSolverOptions, self).\
+            __init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--scenario-solver-options command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--solver-options instead.")
+        current = getattr(namespace, 'CONFIGBLOCK.solver_options', values)
+        current.append(values)
 
-    #
-    # --bounds-cfgfile
-    #
+#
+# --bounds-cfgfile
+#
 
-    class _DeprecatedBoundsCFGFile(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedBoundsCFGFile, self).\
-                __init__(option_strings, dest, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--bounds-cfgfile command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--postinit-callback-location instead.")
-            current = getattr(namespace,
-                              'CONFIGBLOCK.postinit_callback_location')
-            current.append(values)
+class _DeprecatedBoundsCFGFile(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedBoundsCFGFile, self).\
+            __init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--bounds-cfgfile command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--postinit-callback-location instead.")
+        current = getattr(namespace,
+                          'CONFIGBLOCK.postinit_callback_location')
+        current.append(values)
 
-    def _warn_bounds_cfgfile(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'bounds_cfgfile' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'postinit_callback_location'. "
-            "Please use 'postinit_callback_location' instead.\n")
-        return _domain_tuple_of_str(val)
+def _warn_bounds_cfgfile(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'bounds_cfgfile' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'postinit_callback_location'. "
+        "Please use 'postinit_callback_location' instead.\n")
+    return _domain_tuple_of_str(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "bounds_cfgfile",
-        PySPConfigValue(
-            None,
-            domain=_warn_bounds_cfgfile,
-            description=(
-                "Deprecated alias for --postinit-callback-location"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedBoundsCFGFile},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['postinit_callback_location'] = \
-        _deprecated_block.get('bounds_cfgfile')
+safe_declare_unique_option(
+    _deprecated_block,
+    "bounds_cfgfile",
+    PySPConfigValue(
+        None,
+        domain=_warn_bounds_cfgfile,
+        description=(
+            "Deprecated alias for --postinit-callback-location"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedBoundsCFGFile},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['postinit_callback_location'] = \
+    _deprecated_block.get('bounds_cfgfile')
 
-    #
-    # --aggregate-cfgfile
-    #
+#
+# --aggregate-cfgfile
+#
 
-    class _DeprecatedAggregateCFGFile(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedAggregateCFGFile, self).\
-                __init__(option_strings, dest, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--aggregate-cfgfile command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--aggregategetter-callback-location "
-                "instead.")
-            current = getattr(namespace,
-                              'CONFIGBLOCK.aggregategetter_callback_location')
-            current.append(values)
+class _DeprecatedAggregateCFGFile(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedAggregateCFGFile, self).\
+            __init__(option_strings, dest, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--aggregate-cfgfile command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--aggregategetter-callback-location "
+            "instead.")
+        current = getattr(namespace,
+                          'CONFIGBLOCK.aggregategetter_callback_location')
+        current.append(values)
 
-    def _warn_aggregate_cfgfile(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'aggregate_cfgfile' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'aggregategetter_callback_location'. "
-            "Please use 'aggregategetter_callback_location' instead.\n")
-        return _domain_tuple_of_str(val)
+def _warn_aggregate_cfgfile(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'aggregate_cfgfile' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'aggregategetter_callback_location'. "
+        "Please use 'aggregategetter_callback_location' instead.\n")
+    return _domain_tuple_of_str(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "aggregate_cfgfile",
-        PySPConfigValue(
-            None,
-            domain=_warn_aggregate_cfgfile,
-            description=(
-                "Deprecated alias for --aggregategetter-callback-location"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedAggregateCFGFile},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['aggregategetter_callback_location'] = \
-        _deprecated_block.get('aggregate_cfgfile')
+safe_declare_unique_option(
+    _deprecated_block,
+    "aggregate_cfgfile",
+    PySPConfigValue(
+        None,
+        domain=_warn_aggregate_cfgfile,
+        description=(
+            "Deprecated alias for --aggregategetter-callback-location"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedAggregateCFGFile},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['aggregategetter_callback_location'] = \
+    _deprecated_block.get('aggregate_cfgfile')
 
-    #
-    # --shutdown-pyro
-    #
+#
+# --shutdown-pyro
+#
 
-    class _DeprecatedShutdownPyro(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedShutdownPyro, self).\
-                __init__(option_strings, dest, nargs=0, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--shutdown-pyro command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--pyro-shutdown "
-                "instead.")
-            setattr(namespace,
-                    'CONFIGBLOCK.pyro_shutdown',
-                    True)
+class _DeprecatedShutdownPyro(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedShutdownPyro, self).\
+            __init__(option_strings, dest, nargs=0, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--shutdown-pyro command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--pyro-shutdown "
+            "instead.")
+        setattr(namespace,
+                'CONFIGBLOCK.pyro_shutdown',
+                True)
 
-    def _warn_shutdown_pyro(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'shutdown_pyro' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'pyro_shutdown'. "
-            "Please use 'pyro_shutdown' instead.\n")
-        return bool(val)
+def _warn_shutdown_pyro(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'shutdown_pyro' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'pyro_shutdown'. "
+        "Please use 'pyro_shutdown' instead.\n")
+    return bool(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "shutdown_pyro",
-        PySPConfigValue(
-            None,
-            domain=_warn_shutdown_pyro,
-            description=(
-                "Deprecated alias for --pyro-shutdown"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedShutdownPyro},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['pyro_shutdown'] = \
-        _deprecated_block.get('shutdown_pyro')
+safe_declare_unique_option(
+    _deprecated_block,
+    "shutdown_pyro",
+    PySPConfigValue(
+        None,
+        domain=_warn_shutdown_pyro,
+        description=(
+            "Deprecated alias for --pyro-shutdown"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedShutdownPyro},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['pyro_shutdown'] = \
+    _deprecated_block.get('shutdown_pyro')
 
-    class _DeprecatedShutdownPyroWorkers(pyutilib.misc.config.argparse.Action):
-        def __init__(self, option_strings, dest, nargs=None, **kwargs):
-            if nargs is not None:
-                raise ValueError("nargs not allowed")
-            super(_DeprecatedShutdownPyroWorkers, self).\
-                __init__(option_strings, dest, nargs=0, **kwargs)
-        def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--shutdown-pyro-workers command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--pyro-shutdown-workers "
-                "instead.")
-            setattr(namespace,
-                    'CONFIGBLOCK.pyro_shutdown_workers',
-                    True)
+class _DeprecatedShutdownPyroWorkers(argparse.Action):
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(_DeprecatedShutdownPyroWorkers, self).\
+            __init__(option_strings, dest, nargs=0, **kwargs)
+    def __call__(self, parser, namespace, values, option_string=None):
+        logger.warning(
+            "DEPRECATED: The '--shutdown-pyro-workers command-line "
+            "option has been deprecated and will be removed "
+            "in the future. Please use '--pyro-shutdown-workers "
+            "instead.")
+        setattr(namespace,
+                'CONFIGBLOCK.pyro_shutdown_workers',
+                True)
 
-    def _warn_shutdown_pyro_workers(val):
-        # don't use logger here since users might not import
-        # the pyomo logger in a scripting interface
-        sys.stderr.write(
-            "\tWARNING: The 'shutdown_pyro_workers' config item will be ignored "
-            "unless it is being used as a command-line option "
-            "where it can be redirected to 'pyro_shutdown_workers'. "
-            "Please use 'pyro_shutdown_workers' instead.\n")
-        return bool(val)
+def _warn_shutdown_pyro_workers(val):
+    # don't use logger here since users might not import
+    # the pyomo logger in a scripting interface
+    sys.stderr.write(
+        "\tWARNING: The 'shutdown_pyro_workers' config item will be ignored "
+        "unless it is being used as a command-line option "
+        "where it can be redirected to 'pyro_shutdown_workers'. "
+        "Please use 'pyro_shutdown_workers' instead.\n")
+    return bool(val)
 
-    safe_declare_unique_option(
-        _deprecated_block,
-        "shutdown_pyro_workers",
-        PySPConfigValue(
-            None,
-            domain=_warn_shutdown_pyro_workers,
-            description=(
-                "Deprecated alias for --pyro-shutdown-workers"
-            ),
-            doc=None,
-            visibility=1),
-        ap_kwds={'action':_DeprecatedShutdownPyroWorkers},
-        ap_group=_deprecated_options_group_title,
-        declare_for_argparse=True)
-    _map_to_deprecated['pyro_shutdown_workers'] = \
-        _deprecated_block.get('shutdown_pyro_workers')
+safe_declare_unique_option(
+    _deprecated_block,
+    "shutdown_pyro_workers",
+    PySPConfigValue(
+        None,
+        domain=_warn_shutdown_pyro_workers,
+        description=(
+            "Deprecated alias for --pyro-shutdown-workers"
+        ),
+        doc=None,
+        visibility=1),
+    ap_kwds={'action':_DeprecatedShutdownPyroWorkers},
+    ap_group=_deprecated_options_group_title,
+    declare_for_argparse=True)
+_map_to_deprecated['pyro_shutdown_workers'] = \
+    _deprecated_block.get('shutdown_pyro_workers')
 
 #
 # Register a common option
@@ -2705,7 +2704,6 @@ def safe_register_common_option(configblock,
 
 if __name__ == "__main__":
     import pyomo.environ
-    import argparse
 
     class Junk1(object):
 

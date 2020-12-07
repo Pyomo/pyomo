@@ -17,10 +17,8 @@ topdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
 currdir = dirname(abspath(__file__))+os.sep
 tutorial_dir=topdir+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep
 
-import pyutilib.misc
+from pyutilib.misc import run_file
 import pyutilib.th as unittest
-
-from pyomo.environ import *
 
 try:
     from win32com.client.dynamic import Dispatch
@@ -59,24 +57,24 @@ class PyomoTutorials(unittest.TestCase):
         pass
 
     def test_data(self):
-        pyutilib.misc.run_file(tutorial_dir+"data.py", logfile=currdir+"data.log", execdir=tutorial_dir)
+        run_file(tutorial_dir+"data.py", logfile=currdir+"data.log", execdir=tutorial_dir)
         self.assertFileEqualsBaseline(currdir+"data.log", tutorial_dir+"data.out")
 
     @unittest.skipIf(not ((_win32com and _excel_available) or _xlrd or _openpyxl), "Cannot read excel file.")
     def test_excel(self):
-        pyutilib.misc.run_file(tutorial_dir+"excel.py", logfile=currdir+"excel.log", execdir=tutorial_dir)
+        run_file(tutorial_dir+"excel.py", logfile=currdir+"excel.log", execdir=tutorial_dir)
         self.assertFileEqualsBaseline(currdir+"excel.log", tutorial_dir+"excel.out")
 
     def test_set(self):
-        pyutilib.misc.run_file(tutorial_dir+"set.py", logfile=currdir+"set.log", execdir=tutorial_dir)
+        run_file(tutorial_dir+"set.py", logfile=currdir+"set.log", execdir=tutorial_dir)
         self.assertFileEqualsBaseline(currdir+"set.log", tutorial_dir+"set.out")
 
     def test_table(self):
-        pyutilib.misc.run_file(tutorial_dir+"table.py", logfile=currdir+"table.log", execdir=tutorial_dir)
+        run_file(tutorial_dir+"table.py", logfile=currdir+"table.log", execdir=tutorial_dir)
         self.assertFileEqualsBaseline(currdir+"table.log", tutorial_dir+"table.out")
 
     def test_param(self):
-        pyutilib.misc.run_file(tutorial_dir+"param.py", logfile=currdir+"param.log", execdir=tutorial_dir)
+        run_file(tutorial_dir+"param.py", logfile=currdir+"param.log", execdir=tutorial_dir)
         self.assertFileEqualsBaseline(currdir+"param.log", tutorial_dir+"param.out")
 
 if __name__ == "__main__":

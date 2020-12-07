@@ -24,7 +24,6 @@ from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.repn import generate_standard_repn
 
-from six import StringIO
 
 currdir = dirname(abspath(__file__)) + os.sep
 

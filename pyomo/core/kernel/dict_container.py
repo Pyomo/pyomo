@@ -24,7 +24,7 @@ from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
 import six
-from six import itervalues, iteritems
+from six import itervalues
 
 if six.PY3:
     from collections.abc import MutableMapping as collections_MutableMapping

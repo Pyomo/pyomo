@@ -22,9 +22,7 @@ from collections import namedtuple
 from pyomo.common.collections import ComponentMap
 from pyomo.opt import WriterFactory
 from pyomo.core.base.numvalue import value, as_numeric
-from pyomo.core.base.block import (Block,
-                                   _BlockData,
-                                   SortComponents)
+from pyomo.core.base.block import SortComponents
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.constraint import Constraint, _ConstraintData

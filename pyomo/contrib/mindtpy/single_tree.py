@@ -1,24 +1,31 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from __future__ import division
-
-
-from pyomo.core import Constraint, Expression, Objective, minimize, value, Var
+from pyomo.core import Constraint, Objective, minimize, value
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.nlp_solve import (solve_NLP_subproblem,
-                                             handle_NLP_subproblem_optimal, handle_NLP_subproblem_infeasible,
-                                             handle_NLP_subproblem_other_termination, solve_NLP_feas)
+                                             solve_NLP_feas)
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time
 from math import copysign
-from pyomo.environ import *
+import pyomo.environ as pyo
 from pyomo.core.expr import current as EXPR
 from math import fabs
 from pyomo.repn import generate_standard_repn
 import logging
-from pyomo.common.dependencies import attempt_import
 import cplex
 from cplex.callbacks import LazyConstraintCallback
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.opt.results import ProblemSense
 
+logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 class LazyOACallback_cplex(LazyConstraintCallback):
     """Inherent class in Cplex to call Lazy callback."""
@@ -105,7 +112,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             # Equality constraint (makes the problem nonconvex)
             if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
                 sign_adjust = -1 if solve_data.objective_sense == minimize else 1
-                rhs = constr.lower if constr.has_lb() and constr.has_ub() else rhs
+                rhs = constr.lower
 
                 # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
                 pyomo_expr = copysign(1, sign_adjust * dual_value) * (sum(value(jacs[constr][var]) * (
@@ -209,9 +216,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             # TODO: create it at the beginning.
             aff_utils = parent_block.component('MindtPy_aff')
             if aff_utils is None:
-                aff_utils = parent_block.MindtPy_aff = Block(
+                aff_utils = parent_block.MindtPy_aff = pyo.Block(
                     doc="Block holding affine constraints")
-                aff_utils.MindtPy_aff_cons = ConstraintList()
+                aff_utils.MindtPy_aff_cons = pyo.ConstraintList()
             aff_cuts = aff_utils.MindtPy_aff_cons
             if concave_cut_valid:
                 pyomo_concave_cut = sum(ccSlope[var] * (var - var.value)

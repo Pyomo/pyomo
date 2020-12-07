@@ -14,7 +14,7 @@
 #
 
 from __future__ import print_function
-from pyomo.environ import * 
+from pyomo.environ import ConcreteModel, Param, Var, Objective, Constraint, NonNegativeReals, value
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt
 
 def create_model():

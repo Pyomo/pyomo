@@ -7,9 +7,11 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix, full_to_compressed
-import matplotlib.pylab as plt
+from pyomo.contrib.pynumero.interfaces.utils import (build_bounds_mask,
+                                                     build_compression_matrix,
+                                                     full_to_compressed)
 import pyomo.environ as pyo
 import numpy as np
 
@@ -101,4 +103,3 @@ if np.all(res_xl >= 0) and np.all(res_xu >= 0) \
     feasible = True
 
 print("Is x0 feasible:", feasible)
-

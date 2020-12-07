@@ -10,7 +10,7 @@
 
 
 import pyutilib.th as unittest
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, RangeSet, Block, Constraint, CounterLabeler, NumericLabeler, TextLabeler, ComponentUID, ShortNameLabeler, CNameLabeler, CuidLabeler, AlphaNumericTextLabeler, NameLabeler
 
 
 class LabelerTests(unittest.TestCase):
