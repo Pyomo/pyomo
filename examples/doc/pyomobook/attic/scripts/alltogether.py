@@ -1,6 +1,6 @@
 import pyomo.environ
 from pyomo.opt import SolverFactory
-from pyutilib.misc import Options
+from pyomo.common.collections import Options
 
 import sys
 import math
