@@ -18,84 +18,84 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from collections import OrderedDict
 
-#
-#def generate_time_only_slices(obj, time):
-#    o_sets = obj.index_set().subsets()
-#    # Given a potentially complex set, determine the index of the TIME
-#    # set, as well as all other "fixed" indices.  We will even support a
-#    # single Set with dimen==None (using ellipsis in the slice).
-#    ellipsis_idx = None
-#    time_idx = None
-#    regular_idx = []
-#    idx = 0
-#    for s in o_sets:
-#        if s is time:
-#            time_idx = idx
-#            idx += 1
-#        elif s.dimen is not None:
-#            for sub_idx in range(s.dimen):
-#                regular_idx.append(idx+sub_idx)
-#            idx += s.dimen
-#        elif ellipsis_idx is None:
-#            ellipsis_idx = idx
-#            idx += 1
-#        else:
-#            raise RuntimeError(
-#                "We can only handle a single Set with dimen=None")
-#    # To support Sets with dimen==None (using ellipsis), we need to have
-#    # all fixed/time indices be positive if they appear before the
-#    # ellipsis and negative (counting from the end of the list) if they
-#    # are after the ellipsis.
-#    if ellipsis_idx:
-#        if time_idx > ellipsis_idx:
-#            time_idx = time_idx - idx
-#        regular_idx = [ i - idx if i > ellipsis_idx else i
-#                      for i in fixed_idx ]
-#    # We now form a temporary slice that slices over all the regular
-#    # indices for a fixed value of the time index.
-#    tmp_sliced = {i: slice(None) for i in regular_idx}
-#    tmp_fixed = {time_idx: time.first()}
-#    tmp_ellipsis = ellipsis_idx
-#    _slice = IndexedComponent_slice(
-#        obj, tmp_fixed, tmp_sliced, tmp_ellipsis
-#    )
-#    # For each combination of regular indices, we can generate a single
-#    # slice over the time index
-#    time_sliced = [time_idx]
-#    for key in _slice.wildcard_keys():
-#        if type(key) is not tuple:
-#            key = (key,)
-#        time_fixed = dict(
-#            (i, val) if i<time_idx else (i+1, val)
-#            for i,val in enumerate(key)
-#        )
-#        yield IndexedComponent_slice(obj, time_fixed, time_sliced, None)
-#
-#
-#def generate_time_indexed_block_slices(block, time, ctype):
-#    # TODO: We should probably do a sanity check that time does not
-#    # appear in any sub-block / var indices.
-#    queue = list( generate_time_only_slices(block, time) )
-#    while queue:
-#        _slice = queue.pop(0)
-#        # Pick a random block from this slice (i.e. TIME == TIME.first())
-#        #
-#        # TODO: we should probably check that the OTHER blocks
-#        # in the time set have the same variables.
-#        b = next(iter(_slice))
-#        # Any sub-blocks must be put on the queue to descend into and
-#        # process
-#        for sub_b in b.component_objects(Block, descend_into=False):
-#            _name = sub_b.local_name
-#            for idx in sub_b:
-#                queue.append(_slice.component(_name)[idx])
-#        # Any Vars must be mapped to slices and returned
-#        for v in b.component_objects(ctype, descend_into=False):
-#            _name = v.local_name
-#            for idx in v:
-#                yield _slice.component(_name)[idx]
-#        
-#
+
+def generate_time_only_slices(obj, time):
+    o_sets = obj.index_set().subsets()
+    # Given a potentially complex set, determine the index of the TIME
+    # set, as well as all other "fixed" indices.  We will even support a
+    # single Set with dimen==None (using ellipsis in the slice).
+    ellipsis_idx = None
+    time_idx = None
+    regular_idx = []
+    idx = 0
+    for s in o_sets:
+        if s is time:
+            time_idx = idx
+            idx += 1
+        elif s.dimen is not None:
+            for sub_idx in range(s.dimen):
+                regular_idx.append(idx+sub_idx)
+            idx += s.dimen
+        elif ellipsis_idx is None:
+            ellipsis_idx = idx
+            idx += 1
+        else:
+            raise RuntimeError(
+                "We can only handle a single Set with dimen=None")
+    # To support Sets with dimen==None (using ellipsis), we need to have
+    # all fixed/time indices be positive if they appear before the
+    # ellipsis and negative (counting from the end of the list) if they
+    # are after the ellipsis.
+    if ellipsis_idx:
+        if time_idx > ellipsis_idx:
+            time_idx = time_idx - idx
+        regular_idx = [ i - idx if i > ellipsis_idx else i
+                      for i in fixed_idx ]
+    # We now form a temporary slice that slices over all the regular
+    # indices for a fixed value of the time index.
+    tmp_sliced = {i: slice(None) for i in regular_idx}
+    tmp_fixed = {time_idx: time.first()}
+    tmp_ellipsis = ellipsis_idx
+    _slice = IndexedComponent_slice(
+        obj, tmp_fixed, tmp_sliced, tmp_ellipsis
+    )
+    # For each combination of regular indices, we can generate a single
+    # slice over the time index
+    time_sliced = [time_idx] #{time_idx: slice(None)}
+    for key in _slice.wildcard_keys():
+        if type(key) is not tuple:
+            key = (key,)
+        time_fixed = dict(
+            (i, val) if i<time_idx else (i+1, val)
+            for i,val in enumerate(key)
+        )
+        yield IndexedComponent_slice(obj, time_fixed, time_sliced, None)
+
+
+def generate_time_indexed_block_slices(block, time, ctype):
+    # TODO: We should probably do a sanity check that time does not
+    # appear in any sub-block / var indices.
+    queue = list( generate_time_only_slices(block, time) )
+    while queue:
+        _slice = queue.pop(0)
+        # Pick a random block from this slice (i.e. TIME == TIME.first())
+        #
+        # TODO: we should probably check that the OTHER blocks
+        # in the time set have the same variables.
+        b = next(iter(_slice))
+        # Any sub-blocks must be put on the queue to descend into and
+        # process
+        for sub_b in b.component_objects(Block, descend_into=False):
+            _name = sub_b.local_name
+            for idx in sub_b:
+                queue.append(_slice.component(_name)[idx])
+        # Any Vars must be mapped to slices and returned
+        for v in b.component_objects(ctype, descend_into=False):
+            _name = v.local_name
+            for idx in v:
+                yield _slice.component(_name)[idx]
+        
+
 #def flatten_dae_components(model, time, ctype):
 #    """
 #    This function takes in a (hierarchical, block-structured) Pyomo
@@ -189,7 +189,8 @@ def _fill_indices_from_product(partial_index_list, product):
         # scalar or (tuple of (scalars or tuples)). Conveniently,
         # each entry in the tuple belongs to a single factor set.
         # ^ This is not even close to true, because `product` could
-        # be a nested product.
+        # be a nested product. <-FIXME
+        # ^ Product won't be a nested product because I create the product.
         #
         # To simplify some later code we convert scalar to tuple.
         if type(index) is not tuple:
@@ -251,16 +252,22 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
             cross_prod = other_sets[0].cross(*other_sets[1:])
             # The original implementation was to pick an arbitrary index
             # from the "flattened sets" and slice all the other indices.
-            # Then for each index in the slice would 
+            # Then for each index in the slice would ...
 
             # Note that `cross_prod` is not necessarily a cross product.
             # This will be checked and handled in the `_fill_indices...`
             # function.
             # With the new implementation, cross_prod _is_ a cross product.
+            #
+            # TODO: try/finally somewhere here.
             for new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 try:
                     c_slice = getattr(_slice, c.local_name)[new_index]
                     if type(c_slice) is IndexedComponent_slice:
+                        # This is just to make sure we do not have an
+                        # empty slice.
+                        # In a (partially) sliced block with an object that
+                        # was skipped for our concrete index.
                         next(iter(c_slice.duplicate()))
                     yield sliced_sets, c_slice
                 except StopIteration:
@@ -277,6 +284,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
             # `c` is indexed only by sets we would like to slice.
             # At this point we could just yield sliced_sets, new_slice
             idx = Ellipsis if c_is_indexed else None
+            # TODO: next(UnindexedComponent_set) instead of None
             c_slice = getattr(_slice, c.local_name)[idx]
             # ^ This could fail if we try to apply the same code to
             # data objects rather than just simple components.
@@ -294,6 +302,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
         index_stack.extend(new_sets)
 
         if other_sets:
+            #cross_prod = other_sets[0].cross(other_sets[1:])
             cross_prod = other_sets[0]
             for s in other_sets[1:]:
                 cross_prod *= s
@@ -306,6 +315,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
                     # index" to be specified for each set so we don't miss
                     # components that are skipped at endpoints.
                     data = next(iter(sub_slice))
+                    # TODO: try/except
                 else:
                     # sub_slice is a block data object
                     data = sub_slice
@@ -315,7 +325,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
         else:
             # Either sub is a simple component, or we are slicing
             # all of its sets.
-            idx = Ellipsis if new_sets else None
+            idx = Ellipsis if new_sets else None # TODO: next(UnindexedComponent_set)
             sub_slice = getattr(_slice, sub.local_name)[idx]
             data = next(iter(sub_slice))
             # ^ This works as sub_slice is either a slice or a simple
@@ -326,9 +336,9 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
 
         # pop the index sets of the block whose sub-components
         # we just finished iterating over.
-        for s in subsets:
-            if s in sets:
-                index_stack.pop()
+        for _ in new_sets:
+            index_stack.pop()
+        # index_stack[len(original_index_stack):] = []
 
 def flatten_components_along_sets(m, sets, ctype, index_stack=None):
     if index_stack is None:
@@ -350,6 +360,8 @@ def flatten_components_along_sets(m, sets, ctype, index_stack=None):
         if len(key) == 0:
             comps_dict[key].append(_slice)
         else:
+            # TODO: Potentially re-order indices at this point.
+            # TODO: _slice.attribute_error_generate_exception = False
             comps_dict[key].append(Reference(_slice))
     # list-of-tuples of Sets:
     sets_list = list(sets for sets in sets_dict.values())
