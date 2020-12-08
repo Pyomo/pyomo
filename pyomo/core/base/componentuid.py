@@ -357,22 +357,22 @@ class ComponentUID(object):
 
             if name is not None:
                 if call != IndexedComponent_slice.get_attribute:
-                    raise RuntimeError(
+                    raise ValueError(
                         "Cannot create a CUID with a __call__ of anything "
                         "other than a 'component' attribute")
                 if arg != 'component':
-                    raise NotImplementedError(
+                    raise ValueError(
                         "Cannot create a CUID from a slice with a "
-                        "call to any method other than `component`.\n"
-                        "Got %s." % arg)
+                        "call to any method other than 'component': "
+                        "got '%s'." % arg)
                 arg, name = name, None
-            
+
             if call & ( IndexedComponent_slice.SET_MASK
                         | IndexedComponent_slice.DEL_MASK ):
                 raise ValueError(
                     "Cannot create a CUID from a slice that "
-                    "contains `set` or `del` calls. Got call %s "
-                    "with argument '%s'" % (call, arg) 
+                    "contains `set` or `del` calls: got call %s "
+                    "with argument %s" % (call, arg)
                     )
             elif call == IndexedComponent_slice.slice_info:
                 comp = arg[0]
@@ -394,25 +394,25 @@ class ComponentUID(object):
                 assert not call_stack
             elif call == IndexedComponent_slice.get_item:
                 if index is not _NotSpecified:
-                    raise NotImplementedError(
-                    "Two `get_item` calls, %s and %s, were detected before a\n"
-                    "`get_attr` call. This is not supported by `ComponentUID`."
+                    raise ValueError(
+                    "Two `get_item` calls, %s and %s, were detected before a"
+                    "`get_attr` call. This is not supported by 'ComponentUID'."
                     % (index, arg))
                 # Cache `get_item` arg until a `get_attr` is encountered.
                 index = arg
             elif call == IndexedComponent_slice.call:
                 if len(arg) != 1:
-                    raise NotImplementedError(
+                    raise ValueError(
                             "Cannot create a CUID from a slice with a "
-                            "call that has multiple arguments. Got "
+                            "call that has multiple arguments: got "
                             "arguments %s." % (arg,)
                             )
                 # Cache argument of a call to `component`
                 name = arg[0]
                 if kwds != {}:
-                    raise NotImplementedError(
+                    raise ValueError(
                             "Cannot create a CUID from a slice with a "
-                            "call that contains keywords. Got keyword "
+                            "call that contains keywords: got keyword "
                             "dict %s." % (kwds,)
                             )
             elif call == IndexedComponent_slice.get_attribute:
