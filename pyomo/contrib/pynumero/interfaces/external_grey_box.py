@@ -101,6 +101,20 @@ class ExternalGreyBoxModel(object):
         """
         return len(self.output_names())
 
+    class ModelCapabilities:
+        def __init__(self):
+            self.supports_jacobian_equality_constraints = False
+            self.supports_jacobian_outputs = False
+            self.supports_hessian_equality_constraints = False
+            self.supports_hessian_outputs = False
+
+    @abc.abstractmethod
+    def model_capabilities(self):
+        """ This method returns a ModelCapabilities object with
+        the flags set appropriately for the derived class
+        """
+        pass
+
     @abc.abstractmethod
     def input_names(self):
         """
@@ -157,7 +171,17 @@ class ExternalGreyBoxModel(object):
         class must cache these if necessary for any subsequent calls
         to evaluate_hessian_equality_constraints
         """
-        pass
+        if self.model_capabilities().supports_hessian_equality_constraints:
+            raise NotImplementedError('ExternalGreyBoxModel supports evaluation of the Hessian'
+                                      ' of the equality constraints, however, the derived model'
+                                      ' is not handling set_equality_constraint_multipliers')
+        elif eq_con_multiplier_values is not None \
+           and len(eq_con_multiplier_values) != 0:
+            print(eq_con_multiplier_values)
+            raise NotImplementedError('set_equality_constraint_multipliers called'
+                                      ' on a model that does not support computation'
+                                      ' of Hessians of equality constraints.'
+                                      )
 
     def set_output_constraint_multipliers(self, output_con_multiplier_values):
         """
@@ -166,7 +190,17 @@ class ExternalGreyBoxModel(object):
         class must cache these if necessary for any subsequent calls
         to evaluate_hessian_outputs
         """
-        pass
+        if self.model_capabilities().supports_hessian_outputs:
+            raise NotImplementedError('ExternalGreyBoxModel supports evaluation of the Hessian'
+                                      ' of the outputs, however, the derived model'
+                                      ' is not handling set_output_constraint_multipliers')
+        elif output_con_multiplier_values is not None \
+           and len(output_con_multiplier_values) != 0:
+            raise NotImplementedError('set_output_constraint_multipliers called'
+                                      ' on a model that does not support computation'
+                                      ' of Hessians of outputs.'
+                                      )
+
 
     def get_equality_constraint_scaling_factors(self):
         """
@@ -192,14 +226,16 @@ class ExternalGreyBoxModel(object):
         Compute the residuals from the model (using the values
         set in input_values) and return as a numpy array
         """
-        raise NotImplementedError()
+        raise NotImplementedError('evaluate_equality_constraints called '
+                                  'but not implemented in the derived class.')
 
     def evaluate_outputs(self):
         """
         Compute the outputs from the model (using the values
         set in input_values) and return as a numpy array
         """
-        raise NotImplementedError()
+        raise NotImplementedError('evaluate_outputs called '
+                                  'but not implemented in the derived class.')
 
     def evaluate_jacobian_equality_constraints(self):
         """
@@ -209,7 +245,8 @@ class ExternalGreyBoxModel(object):
         the order of the residual names and the cols in
         the order of the input variables.
         """
-        raise NotImplementedError()
+        raise NotImplementedError('evaluate_jacobian_equality_constraints called '
+                                  'but not implemented in the derived class.')
 
     def evaluate_jacobian_outputs(self):
         """
@@ -219,7 +256,8 @@ class ExternalGreyBoxModel(object):
         the order of the output variables and the cols in
         the order of the input variables.
         """
-        raise NotImplementedError()
+        raise NotImplementedError('evaluate_equality_outputs called '
+                                  'but not implemented in the derived class.')
 
     def evaluate_hessian_equality_constraints(self):
         """
@@ -231,7 +269,8 @@ class ExternalGreyBoxModel(object):
         set_inputs. This method must return
         H_eq^k = sum_i (y_eq^k)_i * grad^2_{uu} w_eq(u^k)
         """
-        pass
+        raise NotImplementedError('evaluate_hessian_equality_constraints called '
+                                  'but not implemented in the derived class.')
 
     def evaluate_hessian_outputs(self):
         """
@@ -243,8 +282,8 @@ class ExternalGreyBoxModel(object):
         the input variables. This method must return
         H_o^k = sum_i (y_o^k)_i * grad^2_{uu} w_o(u^k)
         """
-        pass
-
+        raise NotImplementedError('evaluate_hessian_outputs called '
+                                  'but not implemented in the derived class.')
 
 
 class ExternalGreyBoxBlockData(_BlockData):
