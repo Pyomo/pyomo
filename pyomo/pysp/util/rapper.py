@@ -53,7 +53,7 @@ def _kwfromphopts(phopts):
                     float(phopts["--scenario-tree-downsample-fraction"])
         else:
             kwargs['downsample_fraction'] = None
-            
+
         if "--scenario-bundle-specification" in phopts:
             kwargs['bundles'] = phopts["--scenario-tree-bundle-specification"]
         else:
@@ -68,19 +68,19 @@ class StochSolver:
     abstract models.
     Inspired by the IDAES use case and by daps ability to create tree models.
     Author: David L. Woodruff, February 2017
-    
-    Args: 
-      fsfile (str): is a path to the file that contains the scenario 
+
+    Args:
+      fsfile (str): is a path to the file that contains the scenario
                     callback for concrete or the reference model for abstract.
-      fsfct (str, or fct, or None): 
+      fsfct (str, or fct, or None):
          |  str:   callback function name in the file
          |  fct:   callback function (fsfile is ignored)
          |  None:  it is a AbstractModel
-      tree_model (concrete model, or networkx tree, or path): 
+      tree_model (concrete model, or networkx tree, or path):
         gives the tree as a concrete model (which could be a fct)
         or a valid networkx scenario tree
         or path to AMPL data file.
-      phopts: dictionary of ph options; needed during construction 
+      phopts: dictionary of ph options; needed during construction
               if there is bundling.
 
     Attributes:
@@ -110,7 +110,7 @@ class StochSolver:
                 print ("ERROR in StochSolver called from",inspect.stack()[1][3])
                 raise RuntimeError("fsfct is None, so assuming",
                       "AbstractModel but could not find all ingredients.")
-                
+
         else:  # concrete model
             if  callable(fsfct):
                 scen_function = fsfct
@@ -131,7 +131,7 @@ class StochSolver:
 
                 scenario_instance_factory = ScenarioTreeInstanceFactory(scen_function, tree_model)
 
-            else: 
+            else:
                 # DLW March 21: still not correct
                 scenario_instance_factory = \
                     ScenarioTreeInstanceFactory(scen_function, tree_model)
@@ -142,7 +142,7 @@ class StochSolver:
                 scenario_instance_factory.generate_scenario_tree(**kwargs) #verbose = True)
             instances = scenario_instance_factory. \
                         construct_instances_for_scenario_tree(self.scenario_tree)
-            self.scenario_tree.linkInInstances(instances)        
+            self.scenario_tree.linkInInstances(instances)
 
     #=========================
     def make_ef(self,
@@ -153,7 +153,7 @@ class StochSolver:
                 cc_indicator_var_name=None,
                 cc_alpha=0.0):
         """ Make an ef object (used by solve_ef); all Args are optional.
-        
+
         Args:
             verbose (boolean): indicates verbosity to PySP for construction
             generate_weighted_cvar (boolean): indicates we want weighted CVar
@@ -172,7 +172,7 @@ class StochSolver:
                                          risk_alpha = risk_alpha,
                                          cc_indicator_var_name = cc_indicator_var_name,
                                          cc_alpha = cc_alpha)
-    
+
     def solve_ef(self, subsolver, sopts = None, tee = False, need_gap = False,
                  verbose=False,
                  generate_weighted_cvar = False,
@@ -183,7 +183,7 @@ class StochSolver:
 
         """Solve the stochastic program directly using the extensive form.
         All Args other than subsolver are optional.
-       
+
         Args:
             subsolver (str): the solver to call (e.g., 'ipopt')
             sopts (dict):  solver options
@@ -209,7 +209,7 @@ class StochSolver:
            This needs more work to deal with solver failure (dlw, March, 2018)
 
         """
-        
+
         self.ef_instance = self.make_ef(verbose=verbose,
                                         generate_weighted_cvar = generate_weighted_cvar,
                                         cvar_weight = cvar_weight,
@@ -254,7 +254,7 @@ class StochSolver:
         Returns: the ph object
 
         Note:
-            Updates the scenario tree, populated with the xbar values; 
+            Updates the scenario tree, populated with the xbar values;
             however, you probably want to do
             obj, xhat = ph.compute_and_report_inner_bound_using_xhat()
             where ph is the return value.
@@ -269,13 +269,13 @@ class StochSolver:
         phargslist.append('--solver')
         phargslist.append(str(subsolver))
         phargslist = _optiondict_2_list(phopts, args_list = phargslist)
-                    
+
         # Subproblem options go to PH as space-delimited, equals-separated pairs.
         if sopts is not None:
             soptstring = ""
             for key in sopts:
                 soptstring += key + '=' + str(sopts[key]) + ' '
-            phargslist.append('--scenario-solver-options')    
+            phargslist.append('--scenario-solver-options')
             phargslist.append(soptstring)
         phoptions = parser.parse_args(phargslist)
 
