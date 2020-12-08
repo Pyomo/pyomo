@@ -22,6 +22,7 @@ from pyomo.environ import (
     Reference,
 )
 from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.common.log import LoggingIntercept
 
 _star = slice(None)
@@ -1193,23 +1194,29 @@ class TestComponentUID(unittest.TestCase):
         self.assertListSameComponents(m, cuid, cuid_str)
 
         _slice = m.b[:].component('b2','b1')
-        with self.assertRaisesRegex(NotImplementedError,
+        with self.assertRaisesRegex(ValueError,
                 '.*multiple arguments.*'):
             cuid = ComponentUID(_slice)
 
-#        _slice = m.b[:].bad_call('b2')[:,'a']
-#        with self.assertRaisesRegex(NotImplementedError,
-#                'any method other than `component`'):
-#            cuid = ComponentUID(_slice)
-# Unclear how I should test this error. Would need a slice object with
-# a call to attribute other than component in the call stack, but any
-# call to another attribute will get iterated over immediately.
-#
-# Also unclear how I should test for the proper exception if set/del
-# calls are (somehow) present in the call stack.
+        # call of something other than component
+        _slice = IndexedComponent_slice(m.b[:].fix, (
+            IndexedComponent_slice.call, ('fix',), {} ) )
+        with self.assertRaisesRegex(
+                ValueError,
+                "Cannot create a CUID from a slice with a call to any "
+                "method other than 'component': got 'fix'\."):
+            cuid = ComponentUID(_slice)
+
+        _slice = IndexedComponent_slice(m.b[:].component('v'), (
+            IndexedComponent_slice.call, ('fix',), {} ) )
+        with self.assertRaisesRegex(
+                ValueError,
+                "Cannot create a CUID with a __call__ of anything "
+                "other than a 'component' attribute"):
+            cuid = ComponentUID(_slice)
 
         _slice = m.b[:].component('b2', kwd=None)
-        with self.assertRaisesRegex(NotImplementedError,
+        with self.assertRaisesRegex(ValueError,
                 '.*call that contains keywords.*'):
             cuid = ComponentUID(_slice)
 
@@ -1241,12 +1248,24 @@ class TestComponentUID(unittest.TestCase):
         self.assertEqual(str(cuid), str(cuid_str))
         self.assertListSameComponents(m, cuid, cuid_str)
 
-    def test_two_getitem(self):
+
+    def test_cuid_from_slice_errors(self):
+        # two getitem
         m = self._slice_model()
         m.b.comp = Reference(m.b.b1[:].v1)
         _slice = m.b[:].comp[1][1.1]
-        with self.assertRaisesRegex(NotImplementedError,
+        with self.assertRaisesRegex(ValueError,
                 r'.*Two `get_item` calls.*'):
+            cuid = ComponentUID(_slice)
+
+        _slice = IndexedComponent_slice(m.b[:].component('v'), (
+            IndexedComponent_slice.del_attribute, ('foo',)) )
+        with self.assertRaisesRegex(
+                ValueError,
+                "Cannot create a CUID from a slice that "
+                "contains `set` or `del` calls: got call %s "
+                "with argument \('foo',\)" % (
+                    IndexedComponent_slice.del_attribute,)):
             cuid = ComponentUID(_slice)
 
 if __name__ == "__main__":
