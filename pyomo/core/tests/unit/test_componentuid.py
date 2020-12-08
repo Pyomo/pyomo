@@ -1147,6 +1147,26 @@ class TestComponentUID(unittest.TestCase):
         self.assertEqual(str(cuid), str(cuid_str))
         self.assertListSameComponents(m, cuid, cuid_str)
 
+    def test_cuid_from_slice_3(self):
+        """
+        "3-level" slices. These test the ability of
+        the slice-processing logic to handle multiple
+        `get_item` calls in a hierarchy.
+        """
+        m = self._slice_model()
+
+        _slice = m.b[:].b3[:,'a',:].v2[1,:]
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b[*].b3[*,a,*].v2[1,*]')
+        self.assertEqual(cuid, cuid_str)
+        self.assertListSameComponents(m, cuid, cuid_str)
+
+        _slice = m.b[:].b3[:,'a',:].v2
+        cuid = ComponentUID(_slice)
+        cuid_str = ComponentUID('b[*].b3[*,a,*].v2')
+        self.assertEqual(cuid, cuid_str)
+        self.assertListSameComponents(m, cuid, cuid_str)
+
     def test_cuid_from_slice_with_call(self):
         m = self._slice_model()
 
