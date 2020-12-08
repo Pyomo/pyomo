@@ -25,6 +25,9 @@ class _PickleEllipsis(object):
     "A work around for the non-picklability of Ellipsis in Python 2"
     pass
 
+class _NotSpecified(object):
+    pass
+
 class ComponentUID(object):
     """
     A Component unique identifier
