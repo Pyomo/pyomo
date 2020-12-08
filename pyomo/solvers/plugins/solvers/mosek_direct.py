@@ -15,8 +15,7 @@ import itertools
 import operator
 import pyomo.core.base.var
 import pyomo.core.base.constraint
-from pyutilib.misc import Bunch
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 from pyomo.core import is_fixed, value, minimize, maximize
 from pyomo.repn import generate_standard_repn
 from pyomo.core.base.suffix import Suffix
@@ -24,7 +23,7 @@ from pyomo.opt.base.solvers import OptSolver
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import \
     DirectOrPersistentSolver
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet, Bunch
 from pyomo.opt import SolverFactory
 from pyomo.core.kernel.conic import (_ConicBase, quadratic, rotated_quadratic,
                                      primal_exponential, primal_power,

@@ -123,6 +123,9 @@ class TempfileManagerClass:
         self._tempfiles.append([])
         return self
 
+    def __enter__(self):
+        self.push()
+
     def __exit__(self, type, value, traceback):
         self.pop(remove=True)
 

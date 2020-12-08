@@ -14,7 +14,7 @@ import sys
 import csv
 
 import pyutilib.subprocess
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch, Options

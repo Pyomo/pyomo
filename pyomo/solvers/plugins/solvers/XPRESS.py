@@ -17,7 +17,7 @@ from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Options, Bunch
 from pyutilib.misc import yaml_fix
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory

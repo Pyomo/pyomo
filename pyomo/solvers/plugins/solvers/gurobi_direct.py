@@ -12,7 +12,7 @@ import logging
 import re
 import sys
 
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value

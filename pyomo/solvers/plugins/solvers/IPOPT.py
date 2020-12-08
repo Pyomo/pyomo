@@ -12,7 +12,7 @@ import os
 
 from pyomo.common import Executable
 from pyomo.common.collections import Options, Bunch
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
