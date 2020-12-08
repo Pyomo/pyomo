@@ -418,7 +418,7 @@ class ComponentUID(object):
             elif call == IndexedComponent_slice.get_attribute:
                 if index is _NotSpecified:
                     index = ()
-                if type(index) is not tuple or len(index) == 1:
+                elif type(index) is not tuple or len(index) == 1:
                     index = (index,)
                 rcuid.append((arg, index))
                 index = _NotSpecified
