@@ -445,21 +445,19 @@ class PyomoGreyBoxNLP(NLP):
         self._cached_greybox_constraints = None
         self._cached_greybox_jac = None
 
-        # Now that we know the total number of columns, create the
-        # necessary greybox helper objects
-        self._external_greybox_helpers = \
-            [_ExternalGreyBoxModelHelper(data, self._vardata_to_idx) for data in greybox_data]
+        # create the helper objects
+        con_offset = self._pyomo_nlp.n_constraints()
+        self._external_greybox_helpers = []
+        for data in greybox_data:
+            h = _ExternalGreyBoxModelHelper(data, self._vardata_to_idx, con_offset)
+            self._external_greybox_helpers.append(h)
+            con_offset += h.n_residuals()
+
+        self._n_greybox_constraints = con_offset - self._pyomo_nlp.n_constraints()
+        assert len(self._greybox_constraints_names) == self._n_greybox_constraints
 
         # make sure the primal values get to the greybox models
         self.set_primals(self.get_primals())
-
-        self._n_greybox_constraints = 0
-#        self._greybox_eq_duals_maps = list()
-#        self._greybox_output_duals_maps = list()
-        for h in self._external_greybox_helpers:
-            self._n_greybox_constraints += h.n_residuals()
-#            self._greybox_eq_duals_maps
-        assert len(self._greybox_constraints_names) == self._n_greybox_constraints
 
         # If any part of the problem is scaled (i.e., obj, primals,
         # or any of the constraints for any of the external grey boxes),
@@ -511,6 +509,9 @@ class PyomoGreyBoxNLP(NLP):
         self._init_greybox_primals.flags.writeable = False
         self._init_greybox_duals.flags.writeable = False
         self._greybox_duals = self._init_greybox_duals.copy()
+
+        # make sure the duals get to the external greybox models
+        self.set_duals(self.get_duals())
 
         # compute the jacobian for the external greybox models
         # to get some of the statistics
@@ -641,10 +642,14 @@ class PyomoGreyBoxNLP(NLP):
 
         # set the duals for the pyomo part of the nlp
         self._pyomo_nlp.set_duals(
-            duals[:-self._n_greybox_constraints])
+            duals[:self._pyomo_nlp.n_constraints()])
 
         # set the duals for the greybox part of the nlp
-        np.copyto(self._greybox_duals, duals[-self._n_greybox_constraints:])
+        np.copyto(self._greybox_duals, duals[self._pyomo_nlp.n_constraints():])
+
+        # set the duals in the helpers for the hessian computation
+        for h in self._external_greybox_helpers:
+            h.set_duals(duals)
 
     # overloaded from NLP
     def get_duals(self):
@@ -657,23 +662,35 @@ class PyomoGreyBoxNLP(NLP):
 
     # overloaded from ExtendedNLP
     def set_duals_eq(self, duals):
+        raise NotImplementedError('set_duals_eq not implemented for PyomoGreyBoxNLP')
+        # we think the code below is correct, but it has not yet been tested
+        """
         #self._invalidate_greybox_duals_cache()
 
         # set the duals for the pyomo part of the nlp
         self._pyomo_nlp.set_duals_eq(
-            duals[:-self._n_greybox_constraints])
+            duals[:self._pyomo_nlp.n_equality_constraints()])
 
         # set the duals for the greybox part of the nlp
-        np.copyto(self._greybox_duals, duals[-self._n_greybox_constraints:])
+        np.copyto(self._greybox_duals, duals[self._pyomo_nlp.n_equality_constraints():])
+        # set the duals in the helpers for the hessian computation
+        for h in self._external_greybox_helpers:
+            h.set_duals_eq(duals)
+        """
+
+    # TODO: Implement set_duals_ineq
 
     # overloaded from NLP
     def get_duals_eq(self):
+        raise NotImplementedError('get_duals_eq not implemented for PyomoGreyBoxNLP')
+        """
         # return the duals for the pyomo part of the nlp
         # concatenated with the greybox part
         return np.concatenate((
             self._pyomo_nlp.get_duals_eq(),
             self._greybox_duals,
         ))
+        """
 
     # overloaded from NLP
     def set_obj_factor(self, obj_factor):
@@ -934,7 +951,7 @@ class PyomoGreyBoxNLP(NLP):
 
 
 class _ExternalGreyBoxModelHelper(object):
-    def __init__(self, ex_grey_box_block, vardata_to_idx):
+    def __init__(self, ex_grey_box_block, vardata_to_idx, con_offset):
         """This helper takes an ExternalGreyBoxModel and provides the residual
         and Jacobian computation.
 
@@ -960,7 +977,10 @@ class _ExternalGreyBoxModelHelper(object):
         self._ex_model = ex_grey_box_block.get_external_model()
         self._n_primals = len(vardata_to_idx)
         n_inputs = len(self._block.inputs)
+        assert n_inputs == self._ex_model.n_inputs()
+        n_eq_constraints = self._ex_model.n_equality_constraints()
         n_outputs = len(self._block.outputs)
+        assert n_outputs == self._ex_model.n_outputs()
 
         # store the map of input indices (0 .. n_inputs) to
         # the indices in the full primals vector
@@ -980,6 +1000,16 @@ class _ExternalGreyBoxModelHelper(object):
                 'ExternalGreyBoxModel has no equality constraints '
                 'or outputs. It must have at least one or both.')
 
+        self._ex_eq_duals_to_full_map = None
+        if n_eq_constraints > 0:
+            self._ex_eq_duals_to_full_map = \
+                list(xrange(con_offset, con_offset + n_eq_constraints))
+
+        self._ex_output_duals_to_full_map = None
+        if n_outputs > 0:
+            self._ex_output_duals_to_full_map = \
+                list(xrange(con_offset + n_eq_constraints, con_offset + n_eq_constraints + n_outputs))
+
         # we need to change the column indices in the jacobian
         # from the 0..n_inputs provided by the external model
         # to the indices corresponding to the full Pyomo model
@@ -989,6 +1019,11 @@ class _ExternalGreyBoxModelHelper(object):
         self._additional_output_entries_irow = None
         self._additional_output_entries_jcol = None
         self._additional_output_entries_data = None
+        self._con_offset = con_offset
+        self._eq_hess_jcol = None
+        self._eq_hess_irow = None
+        self._output_hess_jcol = None
+        self._output_hess_irow = None
 
     def set_primals(self, primals):
         # map the full primals "x" to the inputs "u" and set
@@ -1000,6 +1035,17 @@ class _ExternalGreyBoxModelHelper(object):
         # store a vector of the current output values to
         # use when evaluating residuals
         self._output_values = primals[self._outputs_to_primals_map]
+
+    def set_duals(self, duals):
+        # map the full duals to the duals for the equality
+        # and the output constraints
+        if self._ex_eq_duals_to_full_map is not None:
+            duals_eq = duals[self._ex_eq_duals_to_full_map]
+            self._ex_model.set_equality_constraint_multipliers(duals_eq)
+
+        if self._ex_output_duals_to_full_map is not None:
+            duals_outputs = duals[self._ex_output_duals_to_full_map]
+            self._ex_model.set_output_constraint_multipliers(duals_outputs)
 
     def n_residuals(self):
         return self._ex_model.n_equality_constraints() \
@@ -1105,3 +1151,66 @@ class _ExternalGreyBoxModelHelper(object):
             jac = outputs_jac
 
         return jac
+
+    def evaluate_hessian(self):
+        # compute the portion of the Hessian of the Lagrangian
+        # of h(x) w.r.t. x
+        # H_h(x) = sum_i y_eq_i * Hw_eq(Pu*x) +_ sum_k y_o_j * Hw_o(Pu*x)]
+
+        data_list = []
+        irow_list = []
+        jcol_list = []
+
+        # Hw_eq(x)
+        eq_hess = None
+        if self._ex_model.n_equality_constraints() > 0:
+            eq_hess = self._ex_model.evaluate_hessian_equality_constraints()
+            if self._eq_hess_jcol is None:
+                # The first time through, we won't have created the
+                # mapping of external primals ('u') to the full space
+                # primals ('x')
+                self._eq_hess_jcol = self._inputs_to_primals_map[eq_hess.col]
+                self._eq_hess_irow = self._inputs_to_primals_map[eq_hess.row]
+
+                # first time through, let's also check that it is lower triangular
+                if np.any(self._eq_hess_irow - self._eq_hess_jcol < 0):
+                    raise ValueError('ExternalGreyBoxModel must return lower '
+                                     'triangular portion of the Hessian only')
+
+            data_list.append(eq_hess.data)
+            irow_list.append(self._eq_hess_irow)
+            jcol_list.append(self._eq_hess_jcol)
+            # # map the columns from the inputs "u" back to the full primals "x"
+            # eq_hess = coo_matrix(
+            #     (eq_hess.data, (self._eq_hess_irow, self._eq_hess_jcol)),
+            #     (self._n_primals, self._n_primals))
+
+        outputs_hess = None
+        if self._ex_model.n_outputs() > 0:
+            outputs_hess = self._ex_model.evaluate_hessian_outputs()
+            if self._outputs_hess is None:
+                # The first time through, we won't have created the
+                # mapping of external outputs ('o') to the full space
+                # primals ('x')
+                self._outputs_hess_irow = self._inputs_to_primals_map[outputs_hess.row]
+                self._outputs_hess_jcol = self._inputs_to_primals_map[outputs_hess.col]
+                # first time through, let's also check that it is lower triangular
+                if np.any(self._outputs_hess_irow - self._outputs_hess_jcol < 0):
+                    raise ValueError('ExternalGreyBoxModel must return lower '
+                                     'triangular portion of the Hessian only')
+
+            data_list.append(output_hess.data)
+            irow_list.append(self._output_hess_irow)
+            jcol_list.append(self._output_hess_jcol)
+            # outputs_hess = coo_matrix(
+            #     (outputs_hess.data, (self._outputs_hess_irow, self._outputs_hess_jcol)),
+            #     (self._n_primals, self._n_primals))
+
+
+        data = np.concatenate(data_list)
+        irow = np.concatenate(irow_list)
+        jcol = np.concatenate(jcol_list)
+        hess = coo_matrix( (data, (irow, jcol)), (self._n_primals, self._n_primals) )
+
+        return hess
+

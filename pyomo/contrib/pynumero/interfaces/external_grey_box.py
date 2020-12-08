@@ -150,7 +150,7 @@ class ExternalGreyBoxModel(object):
         """
         pass
 
-    def set_equality_constraint_multipliers(self, eq_mult):
+    def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
         """
         This method is called by the solver to set the current values
         for the multipliers of the equality constraints. The derived
@@ -159,7 +159,7 @@ class ExternalGreyBoxModel(object):
         """
         pass
 
-    def set_output_constraint_multipliers(self, o_mult):
+    def set_output_constraint_multipliers(self, output_con_multiplier_values):
         """
         This method is called by the solver to set the current values
         for the multipliers of the output constraints. The derived

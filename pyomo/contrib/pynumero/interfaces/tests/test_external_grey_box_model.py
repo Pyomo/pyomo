@@ -102,6 +102,7 @@ class PressureDropSingleOutput(ExternalGreyBoxModel):
         self._input_names = ['Pin', 'c', 'F']
         self._input_values = np.zeros(3, dtype=np.float64)
         self._output_names = ['Pout']
+        self._output_con_mult_values = np.zeros(1, dtype=np.float64)
 
     def input_names(self):
         return self._input_names
@@ -115,6 +116,12 @@ class PressureDropSingleOutput(ExternalGreyBoxModel):
     def set_input_values(self, input_values):
         assert len(input_values) == 3
         np.copyto(self._input_values, input_values)
+
+    def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
+        raise NotImplementedError('This method should not be called for this model.')
+
+    def set_output_constraint_multipliers(self, output_con_multiplier_values):
+        np.copyto(self._output_con_mult_values, output_con_multiplier_values)
 
     def evaluate_equality_constraints(self):
         raise NotImplementedError('This method should not be called for this model.')
@@ -137,6 +144,18 @@ class PressureDropSingleOutput(ExternalGreyBoxModel):
         nonzeros = np.asarray([1, -4*F**2, -4*c*2*F], dtype=np.float64)
         jac = spa.coo_matrix((nonzeros, (irow, jcol)), shape=(1,3))
         return jac
+
+    def evaluate_hessian_equality_constraints(self):
+        raise NotImplementedError('This method should not be called for this model.')
+
+    def evaluate_hessian_outputs(self):
+        c = self._input_values[1]
+        F = self._input_values[2]
+        irow = np.asarray([2, 2], dtype=np.int64)
+        jcol = np.asarray([1, 2], dtype=np.int64)
+        data = self._output_con_mult_values[0]*np.asarray([-8*F, -8*c], dtype=np.float64)
+        hess = spa.coo_matrix((data, (irow, jcol)), shape=(3,3))
+        return hess
 
 class PressureDropSingleEquality(ExternalGreyBoxModel):
     #   u = [Pin, c, F, Pout]
@@ -364,6 +383,9 @@ class TestExternalGreyBoxModel(unittest.TestCase):
         self.assertEqual(output_names, ['Pout'])
 
         egbm.set_input_values(np.asarray([100, 2, 3], dtype=np.float64))
+        with self.assertRaises(NotImplementedError):
+            egbm.set_equality_constraint_multipliers(None)
+        egbm.set_output_constraint_multipliers(np.asarray([5], dtype=np.float64))
 
         with self.assertRaises(NotImplementedError):
             tmp = egbm.evaluate_equality_constraints()
@@ -378,6 +400,14 @@ class TestExternalGreyBoxModel(unittest.TestCase):
         self.assertTrue(np.array_equal(jac_o.row, np.asarray([0,0,0], dtype=np.int64)))
         self.assertTrue(np.array_equal(jac_o.col, np.asarray([0,1,2], dtype=np.int64)))
         self.assertTrue(np.array_equal(jac_o.data, np.asarray([1,-36,-48], dtype=np.float64)))
+
+        with self.assertRaises(NotImplementedError):
+            eq_hess = egbm.evaluate_hessian_equality_constraints()
+        outputs_hess = egbm.evaluate_hessian_outputs()
+        self.assertTrue(np.array_equal(outputs_hess.row, np.asarray([2, 2], dtype=np.int64)))
+        self.assertTrue(np.array_equal(outputs_hess.col, np.asarray([1, 2], dtype=np.int64)))
+        print(outputs_hess.data)
+        self.assertTrue(np.array_equal(outputs_hess.data, np.asarray([5*(-8*3), 5*(-8*2)], dtype=np.int64)))
 
     def test_pressure_drop_single_equality(self):
         egbm = PressureDropSingleEquality()
