@@ -85,9 +85,16 @@ class _fill_in_known_wildcards(object):
             the slice to advance
         """
         if _slice in self.known_slices:
+            # We have encountered the same slice twice, i.e. IC_slice_iter
+            # has constructed an iter_stack, and is now attempting to
+            # exhaust the most recent iterator in that stack.
+            # We know then that the iter stack is complete, and we
+            # tell IC_slice_iter.__next__ to wrap up by raising
+            # StopIteration.
             raise StopIteration()
         self.known_slices.add(_slice)
 
+        # `idx_count` is the number of indices this component needs.
         if _slice.ellipsis is None:
             idx_count = _slice.explicit_index_count
         elif not _slice.component.is_indexed():
@@ -100,22 +107,42 @@ class _fill_in_known_wildcards(object):
                     "underlying slice object contains ellipsis over a jagged "
                     "(dimen=None) Set")
         try:
+            # Here we assemble the index we will actually use to access
+            # the component.
             idx = tuple(
                 _slice.fixed[i] if i in _slice.fixed else self.key.pop(0)
                 for i in range(idx_count))
+            # _slice corresponds to some sliced entry in the call/iter stacks
+            # that contains the information describing the slice.
+            # Here we fill in an index with the fixed indices from the slice
+            # and the wildcard indices from the provided key.
         except IndexError:
+            # Occurs if we try to pop from an empty list.
             raise KeyError(
                 "Insufficient values for slice of indexed component '%s' "
                 "(found evaluating slice index %s)"
                 % (_slice.component.name, self.base_key))
 
         if idx in _slice.component:
+            # We have found a matching component at this level of the
+            # underlying slice _call_stack.  We need to record the index
+            # for later use (i.e., with get_last_index() /
+            # get_last_index_wildcards()).
             _slice.last_index = idx
+            # Return the component. We have successfully accessed
+            # the data value.
             return _slice.component[idx]
         elif len(idx) == 1 and idx[0] in _slice.component:
+            # `idx` is a len-1 tuple.  It is the scalar, not the tuple,
+            # that is contained by the component.
             _slice.last_index = idx
             return _slice.component[idx[0]]
         elif self.look_in_index:
+            # At this point we know our component is sparse and we did
+            # not find the component data.  Since `look_in_index` is
+            # True, we will verify that the index is valid in the
+            # underlying indexing set, and if it is, we will trigger the
+            # creation (and return) of the new component data.
             if idx in _slice.component.index_set():
                 _slice.last_index = idx
                 return _slice.component[idx] if self.get_if_not_present \
@@ -159,10 +186,17 @@ class _ReferenceDict(collections_MutableMapping):
     def __contains__(self, key):
         try:
             advance_iterator(self._get_iter(self._slice, key))
+            # This calls IC_slice_iter.__next__, which calls
+            # _fill_in_known_wildcards.
             return True
         except (StopIteration, KeyError):
             return False
         except SliceEllipsisLookupError:
+            # We failed because the notion of "location" in an index
+            # is ambiguous if the index_set has dimen None.
+            # We can still brute-force the lookup by comparing the key
+            # to the wildcards of the `last_index` cached by the
+            # slice's iterator stack.
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
             # Brute force (linear time) lookup
@@ -177,6 +211,8 @@ class _ReferenceDict(collections_MutableMapping):
             return advance_iterator(
                 self._get_iter(self._slice, key, get_if_not_present=True)
             )
+            # This calls IC_slice_iter.__next__, which calls
+            # _fill_in_known_wildcards.
         except StopIteration:
             raise KeyError("KeyError: %s" % (key,))
         except SliceEllipsisLookupError:
@@ -192,6 +228,10 @@ class _ReferenceDict(collections_MutableMapping):
     def __setitem__(self, key, val):
         tmp = self._slice.duplicate()
         op = tmp._call_stack[-1][0]
+        # Replace the end of the duplicated slice's call stack (deepest
+        # level of the component hierarchy) with the appropriate
+        # `set_item` call.  Then implement the actual __setitem__ by
+        # advancing the duplicated iterator.
         if op == IndexedComponent_slice.get_item:
             tmp._call_stack[-1] = (
                 IndexedComponent_slice.set_item,
@@ -251,6 +291,8 @@ class _ReferenceDict(collections_MutableMapping):
         return self._slice.wildcard_keys()
 
     def __len__(self):
+        # Note that unlike for regular dicts, len() of a _ReferenceDict
+        # is very slow (linear time).
         return sum(1 for i in self._slice)
 
     def iteritems(self):
@@ -275,7 +317,7 @@ class _ReferenceDict(collections_MutableMapping):
         iterates over the keys and looks the values up in the
         dictionary.  Unfortunately some slices have structures that make
         looking up components by the wildcard keys very expensive
-        (linear time; e.g., the use of elipses with jagged sets).  By
+        (linear time; e.g., the use of ellipses with jagged sets).  By
         implementing this method without using lookups, general methods
         that iterate over everything (like component.pprint()) will
         still be linear and not quadratic time.
@@ -284,6 +326,11 @@ class _ReferenceDict(collections_MutableMapping):
         return iter(self._slice)
 
     def _get_iter(self, _slice, key, get_if_not_present=False):
+        # Construct a slice iter with `_fill_in_known_wildcards`
+        # as `advance_iter`. This reuses all the logic from the slice
+        # iter to walk the call/iter stacks, but just jumps to a
+        # particular component rather than actually iterating.
+        # This is how this object does lookups.
         if key.__class__ not in (tuple, list):
             key = (key,)
         return _IndexedComponent_slice_iter(
@@ -348,62 +395,106 @@ class _ReferenceSet(collections_Set):
 
 
 def _identify_wildcard_sets(iter_stack, index):
-    # if we have already decided that there isn't a comon index for the
+    # Note that we can only _identify_wildcard_sets for a Reference if
+    # normalize_index.flatten is True.
+    #
+    # If we have already decided that there isn't a common index for the
     # slices, there is nothing more we can do.  Bail.
     if index is None:
         return index
 
     # Walk the iter_stack that led to the current item and try to
     # identify the component wildcard sets
-    tmp = [None]*len(iter_stack)
+    #
+    # `wildcard_stack` will be a list of dicts mirroring the
+    # _iter_stack.  Each dict maps position within that level's
+    # component's "subsets" list to the set at that position if it is a
+    # wildcard set.
+    wildcard_stack = [None]*len(iter_stack)
     for i, level in enumerate(iter_stack):
         if level is not None:
             offset = 0
+            # `offset` is the position, within the total index tuple,
+            # of the first coordinate of a set.
             wildcard_sets = {}
-            for j,s in enumerate(level.component.index_set().subsets()):
+            # `wildcard_sets` maps position in the current level's
+            # "subsets list" to its set if that set is a wildcard.
+            for j, s in enumerate(level.component.index_set().subsets()):
+                # Iterate over the sets that could possibly be wildcards
                 if s is UnindexedComponent_set:
                     wildcard_sets[j] = s
                     offset += 1
                     continue
                 if s.dimen is None:
                     return None
-                wild = sum( 1 for k in range(s.dimen)
+                # `wildcard_count` is the number of coordinates of this
+                # set (which may be multi-dimensional) that have been
+                # sliced.
+                wildcard_count = sum( 1 for k in range(s.dimen)
                             if k+offset not in level.fixed )
-                if wild == s.dimen:
+                # `k+offset` is a position in the "total" (flattened)
+                # index tuple.  All the _slice_generator's information
+                # is in terms of this total index tuple.
+                if wildcard_count == s.dimen:
+                    # Every coordinate of this subset is covered by a
+                    # wildcard. This could happen because of explicit
+                    # slices or an ellipsis.
                     wildcard_sets[j] = s
-                elif wild != 0:
+                elif wildcard_count != 0:
                     # This subset is "touched" by an explicit slice, but
                     # the whole set is not (i.e. there is a fixed
                     # component to this subset).  Therefore, as we
                     # cannot extract that subset, we quit.
+                    #
+                    # We do not simply `continue` as this "partially sliced
+                    # set" has ruined our chance of extracting sets that
+                    # perfectly describe our wildcards.
                     return None
                 offset += s.dimen
             # I believe that this check is not necessary: weirdnesses
-            # with elipsis should get caught by the check for s.dimen
+            # with ellipsis should get caught by the check for s.dimen
             # above.
             #
             #if offset != level.explicit_index_count:
             #    return None
-            tmp[i] = wildcard_sets
+            wildcard_stack[i] = wildcard_sets
     if not index:
-        return tmp
+        # index is an empty list, i.e. no wildcard sets have been
+        # previously identified.  `wildcard_stack` will serve as the
+        # basis for comparison for future components' wildcard sets.
+        return wildcard_stack
 
-    # Any of the following would preclude identifying common sets.
+    # For objects to have "the same" wildcard sets, the same sets must
+    # be sliced at the same coordinates of their "subsets list" at the
+    # same level of the _iter_stack.
+
+    # Any of the following would preclude identifying common sets
+    # among the objects defined by a slice.
     # However, I can't see a way to actually create any of these
     # situations (i.e., I can't test them).  Assertions are left in for
     # defensive programming.
-    assert len(index) == len(tmp)
-    for i, level in enumerate(tmp):
+    assert len(index) == len(wildcard_stack)
+
+    for i, level in enumerate(wildcard_stack):
         assert (index[i] is None) == (level is None)
         # No slices at this level in the slice
         if level is None:
             continue
-        # if there are a differing number of subsets
+        # if there are a differing number of wildcard "subsets"
         if len(index[i]) != len(level):
             return None
-        # if any subset differs
+        # if any wildcard "subset" differs in position or set.
         if any(index[i].get(j,None) is not _set for j,_set in iteritems(level)):
             return None
+        # These checks seem to intentionally preclude
+        #     m.b1[:].v and m.b2[1,:].v
+        # from having a common set, even if the sliced set is the same.
+        # This is correct, as you cannot express a single reference that
+        # covers this example.  You would have to create intermediate
+        # References to unify the indexing scheme, e.g.:
+        #     m.c[1] = Reference(m.b1[:])
+        #     m.c[2] = Reference(m.b2[1,:])
+        #     Reference(m.c[:].v)
     return index
 
 def Reference(reference, ctype=_NotSpecified):
@@ -523,7 +614,9 @@ def Reference(reference, ctype=_NotSpecified):
     else:
         # If the caller specified a ctype, then we will prepopulate the
         # list to improve our chances of avoiding a scan of the entire
-        # Reference
+        # Reference (by simulating multiple ctypes having been found, we
+        # can break out as soon as we know that there are not common
+        # subsets).
         ctypes = set((1,2))
     index = []
     for obj in _iter:
@@ -537,11 +630,15 @@ def Reference(reference, ctype=_NotSpecified):
             # things like pprint().  Of course, all of this logic is
             # skipped if the User knows better and forced a ctype on us.
             ctypes.add(0)
-        if index is not None:
-            index = _identify_wildcard_sets(_iter._iter_stack, index)
         # Note that we want to walk the entire slice, unless we can
-        # prove that BOTH there aren't common indexing sets AND there is
-        # more than one ctype.
+        # prove that BOTH there aren't common indexing sets (i.e., index
+        # is None) AND there is more than one ctype.
+        if index is not None:
+            # As long as we haven't ruled out the possibility of common
+            # wildcard sets, then we will use _identify_wildcard_sets to
+            # identify the wilcards for this obj and check compatibility
+            # of the wildcards with any previously-identified wildcards.
+            index = _identify_wildcard_sets(_iter._iter_stack, index)
         elif len(ctypes) > 1:
             break
     if not index:
@@ -549,13 +646,18 @@ def Reference(reference, ctype=_NotSpecified):
     else:
         wildcards = sum((sorted(iteritems(lvl)) for lvl in index
                          if lvl is not None), [])
+        # Wildcards is a list of (coordinate, set) tuples.  Coordinate
+        # is that within the subsets list, and set is a wildcard set.
         index = wildcards[0][1]
+        # index is the first wildcard set.
         if not isinstance(index, _SetDataBase):
             index = SetOf(index)
         for lvl, idx in wildcards[1:]:
             if not isinstance(idx, _SetDataBase):
                 idx = SetOf(idx)
             index = index * idx
+        # index is now either a single Set, or a SetProduct of the
+        # wildcard sets.
     if ctype is _NotSpecified:
         if len(ctypes) == 1:
             ctype = ctypes.pop()
