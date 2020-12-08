@@ -133,9 +133,6 @@ class PressureDropSingleOutput(ExternalGreyBoxModel):
         Pout = Pin - 4*c*F**2
         return np.asarray([Pout], dtype=np.float64)
 
-    def evaluate_jacobian_equality_constraints(self):
-        raise NotImplementedError('This method should not be called for this model.')
-
     def evaluate_jacobian_outputs(self):
         c = self._input_values[1]
         F = self._input_values[2]
@@ -144,9 +141,6 @@ class PressureDropSingleOutput(ExternalGreyBoxModel):
         nonzeros = np.asarray([1, -4*F**2, -4*c*2*F], dtype=np.float64)
         jac = spa.coo_matrix((nonzeros, (irow, jcol)), shape=(1,3))
         return jac
-
-    def evaluate_hessian_equality_constraints(self):
-        raise NotImplementedError('This method should not be called for this model.')
 
     def evaluate_hessian_outputs(self):
         c = self._input_values[1]
@@ -261,9 +255,6 @@ class PressureDropTwoOutputs(ExternalGreyBoxModel):
         Pout = Pin - 4*c*F**2
         return np.asarray([P2, Pout], dtype=np.float64)
 
-    def evaluate_jacobian_equality_constraints(self):
-        raise NotImplementedError('This method should not be called for this model.')
-
     def evaluate_jacobian_outputs(self):
         c = self._input_values[1]
         F = self._input_values[2]
@@ -328,9 +319,6 @@ class PressureDropTwoEqualities(ExternalGreyBoxModel):
         Pout = self._input_values[4]
         return np.asarray([P2 - (Pin - 2*c*F**2), Pout - (P2 - 2*c*F**2)], dtype=np.float64)
 
-    def evaluate_outputs(self):
-        raise NotImplementedError('This method should not be called for this model.')
-
     def evaluate_jacobian_equality_constraints(self):
         c = self._input_values[1]
         F = self._input_values[2]
@@ -354,7 +342,6 @@ class PressureDropTwoEqualities(ExternalGreyBoxModel):
         nonzeros = np.asarray([y1*(4*F) + y2*(4*F), y1*(4*c)+y2*(4*c)], dtype=np.float64)
         hess = spa.coo_matrix((nonzeros, (irow, jcol)), shape=(5,5))
         return hess
-
 
 class PressureDropTwoEqualitiesTwoOutputs(ExternalGreyBoxModel):
     #   u = [Pin, c, F, P1, P3]
