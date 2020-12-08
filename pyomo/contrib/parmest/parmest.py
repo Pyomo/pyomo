@@ -389,7 +389,7 @@ class Estimator(object):
                 try:
                     # If the component that was found is not a variable,
                     # this will generate an exception (and the warning
-                    # in the 'except'
+                    # in the 'except')
                     var_validate.fixed = False
                     # We want to standardize on the CUID string
                     # representation (which is what PySP will use
