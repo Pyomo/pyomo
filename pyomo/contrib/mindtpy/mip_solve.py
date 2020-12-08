@@ -100,7 +100,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
     mip_args = dict(config.mip_solver_args)
     set_solver_options(masteropt, solve_data, config, type='mip')
     try:
-        with time_code(solve_data.timing, 'master'):
+        with time_code(solve_data.timing, 'regularization master' if regularization_problem else ('fp master' if fp else 'master')):
             master_mip_results = masteropt.solve(
                 solve_data.mip, tee=config.mip_solver_tee, **mip_args)
     except ValueError:
@@ -409,6 +409,7 @@ def setup_master(solve_data, config, fp, regularization_problem):
             MindtPy.loa_proj_mip_obj = generate_lag_objective_function(solve_data.mip,
                                                                        solve_data.best_solution_found,
                                                                        config,
+                                                                       solve_data,
                                                                        discrete_only=False)
         if solve_data.objective_sense == minimize:
             MindtPy.cuts.obj_reg_estimate = Constraint(

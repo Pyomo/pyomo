@@ -24,7 +24,6 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
-from pyomo.contrib.gdpopt.util import time_code
 from pyomo.contrib.mindtpy.tabu_list import IncumbentCallback_cplex
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')

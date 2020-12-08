@@ -11,7 +11,7 @@
 from pyomo.core import (minimize, Constraint, TransformationFactory, value)
 from pyomo.core.base.constraint import ConstraintList
 from pyomo.opt import SolverFactory, SolutionStatus, SolverResults, SolverStatus
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, get_main_elapsed_time, copy_var_list_values
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, copy_var_list_values, time_code
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_subproblem_optimal
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_solver_options
@@ -103,8 +103,9 @@ def solve_fp_subproblem(solve_data, config):
     nlp_args = dict(config.nlp_solver_args)
     set_solver_options(nlpopt, solve_data, config, type='nlp')
     with SuppressInfeasibleWarning():
-        results = nlpopt.solve(
-            fp_nlp, tee=config.nlp_solver_tee, **nlp_args)
+        with time_code(solve_data.timing, 'fp subproblem'):
+            results = nlpopt.solve(
+                fp_nlp, tee=config.nlp_solver_tee, **nlp_args)
     return fp_nlp, results
 
 
