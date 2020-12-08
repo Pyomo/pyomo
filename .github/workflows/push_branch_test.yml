@@ -36,7 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-18.04]
-        python: [3.8]
+        python: [2.7, 3.8]
         other: [""]
         category: ["nightly"]
         # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
@@ -49,7 +49,6 @@ jobs:
           PYENV: pip
 
         - os: macos-latest
-          python: [2.7, 3.8]
           TARGET: osx
           PYENV: pip
 
