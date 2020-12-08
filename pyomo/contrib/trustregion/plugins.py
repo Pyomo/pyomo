@@ -10,7 +10,7 @@
 
 import logging
 
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 
 from pyomo.common.download import DownloadFactory
 from pyomo.opt.base import SolverFactory, OptSolver
