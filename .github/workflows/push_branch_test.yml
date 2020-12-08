@@ -49,7 +49,7 @@ jobs:
           PYENV: pip
 
         - os: macos-latest
-          python: 2.7
+          python: [2.7, 3.8]
           TARGET: osx
           PYENV: pip
 
@@ -100,12 +100,6 @@ jobs:
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
-
-        exclude:
-        - {os: macos-latest, python: pypy2}
-        - {os: macos-latest, python: pypy3}
-        - {os: windows-latest, python: pypy2}
-        - {os: windows-latest, python: pypy3}
 
     steps:
     - name: Checkout Pyomo source
