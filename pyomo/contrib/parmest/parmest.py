@@ -25,7 +25,7 @@ import pyomo.pysp.util.rapper as st
 from pyomo.pysp.scenariotree import tree_structure
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 from pyomo.opt import SolverFactory
-from pyomo.environ import Block
+from pyomo.environ import Block, ComponentUID
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
@@ -375,11 +375,12 @@ class Estimator(object):
         if (len(self.theta_names) == 1) and (self.theta_names[0] == 'parmest_dummy_var'):
             model.parmest_dummy_var = pyo.Var(initialize = 1.0)
             
-        for theta in self.theta_names:
+        for i, theta in enumerate(self.theta_names):
             # First, leverage the parser in ComponentUID to locate the
             # component.  If that fails, fall back on the original
             # (insecure) use of 'eval'
-            var_validate = model.find_component(theta)
+            var_cuid = ComponentUID(theta)
+            var_validate = var_cuid.find_component_on(model)
             if var_validate is None:
                 try:
                     var_validate = eval('model.'+theta)
@@ -390,6 +391,10 @@ class Estimator(object):
                 # was found is not a variable, this will generate an
                 # exception (and the warning in the 'except'
                 var_validate.fixed = False
+                # We want to standardize on the CUID string
+                # representation (which is what PySP will use
+                # internally)
+                self.theta_names[i] = repr(var_cuid)
             except:
                 print(theta +' is not a variable')
         
