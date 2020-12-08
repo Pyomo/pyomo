@@ -376,8 +376,19 @@ class Estimator(object):
             model.parmest_dummy_var = pyo.Var(initialize = 1.0)
             
         for theta in self.theta_names:
+            #First, leverage the parser in ComponentUID to locate the
+            #component.  If that fails, fall back on the original
+            #(insecure) use of 'eval'
+            var_validate = model.find_component(theta)
+            if var_validate is None:
+                try:
+                    var_validate = eval('model.'+theta)
+                except:
+                    pass
             try:
-                var_validate = eval('model.'+theta)
+                # If the variable was not found, or the component that
+                # was found is not a variable, this will generate an
+                # exception (and the warning in the 'except'
                 var_validate.fixed = False
             except:
                 print(theta +' is not a variable')
