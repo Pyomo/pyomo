@@ -312,13 +312,13 @@ class ComponentUID(object):
         call stack.
         """
         fixed, sliced, ellipsis = slice_info
-     
+
         if ellipsis is None:
-            ellipsis = {} 
+            ellipsis = {}
         else:
             ellipsis = {ellipsis: Ellipsis}
 
-        value_map = {} 
+        value_map = {}
         value_map.update(fixed)
         try:
             value_map.update(sliced)
@@ -506,7 +506,7 @@ class ComponentUID(object):
                 name = tok.value
         assert not idx_stack
         yield (name, idx)
-            
+
     def _parse_cuid_v1(self, label):
         """Parse a string (v1 repr format) and yield name, idx pairs
 
