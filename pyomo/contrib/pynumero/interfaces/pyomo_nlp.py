@@ -337,7 +337,7 @@ class PyomoNLP(AslNLP):
                 model_suffixes['ipopt_zU_out'].update(
                     zip(variables, bound_multipliers[1]))
 
-
+# TODO: look for the [:-i] when i might be zero
 class PyomoGreyBoxNLP(NLP):
     def __init__(self, pyomo_model):
         # store all the greybox custom block data objects
@@ -518,9 +518,18 @@ class PyomoGreyBoxNLP(NLP):
         self._evaluate_greybox_jacobians_and_cache_if_necessary()
         self._nnz_greybox_jac = len(self._cached_greybox_jac.data)
 
+        # compute the hessian for the external greybox models
+        # to get some of the statistics
+        self._evaluate_greybox_hessians_and_cache_if_necessary()
+        self._nnz_greybox_hess = len(self._cached_greybox_hess.data)
+
     def _invalidate_greybox_primals_cache(self):
         self._greybox_constraints_cached = False
         self._greybox_jac_cached = False
+        self._greybox_hess_cached = False
+
+    def _invalidate_greybox_duals_cache(self):
+        self._greybox_hess_cached = False
 
     # overloaded from NLP
     def n_primals(self):
@@ -638,7 +647,7 @@ class PyomoGreyBoxNLP(NLP):
 
     # overloaded from NLP
     def set_duals(self, duals):
-        #self._invalidate_greybox_duals_cache()
+        self._invalidate_greybox_duals_cache()
 
         # set the duals for the pyomo part of the nlp
         self._pyomo_nlp.set_duals(
@@ -810,6 +819,9 @@ class PyomoGreyBoxNLP(NLP):
                     .format(self.n_constraints(), self.n_primals(),
                             self.nnz_jacobian()))
             n_pyomo_constraints = self.n_constraints() - self._n_greybox_constraints
+
+            # to avoid an additional copy, we pass in a slice (numpy view) of the underlying
+            # data, row, and col that we were handed to be populated in evaluate_jacobian
             self._pyomo_nlp.evaluate_jacobian(
                 out=coo_matrix((out.data[:-self._nnz_greybox_jac],
                                 (out.row[:-self._nnz_greybox_jac],
@@ -870,10 +882,59 @@ class PyomoGreyBoxNLP(NLP):
             ))
     """
     # overloaded from NLP
+    def _evaluate_greybox_hessians_and_cache_if_necessary():
+        if self._greybox_hess_cached:
+            return
+
+        data = list()
+        irow = list()
+        jcol = list()
+        for external in self._external_greybox_helpers:
+            hess = external.evaluate_hessian()
+            data.append(hess.data)
+            irow.append(hess.irow)
+            jcol.append(hess.jcol)
+
+        data = np.concatenate(data)
+        irow = np.concatenate(irow)
+        jcol = np.concatenate(jcol)
+
+        self._cached_greybox_hess = coo_matrix( (data, (irow,jcol)), shape=(self.n_primals(), self.n_primals()))
+        self._greybox_hess_cached = True
+
     def evaluate_hessian_lag(self, out=None):
-        # return coo_matrix(([], ([],[])), shape=(self.n_primals(), self.n_primals()))
-        raise NotImplementedError(
-            "PyomoGreyBoxNLP does not currently support Hessians")
+        self._evaluate_greybox_hessians_and_cache_if_necessary()
+
+        if out is not None:
+            if ( not isinstance(out, coo_matrix)
+                 or out.shape[0] != self.n_primals()
+                 or out.shape[1] != self.n_primals()
+                 or out.nnz != self.nnz_hessian() ):
+                raise RuntimeError(
+                    'evaluate_hessian_lag called with an "out" argument'
+                    ' that is invalid. This should be a coo_matrix with'
+                    ' shape=({},{}) and nnz={}'
+                    .format(self.n_primals(), self.n_primals(),
+                            self.nnz_hessian()))
+
+            # to avoid an additional copy, we pass in a slice (numpy view) of the underlying
+            # data, row, and col that we were handed to be populated in evaluate_hessian_lag
+            # the coo_matrix is simply a holder of the data, row, and col structures
+            self._pyomo_nlp.evaluate_hessian_lag(
+                out=coo_matrix((out.data[:-self._nnz_greybox_hess],
+                                (out.row[:-self._nnz_greybox_hess],
+                                 out.col[:-self._nnz_greybox_hess])),
+                               shape=(self._pyomo_nlp.n_primals(), self._pyomo_nlp.n_primals())))
+            np.copyto(out.data[-self._nnz_greybox_hess:],
+                      self._cached_greybox_hess.data)
+            return out
+        else:
+            hess = self._pyomo_nlp.evaluate_hessian_lag()
+            data = np.concatenate(hess.data, self._cached_greybox_hess.data)
+            row = np.concatenate(hess.row, self._cached_greybox_hess.row)
+            col = np.concatenate(hess.col, self._cached_greybox_hess.col)
+            hess = coo_matrix((data, (row, col)), shape=(self.n_primals(), self.n_primals()))
+            return hess
 
     # overloaded from NLP
     def report_solver_status(self, status_code, status_message):
@@ -1169,8 +1230,8 @@ class _ExternalGreyBoxModelHelper(object):
                 # The first time through, we won't have created the
                 # mapping of external primals ('u') to the full space
                 # primals ('x')
-                self._eq_hess_jcol = self._inputs_to_primals_map[eq_hess.col]
                 self._eq_hess_irow = self._inputs_to_primals_map[eq_hess.row]
+                self._eq_hess_jcol = self._inputs_to_primals_map[eq_hess.col]
 
                 # first time through, let's also check that it is lower triangular
                 if np.any(self._eq_hess_irow - self._eq_hess_jcol < 0):
