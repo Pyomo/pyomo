@@ -22,6 +22,7 @@ from pyomo.common.dependencies import (
 
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
+from pyomo.pysp.scenariotree import tree_structure
 from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block
@@ -463,9 +464,21 @@ class Estimator(object):
             tree_model.BootList = bootlist
         tree_model.cb_data = self.callback_data  # None is OK
 
-        stsolver = st.StochSolver(fsfile = "pyomo.contrib.parmest.parmest",
-                                  fsfct = "_pysp_instance_creation_callback",
-                                  tree_model = tree_model)
+        try:
+            # For structured models, it is important that we use the
+            # updated version of the CUID representation.  PySP (for
+            # backwards compatibility reasons, and so a ton of tests
+            # don't have to be updated) still defaults to the old
+            # representation.
+            _cuidver = tree_structure.CUID_repr_version
+            tree_structure.CUID_repr_version = 2
+            stsolver = st.StochSolver(
+                fsfile = "pyomo.contrib.parmest.parmest",
+                fsfct = "_pysp_instance_creation_callback",
+                tree_model = tree_model
+            )
+        finally:
+            tree_structure.CUID_repr_version = _cuidver
                 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
