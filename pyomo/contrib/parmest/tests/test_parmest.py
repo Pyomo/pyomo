@@ -8,15 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-except:
-    pass
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
     scipy, scipy_available,
+    matplotlib, matplotlib_available,
 )
 imports_present = numpy_available & pandas_available & scipy_available
 
