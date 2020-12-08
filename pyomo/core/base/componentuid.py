@@ -354,6 +354,18 @@ class ComponentUID(object):
                 call, arg = call_stack_entry
             except ValueError:
                 call, arg, kwds = call_stack_entry
+
+            if name is not None:
+                if call != IndexedComponent_slice.get_attribute:
+                    raise RuntimeError(
+                        "Cannot create a CUID with a __call__ of anything "
+                        "other than a 'component' attribute")
+                if arg != 'component':
+                    raise NotImplementedError(
+                        "Cannot create a CUID from a slice with a "
+                        "call to any method other than `component`.\n"
+                        "Got %s." % arg)
+                arg, name = name, None
             
             if call & ( IndexedComponent_slice.SET_MASK
                         | IndexedComponent_slice.DEL_MASK ):
@@ -404,18 +416,6 @@ class ComponentUID(object):
                             "dict %s." % (kwds,)
                             )
             elif call == IndexedComponent_slice.get_attribute:
-                if name is not None:
-                    # This only happens if IndexedComponent_slice.call
-                    # was encountered.
-                    if arg != 'component':
-                        raise NotImplementedError(
-                            "Cannot create a CUID from a slice with a "
-                            "call to any method other than `component`. "
-                            "Got %s." % arg
-                            )
-                    else:
-                        # name is the attr we actually want to get.
-                        arg, name = name, None
                 if index is _NotSpecified:
                     index = ()
                 if type(index) is not tuple or len(index) == 1:
