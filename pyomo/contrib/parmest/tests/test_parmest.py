@@ -264,7 +264,86 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
         "Nonlinear Parameter Estimation", Y. Bard, 1974.
         '''
         
-    
+
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+class Test_parmest_indexed_variables(unittest.TestCase):
+
+    def make_model(self, theta_names):
+
+        data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
+                                  [4,16.0],[5,15.6],[7,19.8]], columns=['hour', 'y'])
+
+        def rooney_biegler_model_alternate(data):
+            ''' Alternate model definition used in a unit test
+            Here, the fitted parameters are defined as a single variable over a set
+            A bit silly for this specific example
+            '''
+
+            model = pyo.ConcreteModel()
+
+            model.var_names = pyo.Set(initialize=['asymptote','rate_constant'])
+
+            model.theta = pyo.Var(model.var_names, initialize={'asymptote':15, 'rate_constant':0.5})
+
+            def response_rule(m, h):
+                expr = m.theta['asymptote'] * (1 - pyo.exp(-m.theta['rate_constant'] * h))
+                return expr
+            model.response_function = pyo.Expression(data.hour, rule = response_rule)
+
+            def SSE_rule(m):
+                return sum((data.y[i] - m.response_function[data.hour[i]])**2 for i in data.index)
+            model.SSE = pyo.Objective(rule = SSE_rule, sense=pyo.minimize)
+
+            return model
+
+        def SSE(model, data):
+            expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+            return expr
+
+        return parmest.Estimator(rooney_biegler_model_alternate, data, theta_names, SSE)
+
+    def test_theta_est_quotedIndex(self):
+
+        theta_names = ["theta['asymptote']", "theta['rate_constant']"]
+
+        pest = self.make_model(theta_names)
+        objval, thetavals = pest.theta_est(calc_cov=False)
+
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
+
+    def test_theta_est_impliedStrIndex(self):
+
+        theta_names = ["theta[asymptote]", "theta[rate_constant]"]
+
+        pest = self.make_model(theta_names)
+        objval, thetavals = pest.theta_est(calc_cov=False)
+
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
+
+
+    @unittest.skipIf(not asl_available, "Cannot test covariance matrix: required ASL dependency is missing")
+    def test_theta_est_cov(self):
+        theta_names = ["theta[asymptote]", "theta[rate_constant]"]
+
+        pest = self.make_model(theta_names)
+        objval, thetavals, cov = pest.theta_est(calc_cov=True)
+
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
+
+        # Covariance matrix
+        self.assertAlmostEqual(cov[0,0], 6.30579403, places=2) # 6.22864 from paper
+        self.assertAlmostEqual(cov[0,1], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,0], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,1], 0.04193591, places=2) # 0.04124 from paper
+
         
 
 @unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")

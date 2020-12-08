@@ -376,9 +376,9 @@ class Estimator(object):
             model.parmest_dummy_var = pyo.Var(initialize = 1.0)
             
         for theta in self.theta_names:
-            #First, leverage the parser in ComponentUID to locate the
-            #component.  If that fails, fall back on the original
-            #(insecure) use of 'eval'
+            # First, leverage the parser in ComponentUID to locate the
+            # component.  If that fails, fall back on the original
+            # (insecure) use of 'eval'
             var_validate = model.find_component(theta)
             if var_validate is None:
                 try:
