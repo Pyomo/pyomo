@@ -6,6 +6,7 @@ Author: David L. Woodruff, started February 2017
 """
 
 import inspect
+from pyomo.core.base.component import _name_index_generator
 from pyomo.environ import SolverFactory
 from pyomo.pysp.scenariotree.instance_factory \
     import ScenarioTreeInstanceFactory
@@ -307,7 +308,7 @@ class StochSolver:
             var_name, index = root_node._variable_ids[variable_id]
             name = var_name
             if index is not None:
-                name += "["+str(index)+"]"
+                name += _name_index_generator(index)
             yield name, root_node._solution[variable_id]
 
     #=========================
