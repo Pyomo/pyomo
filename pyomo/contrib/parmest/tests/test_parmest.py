@@ -18,7 +18,6 @@ from pyomo.common.dependencies import (
     pandas as pd, pandas_available,
     scipy, scipy_available,
 )
-imports_present = numpy_available & pandas_available & scipy_available
 
 import platform
 is_osx = platform.mac_ver()[0] != ''
@@ -37,12 +36,6 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
-if numpy_available:
-    from pyomo.contrib.pynumero.asl import AmplInterface
-    asl_available = AmplInterface.available()
-else:
-    asl_available=False
-
 testdir = os.path.dirname(os.path.abspath(__file__))
 
 class Object_from_string_Tester(unittest.TestCase):
@@ -51,7 +44,7 @@ class Object_from_string_Tester(unittest.TestCase):
         self.instance.IDX = pyo.Set(initialize=['a', 'b', 'c'])
         self.instance.x = pyo.Var(self.instance.IDX, initialize=1134)
         # TBD add a block
-        if imports_present:
+        if parmest.parmest_available:
             np.random.seed(1134)
 
     def tearDown(self):
@@ -242,7 +235,8 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
         self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper
         self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 0.5311 from the paper
 
-    @unittest.skipIf(not asl_available, "Cannot test covariance matrix: required ASL dependency is missing")
+    @unittest.skipIf(not parmest.inverse_reduced_hessian_available,
+                     "Cannot test covariance matrix: required ASL dependency is missing")
     def test_theta_est_cov(self):
         objval, thetavals, cov = self.pest.theta_est(calc_cov=True)
 
@@ -327,7 +321,9 @@ class Test_parmest_indexed_variables(unittest.TestCase):
         self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
 
 
-    @unittest.skipIf(not asl_available, "Cannot test covariance matrix: required ASL dependency is missing")
+    @unittest.skipIf(
+        not parmest.inverse_reduced_hessian_available,
+        "Cannot test covariance matrix: required ASL dependency is missing")
     def test_theta_est_cov(self):
         theta_names = ["theta[asymptote]", "theta[rate_constant]"]
 
@@ -346,8 +342,10 @@ class Test_parmest_indexed_variables(unittest.TestCase):
 
 
 
-@unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
-@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not ipopt_available,
+                 "The 'ipopt' solver is not available")
 class parmest_object_Tester_reactor_design(unittest.TestCase):
 
     def setUp(self):
