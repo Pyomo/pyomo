@@ -355,10 +355,8 @@ class ComponentUID(object):
             except ValueError:
                 call, arg, kwds = call_stack_entry
             
-            if call & 0b10:
-                # Least significant bits in `set` and `del` calls
-                # are 0b10 and 0b11. These are hardcoded into the
-                # IndexedComponent_slice class.
+            if call & ( IndexedComponent_slice.SET_MASK
+                        | IndexedComponent_slice.DEL_MASK ):
                 raise ValueError(
                     "Cannot create a CUID from a slice that "
                     "contains `set` or `del` calls. Got call %s "
