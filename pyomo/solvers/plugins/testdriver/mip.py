@@ -12,14 +12,15 @@ import os
 import os.path
 
 import pyutilib.autotest
+
 import pyomo.common
 from pyomo.common.collections import Options
-
+from pyomo.common.tempfile import TempfileManager
 from pyomo.common.plugin import Plugin, implements, alias
 from pyomo.common.errors import ApplicationError
 import pyomo.opt
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 class PyomoMIPTestDriver(Plugin):
 
@@ -35,15 +36,15 @@ class PyomoMIPTestDriver(Plugin):
             cls.pico_convert_available=False
 
     def tearDownClass(self, cls, options):
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.tempdir = old_tempdir
 
     def setUp(self, testcase, options):
         global tmpdir
         tmpdir = os.getcwd()
         os.chdir(options.currdir)
-        pyutilib.services.TempfileManager.push()
-        pyutilib.services.TempfileManager.sequential_files(0)
-        pyutilib.services.TempfileManager.tempdir = options.currdir
+        TempfileManager.push()
+        TempfileManager.sequential_files(0)
+        TempfileManager.tempdir = options.currdir
         #
         if ':' in options.solver:
             solver, sub_solver = options.solver.split(':')
@@ -60,9 +61,9 @@ class PyomoMIPTestDriver(Plugin):
 
     def tearDown(self, testcase, options):
         global tmpdir
-        pyutilib.services.TempfileManager.pop()
+        TempfileManager.pop()
         os.chdir(tmpdir)
-        pyutilib.services.TempfileManager.unique_files()
+        TempfileManager.unique_files()
 
     def run_test(self, testcase, name, options):
         # TODO dirty hack for broken GLPK MIP solve - more elegant solution?

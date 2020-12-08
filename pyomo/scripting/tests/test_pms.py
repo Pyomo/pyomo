@@ -18,8 +18,9 @@ from os.path import abspath, dirname
 
 from pyutilib.pyro import using_pyro4
 import pyutilib.th as unittest
-import pyutilib.services
+
 from pyomo.common.collections import Options
+from pyomo.common.tempfile import TempfileManager
 import pyomo.opt
 from pyomo.environ import (ConcreteModel, RangeSet, Var,
                            Objective, Constraint, sum_product)
@@ -42,7 +43,7 @@ class Test(unittest.TestCase):
         self.worker = TestWorker()
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
+        TempfileManager.clear_tempfiles()
         del self.worker
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")

@@ -19,9 +19,9 @@ currdir = dirname(abspath(__file__))
 import pickle
 
 import pyutilib.th as unittest
-import pyutilib.services
 
 from pyomo.common.dependencies import yaml_available
+from pyomo.common.tempfile import TempfileManager
 from pyomo.core.expr import current as EXPR
 from pyomo.environ import RangeSet, ConcreteModel, Var, Param, Block, AbstractModel, Set, Constraint, Objective, value, sum_product, SolverFactory, VarList, ObjectiveList, ConstraintList
 from pyomo.opt import check_available_solvers
@@ -34,7 +34,7 @@ class Test(unittest.TestCase):
     def tearDown(self):
         if os.path.exists("unknown.lp"):
             os.unlink("unknown.lp")
-        pyutilib.services.TempfileManager.clear_tempfiles()
+        TempfileManager.clear_tempfiles()
 
 
     def test_clone_concrete_model(self):
