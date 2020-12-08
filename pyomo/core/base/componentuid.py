@@ -343,7 +343,7 @@ class ComponentUID(object):
         rcuid = []
         # We only append to `rcuid` when we find a `get_attr` call, so
         # we need to cache any index we encounter in a `get_item` call.
-        index = ()
+        index = _NotSpecified
         # We'd like to support slices that contain a call to `component`,
         # in which case we will cache the `__call__` argument to treat as
         # an attribute.
@@ -381,8 +381,7 @@ class ComponentUID(object):
                 # call stack.
                 assert not call_stack
             elif call == IndexedComponent_slice.get_item:
-                if index:
-                    # I am assuming here that empty tuple is not a valid index.
+                if index is not _NotSpecified:
                     raise NotImplementedError(
                     "Two `get_item` calls, %s and %s, were detected before a\n"
                     "`get_attr` call. This is not supported by `ComponentUID`."
@@ -417,9 +416,12 @@ class ComponentUID(object):
                     else:
                         # name is the attr we actually want to get.
                         arg, name = name, None
+                if index is _NotSpecified:
+                    index = ()
                 if type(index) is not tuple or len(index) == 1:
                     index = (index,)
                 rcuid.append((arg, index))
+                index = _NotSpecified
         rcuid.reverse()
         return rcuid
 
