@@ -251,6 +251,7 @@ community_map attribute or the repr() function can be used:
     so. Let's take a look at how this can be done in the following example:
 
     .. doctest::
+        :skipif: not matplotlib_available
 
         Create a CommunityMap object (so we can demonstrate the visualize_model_graph method)
         >>> community_map_object = cmo = detect_communities(model, type_of_community_map='bipartite', random_seed=seed)
@@ -283,6 +284,7 @@ An example of the two separate graphs created for these two function calls is sh
     .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
 
     .. doctest::
+        :skipif: not matplotlib_available
 
         Define the model
         >>> model = EightProcessFlowsheet()
