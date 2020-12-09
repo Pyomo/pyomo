@@ -17,12 +17,12 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
+from pyomo.common.tempfile import TempfileManager
 from pyomo.common.errors import ApplicationError
 
 import pyomo.opt
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 def filter(text):
     return 'Problem:' in text or text.startswith('NAME')
@@ -40,11 +40,11 @@ class Test(unittest.TestCase):
         solvers = pyomo.opt.check_available_solvers('glpk')
 
     def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test3_write_nl(self):
         """ Convert from AMPL to NL """

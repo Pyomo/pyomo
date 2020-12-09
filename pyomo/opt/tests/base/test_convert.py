@@ -17,12 +17,13 @@ pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
+
 from pyomo.common.errors import ApplicationError
+from pyomo.common.tempfile import TempfileManager
 
 import pyomo.opt
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 class MockArg(object):
 
@@ -70,11 +71,11 @@ class MockArg4(MockArg):
 class OptConvertDebug(unittest.TestCase):
 
     def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test_nl_nl1(self):
         """ Convert from NL to NL """

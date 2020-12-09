@@ -45,7 +45,7 @@ instance.y.value = 2
 instance.y.fixed = True
 # @Equivalent_form_of_instance.x.fix(2)
 
-model=ConcreteModel()
+model=pyo.ConcreteModel()
 model.obj1 = pyo.Objective(expr = 0)
 model.obj2 = pyo.Objective(expr = 0)
 
@@ -189,7 +189,7 @@ results = opt.solve(instance, warmstart=True)
 # @Pass_warmstart_to_solver
 
 # @Specify_temporary_directory_name
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 TempfileManager.tempdir = YourDirectoryNameGoesHere
 # @Specify_temporary_directory_name
 """

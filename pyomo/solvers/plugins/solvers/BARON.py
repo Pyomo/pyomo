@@ -178,7 +178,7 @@ class BARONSHELL(SystemCallSolver):
         # The solution file is created in the _convert_problem function.
         # The bar file needs the solution filename in the OPTIONS section, but
         # this function is executed after the bar problem file writing.
-        #self._soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.baron.sol')
+        #self._soln_file = pyomo.common.tempfile.TempfileManager.create_tempfile(suffix = '.baron.sol')
 
 
         cmd = [executable, problem_files[0]]

@@ -17,7 +17,7 @@ import logging
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 from pyutilib.subprocess import run
 
 import pyomo.common

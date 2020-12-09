@@ -11,7 +11,7 @@
 import os
 import sys
 
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option,

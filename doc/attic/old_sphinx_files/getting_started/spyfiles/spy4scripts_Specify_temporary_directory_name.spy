@@ -1,2 +1,2 @@
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfile import TempfileManager
 TempfileManager.tempdir = YourDirectoryNameGoesHere
