@@ -320,11 +320,7 @@ class ComponentUID(object):
 
         value_map = {} 
         value_map.update(fixed)
-        try:
-            value_map.update(sliced)
-        except TypeError:
-            sliced = {i: slice(None) for i in sliced}
-            value_map.update(sliced)
+        value_map.update(sliced)
         value_map.update(ellipsis)
 
         # Assume that the keys of fixed, sliced, and ellipsis
