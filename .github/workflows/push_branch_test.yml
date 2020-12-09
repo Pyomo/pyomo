@@ -49,17 +49,12 @@ jobs:
           PYENV: pip
 
         - os: macos-latest
-          python: 3.8
-          TARGET: osx
-          PYENV: pip
-
-        - os: macos-latest
-          python: 3.6
+          python: 2.7
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.6
+          python: 3.5
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
