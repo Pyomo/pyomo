@@ -10,13 +10,15 @@
 
 from six import PY3 as _PY3
 if _PY3:
-    from collections.abc import MutableMapping as MutableMapping
-    from collections.abc import Mapping as Mapping
-    from collections.abc import Sequence as Sequence
+    from collections.abc import (
+        MutableMapping, MutableSet, Mapping, Set, Sequence
+    )
+    from collections import UserDict
 else:
-    from collections import MutableMapping as MutableMapping
-    from collections import Mapping as Mapping
-    from collections import Sequence as Sequence
+    from collections import (
+        MutableMapping, MutableSet, Mapping, Set, Sequence
+    )
+    from UserDict import IterableUserDict as UserDict
 
 from .orderedset import OrderedDict, OrderedSet
 from .component_map import ComponentMap

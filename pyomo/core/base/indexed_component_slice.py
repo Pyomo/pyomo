@@ -562,7 +562,7 @@ class _IndexedComponent_slice_iter(object):
                     try:
                         # Get the specified index for the current component:
                         _comp = _comp.__getitem__( _call[1] )
-                    except KeyError:
+                    except LookupError:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
                         # allow users to (silently) ignore any key
