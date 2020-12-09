@@ -30,9 +30,6 @@ from pyomo.solvers.tests.models.QP_simple import QP_simple
 from pyomo.solvers.tests.models.LP_inactive_index import LP_inactive_index
 from pyomo.solvers.tests.models.SOS1_simple import SOS1_simple
 
-if matplotlib_available:
-    matplotlib.use('Agg')  # added to avoid $DISPLAY errors on Travis (from parmest)
-
 
 @unittest.skipUnless(community_louvain_available, "'community' package from 'python-louvain' is not available.")
 @unittest.skipUnless(networkx_available, "networkx is not available.")
