@@ -312,13 +312,13 @@ class ComponentUID(object):
         call stack.
         """
         fixed, sliced, ellipsis = slice_info
-     
+
         if ellipsis is None:
-            ellipsis = {} 
+            ellipsis = {}
         else:
             ellipsis = {ellipsis: Ellipsis}
 
-        value_map = {} 
+        value_map = {}
         value_map.update(fixed)
         value_map.update(sliced)
         value_map.update(ellipsis)
@@ -353,22 +353,22 @@ class ComponentUID(object):
 
             if name is not None:
                 if call != IndexedComponent_slice.get_attribute:
-                    raise RuntimeError(
+                    raise ValueError(
                         "Cannot create a CUID with a __call__ of anything "
                         "other than a 'component' attribute")
                 if arg != 'component':
-                    raise NotImplementedError(
+                    raise ValueError(
                         "Cannot create a CUID from a slice with a "
-                        "call to any method other than `component`.\n"
-                        "Got %s." % arg)
+                        "call to any method other than 'component': "
+                        "got '%s'." % arg)
                 arg, name = name, None
-            
+
             if call & ( IndexedComponent_slice.SET_MASK
                         | IndexedComponent_slice.DEL_MASK ):
                 raise ValueError(
                     "Cannot create a CUID from a slice that "
-                    "contains `set` or `del` calls. Got call %s "
-                    "with argument '%s'" % (call, arg) 
+                    "contains `set` or `del` calls: got call %s "
+                    "with argument %s" % (call, arg)
                     )
             elif call == IndexedComponent_slice.slice_info:
                 comp = arg[0]
@@ -390,31 +390,31 @@ class ComponentUID(object):
                 assert not call_stack
             elif call == IndexedComponent_slice.get_item:
                 if index is not _NotSpecified:
-                    raise NotImplementedError(
-                    "Two `get_item` calls, %s and %s, were detected before a\n"
-                    "`get_attr` call. This is not supported by `ComponentUID`."
+                    raise ValueError(
+                    "Two `get_item` calls, %s and %s, were detected before a"
+                    "`get_attr` call. This is not supported by 'ComponentUID'."
                     % (index, arg))
                 # Cache `get_item` arg until a `get_attr` is encountered.
                 index = arg
             elif call == IndexedComponent_slice.call:
                 if len(arg) != 1:
-                    raise NotImplementedError(
+                    raise ValueError(
                             "Cannot create a CUID from a slice with a "
-                            "call that has multiple arguments. Got "
+                            "call that has multiple arguments: got "
                             "arguments %s." % (arg,)
                             )
                 # Cache argument of a call to `component`
                 name = arg[0]
                 if kwds != {}:
-                    raise NotImplementedError(
+                    raise ValueError(
                             "Cannot create a CUID from a slice with a "
-                            "call that contains keywords. Got keyword "
+                            "call that contains keywords: got keyword "
                             "dict %s." % (kwds,)
                             )
             elif call == IndexedComponent_slice.get_attribute:
                 if index is _NotSpecified:
                     index = ()
-                if type(index) is not tuple or len(index) == 1:
+                elif type(index) is not tuple or len(index) == 1:
                     index = (index,)
                 rcuid.append((arg, index))
                 index = _NotSpecified
@@ -502,7 +502,7 @@ class ComponentUID(object):
                 name = tok.value
         assert not idx_stack
         yield (name, idx)
-            
+
     def _parse_cuid_v1(self, label):
         """Parse a string (v1 repr format) and yield name, idx pairs
 
