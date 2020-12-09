@@ -25,7 +25,7 @@ tempdir = dirname(abspath(__file__)) + os.sep + 'tempdir' + os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 
 old_tempdir = TempfileManager.tempdir
 

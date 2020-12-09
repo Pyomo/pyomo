@@ -19,7 +19,7 @@ import time
 import json
 from six import iteritems
 from pyomo.common import pyomo_api
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 
 from pyutilib.misc import import_file, setup_redirect, reset_redirect
 

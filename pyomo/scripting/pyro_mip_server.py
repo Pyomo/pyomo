@@ -33,7 +33,7 @@ from pyomo.common.errors import ApplicationError
 from pyomo.common import pyomo_command
 from pyomo.opt.base import SolverFactory, ConverterError
 from pyomo.common.collections import Bunch
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 
 import six
 

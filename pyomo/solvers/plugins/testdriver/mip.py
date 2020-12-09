@@ -15,7 +15,7 @@ import pyutilib.autotest
 
 import pyomo.common
 from pyomo.common.collections import Options
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.plugin import Plugin, implements, alias
 from pyomo.common.errors import ApplicationError
 import pyomo.opt

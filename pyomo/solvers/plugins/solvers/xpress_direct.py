@@ -13,7 +13,7 @@ import re
 import sys
 import time
 
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value

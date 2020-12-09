@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import TerminationCondition
 
 def ipopt_solve_with_stats(model, solver, max_iter=500, max_cpu_time=120):

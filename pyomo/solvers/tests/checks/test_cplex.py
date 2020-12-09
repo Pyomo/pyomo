@@ -10,7 +10,7 @@
 
 import os
 
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 import pyutilib.th as unittest
 
 import pyomo.kernel as pmo

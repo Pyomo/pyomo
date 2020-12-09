@@ -15,7 +15,7 @@ import itertools
 import operator
 import pyomo.core.base.var
 import pyomo.core.base.constraint
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core import is_fixed, value, minimize, maximize
 from pyomo.repn import generate_standard_repn
 from pyomo.core.base.suffix import Suffix

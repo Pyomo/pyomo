@@ -17,7 +17,7 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Options, Bunch
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver

@@ -23,7 +23,7 @@ if __name__ == "__main__":
     from os.path import abspath, dirname
     currdir = dirname(abspath(__file__))+os.sep
 
-    from pyomo.common.tempfile import TempfileManager
+    from pyomo.common.tempfiles import TempfileManager
 
     from pyutilib.autotest import create_test_suites
     create_test_suites(filename=currdir+'test_baselines.yml', _globals=globals())

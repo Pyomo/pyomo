@@ -21,7 +21,7 @@ import pickle
 import pyutilib.th as unittest
 
 from pyomo.common.dependencies import yaml_available
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr import current as EXPR
 from pyomo.environ import RangeSet, ConcreteModel, Var, Param, Block, AbstractModel, Set, Constraint, Objective, value, sum_product, SolverFactory, VarList, ObjectiveList, ConstraintList
 from pyomo.opt import check_available_solvers

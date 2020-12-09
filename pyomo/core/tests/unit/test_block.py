@@ -32,7 +32,7 @@ from pyomo.environ import (AbstractModel, ConcreteModel, Var, Set,
                            TraversalStrategy, RangeSet, SolverFactory,
                            value, sum_product)
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.block import SimpleBlock, SubclassOf, _BlockData, declare_custom_block
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import check_available_solvers

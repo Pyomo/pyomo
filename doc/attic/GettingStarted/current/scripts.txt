@@ -761,7 +761,7 @@ TempFileManager service. One can accomplish the same through the
 following few lines of code in a script:
 [source,python]
 ----
-from pyomo.common.tempfile import TempFileManager
+from pyomo.common.tempfiles import TempFileManager
 TempfileManager.tempdir = YourDirectoryNameGoesHere
 ----
 

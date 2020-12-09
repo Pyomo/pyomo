@@ -13,7 +13,7 @@ import pyutilib.subprocess
 
 from pyomo.common.errors import ApplicationError
 import pyomo.common
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import ProblemFormat, ConverterError
 from pyomo.opt.base.convert import ProblemConverterFactory
 

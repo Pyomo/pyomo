@@ -32,7 +32,7 @@ from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
                            exp, sqrt, ceil, floor, asin, acos, atan, sinh,
                            cosh, tanh, asinh, acosh, atanh)
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import _NotValid, _ParamData 
 
 from six import iteritems, itervalues, StringIO

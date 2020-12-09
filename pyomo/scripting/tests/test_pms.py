@@ -20,7 +20,7 @@ from pyutilib.pyro import using_pyro4
 import pyutilib.th as unittest
 
 from pyomo.common.collections import Options
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 from pyomo.environ import (ConcreteModel, RangeSet, Var,
                            Objective, Constraint, sum_product)

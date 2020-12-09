@@ -18,7 +18,7 @@ import six
 
 from scipy.sparse import coo_matrix
 
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import WriterFactory
 import pyomo.core.base as pyo
 from pyomo.common.collections import ComponentMap

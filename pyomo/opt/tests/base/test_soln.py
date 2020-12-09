@@ -21,7 +21,7 @@ import pyutilib.th as unittest
 import pyutilib.misc
 
 from pyomo.common.dependencies import yaml_available
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 
 from six import iterkeys

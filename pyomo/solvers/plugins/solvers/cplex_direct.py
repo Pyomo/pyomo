@@ -13,7 +13,7 @@ import re
 import six
 import sys
 
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.base import Suffix, Var, Constraint, SOSConstraint, Objective
 from pyomo.core.expr.numvalue import is_fixed

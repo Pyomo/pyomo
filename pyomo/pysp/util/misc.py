@@ -21,7 +21,7 @@ import inspect
 import argparse
 
 from pyutilib.misc import import_file
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.errors import ApplicationError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.opt.base import ConverterError

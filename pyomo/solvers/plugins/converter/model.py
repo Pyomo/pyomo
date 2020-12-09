@@ -12,7 +12,7 @@
 import os
 from six import iteritems, PY3
 
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import ProblemFormat
 from pyomo.opt.base.convert import ProblemConverterFactory
 from pyomo.solvers.plugins.converter.pico import PicoMIPConverter

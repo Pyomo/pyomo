@@ -15,7 +15,7 @@ import sys
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch, Options
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 import pyutilib.subprocess
 
 from pyomo.common import Executable

@@ -101,6 +101,12 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
+        exclude:
+        - {os: macos-latest, python: pypy2}
+        - {os: macos-latest, python: pypy3}
+        - {os: windows-latest, python: pypy2}
+        - {os: windows-latest, python: pypy3}
+
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v2

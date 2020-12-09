@@ -18,7 +18,7 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 from pyomo.opt import (TerminationCondition,
                        SolutionStatus,

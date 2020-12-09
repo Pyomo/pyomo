@@ -22,7 +22,7 @@ import pyutilib.misc
 
 import pyomo.opt
 import pyomo.opt.blackbox
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 
 old_tempdir = TempfileManager.tempdir
 

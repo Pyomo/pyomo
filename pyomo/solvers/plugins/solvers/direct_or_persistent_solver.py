@@ -16,7 +16,7 @@ from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 import pyomo.common
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import ComponentMap, ComponentSet, Options
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt.base.solvers
 from pyomo.opt.base.formats import ResultsFormat
 

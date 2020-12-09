@@ -1,2 +1,2 @@
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 TempfileManager.tempdir = YourDirectoryNameGoesHere

@@ -13,7 +13,7 @@ import logging
 import pprint
 
 import pyomo.common
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.pysp.solvers.spsolver import SPSolver
 
 logger = logging.getLogger('pyomo.pysp')

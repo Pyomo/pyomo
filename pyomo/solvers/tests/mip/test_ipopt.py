@@ -13,7 +13,7 @@ from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
 import pyutilib.th as unittest
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 
 import pyomo.opt
 from pyomo.core import ConcreteModel, RangeSet, Var, Param, Objective, ConstraintList, value, minimize

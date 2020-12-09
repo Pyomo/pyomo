@@ -13,7 +13,7 @@ import logging
 from pyomo.opt.base import SolverFactory, ProblemFormat, ResultsFormat
 from pyomo.opt.solver import SystemCallSolver
 from pyomo.common.collections import Bunch
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 
 logger = logging.getLogger('pyomo.neos')
 

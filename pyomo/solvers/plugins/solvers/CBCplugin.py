@@ -20,7 +20,7 @@ from six import iteritems, string_types
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Options, Bunch
-from pyomo.common.tempfile import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyutilib.subprocess import run
 
 from pyomo.core.kernel.block import IBlock
