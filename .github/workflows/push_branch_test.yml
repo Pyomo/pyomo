@@ -49,12 +49,17 @@ jobs:
           PYENV: pip
 
         - os: macos-latest
-          python: 2.7
+          python: 3.8
+          TARGET: osx
+          PYENV: pip
+
+        - os: macos-latest
+          python: 3.6
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.5
+          python: 3.6
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
@@ -100,12 +105,6 @@ jobs:
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
-
-        exclude:
-        - {os: macos-latest, python: pypy2}
-        - {os: macos-latest, python: pypy3}
-        - {os: windows-latest, python: pypy2}
-        - {os: windows-latest, python: pypy3}
 
     steps:
     - name: Checkout Pyomo source
