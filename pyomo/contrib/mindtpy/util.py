@@ -402,7 +402,21 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
         expr=sum(norm_constraint_blk.L1_slack_var[idx] for idx in norm_constraint_blk.L1_slack_idx) <= rhs)
 
 
-def set_solver_options(opt, solve_data, config, type):
+def set_solver_options(opt, solve_data, config, type, regularization=False):
+    """ set options for MIP/NLP solvers
+
+    Args:
+        opt : SolverFactory
+            the solver
+        solve_data: MindtPy Data Container
+            data container that holds solve-instance data
+        config: ConfigBlock
+            contains the specific configurations for the algorithm
+        type: String
+            The type of the solver, i.e. mip or nlp
+        regularization (bool, optional): Boolean. 
+            Defaults to False.
+    """
     # TODO: integrate nlp_args here
     # nlp_args = dict(config.nlp_solver_args)
     elapsed = get_main_elapsed_time(solve_data.timing)
@@ -417,9 +431,16 @@ def set_solver_options(opt, solve_data, config, type):
     if solver_name in {'cplex', 'gurobi', 'gurobi_persistent'}:
         opt.options['timelimit'] = remaining
         opt.options['mipgap'] = 0.001
+        if regularization == True:
+            if solver_name == 'cplex':
+                opt.options['mip limits populate'] == 10
+            elif solver_name == 'gurobi':
+                opt.options['SolutionLimit'] = 10
     elif solver_name == 'cplex_persistent':
         opt.options['timelimit'] = remaining
         opt._solver_model.parameters.mip.tolerances.mipgap.set(0.001)
+        if regularization == True:
+            opt._solver_model.parameters.mip.limits.populate.set(10)
     elif solver_name == 'glpk':
         opt.options['tmlim'] = remaining
         # opt.options['mipgap'] = 0.001
@@ -431,6 +452,5 @@ def set_solver_options(opt, solve_data, config, type):
         if type == 'mip':
             opt.options['add_options'] = ['option optcr=0.001;',
                                           ('option reslim=%s;', remaining)]
-            opt['warmstart'] = True
         elif type == 'nlp':
             opt.options['add_options'] = [('option reslim=%s;', remaining)]

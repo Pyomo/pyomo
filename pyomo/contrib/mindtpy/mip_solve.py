@@ -98,11 +98,14 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
     mip_args = dict(config.mip_solver_args)
-    set_solver_options(masteropt, solve_data, config, type='mip')
+    if config.mip_solver in {'cplex', 'gurobi'}:
+        mip_args['warmstart'] = True
+    set_solver_options(masteropt, solve_data, config,
+                       type='mip', regularization=regularization_problem)
     try:
         with time_code(solve_data.timing, 'regularization master' if regularization_problem else ('fp master' if fp else 'master')):
-            master_mip_results = masteropt.solve(
-                solve_data.mip, tee=config.mip_solver_tee, **mip_args)
+            master_mip_results = masteropt.solve(solve_data.mip,
+                                                 tee=config.mip_solver_tee, **mip_args)
     except ValueError:
         config.logger.warning('ValueError: Cannot load a SolverResults object with bad status: error. '
                               'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
