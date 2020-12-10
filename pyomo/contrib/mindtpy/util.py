@@ -451,6 +451,6 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
     elif solver_name == 'gams':
         if type == 'mip':
             opt.options['add_options'] = ['option optcr=0.001;',
-                                          ('option reslim=%s;', remaining)]
+                                          'option reslim=%s;' % remaining]
         elif type == 'nlp':
-            opt.options['add_options'] = [('option reslim=%s;', remaining)]
+            opt.options['add_options'] = ['option reslim=%s;' % remaining]
