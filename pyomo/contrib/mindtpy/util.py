@@ -326,8 +326,9 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
         dual_values = np.array(list(
             temp_model.dual[c] for c in nlp.get_pyomo_constraints())).reshape(-1, 1)
         jac_lag = obj_grad + jac.transpose().dot(dual_values)
+        nlp_var = set([i.name for i in nlp.get_pyomo_variables()])
         first_order_term = sum(float(jac_lag[nlp.get_primal_indices([temp_var])[0]]) * (var - var.value) for var,
-                               temp_var in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]))
+                               temp_var in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]) if temp_var.name in nlp_var)
 
         # Implementation 2
         # Use extract_submatrix_jacobian and extract_submatrix_hessian_lag function to assigning variable and constraint sequence
@@ -349,7 +350,8 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
             hess_lag = nlp.evaluate_hessian_lag().toarray()
             second_order_term = 0.5 * sum((var_i - var_i.value) * float(hess_lag[nlp.get_primal_indices([temp_var_i])[0]][nlp.get_primal_indices([temp_var_j])[0]]) * (var_j - var_j.value)
                                           for var_i, temp_var_i in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
-                                          for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]))
+                                          for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
+                                          if (temp_var_i.name in nlp_var and temp_var_j.name in nlp_var))
 
             # Implementation 2
             # hess_lag = nlp.extract_submatrix_hessian_lag(temp_model.MindtPy_utils.variable_list[:-1],
