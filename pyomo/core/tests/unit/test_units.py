@@ -569,7 +569,11 @@ class TestPyomoUnit(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(units=units.kg)
         m.c = Constraint(expr=m.x**2 <= 10*units.kg**2)
-        i = pickle.loads(pickle.dumps(m))
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.core.base'):
+            i = pickle.loads(pickle.dumps(m))
+        self.assertEqual("", log.getvalue())
+        self.assertIsNot(m.x, i.x)
         self.assertIsNot(m.x._units, i.x._units)
         self.assertEqual(m.x._units, i.x._units)
         self.assertEqual(str(m.c.upper), str(i.c.upper))
@@ -591,11 +595,14 @@ class TestPyomoUnit(unittest.TestCase):
             "pickling a _PyomoUnit associated with a PyomoUnitsContainer "
             "that is not the default singleton "
             "(pyomo.core.base.units_container.units)", log.getvalue())
+        self.assertIsNot(m.x, i.x)
         self.assertIsNot(m.x._units, i.x._units)
-        # Note that since the pickle is restored using the default
-        # global PyomoUnitsContainer, the units will not longer compare
-        # equal
-        self.assertNotEqual(m.x._units, i.x._units)
+        # Note that pint is inconsistent when comparing standard units
+        # across different UnitRegistry instances: older versions of
+        # pint would have them compare "not equal" while newer versions
+        # compare equal
+        #
+        # self.assertNotEqual(m.x._units, i.x._units)
         self.assertEqual(str(m.c.upper), str(i.c.upper))
         base = StringIO()
         m.pprint(base)
