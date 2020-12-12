@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from __future__ import division
-from pyomo.core import Constraint, minimize, value
+from pyomo.core import Constraint, minimize, value, maximize
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
@@ -23,6 +23,9 @@ import cplex
 from cplex.callbacks import LazyConstraintCallback
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.opt.results import ProblemSense
+from pyomo.contrib.mindtpy.mip_solve import handle_master_optimal, solve_master
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
+
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -312,15 +315,12 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             the mip solver
         """
         # proceed. Just need integer values
-        MindtPy = master_mip.MindtPy_utils
 
         # this value copy is useful since we need to fix subproblem based on the solution of the master problem
         self.copy_lazy_var_list_values(opt,
                                        master_mip.MindtPy_utils.variable_list,
                                        solve_data.working_model.MindtPy_utils.variable_list,
                                        config)
-        # if config.strategy == 'GOA':
-        # if not config.add_no_good_cuts:
         if solve_data.objective_sense == minimize:
             solve_data.LB = max(
                 self.get_best_objective_value(), solve_data.LB)
@@ -330,9 +330,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 self.get_best_objective_value(), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
-            'MIP %s: OBJ: %s  Bound: %s  LB: %s  UB: %s'
-            % (solve_data.mip_iter, value(MindtPy.mip_obj.expr), self.get_best_objective_value(),
-               solve_data.LB, solve_data.UB))
+            'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s'
+            % (solve_data.mip_iter, self.get_objective_value(), self.get_best_objective_value(),
+                solve_data.LB, solve_data.UB))
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """
@@ -393,6 +393,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         if config.strategy == 'OA':
             self.add_lazy_oa_cuts(
                 solve_data.mip, dual_values, solve_data, config, opt)
+            if config.add_regularization is not None:
+                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
         elif config.strategy == 'GOA':
             self.add_lazy_affine_cuts(solve_data, config, opt)
         if config.add_no_good_cuts:
@@ -489,6 +491,24 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         self.handle_lazy_master_feasible_solution(
             master_mip, solve_data, config, opt)
+
+        # regularization is activated after the first feasible solution is found.
+        if config.add_regularization is not None and solve_data.best_solution_found is not None:
+            # the master problem might be unbounded, regularization is activated only when a valid bound is provided.
+
+            copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
+                                 solve_data.mip.MindtPy_utils.variable_list,
+                                 config)
+            if config.strategy == 'OA':
+                self.add_lazy_oa_cuts(
+                    solve_data.mip, None, solve_data, config, opt)
+
+            if (solve_data.objective_sense == minimize and solve_data.LB != float('-inf')) or (solve_data.objective_sense == maximize and solve_data.UB != float('inf')):
+                master_mip, master_mip_results = solve_master(
+                    solve_data, config, regularization_problem=True)
+                if master_mip_results.solver.termination_condition is tc.optimal:
+                    handle_master_optimal(
+                        master_mip, solve_data, config, update_bound=False)
 
         if solve_data.LB + config.bound_tolerance >= solve_data.UB:
             config.logger.info(

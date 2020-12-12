@@ -68,12 +68,11 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
     if config.nlp_solver == 'ipopt':
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
-
     masteropt = SolverFactory(config.mip_solver)
     # determine if persistent solver is called.
     if isinstance(masteropt, PersistentSolver):
         masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
-    if config.single_tree:
+    if config.single_tree and not regularization_problem:
         # Configuration of lazy callback
         lazyoa = masteropt._solver_model.register_callback(
             single_tree.LazyOACallback_cplex)
@@ -114,7 +113,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
         return None, None
 
     if master_mip_results.solver.termination_condition is tc.optimal:
-        if config.single_tree and config.add_no_good_cuts is False:
+        if config.single_tree and config.add_no_good_cuts is False and regularization_problem is False:
             if solve_data.objective_sense == minimize:
                 solve_data.LB = max(
                     master_mip_results.problem.lower_bound, solve_data.LB)
