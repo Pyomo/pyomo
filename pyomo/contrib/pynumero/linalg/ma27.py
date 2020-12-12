@@ -38,6 +38,7 @@ class MA27Interface(object):
 
         self.iw_factor = iw_factor
         self.a_factor = a_factor
+        self._dim_cached = None
 
         self.lib = ctypes.cdll.LoadLibrary(self.libname)
 
@@ -119,8 +120,7 @@ class MA27Interface(object):
         irn = irn.astype(np.intc, casting='safe', copy=True)
         icn = icn.astype(np.intc, casting='safe', copy=True)
         ne = irn.size
-        self.ne_cached = ne
-        self.dim_cached = dim
+        self._dim_cached = dim
         assert ne == icn.size, 'Dimension mismatch in row and column arrays'
 
         if self.iw_factor is not None:
@@ -136,16 +136,11 @@ class MA27Interface(object):
     def do_numeric_factorization(self, irn, icn, dim, entries):
         irn = irn.astype(np.intc, casting='safe', copy=True)
         icn = icn.astype(np.intc, casting='safe', copy=True)
-        assert (self.ne_cached == icn.size) and self.ne_cached == irn.size,\
-                'Dimension mismatch in row or column array'
 
         ent = entries.astype(np.double, casting='safe', copy=True)
 
         ne = ent.size
-        assert ne == self.ne_cached,\
-               ('Wrong number of entries in matrix. Please re-run symbolic'
-               'factorization with correct nonzero coordinates.')
-        assert dim == self.dim_cached,\
+        assert dim == self._dim_cached,\
                ('Dimension mismatch between symbolic and numeric factorization.'
                'Please re-run symbolic factorization with the correct '
                'dimension.')
@@ -166,7 +161,7 @@ class MA27Interface(object):
     def do_backsolve(self, rhs):
         rhs = rhs.astype(np.double, casting='safe', copy=True)
         rhs_dim = rhs.size
-        assert rhs_dim == self.dim_cached,\
+        assert rhs_dim == self._dim_cached,\
             'Dimension mismatch in right hand side. Please correct.'
 
         self.lib.do_backsolve(self._ma27, rhs_dim, rhs)
