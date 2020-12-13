@@ -376,6 +376,10 @@ def check_config(config):
         config.mip_solver = 'cplex_persistent'
         config.logger.info(
             'Single tree implementation is activated. The defalt MIP solver is cplex_persistent')
+        if config.threads > 0:
+            config.threads = 0
+            config.logger.info(
+                'The threads parameter is corrected to 1 since lazy constraint callback conflicts with multi-threads mode.')
     # if the slacks fix to zero, just don't add them
     if config.max_slack == 0.0:
         config.add_slack = False
@@ -416,3 +420,7 @@ def check_config(config):
         config.integer_to_binary = True
     if config.use_tabu_list:
         config.mip_solver = 'cplex_persistent'
+        if config.threads > 0:
+            config.threads = 0
+            config.logger.info(
+                'The threads parameter is corrected to 1 since incumbent callback conflicts with multi-threads mode.')
