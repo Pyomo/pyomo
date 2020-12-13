@@ -425,8 +425,12 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
     remaining = int(max(config.time_limit - elapsed, 1))
     if type == 'mip':
         solver_name = config.mip_solver
-        if config.threads > 0:
-            opt.options['threads'] = config.threads
+        if regularization:
+            if config.projection_mip_threads > 0:
+                opt.options['threads'] = config.projection_mip_threads
+        else:
+            if config.threads > 0:
+                opt.options['threads'] = config.threads
     elif type == 'nlp':
         solver_name = config.nlp_solver
     # TODO: opt.name doesn't work for GAMS

@@ -228,6 +228,12 @@ def _add_subsolver_configs(CONFIG):
         description='Threads',
         doc='Threads used by milp solver and nlp solver.'
     ))
+    CONFIG.declare('projection_mip_threads', ConfigValue(
+        default=0,
+        domain=NonNegativeInt,
+        description='projection mip threads',
+        doc='Threads used by milp solver to solve projection master problem.'
+    ))
     CONFIG.declare('solver_tee', ConfigValue(
         default=False,
         description='Stream the output of mip solver and nlp solver to terminal.',
@@ -368,6 +374,11 @@ def _add_loa_configs(CONFIG):
 
 def check_config(config):
     # configuration confirmation
+    if config.add_regularization in {'grad_lag', 'hess_lag'}:
+        config.calculate_dual = True
+        if config.projection_mip_threads == 0 and config.threads > 0:
+            config.projection_mip_threads = config.threads
+            config.logger.info('Set projection_mip_threads equal to threads')
     if config.single_tree:
         config.iteration_limit = 1
         config.add_slack = False
@@ -409,8 +420,6 @@ def check_config(config):
     if config.solver_tee:
         config.mip_solver_tee = True
         config.nlp_solver_tee = True
-    if config.add_regularization in {'grad_lag', 'hess_lag'}:
-        config.calculate_dual = True
     if config.heuristic_nonconvex:
         config.equality_relaxation = True
         config.add_slack = True
