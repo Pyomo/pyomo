@@ -7,8 +7,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from __future__ import division
-import sys
 import pyutilib.th as unittest
 
 from pyomo.contrib.pynumero.dependencies import (

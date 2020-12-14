@@ -12,9 +12,9 @@ import os
 import six
 
 import pyutilib.subprocess
-import pyutilib.common
 import pyomo.common
-from pyomo.opt.base import *
+from pyomo.common.errors import ApplicationError
+from pyomo.opt.base import ProblemFormat, ConverterError
 from pyomo.opt.base.convert import ProblemConverterFactory
 
 
@@ -105,7 +105,7 @@ class GlpsolMIPConverter(object):
             cmd.append(modfile)
         pyutilib.subprocess.run(cmd)
         if not os.path.exists(ofile):       #pragma:nocover
-            raise pyutilib.common.ApplicationError("Problem launching 'glpsol' to create "+ofile)
+            raise ApplicationError("Problem launching 'glpsol' to create "+ofile)
         if os.path.exists(modfile):
             os.remove(modfile)
         return (ofile,),None # empty variable map

@@ -11,7 +11,6 @@ import os
 import sys
 import time
 import math
-import array
 
 # TODO: run y update on the server side so that bounds can be
 #       returned efficiently if enabled

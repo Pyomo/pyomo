@@ -38,9 +38,16 @@ from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 import pyutilib.th as unittest
 
 import pyomo.core.base
-from pyomo.environ import *
+from pyomo.environ import (Set, SetOf, RangeSet, Param, ConcreteModel, 
+                           AbstractModel, Expression, EmptySet, NonPositiveIntegers,
+                           NonPositiveReals, PositiveReals, NegativeReals, 
+                           IntegerSet, NegativeIntegers, 
+                           PositiveIntegers, RealSet, BooleanSet, 
+                           IntegerInterval, RealInterval, Binary,
+                           PercentFraction, UnitInterval, NonNegativeIntegers,
+                           Integers, NonNegativeReals, Boolean, Reals, 
+                           Any, value, set_options, simple_set_rule)
 from pyomo.core.base.set import _AnySet, RangeDifferenceError
-from pyomo.core.base.component import CloneError
 
 _has_numpy = False
 try:

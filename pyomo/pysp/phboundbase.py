@@ -17,7 +17,7 @@ import copy
 from six import iteritems
 from operator import itemgetter
 
-from pyomo.pysp.phutils import *
+from pyomo.pysp.phutils import indexToString
 from pyomo.opt import UndefinedData
 
 logger = logging.getLogger('pyomo.pysp')

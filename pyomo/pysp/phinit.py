@@ -8,23 +8,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import gc
 import sys
 import time
 import contextlib
 import random
 import argparse
-try:
-    from guppy import hpy
-    guppy_available = True
-except ImportError:
-    guppy_available = False
 
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.misc import import_file
 
 from pyomo.common import pyomo_command
-from pyomo.common.dependencies import pympler_available
+from pyomo.common.dependencies import pympler_available, attempt_import
 from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
 from pyomo.core.base import maximize, minimize, Var, Suffix
 from pyomo.opt.base import SolverFactory
@@ -41,7 +35,8 @@ from pyomo.pysp.scenariotree.instance_factory import \
 from pyomo.pysp.solutionwriter import ISolutionWriterExtension
 from pyomo.pysp.util.misc import (launch_command,
                                   load_extensions)
-import pyomo.pysp.phsolverserverutils
+
+guppy, guppy_available = attempt_import('guppy')
 
 #
 # utility method to construct an option parser for ph arguments,
@@ -1257,9 +1252,8 @@ def run_ph(options, ph):
 
 def exec_runph(options):
 
-    import pyomo.environ
-
     start_time = time.time()
+    import pyomo.environ
 
     try:
 

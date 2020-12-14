@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Set, ConstraintList, Block
+from pyomo.core import ConcreteModel, Var, Objective, Constraint, Set, ConstraintList, Block
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 def inactive_index_LP_obj_rule(model,i):

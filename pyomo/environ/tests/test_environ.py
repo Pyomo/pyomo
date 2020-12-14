@@ -55,14 +55,17 @@ def collect_import_time(module):
                 data.append(ImportData())
             if len(data) > _level+1:
                 assert len(data) == _level+2
+                inner = data.pop()
+                inner.tpl = {
+                    (k if '(from' in k else "%s (from %s)" % (k, _module),
+                     v) for k,v in iteritems(inner.tpl) }
                 if _module.startswith('pyomo'):
-                    data[_level].update(data.pop())
+                    data[_level].update(inner)
                     data[_level].pyomo[_module] = _self
                 elif _module.startswith('pyutilib'):
-                    data[_level].update(data.pop())
+                    data[_level].update(inner)
                     data[_level].pyutilib[_module] = _self
                 else:
-                    data.pop()
                     if _level > 0:
                         data[_level].tpl[_module] = _cumul
             elif _module.startswith('pyomo'):
@@ -99,10 +102,13 @@ class TestPyomoEnviron(unittest.TestCase):
         print("\n".join("   %s: %s" % i for i in sorted(
             data.pyomo.items(), key=lambda x: x[1])))
         print("TPLS:")
-        print("\n".join("   %s: %s" % i for i in sorted(data.tpl.items())))
+        _line_fmt = "   %%%ds: %%6d %%s" % (
+            max(len(k[:k.find(' ')]) for k in data.tpl),)
+        print("\n".join(_line_fmt % (k[:k.find(' ')], v, k[k.find(' '):])
+                        for k,v in sorted(data.tpl.items())))
         tpl = {}
         for k, v in iteritems(data.tpl):
-            _mod = k.split('.')[0]
+            _mod = k[:k.find(' ')].split('.')[0]
             tpl[_mod] = tpl.get(_mod,0) + v
         tpl_by_time = sorted(tpl.items(), key=lambda x: x[1])
         print("TPLS (by package time):")
@@ -120,9 +126,35 @@ class TestPyomoEnviron(unittest.TestCase):
         # Spot-check the (known) worst offenders.  The following are
         # modules from the "standard" library.  Their order in the list
         # of slow-loading TPLs can vary from platform to platform.
-        ref = {'tempfile', 'logging', 'ctypes', 'ssl', 'argparse',
-               'textwrap', 'inspect', 'xml', 'platform', 'uuid',
-               'optparse'}
+        ref = {
+            'argparse',
+            'cPickle',
+            'csv',
+            'ctypes',
+            'decimal',
+            'glob',
+            'inspect',
+            'json',
+            'logging',
+            'pickle',
+            'platform',
+            'pprint',
+            'textwrap',
+            'tempfile',
+            'xml',
+            # From PySP
+            'filecmp',
+            'optparse',
+            'shelve',
+            'uuid',
+            # From PyUtilib
+            'difflib',
+            'gzip',
+            'imp',
+            'runpy',
+            'tarfile',
+            'zipfile',
+        }
         # Non-standard-library TPLs that Pyomo will load unconditionally
         ref.add('six')
         ref.add('ply')
@@ -130,10 +162,10 @@ class TestPyomoEnviron(unittest.TestCase):
             ref.add('numpy')
         if pyro4_available:
             ref.add('Pyro4')
-        diff = set(_[0] for _ in tpl_by_time[-4:]).difference(ref)
+        diff = set(_[0] for _ in tpl_by_time[-5:]).difference(ref)
         self.assertEqual(
             diff, set(),
-            "Unexpected module found in 4 slowest-loading modules")
+            "Unexpected module found in 5 slowest-loading TPL modules")
 
 
 if __name__ == "__main__":

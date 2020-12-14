@@ -23,7 +23,7 @@ import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.opt import ProblemFormat
-from pyomo.core import *
+from pyomo.core import ConcreteModel, Var, Constraint, TransformationFactory, Objective, Block, inequality
 from pyomo.mpec import Complementarity, complements, ComplementarityList
 from pyomo.gdp import Disjunct, Disjunction
 

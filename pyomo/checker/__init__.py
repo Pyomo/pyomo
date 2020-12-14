@@ -11,18 +11,16 @@
 from pyomo.common.plugin import PluginGlobals
 PluginGlobals.add_env("pyomo")
 
-from pyomo.checker.checker import *
-from pyomo.checker.runner import *
-from pyomo.checker.script import *
-from pyomo.checker.hooks import *
+from pyomo.checker.checker import Interface, IModelChecker
+from pyomo.checker.runner import ExtensionPoint, CheckingNodeVisitor, ModelCheckRunner
+from pyomo.checker.script import ModelScript
+from pyomo.checker.hooks import IPreCheckHook, IPostCheckHook
 
 # Modules
 __all__ = []
 
 # Checker classes
 __all__.extend(['IModelChecker'])
-#__all__.extend(['ImmediateDataChecker', 'IterativeDataChecker'])
-#__all__.extend(['ImmediateTreeChecker', 'IterativeTreeChecker'])
 
 # Other builtins
 __all__.extend(['ModelCheckRunner', 'ModelScript'])

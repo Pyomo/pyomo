@@ -46,11 +46,11 @@ model.strip_ends_after_last_rec = Constraint(model.RECTANGLES,
 
 # constraints to prevent rectangles from going off strip
 def no_recs_off_end_rule(model, i):
-    return 0 <= model.x[i] <= model.LengthUB - model.Lengths[i]
+    return inequality(0, model.x[i], model.LengthUB - model.Lengths[i])
 model.no_recs_off_end = Constraint(model.RECTANGLES, rule=no_recs_off_end_rule)
 
 def no_recs_off_bottom_rule(model, i):
-    return model.Heights[i] <= model.y[i] <= model.StripWidth
+    return inequality(model.Heights[i], model.y[i], model.StripWidth)
 model.no_recs_off_bottom = Constraint(model.RECTANGLES,
     rule=no_recs_off_bottom_rule)
 
@@ -70,12 +70,14 @@ def no_overlap_disjunct_rule(disjunct, i, j, recRelation):
     elif recRelation == 'Below':
         disjunct.c = Constraint(expr=model.y[j] - model.Heights[j] >= model.y[i])
     else:
-        raise RuntimeError("Unrecognized rectangle relationship: %s" % recRelation)
+        raise RuntimeError("Unrecognized rectangle relationship: %s" 
+                           % recRelation)
 model.no_overlap_disjunct = Disjunct(model.RectanglePairs, model.RecRelations,
     rule=no_overlap_disjunct_rule)
 
 def no_overlap(model, i, j):
-    return [model.no_overlap_disjunct[i, j, direction] for direction in model.RecRelations]
+    return [model.no_overlap_disjunct[i, j, direction] \
+            for direction in model.RecRelations]
 model.disj = Disjunction(model.RectanglePairs, rule=no_overlap)
 
 # minimize length

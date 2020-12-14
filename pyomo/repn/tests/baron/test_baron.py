@@ -15,8 +15,7 @@ import os
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
-import pyomo.opt
+from pyomo.environ import ConcreteModel, Var, Param,  Constraint, Objective,  Block, sin
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 

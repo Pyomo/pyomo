@@ -11,7 +11,6 @@
 #
 # Utility functions
 #
-import collections
 import functools
 import inspect
 import six

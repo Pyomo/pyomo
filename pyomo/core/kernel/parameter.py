@@ -8,17 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.core.expr
 from pyomo.core.expr.numvalue import (is_numeric_data,
                                       NumericValue)
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _abstract_readwrite_property,
-     _abstract_readonly_property)
-from pyomo.core.kernel.container_utils import \
-    define_simple_containers
+from pyomo.core.kernel.base import ICategorizedObject
+from pyomo.core.kernel.container_utils import define_simple_containers
 
-import six
 
 class IParameter(ICategorizedObject, NumericValue):
     """The interface for mutable numeric data."""
@@ -64,6 +58,7 @@ class IParameter(ICategorizedObject, NumericValue):
         variables."""
         return 0
 
+
 class parameter(IParameter):
     """A object for storing a mutable, numeric value that
     can be used to build a symbolic expression."""
@@ -95,9 +90,11 @@ class parameter(IParameter):
     def value(self):
         """The value of the paramater"""
         return self._value
+
     @value.setter
     def value(self, value):
         self._value = value
+
 
 class functional_value(IParameter):
     """An object for storing a numeric function that can be
@@ -146,9 +143,11 @@ class functional_value(IParameter):
     def fn(self):
         """The function stored with this object"""
         return self._fn
+
     @fn.setter
     def fn(self, fn):
         self._fn = fn
+
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module
