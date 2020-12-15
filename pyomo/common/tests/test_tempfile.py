@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,14 +17,20 @@
 
 
 import glob
-import shutil
 import os
+import shutil
+import sys
+from six import StringIO
+
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 tempdir = dirname(abspath(__file__)) + os.sep + 'tempdir' + os.sep
 
 import pyutilib.th as unittest
 
+import pyomo.common.tempfiles as tempfiles
+
+from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 
 old_tempdir = TempfileManager.tempdir
@@ -275,6 +281,38 @@ class Test(unittest.TestCase):
         fname = os.path.basename(fname)
         self.assertNotEqual(fname, 'tmp3')
         self.assertTrue(fname.startswith('tmp'))
+
+    @unittest.skipIf(not sys.platform.lower().startswith('win'),
+                     "test only applies to Windows platforms")
+    def test_open_tempfile_windows(self):
+        TempfileManager.push()
+        fname = TempfileManager.create_tempfile()
+        f = open(fname)
+        try:
+            _orig = tempfiles.deletion_errors_are_fatal
+            tempfiles.deletion_errors_are_fatal = True
+            with self.assertRaisesRegex(
+                    WindowsError, ".*process cannot access the file"):
+                TempfileManager.pop()
+        finally:
+            tempfiles.deletion_errors_are_fatal = _orig
+            f.close()
+            os.remove(fname)
+
+        TempfileManager.push()
+        fname = TempfileManager.create_tempfile()
+        f = open(fname)
+        log = StringIO()
+        try:
+            _orig = tempfiles.deletion_errors_are_fatal
+            tempfiles.deletion_errors_are_fatal = False
+            with LoggingIntercept(log, 'pyomo.common'):
+                TempfileManager.pop()
+            self.assertIn("Unable to delete temporary file", log.getvalue())
+        finally:
+            tempfiles.deletion_errors_are_fatal = _orig
+            f.close()
+            os.remove(fname)
 
 
 if __name__ == "__main__":
