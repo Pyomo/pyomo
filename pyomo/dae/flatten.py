@@ -212,9 +212,12 @@ def _fill_indices_from_product(partial_index_list, product):
             assert j == len(index)
             filled_index = tuple(filled_index)
 
-            normalize_index.flatten = True
-            # `filled_index` can now be used in a rational way...
-            yield filled_index
+            normalize_index.flatten = _normalize_index_flatten
+            # `filled_index` can now be used in the user's intended way
+            if len(filled_index) == 1:
+                yield filled_index[0]
+            else:
+                yield filled_index
             normalize_index.flatten = False
             # Want to get the unflattened factors when we advance the
             # `product` iterator.
