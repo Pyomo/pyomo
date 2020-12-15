@@ -66,12 +66,14 @@ def _constraint_tight(model, constraint):
     val = value(constraint.body)
     ans = [0, 0]
     if constraint.lower is not None:
-        if value(constraint.lower) >= val:
+        #if value(constraint.lower) >= val:
+        if abs(value(constraint.lower) - val) <= 1e-4:
             # tight or in violation of LB
             ans[0] -= 1
 
     if constraint.upper is not None:
-        if value(constraint.upper) <= val:
+        #if value(constraint.upper) <= val:
+        if abs(value(constraint.upper) - val) <= 1e-4:
             # tight or in violation of UB
             ans[1] += 1
 
@@ -1050,7 +1052,7 @@ class CuttingPlane_Transformation(Transformation):
         # rHull is our model and we aren't giving it back (unless in the future
         # we we add a callback to do basic steps to it...), so we just check if
         # dual is there. If it's a Suffix, we'll borrow it. If it's something
-        # else we'll rename it and add the Sufix.
+        # else we'll rename it and add the Suffix.
         dual = rHull.component("dual")
         if dual is None:
             rHull.dual = Suffix(direction=Suffix.IMPORT)
