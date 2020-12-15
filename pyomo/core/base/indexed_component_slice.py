@@ -23,17 +23,20 @@ class IndexedComponent_slice(object):
     calls to __getitem__ / __getattr__ / __call__ happen *before* the
     call to __iter__()
     """
-    ATTR_MASK = 4
-    ITEM_MASK = 8
-    CALL_MASK = 16
+    ATTR_MASK = 8
+    ITEM_MASK = 16
+    CALL_MASK = 32
+    GET_MASK = 1
+    SET_MASK = 2
+    DEL_MASK = 4
 
     slice_info = 0
-    get_attribute = ATTR_MASK | 1
-    set_attribute = ATTR_MASK | 2
-    del_attribute = ATTR_MASK | 3
-    get_item = ITEM_MASK | 1
-    set_item = ITEM_MASK | 2
-    del_item = ITEM_MASK | 3
+    get_attribute = ATTR_MASK | GET_MASK
+    set_attribute = ATTR_MASK | SET_MASK
+    del_attribute = ATTR_MASK | DEL_MASK
+    get_item = ITEM_MASK | GET_MASK
+    set_item = ITEM_MASK | SET_MASK
+    del_item = ITEM_MASK | DEL_MASK
     call = CALL_MASK
 
     def __init__(self, component, fixed=None, sliced=None, ellipsis=None):
