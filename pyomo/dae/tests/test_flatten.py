@@ -459,20 +459,21 @@ self._hashRef(Reference(m.v_tt)),
             else:
                 raise RuntimeError()
 
-    def _model_2(self):
+    def _model_2_no_normalize(self):
         # A more simple model, but now with some higher-dimension sets
         m = ConcreteModel()
+
+        normalize_index.flatten = False
 
         m.d1 = Set(initialize=[1,2])
         m.d2 = Set(initialize=[('a',1), ('b',2)])
         m.dn = Set(initialize=[('c',3), ('d',4,5)], dimen=None)
 
+        m.v_2n = Var(m.d2, m.dn)
         m.v_12 = Var(m.d1, m.d2)
         m.v_212 = Var(m.d2, m.d1, m.d2)
         m.v_12n = Var(m.d1, m.d2, m.dn)
         m.v_1n2n = Var(m.d1, m.dn, m.d2, m.dn)
-
-        normalize_index.flatten = False
 
         @m.Block(m.d1, m.d2, m.dn)
         def b(b, i1, i2, i3):
@@ -485,17 +486,57 @@ self._hashRef(Reference(m.v_tt)),
 
         return m
 
-    def test_flatten_m2_1d(self):
-        m = self._model_2()
+    def test_flatten_m2_1d_no_normalize(self):
+        m = self._model_2_noflatten()
 
         sets = ComponentSet((m.d1,))
+        # need to set `flatten` to False here to properly access b's data,
+        # since it was created with `flatten == False`.
+        #
+        # This means we are accessing m.v...'s data with unflattened indices
+        # even though it was created with flattened indices. These indices
+        # are valid, however, so they lead to the creation of additional data
+        # objects. This is dangerous, so we should probably just create the
+        # entire model with `flatten == False`.
+        # We would expect the unflattened indices to raise an error if we
+        # were using a dict or rule initializer
+        #
+        # ^ Creating with flatten True then iterating with Flatten False
+        # seemed to cause problems when iterating over slices.
+        normalize_index.flatten = False
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
 
         assert len(sets_list) == len(comps_list)
-        assert len(sets_list) == 1
+        assert len(sets_list) == 3
+
+        D22 = m.d2*m.d2
+        D2N = m.d2*m.dn
+        DN2N = m.dn.cross(m.d2, m.dn)
+        D2NN = m.d2.cross(m.dn, m.dn)
+        D2N2 = m.d2.cross(m.dn, m.d2)
+
+        for sets, comps in zip(sets_list, comps_list):
+
+            if len(sets) == 1 and sets[0] is m.d1:
+                ref_data = [
+# Don't expand indices:
+*list(self._hashRef(Reference(m.v_12[:,i2])) for i2 in m.d2),
+*list(self._hashRef(Reference(m.v_212[i2a,:,i2b])) for i2a, i2b in D22),
+*list(self._hashRef(Reference(m.v_12n[:,i2,i_n])) for i2, i_n in D2N),
+*list(self._hashRef(Reference(m.v_1n2n[:,i_na,i2,i_nb])) for i_na, i2, i_nb in DN2N),
+*list(self._hashRef(Reference(m.b[:,i2,i_n].v0)) for i2, i_n in D2N),
+*list(self._hashRef(Reference(m.b[:,i2a,i_n].v2[i2b])) for i2a, i_n, i2b in D2N2),
+*list(self._hashRef(Reference(m.b[:,i2,i_na].vn[i_nb])) for i2, i_na, i_nb in D2NN),
+                        ]
+                # Expect length to be 38
+                assert len(ref_data) == len(comps)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+        normalize_index.flatten = True
 
 
 if __name__ == "__main__":
     #unittest.main()
-    TestFlatten().test_flatten_m2_1d()
+    TestFlatten().test_flatten_m2_1d_nonormalize()
 
