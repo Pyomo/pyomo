@@ -842,7 +842,7 @@ class _BlockData(ActiveComponentData):
                                              descend_into=descend_into,
                                              sort=SortComponents.unsorted):
             if active is None:
-                ctypes.update(ctype for ctype in block._ctypes)
+                ctypes.update(block._ctypes)
             else:
                 assert active is True
                 for ctype in block._ctypes:
@@ -851,8 +851,10 @@ class _BlockData(ActiveComponentData):
                             active=True,
                             descend_into=False,
                             sort=SortComponents.unsorted):
+                        # We only need to verify that there is at least
+                        # one active data member
                         ctypes.add(ctype)
-                        break  # just need 1 or more
+                        break
         return ctypes
 
     def model(self):
