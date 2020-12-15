@@ -324,8 +324,9 @@ class Test(unittest.TestCase):
     @unittest.skipIf(pyutilib_mngr is None,
                      "deprecation test requires pyutilib")
     def test_deprecated_tempdir(self):
+        TempfileManager.push()
         try:
-            TempfileManager.push()
+            TempfileManager.tempdir = None
             tmpdir = TempfileManager.create_tempdir()
             _orig = pyutilib_mngr.tempdir
             pyutilib_mngr.tempdir = tmpdir
@@ -335,7 +336,7 @@ class Test(unittest.TestCase):
             self.assertIn(
                 "The use of the PyUtilib TempfileManager.tempdir "
                 "to specify the default location for Pyomo "
-                "temporary files", log.getvalue())
+                "temporary files", log.getvalue().replace("\n", " "))
 
             log = StringIO()
             with LoggingIntercept(log):
@@ -343,7 +344,7 @@ class Test(unittest.TestCase):
             self.assertIn(
                 "The use of the PyUtilib TempfileManager.tempdir "
                 "to specify the default location for Pyomo "
-                "temporary directories", log.getvalue())
+                "temporary directories", log.getvalue().replace("\n", " "))
         finally:
             TempfileManager.pop()
             pyutilib_mngr.tempdir = _orig
