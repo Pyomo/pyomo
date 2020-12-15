@@ -593,11 +593,11 @@ class TestBlock(unittest.TestCase):
                          set([]))
         del b.y
 
-        # a block DOES check its own .active flag apparently
+        # a block DOES NOT check its own .active flag
         self.assertEqual(b.collect_ctypes(),
                          set([Var]))
         self.assertEqual(b.collect_ctypes(active=True),
-                         set([]))
+                         set([Var]))
         b.activate()
         self.assertEqual(b.collect_ctypes(),
                          set([Var]))
