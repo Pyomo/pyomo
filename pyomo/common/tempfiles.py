@@ -30,9 +30,6 @@ class TempfileManagerClass:
     tempdir = None
 
     def __init__(self, **kwds):
-        if getattr(self, '_initialized', False) is True:
-            return
-        self._initialized = True
         self._tempfiles = [[]]
         self._ctr = -1
 
