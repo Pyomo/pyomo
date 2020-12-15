@@ -12,7 +12,15 @@ import pyutilib.th as unittest
 from pyomo.environ import ConcreteModel, Block, Var, Reference, Set, Constraint
 from pyomo.dae import ContinuousSet
 # This inport will have to change when we decide where this should go...
-from pyomo.dae.flatten import flatten_dae_components
+from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.core.base.indexed_component import (
+        UnindexedComponent_set,
+        normalize_index,
+        )
+from pyomo.dae.flatten import (
+        flatten_dae_components,
+        flatten_components_along_sets,
+        )
 
 class TestCategorize(unittest.TestCase):
     def _hashRef(self, ref):
@@ -211,5 +219,283 @@ class TestCategorize(unittest.TestCase):
     # TODO: Add tests for Sets with dimen==None
 
 
+class TestFlatten(TestCategorize):
+
+    def _hashRef(self, ref):
+        if not ref.is_indexed():
+            return (id(ref),)
+        else:
+            return tuple(sorted(id(_) for _ in ref.values()))
+
+    def _model_1(self):
+        # One-dimensional sets, no skipping.
+        m = ConcreteModel()
+        m.time = Set(initialize=[1,2,3])
+        m.space = Set(initialize=[0.0, 0.5, 1.0])
+        m.comp = Set(initialize=['a','b'])
+
+        m.v0 = Var()
+        m.v1 = Var(m.time)
+        m.v2 = Var(m.time, m.space)
+        m.v3 = Var(m.time, m.space, m.comp)
+
+        m.v_tt = Var(m.time, m.time)
+        m.v_tst = Var(m.time, m.space, m.time)
+
+        @m.Block()
+        def b(b):
+
+            @b.Block(m.time)
+            def b1(b1):
+                b1.v0 = Var()
+                b1.v1 = Var(m.space)
+                b1.v2 = Var(m.space, m.comp)
+
+                @b1.Block(m.space)
+                def b_s(b_s):
+                    b_s.v0 = Var()
+                    b_s.v1 = Var(m.space)
+                    b_s.v2 = Var(m.space, m.comp)
+
+            @b.Block(m.time, m.space)
+            def b2(b2):
+                b2.v0 = Var()
+                b2.v1 = Var(m.comp)
+                b2.v2 = Var(m.time, m.comp)
+
+        return m
+
+    def test_flatten_m1_along_time_space(self):
+        m = self._model_1()
+        
+        sets = ComponentSet((m.time, m.space))
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 6
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                ref_data = {
+                        self._hashRef(m.v0)
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif len(sets) == 1 and sets[0] is m.time:
+                ref_data = {
+                        self._hashRef(Reference(m.v1)),
+                        self._hashRef(Reference(m.b.b1[:].v0)),
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif len(sets) == 2 and sets[0] is m.time and sets[1] is m.time:
+                ref_data = {
+                        self._hashRef(Reference(m.v_tt)),
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif len(sets) == 2 and sets[0] is m.time and sets[1] is m.space:
+                ref_data = {
+                self._hashRef(m.v2),
+                self._hashRef(Reference(m.b.b1[:].v1[:])),
+                self._hashRef(Reference(m.b.b2[:,:].v0)),
+                self._hashRef(Reference(m.b.b1[:].b_s[:].v0)),
+                *list(self._hashRef(Reference(m.v3[:,:,j])) for j in m.comp),
+                *list(self._hashRef(Reference(m.b.b1[:].v2[:,j])) for j in m.comp),
+                *list(self._hashRef(Reference(m.b.b2[:,:].v1[j])) for j in m.comp),
+                }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif (len(sets) == 3 and sets[0] is m.time and sets[1] is m.space
+                    and sets[2] is m.time):
+                ref_data = {
+                self._hashRef(m.v_tst),
+                *list(self._hashRef(Reference(m.b.b2[:,:].v2[:,j])) for j in m.comp),
+                }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif (len(sets) == 3 and sets[0] is m.time and sets[1] is m.space
+                    and sets[2] is m.space):
+                ref_data = {
+                self._hashRef(Reference(m.b.b1[:].b_s[:].v1[:])),
+                *list(self._hashRef(Reference(m.b.b1[:].b_s[:].v2[:,j])) for j in m.comp),
+                }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            else:
+                raise RuntimeError()
+
+    def test_flatten_m1_empty(self):
+        m = self._model_1()
+        
+        sets = ComponentSet()
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 1
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                ref_data = {
+                    self._hashRef(v) for v in m.component_data_objects(Var)
+                    }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+    def test_flatten_m1_along_space(self):
+        m = self._model_1()
+        
+        sets = ComponentSet((m.space,))
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 3
+
+        T = m.time
+        TC = m.time*m.comp
+        TT = m.time*m.time
+        TTC = m.time*m.time*m.comp
+        # These products are nested, i.e. ((t,t),j). This is fine
+        # as normalize_index.flatten is True.
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                ref_data = {
+                        self._hashRef(m.v0),
+                        *list(self._hashRef(m.v1[t]) for t in T),
+                        *list(self._hashRef(m.v_tt[t1,t2]) for t1, t2 in TT),
+                        *list(self._hashRef(m.b.b1[t].v0) for t in T),
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 1 and sets[0] is m.space:
+                ref_data = {
+        *list(self._hashRef(Reference(m.v2[t,:])) for t in T),
+        *list(self._hashRef(Reference(m.v3[t,:,j])) for t, j in TC),
+        *list(self._hashRef(Reference(m.v_tst[t1,:,t2])) for t1, t2 in TT),
+        *list(self._hashRef(Reference(m.b.b1[t].v1[:])) for t in T),
+        *list(self._hashRef(Reference(m.b.b1[t].v2[:,j])) for t, j in TC),
+        *list(self._hashRef(Reference(m.b.b1[t].b_s[:].v0)) for t in T),
+        *list(self._hashRef(Reference(m.b.b2[t,:].v0)) for t in T),
+        *list(self._hashRef(Reference(m.b.b2[t,:].v1[j])) for t, j in TC),
+        *list(self._hashRef(Reference(m.b.b2[t1,:].v2[t2,j])) for t1, t2, j in TTC),
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif len(sets) == 2 and sets[0] is m.space and sets[1] is m.space:
+                ref_data = {
+        *list(self._hashRef(Reference(m.b.b1[t].b_s[:].v1[:])) for t in T),
+        *list(self._hashRef(Reference(m.b.b1[t].b_s[:].v2[:,j])) for t,j in TC),
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+    def test_flatten_m1_along_time(self):
+        m = self._model_1()
+        
+        sets = ComponentSet((m.time,))
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+
+        S = m.space
+        SS = m.space*m.space
+        SC = m.space*m.comp
+        SSC = m.space*m.space*m.comp
+
+        assert len(sets_list) == 3
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                ref_data = {
+                        self._hashRef(Reference(m.v0)),
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 1 and sets[0] is m.time:
+                ref_data = {
+# Components indexed only by time;                        
+self._hashRef(Reference(m.v1)),
+self._hashRef(Reference(m.b.b1[:].v0)),
+# Components indexed by time and some other set(s)
+*list(self._hashRef(Reference(m.v2[:,x])) for x in S),
+*list(self._hashRef(Reference(m.v3[:,x,j])) for x, j in SC),
+*list(self._hashRef(Reference(m.b.b1[:].v1[x])) for x in S),
+*list(self._hashRef(Reference(m.b.b1[:].v2[x,j])) for x, j in SC),
+*list(self._hashRef(Reference(m.b.b1[:].b_s[x].v0)) for x in S),
+*list(self._hashRef(Reference(m.b.b1[:].b_s[x1].v1[x2])) for x1, x2 in SS),
+*list(self._hashRef(Reference(m.b.b1[:].b_s[x1].v2[x2,j])) for x1,x2,j in SSC),
+*list(self._hashRef(Reference(m.b.b2[:,x].v0)) for x in S),
+*list(self._hashRef(Reference(m.b.b2[:,x].v1[j])) for x, j in SC),
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 2 and sets[0] is m.time and sets[1] is m.time:
+                ref_data = {
+self._hashRef(Reference(m.v_tt)),
+*list(self._hashRef(Reference(m.v_tst[:,x,:])) for x in S),
+*list(self._hashRef(Reference(m.b.b2[:,x].v2[:,j])) for x, j in SC),
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+    def _model_2(self):
+        # A more simple model, but now with some higher-dimension sets
+        m = ConcreteModel()
+
+        m.d1 = Set(initialize=[1,2])
+        m.d2 = Set(initialize=[('a',1), ('b',2)])
+        m.dn = Set(initialize=[('c',3), ('d',4,5)], dimen=None)
+
+        m.v_12 = Var(m.d1, m.d2)
+        m.v_212 = Var(m.d2, m.d1, m.d2)
+        m.v_12n = Var(m.d1, m.d2, m.dn)
+        m.v_1n2n = Var(m.d1, m.dn, m.d2, m.dn)
+
+        normalize_index.flatten = False
+
+        @m.Block(m.d1, m.d2, m.dn)
+        def b(b, i1, i2, i3):
+            b.v0 = Var()
+            b.v1 = Var(m.d1)
+            b.v2 = Var(m.d2)
+            b.vn = Var(m.dn)
+
+        normalize_index.flatten = True
+
+        return m
+
+    def test_flatten_m2_1d(self):
+        m = self._model_2()
+
+        sets = ComponentSet((m.d1,))
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 1
+
+
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    TestFlatten().test_flatten_m2_1d()
+
