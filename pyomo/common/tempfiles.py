@@ -59,10 +59,10 @@ class TempfileManagerClass:
                 if dir is not None:
                     deprecation_warning(
                         "The use of the PyUtilib TempfileManager.tempdir "
-                        "to specify the default temporary file location "
-                        "for Pyomo temporary files has been deprecated.  "
+                        "to specify the default location for Pyomo "
+                        "temporary files has been deprecated.  "
                         "Please set TempfileManager.tempdir in "
-                        "pyomo.common.tempfiles")
+                        "pyomo.common.tempfiles", version='TBD')
 
         ans = tempfile.mkstemp(suffix=suffix, prefix=prefix, text=text, dir=dir)
         ans = list(ans)
@@ -102,10 +102,10 @@ class TempfileManagerClass:
                 if dir is not None:
                     deprecation_warning(
                         "The use of the PyUtilib TempfileManager.tempdir "
-                        "to specify the default temporary file location "
-                        "for Pyomo temporary files has been deprecated.  "
+                        "to specify the default location for Pyomo "
+                        "temporary directories has been deprecated.  "
                         "Please set TempfileManager.tempdir in "
-                        "pyomo.common.tempfiles")
+                        "pyomo.common.tempfiles", version='TBD')
 
         dirname = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
         if self._ctr >= 0:
