@@ -20,6 +20,13 @@ import time
 import tempfile
 import logging
 import shutil
+from pyomo.common.deprecation import deprecation_warning
+try:
+    from pyutilib.component.config.tempfiles import (
+        TempfileManager as pyutilib_mngr
+    )
+except ImportError:
+    pyutilib_mngr = None
 
 deletion_errors_are_fatal = True
 
@@ -34,10 +41,12 @@ class TempfileManagerClass:
         self._ctr = -1
 
     def create_tempfile(self, suffix=None, prefix=None, text=False, dir=None):
-        """
-        Return the absolute path of a temporary filename that is
-        guaranteed to be unique.  This function generates the file and returns
-        the filename.
+        """Create a unique temporary file
+
+        Returns the absolute path of a temporary filename that is
+        guaranteed to be unique.  This function generates the file and
+        returns the filename.
+
         """
         if suffix is None:
             suffix = ''
@@ -45,6 +54,15 @@ class TempfileManagerClass:
             prefix = 'tmp'
         if dir is None:
             dir = self.tempdir
+            if dir is None and pyutilib_mngr is not None:
+                dir = pyutilib_mngr.tempdir
+                if dir is not None:
+                    deprecation_warning(
+                        "The use of the PyUtilib TempfileManager.tempdir "
+                        "to specify the default temporary file location "
+                        "for Pyomo temporary files has been deprecated.  "
+                        "Please set TempfileManager.tempdir in "
+                        "pyomo.common.tempfiles")
 
         ans = tempfile.mkstemp(suffix=suffix, prefix=prefix, text=text, dir=dir)
         ans = list(ans)
@@ -66,10 +84,12 @@ class TempfileManagerClass:
         return fname
 
     def create_tempdir(self, suffix=None, prefix=None, dir=None):
-        """
-        Return the absolute path of a temporary directory that is
-        guaranteed to be unique.  This function generates the directory and returns
-        the directory name.
+        """Create a unique temporary directory
+
+        Returns the absolute path of a temporary directory that is
+        guaranteed to be unique.  This function generates the directory
+        and returns the directory name.
+
         """
         if suffix is None:
             suffix = ''
@@ -77,6 +97,16 @@ class TempfileManagerClass:
             prefix = 'tmp'
         if dir is None:
             dir = self.tempdir
+            if dir is None and pyutilib_mngr is not None:
+                dir = pyutilib_mngr.tempdir
+                if dir is not None:
+                    deprecation_warning(
+                        "The use of the PyUtilib TempfileManager.tempdir "
+                        "to specify the default temporary file location "
+                        "for Pyomo temporary files has been deprecated.  "
+                        "Please set TempfileManager.tempdir in "
+                        "pyomo.common.tempfiles")
+
         dirname = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
         if self._ctr >= 0:
             new_dirname = os.path.join(dir, prefix + str(self._ctr) + suffix)
