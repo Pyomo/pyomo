@@ -1085,8 +1085,7 @@ class TestComponentUID(unittest.TestCase):
         cuid_str = ComponentUID('b.b2[2,*].vn[**,**]')
         self.assertEqual(cuid, cuid_str)
         self.assertEqual(str(cuid), str(cuid_str))
-        with self.assertRaisesRegex(IndexError, r'.*simple slices.*'):
-            self.assertListSameComponents(m, cuid, cuid_str)
+        self.assertListSameComponents(m, cuid, cuid_str)
 
         _slice = m.b.b2[2,:].vn[...]
         cuid = ComponentUID(_slice)
