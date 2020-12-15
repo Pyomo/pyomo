@@ -12,8 +12,11 @@ import os
 thisdir = os.path.dirname(os.path.abspath(__file__))
 
 import time
+from pyomo.common.dependencies import matplotlib, matplotlib_available
 from pyomo.core import ConcreteModel, RangeSet, Set, Param
 import pyutilib.th as unittest
+
+plt = matplotlib.pyplot
 
 _plot_filename = os.path.join(thisdir, "param_performance.pdf")
 _pdf_out = None
@@ -21,23 +24,14 @@ _pdf_out = None
 def setUpModule():
     global _plot_filename
     global _pdf_out
-    try:
-        import matplotlib
-        matplotlib.use('Agg')
-        from matplotlib.backends.backend_pdf import PdfPages
-        _pdf_out = PdfPages(_plot_filename)
-    except:
-        _pdf_out = None
 
 def tearDownModule():
     global _pdf_out
-    if _pdf_out:
+    if _pdf_out is not None:
         _pdf_out.close()
+        _pdf_out = None
 
 def plot_results(page_title, results):
-
-    import matplotlib.pyplot as plt
-
     pyomo_set_iter_time = results.pop('pyomo set iter')
     python_set_iter_time = results.pop('python set iter')
     pyomo_set_contains_time = results.pop('pyomo set contains')
@@ -111,6 +105,10 @@ def plot_results(page_title, results):
     plt.legend((p1[0],p2[0]),
                ('Consruction','Access All'),loc=4)
 
+    global _pdf_out
+    if _pdf_out is None:
+        from matplotlib.backends.backend_pdf import PdfPages
+        _pdf_out = PdfPages(_plot_filename)
     plt.savefig(_pdf_out,format='pdf')
 
 def _setup_cls(self):
@@ -275,10 +273,8 @@ class TestParamPerformanceRangeSet(unittest.TestCase,
 
     @classmethod
     def tearDownClass(self):
-        try:
+        if matplotlib_available:
             plot_results("Param Usage - Large RangeSet Index", self.results)
-        except:
-            print("Results plotting failed")
 
 
 @unittest.category('performance')
@@ -331,10 +327,8 @@ class TestParamPerformanceSetProduct(unittest.TestCase,
 
     @classmethod
     def tearDownClass(self):
-        try:
+        if matplotlib_available:
             plot_results("Param Usage - High Dimensional Set Product Index", self.results)
-        except:
-            print("Results plotting failed")
 
 
 if __name__ == "__main__":

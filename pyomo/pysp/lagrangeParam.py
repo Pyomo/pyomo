@@ -730,7 +730,7 @@ if __name__ == "__main__":
 #except IOError, str:
 #    print "IO ERROR:"
 #    print str
-#except pyutilib.common.ApplicationError, str:
+#except pyomo.common.errors.ApplicationError, str:
 #    print "APPLICATION ERROR:"
 #    print str
 #except RuntimeError, str:
