@@ -403,8 +403,14 @@ class IndexedComponent(Component):
 
         """
         sort_needed = ordered
-        if hasattr(self._index_set, 'isfinite') and not \
-           self._index_set.isfinite():
+        if not self._index.isordered():
+            #
+            # If the index set is not ordered, then return the
+            # data iterator.  This is in an arbitrary order, which is
+            # fine because the data is unordered.
+            #
+            # As non-finite sets are unordered by definition (only
+            # finite sets are be ordered), this will also catch them.
             #
             # If the index set is virtual (e.g., Any) then return the
             # data iterator.  Note that since we cannot check the length
