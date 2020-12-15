@@ -33,6 +33,13 @@ import pyomo.common.tempfiles as tempfiles
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 
+try:
+    from pyutilib.component.config.tempfiles import (
+        TempfileManager as pyutilib_mngr
+    )
+except ImportError:
+    pyutilib_mngr = None
+
 old_tempdir = TempfileManager.tempdir
 
 class Test(unittest.TestCase):
@@ -314,6 +321,32 @@ class Test(unittest.TestCase):
             f.close()
             os.remove(fname)
 
+    @unittest.skipIf(pyutilib_mngr is None,
+                     "deprecation test requires pyutilib")
+    def test_deprecated_tempdir(self):
+        try:
+            TempfileManager.push()
+            tmpdir = TempfileManager.create_tempdir()
+            _orig = pyutilib_mngr.tempdir
+            pyutilib_mngr.tempdir = tmpdir
+            log = StringIO()
+            with LoggingIntercept(log):
+                fname = TempfileManager.create_tempfile()
+            self.assertIn(
+                "The use of the PyUtilib TempfileManager.tempdir "
+                "to specify the default location for Pyomo "
+                "temporary files", log.getvalue())
+
+            log = StringIO()
+            with LoggingIntercept(log):
+                dname = TempfileManager.create_tempdir()
+            self.assertIn(
+                "The use of the PyUtilib TempfileManager.tempdir "
+                "to specify the default location for Pyomo "
+                "temporary directories", log.getvalue())
+        finally:
+            TempfileManager.pop()
+            pyutilib_mngr.tempdir = _orig
 
 if __name__ == "__main__":
     unittest.main()
