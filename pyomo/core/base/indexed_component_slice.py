@@ -513,6 +513,12 @@ class _IndexedComponent_slice_iter(object):
                            and not self._iter_over_index:
                             raise
                         break
+                    if _comp is None:
+                        # As when calling `component` with the name of
+                        # a nonexistant component.
+                        #if self._slice.attribute_errors_generate_exceptions:
+                        #    raise AttributeError()
+                        break
                 elif _call[0] == IndexedComponent_slice.set_attribute:
                     assert idx == self._slice._len - 1
                     try:
