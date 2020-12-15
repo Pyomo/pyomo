@@ -380,6 +380,19 @@ class PyomoGreyBoxNLP(NLP):
                 " PyomoGreyBoxModel requires at least one variable"
                 " to be active in a Pyomo objective or constraint")
 
+        # check that the greybox model supports what we would expect
+        # TODO: add support for models that do not provide jacobians
+        for data in greybox_data:
+            CRASH HERE
+            c = data._ex_model.model_capabilities()
+            if (c.n_equality_constraints() > 0 \
+               and not c.supports_jacobian_equality_constraints) \
+               or (c.n_equality_constraints() > 0 \
+               and not c.supports_jacobian_equality_constraints)
+                raise NotImplementedError('PyomoGreyBoxNLP does not support models'
+                                          ' without explicit Jacobian support')
+
+
         # number of additional variables required - they are in the
         # greybox models but not included in the NL file
         self._n_greybox_primals = 0
@@ -882,7 +895,7 @@ class PyomoGreyBoxNLP(NLP):
             ))
     """
     # overloaded from NLP
-    def _evaluate_greybox_hessians_and_cache_if_necessary():
+    def _evaluate_greybox_hessians_and_cache_if_necessary(self):
         if self._greybox_hess_cached:
             return
 
@@ -892,8 +905,8 @@ class PyomoGreyBoxNLP(NLP):
         for external in self._external_greybox_helpers:
             hess = external.evaluate_hessian()
             data.append(hess.data)
-            irow.append(hess.irow)
-            jcol.append(hess.jcol)
+            irow.append(hess.row)
+            jcol.append(hess.col)
 
         data = np.concatenate(data)
         irow = np.concatenate(irow)
@@ -930,9 +943,9 @@ class PyomoGreyBoxNLP(NLP):
             return out
         else:
             hess = self._pyomo_nlp.evaluate_hessian_lag()
-            data = np.concatenate(hess.data, self._cached_greybox_hess.data)
-            row = np.concatenate(hess.row, self._cached_greybox_hess.row)
-            col = np.concatenate(hess.col, self._cached_greybox_hess.col)
+            data = np.concatenate((hess.data, self._cached_greybox_hess.data))
+            row = np.concatenate((hess.row, self._cached_greybox_hess.row))
+            col = np.concatenate((hess.col, self._cached_greybox_hess.col))
             hess = coo_matrix((data, (row, col)), shape=(self.n_primals(), self.n_primals()))
             return hess
 
@@ -1227,16 +1240,23 @@ class _ExternalGreyBoxModelHelper(object):
         if self._ex_model.n_equality_constraints() > 0:
             eq_hess = self._ex_model.evaluate_hessian_equality_constraints()
             if self._eq_hess_jcol is None:
+                # first time through, let's also check that it is lower triangular
+                if np.any(eq_hess.row - eq_hess.col < 0):
+                    raise ValueError('ExternalGreyBoxModel must return lower '
+                                     'triangular portion of the Hessian only')
+
                 # The first time through, we won't have created the
                 # mapping of external primals ('u') to the full space
                 # primals ('x')
-                self._eq_hess_irow = self._inputs_to_primals_map[eq_hess.row]
-                self._eq_hess_jcol = self._inputs_to_primals_map[eq_hess.col]
+                self._eq_hess_irow = row = self._inputs_to_primals_map[eq_hess.row]
+                self._eq_hess_jcol = col = self._inputs_to_primals_map[eq_hess.col]
 
-                # first time through, let's also check that it is lower triangular
-                if np.any(self._eq_hess_irow - self._eq_hess_jcol < 0):
-                    raise ValueError('ExternalGreyBoxModel must return lower '
-                                     'triangular portion of the Hessian only')
+                # mapping may have made this not lower triangular
+                mask = col > row
+                if np.any(mask):
+                    temp = row[mask].copy()
+                    row[mask] = col[mask]
+                    col[mask] = temp
 
             data_list.append(eq_hess.data)
             irow_list.append(self._eq_hess_irow)
@@ -1246,19 +1266,26 @@ class _ExternalGreyBoxModelHelper(object):
             #     (eq_hess.data, (self._eq_hess_irow, self._eq_hess_jcol)),
             #     (self._n_primals, self._n_primals))
 
-        outputs_hess = None
         if self._ex_model.n_outputs() > 0:
-            outputs_hess = self._ex_model.evaluate_hessian_outputs()
-            if self._outputs_hess is None:
+            output_hess = self._ex_model.evaluate_hessian_outputs()
+            if self._output_hess_irow is None:
+                # first time through, let's also check that it is lower triangular
+                if np.any(output_hess.row - output_hess.col < 0):
+                    raise ValueError('ExternalGreyBoxModel must return lower '
+                                     'triangular portion of the Hessian only')
+
                 # The first time through, we won't have created the
                 # mapping of external outputs ('o') to the full space
                 # primals ('x')
-                self._outputs_hess_irow = self._inputs_to_primals_map[outputs_hess.row]
-                self._outputs_hess_jcol = self._inputs_to_primals_map[outputs_hess.col]
-                # first time through, let's also check that it is lower triangular
-                if np.any(self._outputs_hess_irow - self._outputs_hess_jcol < 0):
-                    raise ValueError('ExternalGreyBoxModel must return lower '
-                                     'triangular portion of the Hessian only')
+                self._output_hess_irow = row = self._inputs_to_primals_map[output_hess.row]
+                self._output_hess_jcol = col = self._inputs_to_primals_map[output_hess.col]
+
+                # mapping may have made this not lower triangular
+                mask = col > row
+                if np.any(mask):
+                    temp = row[mask].copy()
+                    row[mask] = col[mask]
+                    col[mask] = temp
 
             data_list.append(output_hess.data)
             irow_list.append(self._output_hess_irow)
