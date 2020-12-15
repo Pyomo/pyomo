@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.collections import ComponentSet
 from pyomo.core.base import Constraint, Block, value
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.dae.set_utils import (is_explicitly_indexed_by, 
         get_index_set_except, is_in_block_indexed_by,
         deactivate_model_at, index_warning)
@@ -87,7 +87,8 @@ def get_inconsistent_initial_conditions(model, time, tol=1e-8, t0=None,
     return list(inconsistent)
 
 
-def solve_consistent_initial_conditions(model, time, solver, tee=False):
+def solve_consistent_initial_conditions(model, time, solver, tee=False,
+        allow_skip=True, suppress_warnings=False):
     """
     Solves a model with all Constraints and Blocks deactivated except
     at the initial value of the Set time. Reactivates Constraints and
@@ -98,6 +99,11 @@ def solve_consistent_initial_conditions(model, time, solver, tee=False):
         time: Set whose initial conditions will remain active for solve
         solver: Something that implements a solve method that accepts
                 a model and tee keyword as arguments
+        tee: tee argument that will be sent to solver's solve method
+        allow_skip: If True, KeyErrors due to Constraint.Skip being
+                    used will be ignored
+        suppress_warnings: If True, warnings due to ignored
+                           KeyErrors will be suppressed
 
     Returns:
         The object returned by the solver's solve method
@@ -119,9 +125,13 @@ def solve_consistent_initial_conditions(model, time, solver, tee=False):
         raise NotImplementedError(
             '%s discretization scheme is not supported' % scheme)
 
-    t0 = time.first()
     timelist = list(time)[1:]
-    deactivated_dict = deactivate_model_at(model, time, timelist)
+    deactivated_dict = deactivate_model_at(
+            model,
+            time,
+            timelist,
+            allow_skip=allow_skip,
+            suppress_warnings=suppress_warnings)
 
     result = solver.solve(model, tee=tee)
 

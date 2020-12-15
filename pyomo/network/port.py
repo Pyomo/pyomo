@@ -11,9 +11,10 @@
 __all__ = [ 'Port' ]
 
 import logging, sys
-from six import iteritems, itervalues
+from six import iteritems
 from weakref import ref as weakref_ref
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import ConstructionTimer
 from pyomo.common.modeling import unique_component_name
 
@@ -26,9 +27,7 @@ from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import as_numeric, value
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.base.label import alphanum_label_from_name
-from pyomo.core.base.plugin import ModelComponentFactory, \
-    IPyomoScriptModifyInstance, TransformationFactory
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.base.plugin import ModelComponentFactory
 
 from pyomo.network.util import create_var, tighten_var_domain
 
@@ -548,10 +547,11 @@ class Port(IndexedComponent):
         # Same logic as Port._Split
         cname = unique_component_name(port_parent, "%s_%s_insum" %
             (alphanum_label_from_name(port.local_name), name))
-        def rule(m, *args):
-            if len(args):
+        if index_set is not UnindexedComponent_set:
+            def rule(m, *args):
                 return sum(evar[args] for evar in in_vars) == var[args]
-            else:
+        else:
+            def rule(m):
                 return sum(evar for evar in in_vars) == var
         con = Constraint(index_set, rule=rule)
         port_parent.add_component(cname, con)
@@ -642,10 +642,11 @@ class Port(IndexedComponent):
 
             # Create constraint for this member using splitfrac.
             cname = "%s_split" % name
-            def rule(m, *args):
-                if len(args):
+            if index_set is not UnindexedComponent_set:
+                def rule(m, *args):
                     return evar[args] == eblock.splitfrac * var[args]
-                else:
+            else:
+                def rule(m):
                     return evar == eblock.splitfrac * var
             con = Constraint(index_set, rule=rule)
             eblock.add_component(cname, con)
@@ -658,10 +659,11 @@ class Port(IndexedComponent):
             # Need to alphanum port name in case it is indexed.
             cname = unique_component_name(port_parent, "%s_%s_outsum" %
                 (alphanum_label_from_name(port.local_name), name))
-            def rule(m, *args):
-                if len(args):
+            if index_set is not UnindexedComponent_set:
+                def rule(m, *args):
                     return sum(evar[args] for evar in out_vars) == var[args]
-                else:
+            else:
+                def rule(m):
                     return sum(evar for evar in out_vars) == var
             con = Constraint(index_set, rule=rule)
             port_parent.add_component(cname, con)
@@ -691,10 +693,11 @@ class Port(IndexedComponent):
             # already exists, skip
             return
         port1, port2 = arc.ports
-        def rule(m, *args):
-            if len(args):
+        if index_set is not UnindexedComponent_set:
+            def rule(m, *args):
                 return port1.vars[name][args] == port2.vars[name][args]
-            else:
+        else:
+            def rule(m):
                 return port1.vars[name] == port2.vars[name]
         con = Constraint(index_set, rule=rule)
         eblock.add_component(cname, con)

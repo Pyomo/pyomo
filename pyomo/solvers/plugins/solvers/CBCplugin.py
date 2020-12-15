@@ -15,20 +15,20 @@ import re
 import time
 import logging
 
-from six import iteritems
-from six import string_types
+from six import iteritems, string_types
 
-import pyomo.common
-import pyutilib.misc
-import pyutilib.common
-import pyutilib.subprocess
+from pyomo.common import Executable
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Options, Bunch
+from pyutilib.services import TempfileManager
+from pyutilib.subprocess import run
 
-from pyomo.core.base import Var
 from pyomo.core.kernel.block import IBlock
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.core import Var
+from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import SolverResults, SolverStatus, TerminationCondition, SolutionStatus, ProblemSense, Solution
+from pyomo.opt.solver import SystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
 
 logger = logging.getLogger('pyomo.solvers')
@@ -49,13 +49,13 @@ def configure_cbc():
         return
     # manually look for the cbc executable to prevent the
     # CBC.execute() from logging an error when CBC is missing
-    executable = pyomo.common.Executable("cbc")
+    executable = Executable("cbc")
     if not executable:
         return
     cbc_exec = executable.path()
-    results = pyutilib.subprocess.run( [cbc_exec,"-stop"], timelimit=1 )
+    results = run( [cbc_exec,"-stop"], timelimit=1 )
     _cbc_version = _extract_version(results[1])
-    results = pyutilib.subprocess.run(
+    results = run(
         [cbc_exec,"dummy","-AMPL","-stop"], timelimit=1 )
     _cbc_compiled_with_asl = not ('No match for AMPL' in results[1])
     if _cbc_version is not None:
@@ -158,7 +158,7 @@ class CBCSHELL(SystemCallSolver):
         self._valid_result_formats[ProblemFormat.mps] = [ResultsFormat.soln]
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Options()
         self._capabilities.linear = True
         self._capabilities.integer = True
         # The quadratic capabilities may be true but there is
@@ -234,7 +234,7 @@ class CBCSHELL(SystemCallSolver):
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
 
         # if the first argument is a string (representing a filename),
         # then we don't have an instance => the solver is being applied
@@ -260,7 +260,7 @@ class CBCSHELL(SystemCallSolver):
             # and the warm start file-name is (obviously) needed there.
             if self._warm_start_file_name is None:
                 assert not user_warmstart
-                self._warm_start_file_name = pyutilib.services.TempfileManager.\
+                self._warm_start_file_name = TempfileManager.\
                                              create_tempfile(suffix = '.cbc.soln')
 
         # let the base class handle any remaining keywords/actions.
@@ -289,7 +289,7 @@ class CBCSHELL(SystemCallSolver):
 
 
     def _default_executable(self):
-        executable = pyomo.common.Executable("cbc")
+        executable = Executable("cbc")
         if not executable:
             logger.warning(
                 "Could not locate the 'cbc' executable, which is "
@@ -311,7 +311,7 @@ class CBCSHELL(SystemCallSolver):
         # Define the log file
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.create_tempfile(suffix=".cbc.log")
+            self._log_file = TempfileManager.create_tempfile(suffix=".cbc.log")
 
         #
         # Define the solution file
@@ -404,7 +404,7 @@ class CBCSHELL(SystemCallSolver):
                         "-solve",
                         "-solu", self._soln_file])
 
-        return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=None)
+        return Bunch(cmd=cmd, log_file=self._log_file, env=None)
 
     def process_logfile(self):
         """
@@ -873,7 +873,7 @@ class CBCSHELL(SystemCallSolver):
         # manager, created populated *directly* by this plugin. does not
         # include, for example, the execution script. but does include
         # the warm-start file.
-        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         return results
 
@@ -886,7 +886,7 @@ class MockCBC(CBCSHELL,MockMIP):
     def __init__(self, **kwds):
         try:
             CBCSHELL.__init__(self,**kwds)
-        except pyutilib.common.ApplicationError: #pragma:nocover
+        except ApplicationError: #pragma:nocover
             pass                        #pragma:nocover
         MockMIP.__init__(self,"cbc")
 

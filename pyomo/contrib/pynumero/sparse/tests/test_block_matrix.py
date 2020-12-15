@@ -220,6 +220,16 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(A_dense.dot(x), block_res.flatten()))
         self.assertEqual(block_res.bshape[0], 2)
 
+        m = BlockMatrix(2, 2)
+        sub_m = np.array([[1, 0],
+                          [0, 1]])
+        sub_m = coo_matrix(sub_m)
+        m.set_block(0, 1, sub_m.copy())
+        m.set_block(1, 0, sub_m.copy())
+        x = np.arange(4)
+        res = m*x
+        self.assertTrue(np.allclose(res.flatten(), np.array([2, 3, 0, 1])))
+
     def test_reset_brow(self):
         self.basic_m.reset_brow(0)
         for j in range(self.basic_m.bshape[1]):
@@ -318,7 +328,7 @@ class TestBlockMatrix(unittest.TestCase):
         self.assertTrue(np.allclose(r.toarray(), dense_res))
 
         with self.assertRaises(Exception) as context:
-            mm = A_block.__radd__(A_block.toarray())
+            mm = A_block.toarray() + A_block
 
         with self.assertRaises(Exception) as context:
             mm = A_block + A_block.toarray()

@@ -38,7 +38,7 @@ def _failIfPyomoResultsDiffer(self, cmd=None, baseline=None, cwd=None):
     
     if output[0] != 0:
         self.fail("Command terminated with nonzero status: '%s'" % cmd)
-    results = extract_results( re.split('\n',output[1]) )
+    results = extract_results(re.split('\n',output[1]))
     try:
         compare_results(results, baseline)
     except IOError:

@@ -12,9 +12,8 @@
 #
 
 import pyutilib.th as unittest
-from pyomo.environ import *
-from pyomo.util.check_units import assert_units_consistent, assert_units_equivalent
-from pyomo.core.base.template_expr import IndexTemplate
+from pyomo.environ import ConcreteModel, Var, Param, Set, Constraint, Objective, Expression, ExternalFunction, value, log, log10, exp, sqrt, cos, sin, tan, asin, acos, atan, cosh, sinh, tanh, asinh, acosh, atanh, ceil, floor, sum_product, maximize, units
+from pyomo.util.check_units import assert_units_consistent
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.units_container import (

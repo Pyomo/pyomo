@@ -10,9 +10,9 @@
 
 import logging
 
+from pyomo.common.collections import ComponentSet
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core import Var, Expression, Objective
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 
 from pyomo.dae.misc import generate_finite_elements
@@ -33,8 +33,8 @@ def _central_transform(v, s):
     derivatives
     """
     def _ctr_fun(i):
-        tmp = sorted(s)
-        idx = tmp.index(i)
+        tmp = list(s)
+        idx = s.ord(i)-1
         if idx == 0:  # Needed since '-1' is considered a valid index in Python
             raise IndexError("list index out of range")
         return 1 / (tmp[idx + 1] - tmp[idx - 1]) * \
@@ -48,8 +48,8 @@ def _central_transform_order2(v, s):
     derivatives
     """
     def _ctr_fun2(i):
-        tmp = sorted(s)
-        idx = tmp.index(i)
+        tmp = list(s)
+        idx = s.ord(i)-1
         if idx == 0:  # Needed since '-1' is considered a valid index in Python
             raise IndexError("list index out of range")
         return 1 / ((tmp[idx + 1] - tmp[idx]) * (tmp[idx] - tmp[idx - 1])) * \
@@ -62,8 +62,8 @@ def _forward_transform(v, s):
     Applies the Forward Difference formula of order O(h) for first derivatives
     """
     def _fwd_fun(i):
-        tmp = sorted(s)
-        idx = tmp.index(i)
+        tmp = list(s)
+        idx = s.ord(i)-1
         return 1 / (tmp[idx + 1] - tmp[idx]) * (v(tmp[idx + 1]) - v(tmp[idx]))
     return _fwd_fun
 
@@ -73,8 +73,8 @@ def _forward_transform_order2(v, s):
     Applies the Forward Difference formula of order O(h) for second derivatives
     """
     def _fwd_fun(i):
-        tmp = sorted(s)
-        idx = tmp.index(i)
+        tmp = list(s)
+        idx = s.ord(i)-1
         return 1 / ((tmp[idx + 2] - tmp[idx + 1]) *
                     (tmp[idx + 1] - tmp[idx])) *\
                (v(tmp[idx + 2]) - 2 * v(tmp[idx + 1]) + v(tmp[idx]))
@@ -86,8 +86,8 @@ def _backward_transform(v, s):
     Applies the Backward Difference formula of order O(h) for first derivatives
     """
     def _bwd_fun(i):
-        tmp = sorted(s)
-        idx = tmp.index(i)
+        tmp = list(s)
+        idx = s.ord(i)-1
         if idx == 0:  # Needed since '-1' is considered a valid index in Python
             raise IndexError("list index out of range")
         return 1 / (tmp[idx] - tmp[idx - 1]) * (v(tmp[idx]) - v(tmp[idx - 1]))
@@ -100,8 +100,8 @@ def _backward_transform_order2(v, s):
     derivatives
     """
     def _bwd_fun(i):
-        tmp = sorted(s)
-        idx = tmp.index(i)
+        tmp = list(s)
+        idx = s.ord(i)-1
 
         # This check is needed since '-1' is considered a valid index in Python
         if idx == 0 or idx == 1:
@@ -222,7 +222,7 @@ class Finite_Difference_Transformation(Transformation):
                                     "used." % ds.name)
 
                 self._nfe[ds.name] = len(ds) - 1
-                self._fe[ds.name] = sorted(ds)
+                self._fe[ds.name] = list(ds)
                 # Adding discretization information to the ContinuousSet
                 # object itself so that it can be accessed outside of the
                 # discretization object

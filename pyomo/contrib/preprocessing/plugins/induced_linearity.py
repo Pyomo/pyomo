@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Transformation to reformulate nonlinear models with linearity induced from
 discrete variables.
 
@@ -12,15 +22,13 @@ import logging
 import textwrap
 from math import fabs
 
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.contrib.preprocessing.util import SuppressConstantObjectiveWarning
 from pyomo.core import (Binary, Block, Constraint, Objective, Set,
                         TransformationFactory, Var, summation, value)
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc

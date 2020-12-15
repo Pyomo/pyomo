@@ -12,11 +12,10 @@ import logging
 
 import pyomo.common.config as cfg
 from pyomo.common import deprecated
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
-from pyomo.core.base.component import ActiveComponent, ComponentUID
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.core.base.component import ActiveComponent
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core import (
@@ -25,12 +24,12 @@ from pyomo.core import (
     Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalConstraint,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (
-    _warn_for_active_logical_constraint, clone_without_expression_components, target_list,
-    is_child_of, get_src_disjunction,
-    get_src_constraint, get_transformed_constraints,
-    get_src_disjunct, _warn_for_active_disjunction,
-    _warn_for_active_disjunct, )
+from pyomo.gdp.util import ( _warn_for_active_logical_constraint,
+                             clone_without_expression_components, target_list,
+                             is_child_of, get_src_disjunction,
+                             get_src_constraint, get_transformed_constraints,
+                             get_src_disjunct, _warn_for_active_disjunction,
+                             _warn_for_active_disjunct, )
 from functools import wraps
 from six import iteritems, iterkeys
 from weakref import ref as weakref_ref

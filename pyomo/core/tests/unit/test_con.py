@@ -14,7 +14,6 @@
 # TestArrayCon                Class for testing array of constraint
 #
 
-import logging
 import sys
 import os
 from os.path import abspath, dirname
@@ -27,8 +26,6 @@ from pyomo.environ import ConcreteModel, AbstractModel, Var, Constraint, \
     simple_constraintlist_rule, simple_constraint_rule, inequality
 from pyomo.core.expr import logical_expr
 from pyomo.core.base.constraint import _GeneralConstraintData
-
-from six import StringIO
 
 
 class TestConstraintCreation(unittest.TestCase):
@@ -1221,41 +1218,35 @@ class MiscConTests(unittest.TestCase):
         a = Constraint()
         self.assertEqual(a._constructed, False)
         self.assertEqual(len(a), 0)
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a()
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.body
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.lower
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.upper
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.equality
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.strict_lower
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                ".*before it has been constructed"):
             a.strict_upper
-            self.fail("Component is unconstructed")
-        except ValueError:
-            pass
+
         x = Var(initialize=1.0)
         x.construct()
         a.construct()

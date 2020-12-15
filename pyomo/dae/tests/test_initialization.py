@@ -14,16 +14,12 @@ Unit Tests for pyomo.dae.init_cond
 import os
 from os.path import abspath, dirname
 
-from six import StringIO
 
 import pyutilib.th as unittest
 
-from pyomo.core.base import *
-from pyomo.environ import SolverFactory
-from pyomo.common.log import LoggingIntercept
-from pyomo.dae import *
-from pyomo.dae.initialization import *
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.environ import SolverFactory, ConcreteModel, Set, Block, Var, Constraint, TransformationFactory
+from pyomo.dae import ContinuousSet, DerivativeVar
+from pyomo.dae.initialization import solve_consistent_initial_conditions, get_inconsistent_initial_conditions
 
 currdir = dirname(abspath(__file__)) + os.sep
 
@@ -77,6 +73,12 @@ def make_model():
         return fs.b1.v[m.time.first(), x] == fs.v0[x]
     # will be consistent
 
+    @m.fs.Constraint(m.time, m.space)
+    def con3(fs, t, x):
+        if x == m.space.first():
+            return Constraint.Skip
+        return fs.b2[t, x].v['a'] == 7.
+
     disc = TransformationFactory('dae.collocation')
     disc.apply_to(m, wrt=m.time, nfe=5, ncp=2, scheme='LAGRANGE-RADAU')
     disc.apply_to(m, wrt=m.space, nfe=5, ncp=2, scheme='LAGRANGE-RADAU')
@@ -101,7 +103,7 @@ class TestDaeInitCond(unittest.TestCase):
     def test_solve_consistent_initial_conditions(self):
         m = make_model()
         solver = SolverFactory('ipopt')
-        solve_consistent_initial_conditions(m, m.time, solver)
+        solve_consistent_initial_conditions(m, m.time, solver, allow_skip=True)
         inconsistent = get_inconsistent_initial_conditions(m, m.time)
         self.assertFalse(inconsistent)
 
@@ -109,6 +111,14 @@ class TestDaeInitCond(unittest.TestCase):
         self.assertTrue(m.fs.con1[m.time[3]].active)
         self.assertTrue(m.fs.b1.con[m.time[1], m.space[1]].active)
         self.assertTrue(m.fs.b1.con[m.time[3], m.space[1]].active)
+
+        with self.assertRaises(KeyError):
+            solve_consistent_initial_conditions(
+                    m,
+                    m.time,
+                    solver,
+                    allow_skip=False,
+                    )
 
 
 if __name__ == "__main__":

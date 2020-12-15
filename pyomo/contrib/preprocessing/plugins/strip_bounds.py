@@ -1,12 +1,21 @@
-"""Transformation to strip variable bounds from a model."""
-import textwrap
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
+"""Transformation to strip variable bounds from a model."""
+
+from pyomo.common.collections import ComponentMap
+from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.var import Var
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.base.set_types import Reals
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
-from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
 
 
 @TransformationFactory.register('contrib.strip_var_bounds',

@@ -10,7 +10,6 @@
 
 import logging
 import sys
-from six import iteritems
 
 from pyomo.common.extensions import ExtensionBuilderFactory
 from pyomo.scripting.pyomo_parser import add_subparser

@@ -13,6 +13,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import (
     ConcreteModel, AbstractModel, RangeSet, Param, Var, Set, value,
+    Integers,
 )
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.template_expr import (
@@ -26,7 +27,6 @@ from pyomo.core.expr.template_expr import (
     substitute_template_with_value,
 )
 
-import six
 
 class TestTemplateExpressions(unittest.TestCase):
     def setUp(self):
@@ -336,6 +336,21 @@ class TestTemplatizeRule(unittest.TestCase):
         self.assertEqual(str(template), "x[_1]  <=  0.0")
         # Test that the RangeSet iterator was put back
         self.assertEqual(list(m.I), list(range(1,4)))
+        # Evaluate the template
+        indices[0].set_value(2)
+        self.assertEqual(str(resolve_template(template)), 'x[2]  <=  0.0')
+
+    def test_simple_rule_nonfinite_set(self):
+        m = ConcreteModel()
+        m.x = Var(Integers, dense=False)
+        @m.Constraint(Integers)
+        def c(m, i):
+            return m.x[i] <= 0
+
+        template, indices = templatize_constraint(m.c)
+        self.assertEqual(len(indices), 1)
+        self.assertIs(indices[0]._set, Integers)
+        self.assertEqual(str(template), "x[_1]  <=  0.0")
         # Evaluate the template
         indices[0].set_value(2)
         self.assertEqual(str(resolve_template(template)), 'x[2]  <=  0.0')

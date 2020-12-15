@@ -9,9 +9,9 @@
 #  ___________________________________________________________________________
 
 import weakref
-from pyomo.core import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.core.base.set import UnknownSetDimen
-from pyomo.core.base.var import Var, _VarData
+from pyomo.core.base.var import Var
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
 from six import iterkeys

@@ -18,8 +18,6 @@ except ImportError:                         #pragma:nocover
 from pyomo.common.dependencies import attempt_import
 from pyomo.opt.parallel.manager import \
     (AsynchronousActionManager,
-     ActionManagerError,
-     ActionHandle,
      ActionStatus)
 
 pyu_pyro = attempt_import('pyutilib.pyro', alt_names=['pyu_pyro'])[0]

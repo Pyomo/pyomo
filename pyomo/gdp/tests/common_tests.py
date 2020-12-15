@@ -1,9 +1,20 @@
-from pyomo.environ import *
-from pyomo.gdp import *
-from pyomo.core.base import constraint
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+
+from pyomo.environ import TransformationFactory, ConcreteModel, Constraint, Var, Objective, Block, Any, RangeSet, Expression, value
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.core.base import constraint, ComponentUID
 from pyomo.repn import generate_standard_repn
 import pyomo.gdp.tests.models as models
-from six import StringIO
+from six import StringIO, iteritems
 import random
 
 # utitility functions

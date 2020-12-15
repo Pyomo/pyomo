@@ -14,16 +14,16 @@ Unit Tests for pyomo.dae.set_utils
 import os
 from os.path import abspath, dirname
 
-from six import StringIO
-
 import pyutilib.th as unittest
 
-from pyomo.core.base import (Block, Constraint, ConcreteModel, Var, Set,
-        TransformationFactory)
-from pyomo.common.log import LoggingIntercept
-from pyomo.dae import *
-from pyomo.dae.set_utils import *
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.base import (
+    Block, Constraint, ConcreteModel, Var, Set, TransformationFactory
+)
+from pyomo.dae import ContinuousSet, DerivativeVar
+from pyomo.dae.set_utils import (
+    is_explicitly_indexed_by, is_in_block_indexed_by, get_index_set_except,
+    deactivate_model_at,
+)
 
 currdir = dirname(abspath(__file__)) + os.sep
 

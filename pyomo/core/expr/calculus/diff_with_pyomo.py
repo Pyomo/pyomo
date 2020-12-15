@@ -1,8 +1,18 @@
-from pyomo.core.kernel.component_map import ComponentMap
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+from pyomo.common.collections import ComponentMap
 from pyomo.core.expr import current as _expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value
-from pyomo.core.expr.current import exp, log, sin, cos, tan, asin, acos, atan
+from pyomo.core.expr.current import exp, log, sin, cos
 import math
 
 
@@ -52,6 +62,15 @@ def _diff_SumExpression(node, val_dict, der_dict):
     for arg in node.args:
         der_dict[arg] += der
 
+
+def _diff_LinearExpression(node, val_dict, der_dict):
+    der = der_dict[node]
+    for ndx, v in enumerate(node.linear_vars):
+        coef = node.linear_coefs[ndx]
+        der_dict[v] += der * val_dict[coef]
+        der_dict[coef] += der * val_dict[v]
+
+    der_dict[node.constant] += der
 
 def _diff_PowExpression(node, val_dict, der_dict):
     """
@@ -325,6 +344,16 @@ _diff_map[_expr.MonomialTermExpression] = _diff_ProductExpression
 _diff_map[_expr.NegationExpression] = _diff_NegationExpression
 _diff_map[_expr.UnaryFunctionExpression] = _diff_UnaryFunctionExpression
 _diff_map[_expr.ExternalFunctionExpression] = _diff_ExternalFunctionExpression
+_diff_map[_expr.LinearExpression] = _diff_LinearExpression
+
+_diff_map[_expr.NPV_ProductExpression] = _diff_ProductExpression
+_diff_map[_expr.NPV_DivisionExpression] = _diff_DivisionExpression
+_diff_map[_expr.NPV_ReciprocalExpression] = _diff_ReciprocalExpression
+_diff_map[_expr.NPV_PowExpression] = _diff_PowExpression
+_diff_map[_expr.NPV_SumExpression] = _diff_SumExpression
+_diff_map[_expr.NPV_NegationExpression] = _diff_NegationExpression
+_diff_map[_expr.NPV_UnaryFunctionExpression] = _diff_UnaryFunctionExpression
+_diff_map[_expr.NPV_ExternalFunctionExpression] = _diff_ExternalFunctionExpression
 
 
 class _NamedExpressionCollector(ExpressionValueVisitor):
@@ -393,6 +422,18 @@ class _ReverseADVisitorLeafToRoot(ExpressionValueVisitor):
                 self.der_dict[node] = 0
             return True, node
 
+        if node.__class__ is _expr.LinearExpression:
+            for v in node.linear_vars + node.linear_coefs + [node.constant]:
+                val = value(v)
+                self.val_dict[v] = val
+                if v not in self.der_dict:
+                    self.der_dict[v] = 0
+            val = value(node)
+            self.val_dict[node] = val
+            if node not in self.der_dict:
+                self.der_dict[node] = 0
+            return True, val
+
         if not node.is_expression_type():
             val = value(node)
             self.val_dict[node] = val
@@ -445,7 +486,7 @@ def reverse_ad(expr):
 
     Returns
     -------
-    pyomo.core.kernel.component_map.ComponentMap
+    ComponentMap
         component_map mapping variables to derivatives with respect
         to the corresponding variable
     """
@@ -487,6 +528,18 @@ class _ReverseSDVisitorLeafToRoot(ExpressionValueVisitor):
             if node not in self.der_dict:
                 self.der_dict[node] = 0
             return True, node
+
+        if node.__class__ is _expr.LinearExpression:
+            for v in node.linear_vars + node.linear_coefs + [node.constant]:
+                val = v
+                self.val_dict[v] = val
+                if v not in self.der_dict:
+                    self.der_dict[v] = 0
+            val = node
+            self.val_dict[node] = val
+            if node not in self.der_dict:
+                self.der_dict[node] = 0
+            return True, val
 
         if not node.is_expression_type():
             val = node
@@ -540,7 +593,7 @@ def reverse_sd(expr):
 
     Returns
     -------
-    pyomo.core.kernel.component_map.ComponentMap
+    ComponentMap
         component_map mapping variables to derivatives with respect
         to the corresponding variable
     """

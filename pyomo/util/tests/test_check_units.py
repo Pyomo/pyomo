@@ -12,10 +12,9 @@
 #
 
 import pyutilib.th as unittest
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Param, Set, Constraint, Objective, Expression, Suffix, RangeSet, ExternalFunction, units, maximize, sin, cos
 from pyomo.network import Port, Arc
 from pyomo.dae import ContinuousSet, DerivativeVar
-from pyomo.mpec import Complementarity, complements
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.base.units_container import (
     pint_available, UnitsError,

@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, RangeSet, maximize, ConstraintList
+from pyomo.core import ConcreteModel, Param, Var, Objective, Constraint, RangeSet, maximize, ConstraintList
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model

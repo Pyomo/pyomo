@@ -1,15 +1,21 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 #!/usr/python/env python
 
 import pyutilib.th as unittest
 
-from pyutilib.misc.config import ConfigBlock, ConfigValue, ConfigList
-from pyomo.common.config import ( 
-    PositiveInt, PositiveFloat, NonNegativeFloat, In)
 from pyomo.common.dependencies import numpy_available
-from pyomo.core import Var, value
 
-from pyomo.environ import *
-from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
+from pyomo.environ import (Var, ConcreteModel, Reals, ExternalFunction,
+                           Objective, Constraint, sqrt, sin, SolverFactory)
 
 @unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
 @unittest.skipIf(not SolverFactory('gjh').available(False), "The GJH solver is not available")

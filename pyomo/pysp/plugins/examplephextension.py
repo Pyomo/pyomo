@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import *
+from pyomo.common.plugin import implements, SingletonPlugin
 from pyomo.pysp import phextension
 
 

@@ -10,10 +10,8 @@
 
 import pyutilib.th as unittest
 
-from pyomo.core import ConcreteModel, Var, Constraint, Block, \
-    TransformationFactory
-from pyomo.gdp import Disjunction, Disjunct, GDP_Error
-import pyomo.gdp.plugins.bigm
+from pyomo.core import ConcreteModel, Var, Constraint
+from pyomo.gdp import Disjunction, Disjunct
 
 from six import iterkeys
 

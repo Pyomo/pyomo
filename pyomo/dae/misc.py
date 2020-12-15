@@ -10,17 +10,15 @@
 
 import logging
 
+from pyomo.common.collections import ComponentMap
+from pyomo.common.log import LoggingIntercept
 from pyomo.core import Suffix, Var, Constraint, Piecewise, Block
 from pyomo.core import Expression, Param
-from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.block import _BlockData, IndexedBlock
-from pyomo.dae import ContinuousSet, DerivativeVar, DAE_Error
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.base.block import SortComponents
-from pyomo.common.log import LoggingIntercept
+from pyomo.core.base.block import IndexedBlock, SortComponents
+from pyomo.dae import ContinuousSet, DAE_Error
 
-from six import iterkeys, itervalues, iteritems, StringIO
+from six import iterkeys, itervalues, StringIO
 
 logger = logging.getLogger('pyomo.dae')
 
@@ -71,7 +69,7 @@ def generate_finite_elements(ds, nfe):
 
 
 def _add_point(ds):
-    sortds = sorted(ds)
+    sortds = list(ds)
     maxstep = sortds[1] - sortds[0]
     maxloc = 0
     for i in range(2, len(sortds)):
@@ -87,7 +85,7 @@ def generate_colloc_points(ds, tau):
     This function adds collocation points between the finite elements
     in the differential set
     """
-    fes = sorted(ds)
+    fes = list(ds)
     for i in range(1, len(fes)):
         h = fes[i] - fes[i - 1]
         for j in range(len(tau)):
@@ -171,7 +169,7 @@ def expand_components(block):
 
                 N = len(redo_expansion)
 
-    except Exception as e:
+    except Exception:
         logger.error(buf.getvalue())
         raise
 
@@ -219,10 +217,7 @@ def update_contset_indexed_component(comp, expansion_map):
     # Extract the indexing sets. Must treat components with a single
     # index separately from components with multiple indexing sets.
     temp = comp.index_set()
-    if hasattr(temp, 'set_tuple'):
-        indexset = comp.index_set().set_tuple
-    else:
-        indexset = [temp,]
+    indexset = list(comp.index_set().subsets())
 
     for s in indexset:
         if s.ctype == ContinuousSet and s.get_changed():
@@ -280,7 +275,7 @@ def _update_constraint(con):
     for i in con.index_set():
         if i not in con:
             # Code taken from the construct() method of Constraint
-            con.add(i, apply_indexed_rule(con, _rule, _parent, i))
+            con.add(i, _rule(_parent, i))
 
 
 def _update_expression(expre):
@@ -365,7 +360,7 @@ def create_access_function(var):
 def create_partial_expression(scheme, expr, ind, loc):
     """
     This method returns a function which applies a discretization scheme
-    to an expression along a particular indexind set. This is admittedly a
+    to an expression along a particular indexing set. This is admittedly a
     convoluted looking implementation. The idea is that we only apply a
     discretization scheme to one indexing set at a time but we also want
     the function to be expanded over any other indexing sets.
@@ -408,13 +403,13 @@ def add_continuity_equations(block, d, i, loc):
         afinal = s.get_discretization_info()['afinal']
 
         def _fun(i):
-            tmp = sorted(s)
-            idx = tmp.index(i)
+            tmp = list(s)
+            idx = s.ord(i)-1
             low = s.get_lower_element_boundary(i)
             if i != low or idx == 0:
                 raise IndexError("list index out of range")
             low = s.get_lower_element_boundary(tmp[idx - 1])
-            lowidx = tmp.index(low)
+            lowidx = s.ord(low)-1
             return sum(v(tmp[lowidx + j]) * afinal[j] for j in range(ncp + 1))
         return _fun
     expr = create_partial_expression(_cont_exp, create_access_function(svar),
@@ -454,7 +449,6 @@ def get_index_information(var, ds):
     # Find index order of ContinuousSet in the variable
     indargs = []
     dsindex = 0
-    tmpds2 = None
 
     if var.dim() != 1:
         indCount = 0
@@ -504,8 +498,8 @@ def _get_idx(l, ds, n, i, k):
     points and is not separated into finite elements and collocation
     points.
     """
-    t = sorted(ds)
-    tmp = t.index(ds._fe[i])
+    t = list(ds)
+    tmp = ds.ord(ds._fe[i])-1
     tik = t[tmp + k]
     if n is None:
         return tik

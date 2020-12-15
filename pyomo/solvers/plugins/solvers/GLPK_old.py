@@ -13,16 +13,16 @@ import os
 import re
 import sys
 
-from pyutilib.common import ApplicationError
-from pyutilib.misc import Bunch, Options
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Bunch, Options
 from pyutilib.services import TempfileManager
 import pyutilib.subprocess
 
-import pyomo.common
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.common import Executable
+from pyomo.opt.base import ProblemFormat, ResultsFormat
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import SolverResults, SolverStatus, TerminationCondition, SolutionStatus, ProblemSense
+from pyomo.opt.solver import SystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
 from pyomo.solvers.plugins.solvers.GLPK import _glpk_version, configure_glpk
 
@@ -85,7 +85,7 @@ class GLPKSHELL_4_42(SystemCallSolver):
         return ResultsFormat.soln
 
     def _default_executable(self):
-        executable = pyomo.common.Executable('glpsol')
+        executable = Executable('glpsol')
         if not executable:
             msg = ("Could not locate the 'glpsol' executable, which is "
                    "required for solver '%s'")
@@ -439,7 +439,7 @@ class GLPKSHELL_old(SystemCallSolver):
         return ResultsFormat.soln
 
     def _default_executable(self):
-        executable = pyomo.common.Executable('glpsol')
+        executable = Executable('glpsol')
         if not executable:
             msg = "Could not locate the 'glpsol' executable, which is " \
                   "required for solver '%s'"
@@ -722,7 +722,7 @@ class GLPKSHELL_old(SystemCallSolver):
                                   ("***ERROR: Unexpected constraint index " + \
                                    "encountered on line=%s; expected " + \
                                    "value=%s; actual value=%s") % \
-                                   (line, str(number_of_consrtaints_read),
+                                   (line, str(number_of_constraints_read),
                                     str(index)))
                     else:
                         index = None

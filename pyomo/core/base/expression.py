@@ -16,7 +16,6 @@ from weakref import ref as weakref_ref
 
 from pyomo.common.timing import ConstructionTimer
 
-from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.indexed_component import (

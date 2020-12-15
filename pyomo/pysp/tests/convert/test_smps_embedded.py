@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import sys
-import re
 import os
 import tempfile
 from os.path import join, dirname, abspath
@@ -17,7 +16,7 @@ import difflib
 import filecmp
 import shutil
 
-import pyutilib.misc
+from pyutilib.misc import import_file
 import pyutilib.th as unittest
 
 from six import StringIO
@@ -27,14 +26,14 @@ baselinedir = os.path.join(thisdir, "smps_embedded_baselines")
 pysp_examples_dir = \
     join(dirname(dirname(dirname(dirname(thisdir)))), "examples", "pysp")
 
-import pyomo.environ
-import pyomo.environ as aml
+import pyomo.environ as pyo
 from pyomo.pysp.embeddedsp import (EmbeddedSP,
                                    StochasticDataAnnotation,
                                    TableDistribution,
                                    UniformDistribution,
                                    StageCostAnnotation,
                                    VariableStageAnnotation)
+from pyomo.pysp.convert.smps import convert_embedded
 
 baa99_basemodel = None
 piecewise_model_embedded = None
@@ -46,13 +45,13 @@ def setUpModule():
     fname = os.path.join(pysp_examples_dir, "baa99", "baa99_basemodel.py")
     if os.path.exists(fname+"c"):
         os.remove(fname+"c")
-    baa99_basemodel = pyutilib.misc.import_file(fname)
+    baa99_basemodel = import_file(fname)
     if "piecewise_model_embedded" in sys.modules:
         del sys.modules["piecewise_model_embedded"]
     fname = os.path.join(thisdir, "piecewise_model_embedded.py")
     if os.path.exists(fname+"c"):
         os.remove(fname+"c")
-    piecewise_model_embedded = pyutilib.misc.import_file(fname)
+    piecewise_model_embedded = import_file(fname)
 
 def tearDownModule():
     global baa99_basemodel
@@ -78,18 +77,18 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         cls.tmpdir = None
 
     def _get_base_model(self):
-        model = aml.ConcreteModel()
-        model.x = aml.Var()
-        model.y = aml.Var()
-        model.d1 = aml.Param(mutable=True, initialize=0.0)
-        model.d2 = aml.Param(mutable=True, initialize=0.0)
-        model.d3 = aml.Param(mutable=True, initialize=0.0)
-        model.cost = aml.Expression([1,2])
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var()
+        model.y = pyo.Var()
+        model.d1 = pyo.Param(mutable=True, initialize=0.0)
+        model.d2 = pyo.Param(mutable=True, initialize=0.0)
+        model.d3 = pyo.Param(mutable=True, initialize=0.0)
+        model.cost = pyo.Expression([1,2])
         model.cost[1].expr = model.x
         model.cost[2].expr = model.d1*model.y
-        model.o = aml.Objective(expr= model.cost[1]+model.cost[2])
-        model.c1 = aml.Constraint(expr= model.x >= 0)
-        model.c2 = aml.Constraint(expr= model.y*model.d2 >= model.d3)
+        model.o = pyo.Objective(expr= model.cost[1]+model.cost[2])
+        model.c1 = pyo.Constraint(expr= model.x >= 0)
+        model.c2 = pyo.Constraint(expr= model.y*model.d2 >= model.d3)
         model.varstage = VariableStageAnnotation()
         model.varstage.declare(model.x, 1)
         model.varstage.declare(model.y, 2)
@@ -115,9 +114,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         shutil.rmtree(tmpdir, ignore_errors=True)
         self.assertFalse(os.path.exists(tmpdir))
         sp = EmbeddedSP(self._get_base_model())
-        pyomo.pysp.convert.smps.convert_embedded(tmpdir,
-                                                 'test',
-                                                 sp)
+        convert_embedded(tmpdir, 'test', sp)
         self.assertTrue(os.path.exists(tmpdir))
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -125,9 +122,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         sp = EmbeddedSP(self._get_base_model())
         sp.time_stages = [1,2,3]
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(str(cm.exception),
                          ("SMPS conversion does not yet handle more "
                           "than 2 time-stages"))
@@ -144,9 +139,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         sp.has_stochastic_variable_bounds = True
         self.assertEqual(sp.has_stochastic_variable_bounds, True)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(str(cm.exception),
                          ("Problems with stochastic variables bounds "
                          "can not be converted into an embedded "
@@ -157,9 +150,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.cost[2].expr = model.y**2 + model.d1
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertTrue(str(cm.exception).startswith(
             "Cannot output embedded SP representation for component "
             "'o'. The embedded SMPS writer does not yet handle "
@@ -170,9 +161,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.cost[2].expr = model.d1*model.y + model.d1
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -190,9 +179,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.cost[2].expr = -model.d1*model.y
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertTrue(str(cm.exception).startswith(
             "Cannot output embedded SP representation for component "
             "'o'. The embedded SMPS writer does not yet handle the "
@@ -204,16 +191,14 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
 
     def test_stoch_data_nontrivial_expression_objective2(self):
         model = self._get_base_model()
-        model.q = aml.Param(mutable=True, initialize=0.0)
+        model.q = pyo.Param(mutable=True, initialize=0.0)
         model.stochdata.declare(
             model.q,
             distribution=TableDistribution([0.0,1.0]))
         model.cost[2].expr = (model.d1+model.q)*model.y
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -232,9 +217,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
             distribution=UniformDistribution(0.0,1.0))
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Invalid distribution type 'UniformDistribution' for stochastic "
@@ -247,9 +230,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.c2._body = model.d2*model.y**2
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertTrue(str(cm.exception).startswith(
             "Cannot output embedded SP representation for component "
             "'c2'. The embedded SMPS writer does not yet handle "
@@ -257,16 +238,14 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
 
     def test_stoch_constraint_body_constant(self):
         model = self._get_base_model()
-        model.q = aml.Param(mutable=True, initialize=0.0)
+        model.q = pyo.Param(mutable=True, initialize=0.0)
         model.stochdata.declare(
             model.q,
             distribution=TableDistribution([0.0,1.0]))
         model.c2._body = model.d2*model.y + model.q
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -279,16 +258,14 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
 
     def test_stoch_range_constraint(self):
         model = self._get_base_model()
-        model.q = aml.Param(mutable=True, initialize=0.0)
+        model.q = pyo.Param(mutable=True, initialize=0.0)
         model.stochdata.declare(
             model.q,
             distribution=TableDistribution([0.0,1.0]))
-        model.c3 = aml.Constraint(expr=aml.inequality(model.q, model.y, 0))
+        model.c3 = pyo.Constraint(expr=pyo.inequality(model.q, model.y, 0))
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -300,9 +277,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.c2._lower = model.d2
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -320,9 +295,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
         model.c2._body = -model.d2*model.y
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertTrue(str(cm.exception).startswith(
             "Cannot output embedded SP representation for component "
             "'c2'. The embedded SMPS writer does not yet handle the "
@@ -334,16 +307,14 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
 
     def test_stoch_data_nontrivial_expression_constraint2(self):
         model = self._get_base_model()
-        model.q = aml.Param(mutable=True, initialize=0.0)
+        model.q = pyo.Param(mutable=True, initialize=0.0)
         model.stochdata.declare(
             model.q,
             distribution=TableDistribution([0.0,1.0]))
         model.c2._body = (model.d2+model.q)*model.y
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Cannot output embedded SP representation for component "
@@ -362,9 +333,7 @@ class TestSMPSEmbeddedBad(unittest.TestCase):
             distribution=UniformDistribution(0.0,1.0))
         sp = EmbeddedSP(model)
         with self.assertRaises(ValueError) as cm:
-            pyomo.pysp.convert.smps.convert_embedded(self.tmpdir,
-                                                     'test',
-                                                     sp)
+            convert_embedded(self.tmpdir, 'test', sp)
         self.assertEqual(
             str(cm.exception),
             ("Invalid distribution type 'UniformDistribution' for stochastic "
@@ -419,10 +388,7 @@ class TestSMPSEmbedded(unittest.TestCase):
         shutil.rmtree(output_directory,
                       ignore_errors=True)
         os.makedirs(output_directory)
-        pyomo.pysp.convert.smps.convert_embedded(output_directory,
-                                                 basename,
-                                                 sp,
-                                                 **kwds)
+        convert_embedded(output_directory, basename, sp, **kwds)
         return output_directory
 
     def _get_baa99_sp(self):

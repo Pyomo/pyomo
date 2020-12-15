@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.opt.parallel.async_solver import *
+from pyomo.opt.parallel.async_solver import (Factory, AsynchronousActionManager, SolverManagerFactory, AsynchronousSolverManager)
 import pyomo.opt.parallel.manager
 import pyomo.opt.parallel.pyro
 import pyomo.opt.parallel.local
