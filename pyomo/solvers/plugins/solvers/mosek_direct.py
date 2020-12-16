@@ -10,6 +10,7 @@
 
 import logging
 import re
+import six
 import sys
 import itertools
 import operator
@@ -35,6 +36,14 @@ from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 logger = logging.getLogger('pyomo.solvers')
 inf = float('inf')
 
+if six.PY2:
+    def accumulate(it):
+        total = 0
+        for x in it:
+            total += x
+            yield total
+else:
+    from itertools import accumulate
 
 class DegreeError(ValueError):
     pass
@@ -318,7 +327,7 @@ class MOSEKDirect(DirectSolver):
         lq = tuple(filter(operator.attrgetter("_linear_canonical_form"),
                           con_seq))
         conic = tuple(filter(lambda x: isinstance(x, _ConicBase), con_seq))
-        lq_ex = tuple(itertools.filterfalse(lambda x: isinstance(
+        lq_ex = tuple(six.moves.filterfalse(lambda x: isinstance(
             x, _ConicBase) or (x._linear_canonical_form), con_seq))
         lq_all = lq + lq_ex
         num_lq = len(lq) + len(lq_ex)
@@ -341,7 +350,7 @@ class MOSEKDirect(DirectSolver):
             sub = range(con_num, con_num + num_lq)
             sub_names = tuple(self._symbol_map.getSymbol(c, self._labeler)
                               for c in lq_all)
-            ptre = tuple(itertools.accumulate(list(map(len, l_ids))))
+            ptre = tuple(accumulate(list(map(len, l_ids))))
             ptrb = (0,) + ptre[:-1]
             asubs = tuple(itertools.chain.from_iterable(l_ids))
             avals = tuple(itertools.chain.from_iterable(l_coefs))
