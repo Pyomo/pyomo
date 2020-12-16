@@ -723,7 +723,8 @@ class Hull_Reformulation(Transformation):
     def _warn_for_active_logical_statement(
             self, logical_statment, disjunct, var_substitute_map,
             zero_substitute_map):
-        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
+        _warn_for_active_logical_constraint(logical_statment, disjunct,
+                                            NAME_BUFFER)
 
     def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
                                       zero_substitute_map):
@@ -998,8 +999,8 @@ class Hull_Reformulation(Transformation):
             if transBlock is not None:
                 break
         if transBlock is None:
-            raise GDP_Error("Disjunction '%s' has not been properly transformed: "
-                            "None of its disjuncts are transformed."
+            raise GDP_Error("Disjunction '%s' has not been properly transformed:"
+                            " None of its disjuncts are transformed."
                             % disjunction.name)
 
         try:
