@@ -459,7 +459,7 @@ self._hashRef(Reference(m.v_tt)),
             else:
                 raise RuntimeError()
 
-    def _model_2_no_normalize(self):
+    def _model_2(self):
         # A more simple model, but now with some higher-dimension sets
         m = ConcreteModel()
 
@@ -486,23 +486,46 @@ self._hashRef(Reference(m.v_tt)),
 
         return m
 
-    def test_flatten_m2_1d_no_normalize(self):
-        m = self._model_2_noflatten()
+    def test_flatten_m2_2d(self):
+        m = self._model_2()
+
+        sets = ComponentSet((m.d2,))
+        # need to set `flatten` to False here to properly access data,
+        # since model was created with `flatten == False`.
+        normalize_index.flatten = False
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 2
+
+        D1N = m.d1*m.dn
+        D1NN = m.d1.cross(m.dn, m.dn)
+        D1N1 = m.d1.cross(m.dn, m.d1)
+
+        for sets, comps in zip(sets_list, comps_list):
+
+            if len(sets) == 1 and sets[0] is m.d2:
+                ref_data = {
+*list(self._hashRef(Reference(m.v_2n[:,i_n])) for i_n in m.dn),
+*list(self._hashRef(Reference(m.v_12[i1,:])) for i1 in m.d1),
+*list(self._hashRef(Reference(m.v_12n[i1,:,i_n])) for i1,i_n in D1N),
+*list(self._hashRef(Reference(m.v_1n2n[i1,i_na,:,i_nb])) for i1, i_na, i_nb in D1NN),
+*list(self._hashRef(Reference(m.b[i1,:,i_n].v0)) for i1,i_n in D1N),
+*list(self._hashRef(Reference(m.b[i1a,:,i_n].v1[i1b])) for i1a, i_n, i1b in D1N1),
+*list(self._hashRef(Reference(m.b[i1,:,i_na].v1[i_nb])) for i1, i_na, i_nb in D1NN),
+                        }
+                assert len(ref_data) == len(comps)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+        normalize_index.flatten = True
+
+    def test_flatten_m2_1d(self):
+        m = self._model_2()
 
         sets = ComponentSet((m.d1,))
-        # need to set `flatten` to False here to properly access b's data,
-        # since it was created with `flatten == False`.
-        #
-        # This means we are accessing m.v...'s data with unflattened indices
-        # even though it was created with flattened indices. These indices
-        # are valid, however, so they lead to the creation of additional data
-        # objects. This is dangerous, so we should probably just create the
-        # entire model with `flatten == False`.
-        # We would expect the unflattened indices to raise an error if we
-        # were using a dict or rule initializer
-        #
-        # ^ Creating with flatten True then iterating with Flatten False
-        # seemed to cause problems when iterating over slices.
+        # need to set `flatten` to False here to properly access data,
+        # since model was created with `flatten == False`.
         normalize_index.flatten = False
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
 
@@ -518,7 +541,7 @@ self._hashRef(Reference(m.v_tt)),
         for sets, comps in zip(sets_list, comps_list):
 
             if len(sets) == 1 and sets[0] is m.d1:
-                ref_data = [
+                ref_data = {
 # Don't expand indices:
 *list(self._hashRef(Reference(m.v_12[:,i2])) for i2 in m.d2),
 *list(self._hashRef(Reference(m.v_212[i2a,:,i2b])) for i2a, i2b in D22),
@@ -527,8 +550,22 @@ self._hashRef(Reference(m.v_tt)),
 *list(self._hashRef(Reference(m.b[:,i2,i_n].v0)) for i2, i_n in D2N),
 *list(self._hashRef(Reference(m.b[:,i2a,i_n].v2[i2b])) for i2a, i_n, i2b in D2N2),
 *list(self._hashRef(Reference(m.b[:,i2,i_na].vn[i_nb])) for i2, i_na, i_nb in D2NN),
-                        ]
+                        }
                 # Expect length to be 38
+                assert len(ref_data) == len(comps)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                ref_data = {
+                        *list(self._hashRef(v) for v in m.v_2n.values()),
+                        }
+                assert len(ref_data) == len(comps)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 2 and sets[0] is m.d1 and sets[1] is m.d1:
+                ref_data = {
+                *list(self._hashRef(Reference(m.b[:,i2,i_n].v1[:])) for i2, i_n in D2N),
+                        }
                 assert len(ref_data) == len(comps)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -538,5 +575,5 @@ self._hashRef(Reference(m.v_tt)),
 
 if __name__ == "__main__":
     #unittest.main()
-    TestFlatten().test_flatten_m2_1d_nonormalize()
+    TestFlatten().test_flatten_m2_2d()
 
