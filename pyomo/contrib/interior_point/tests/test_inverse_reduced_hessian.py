@@ -99,7 +99,7 @@ class TestInverseReducedHessian(unittest.TestCase):
 
         return model
 
-    @unittest.skipIf(not numdiff_available, "numdiff missing")
+    @unittest.skipIf(not numdiff_available, "numdifftools missing")
     @unittest.skipIf(not pandas_available, "pandas missing")
     def test_3x3_using_linear_regression(self):
         """ simple linear regression with two x columns, so 3x3 Hessian"""        
@@ -133,7 +133,7 @@ class TestInverseReducedHessian(unittest.TestCase):
         np.testing.assert_array_almost_equal(HInv, H_inv_red_hess, decimal=3)
 
 
-    @unittest.skipIf(not numdiff_available, "numdiff missing")
+    @unittest.skipIf(not numdiff_available, "numdifftools missing")
     @unittest.skipIf(not pandas_available, "pandas missing")
     def test_with_binding_constraint(self):
         """ there is a binding constraint"""        

@@ -14,7 +14,8 @@ pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-from pyutilib.services import TempfileManager
+import pyomo.common
+from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.core import ConcreteModel
 from pyomo.opt import ResultsFormat, SolverResults, SolverFactory

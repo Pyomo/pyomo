@@ -68,7 +68,7 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
             #
             from pyomo.mpec import Complementarity
             for cuid in self._instance._transformation_data['mpec.simple_disjunction'].compl_cuids:
-                cobj = cuid.find_component(self._instance)
+                cobj = cuid.find_component_on(self._instance)
                 cobj.parent_block().reclassify_component_type(cobj, Complementarity)
             #
             # Transform the result back into the original model

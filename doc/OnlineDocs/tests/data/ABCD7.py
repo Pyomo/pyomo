@@ -1,5 +1,5 @@
 from pyomo.environ import *
-import pyutilib.common
+import pyomo.common
 import sys
 
 model = AbstractModel()
@@ -9,8 +9,8 @@ model.Y = Param(model.Z)
 
 try:
     instance = model.create_instance('ABCD7.dat')
-except pyutilib.common.ApplicationError:
-    print("ERROR")
+except pyomo.common.errors.ApplicationError as e:
+    print("ERROR "+str(e))
     sys.exit(1)
 
 print('Z '+str(sorted(list(instance.Z.data()))))
