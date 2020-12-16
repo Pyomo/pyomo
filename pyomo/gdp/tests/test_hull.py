@@ -1567,6 +1567,22 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d3)), 0)
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d4)), 0)
 
+        # and what if one of the inner disjuncts is true?
+        m.d1.indicator_var.fix(1)
+        m.d2.indicator_var.fix(0)
+        m.d3.indicator_var.fix(1)
+        m.d4.indicator_var.fix(0)
+
+        results = SolverFactory(linear_solvers[0]).solve(m)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertEqual(value(m.x), 1.2)
+
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d1)), 1.2)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d2)), 0)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d3)), 1.2)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d4)), 0)
+
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):
         """ checks that if nothing is marked as local, we assume it is all
