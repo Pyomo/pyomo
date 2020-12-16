@@ -279,14 +279,6 @@ class IndexedComponent_slice(object):
         return ((_iter.get_last_index(), _) for _ in _iter)
 
 
-def _tuple_from_possible_scalar(source):
-    if type(source) is not tuple:
-        # This will behave poorly for non-tuple,
-        # non-string iterables, but we do not
-        # expect non-tuple, non-string iterables.
-        return (source,)
-    return source
-
 def _freeze(info):
     if info[0] == IndexedComponent_slice.slice_info:
         return (
@@ -297,7 +289,10 @@ def _freeze(info):
             info[1][3]  # elipsis index
         )
     elif info[0] & IndexedComponent_slice.ITEM_MASK:
-        index = _tuple_from_possible_scalar(info[1])
+        if type(info[1]) is not tuple:
+            index = (info[1],)
+        else:
+            index = info[1]
         return (
             info[0],
             tuple( (x.start,x.stop,x.step) if type(x) is slice else x
