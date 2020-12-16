@@ -420,9 +420,14 @@ class Hull_Reformulation(Transformation):
         # as being local. Note however, that we do declare our own disaggregated
         # variables as local, so they will not be re-disaggregated.
         varSet = []
-        # values of localVarsByDisjunct are ComponentSets, so we need this for
-        # determinism (we iterate through the localVars later)
-        localVars = []
+        # Note that variables are local with respect to a Disjunct. We deal with
+        # them here to do some error checking (if something is obviously not
+        # local since it is used in multiple Disjuncts in this Disjunction) and
+        # also to get a deterministic order in which to process them when we
+        # transform the Disjuncts: Values of localVarsByDisjunct are
+        # ComponentSets, so we need this for determinism (we iterate through the
+        # localVars of a Disjunct later)
+        localVars = ComponentMap()
         for var in varOrder:
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
             # clearly not local if used in more than one disjunct
@@ -433,12 +438,19 @@ class Hull_Reformulation(Transformation):
                                  var.getname(fully_qualified=True,
                                              name_buffer=NAME_BUFFER))
                 varSet.append(var)
+            # disjuncts is a list of length 1
             elif localVarsByDisjunct.get(disjuncts[0]) is not None:
                 if var in localVarsByDisjunct[disjuncts[0]]:
-                    localVars.append(var)
+                    localVars_thisDisjunct = localVars.get(disjuncts[0])
+                    if localVars_thisDisjunct is not None:
+                        localVars[disjuncts[0]].append(var)
+                    else:
+                        localVars[disjuncts[0]] = [var]
                 else:
+                    # It's not local to this Disjunct
                     varSet.append(var)
             else:
+                # We don't even have have any local vars for this Disjunct.
                 varSet.append(var)
 
         # Now that we know who we need to disaggregate, we will do it
@@ -446,12 +458,14 @@ class Hull_Reformulation(Transformation):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
-            self._transform_disjunct(disjunct, transBlock, varSet, localVars)
+            self._transform_disjunct(disjunct, transBlock, varSet,
+                                     localVars.get(disjunct, []))
         orConstraint.add(index, (or_expr, 1))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
         obj._algebraic_constraint = weakref_ref(orConstraint[index])
 
+        # add the reaggregation constraints
         for i, var in enumerate(varSet):
             disaggregatedExpr = 0
             for disjunct in obj.disjuncts:
@@ -551,9 +565,14 @@ class Hull_Reformulation(Transformation):
                 break
             parent_disjunct = parent_disjunct.parent_block()
         if parent_disjunct is not None:
-            localVarSuffix = relaxationBlock.LocalVars = Suffix(
-                direction=Suffix.LOCAL)
-            local_var_set = localVarSuffix[parent_disjunct] = ComponentSet()
+            # TODO: This basically makes it so that naming something LocalVar on
+            # Disjunct is very dangerous. But I am assuming that the Suffix has
+            # to be somewhere above the disjunct in the tree, so I can't put it
+            # on a Block that I own.
+            if parent_disjunct.component("LocalVars") is None:
+                parent_disjunct.LocalVars = Suffix(direction=Suffix.LOCAL)
+                parent_disjunct.LocalVars[parent_disjunct] = []
+            local_var_set = parent_disjunct.LocalVars[parent_disjunct]
 
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
@@ -581,7 +600,7 @@ class Hull_Reformulation(Transformation):
             # mark this as local because we won't re-disaggregate if this is a
             # nested disjunction
             if local_var_set is not None:
-                local_var_set.add(disaggregatedVar)
+                local_var_set.append(disaggregatedVar)
             # store the mappings from variables to their disaggregated selves on
             # the transformation block.
             relaxationBlock._disaggregatedVarMap['disaggregatedVar'][
