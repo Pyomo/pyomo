@@ -1545,6 +1545,28 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(value(m.d2.indicator_var), 1)
         self.assertEqual(value(m.x), 1.1)
 
+    @unittest.skipIf(not linear_solvers, "No linear solver available")
+    def test_disaggregated_vars_are_set_to_0_correctly(self):
+        m = models.makeNestedDisjunctions_FlatDisjuncts()
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+
+        # this should be a feasible integer solution
+        m.d1.indicator_var.fix(0)
+        m.d2.indicator_var.fix(1)
+        m.d3.indicator_var.fix(0)
+        m.d4.indicator_var.fix(0)
+
+        results = SolverFactory(linear_solvers[0]).solve(m)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertEqual(value(m.x), 1.1)
+
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d1)), 0)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d2)), 1.1)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d3)), 0)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d4)), 0)
+
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):
         """ checks that if nothing is marked as local, we assume it is all
