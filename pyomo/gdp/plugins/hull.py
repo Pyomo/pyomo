@@ -565,12 +565,13 @@ class Hull_Reformulation(Transformation):
                 break
             parent_disjunct = parent_disjunct.parent_block()
         if parent_disjunct is not None:
-            # TODO: This basically makes it so that naming something LocalVar on
-            # Disjunct is very dangerous. But I am assuming that the Suffix has
-            # to be somewhere above the disjunct in the tree, so I can't put it
-            # on a Block that I own.
-            if parent_disjunct.component("LocalVars") is None:
-                parent_disjunct.LocalVars = Suffix(direction=Suffix.LOCAL)
+            # This limits the cases that a user is allowed to name something
+            # (other than a Suffix) 'LocalVars' on a Disjunct. But I am assuming
+            # that the Suffix has to be somewhere above the disjunct in the
+            # tree, so I can't put it on a Block that I own. And if I'm coopting
+            # something of theirs, it may as well be here.
+            self._add_local_var_suffix(parent_disjunct)
+            if parent_disjunct.LocalVars.get(parent_disjunct) is None:
                 parent_disjunct.LocalVars[parent_disjunct] = []
             local_var_set = parent_disjunct.LocalVars[parent_disjunct]
 
@@ -934,6 +935,21 @@ class Hull_Reformulation(Transformation):
 
         # deactivate now that we have transformed
         obj.deactivate()
+
+    def _add_local_var_suffix(self, disjunct):
+        # If the Suffix is there, we will borrow it. If not, we make it. If it's
+        # something else, we complain.
+        localSuffix = disjunct.component("LocalVars")
+        if localSuffix is None:
+            disjunct.LocalVars = Suffix(direction=Suffix.LOCAL)
+        else:
+            if localSuffix.ctype is Suffix:
+                return
+            raise GDP_Error("A component called 'LocalVars' is declared on "
+                            "Disjunct %s, but it is of type %s, not Suffix."  
+                            % (disjunct.getname(fully_qualified=True,
+                                                name_buffer=NAME_BUFFER), 
+                               localSuffix.ctype))
 
     # These are all functions to retrieve transformed components from
     # original ones and vice versa.
