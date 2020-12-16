@@ -16,6 +16,7 @@ from six import StringIO
 
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.dependencies import matplotlib
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, mcpp_available, MCPP_Error
 from pyomo.core import (
     ConcreteModel, Expression, Var, acos, asin, atan, cos, exp, quicksum, sin,
@@ -201,7 +202,7 @@ def make2dPlot(expr, numticks=10, show_plot=False):
         mc_cvVals[i] = mc_expr.convex()
         fvals[i] = value(expr)
     if show_plot:
-        import matplotlib.pyplot as plt
+        plt = matplotlib.pyplot
         plt.plot(xaxis, fvals, 'r', xaxis, mc_ccVals, 'b--', xaxis,
                  mc_cvVals, 'b--', xaxis, aff_cc, 'k|', xaxis, aff_cv, 'k|')
         plt.show()
@@ -252,7 +253,7 @@ def make3dPlot(expr, numticks=30, show_plot=False):
             fvals[i + (numticks + 1) * j] = value(expr)
 
     if show_plot:
-        import matplotlib.pyplot as plt
+        plt = matplotlib.pyplot
         from mpl_toolkits.mplot3d import Axes3D
         assert Axes3D  # silence pyflakes
 

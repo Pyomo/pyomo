@@ -10,7 +10,7 @@
 
 import os
 
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 import pyutilib.th as unittest
 
 import pyomo.kernel as pmo
