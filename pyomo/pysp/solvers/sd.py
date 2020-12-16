@@ -30,7 +30,6 @@ import traceback
 import logging
 
 import pyutilib.subprocess
-import pyutilib.services
 
 from pyomo.core import maximize
 from pyomo.opt import (TerminationCondition,

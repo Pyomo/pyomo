@@ -18,12 +18,13 @@ pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
 
 import pyomo.opt
 import pyomo.opt.blackbox
+from pyomo.opt.parallel.manager import ActionManagerError
+from pyomo.common.tempfiles import TempfileManager
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 
 class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
@@ -117,16 +118,16 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.do_setup(False)
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def do_setup(self,flag):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
         self.ps = pyomo.opt.SolverFactory('ps')
 
     def tearDown(self):
         pyomo.opt.SolverManagerFactory.unregister('smtest')
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test_solve1(self):
         """ Test PatternSearch - TestProblem1 """

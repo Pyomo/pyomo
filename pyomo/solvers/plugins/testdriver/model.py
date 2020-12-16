@@ -15,8 +15,9 @@ import sys
 import re
 
 import pyutilib.autotest
-import pyomo.common
 
+import pyomo.common
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.plugin
 from pyomo.common.errors import ApplicationError
 import pyomo.opt
@@ -31,7 +32,7 @@ class PyomoTestDriver(pyomo.common.plugin.Plugin):
 
     def setUpClass(self, cls, options):
         global old_tempdir 
-        old_tempdir = pyutilib.services.TempfileManager.tempdir
+        old_tempdir = TempfileManager.tempdir
         try:
             cls.pico_convert =  pyomo.common.Executable("pico_convert")
             cls.pico_convert_available= cls.pico_convert.available()
@@ -39,13 +40,13 @@ class PyomoTestDriver(pyomo.common.plugin.Plugin):
             cls.pico_convert_available=False
 
     def tearDownClass(self, cls, options):
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.tempdir = old_tempdir
 
     def setUp(self, testcase, options):
         os.chdir(options.currdir)
-        pyutilib.services.TempfileManager.push()
-        pyutilib.services.TempfileManager.sequential_files(0)
-        pyutilib.services.TempfileManager.tempdir = options.currdir
+        TempfileManager.push()
+        TempfileManager.sequential_files(0)
+        TempfileManager.tempdir = options.currdir
         #
         try:
             testcase.opt = pyomo.opt.SolverFactory(options.solver,
@@ -59,9 +60,9 @@ class PyomoTestDriver(pyomo.common.plugin.Plugin):
             testcase.skipTest(err)
 
     def tearDown(self, testcase, options):
-        pyutilib.services.TempfileManager.pop()
-        pyutilib.services.TempfileManager.unique_files()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.pop()
+        TempfileManager.unique_files()
+        TempfileManager.tempdir = old_tempdir
 
     def pyomo(self, cmd, **kwds):
         import pyomo.scripting.pyomo_command as main
