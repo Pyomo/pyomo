@@ -326,10 +326,11 @@ class Test(unittest.TestCase):
     def test_deprecated_tempdir(self):
         TempfileManager.push()
         try:
-            TempfileManager.tempdir = None
             tmpdir = TempfileManager.create_tempdir()
             _orig = pyutilib_mngr.tempdir
             pyutilib_mngr.tempdir = tmpdir
+            TempfileManager.tempdir = None
+
             log = StringIO()
             with LoggingIntercept(log):
                 fname = TempfileManager.create_tempfile()
