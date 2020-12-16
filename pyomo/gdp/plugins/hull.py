@@ -673,12 +673,11 @@ class Hull_Reformulation(Transformation):
         # As opposed to bigm, in hull the only special thing we need to do for
         # nested Disjunctions is to make sure that we move up local var
         # references and also references to the disaggregated variables so that
-        # all will be accessible after we transform this
-        # Disjunct. Mathematically, there is nothing to do: the indicator
+        # all will be accessible after we transform this Disjunct.The indicator
         # variables and disaggregated variables of the inner disjunction will
-        # need to be disaggregated again anyway, and nothing will get
-        # double-bigm-ed. (If an untransformed disjunction is lurking here, we
-        # will catch it below).
+        # need to be disaggregated again, but the transformed constraints will
+        # not be. But this way nothing will get double-bigm-ed. (If an
+        # untransformed disjunction is lurking here, we will catch it below).
 
         # add references to all local variables on block (including the
         # indicator_var)
