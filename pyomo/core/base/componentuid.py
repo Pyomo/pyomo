@@ -556,7 +556,7 @@ class ComponentUID(object):
         return obj
 
     @deprecated("ComponentUID.find_component() is deprecated. "
-                "Use ComponentUID.find_component_on()", version='TBD')
+                "Use ComponentUID.find_component_on()", version='5.7.2')
     def find_component(self, block):
         return self.find_component_on(block)
 
