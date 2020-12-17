@@ -46,7 +46,7 @@ jobs:
       run: |
         sudo test -d dist || mkdir -v dist
         sudo find . -name \*.whl | grep -v /dist/ | xargs -n1 -i mv -v "{}" dist/
-    - name: Consolidate and Delete linux wheels
+    - name: Delete linux wheels
       run: |
         sudo rm -rfv dist/*-linux_x86_64.whl
     - name: Upload artifact
