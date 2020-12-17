@@ -44,12 +44,12 @@ jobs:
         # When locally testing, --no-deps flag is necessary (PyUtilib dependency will trigger an error otherwise)
     - name: Delete linux wheels
       run: |
-        sudo rm -rf wheelhouse/*-linux_x86_64.whl
+        sudo rm -rf dist/*-linux_x86_64.whl
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
         name: manylinux-wheels
-        path: wheelhouse
+        path: dist
         
   generictarball:
     name: ${{ matrix.TARGET }}
