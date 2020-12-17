@@ -609,7 +609,7 @@ class GAMSShell(_GAMSSolver):
         else:
             # specify logging to stdout for windows compatibility
             cmd = [solver_exec, "audit", "lo=3"]
-            results = subprocess.run(cmd, capture_output=True)
+            results = subprocess.run(cmd, capture_output=True, text=True)
             return _extract_version(results.stdout)
 
     @staticmethod

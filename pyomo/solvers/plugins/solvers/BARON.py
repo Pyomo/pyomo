@@ -167,7 +167,7 @@ class BARONSHELL(SystemCallSolver):
         else:
             fnames = self._get_dummy_input_files(check_license=False)
             try:
-                results = subprocess.run([solver_exec, fnames[0]], capture_output=True)
+                results = subprocess.run([solver_exec, fnames[0]], capture_output=True, text=True)
                 return _extract_version(results.stdout)
             finally:
                 self._remove_dummy_input_files(fnames)

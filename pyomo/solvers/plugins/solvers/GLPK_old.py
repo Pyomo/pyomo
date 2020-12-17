@@ -456,7 +456,7 @@ class GLPKSHELL_old(SystemCallSolver):
         if solver_exec is None:
             return _extract_version('')
         result = subprocess.run([solver_exec, "--version"], timeout=1,
-                                capture_output=True)
+                                capture_output=True, text=True)
         errcode = result.returncode
         results = result.stdout
         if errcode == 0:

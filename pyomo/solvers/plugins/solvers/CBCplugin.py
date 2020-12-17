@@ -52,7 +52,8 @@ def configure_cbc():
     if not executable:
         return
     cbc_exec = executable.path()
-    results = subprocess.run( [cbc_exec,"-stop"], timeout=1, capture_output=True )
+    results = subprocess.run( [cbc_exec,"-stop"], timeout=1,
+                             capture_output=True, text=True)
     _cbc_version = _extract_version(results.stdout)
     results = subprocess.run(
         [cbc_exec,"dummy","-AMPL","-stop"], timeout=1, capture_output=True )

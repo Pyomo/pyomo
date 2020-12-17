@@ -77,7 +77,8 @@ class SCIPAMPL(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = subprocess.run( [solver_exec], timeout=1, capture_output=True )
+        results = subprocess.run( [solver_exec], timeout=1,
+                                 capture_output=True, text=True)
         return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
