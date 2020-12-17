@@ -18,12 +18,13 @@ pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
+import pyutilib.misc
 
 import pyomo.opt
 import pyomo.opt.blackbox
+from pyomo.common.tempfiles import TempfileManager
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
@@ -106,16 +107,16 @@ class TestDakotaMain(unittest.TestCase):
 
     def setUp(self):
         self.do_setup(False)
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def do_setup(self,flag):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
         self.problem=TestProblem1()
         self.rproblem=RealProblem3()
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test_main(self):
         self.problem.main(['test_main', currdir+'request1.din', currdir+'results1.out'], format='dakota')
@@ -130,17 +131,17 @@ class TestColinMain(unittest.TestCase):
 
     def setUp(self):
         self.do_setup(False)
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def do_setup(self,flag):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
         self.ps = pyomo.opt.SolverFactory('ps')
         self.problem=TestProblem1()
         self.rproblem=RealProblem3()
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test_main(self):
         self.problem.main(['test_main', currdir+'request1.xml', currdir+'results1.out'])
@@ -180,17 +181,17 @@ class TestOptProblem(unittest.TestCase):
 
     def setUp(self):
         self.do_setup(False)
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def do_setup(self,flag):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
         self.ps = pyomo.opt.SolverFactory('ps')
         self.problem=TestProblem1()
         self.rproblem=RealProblem3()
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test_error1(self):
         point = pyomo.opt.blackbox.MixedIntVars()
