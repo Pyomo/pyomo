@@ -10,7 +10,8 @@ Pyomo 5.7.2   17 Dec 2020
   - Increase timeout when loading libraries through CtypesEnviron (#1644)
   - Add support for deferred import of submodules (#1683, #1729)
   - Overhaul of imports to replace import * and remove unused imports (#1607)
-  - Move pyutilib.misc Bunch/Container/Options imports to pyomo.common.collections (#1708, #1735)
+  - Move pyutilib.misc Bunch/Container/Options imports to pyomo.common.collections 
+    (#1708, #1735)
   - Move pyutilib.common exceptions to pyomo.common.errors (#1694, #1733)
   - Move pyutilib.misc.timing to pyomo.common.timing (#1688)
   - Move pyutilib.misc.config into pyomo.common.config (#1687)
@@ -75,14 +76,16 @@ Pyomo 5.7.2   17 Dec 2020
 - Documentation 
   - Add docstrings in pyomo.util.config (#1707)
 - Contributed Packages
-  - FME: treat bounds of variables being projected as constraints in the transformation (#1664)
+  - FME: treat bounds of variables being projected as constraints in the 
+    transformation (#1664)
   - MindtPy: add extended cutting plane and global OA strategies (#1590)
   - Parmest: bug fix in return_values, resolve example incompatibility with 
     Python<3.5, use CUID v2 representations, update handling of indexed 
     stage variables (#1645, #1699, #1734, #1737)
   - PyNumero: add ENABLE_HSL cmake option, extend Cyipopt solver interface, improve 
     MPI Matvec performance, update mumps interface to use attempt_import, performance 
-    enhancements to pynumero.sparse, misc updates (#1632, #1653, #1610, #1667, #1681, #1705, #1724)
+    enhancements to pynumero.sparse, misc updates (#1632, #1653, #1610, #1667, 
+    #1681, #1705, #1724)
 
 -------------------------------------------------------------------------------
 Pyomo 5.7.1   15 Sep 2020
