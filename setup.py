@@ -94,8 +94,8 @@ def run_setup():
       # Note: the release number is set in pyomo/version/info.py
       #
       version=get_version(),
-      maintainer='William E. Hart',
-      maintainer_email='wehart@sandia.gov',
+      maintainer='Pyomo Developer Team',
+      maintainer_email='pyomo-developers@googlegroups.com',
       url='http://pyomo.org',
       license='BSD',
       platforms=["any"],
@@ -129,7 +129,7 @@ def run_setup():
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
       install_requires=[
-          'PyUtilib>=6.0.1.dev0',
+          'PyUtilib>=6.0.0',
           'enum34;python_version<"3.4"',
           'ply',
           'six>=1.4',
