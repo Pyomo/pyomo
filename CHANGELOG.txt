@@ -39,6 +39,7 @@ Pyomo 5.7.2   17 Dec 2020
   - Fix bugs in deepcopying/pickling units (#1743)
   - Fix cloning AMPLExternalFunction objects after external library is loaded (#1745)
   - Extend ComponentUID to allow construction from a slice (#1652, #1748)
+  - Improve log message when loading solution with 'warning' status (#1752)
 - Solver Interfaces
   - Fix typo in Gurobi direct interface (#1649)
   - Explicitly close log files for cplex_direct (#1655)
@@ -73,9 +74,11 @@ Pyomo 5.7.2   17 Dec 2020
   - Add TPLs, update solver PATH, and remove solvers from SLIM builds in GitHub 
     Actions tests (#1732)
   - Add Gurobi to GitHub Actions workflows (#1721)
+  - Add Python 3.9 to test suite (#1753)
 - Documentation 
   - Add docstrings in pyomo.util.config (#1707)
 - Contributed Packages
+  - Add new package for performing Louvain community detection on a Pyomo model (#1526)
   - FME: treat bounds of variables being projected as constraints in the 
     transformation (#1664)
   - MindtPy: add extended cutting plane and global OA strategies (#1590)
