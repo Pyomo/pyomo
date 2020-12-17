@@ -18,7 +18,6 @@ import subprocess
 from pyomo.common import Executable
 from pyomo.common.collections import Options, Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -28,7 +27,7 @@ from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
 
-from six import iteritems, StringIO
+from six import iteritems
 
 try:
     unicode
@@ -263,22 +262,8 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        f = StringIO()
-        results = run([solver_exec],
-                                          stdin=('from gurobipy import *; '
-                                                 'print(gurobi.version()); exit()'),
-                                          ostream=f)
-        tmp = None
-        try:
-            tmp = tuple(eval(f.getvalue().strip()))
-            while(len(tmp) < 4):
-                tmp += (0,)
-        except SyntaxError:
-            tmp = None
-        if tmp is None:
-            return _extract_version('')
-
-        return tmp[:4]
+        results = subprocess.run([solver_exec], capture_output=True)
+        return _extract_version(results.stdout)
 
     def create_command_line(self,executable,problem_files):
 

@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import os.path
-import pyutilib.subprocess
+import subprocess
 
 from pyomo.common.errors import ApplicationError
 import pyomo.common
@@ -78,7 +78,7 @@ class AmplMIPConverter(object):
         #
         # Execute command and cleanup
         #
-        output = pyutilib.subprocess.run(cmd)
+        output = subprocess.run(cmd)
         if not os.path.exists(output_filename):       #pragma:nocover
             raise ApplicationError("Problem launching 'ampl' to create '%s': %s" % (output_filename, output))
         return (output_filename,),None # empty variable map

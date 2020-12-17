@@ -13,12 +13,12 @@ import os
 import re
 import time
 import logging
+import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyutilib.misc import yaml_fix
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.common.collections import ComponentMap, Options, Bunch
 from pyomo.opt.base import (
@@ -397,8 +397,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = run( [solver_exec,'-c','quit'], timelimit=1 )
-        return _extract_version(results[1])
+        results = subprocess.run( [solver_exec,'-c','quit'], timeout=1, capture_output=True )
+        return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
 

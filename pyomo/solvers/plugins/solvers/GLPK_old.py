@@ -12,11 +12,11 @@
 import os
 import re
 import sys
+import subprocess
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch, Options
 from pyomo.common.tempfiles import TempfileManager
-import pyutilib.subprocess
 
 from pyomo.common import Executable
 from pyomo.opt.base import ProblemFormat, ResultsFormat
@@ -455,8 +455,10 @@ class GLPKSHELL_old(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        errcode, results = pyutilib.subprocess.run(
-        [solver_exec, "--version"], timelimit=1)
+        result = subprocess.run([solver_exec, "--version"], timeout=1,
+                                capture_output=True)
+        errcode = result.returncode
+        results = result.stdout
         if errcode == 0:
             return _extract_version(results)
         return _extract_version('')

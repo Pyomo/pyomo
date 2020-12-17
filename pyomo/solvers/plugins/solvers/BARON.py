@@ -17,7 +17,6 @@ import tempfile
 from pyomo.common import Executable
 from pyomo.common.collections import Options, Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -168,8 +167,8 @@ class BARONSHELL(SystemCallSolver):
         else:
             fnames = self._get_dummy_input_files(check_license=False)
             try:
-                results = run([solver_exec, fnames[0]])
-                return _extract_version(results[1])
+                results = subprocess.run([solver_exec, fnames[0]], capture_output=True)
+                return _extract_version(results.stdout)
             finally:
                 self._remove_dummy_input_files(fnames)
 

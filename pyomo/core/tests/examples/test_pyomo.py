@@ -17,7 +17,7 @@ import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.subprocess
+import subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 
@@ -88,7 +88,7 @@ class BaseTester(unittest.TestCase):
     def run_pyomo(self, cmd, root=None):
         cmd = 'pyomo solve --solver=glpk --results-format=json ' \
               '--save-results=%s.jsn %s' % (root, cmd)
-        return pyutilib.subprocess.run(cmd, outfile=root+'.out')
+        return subprocess.run(cmd)
 
 
 class TestJson(BaseTester):

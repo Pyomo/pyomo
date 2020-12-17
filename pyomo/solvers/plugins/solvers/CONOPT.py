@@ -9,11 +9,11 @@
 #  ___________________________________________________________________________
 
 import os
+import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Options, Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -79,8 +79,8 @@ class CONOPT(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = run( [solver_exec], timelimit=1 )
-        return _extract_version(results[1])
+        results = subprocess.run( [solver_exec], timeout=1, capture_output=True )
+        return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
 

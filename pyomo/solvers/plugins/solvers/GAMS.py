@@ -10,7 +10,7 @@
 
 from six import StringIO, iteritems, string_types
 from tempfile import mkdtemp
-import os, sys, math, logging, shutil, time
+import os, sys, math, logging, shutil, time, subprocess
 
 from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
@@ -19,7 +19,6 @@ import pyomo.common
 from pyomo.common.collections import Options
 
 from pyomo.opt.base.solvers import _extract_version
-import pyutilib.subprocess
 from pyutilib.misc import quote_split
 
 from pyomo.core.kernel.block import IBlock
@@ -610,8 +609,8 @@ class GAMSShell(_GAMSSolver):
         else:
             # specify logging to stdout for windows compatibility
             cmd = [solver_exec, "audit", "lo=3"]
-            _, txt = pyutilib.subprocess.run(cmd, tee=False)
-            return _extract_version(txt)
+            results = subprocess.run(cmd, capture_output=True)
+            return _extract_version(results.stdout)
 
     @staticmethod
     def _parse_special_values(value):
@@ -762,7 +761,9 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            rc, txt = pyutilib.subprocess.run(command, tee=tee)
+            result = subprocess.run(command, capture_output=True, text=True)
+            txt = result.stdout
+            rc = result.returncode
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)

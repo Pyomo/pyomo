@@ -12,8 +12,8 @@ import logging
 import re
 import sys
 import csv
+import subprocess
 
-import pyutilib.subprocess
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common import Executable
@@ -34,8 +34,10 @@ def configure_glpk():
     _glpk_version = _extract_version("")
     if not Executable("glpsol"):
         return
-    errcode, results = pyutilib.subprocess.run(
-        [Executable('glpsol').path(), "--version"], timelimit=2)
+    result = subprocess.run([Executable('glpsol').path(), "--version"],
+                            timeout=2)
+    errcode = result.returncode
+    results = result.stdout
     if errcode == 0:
         _glpk_version = _extract_version(results)
 

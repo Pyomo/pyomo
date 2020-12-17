@@ -20,7 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 scriptdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep
 
 from pyutilib.misc import setup_redirect, reset_redirect
-import pyutilib.subprocess
+import subprocess
 import pyutilib.th as unittest
 
 import pyomo.scripting.convert as main
@@ -62,10 +62,10 @@ class xTest(object):
 
     # in the convert tests, make sure everything is generating symbolic solver labels - aids debugging.
     def run_convert2nl(self, cmd, file=None):
-        return pyutilib.subprocess.run('pyomo convert --format=nl --symbolic-solver-labels '+cmd, outfile=file)
+        return subprocess.run('pyomo convert --format=nl --symbolic-solver-labels '+cmd)
 
     def run_convert2lp(self, cmd, file=None):
-        return pyutilib.subprocess.run('pyomo convert --format=lp --symbolic-solver-labels '+cmd, outfile=file)
+        return subprocess.run('pyomo convert --format=lp --symbolic-solver-labels '+cmd)
 
     def test1a(self):
         """Simple execution of 'convert2nl'"""

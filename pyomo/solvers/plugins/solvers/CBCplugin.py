@@ -14,14 +14,13 @@ import os
 import re
 import time
 import logging
-
+import subprocess
 from six import iteritems, string_types
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Options, Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.core.kernel.block import IBlock
 from pyomo.core import Var
@@ -53,11 +52,11 @@ def configure_cbc():
     if not executable:
         return
     cbc_exec = executable.path()
-    results = run( [cbc_exec,"-stop"], timelimit=1 )
-    _cbc_version = _extract_version(results[1])
-    results = run(
-        [cbc_exec,"dummy","-AMPL","-stop"], timelimit=1 )
-    _cbc_compiled_with_asl = not ('No match for AMPL' in results[1])
+    results = subprocess.run( [cbc_exec,"-stop"], timeout=1, capture_output=True )
+    _cbc_version = _extract_version(results.stdout)
+    results = subprocess.run(
+        [cbc_exec,"dummy","-AMPL","-stop"], timeout=1, capture_output=True )
+    _cbc_compiled_with_asl = not ('No match for AMPL' in results.stdout)
     if _cbc_version is not None:
         _cbc_old_version = _cbc_version < (2,7,0,0)
 

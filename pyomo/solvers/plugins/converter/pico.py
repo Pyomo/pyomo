@@ -9,10 +9,9 @@
 #  ___________________________________________________________________________
 
 import six
-
 import os.path
+import subprocess
 
-import pyutilib.subprocess
 import pyomo.common
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.errors import ApplicationError
@@ -72,7 +71,7 @@ class PicoMIPConverter(object):
                     raise ConverterError("File "+item+" does not exist!")
                 cmd = cmd + " "+item
         print("Running command: "+cmd)
-        pyutilib.subprocess.run(cmd)
+        subprocess.run(cmd)
         if not os.path.exists(output_filename):       #pragma:nocover
             raise ApplicationError(\
                     "Problem launching 'pico_convert' to create "+output_filename)
