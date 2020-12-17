@@ -262,8 +262,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = subprocess.run([solver_exec], capture_output=True, text=True)
-        return _extract_version(results.stdout)
+        results = subprocess.run([solver_exec], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+        return _extract_version(results.stdout.decode("utf-8"))
 
     def create_command_line(self,executable,problem_files):
 

@@ -609,8 +609,9 @@ class GAMSShell(_GAMSSolver):
         else:
             # specify logging to stdout for windows compatibility
             cmd = [solver_exec, "audit", "lo=3"]
-            results = subprocess.run(cmd, capture_output=True, text=True)
-            return _extract_version(results.stdout)
+            results = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+            return _extract_version(results.stdout.decode("utf-8"))
 
     @staticmethod
     def _parse_special_values(value):
@@ -761,8 +762,9 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            result = subprocess.run(command, capture_output=True, text=True)
-            txt = result.stdout
+            result = subprocess.run(command, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+            txt = result.stdout.decode("utf-8")
             rc = result.returncode
 
             if keepfiles:
