@@ -557,7 +557,7 @@ class ExpressionValueVisitor(object):
         """
         flag, value = self.visiting_potential_leaf(node)
         if flag:
-            return value
+            return self.finalize(value)
         #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
         _stack = [ (node, node._args_, 0, node.nargs(), [])]
         #
