@@ -34,7 +34,7 @@ def configure_glpk():
     _glpk_version = _extract_version("")
     if not Executable("glpsol"):
         return
-    result = subprocess.run([Executable('glpsol').path(), "--version"])
+    result = subprocess.run([Executable('glpsol').path(), "--version"], capture_output=True)
     errcode = result.returncode
     results = result.stdout
     if errcode == 0:
