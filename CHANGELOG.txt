@@ -25,7 +25,7 @@ ADVANCE CHANGE NOTICE:
   - Move pyutilib LogHandler to pyomo.common.log (#1717)
   - Move pyutilib.services.tempfiles to pyomo.common.tempfiles (#1742)
   - Make logger and ostream public attributes in the TicTocTimer (#1714)
-  - Update management of matplotliub imports (#1738)
+  - Update management of matplotlib imports (#1738)
   - Add utility function to get slice of component along certain set (#1639)
   - Remove unused pyomo.solvers.plugins.testdriver directory (#1750)
 - Core
