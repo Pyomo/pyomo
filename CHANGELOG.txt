@@ -3,6 +3,88 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 5.7.2   17 Dec 2020
+-------------------------------------------------------------------------------
+
+- General
+  - Increase timeout when loading libraries through CtypesEnviron (#1644)
+  - Add support for deferred import of submodules (#1683, #1729)
+  - Overhaul of imports to replace import * and remove unused imports (#1607)
+  - Move pyutilib.misc Bunch/Container/Options imports to pyomo.common.collections (#1708, #1735)
+  - Move pyutilib.common exceptions to pyomo.common.errors (#1694, #1733)
+  - Move pyutilib.misc.timing to pyomo.common.timing (#1688)
+  - Move pyutilib.misc.config into pyomo.common.config (#1687)
+  - Move pyutilib.factory to pyomo.common.factory (#1695)
+  - Move pyutilib.misc.gc_manager to pyomo.common.gc_manager (#1716)
+  - Move pyutilib LogHandler to pyomo.common.log (#1717)
+  - Move pyutilib.services.tempfiles to pyomo.common.tempfiles (#1742)
+  - Rename assertRelativeEqual to assertStructuredAlmostEqual (#1719)
+  - Make logger and ostream public attributes in the TicTocTimer (#1714)
+  - Timing updates (#1728)
+  - Update management of matplotliub imports (#1738)
+  - Add utility function to get slice of component along certain set (#1639)
+  - Remove unused pyomo.solvers.plugins.testdriver directory (#1750)
+- Core
+  - Use name buffer in add_slack_variables transformation (#1637)
+  - Make Constraint.Feasible be an alias for Constraint.Skip (#1676)
+  - Updates to slicing infrastructure (#1638)
+  - Add public API for checking Param mutability (#1651)
+  - Update methods for differentiating Pyomo expressions (#1663)
+  - Add skip_stale_vars option to store_to function (#1679)
+  - Improve Block initialization (#1703)
+  - Update ComponentUID to improve serialization and leverage slicing (#1713)
+  - Add comments to slide iter and reference (#1736)
+  - Extend Reference function to accept Sequence and Mapping derivatives (#1739)
+  - Fix bugs in deepcopying/pickling units (#1743)
+  - Fix cloning AMPLExternalFunction objects after external library is loaded (#1745)
+  - Extend ComponentUID to allow construction from a slice (#1652, #1748)
+- Solver Interfaces
+  - Fix typo in Gurobi direct interface (#1649)
+  - Explicitly close log files for cplex_direct (#1655)
+  - Deprecate use of base64.decodestring in Python 3 NEOS interface (#1661)
+  - Improvements to MOSEK direct interface, new persistent interface, add license 
+    check to tests, resolve incompatibilities with Python 2.7 (#1686, #1746)
+- DAE Updates
+  - Improve performance of discretization transformations (#1727)
+  - Allow flattener to find constraints that skip the first index (#1720)
+- GDP Updates
+  - Rewrite of gdp.cuttingplane transformation (#1668)
+  - Fix handling of local variables in gdp.hull
+- PySP Updates
+  - Defer import of profiling packages and guppy module (#1677, #1697)
+  - Fix integer conversion of string arguments in ProgressiveHedging (#1684)
+- Testing
+  - Update Jenkins driver to resolve codecov report upload (#1670)
+  - Update slim and cythonized builds in GitHub Actions and Jenkins drivers (#1674)
+  - Fix security risk in GitHub Actions workflow (#1654)
+  - Bundle GitHub Actions coverage report uploads (#1680)
+  - Create Pyomo-specific unittest.TestCase and update fragile test (#1682)
+  - Add python-louvain to testing infrastructure (#1646)
+  - Update the idaes-ext download in the GitHub Actions workflows (#1698)
+  - Make pyomo.common.timing tests more flexible (#1711)
+  - Replace ubuntu-latest with ubuntu-18.04 in GitHub Actions workflows (#1709)
+  - Change setup-miniconda action to version 2 in GitHub Actions workflows (#1696)
+  - Update GitHub Actions workflows to include a conda build on Linux and parallel 
+    tests (#1725)
+  - Remove Travis-CI test driver and references to Travis-CI (#1722)
+  - Resolve test failures with xpress 8.11 (#1706)
+  - Fix installation of pymumps through conda in GitHub Actions workflows (#1731)
+  - Add TPLs, update solver PATH, and remove solvers from SLIM builds in GitHub 
+    Actions tests (#1732)
+  - Add Gurobi to GitHub Actions workflows (#1721)
+- Documentation 
+  - Add docstrings in pyomo.util.config (#1707)
+- Contributed Packages
+  - FME: treat bounds of variables being projected as constraints in the transformation (#1664)
+  - MindtPy: add extended cutting plane and global OA strategies (#1590)
+  - Parmest: bug fix in return_values, resolve example incompatibility with 
+    Python<3.5, use CUID v2 representations, update handling of indexed 
+    stage variables (#1645, #1699, #1734, #1737)
+  - PyNumero: add ENABLE_HSL cmake option, extend Cyipopt solver interface, improve 
+    MPI Matvec performance, update mumps interface to use attempt_import, performance 
+    enhancements to pynumero.sparse, misc updates (#1632, #1653, #1610, #1667, #1681, #1705, #1724)
+
+-------------------------------------------------------------------------------
 Pyomo 5.7.1   15 Sep 2020
 -------------------------------------------------------------------------------
 
@@ -138,7 +220,7 @@ Pyomo 5.7.0   19 Jun 2020
     build-extensions, add HSL interface, package reorganization, add operations 
     for block vectors/matrices, fix broken examples (#1356, #1412, #1381, #1419, 
     #1439, #1467, #1518)
-  - Add Fourier-Motzkin elimination transformation (#1370, #1440)
+  - Add Fourier-Motzkin elimination (FME) transformation (#1370, #1440)
   - GDPOpt updates, fix use of numeric derivatives, preserve implicit config 
     options (#1422, #1432,)
   - Mindtpy updates, add lp/nlp algorithm, bug fixes, documentation, fix 
