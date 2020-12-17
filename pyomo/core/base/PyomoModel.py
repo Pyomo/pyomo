@@ -222,7 +222,7 @@ class ModelSolutions(object):
             msg = getattr(results.solver, 'message', None)
             logger.warning(
                 'Loading a SolverResults object with a '
-                'warning status into model=%s;\n'
+                'warning status into model.name="%s";\n'
                 '  - termination condition: %s\n'
                 '  - message from solver: %s'
                 % (instance.name, tc, msg))
