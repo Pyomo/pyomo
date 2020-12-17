@@ -218,13 +218,17 @@ class ModelSolutions(object):
         # If there is a warning, then print a warning message.
         #
         if (results.solver.status == SolverStatus.warning):
+            tc = getattr(results.solver, 'termination_condition', None)
+            msg = getattr(results.solver, 'message', None)
             logger.warning(
                 'Loading a SolverResults object with a '
                 'warning status into model=%s;\n'
-                '    message from solver=%s'
-                % (instance.name, results.solver.Message))
+                '  - termination condition: %s\n'
+                '  - message from solver: %s'
+                % (instance.name, tc, msg))
         #
-        # If the solver status not one of either OK or Warning, then generate an error.
+        # If the solver status not one of either OK or Warning, then
+        # generate an error.
         #
         elif results.solver.status != SolverStatus.ok:
             if (results.solver.status == SolverStatus.aborted) and \
