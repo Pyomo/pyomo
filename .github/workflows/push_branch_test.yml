@@ -196,6 +196,7 @@ jobs:
             brew list $pkg || brew install $pkg
         done
         #brew link --overwrite gcc
+        chsh -s /bin/zsh
 
     - name: Update Linux
       if: matrix.TARGET == 'linux'
