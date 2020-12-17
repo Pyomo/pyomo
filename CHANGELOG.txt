@@ -80,7 +80,7 @@ ADVANCE CHANGE NOTICE:
   - Add TPLs, update solver PATH, and remove solvers from SLIM builds in GitHub
     Actions tests (#1732)
   - Add Gurobi to GitHub Actions workflows (#1721)
-  - Add Python 3.9 to test suite (#1753)
+  - Add Python 3.9 to test suite (#1753, #1755)
 - Documentation
   - Add docstrings in pyomo.util.config (#1707)
 - Contributed Packages
