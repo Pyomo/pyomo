@@ -42,10 +42,13 @@ jobs:
         package-path: ''
         pip-wheel-args: ''
         # When locally testing, --no-deps flag is necessary (PyUtilib dependency will trigger an error otherwise)
-    - name: Consolidate and Delete linux wheels
+    - name: Consolidate wheels
       run: |
+        sudo find . -name \*.whl
         sudo test -d dist || mkdir -v dist
         sudo compgen -G "*.whl" > /dev/null && mv -v *.whl dist/
+    - name: Consolidate and Delete linux wheels
+      run: |
         sudo rm -rfv dist/*-linux_x86_64.whl
     - name: Upload artifact
       uses: actions/upload-artifact@v1
