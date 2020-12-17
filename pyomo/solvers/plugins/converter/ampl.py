@@ -80,5 +80,5 @@ class AmplMIPConverter(object):
         #
         output = subprocess.run(cmd)
         if not os.path.exists(output_filename):       #pragma:nocover
-            raise ApplicationError("Problem launching 'ampl' to create '%s': %s" % (output_filename, output))
+            raise ApplicationError("Problem launching 'ampl' to create '%s': %s" % (output_filename, output.stdout))
         return (output_filename,),None # empty variable map

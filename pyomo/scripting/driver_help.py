@@ -16,8 +16,9 @@ import datetime
 import textwrap
 import logging
 import socket
+import subprocess
 
-import pyutilib.subprocess
+import pyutilib.misc
 
 import pyomo.common
 from pyomo.common.collections import Options
@@ -53,7 +54,7 @@ def command_exec(options):
     if not os.path.exists(cmddir+options.command[0]):
         print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
         return 1
-    return pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)[0]
+    return subprocess.run(cmddir+' '.join(options.command)).returncode
 
 #
 # Add a subparser for the pyomo command
