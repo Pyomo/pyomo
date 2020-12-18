@@ -495,6 +495,11 @@ self._hashRef(Reference(m.v_tt)),
         normalize_index.flatten = False
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
 
+        ref1 = Reference(m.v_2n[:,('c',3)])
+
+        import pdb; pdb.set_trace()
+        ref1 = Reference(m.v_2n[:,('d',4,5)])
+
         assert len(sets_list) == len(comps_list)
         assert len(sets_list) == 2
 
