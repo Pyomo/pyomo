@@ -763,7 +763,7 @@ class GAMSShell(_GAMSSolver):
 
         try:
             result = subprocess.run(command, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE, shell=True)
+                                    stderr=subprocess.PIPE)
             txt = result.stdout.decode("utf-8")
             print(txt)
             rc = result.returncode
