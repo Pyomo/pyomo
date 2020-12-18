@@ -27,7 +27,7 @@ logger = logging.getLogger('pyomo.core')
 
 relocated_module_attribute(
     'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
-    version='TBD')
+    version='5.7.2')
 
 def _name_index_generator(idx):
     """

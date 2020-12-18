@@ -111,6 +111,13 @@ class AMPLExternalFunction(ExternalFunction):
         self._so = None
         ExternalFunction.__init__(self, *args, **kwds)
 
+    def __getstate__(self):
+        state = super(AMPLExternalFunction, self).__getstate__()
+        # Remove reference to loaded library (they are not copyable or
+        # picklable)
+        state['_so'] = state['_known_functions'] = None
+        return state
+
     def _evaluate(self, args, fgh, fixed):
         if self._so is None:
             self.load_library()
