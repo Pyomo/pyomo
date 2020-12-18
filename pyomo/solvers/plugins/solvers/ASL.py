@@ -95,7 +95,10 @@ class ASL(SystemCallSolver):
             return _extract_version('')
         results = subprocess.run( [solver_exec,"-v"], timeout=1,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return _extract_version(results.stdout.decode("utf-8"))
+        try:
+            return _extract_version(results.stdout.decode("utf-8"))
+        except OSError:
+            pass
 
     def create_command_line(self, executable, problem_files):
         assert(self._problem_format == ProblemFormat.nl)
