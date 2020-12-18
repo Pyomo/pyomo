@@ -1,6 +1,6 @@
 # Mimic the pyomo script
 from pyomo.environ import *
-from pyutilib.misc import Options
+from pyomo.common.collections import Options
 
 # set high level options that mimic pyomo comand line
 options = Options()

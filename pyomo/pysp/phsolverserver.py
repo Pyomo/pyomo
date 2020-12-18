@@ -17,7 +17,7 @@ from optparse import OptionParser
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
-from pyutilib.misc import PauseGC, import_file
+from pyutilib.misc import import_file
 from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
@@ -25,6 +25,7 @@ from pyutilib.pyro import (TaskWorker,
 from pyomo.core import Var, Suffix, Constraint
 from pyomo.opt import UndefinedData
 from pyomo.common import pyomo_command
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
@@ -66,7 +67,7 @@ class PHPyroWorker(TaskWorker):
         result = None
         if data.action == "release":
 
-            del self._phsolverserver_map[name]
+            del self._phsolverserver_map[data.object_name]
             result = True
 
         elif data.action == "initialize":
@@ -781,7 +782,7 @@ class _PHSolverServer(_PHBase):
             auxilliary_values["solve_time"], auxilliary_values["pyomo_solve_time"] = \
                 extract_solve_times(results, default=None)
 
-            auxilliary_values['solution_status'] = solution0.status.key
+            auxilliary_values['solution_status'] = solution0.status.name
 
             solve_method_result = (variable_values, suffix_values, auxilliary_values)
 

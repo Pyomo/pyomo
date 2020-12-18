@@ -144,6 +144,6 @@ opt = pyo.SolverFactory("cplex")
 
 results = opt.solve(instance, warmstart=True)
 
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 TempfileManager.tempdir = YourDirectoryNameGoesHere
 """
