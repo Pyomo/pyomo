@@ -211,6 +211,7 @@ def _fill_indices_from_product(partial_index_list, product):
                 # TODO: test this.
                 # This would not be reliable as it could not distinguish
                 # between ('a', 1) and (('a', 1),)
+                # NOTE: My tests pass without this check and conversion
                 index = (index,)
             # We need to generate a new index for every entry of `product`,
             # and want to reuse `partial_index_list` as a starting point,
@@ -220,7 +221,7 @@ def _fill_indices_from_product(partial_index_list, product):
             for i, val in enumerate(filled_index):
                 if val is _NotAnIndex:
                     filled_index[i] = index[j]
-                    # We have made `index` a tuple so the above is valid.
+                    # `index` is always a tuple, so this is valid
                     j += 1
             # Make sure `partial_index_list` has the same number of vacancies
             # as `product` has factors. Not _strictly_ necessary.
@@ -229,6 +230,18 @@ def _fill_indices_from_product(partial_index_list, product):
 
             normalize_index.flatten = _normalize_index_flatten
             # `filled_index` can now be used in the user's intended way
+            # This determines how we will access the component's data
+            # with our new index, which is currently _completely_ unflattened
+            # (i.e. a tuple-of-tuples, no further nesting).
+            #
+            # This will not work well if the user's component is indexed by
+            # a nested product of sets AND normalize_index.flatten is False.
+            # In this case we may try to access a component's data with
+            # >>> comp[(1,'a',1)]
+            # (each coordinate belongs to its own set) when it expects
+            # >>> comp[((1,'a'),1)]
+            # because `comp` was created with two set arguments, the first
+            # of which was already a product.
             if len(filled_index) == 1:
                 yield filled_index[0]
             else:
