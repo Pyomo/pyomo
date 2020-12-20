@@ -57,15 +57,13 @@ def model_is_valid(solve_data, config):
 
     # Handle LP/NLP being passed to the solver
     prob = solve_data.results.problem
-    if (prob.number_of_binary_variables == 0 and
-        prob.number_of_integer_variables == 0 and
-            prob.number_of_disjunctions == 0):
+    if len(MindtPy.discrete_variable_list) == 0:
         config.logger.info('Problem has no discrete decisions.')
         obj = next(m.component_data_objects(ctype=Objective, active=True))
         if (any(c.body.polynomial_degree() not in (1, 0) for c in MindtPy.constraint_list) or
                 obj.expr.polynomial_degree() not in (1, 0)):
             config.logger.info(
-                'Your model is an NLP (nonlinear program). '
+                'Your model is a NLP (nonlinear program). '
                 'Using NLP solver %s to solve.' % config.nlp_solver)
             nlpopt = SolverFactory(config.nlp_solver)
             set_solver_options(nlpopt, solve_data, config, type='nlp')
