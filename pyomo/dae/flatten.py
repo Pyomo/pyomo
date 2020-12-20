@@ -210,7 +210,7 @@ def _fill_indices_from_product(partial_index_list, product):
                 # NOTE: I don't think I ever get here.
                 # TODO: test this.
                 # This would not be reliable as it could not distinguish
-                # between a ('a', 1) and (('a', 1),)
+                # between ('a', 1) and (('a', 1),)
                 index = (index,)
             # We need to generate a new index for every entry of `product`,
             # and want to reuse `partial_index_list` as a starting point,
