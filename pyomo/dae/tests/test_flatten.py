@@ -525,7 +525,7 @@ self._hashRef(Reference(m.v_tt)),
 *list(self._hashRef(Reference(m.v_1n2n[i1,i_na,:,i_nb])) for i1, i_na, i_nb in D1NN),
 *list(self._hashRef(Reference(m.b[i1,:,i_n].v0)) for i1,i_n in D1N),
 *list(self._hashRef(Reference(m.b[i1a,:,i_n].v1[i1b])) for i1a, i_n, i1b in D1N1),
-*list(self._hashRef(Reference(m.b[i1,:,i_na].v1[i_nb])) for i1, i_na, i_nb in D1NN),
+*list(self._hashRef(Reference(m.b[i1,:,i_na].vn[i_nb])) for i1, i_na, i_nb in D1NN),
                         }
                 assert len(ref_data) == len(comps)
                 for comp in comps:
@@ -582,11 +582,259 @@ self._hashRef(Reference(m.v_tt)),
                 assert len(ref_data) == len(comps)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
 
         normalize_index.flatten = True
+
+    def _model_3(self):
+        # The same as model 2, but now with `normalize_index.flatten == True`
+        m = ConcreteModel()
+
+        m.d1 = Set(initialize=[1,2])
+        m.d2 = Set(initialize=[('a',1), ('b',2)])
+        m.dn = Set(initialize=[('c',3), ('d',4,5)], dimen=None)
+
+        m.v_2n = Var(m.d2, m.dn)
+        m.v_12 = Var(m.d1, m.d2)
+        m.v_212 = Var(m.d2, m.d1, m.d2)
+        m.v_12n = Var(m.d1, m.d2, m.dn)
+        m.v_1n2n = Var(m.d1, m.dn, m.d2, m.dn)
+
+        m.b = Block(m.d1, m.d2, m.dn)
+        for i1 in m.d1:
+            for i2 in m.d2:
+                for i_n in m.dn:
+                    m.b[i1,i2,i_n].v0 = Var()
+                    m.b[i1,i2,i_n].v1 = Var(m.d1)
+                    m.b[i1,i2,i_n].v2 = Var(m.d2)
+                    m.b[i1,i2,i_n].vn = Var(m.dn)
+
+        return m
+
+    def test_flatten_m3_1d(self):
+        m = self._model_3()
+
+        sets = ComponentSet((m.d1,))
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 3
+
+        for sets, comps in zip(sets_list, comps_list):
+
+            if len(sets) == 1 and sets[0] is m.d1:
+                ref_data = {
+                    # Must iterate and slice in a manner consistent with
+                    # `normalize_index.flatten == True`
+                    *list(self._hashRef(Reference(m.v_12[:,i2]))
+                        for i2 in m.d2), # 2
+                    *list(self._hashRef(Reference(m.v_212[i2a,:,i2b]))
+                        for i2a in m.d2 for i2b in m.d2), # 4
+                    *list(self._hashRef(Reference(m.v_12n[:,i2,i_n]))
+                        for i2 in m.d2 for i_n in m.dn), # 4
+                    *list(self._hashRef(Reference(m.v_1n2n[:,i_na,i2,i_nb]))
+                        for i_na in m.dn for i2 in m.d2 for i_nb in m.dn), # 8
+                    *list(self._hashRef(Reference(m.b[:,i2,i_n].v0))
+                        for i2 in m.d2 for i_n in m.dn), # 4
+                    *list(self._hashRef(Reference(m.b[:,i2a,i_n].v2[i2b]))
+                        for i2a in m.d2 for i_n in m.dn for i2b in m.d2), # 8
+                    *list(self._hashRef(Reference(m.b[:,i2,i_na].vn[i_nb]))
+                        for i2 in m.d2 for i_na in m.dn for i_nb in m.dn), # 8
+                        }
+                assert len(ref_data) == len(comps)
+                assert len(ref_data) == 38
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                ref_data = {
+                        *list(self._hashRef(v) for v in m.v_2n.values()),
+                        }
+                assert len(ref_data) == len(comps)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 2 and sets[0] is m.d1 and sets[1] is m.d1:
+                ref_data = {
+                *list(self._hashRef(Reference(m.b[:,i2,i_n].v1[:]))
+                    for i2 in m.d2 for i_n in m.dn),
+                        }
+                assert len(ref_data) == len(comps)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+    def test_flatten_m3_2d(self):
+        m = self._model_3()
+
+        sets = ComponentSet((m.d2,))
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 2
+
+        for sets, comps in zip(sets_list, comps_list):
+
+            if len(sets) == 1 and sets[0] is m.d2:
+                ref_data = {
+                    *list(self._hashRef(Reference(m.v_2n[:,:,i_n]))
+                        for i_n in m.dn), # 2
+                    *list(self._hashRef(Reference(m.v_12[i1,:,:]))
+                        for i1 in m.d1), # 2
+                    *list(self._hashRef(Reference(m.v_12n[i1,:,:,i_n]))
+                        for i1 in m.d1 for i_n in m.dn), # 4
+                    *list(self._hashRef(Reference(m.v_1n2n[i1,i_na,:,:,i_nb]))
+                        for i1 in m.d1 for i_na in m.dn for i_nb in m.dn), # 8
+                    *list(self._hashRef(Reference(m.b[i1,:,:,i_n].v0))
+                        for i1 in m.d1 for i_n in m.dn), # 4
+                    *list(self._hashRef(Reference(m.b[i1a,:,:,i_n].v1[i1b]))
+                        for i1a in m.d1 for i_n in m.dn for i1b in m.d1), # 8
+                    *list(self._hashRef(Reference(m.b[i1,:,:,i_na].vn[i_nb]))
+                        for i1 in m.d1 for i_na in m.dn for i_nb in m.dn), # 8
+                        }
+                assert len(ref_data) == len(comps)
+                assert len(ref_data) == 36
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            elif len(sets) == 2 and sets[0] is m.d2 and sets[1] is m.d2:
+                ref_data = {
+                    *list(self._hashRef(Reference(m.v_212[:,:,i1,:,:]))
+                        for i1 in m.d1),
+                    *list(self._hashRef(Reference(m.b[i1,:,:,i_n].v2[:,:]))
+                        for i1 in m.d1 for i_n in m.dn),
+                        }
+                assert len(ref_data) == len(comps)
+                assert len(ref_data) == 6
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+    def test_flatten_m3_nd(self):
+        m = self._model_3()
+
+        # Can't create a slice with multiple ellipses in the same index.
+        m.del_component(m.v_1n2n)
+
+        sets = ComponentSet((m.dn,))
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 3
+
+        for sets, comps in zip(sets_list, comps_list):
+
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                ref_data = {
+                        *list(self._hashRef(v) for v in m.v_12.values()),
+                        *list(self._hashRef(v) for v in m.v_212.values()),
+                        }
+                assert len(comps) == len(ref_data)
+                assert len(comps) == 12
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif len(sets) == 1 and sets[0] is m.dn:
+                ref_data = {
+                    *list(self._hashRef(Reference(m.v_2n[i2,...]))
+                        for i2 in m.d2), # 2
+                    *list(self._hashRef(Reference(m.v_12n[i1,i2,...]))
+                        for i1 in m.d1 for i2 in m.d2), # 4
+                    *list(self._hashRef(Reference(m.b[i1,i2,...].v0))
+                        for i1 in m.d1 for i2 in m.d2), # 4
+                    *list(self._hashRef(Reference(m.b[i1a,i2,...].v1[i1b]))
+                        for i1a in m.d1 for i2 in m.d2 for i1b in m.d1), # 8
+                    *list(self._hashRef(Reference(m.b[i1,i2a,...].v2[i2b]))
+                        for i1 in m.d1 for i2a in m.d2 for i2b in m.d2), # 8
+                        }
+                assert len(comps) == len(ref_data)
+                assert len(comps) == 26
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif len(sets) == 2 and sets[0] is m.dn and sets[1] is m.dn:
+                ref_data = {
+                    *list(self._hashRef(Reference(m.b[i1,i2,...].vn[...]))
+                        for i1 in m.d1 for i2 in m.d2), # 4
+                        }
+                assert len(comps) == len(ref_data)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+    def test_flatten_m3_1_2(self):
+        m = self._model_3()
+
+        sets = ComponentSet((m.d1,m.d2))
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+
+        assert len(sets_list) == len(comps_list)
+        assert len(sets_list) == 5
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is m.d2:
+                ref_data = {
+                    *list(self._hashRef(Reference(m.v_2n[:,:,i_n]))
+                        for i_n in m.dn),
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif len(sets) == 2 and sets[0] is m.d1 and sets[1] is m.d2:
+                ref_data = {
+                    self._hashRef(Reference(m.v_12[...])), # 1
+                    *list(self._hashRef(Reference(m.v_12n[:,:,:,i_n]))
+                        for i_n in m.dn), # 2
+                    *list(self._hashRef(Reference(m.v_1n2n[:,i_na,:,:,i_nb]))
+                        for i_na in m.dn for i_nb in m.dn), # 4
+                    *list(self._hashRef(Reference(m.b[:,:,:,i_n].v0))
+                        for i_n in m.dn), # 2
+                    *list(self._hashRef(Reference(m.b[:,:,:,i_na].vn[i_nb]))
+                        for i_na in m.dn for i_nb in m.dn), # 4
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                self.assertEqual(len(comps), 13)
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif (len(sets) == 3 and sets[0] is m.d1 and sets[1] is m.d2
+                    and sets[2] is m.d1):
+                ref_data = {
+                    *list(self._hashRef(Reference(m.b[:,:,:,i_n].v1[:]))
+                        for i_n in m.dn), # 2
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif (len(sets) == 3 and sets[0] is m.d1 and sets[1] is m.d2
+                    and sets[2] is m.d2):
+                ref_data = {
+                    *list(self._hashRef(Reference(m.b[:,:,:,i_n].v2[:,:]))
+                        for i_n in m.dn), # 2
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            elif (len(sets) == 3 and sets[0] is m.d2 and sets[1] is m.d1
+                    and sets[2] is m.d2):
+                ref_data = {
+                    self._hashRef(Reference(m.v_212[...])), # 1
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+
+            else:
+                raise RuntimeError()
+
+    # TODO:
+    # - test flattening along 3 sets
+    # - test where components are skipped or otherwise missing
 
 
 if __name__ == "__main__":
     #unittest.main()
-    TestFlatten().test_flatten_m2_2d()
+    TestFlatten().test_flatten_m3_1_2()
 
