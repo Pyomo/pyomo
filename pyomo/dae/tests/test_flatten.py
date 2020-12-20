@@ -486,7 +486,11 @@ self._hashRef(Reference(m.v_tt)),
 
         return m
 
-    def test_flatten_m2_2d(self):
+    def _test_flatten_m2_2d(self):
+        """
+        This test has some issues due to incompatibility between
+        slicing and `normalize_index.flatten==False`.
+        """
         m = self._model_2()
 
         sets = ComponentSet((m.d2,))
@@ -497,8 +501,12 @@ self._hashRef(Reference(m.v_tt)),
 
         ref1 = Reference(m.v_2n[:,('c',3)])
 
-        import pdb; pdb.set_trace()
-        ref1 = Reference(m.v_2n[:,('d',4,5)])
+        # _ReferenceSet.__contains__
+        ref_set = ref1._index._ref
+        next(ref_set._get_iter(ref_set._slice, ('a',1)))
+        # TODO: Debug ^this cryptic error message...
+        #('a',1) in ref1._index._ref
+        ref2 = Reference(m.v_2n[:,('d',4,5)])
 
         assert len(sets_list) == len(comps_list)
         assert len(sets_list) == 2
