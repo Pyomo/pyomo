@@ -207,6 +207,10 @@ def _fill_indices_from_product(partial_index_list, product):
             #
             # To simplify some later code we convert scalar to tuple.
             if type(index) is not tuple:
+                # NOTE: I don't think I ever get here.
+                # TODO: test this.
+                # This would not be reliable as it could not distinguish
+                # between a ('a', 1) and (('a', 1),)
                 index = (index,)
             # We need to generate a new index for every entry of `product`,
             # and want to reuse `partial_index_list` as a starting point,
