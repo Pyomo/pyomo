@@ -41,8 +41,8 @@ def create_pyomo_model(A1, A2, c1, c2, N, dt):
     m.Tu = pyo.Set(initialize=list(range(N))[1:], ordered=True)
     
     # inputs (controls)
-    m.F1 = pyo.Var(m.Tu, bounds=(0,5), initialize=1.0)
-    m.F2 = pyo.Var(m.Tu, bounds=(0,5), initialize=1.0)
+    m.F1 = pyo.Var(m.Tu, bounds=(0,None), initialize=1.0)
+    m.F2 = pyo.Var(m.Tu, bounds=(0,None), initialize=1.0)
 
     # state variables
     m.h1 = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
@@ -111,8 +111,8 @@ class TwoTanksSeries(ExternalGreyBoxModel):
         self._Fo = np.zeros(N)
 
         # multipliers
-        self._eq_con_mult_values = np.zeros(2*(N-1))
-        self._output_con_mult_values = np.zeros(2*N)
+        self._eq_con_mult_values = np.ones(2*(N-1))
+        self._output_con_mult_values = np.ones(2*N)
 
     def model_capabilities(self):
         capabilities = self.ModelCapabilities()
@@ -132,10 +132,15 @@ class TwoTanksSeries(ExternalGreyBoxModel):
         return self._output_names
 
     def finalize_block_construction(self, pyomo_block):
+        # initialize all variables to 1 and set bounds
         for k in pyomo_block.inputs:
+            pyomo_block.inputs[k].setlb(0)
             pyomo_block.inputs[k].value = 1.0
         for k in pyomo_block.outputs:
+            pyomo_block.outputs[k].setlb(0)
             pyomo_block.outputs[k].value = 1.0
+
+        
 
     def set_input_values(self, input_values):
         N = self._N
@@ -448,19 +453,20 @@ class TestGreyBoxModel(unittest.TestCase):
         dt = 1
 
         m = create_pyomo_model(A1, A2, c1, c2, N, dt)
-        solver = pyo.SolverFactory('ipopt')
-        solver.options['print_level'] = 10
-        solver.options['linear_solver'] = 'mumps'
-        solver.options['derivative_test'] = 'first-order'
-        #status = solver.solve(m, tee=True)
+        solver = pyo.SolverFactory('cyipopt')
+        #solver.options['print_level'] = 10
+        #solver.options['linear_solver'] = 'mumps'
+        #solver.options['derivative_test'] = 'first-order'
+        status = solver.solve(m, tee=True)
+        #m.pprint()
                 
         mex = create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt)
         solver = pyo.SolverFactory('cyipopt')
-        solver.config.options['print_level'] = 10
-        solver.config.options['derivative_test'] = 'first-order'
-        #status = solver.solve(mex, tee=True)
+        #solver.config.options['print_level'] = 10
+        #solver.config.options['derivative_test'] = 'first-order'
+        status = solver.solve(mex, tee=True)
         #mex.pprint()
-        
+
 if __name__ == '__main__':
     t = TestGreyBoxModel()
     t.test_solve()
