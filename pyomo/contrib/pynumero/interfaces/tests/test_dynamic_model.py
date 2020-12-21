@@ -28,22 +28,17 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
     CyIpoptSolver, CyIpoptNLP, ipopt, ipopt_available,
 )
 
-from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
-from ..pyomo_nlp import PyomoGreyBoxNLP
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
+from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoGreyBoxNLP, PyomoNLP
 
-A1 = 5
-A2 = 10
-c1 = 3
-c2 = 4
-Fin = 2
-Tf = 10
-dt = 1
-def create_pyomo_model():
+from pyomo.contrib.pynumero.interfaces.tests.compare_utils import check_vectors_specific_order, check_sparse_matrix_specific_order
+
+def create_pyomo_model(A1, A2, c1, c2, N, dt):
     m = pyo.ConcreteModel()
     
     # timesteps
-    m.T = pyo.Set(initialize=list(range(Tf)), ordered=True)
-    m.Tu = pyo.Set(initialize=list(range(Tf))[1:], ordered=True)
+    m.T = pyo.Set(initialize=list(range(N)), ordered=True)
+    m.Tu = pyo.Set(initialize=list(range(N))[1:], ordered=True)
     
     # inputs (controls)
     m.F1 = pyo.Var(m.Tu, bounds=(0,5), initialize=1.0)
@@ -53,56 +48,71 @@ def create_pyomo_model():
     m.h1 = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
     m.h2 = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
 
-#    # algebraics (outputs)
-#    m.F12 = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
-#    m.Fo = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
+    # algebraics (outputs)
+    m.F12 = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
+    m.Fo = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
 
     @m.Constraint(m.Tu)
     def h1bal(m, t):
-        return A1/dt * (m.h1[t] - m.h1[t-1]) - m.F1[t] + c1*pyo.sqrt(m.h1[t]) == 0
+        return (m.h1[t] - m.h1[t-1]) - dt/A1 * (m.F1[t] - c1*pyo.sqrt(m.h1[t])) == 0
 
     @m.Constraint(m.Tu)
     def h2bal(m, t):
-        return A2/dt * (m.h2[t] - m.h2[t-1]) - c1*pyo.sqrt(m.h1[t]) - m.F2[t] + c2*pyo.sqrt(m.h2[t]) == 0
+        return (m.h2[t] - m.h2[t-1]) - dt/A2 * (c1*pyo.sqrt(m.h1[t]) + m.F2[t] - c2*pyo.sqrt(m.h2[t])) == 0
 
-#    @m.Constraint(m.T)
-#    def F12con(m, t):
-#        return c1*pyo.sqrt(m.h1[t]) - m.F12[t] == 0
-#
-#    @m.Constraint(m.T)
-#    def Focon(m, t):
-#        return c2*pyo.sqrt(m.h2[t]) - m.Fo[t] == 0
+    @m.Constraint(m.T)
+    def F12con(m, t):
+        return c1*pyo.sqrt(m.h1[t]) - m.F12[t] == 0
+
+    @m.Constraint(m.T)
+    def Focon(m, t):
+        return c2*pyo.sqrt(m.h2[t]) - m.Fo[t] == 0
 
     @m.Constraint(m.Tu)
     def min_inflow(m, t):
-        return 2 <= m.F1[t] + m.F2[t]
+        return 2 <= m.F1[t]
 
-    @m.Constraint(m.Tu)
-    def max_inflow(m, t):
-        return m.F1[t] + m.F2[t] <= 5
+    @m.Constraint(m.T)
+    def max_outflow(m, t):
+        return m.Fo[t] <= 4.5
 
-    m.h10 = pyo.Constraint( expr=m.h1[m.T.first()] == 2.0 )
-    m.h20 = pyo.Constraint( expr=m.h2[m.T.first()] == 2.0 )
+    m.h10 = pyo.Constraint( expr=m.h1[m.T.first()] == 1.5 )
+    m.h20 = pyo.Constraint( expr=m.h2[m.T.first()] == 0.5 )
     m.obj = pyo.Objective( expr= sum((m.h1[t]-1.0)**2  + (m.h2[t]-1.5)**2 for t in m.T) )
     
     return m
 
-"""
+
 class TwoTanksSeries(ExternalGreyBoxModel):
-    def __init__(self, tstart, tend):
-        self._N = tend - tstart + 1
-        self._input_names = ['Fin_{}'.format(t) for t in range(tstart,tend+1)]
-        self._input_names.extend(['h1_{}'.format(t) for t in range(tstart,tend+1)])
-        self._input_names.extend(['h2_{}'.format(t) for t in range(tstart,tend+1)])
-        self._output_names = ['F12_{}'.format(t) for t in range(tstart,tend+1)]
-        self._output_names.extend(['Fo_{}'.format(t) for t in range(tstart,tend+1)])
-        self._equality_constraint_names = ['h1bal_{}'.format(t) for t in range(tstart+1,tend+1)]
-        self._equality_constraint_names.extend(['h2bal_{}'.format(t) for t in range(tstart+1,tend+1)])
-        self._Fin = np.zeros(self._N)
-        self._h1 = np.zeros(self._N)
-        self._h2 = np.zeros(self._N)
-        self._eq_con_mult_values = np.zeros(2*self._N-2)
-        self._output_con_mult_values = np.zeros(2*self._N)
+    def __init__(self, A1, A2, c1, c2, N, dt):
+        self._A1 = A1
+        self._A2 = A2
+        self._c1 = c1
+        self._c2 = c2
+        self._N = N
+        self._dt = dt
+        self._input_names = ['F1_{}'.format(t) for t in range(1,N)]
+        self._input_names.extend(['F2_{}'.format(t) for t in range(1,N)])
+        self._input_names.extend(['h1_{}'.format(t) for t in range(0,N)])
+        self._input_names.extend(['h2_{}'.format(t) for t in range(0,N)])
+        self._output_names = ['F12_{}'.format(t) for t in range(0,N)]
+        self._output_names.extend(['Fo_{}'.format(t) for t in range(0,N)])
+        self._equality_constraint_names = ['h1bal_{}'.format(t) for t in range(1,N)]
+        self._equality_constraint_names.extend(['h2bal_{}'.format(t) for t in range(1,N)])
+
+        # inputs
+        self._F1 = np.zeros(N) # we don't use the first one
+        self._F2 = np.zeros(N) # we don't use the first one
+        self._h1 = np.zeros(N)
+        self._h2 = np.zeros(N)
+
+        # outputs
+        self._F12 = np.zeros(N)
+        self._Fo = np.zeros(N)
+
+        # multipliers
+        self._eq_con_mult_values = np.zeros(2*(N-1))
+        self._output_con_mult_values = np.zeros(2*N)
 
     def model_capabilities(self):
         capabilities = self.ModelCapabilities()
@@ -121,11 +131,19 @@ class TwoTanksSeries(ExternalGreyBoxModel):
     def output_names(self):
         return self._output_names
 
+    def finalize_block_construction(self, pyomo_block):
+        for k in pyomo_block.inputs:
+            pyomo_block.inputs[k].value = 1.0
+        for k in pyomo_block.outputs:
+            pyomo_block.outputs[k].value = 1.0
+
     def set_input_values(self, input_values):
-        assert len(input_values) == 3*self._N
-        np.copyto(self._Fin,input_values[:self._N])
-        np.copyto(self._h1, input_values[self._N:2*self._N])
-        np.copyto(self._h2, input_values[2*self._N:3*self._N])
+        N = self._N
+        assert len(input_values) == 4*N-2
+        self._F1[1:self._N] = np.copy(input_values[:N-1])
+        self._F2[1:self._N] = np.copy(input_values[N-1:2*N-2])
+        self._h1 = np.copy(input_values[2*N-2:3*N-2])
+        self._h2 = np.copy(input_values[3*N-2:4*N-2])
 
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
         assert len(eq_con_multiplier_values) == 2*(self._N-1)
@@ -136,122 +154,308 @@ class TwoTanksSeries(ExternalGreyBoxModel):
         np.copyto(self._output_con_mult_values, output_con_multiplier_values)
 
     def evaluate_equality_constraints(self):
-        Fin = self._Fin
+        N = self._N
+        F1 = self._F1
+        F2 = self._F2
         h1 = self._h1
         h2 = self._h2
         
-        resid = np.zeros(2*self._N)
+        resid = np.zeros(2*(N-1))
 
-        for t in range(1,self._N):
-            resid[t-1] = A1/dt*(h1[t]-h1[t-1]) - Fin[t] + c1*math.sqrt(h1[t])
+        for t in range(1,N):
+            resid[t-1] = (h1[t]-h1[t-1]) - \
+                self._dt/self._A1*(F1[t] - self._c1*math.sqrt(h1[t]))
 
-        for t in range(1,self._N):
-            resid[t-1+self._N] = A2/dt*(h2[t]-h2[t-1]) - c1*math.sqrt(h1[t]) + c2*math.sqrt(h2[t])
-
+        for t in range(1,N):
+            resid[t-2+N] = (h2[t]-h2[t-1]) - \
+                self._dt/self._A2*(self._c1*math.sqrt(h1[t]) + F2[t] - self._c2*math.sqrt(h2[t]))
         return resid
 
     def evaluate_outputs(self):
-        Fin = self._Fin
+        N = self._N
         h1 = self._h1
         h2 = self._h2
         
-        resid = np.zeros(2*self._N)
+        resid = np.zeros(2*N)
 
-        for t in range(0,self._N):
-            resid[t] = c1*math.sqrt(h1[t])
+        for t in range(N):
+            resid[t] = self._c1*math.sqrt(h1[t])
 
-        for t in range(0,self._N):
-            resid[t+self._N] = c2*math.sqrt(h2[t])
+        for t in range(N):
+            resid[t+N] = self._c2*math.sqrt(h2[t])
 
         return resid
 
     def evaluate_jacobian_equality_constraints(self):
-        pass
-    
+        N = self._N
+        F1 = self._F1
+        F2 = self._F2
+        h1 = self._h1
+        h2 = self._h2
+        A1 = self._A1
+        A2 = self._A2
+        c1 = self._c1
+        c2 = self._c2
+        dt = self._dt
+
+        nnz = 3*(N-1)+ 4*(N-1)
+        irow = np.zeros(nnz, dtype=np.int64)
+        jcol = np.zeros(nnz, dtype=np.int64)
+        data = np.zeros(nnz, dtype=np.float64)
+        idx = 0
+        # Jac h1bal
+        for i in range(N-1):
+            irow[idx] = i
+            jcol[idx] = i
+            data[idx] = -dt/A1
+            idx += 1
+            irow[idx] = i
+            jcol[idx] = 2*(N-1)+i
+            data[idx] = -1
+            idx += 1
+            irow[idx] = i
+            jcol[idx] = 2*(N-1)+i+1
+            data[idx] = 1+dt/A1*c1*1/2*(h1[i+1])**(-0.5)
+            idx += 1
+        # Jac h2bal
+        for i in range(N-1):
+            irow[idx] = i+(N-1)
+            jcol[idx] = i+(N-1)
+            data[idx] = -dt/A2
+            idx += 1
+            irow[idx] = i+(N-1)
+            jcol[idx] = 2*(N-1)+i+1
+            data[idx] = -dt/A2*c1*1/2*(h1[i+1])**(-0.5)
+            idx += 1
+            irow[idx] = i+(N-1)
+            jcol[idx] = 2*(N-1)+N+i
+            data[idx] = -1
+            idx += 1
+            irow[idx] = i+(N-1)
+            jcol[idx] = 2*(N-1)+N+i+1
+            data[idx] = 1+dt/A2*c2*1/2*(h2[i+1])**(-0.5)
+            idx += 1
+
+        assert idx == nnz
+        return spa.coo_matrix( (data, (irow,jcol)), shape=(2*(N-1), 2*(N-1)+2*N) )
+
     def evaluate_jacobian_outputs(self):
-        pass
+        N = self._N
+        F1 = self._F1
+        F2 = self._F2
+        h1 = self._h1
+        h2 = self._h2
+        A1 = self._A1
+        A2 = self._A2
+        c1 = self._c1
+        c2 = self._c2
+        dt = self._dt
+
+        nnz = 2*N
+        irow = np.zeros(nnz, dtype=np.int64)
+        jcol = np.zeros(nnz, dtype=np.int64)
+        data = np.zeros(nnz, dtype=np.float64)
+        idx = 0
+        # Jac F12
+        for i in range(N):
+            irow[idx] = i
+            jcol[idx] = 2*(N-1)+i
+            data[idx] = 1/2*c1*h1[i]**(-0.5)
+            idx += 1
+        for i in range(N):
+            irow[idx] = N+i
+            jcol[idx] = 2*(N-1)+N+i
+            data[idx] = 1/2*c2*h2[i]**(-0.5)
+            idx += 1
+
+        assert idx == nnz
+        return spa.coo_matrix( (data, (irow,jcol)), shape=(2*N, 2*(N-1)+2*N) )
 
     def evaluate_hessian_equality_constraints(self):
-        pass
+        N = self._N
+        F1 = self._F1
+        F2 = self._F2
+        h1 = self._h1
+        h2 = self._h2
+        A1 = self._A1
+        A2 = self._A2
+        c1 = self._c1
+        c2 = self._c2
+        dt = self._dt
+        lam = self._eq_con_mult_values
+        
+        nnz = 2*(N-1)
+        irow = np.zeros(nnz, dtype=np.int64)
+        jcol = np.zeros(nnz, dtype=np.int64)
+        data = np.zeros(nnz, dtype=np.float64)
+        idx = 0
+#        # Hess h1bal
+#        for i in range(N-1):
+#            irow[idx] = 2*(N-1)+i+1
+#            jcol[idx] = 2*(N-1)+i+1
+#            data[idx] = lam[i]*dt/A1*(-c1/4)*h1[i+1]**(-1.5)
+#            idx += 1
+        # Hess h2bal
+        for i in range(N-1):
+            irow[idx] = 2*(N-1)+i+1
+            jcol[idx] = 2*(N-1)+i+1
+            data[idx] = lam[i]*dt/A1*(-c1/4)*h1[i+1]**(-1.5) + lam[(N-1)+i]*dt/A2*(c1/4)*h1[i+1]**(-1.5)
+            idx += 1
+            irow[idx] = 2*(N-1)+N+i+1
+            jcol[idx] = 2*(N-1)+N+i+1
+            data[idx] = lam[(N-1)+i]*dt/A2*(-c2/4)*h2[i+1]**(-1.5)
+            idx += 1
+
+        assert idx == nnz
+        return spa.coo_matrix( (data, (irow,jcol)), shape=(2*(N-1)+2*N, 2*(N-1)+2*N) )
     
     def evaluate_hessian_outputs(self):
-        pass
-"""
+        N = self._N
+        F1 = self._F1
+        F2 = self._F2
+        h1 = self._h1
+        h2 = self._h2
+        A1 = self._A1
+        A2 = self._A2
+        c1 = self._c1
+        c2 = self._c2
+        dt = self._dt
+        lam = self._output_con_mult_values
+        
+        nnz = 2*N
+        irow = np.zeros(nnz, dtype=np.int64)
+        jcol = np.zeros(nnz, dtype=np.int64)
+        data = np.zeros(nnz, dtype=np.float64)
+        idx = 0
+        # Hess F12_t
+        for i in range(N):
+            irow[idx] = 2*(N-1)+i
+            jcol[idx] = 2*(N-1)+i
+            data[idx] = lam[i]*c1*(-1/4)*h1[i]**(-1.5)
+            idx += 1
+        # Hess Fo_t
+        for i in range(N):
+            irow[idx] = 2*(N-1)+i
+            jcol[idx] = 2*(N-1)+i
+            data[idx] = lam[(N-1)+i]*c2*(-1/4)*h2[i]**(-1.5)
+            idx += 1
+
+        assert idx == nnz
+        return spa.coo_matrix( (data, (irow,jcol)), shape=(2*(N-1)+2*N, 2*(N-1)+2*N) )
+
+def create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt):
+    m2 = pyo.ConcreteModel()
+    m2.T = pyo.Set(initialize=list(range(N)), ordered=True)
+    m2.Tu = pyo.Set(initialize=list(range(N))[1:], ordered=True)
+    m2.egb = ExternalGreyBoxBlock()
+    m2.egb.set_external_model(TwoTanksSeries(A1, A2, c1, c2, N, dt))
+
+    @m2.Constraint(m2.Tu)
+    def min_inflow(m, t):
+        F1_t = m.egb.inputs['F1_{}'.format(t)]
+        return 2 <= F1_t
+
+    @m2.Constraint(m2.T)
+    def max_outflow(m, t):
+        Fo_t = m.egb.outputs['Fo_{}'.format(t)]
+        return Fo_t <= 4.5
+
+    m2.h10 = pyo.Constraint( expr=m2.egb.inputs['h1_0'] == 1.5 )
+    m2.h20 = pyo.Constraint( expr=m2.egb.inputs['h2_0'] == 0.5 )
+    m2.obj = pyo.Objective( expr= sum((m2.egb.inputs['h1_{}'.format(t)]-1.0)**2  + (m2.egb.inputs['h2_{}'.format(t)]-1.5)**2 for t in m2.T) )
+
+    return m2
 
 class TestGreyBoxModel(unittest.TestCase):
-    def test_full_pyomo(self):
-        m = create_pyomo_model()
+    def test_compare_evaluations(self):
+        A1 = 5
+        A2 = 10
+        c1 = 3
+        c2 = 4
+        N = 6
+        dt = 1
+
+        m = create_pyomo_model(A1, A2, c1, c2, N, dt)
         solver = pyo.SolverFactory('ipopt')
         status = solver.solve(m, tee=True)
-        m.pprint()
-        m.display()
-        assert False
-"""
-        m2 = pyo.ConcreteModel()
-        m2.egb = ExternalGreyBoxBlock()
-        m2.egb.set_external_model(TwoTanksSeries(0,Tf-1))
-        m2.egb.pprint()
+        m_nlp = PyomoNLP(m)
 
-        print('foo')
+        mex = create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt)
+        mex_nlp = PyomoGreyBoxNLP(mex)
 
-        # let's assign inputs / outputs and check the equations
-        N = Tf
-        u = np.zeros(3*N)
-        for t in range(N):
-            u[t] = pyo.value(m.Fin[t])
-            u[t+N] = pyo.value(m.h1[t])
-            u[t+2*N] = pyo.value(m.h2[t])
-        print(u)
-
-        ex_model = m2.egb._ex_model
-        ex_model.set_input_values(u)
-        resid = ex_model.evaluate_equality_constraints()
-        print(resid)
-        osoln = np.zeros(len(m.F12)+len(m.Fo))
-        for i in m.T:
-            osoln[i] = pyo.value(m.F12[i])
-        for i in m.T:
-            osoln[i+N] = pyo.value(m.Fo[i])
-        o = ex_model.evaluate_outputs()
-        print(o)
-        print(osoln)
-        assert False
-
-    def test_evaluations(self):
-        u = np.asarray([0.00000000e+00, 1.50357444e-08, 3.60100604e-08, 1.10971623e-07,
-                        3.71388285e+00, 4.99999960e+00, 4.99999957e+00, 4.99999927e+00,
-                        4.99999816e+00, 4.99999025e+00, 2.00000000e+00, 1.31259006e+00,
-                        7.82004098e-01, 4.01717155e-01, 6.57847087e-01, 1.04461002e+00,
-                        1.34799167e+00, 1.59114738e+00, 1.78869451e+00, 1.95068994e+00,
-                        2.00000000e+00, 1.80613490e+00, 1.57019776e+00, 1.30363406e+00,
-                        1.12305939e+00, 1.02475680e+00, 9.77576129e-01, 9.63388730e-01,
-                        9.70549167e-01, 9.91295233e-01])
-
-        o = np.asarray([4.24264069, 3.43704969, 2.65292987, 1.90143483, 2.4332332,  3.06618495,
-                        3.4830913,  3.78422072, 4.01226253, 4.19001307, 5.65685425, 5.37570073,
-                        5.01230128, 4.56707181, 4.23897986, 4.04921088, 3.95489798, 3.92609471,
-                        3.94065815, 3.98255241])
+        # get the variable and constraint order and create the maps
+        # reliable order independent comparisons
+        m_x_order = m_nlp.variable_names()
+        m_c_order = m_nlp.constraint_names()
+        mex_x_order = mex_nlp.variable_names()
+        mex_c_order = mex_nlp.constraint_names()
         
-        m2 = pyo.ConcreteModel()
-        m2.egb = ExternalGreyBoxBlock()
-        m2.egb.set_external_model(TwoTanksSeries(0,Tf-1))
-        m2.obj = pyo.Objective(expr=sum( (m2.egb.inputs['h2_{}'.format(t)] - 1.0)**2 for t in range(Tf) ) )
+        x1list = ['h1[0]', 'h1[1]', 'h1[2]', 'h1[3]', 'h1[4]', 'h1[5]', 'h2[0]', 'h2[1]', 'h2[2]', 'h2[3]', 'h2[4]', 'h2[5]', 'F1[1]', 'F1[2]', 'F1[3]', 'F1[4]', 'F1[5]', 'F2[1]', 'F2[2]', 'F2[3]', 'F2[4]', 'F2[5]', 'F12[0]', 'F12[1]', 'F12[2]', 'F12[3]', 'F12[4]', 'F12[5]', 'Fo[0]', 'Fo[1]', 'Fo[2]', 'Fo[3]', 'Fo[4]', 'Fo[5]']
+        x2list = ['egb.inputs[h1_0]', 'egb.inputs[h1_1]', 'egb.inputs[h1_2]', 'egb.inputs[h1_3]', 'egb.inputs[h1_4]', 'egb.inputs[h1_5]', 'egb.inputs[h2_0]', 'egb.inputs[h2_1]', 'egb.inputs[h2_2]', 'egb.inputs[h2_3]', 'egb.inputs[h2_4]', 'egb.inputs[h2_5]', 'egb.inputs[F1_1]', 'egb.inputs[F1_2]', 'egb.inputs[F1_3]', 'egb.inputs[F1_4]', 'egb.inputs[F1_5]', 'egb.inputs[F2_1]', 'egb.inputs[F2_2]', 'egb.inputs[F2_3]', 'egb.inputs[F2_4]', 'egb.inputs[F2_5]', 'egb.outputs[F12_0]', 'egb.outputs[F12_1]', 'egb.outputs[F12_2]', 'egb.outputs[F12_3]', 'egb.outputs[F12_4]', 'egb.outputs[F12_5]', 'egb.outputs[Fo_0]', 'egb.outputs[Fo_1]', 'egb.outputs[Fo_2]', 'egb.outputs[Fo_3]', 'egb.outputs[Fo_4]', 'egb.outputs[Fo_5]']
+        x1_x2_map = dict(zip(x1list, x2list))
+        x1idx_x2idx_map = {i: mex_x_order.index(x1_x2_map[m_x_order[i]]) for i in range(len(m_x_order))}
 
-        pnlp = PyomoGreyBoxNLP(m2)
+        c1list = ['h1bal[1]', 'h1bal[2]', 'h1bal[3]', 'h1bal[4]', 'h1bal[5]', 'h2bal[1]', 'h2bal[2]', 'h2bal[3]', 'h2bal[4]', 'h2bal[5]', 'F12con[0]', 'F12con[1]', 'F12con[2]', 'F12con[3]', 'F12con[4]', 'F12con[5]', 'Focon[0]', 'Focon[1]', 'Focon[2]', 'Focon[3]', 'Focon[4]', 'Focon[5]', 'min_inflow[1]', 'min_inflow[2]', 'min_inflow[3]', 'min_inflow[4]', 'min_inflow[5]', 'max_outflow[0]', 'max_outflow[1]', 'max_outflow[2]', 'max_outflow[3]', 'max_outflow[4]', 'max_outflow[5]', 'h10', 'h20']
+        c2list = ['egb.h1bal_1', 'egb.h1bal_2', 'egb.h1bal_3', 'egb.h1bal_4', 'egb.h1bal_5', 'egb.h2bal_1', 'egb.h2bal_2', 'egb.h2bal_3', 'egb.h2bal_4', 'egb.h2bal_5', 'egb.F12_0_con', 'egb.F12_1_con', 'egb.F12_2_con', 'egb.F12_3_con', 'egb.F12_4_con', 'egb.F12_5_con', 'egb.Fo_0_con', 'egb.Fo_1_con', 'egb.Fo_2_con', 'egb.Fo_3_con', 'egb.Fo_4_con', 'egb.Fo_5_con', 'min_inflow[1]', 'min_inflow[2]', 'min_inflow[3]', 'min_inflow[4]', 'min_inflow[5]', 'max_outflow[0]', 'max_outflow[1]', 'max_outflow[2]', 'max_outflow[3]', 'max_outflow[4]', 'max_outflow[5]', 'h10', 'h20']
+        c1_c2_map = dict(zip(c1list, c2list))
+        c1idx_c2idx_map = {i: mex_c_order.index(c1_c2_map[m_c_order[i]]) for i in range(len(m_c_order))}
+
+        # get the primals from m and put them in the correct order for mex
+        m_x = m_nlp.get_primals()
+        mex_x = np.zeros(len(m_x))
+        for i in range(len(m_x)):
+            mex_x[x1idx_x2idx_map[i]] = m_x[i]
+
+        # get the duals from m and put them in the correct order for mex
+        m_lam = m_nlp.get_duals()
+        mex_lam = np.zeros(len(m_lam))
+        for i in range(len(m_x)):
+            mex_lam[c1idx_c2idx_map[i]] = m_lam[i]
+
+        mex_nlp.set_primals(mex_x)
+        mex_nlp.set_duals(mex_lam)
+        m_obj = m_nlp.evaluate_objective()
+        mex_obj = mex_nlp.evaluate_objective()
+        self.assertAlmostEqual(m_obj, mex_obj, places=4)
+
+        m_gobj = m_nlp.evaluate_grad_objective()
+        mex_gobj = mex_nlp.evaluate_grad_objective()
+        check_vectors_specific_order(self, m_gobj, m_x_order, mex_gobj, mex_x_order, x1_x2_map)
+
+        m_c = m_nlp.evaluate_constraints()
+        mex_c = mex_nlp.evaluate_constraints()
+        check_vectors_specific_order(self, m_c, m_c_order, mex_c, mex_c_order, c1_c2_map)
+
+        m_j = m_nlp.evaluate_jacobian()
+        mex_j = mex_nlp.evaluate_jacobian().todense()
+        check_sparse_matrix_specific_order(self, m_j, m_c_order, m_x_order, mex_j, mex_c_order, mex_x_order, c1_c2_map, x1_x2_map)
+
+        m_h = m_nlp.evaluate_hessian_lag()
+        mex_h = mex_nlp.evaluate_hessian_lag()
+        check_sparse_matrix_specific_order(self, m_h, m_x_order, m_x_order, mex_h, mex_x_order, mex_x_order, x1_x2_map, x1_x2_map)
+
+    def test_solve(self):
+        A1 = 5
+        A2 = 10
+        c1 = 3
+        c2 = 4
+        N = 6
+        dt = 1
+
+        #m = create_pyomo_model(A1, A2, c1, c2, N, dt)
+        #solver = pyo.SolverFactory('ipopt')
+        #status = solver.solve(m, tee=True)
+        #m_nlp = PyomoNLP(m)
+
+        mex = create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt)
+        mex_nlp = PyomoGreyBoxNLP(mex)
+        solver = pyo.SolverFactory('cyipopt')
+        status = solver.solve(mex, tee=True)
+        mex.pprint()
         assert False
-        
-        ex_model = m2.egb._ex_model
-        ex_model.set_input_values(u)
-        resid = ex_model.evaluate_equality_constraints()
-        print(resid)
-        osoln = np.zeros(len(m.F12)+len(m.Fo))
-        for i in m.T:
-            osoln[i] = pyo.value(m.F12[i])
-        for i in m.T:
-            osoln[i+N] = pyo.value(m.Fo[i])
-        o = ex_model.evaluate_outputs()
-
-"""
-
 
         
+if __name__ == '__main__':
+    t = TestGreyBoxModel()
+    t.test_full_pyomo()
+    

@@ -29,6 +29,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
 
 from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
 from ..pyomo_nlp import PyomoGreyBoxNLP
+from pyomo.contrib.pynumero.interfaces.tests.compare_utils import check_vectors_specific_order, check_sparse_matrix_specific_order
 
 # set of external models for testing
 # basic model is a simple pipe sequence with nonlinear pressure drop
@@ -1474,10 +1475,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
                                    [0, 0, 0, 0, 0, 0, 0, 0, 0],
                                    [0, 0, 0, 0, 0, 0, 0, 0, 0]],
                                   dtype=np.float64)
-        print(h)
-        print(comparison_h)
         check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
-        assert False
         
     @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
     def test_external_greybox_solve(self):
@@ -1767,34 +1765,6 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertIn('c scaling vector[    6]= 4.2000000000000002e+00', solver_trace) # Pout_con
         self.assertIn('DenseVector "d scaling vector" with 1 elements:', solver_trace)
         self.assertIn('d scaling vector[    1]= 1.0000000000000000e+00', solver_trace) # pcon
-
-def check_vectors_specific_order(tst, v1, v1order, v2, v2order):
-    tst.assertEqual(len(v1), len(v1order))
-    tst.assertEqual(len(v2), len(v2order))
-    tst.assertEqual(len(v1), len(v2))
-    v2map = {s:i for i,s in enumerate(v2order)}
-    for i,s in enumerate(v1order):
-        tst.assertEqual(v1[i], v2[v2map[s]])
-
-def check_sparse_matrix_specific_order(tst, m1, m1rows, m1cols, m2, m2rows, m2cols):
-    tst.assertEqual(m1.shape[0], len(m1rows))
-    tst.assertEqual(m1.shape[1], len(m1cols))
-    tst.assertEqual(m2.shape[0], len(m2rows))
-    tst.assertEqual(m2.shape[1], len(m2cols))
-    tst.assertEqual(len(m1rows), len(m2rows))
-    tst.assertEqual(len(m1cols), len(m2cols))
-
-    m1c = m1.todense()
-    m2c = np.zeros((len(m2rows), len(m2cols)))
-    rowmap = [m2rows.index(x) for x in m1rows]
-    colmap = [m2cols.index(x) for x in m1cols]
-    for i in range(len(m1rows)):
-        for j in range(len(m1cols)):
-            m2c[i,j] = m2[rowmap[i], colmap[j]]
-
-    #print(m1c)
-    #print(m2c)
-    tst.assertTrue(np.array_equal(m1c, m2c))
 
 if __name__ == '__main__':
     TestPyomoGreyBoxNLP().test_external_greybox_solve(self)

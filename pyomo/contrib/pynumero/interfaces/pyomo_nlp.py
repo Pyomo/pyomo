@@ -382,8 +382,8 @@ class PyomoGreyBoxNLP(NLP):
 
         # check that the greybox model supports what we would expect
         # TODO: add support for models that do not provide jacobians
+        """
         for data in greybox_data:
-            CRASH HERE
             c = data._ex_model.model_capabilities()
             if (c.n_equality_constraints() > 0 \
                and not c.supports_jacobian_equality_constraints) \
@@ -391,7 +391,7 @@ class PyomoGreyBoxNLP(NLP):
                and not c.supports_jacobian_equality_constraints)
                 raise NotImplementedError('PyomoGreyBoxNLP does not support models'
                                           ' without explicit Jacobian support')
-
+        """
 
         # number of additional variables required - they are in the
         # greybox models but not included in the NL file
@@ -787,6 +787,8 @@ class PyomoGreyBoxNLP(NLP):
 
     # overloaded from ExtendedNLP
     def evaluate_eq_constraints(self, out=None):
+        raise NotImplementedError('Not yet implemented for PyomoGreyBoxNLP')
+        """
         self._evaluate_greybox_constraints_and_cache_if_necessary()
 
         if out is not None:
@@ -805,6 +807,7 @@ class PyomoGreyBoxNLP(NLP):
                 self._pyomo_nlp.evaluate_eq_constraints(),
                 self._cached_greybox_constraints,
             ))
+        """
 
     def _evaluate_greybox_jacobians_and_cache_if_necessary(self):
         if self._greybox_jac_cached:
