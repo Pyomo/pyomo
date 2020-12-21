@@ -414,6 +414,7 @@ class TestGreyBoxModel(unittest.TestCase):
 
         mex_nlp.set_primals(mex_x)
         mex_nlp.set_duals(mex_lam)
+
         m_obj = m_nlp.evaluate_objective()
         mex_obj = mex_nlp.evaluate_objective()
         self.assertAlmostEqual(m_obj, mex_obj, places=4)
@@ -434,6 +435,10 @@ class TestGreyBoxModel(unittest.TestCase):
         mex_h = mex_nlp.evaluate_hessian_lag()
         check_sparse_matrix_specific_order(self, m_h, m_x_order, m_x_order, mex_h, mex_x_order, mex_x_order, x1_x2_map, x1_x2_map)
 
+        mex_h = 0*mex_h
+        mex_nlp.evaluate_hessian_lag(out=mex_h)
+        check_sparse_matrix_specific_order(self, m_h, m_x_order, m_x_order, mex_h, mex_x_order, mex_x_order, x1_x2_map, x1_x2_map)
+
     def test_solve(self):
         A1 = 5
         A2 = 10
@@ -442,20 +447,21 @@ class TestGreyBoxModel(unittest.TestCase):
         N = 6
         dt = 1
 
-        #m = create_pyomo_model(A1, A2, c1, c2, N, dt)
-        #solver = pyo.SolverFactory('ipopt')
+        m = create_pyomo_model(A1, A2, c1, c2, N, dt)
+        solver = pyo.SolverFactory('ipopt')
+        solver.options['print_level'] = 10
+        solver.options['linear_solver'] = 'mumps'
+        solver.options['derivative_test'] = 'first-order'
         #status = solver.solve(m, tee=True)
-        #m_nlp = PyomoNLP(m)
-
+                
         mex = create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt)
-        mex_nlp = PyomoGreyBoxNLP(mex)
         solver = pyo.SolverFactory('cyipopt')
-        status = solver.solve(mex, tee=True)
-        mex.pprint()
-        assert False
-
+        solver.config.options['print_level'] = 10
+        solver.config.options['derivative_test'] = 'first-order'
+        #status = solver.solve(mex, tee=True)
+        #mex.pprint()
         
 if __name__ == '__main__':
     t = TestGreyBoxModel()
-    t.test_full_pyomo()
+    t.test_solve()
     

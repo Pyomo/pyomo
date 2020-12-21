@@ -825,8 +825,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(4, pyomo_nlp.n_primals())
         self.assertEqual(1, pyomo_nlp.n_constraints())
         self.assertEqual(4, pyomo_nlp.nnz_jacobian())
-        with self.assertRaises(NotImplementedError):
-            tmp = pyomo_nlp.nnz_hessian_lag()
+        self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.outputs[Pout]']
         x_order = pyomo_nlp.variable_names()
@@ -928,8 +927,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(4, pyomo_nlp.n_primals())
         self.assertEqual(1, pyomo_nlp.n_constraints())
         self.assertEqual(4, pyomo_nlp.nnz_jacobian())
-        with self.assertRaises(NotImplementedError):
-            tmp = pyomo_nlp.nnz_hessian_lag()
+        self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[Pout]']
         x_order = pyomo_nlp.variable_names()
@@ -994,7 +992,6 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         c = np.zeros(1)
         pyomo_nlp.evaluate_constraints(out=c)
         check_vectors_specific_order(self, c, c_order, comparison_c, comparison_c_order)
-        
 
         j = pyomo_nlp.evaluate_jacobian()
         comparison_j = np.asarray([[-1, 36, 48, 1]])
@@ -1034,8 +1031,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(5, pyomo_nlp.n_primals())
         self.assertEqual(2, pyomo_nlp.n_constraints())
         self.assertEqual(8, pyomo_nlp.nnz_jacobian())
-        with self.assertRaises(NotImplementedError):
-            tmp = pyomo_nlp.nnz_hessian_lag()
+        self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.outputs[P2]', 'egb.outputs[Pout]']
         x_order = pyomo_nlp.variable_names()
@@ -1139,8 +1135,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(5, pyomo_nlp.n_primals())
         self.assertEqual(2, pyomo_nlp.n_constraints())
         self.assertEqual(8, pyomo_nlp.nnz_jacobian())
-        with self.assertRaises(NotImplementedError):
-            tmp = pyomo_nlp.nnz_hessian_lag()
+        self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P2]', 'egb.inputs[Pout]']
         x_order = pyomo_nlp.variable_names()
@@ -1251,8 +1246,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(7, pyomo_nlp.n_primals())
         self.assertEqual(4, pyomo_nlp.n_constraints())
         self.assertEqual(16, pyomo_nlp.nnz_jacobian())
-        with self.assertRaises(NotImplementedError):
-            tmp = pyomo_nlp.nnz_hessian_lag()
+        self.assertEqual(5, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]',
                               'egb.inputs[P1]', 'egb.inputs[P3]',
@@ -1379,8 +1373,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(9, pyomo_nlp.n_primals())
         self.assertEqual(6, pyomo_nlp.n_constraints())
         self.assertEqual(20, pyomo_nlp.nnz_jacobian())
-        with self.assertRaises(NotImplementedError):
-            tmp = pyomo_nlp.nnz_hessian_lag()
+        self.assertEqual(5, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]',
                               'egb.inputs[P1]', 'egb.inputs[P3]',
@@ -1737,7 +1730,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
 
         with open('_cyipopt-external-greybox-scaling.log', 'r') as fd:
             solver_trace = fd.read()
-        #os.remove('_cyipopt-external-greybox-scaling.log')
+        os.remove('_cyipopt-external-greybox-scaling.log')
 
         self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
         self.assertIn('output_file = _cyipopt-external-greybox-scaling.log', solver_trace)

@@ -570,8 +570,7 @@ class PyomoGreyBoxNLP(NLP):
 
     # overloaded from NLP
     def nnz_hessian_lag(self):
-        raise NotImplementedError(
-            "PyomoGreyBoxNLP does not currently support Hessians")
+        return self._pyomo_nlp.nnz_hessian_lag() + self._nnz_greybox_hess
 
     # overloaded from NLP
     def primals_lb(self):
@@ -920,19 +919,17 @@ class PyomoGreyBoxNLP(NLP):
 
     def evaluate_hessian_lag(self, out=None):
         self._evaluate_greybox_hessians_and_cache_if_necessary()
-
         if out is not None:
             if ( not isinstance(out, coo_matrix)
                  or out.shape[0] != self.n_primals()
                  or out.shape[1] != self.n_primals()
-                 or out.nnz != self.nnz_hessian() ):
+                 or out.nnz != self.nnz_hessian_lag() ):
                 raise RuntimeError(
                     'evaluate_hessian_lag called with an "out" argument'
                     ' that is invalid. This should be a coo_matrix with'
                     ' shape=({},{}) and nnz={}'
                     .format(self.n_primals(), self.n_primals(),
                             self.nnz_hessian()))
-
             # to avoid an additional copy, we pass in a slice (numpy view) of the underlying
             # data, row, and col that we were handed to be populated in evaluate_hessian_lag
             # the coo_matrix is simply a holder of the data, row, and col structures

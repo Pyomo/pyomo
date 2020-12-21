@@ -529,6 +529,8 @@ class PyomoCyIpoptSolver(object):
             solverStatus = SolverStatus.ok
         except:
             solverStatus = SolverStatus.unknown
+            raise
+        
         wall_time = timer.toc("")
 
         results = SolverResults()
