@@ -21,6 +21,7 @@ objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
 import six
 import sys
+import logging
 import os
 import abc
 
@@ -46,6 +47,8 @@ from pyomo.core.base import Block, Objective, minimize
 from pyomo.opt import (
     SolverStatus, SolverResults, TerminationCondition, ProblemSense
 )
+
+logger = logging.getLogger(__name__)
 
 # This maps the cyipopt STATUS_MESSAGES back to string representations
 # of the Ipopt ApplicationReturnStatus enum
@@ -528,6 +531,8 @@ class PyomoCyIpoptSolver(object):
                 os.dup2(newstdout, 1)
             solverStatus = SolverStatus.ok
         except:
+            msg = "Exception encountered during cyipopt solve:"
+            logger.error(msg, exc_info=sys.exc_info())
             solverStatus = SolverStatus.unknown
             raise
         
