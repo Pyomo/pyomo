@@ -317,40 +317,39 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
-    # TODO: fix the bug here
-    # def test_lazy_OA_8PP_LOA_L2(self):
-    #     """Test the LP/NLP decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet(convex=True)
-    #         print('\n Solving 8PP problem with LP/NLP (LOA L2)')
-    #         results = opt.solve(model, strategy='OA',
-    #                             init_strategy='rNLP',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver=required_solvers[0],
-    #                             bound_tolerance=1E-5,
-    #                             single_tree=True,
-    #                             add_regularization='level_L2')
 
-    #         self.assertIn(results.solver.termination_condition,
-    #                       [TerminationCondition.optimal, TerminationCondition.feasible])
-    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+    def test_lazy_OA_8PP_LOA_L2(self):
+        """Test the LP/NLP decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print('\n Solving 8PP problem with LP/NLP (LOA L2)')
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                bound_tolerance=1E-5,
+                                single_tree=True,
+                                add_regularization='level_L2')
 
-    # def test_lazy_OA_8PP_init_max_binary_LOA_L2(self):
-    #     """Test the LP/NLP decomposition algorithm."""
-    #     with SolverFactory('mindtpy') as opt:
-    #         model = EightProcessFlowsheet(convex=True)
-    #         print('\n Solving 8PP_init_max_binary problem with LP/NLP (LOA L2)')
-    #         results = opt.solve(model, strategy='OA',
-    #                             init_strategy='max_binary',
-    #                             mip_solver=required_solvers[1],
-    #                             nlp_solver=required_solvers[0],
-    #                             single_tree=True,
-    #                             add_regularization='level_L2',
-    #                             tee=True)
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    #         self.assertIn(results.solver.termination_condition,
-    #                       [TerminationCondition.optimal, TerminationCondition.feasible])
-    #         self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+    def test_lazy_OA_8PP_init_max_binary_LOA_L2(self):
+        """Test the LP/NLP decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print('\n Solving 8PP_init_max_binary problem with LP/NLP (LOA L2)')
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='max_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                single_tree=True,
+                                add_regularization='level_L2')
+
+            self.assertIn(results.solver.termination_condition,
+                          [TerminationCondition.optimal, TerminationCondition.feasible])
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_lazy_OA_MINLP_simple_LOA_L2(self):
         """Test the LP/NLP decomposition algorithm."""

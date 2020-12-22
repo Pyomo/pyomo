@@ -14,6 +14,7 @@ from pyomo.gdp import Disjunct
 from pyomo.network import Port
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc, SolverResults
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 
 def solve_linear_GDP(linear_GDP_model, solve_data, config):
@@ -170,11 +171,15 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
 
     """
     tmp_args = deepcopy(config.mip_solver_args)
-    # TODO This solver option is specific to Gurobi.
-    tmp_args['options'] = tmp_args.get('options', {})
-    tmp_args['options']['DualReductions'] = 0
+    if config.mip_solver == 'gurobi':
+        # This solver option is specific to Gurobi.
+        tmp_args['options'] = tmp_args.get('options', {})
+        tmp_args['options']['DualReductions'] = 0
+    mipopt = SolverFactory(config.mip_solver)
+    if isinstance(mipopt, PersistentSolver):
+        mipopt.set_instance(m)
     with SuppressInfeasibleWarning():
-        results = SolverFactory(config.mip_solver).solve(m, **tmp_args)
+        results = mipopt.solve(m, **tmp_args)
     termination_condition = results.solver.termination_condition
     return results, termination_condition
 
