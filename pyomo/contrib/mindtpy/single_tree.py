@@ -487,7 +487,10 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         config = self.config
         opt = self.opt
         master_mip = self.master_mip
-        cpx = opt._solver_model  # Cplex model
+
+        if solve_data.should_terminate:
+            self.abort()
+            return
 
         self.handle_lazy_master_feasible_solution(
             master_mip, solve_data, config, opt)
@@ -517,6 +520,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     solve_data.LB, config.bound_tolerance, solve_data.UB))
             solve_data.results.solver.termination_condition = tc.optimal
             self.abort()
+            return
         # solve subproblem
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = solve_subproblem(

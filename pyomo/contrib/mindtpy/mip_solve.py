@@ -106,10 +106,13 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
             master_mip_results = masteropt.solve(solve_data.mip,
                                                  tee=config.mip_solver_tee, **mip_args)
     except ValueError:
-        config.logger.warning('ValueError: Cannot load a SolverResults object with bad status: error. '
-                              'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
-                              "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
-                              'No integer solution is found, so the cplex solver will report an error status. ')
+        if config.single_tree:
+            config.logger.warning('Single tree failed.')
+            if config.strategy == 'GOA' or config.add_no_good_cuts:
+                config.logger.warning('ValueError: Cannot load a SolverResults object with bad status: error. '
+                                      'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
+                                      "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
+                                      'No integer solution is found, so the cplex solver will report an error status. ')
         return None, None
 
     if master_mip_results.solver.termination_condition is tc.optimal:
