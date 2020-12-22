@@ -229,8 +229,10 @@ class MindtPySolver(object):
                     config=config)
                 copy_var_list_values(
                     MindtPy.variable_list,
-                    solve_data.original_model.component_data_objects(Var),
+                    [i for i in solve_data.original_model.component_data_objects(
+                        Var) if not i.fixed],
                     config)
+                # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
 
             solve_data.results.problem.lower_bound = solve_data.LB
             solve_data.results.problem.upper_bound = solve_data.UB
