@@ -133,8 +133,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
 
     if regularization_problem:
         solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
-        solve_data.mip.MindtPy_utils.cuts.del_component(
-            'obj_reg_estimate')
+        solve_data.mip.MindtPy_utils.cuts.del_component('obj_reg_estimate')
         if config.add_regularization == 'level_L1':
             solve_data.mip.MindtPy_utils.del_component('L1_obj')
         elif config.add_regularization == 'level_L_infinity':
@@ -376,6 +375,9 @@ def setup_master(solve_data, config, fp, regularization_problem):
 
     sign_adjust = 1 if solve_data.objective_sense == minimize else - 1
     MindtPy.del_component('mip_obj')
+    if regularization_problem and config.single_tree:
+        MindtPy.del_component('loa_proj_mip_obj')
+        MindtPy.cuts.del_component('obj_reg_estimate')
 
     if fp:
         MindtPy.del_component('fp_mip_obj')

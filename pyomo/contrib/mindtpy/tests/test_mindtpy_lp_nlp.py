@@ -111,9 +111,8 @@ class TestMindtPy(unittest.TestCase):
                                 nlp_solver=required_solvers[0],
                                 obj_bound=10,
                                 single_tree=True)
-            # TODO: fix the bug of bound here
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal(self):
@@ -251,9 +250,8 @@ class TestMindtPy(unittest.TestCase):
                                 obj_bound=10,
                                 single_tree=True,
                                 add_regularization='level_L1')
-            # TODO: fix the bug of bound here
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal_LOA_L1(self):
@@ -395,9 +393,8 @@ class TestMindtPy(unittest.TestCase):
                                 obj_bound=10,
                                 single_tree=True,
                                 add_regularization='level_L2')
-            # TODO: fix the bug of bound here
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal_LOA_L2(self):
@@ -539,9 +536,8 @@ class TestMindtPy(unittest.TestCase):
                                 obj_bound=10,
                                 single_tree=True,
                                 add_regularization='level_L_infinity')
-            # TODO: fix the bug of bound here
-            # self.assertIs(results.solver.termination_condition,
-            #               TerminationCondition.optimal)
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal_LOA_L_inf(self):
