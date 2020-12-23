@@ -107,7 +107,10 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
                                                  tee=config.mip_solver_tee, **mip_args)
     except ValueError:
         if config.single_tree:
-            config.logger.warning('Single tree failed.')
+            config.logger.warning('Single tree terminate.')
+            if get_main_elapsed_time(solve_data.timing) >= config.time_limit - 2:
+                config.logger.warning('due to the timelimit.')
+                solve_data.results.solver.termination_condition = tc.maxTimeLimit
             if config.strategy == 'GOA' or config.add_no_good_cuts:
                 config.logger.warning('ValueError: Cannot load a SolverResults object with bad status: error. '
                                       'MIP solver failed. This usually happens in the single-tree GOA algorithm. '
