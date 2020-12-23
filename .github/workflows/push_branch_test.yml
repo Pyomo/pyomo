@@ -267,8 +267,6 @@ jobs:
         conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
         conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
         if test -z "${{matrix.slim}}"; then
-            # Note: CPLEX 12.9 (the last version in conda that supports
-            #    Python 2.7) causes a seg fault in the tests.
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
             conda install -q -y -c fico-xpress xpress \
