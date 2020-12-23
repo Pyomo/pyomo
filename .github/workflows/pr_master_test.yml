@@ -39,7 +39,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-18.04, macos-latest, windows-latest]
-        python: [2.7, 3.5, 3.6, 3.7, 3.8, 3.9, pypy2, pypy3]
+        python: [3.6, 3.7, 3.8, 3.9, pypy3]
         other: [""]
         category: ["nightly"]
         # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
@@ -103,9 +103,7 @@ jobs:
           PACKAGES: cython
 
         exclude:
-        - {os: macos-latest, python: pypy2}
         - {os: macos-latest, python: pypy3}
-        - {os: windows-latest, python: pypy2}
         - {os: windows-latest, python: pypy3}
 
     steps:
