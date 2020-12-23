@@ -62,7 +62,7 @@ class TempfileManagerClass:
                         "to specify the default location for Pyomo "
                         "temporary files has been deprecated.  "
                         "Please set TempfileManager.tempdir in "
-                        "pyomo.common.tempfiles", version='TBD')
+                        "pyomo.common.tempfiles", version='5.7.2')
 
         ans = tempfile.mkstemp(suffix=suffix, prefix=prefix, text=text, dir=dir)
         ans = list(ans)
@@ -105,7 +105,7 @@ class TempfileManagerClass:
                         "to specify the default location for Pyomo "
                         "temporary directories has been deprecated.  "
                         "Please set TempfileManager.tempdir in "
-                        "pyomo.common.tempfiles", version='TBD')
+                        "pyomo.common.tempfiles", version='5.7.2')
 
         dirname = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
         if self._ctr >= 0:
