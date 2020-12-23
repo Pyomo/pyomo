@@ -192,6 +192,7 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('ctype', Complementarity)
+        kwargs.setdefault('dense', False)
         _init = tuple( _arg for _arg in (
             kwargs.pop('initialize', None),
             kwargs.pop('rule', None),

@@ -23,6 +23,7 @@ Contributed packages distributed with Pyomo:
    mindtpy.rst
    satsolver.rst
    sensitivity_toolbox.rst
+   community.rst
 
 Contributed packages distributed independently of Pyomo, but accessible
 through ``pyomo.contrib``:

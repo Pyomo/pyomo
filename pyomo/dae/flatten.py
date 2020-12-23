@@ -47,14 +47,25 @@ def generate_time_only_slices(obj, time):
     # We now form a temporary slice that slices over all the regular
     # indices for a fixed value of the time index.
     tmp_sliced = {i: slice(None) for i in regular_idx}
-    tmp_fixed = {time_idx: time.first()}
+
+    # Need to choose some arbitrary time index to fix, but indices
+    # may have been skipped, so choosing e.g. time.first() is not
+    # reliable. Approach here is to take the first index we encounter
+    # when iterating over obj.
+    for idx in obj:
+        if idx.__class__ is not tuple:
+            idx = (idx,)
+        t = idx[time_idx]
+        break
+    tmp_fixed = {time_idx: t}
+
     tmp_ellipsis = ellipsis_idx
     _slice = IndexedComponent_slice(
         obj, tmp_fixed, tmp_sliced, tmp_ellipsis
     )
     # For each combination of regular indices, we can generate a single
     # slice over the time index
-    time_sliced = [time_idx]
+    time_sliced = {time_idx: slice(None)}
     for key in _slice.wildcard_keys():
         if type(key) is not tuple:
             key = (key,)

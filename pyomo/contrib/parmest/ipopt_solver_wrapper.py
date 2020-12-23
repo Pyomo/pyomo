@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.services
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import TerminationCondition
 
 def ipopt_solve_with_stats(model, solver, max_iter=500, max_cpu_time=120):
@@ -35,8 +35,8 @@ def ipopt_solve_with_stats(model, solver, max_iter=500, max_cpu_time=120):
     """
     # ToDo: Check that the "solver" is, in fact, IPOPT
 
-    pyutilib.services.TempfileManager.push()
-    tempfile = pyutilib.services.TempfileManager.create_tempfile(suffix='ipopt_out', text=True)
+    TempfileManager.push()
+    tempfile = TempfileManager.create_tempfile(suffix='ipopt_out', text=True)
     opts = {'output_file': tempfile,
             'max_iter': max_iter,
             'max_cpu_time': max_cpu_time}
@@ -67,5 +67,5 @@ def ipopt_solve_with_stats(model, solver, max_iter=500, max_cpu_time=120):
             line_m_2 = line_m_1
             line_m_1 = line
 
-    pyutilib.services.TempfileManager.pop(remove=True)
+    TempfileManager.pop(remove=True)
     return status_obj, solved, iters, time, regu

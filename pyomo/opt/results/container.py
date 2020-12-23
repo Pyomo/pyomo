@@ -13,7 +13,8 @@ __all__ = ['UndefinedData', 'undefined', 'ignore', 'ScalarData', 'ListContainer'
 import copy
 
 from math import inf
-from pyutilib.misc import Bunch
+from pyomo.common.collections import Bunch
+
 import enum
 from six import StringIO
 from six.moves import xrange

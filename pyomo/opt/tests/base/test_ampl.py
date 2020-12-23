@@ -17,12 +17,12 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
-import pyutilib.common
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.errors import ApplicationError
 
 import pyomo.opt
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 def filter(text):
     return 'Problem:' in text or text.startswith('NAME')
@@ -40,11 +40,11 @@ class Test(unittest.TestCase):
         solvers = pyomo.opt.check_available_solvers('glpk')
 
     def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test3_write_nl(self):
         """ Convert from AMPL to NL """
@@ -52,7 +52,7 @@ class Test(unittest.TestCase):
         """ Convert from MOD+DAT to NL """
         try:
             self.model.write(currdir+'test3.nl')
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             err = sys.exc_info()[1]
             if pyomo.common.Executable("ampl"):
                 self.fail("Unexpected ApplicationError - ampl is enabled "
@@ -71,7 +71,7 @@ class Test(unittest.TestCase):
         self.model = pyomo.opt.AmplModel(currdir+'test3.mod')
         try:
             self.model.write(currdir+'test3.lp')
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             err = sys.exc_info()[1]
             if pyomo.common.Executable("glpsol"):
                 self.fail("Unexpected ApplicationError - glpsol is enabled "
@@ -92,7 +92,7 @@ class Test(unittest.TestCase):
         self.model = pyomo.opt.AmplModel(currdir+'test3.mod')
         try:
             self.model.write(currdir+'test3.mps')
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             err = sys.exc_info()[1]
             if pyomo.common.Executable("ampl"):
                 self.fail("Unexpected ApplicationError - ampl is enabled "
@@ -111,7 +111,7 @@ class Test(unittest.TestCase):
         self.model = pyomo.opt.AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
         try:
             self.model.write(currdir+'test3a.nl')
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             err = sys.exc_info()[1]
             if pyomo.common.Executable("ampl"):
                 self.fail("Unexpected ApplicationError - ampl is enabled "
@@ -130,7 +130,7 @@ class Test(unittest.TestCase):
         self.model = pyomo.opt.AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
         try:
             self.model.write(currdir+'test3a.lp')
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             err = sys.exc_info()[1]
             if pyomo.common.Executable("glpsol"):
                 self.fail("Unexpected ApplicationError - glpsol is enabled "
@@ -151,7 +151,7 @@ class Test(unittest.TestCase):
         self.model = pyomo.opt.AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
         try:
             self.model.write(currdir+'test3a.mps')
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             err = sys.exc_info()[1]
             if pyomo.common.Executable("ampl"):
                 self.fail("Unexpected ApplicationError - ampl is enabled "

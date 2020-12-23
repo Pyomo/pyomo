@@ -47,7 +47,7 @@ from pyomo.core import (
     Block, ConstraintList, NonNegativeReals, Set, Suffix, Var,
     VarList, TransformationFactory, Objective)
 from pyomo.opt import SolverFactory, SolverResults
-from pyutilib.misc import Container
+from pyomo.common.collections import Container
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.mindtpy.config_options import _get_GDPopt_config
 

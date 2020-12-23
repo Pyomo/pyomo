@@ -15,12 +15,12 @@ import time
 import logging
 
 from pyomo.common import Executable
-from pyutilib.common import ApplicationError
-from pyutilib.misc import Options, Bunch, yaml_fix
-from pyutilib.services import TempfileManager
+from pyomo.common.errors import ApplicationError
+from pyutilib.misc import yaml_fix
+from pyomo.common.tempfiles import TempfileManager
 from pyutilib.subprocess import run
 
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, Options, Bunch
 from pyomo.opt.base import (
     ProblemFormat, ResultsFormat, OptSolver, BranchDirection,
 )
