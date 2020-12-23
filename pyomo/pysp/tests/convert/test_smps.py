@@ -17,7 +17,7 @@ import filecmp
 import shutil
 import subprocess
 import sys
-from pyutilib.subprocess import run
+
 import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyomo.pysp.util.misc import (_get_test_nameserver,
@@ -36,17 +36,6 @@ _run_verbose = True
 
 @unittest.category('nightly')
 class TestConvertSMPSSimple(unittest.TestCase):
-
-    @unittest.nottest
-    def _assert_contains(self, filename, *checkstrs):
-        with open(filename, 'rb') as f:
-            fdata = f.read()
-        for checkstr in checkstrs:
-            if re.search(checkstr, fdata) is None:
-                self.fail("File %s does not contain test string:\n%s\n"
-                          "------------------------------------------\n"
-                          "File data:\n%s\n"
-                          % (filename, checkstr, fdata))
 
     @unittest.nottest
     def _get_cmd(self,
@@ -87,15 +76,14 @@ class TestConvertSMPSSimple(unittest.TestCase):
     @unittest.nottest
     def _run_bad_conversion_test(self, *args, **kwds):
         cmd, output_dir = self._get_cmd(*args, **kwds)
-        outfile = output_dir+".out"
-        rc = run(cmd, outfile=outfile)
-        self.assertNotEqual(rc[0], 0)
-        self._assert_contains(
-            outfile,
-            b"ValueError: One or more deterministic parts of the problem found in file")
+        result = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+           b"ValueError: One or more deterministic parts of the problem found in file",
+           result.stderr)
         shutil.rmtree(output_dir,
                       ignore_errors=True)
-        os.remove(outfile)
 
     def test_bad_variable_bounds_MPS(self):
         self._run_bad_conversion_test(
@@ -150,52 +138,43 @@ class TestConvertSMPSSimple(unittest.TestCase):
     def test_too_many_declarations(self):
         cmd, output_dir = self._get_cmd(
             join(thisdir, "model_too_many_declarations.py"))
-        outfile = output_dir+".out"
-        rc = run(cmd, outfile=outfile)
-        self.assertNotEqual(rc[0], 0)
-        self._assert_contains(
-            outfile,
-            b"RuntimeError: Component b.c was "
-            b"assigned multiple declarations in annotation type "
-            b"StochasticConstraintBodyAnnotation. To correct this "
-            b"issue, ensure that multiple container components under "
-            b"which the component might be stored \(such as a Block "
-            b"and an indexed Constraint\) are not simultaneously set in "
-            b"this annotation.")
+        result = subprocess.run(cmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            """RuntimeError: Component b.c was assigned multiple declarations in annotation type StochasticConstraintBodyAnnotation. To correct this issue, ensure that multiple container components under which the component might be stored (such as a Block and an indexed Constraint) are not simultaneously set in this annotation.""".encode('utf-8'),
+            result.stderr)
         shutil.rmtree(output_dir,
                       ignore_errors=True)
-        os.remove(outfile)
 
     def test_bad_component_type(self):
         cmd, output_dir = self._get_cmd(
             join(thisdir, "model_bad_component_type.py"))
-        outfile = output_dir+".out"
-        rc = run(cmd, outfile=outfile)
-        self.assertNotEqual(rc[0], 0)
-        self._assert_contains(
-            outfile,
+        result = subprocess.run(cmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
             b"TypeError: Declarations "
             b"in annotation type StochasticConstraintBodyAnnotation "
             b"must be of types Constraint or Block. Invalid type: "
-            b"<class 'pyomo.core.base.objective.SimpleObjective'>")
+            b"<class 'pyomo.core.base.objective.SimpleObjective'>",
+            result.stderr)
         shutil.rmtree(output_dir,
                       ignore_errors=True)
-        os.remove(outfile)
 
     def test_unsupported_variable_bounds(self):
         cmd, output_dir = self._get_cmd(
             join(thisdir, "model_unsupported_variable_bounds.py"))
-        outfile = output_dir+".out"
-        rc = run(cmd, outfile=outfile)
-        self.assertNotEqual(rc[0], 0)
-        self._assert_contains(
-            outfile,
+        result = subprocess.run(cmd, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
             b"ValueError: The SMPS writer does not currently support "
             b"stochastic variable bounds. Invalid annotation type: "
-            b"StochasticVariableBoundsAnnotation")
+            b"StochasticVariableBoundsAnnotation",
+            result.stderr)
         shutil.rmtree(output_dir,
                       ignore_errors=True)
-        os.remove(outfile)
 
 class _SMPSTesterBase(object):
 

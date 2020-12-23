@@ -15,8 +15,7 @@ import os
 import platform
 import re
 import sys
-
-from pyutilib.subprocess import run
+import subprocess
 
 from .config import PYOMO_CONFIG_DIR
 from .deprecation import deprecated
@@ -98,9 +97,11 @@ class FileDownloader(object):
 
     @classmethod
     def _get_distver_from_lsb_release(cls):
-        rc, dist = run(['lsb_release', '-si'])
-        rc, ver = run(['lsb_release', '-sr'])
-        return cls._map_dist(dist.lower().strip()), ver.strip()
+        dist = subprocess.run(['lsb_release -si'], stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, shell=True)
+        ver = subprocess.run(['lsb_release -sr'], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, shell=True)
+        return cls._map_dist(dist.stdout.decode("utf-8").lower().strip()), ver.stdout.decode("utf-8").strip()
 
     @classmethod
     def _get_distver_from_distro(cls):
@@ -130,7 +131,7 @@ class FileDownloader(object):
                 dist, ver = cls._get_distver_from_distro()
             elif os.path.exists('/etc/redhat-release'):
                 dist, ver = cls._get_distver_from_redhat_release()
-            elif run(['lsb_release'])[0] == 0:
+            elif subprocess.run(['lsb_release'], shell=True).returncode == 0:
                 dist, ver = cls._get_distver_from_lsb_release()
             elif os.path.exists('/etc/os-release'):
                 # Note that (at least on centos), os_release is an

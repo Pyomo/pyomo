@@ -16,11 +16,11 @@ import shutil
 import stat
 import sys
 import tempfile
+import subprocess
 
 from six import StringIO
 
 import pyutilib.th as unittest
-from pyutilib.subprocess import run
 
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
@@ -84,16 +84,19 @@ class TestFileUtils(unittest.TestCase):
         self.assertEquals(_this_file, __file__.replace('.pyc','.py'))
         # Note that in some versions of PyPy, this can return <module>
         # instead of the normal <string>
-        self.assertIn(run([
+        self.assertIn(subprocess.run([
             sys.executable,'-c',
             'from pyomo.common.fileutils import this_file;'
             'print(this_file())'
-        ])[1].strip(), ['<string>','<module>'])
-        self.assertEquals(run(
+        ], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE).stdout.decode("utf-8").strip(),
+            ['<string>','<module>'])
+        self.assertEquals(subprocess.run(
             [sys.executable],
-            stdin='from pyomo.common.fileutils import this_file;'
-            'print(this_file())'
-        )[1].strip(), '<stdin>')
+            input='from pyomo.common.fileutils import this_file;'
+            'print(this_file())'.encode('utf-8'), stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        ).stdout.decode("utf-8").strip(), '<stdin>')
 
     def test_this_file_dir(self):
         expected_path = os.path.join('pyomo','common','tests')
