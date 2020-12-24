@@ -376,6 +376,7 @@ def check_config(config):
     # configuration confirmation
     if config.add_regularization in {'grad_lag', 'hess_lag'}:
         config.calculate_dual = True
+    if config.add_regularization is not None:
         if config.projection_mip_threads == 0 and config.threads > 0:
             config.projection_mip_threads = config.threads
             config.logger.info('Set projection_mip_threads equal to threads')
