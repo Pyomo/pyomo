@@ -105,7 +105,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
         with time_code(solve_data.timing, 'regularization master' if regularization_problem else ('fp master' if fp else 'master')):
             master_mip_results = masteropt.solve(solve_data.mip,
                                                  tee=config.mip_solver_tee, **mip_args)
-    except ValueError:
+    except (ValueError, AttributeError):
         if config.single_tree:
             config.logger.warning('Single tree terminate.')
             if get_main_elapsed_time(solve_data.timing) >= config.time_limit - 2:
@@ -117,7 +117,6 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
                                       "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
                                       'No integer solution is found, so the cplex solver will report an error status. ')
         return None, None
-
     if master_mip_results.solver.termination_condition is tc.optimal:
         if config.single_tree and config.add_no_good_cuts is False and regularization_problem is False:
             if solve_data.objective_sense == minimize:
