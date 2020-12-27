@@ -256,6 +256,12 @@ def _add_tolerance_configs(CONFIG):
         default=1E-4,
         domain=PositiveFloat,
         description='Bound tolerance',
+        doc='Absolute tolerance for bound feasibility checks.'
+    ))
+    CONFIG.declare('relative_bound_tolerance', ConfigValue(
+        default=1E-3,
+        domain=PositiveFloat,
+        description='Relative bound tolerance',
         doc='Relative tolerance for bound feasibility checks.'
     ))
     CONFIG.declare('small_dual_tolerance', ConfigValue(

@@ -207,6 +207,14 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                 solve_data.LB, config.bound_tolerance, solve_data.UB))
         solve_data.results.solver.termination_condition = tc.optimal
         return True
+    # Check relative bound convergence
+    if solve_data.best_solution_found is not None:
+        if solve_data.UB - solve_data.LB <= config.relative_bound_tolerance * (abs(solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB) + 1E-10):
+            config.logger.info(
+                'MindtPy exiting on bound convergence. '
+                '(UB: {} - LB: {})/ (1e-10+|bestinteger|:{}) <= relative tolerance: {}'.format(solve_data.UB, solve_data.LB, abs(solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB), config.relative_bound_tolerance))
+            solve_data.results.solver.termination_condition = tc.optimal
+            return True
 
     # Check iteration limit
     if solve_data.mip_iter >= config.iteration_limit:

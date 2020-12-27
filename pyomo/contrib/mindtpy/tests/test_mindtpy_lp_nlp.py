@@ -313,7 +313,7 @@ class TestMindtPy(unittest.TestCase):
                                 )
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_lazy_OA_8PP_LOA_L2(self):
@@ -456,7 +456,7 @@ class TestMindtPy(unittest.TestCase):
                                 )
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_lazy_OA_8PP_LOA_L_inf(self):
@@ -600,7 +600,7 @@ class TestMindtPy(unittest.TestCase):
                                 )
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_lazy_OA_8PP_QOA_grad(self):
@@ -744,7 +744,7 @@ class TestMindtPy(unittest.TestCase):
                                 )
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
     def test_lazy_OA_8PP_QOA_hess(self):
@@ -888,7 +888,7 @@ class TestMindtPy(unittest.TestCase):
                                 )
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
 
