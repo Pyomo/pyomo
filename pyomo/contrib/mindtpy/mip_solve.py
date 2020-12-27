@@ -97,7 +97,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
         masteropt._solver_model.set_log_stream(None)
         masteropt._solver_model.set_error_stream(None)
     mip_args = dict(config.mip_solver_args)
-    if config.mip_solver in {'cplex', 'gurobi'}:
+    if config.mip_solver in {'cplex','cplex_persistent', 'gurobi','gurobi_persistent'}:
         mip_args['warmstart'] = True
     set_solver_options(masteropt, solve_data, config,
                        type='mip', regularization=regularization_problem)
