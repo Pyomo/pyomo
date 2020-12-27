@@ -437,14 +437,17 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
         opt.options['mipgap'] = 0.001
         if regularization == True:
             if solver_name == 'cplex':
-                opt.options['mip limits populate'] == 10
+                opt.options['mip limits populate'] = 10
+                opt.options['mip strategy presolvenode'] = 3
             elif solver_name == 'gurobi':
                 opt.options['SolutionLimit'] = 10
+                opt.options['Presolve'] = 2
     elif solver_name == 'cplex_persistent':
         opt.options['timelimit'] = remaining
         opt._solver_model.parameters.mip.tolerances.mipgap.set(0.001)
         if regularization == True:
             opt._solver_model.parameters.mip.limits.populate.set(10)
+            opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
     elif solver_name == 'glpk':
         opt.options['tmlim'] = remaining
         # opt.options['mipgap'] = 0.001
