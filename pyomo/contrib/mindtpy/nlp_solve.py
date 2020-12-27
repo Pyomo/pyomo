@@ -95,7 +95,7 @@ def solve_subproblem(solve_data, config):
             # TODO: change logic to c_leq based on benchmarking
     try:
         TransformationFactory('contrib.deactivate_trivial_constraints')\
-            .apply_to(fixed_nlp, tmp=True, ignore_infeasible=False)
+            .apply_to(fixed_nlp, tmp=True, ignore_infeasible=False, tolerance=config.constraint_tolerance)
     except ValueError:
         config.logger.warning(
             'infeasibility detected in deactivate_trivial_constraints')
