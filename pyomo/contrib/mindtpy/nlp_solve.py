@@ -225,6 +225,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
     # TODO try something else? Reinitialize with different initial
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
+    solve_data.nlp_infeasible_counter += 1
     if config.calculate_dual:
         for c in fixed_nlp.component_data_objects(ctype=Constraint):
             rhs = c.upper if c. has_ub() else c.lower

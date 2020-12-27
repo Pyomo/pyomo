@@ -167,6 +167,7 @@ class MindtPySolver(object):
             solve_data.nlp_iter = 0
             solve_data.mip_iter = 0
             solve_data.mip_subiter = 0
+            solve_data.nlp_infeasible_counter = 0
             if config.init_strategy == 'FP':
                 solve_data.fp_iter = 1
 
@@ -241,6 +242,7 @@ class MindtPySolver(object):
         solve_data.results.solver.user_time = solve_data.timing.total
         solve_data.results.solver.wallclock_time = solve_data.timing.total
         solve_data.results.solver.iterations = solve_data.mip_iter
+        solve_data.results.solver.num_infeasible_nlp_subproblem = solve_data.nlp_infeasible_counter
         solve_data.results.solver.best_solution_found_time = solve_data.best_solution_found_time
 
         if config.single_tree:
