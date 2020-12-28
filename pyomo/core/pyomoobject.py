@@ -40,6 +40,7 @@ class PyomoObject(object):
         """Return True if this class is a Pyomo Boolean value, variable, or expression."""
         return False
 
-    def is_reference(self):
-        """Return True if this object "references" another model component."""
-        return False
+    def owns_data(self):
+        """Return True if this object is the owner of its data. Each data
+        object should have exactly one owner."""
+        return True
