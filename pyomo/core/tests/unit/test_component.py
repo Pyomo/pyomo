@@ -95,6 +95,12 @@ class TestComponent(unittest.TestCase):
                     '2 :  None :  None :  None : False :  True :  Reals\n'
         self.assertEqual(correct_s, stream.getvalue())
 
+    def test_owns_data(self):
+        m = ConcreteModel()
+        class _NotSpecified(object):
+            pass
+        m.comp = Component(ctype=_NotSpecified)
+        self.assertTrue(m.comp.owns_data())
 
 class TestEnviron(unittest.TestCase):
 
