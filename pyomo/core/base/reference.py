@@ -10,7 +10,11 @@
 
 from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
-from pyomo.core.base.set import SetOf, _SetDataBase
+from pyomo.common.collections import (
+    UserDict, OrderedDict, Mapping, MutableMapping,
+    Set as collections_Set, Sequence,
+)
+from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set
@@ -20,14 +24,7 @@ from pyomo.core.base.indexed_component_slice import (
 )
 
 import six
-from six import iteritems, advance_iterator
-
-if six.PY3:
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Set as collections_Set
-else:
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Set as collections_Set
+from six import iteritems, itervalues, advance_iterator
 
 _NotSpecified = object()
 
@@ -163,10 +160,10 @@ class _fill_in_known_wildcards(object):
                            % ( self.base_key, ))
 
 
-class SliceEllipsisLookupError(Exception):
+class SliceEllipsisLookupError(LookupError):
     pass
 
-class _ReferenceDict(collections_MutableMapping):
+class _ReferenceDict(MutableMapping):
     """A dict-like object whose values are defined by a slice.
 
     This implements a dict-like object whose keys and values are defined
@@ -189,8 +186,6 @@ class _ReferenceDict(collections_MutableMapping):
             # This calls IC_slice_iter.__next__, which calls
             # _fill_in_known_wildcards.
             return True
-        except (StopIteration, KeyError):
-            return False
         except SliceEllipsisLookupError:
             # We failed because the notion of "location" in an index
             # is ambiguous if the index_set has dimen None.
@@ -205,16 +200,16 @@ class _ReferenceDict(collections_MutableMapping):
                 if _iter.get_last_index_wildcards() == key:
                     return True
             return False
+        except (StopIteration, LookupError):
+            return False
 
     def __getitem__(self, key):
         try:
+            # This calls IC_slice_iter.__next__, which calls
+            # _fill_in_known_wildcards.
             return advance_iterator(
                 self._get_iter(self._slice, key, get_if_not_present=True)
             )
-            # This calls IC_slice_iter.__next__, which calls
-            # _fill_in_known_wildcards.
-        except StopIteration:
-            raise KeyError("KeyError: %s" % (key,))
         except SliceEllipsisLookupError:
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
@@ -223,6 +218,8 @@ class _ReferenceDict(collections_MutableMapping):
             for item in _iter:
                 if _iter.get_last_index_wildcards() == key:
                     return item
+            raise KeyError("KeyError: %s" % (key,))
+        except (StopIteration, LookupError):
             raise KeyError("KeyError: %s" % (key,))
 
     def __setitem__(self, key, val):
@@ -343,6 +340,15 @@ if six.PY3:
     _ReferenceDict.items = _ReferenceDict.iteritems
     _ReferenceDict.values = _ReferenceDict.itervalues
 
+
+class _ReferenceDict_mapping(UserDict):
+    def __init__(self, data):
+        # Overwrite the internal dict to keep a reference to whatever
+        # mapping was passed in (potentially preserving the
+        # "orderedness" of the source dictionary).
+        self.data = data
+
+
 class _ReferenceSet(collections_Set):
     """A set-like object whose values are defined by a slice.
 
@@ -366,8 +372,6 @@ class _ReferenceSet(collections_Set):
         try:
             advance_iterator(self._get_iter(self._slice, key))
             return True
-        except (StopIteration, KeyError):
-            return False
         except SliceEllipsisLookupError:
             if type(key) is tuple and len(key) == 1:
                 key = key[0]
@@ -376,6 +380,8 @@ class _ReferenceSet(collections_Set):
             for item in _iter:
                 if _iter.get_last_index_wildcards() == key:
                     return True
+            return False
+        except (StopIteration, LookupError):
             return False
 
     def __iter__(self):
@@ -598,17 +604,32 @@ def Reference(reference, ctype=_NotSpecified):
 
     """
     if isinstance(reference, IndexedComponent_slice):
-        pass
+        _data = _ReferenceDict(reference)
+        _iter = iter(reference)
+        slice_idx = []
+        index = None
     elif isinstance(reference, Component):
         reference = reference[...]
+        _data = _ReferenceDict(reference)
+        _iter = iter(reference)
+        slice_idx = []
+        index = None
+    elif isinstance(reference, Mapping):
+        _data = _ReferenceDict_mapping(dict(reference))
+        _iter = itervalues(_data)
+        slice_idx = None
+        index = SetOf(_data)
+    elif isinstance(reference, Sequence):
+        _data = _ReferenceDict_mapping(OrderedDict(enumerate(reference)))
+        _iter = itervalues(_data)
+        slice_idx = None
+        index = OrderedSetOf(_data)
     else:
         raise TypeError(
             "First argument to Reference constructors must be a "
-            "component or component slice (received %s)"
+            "component, component slice, Sequence, or Mapping (received %s)"
             % (type(reference).__name__,))
 
-    _data = _ReferenceDict(reference)
-    _iter = iter(reference)
     if ctype is _NotSpecified:
         ctypes = set()
     else:
@@ -618,7 +639,7 @@ def Reference(reference, ctype=_NotSpecified):
         # can break out as soon as we know that there are not common
         # subsets).
         ctypes = set((1,2))
-    index = []
+
     for obj in _iter:
         ctypes.add(obj.ctype)
         if not isinstance(obj, ComponentData):
@@ -633,31 +654,33 @@ def Reference(reference, ctype=_NotSpecified):
         # Note that we want to walk the entire slice, unless we can
         # prove that BOTH there aren't common indexing sets (i.e., index
         # is None) AND there is more than one ctype.
-        if index is not None:
+        if slice_idx is not None:
             # As long as we haven't ruled out the possibility of common
             # wildcard sets, then we will use _identify_wildcard_sets to
             # identify the wilcards for this obj and check compatibility
             # of the wildcards with any previously-identified wildcards.
-            index = _identify_wildcard_sets(_iter._iter_stack, index)
+            slice_idx = _identify_wildcard_sets(_iter._iter_stack, slice_idx)
         elif len(ctypes) > 1:
             break
-    if not index:
-        index = SetOf(_ReferenceSet(reference))
-    else:
-        wildcards = sum((sorted(iteritems(lvl)) for lvl in index
-                         if lvl is not None), [])
-        # Wildcards is a list of (coordinate, set) tuples.  Coordinate
-        # is that within the subsets list, and set is a wildcard set.
-        index = wildcards[0][1]
-        # index is the first wildcard set.
-        if not isinstance(index, _SetDataBase):
-            index = SetOf(index)
-        for lvl, idx in wildcards[1:]:
-            if not isinstance(idx, _SetDataBase):
-                idx = SetOf(idx)
-            index = index * idx
-        # index is now either a single Set, or a SetProduct of the
-        # wildcard sets.
+
+    if index is None:
+        if not slice_idx:
+            index = SetOf(_ReferenceSet(reference))
+        else:
+            wildcards = sum((sorted(iteritems(lvl)) for lvl in slice_idx
+                             if lvl is not None), [])
+            # Wildcards is a list of (coordinate, set) tuples.  Coordinate
+            # is that within the subsets list, and set is a wildcard set.
+            index = wildcards[0][1]
+            # index is the first wildcard set.
+            if not isinstance(index, _SetDataBase):
+                index = SetOf(index)
+            for lvl, idx in wildcards[1:]:
+                if not isinstance(idx, _SetDataBase):
+                    idx = SetOf(idx)
+                index = index * idx
+            # index is now either a single Set, or a SetProduct of the
+            # wildcard sets.
     if ctype is _NotSpecified:
         if len(ctypes) == 1:
             ctype = ctypes.pop()

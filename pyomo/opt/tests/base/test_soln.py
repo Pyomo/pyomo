@@ -19,19 +19,19 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 import pyutilib.misc
-import pyutilib.services
 
 from pyomo.common.dependencies import yaml_available
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 
 from six import iterkeys
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 class Test(unittest.TestCase):
 
     def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
         self.results = pyomo.opt.SolverResults()
         self.soln = self.results.solution.add()
         self.soln.variable[1]={"Value" : 0}
@@ -39,8 +39,8 @@ class Test(unittest.TestCase):
         self.soln.variable[4]={"Value" : 0}
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
         del self.results
 
     def test_write_solution1(self):
@@ -172,6 +172,5 @@ class Test(unittest.TestCase):
         self.assertEqual(self.soln.variable[4]["Slack"],0.4)
 
 if __name__ == "__main__":
-    import pyutilib.misc
     #sys.settrace(pyutilib.misc.traceit)
     unittest.main()

@@ -14,6 +14,7 @@ import os.path
 
 import pyutilib.subprocess
 import pyomo.common
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.errors import ApplicationError
 
 from pyomo.opt.base import ProblemFormat, ConverterError
@@ -59,9 +60,9 @@ class PicoMIPConverter(object):
         if target=="cpxlp":
             target="lp"
         # NOTE: if you have an extra "." in the suffix, the pico_convert program fails to output to the correct filename.
-        output_filename = pyutilib.services.TempfileManager.create_tempfile(suffix = 'pico_convert.' + target)
+        output_filename = TempfileManager.create_tempfile(suffix = 'pico_convert.' + target)
         if not isinstance(args[2],six.string_types):
-            fname= pyutilib.services.TempfileManager.create_tempfile(suffix= 'pico_convert.' +str(args[0]))
+            fname= TempfileManager.create_tempfile(suffix= 'pico_convert.' +str(args[0]))
             args[2].write(filename=fname, format=args[1])
             cmd = pico_convert_cmd +" --output="+output_filename+" "+target+" "+fname
         else:

@@ -23,17 +23,20 @@ class IndexedComponent_slice(object):
     calls to __getitem__ / __getattr__ / __call__ happen *before* the
     call to __iter__()
     """
-    ATTR_MASK = 4
-    ITEM_MASK = 8
-    CALL_MASK = 16
+    ATTR_MASK = 8
+    ITEM_MASK = 16
+    CALL_MASK = 32
+    GET_MASK = 1
+    SET_MASK = 2
+    DEL_MASK = 4
 
     slice_info = 0
-    get_attribute = ATTR_MASK | 1
-    set_attribute = ATTR_MASK | 2
-    del_attribute = ATTR_MASK | 3
-    get_item = ITEM_MASK | 1
-    set_item = ITEM_MASK | 2
-    del_item = ITEM_MASK | 3
+    get_attribute = ATTR_MASK | GET_MASK
+    set_attribute = ATTR_MASK | SET_MASK
+    del_attribute = ATTR_MASK | DEL_MASK
+    get_item = ITEM_MASK | GET_MASK
+    set_item = ITEM_MASK | SET_MASK
+    del_item = ITEM_MASK | DEL_MASK
     call = CALL_MASK
 
     def __init__(self, component, fixed=None, sliced=None, ellipsis=None):
@@ -276,14 +279,6 @@ class IndexedComponent_slice(object):
         return ((_iter.get_last_index(), _) for _ in _iter)
 
 
-def _tuple_from_possible_scalar(source):
-    if type(source) is not tuple:
-        # This will behave poorly for non-tuple,
-        # non-string iterables, but we do not
-        # expect non-tuple, non-string iterables.
-        return (source,)
-    return source
-
 def _freeze(info):
     if info[0] == IndexedComponent_slice.slice_info:
         return (
@@ -294,7 +289,10 @@ def _freeze(info):
             info[1][3]  # elipsis index
         )
     elif info[0] & IndexedComponent_slice.ITEM_MASK:
-        index = _tuple_from_possible_scalar(info[1])
+        if type(info[1]) is not tuple:
+            index = (info[1],)
+        else:
+            index = info[1]
         return (
             info[0],
             tuple( (x.start,x.stop,x.step) if type(x) is slice else x
@@ -562,7 +560,7 @@ class _IndexedComponent_slice_iter(object):
                     try:
                         # Get the specified index for the current component:
                         _comp = _comp.__getitem__( _call[1] )
-                    except KeyError:
+                    except LookupError:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
                         # allow users to (silently) ignore any key
