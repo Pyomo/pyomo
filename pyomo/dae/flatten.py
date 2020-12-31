@@ -184,6 +184,26 @@ class _NotAnIndex(object):
     """
     pass
 
+def _fill_indices(filled_index, index):
+    # We need to generate a new index for every entry of `product`,
+    # and want to reuse `partial_index_list` as a starting point,
+    # so we copy it here.
+    j = 0
+    for i, val in enumerate(filled_index):
+        if val is _NotAnIndex:
+            filled_index[i] = index[j]
+            # `index` is always a tuple, so this is valid
+            j += 1
+    # Make sure `partial_index_list` has the same number of vacancies
+    # as `product` has factors. Not _strictly_ necessary.
+    assert j == len(index)
+    filled_index = tuple(filled_index)
+
+    if len(filled_index) == 1:
+        return filled_index[0]
+    else:
+        return filled_index
+
 def _fill_indices_from_product(partial_index_list, product):
     """ 
     `partial_index_list` is a list of indices, each corresponding to a
@@ -205,31 +225,36 @@ def _fill_indices_from_product(partial_index_list, product):
             # I do not have to worry about having a product-of-products
             # here because I created the product from "unfactorable sets"
             #
-            # To simplify some later code we convert scalar to tuple.
-            if type(index) is not tuple:
-                # NOTE: I don't think I ever get here.
-                # TODO: test this.
-                # This would not be reliable as it could not distinguish
-                # between ('a', 1) and (('a', 1),)
-                # NOTE: My tests pass without this check and conversion
-                index = (index,)
-            # We need to generate a new index for every entry of `product`,
-            # and want to reuse `partial_index_list` as a starting point,
-            # so we copy it here.
+# TODO: Remove this code
+#            # To simplify some later code we convert scalar to tuple.
+#            if type(index) is not tuple:
+#                # NOTE: I don't think I ever get here.
+#                # TODO: test this.
+#                # This would not be reliable as it could not distinguish
+#                # between ('a', 1) and (('a', 1),)
+#                # NOTE: My tests pass without this check and conversion
+#                index = (index,)
+#            # We need to generate a new index for every entry of `product`,
+#            # and want to reuse `partial_index_list` as a starting point,
+#            # so we copy it here.
+#            filled_index = partial_index_list.copy()
+#            j = 0
+#            for i, val in enumerate(filled_index):
+#                if val is _NotAnIndex:
+#                    filled_index[i] = index[j]
+#                    # `index` is always a tuple, so this is valid
+#                    j += 1
+#            # Make sure `partial_index_list` has the same number of vacancies
+#            # as `product` has factors. Not _strictly_ necessary.
+#            assert j == len(index)
+#            filled_index = tuple(filled_index)
+#
+
             filled_index = partial_index_list.copy()
-            j = 0
-            for i, val in enumerate(filled_index):
-                if val is _NotAnIndex:
-                    filled_index[i] = index[j]
-                    # `index` is always a tuple, so this is valid
-                    j += 1
-            # Make sure `partial_index_list` has the same number of vacancies
-            # as `product` has factors. Not _strictly_ necessary.
-            assert j == len(index)
-            filled_index = tuple(filled_index)
 
             normalize_index.flatten = _normalize_index_flatten
-            # `filled_index` can now be used in the user's intended way
+
+            # filled_index can now be used in the user's intended way
             # This determines how we will access the component's data
             # with our new index, which is currently _completely_ unflattened
             # (i.e. a tuple-of-tuples, no further nesting).
@@ -242,10 +267,14 @@ def _fill_indices_from_product(partial_index_list, product):
             # >>> comp[((1,'a'),1)]
             # because `comp` was created with two set arguments, the first
             # of which was already a product.
-            if len(filled_index) == 1:
-                yield filled_index[0]
-            else:
-                yield filled_index
+
+#            if len(filled_index) == 1:
+#                yield filled_index[0]
+#            else:
+#                yield filled_index
+
+            yield _fill_indices(filled_index, index)
+
             normalize_index.flatten = False
             # Want to get the unflattened factors when we advance the
             # `product` iterator.
@@ -327,6 +356,12 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
         new_sets = [s for s in subsets if s in sets]
         other_sets = [s for s in subsets if s not in sets]
 
+        # For each set we are slicing, if the user specified an index, put it
+        # here. Otherwise, slice the set and we will call next(iter(_slice))
+        # once the full index is constructed.
+        descend_index_sliced_sets = tuple(index_map[s] if s in index_map else 
+                get_slice_for_set(s) for s in new_sets)
+
         # Extend stack with new matched indices.
         index_stack.extend(new_sets)
 
@@ -346,7 +381,29 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                         #
                         # Need a function to replace slices in new_index with
                         # indices from temp_idx...
-                        data = next(iter(sub_slice))
+#                        ref = Reference(sub_slice.duplicate(), ctype=ctype)
+                        # Need to get the index I want for ref.
+                        # Should use the indices from `cross_prod`, plus the
+                        # indices from my reference map. The former are contained
+                        # in `new_index`. The latter need to be obtained for s
+                        # in sets, then put in the right place in new_index.
+                        tupl_new_index = (new_index,) if type(new_index) \
+                                is not tuple else new_index
+                        incomplete_descend_index = list(
+                                idx if subset not in sets else _NotAnIndex
+                                for idx, subset in zip(tupl_new_index, subsets)
+                                )
+                        descend_index = _fill_indices(incomplete_descend_index,
+                                descend_index_sliced_sets)
+
+                        descend_slice = sub[descend_index]
+                        data = descend_slice if type(descend_slice) is not \
+                            IndexedComponent_slice else next(iter(descend_slice))
+                        # If the user has supplied enough indices that we can
+                        # descend into a concrete component, we do so. Otherwise
+                        # we use the user's indices, slice the rest, and advance
+                        # the iterator.
+
                         # TODO: try/except
                         # What is the risk here? sub_slice is "empty."
                         # This is definitely possible if the block is (somehow)
@@ -370,7 +427,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                     # Trying to access a concrete data object for a "skipped" index.
                     pass
         else:
-            # Either sub is a simple component, or we are slicing
+            # Either `sub` is a simple component, or we are slicing
             # all of its sets.
             #
             # In this case it may be unnecessary to slice at all...
@@ -383,6 +440,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
             if type(sub_slice) is IndexedComponent_slice:
                 # Get an arbitrary BlockData to descend into.
                 # Should be able to use a supplied index here...
+                # TODO: access this component at the specified index.
                 data = next(iter(sub_slice.duplicate()))
             else:
                 # `sub_slice` is a simple component
