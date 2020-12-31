@@ -331,9 +331,6 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
 
         if other_sets and is_indexed:
             cross_prod = other_sets[0].cross(*other_sets[1:])
-            #cross_prod = other_sets[0]
-            #for s in other_sets[1:]:
-            #    cross_prod *= s
 
             for new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 try:
@@ -416,8 +413,12 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
 #       need to choose...
 
 def flatten_components_along_sets(m, sets, ctype, index_stack=None):
+    """
+    """
     if index_stack is None:
         index_stack = []
+
+    set_of_sets = ComponentSet(sets)
     # Using these two `OrderedDict`s is a workaround because I can't
     # reliably use tuples of components as keys in a `ComponentMap`.
     sets_dict = OrderedDict()
