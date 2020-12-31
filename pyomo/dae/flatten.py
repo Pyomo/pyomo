@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.core.base import Block, Reference
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.block import SubclassOf
 from pyomo.core.base.set import SetProduct
 from pyomo.core.base.indexed_component import (
@@ -253,7 +253,7 @@ def _fill_indices_from_product(partial_index_list, product):
         # Reset `normalize_index.flatten`
         normalize_index.flatten = _normalize_index_flatten
 
-def generate_sliced_components(b, index_stack, _slice, sets, ctype):
+def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
     """
     `b` is a _BlockData object.
 
@@ -265,6 +265,9 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
     yield extensions to `_slice` at this level of the hierarchy.
 
     `ctype` is the type we are looking for.
+
+    `index_map` is potentially a map from each set in `sets` to a "representative
+              index" to use if we ever have
     """
     for c in b.component_objects(ctype, descend_into=False):
         subsets = list(c.index_set().subsets())
@@ -356,7 +359,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
                         # sub_slice is a block data object
                         data = sub_slice
                     for st, v in generate_sliced_components(data, index_stack,
-                            sub_slice, sets, ctype):
+                            sub_slice, sets, ctype, index_map):
                         yield tuple(st), v
                 # TODO: Make sure I can actually encounter these exceptions.
                 # Should I have an option to raise these errors?
@@ -385,7 +388,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
                 # `sub_slice` is a simple component
                 data = sub_slice
             for st, v in generate_sliced_components(data, index_stack,
-                    sub_slice, sets, ctype):
+                    sub_slice, sets, ctype, index_map):
                 yield tuple(st), v
             # TODO: Make sure we can actually encounter this exception.
             #except StopIteration:
@@ -412,19 +415,30 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype):
 #       If we had a "templatized representation" of the block, then we may not
 #       need to choose...
 
-def flatten_components_along_sets(m, sets, ctype, index_stack=None):
+def flatten_components_along_sets(m, sets, ctype, indices=None, index_stack=None):
     """
     """
     if index_stack is None:
         index_stack = []
+
+    if indices is None:
+        index_map = ComponentMap()
+    else:
+        index_map = ComponentMap(zip(sets, indices))
 
     set_of_sets = ComponentSet(sets)
     # Using these two `OrderedDict`s is a workaround because I can't
     # reliably use tuples of components as keys in a `ComponentMap`.
     sets_dict = OrderedDict()
     comps_dict = OrderedDict()
-    for index_sets, _slice in generate_sliced_components(m, index_stack, m, sets, ctype):
-        # Note that sets should always be a tuple, never a scalar
+    for index_sets, _slice in generate_sliced_components(m, index_stack,
+            m, set_of_sets, ctype, index_map):
+        # Note that index_sets should always be a tuple, never a scalar
+
+        # TODO: Potentially re-order sets at this point.
+        # In this way (time, space) would have the same key as (space, time).
+        # They we'd have to somehow "swap indexing sets" when we create
+        # the reference below.
         key = tuple(id(c) for c in index_sets)
         if key not in sets_dict:
             if len(key) == 0:
@@ -436,7 +450,6 @@ def flatten_components_along_sets(m, sets, ctype, index_stack=None):
         if len(key) == 0:
             comps_dict[key].append(_slice)
         else:
-            # TODO: Potentially re-order indices at this point.
             _slice.attribute_errors_generate_exceptions = False
             _slice.key_errors_generate_exceptions = False
             comps_dict[key].append(Reference(_slice))
