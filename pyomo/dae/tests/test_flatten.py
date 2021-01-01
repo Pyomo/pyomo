@@ -833,6 +833,223 @@ self._hashRef(Reference(m.v_tt)),
     # - test flattening along 3 sets
     # - test where components are skipped or otherwise missing
 
+    def test_specified_index_1(self):
+        """
+        Components indexed by flattened sets and others
+        """
+        m = ConcreteModel()
+
+        m.time = Set(initialize=[1,2,3])
+        m.space = Set(initialize=[2,4,6])
+        m.phase = Set(initialize=['p1', 'p2'])
+        m.comp = Set(initialize=['a','b'])
+
+        phase_comp = m.comp * m.phase
+        n_phase_comp = len(m.phase)*len(m.comp)
+
+        m.v = Var(m.time, m.comp, m.space, m.phase)
+
+        @m.Block(m.time, m.comp,  m.space, m.phase)
+        def b(b, t, j, x, p):
+            b.v1 = Var()
+
+            if x != 2:
+                b.v2 = Var()
+
+        sets = (m.time, m.space)
+
+        # No specified indices
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+
+        # Everything is indexed by time and space
+        self.assertEqual(len(comps_list), len(sets_list))
+        self.assertEqual(len(sets_list), 1)
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.time and sets[1] is m.space:
+                # We missed b.v2 by descending into the "first" index
+                # of the block
+                self.assertEqual(len(comps), 2*n_phase_comp)
+                ref_data = {
+                        *list(self._hashRef(Reference(m.v[:,j,:,p]))
+                            for j, p in phase_comp),
+                        *list(self._hashRef(Reference(m.b[:,j,:,p].v1))
+                            for j, p in phase_comp),
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+        # Space index specified:
+        indices = ComponentMap([(m.space, 4)])
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var,
+                indices=indices)
+
+        self.assertEqual(len(comps_list), len(sets_list))
+        self.assertEqual(len(sets_list), 1)
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.time and sets[1] is m.space:
+                # We descended into a block data that includes v2
+                self.assertEqual(len(comps), 3*n_phase_comp)
+
+                # Slices where we expect an attribute error somewhere,
+                # due to v2 being "skipped"
+                incomplete_slices = list(m.b[:,j,:,p].v2 for j, p in phase_comp)
+                for ref in incomplete_slices:
+                    ref.attribute_errors_generate_exceptions = False
+                incomplete_refs = list(Reference(sl) for sl in incomplete_slices)
+
+                ref_data = {
+                        *list(self._hashRef(Reference(m.v[:,j,:,p]))
+                            for j, p in phase_comp),
+                        *list(self._hashRef(Reference(m.b[:,j,:,p].v1))
+                            for j, p in phase_comp),
+                        *list(self._hashRef(ref) for ref in incomplete_refs),
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+        # Time and space indices specified
+        indices = (3, 6)
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var,
+                indices=indices)
+
+        self.assertEqual(len(comps_list), len(sets_list))
+        self.assertEqual(len(sets_list), 1)
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.time and sets[1] is m.space:
+                # We descended into a block data that includes v2
+                self.assertEqual(len(comps), 3*n_phase_comp)
+
+                # Slices where we expect an attribute error somewhere,
+                # due to v2 being "skipped"
+                incomplete_slices = list(m.b[:,j,:,p].v2 for j, p in phase_comp)
+                for ref in incomplete_slices:
+                    ref.attribute_errors_generate_exceptions = False
+                incomplete_refs = list(Reference(sl) for sl in incomplete_slices)
+
+                ref_data = {
+                        *list(self._hashRef(Reference(m.v[:,j,:,p]))
+                            for j, p in phase_comp),
+                        *list(self._hashRef(Reference(m.b[:,j,:,p].v1))
+                            for j, p in phase_comp),
+                        *list(self._hashRef(ref) for ref in incomplete_refs),
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+    def test_specified_index_2(self):
+        """
+        Components indexed only by flattened sets
+        """
+        m = ConcreteModel()
+
+        m.time = Set(initialize=[1,2,3])
+        m.space = Set(initialize=[2,4,6])
+
+        m.v = Var(m.time, m.space)
+
+        @m.Block(m.time, m.space)
+        def b(b, t, x):
+            b.v1 = Var()
+
+            if x != 2:
+                b.v2 = Var()
+
+        sets = (m.time, m.space)
+
+        # No specified indices
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+
+        # Everything is indexed by time and space
+        self.assertEqual(len(comps_list), len(sets_list))
+        self.assertEqual(len(sets_list), 1)
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.time and sets[1] is m.space:
+                # We missed b.v2 by descending into the "first" index
+                # of the block
+                self.assertEqual(len(comps), 2)
+                ref_data = {
+                        self._hashRef(Reference(m.v[...])),
+                        self._hashRef(Reference(m.b[...].v1)),
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+        # Space index specified:
+        indices = ComponentMap([(m.space, 4)])
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var,
+                indices=indices)
+
+        self.assertEqual(len(comps_list), len(sets_list))
+        self.assertEqual(len(sets_list), 1)
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.time and sets[1] is m.space:
+                # We descended into a block data that includes v2
+                self.assertEqual(len(comps), 3)
+
+                # Slices where we expect an attribute error somewhere,
+                # due to v2 being "skipped"
+                incomplete_slice = m.b[:,:].v2
+                incomplete_slice.attribute_errors_generate_exceptions = False
+                incomplete_ref = Reference(incomplete_slice)
+
+                ref_data = {
+                        self._hashRef(Reference(m.v[:,:])),
+                        self._hashRef(Reference(m.b[:,:].v1)),
+                        self._hashRef(incomplete_ref),
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+        # Time and space indices specified
+        indices = (3, 6)
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var,
+                indices=indices)
+
+        self.assertEqual(len(comps_list), len(sets_list))
+        self.assertEqual(len(sets_list), 1)
+
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.time and sets[1] is m.space:
+                # We descended into a block data that includes v2
+                self.assertEqual(len(comps), 3)
+
+                # Slices where we expect an attribute error somewhere,
+                # due to v2 being "skipped"
+                incomplete_slice = m.b[:,:].v2
+                incomplete_slice.attribute_errors_generate_exceptions = False
+                incomplete_ref = Reference(incomplete_slice)
+
+                ref_data = {
+                        self._hashRef(Reference(m.v[:,:])),
+                        self._hashRef(Reference(m.b[:,:].v1)),
+                        self._hashRef(incomplete_ref),
+                        }
+                self.assertEqual(len(ref_data), len(comps))
+                for comp in comps:
+                    self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
 
 if __name__ == "__main__":
     #unittest.main()
