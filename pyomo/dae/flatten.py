@@ -428,7 +428,8 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                     pass
         else:
             # Either `sub` is a simple component, or we are slicing
-            # all of its sets.
+            # all of its sets. What is common here is that we don't need
+            # to iterate over "other sets."
             #
             # In this case it may be unnecessary to slice at all...
             #
@@ -438,10 +439,17 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                     # to the call stack.
             #try:
             if type(sub_slice) is IndexedComponent_slice:
+                # We have to get the block data object.
+
                 # Get an arbitrary BlockData to descend into.
                 # Should be able to use a supplied index here...
                 # TODO: access this component at the specified index.
-                data = next(iter(sub_slice.duplicate()))
+
+                descend_slice = sub[descend_index_sliced_sets]
+                data = descend_slice if type(descend_slice) is not \
+                    IndexedComponent_slice else next(iter(descend_slice))
+                
+                #data = next(iter(sub_slice.duplicate()))
             else:
                 # `sub_slice` is a simple component
                 data = sub_slice
@@ -481,6 +489,8 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, index_stack=None
 
     if indices is None:
         index_map = ComponentMap()
+    elif type(indices) is ComponentMap:
+        index_map = indices
     else:
         index_map = ComponentMap(zip(sets, indices))
 
@@ -508,6 +518,8 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, index_stack=None
         if len(key) == 0:
             comps_dict[key].append(_slice)
         else:
+            # If the user wants to change these flags, they can access the
+            # slice via the `referent` attribute of each reference component.
             _slice.attribute_errors_generate_exceptions = False
             _slice.key_errors_generate_exceptions = False
             comps_dict[key].append(Reference(_slice))
