@@ -301,9 +301,6 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
         setpoint_model ([type]): [description]
         discrete_only (bool, optional): [description]. Defaults to False.
     """
-    copy_var_list_values(setpoint_model.MindtPy_utils.variable_list,
-                         model.MindtPy_utils.variable_list,
-                         config)
     temp_model = setpoint_model.clone()
     for var in temp_model.MindtPy_utils.variable_list:
         if var.is_integer():
@@ -325,7 +322,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
             temp_model.dual[c] for c in nlp.get_pyomo_constraints())).reshape(-1, 1)
         jac_lag = obj_grad + jac.transpose().dot(dual_values)
         nlp_var = set([i.name for i in nlp.get_pyomo_variables()])
-        first_order_term = sum(float(jac_lag[nlp.get_primal_indices([temp_var])[0]]) * (var - var.value) for var,
+        first_order_term = sum(float(jac_lag[nlp.get_primal_indices([temp_var])[0]]) * (var - temp_var.value) for var,
                                temp_var in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]) if temp_var.name in nlp_var)
 
         # Implementation 2
@@ -346,7 +343,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
         elif config.add_regularization == 'hess_lag':
             # Implementation 1
             hess_lag = nlp.evaluate_hessian_lag().toarray()
-            second_order_term = 0.5 * sum((var_i - var_i.value) * float(hess_lag[nlp.get_primal_indices([temp_var_i])[0]][nlp.get_primal_indices([temp_var_j])[0]]) * (var_j - var_j.value)
+            second_order_term = 0.5 * sum((var_i - temp_var_i.value) * float(hess_lag[nlp.get_primal_indices([temp_var_i])[0]][nlp.get_primal_indices([temp_var_j])[0]]) * (var_j - temp_var_j.value)
                                           for var_i, temp_var_i in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
                                           for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
                                           if (temp_var_i.name in nlp_var and temp_var_j.name in nlp_var))
@@ -439,6 +436,8 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
             if solver_name == 'cplex':
                 opt.options['mip limits populate'] = 10
                 opt.options['mip strategy presolvenode'] = 3
+                if config.add_regularization == 'hess_lag':
+                    opt.options['optimalitytarget'] = 3
             elif solver_name == 'gurobi':
                 opt.options['SolutionLimit'] = 10
                 opt.options['Presolve'] = 2
@@ -448,6 +447,8 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
         if regularization == True:
             opt._solver_model.parameters.mip.limits.populate.set(10)
             opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
+            if config.add_regularization == 'hess_lag':
+                opt._solver_model.parameters.optimalitytarget.set(3)
     elif solver_name == 'glpk':
         opt.options['tmlim'] = remaining
         # opt.options['mipgap'] = 0.001
