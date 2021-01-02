@@ -1246,27 +1246,8 @@ class TestExceptional(unittest.TestCase):
         self.assertIs(sets_list[0][0], UnindexedComponent_set)
         self.assertEqual(len(comps_list[0]), len(list(m.con.values())))
 
-# FIXME: This behavior is harder to produce for blocks...
-#        m.del_component(m.v)
-#        m.del_component(m.con)
-#
-#        m.b = Block(m.s1, m.s2)
-#        for b in m.b.values():
-#            b.v = Var()
-#
-#        for i in m.s1:
-#            del m.b[i, 'a']
-#
-#        with self.assertRaises(KeyError):
-#            for idx in m.b.index_set():
-#                temp = m.b._data[idx]
-#
-#        sets = ()
-#        ctype = Var
-#        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
-#        self.assertEqual(len(sets_list), len(comps_list))
-#        self.assertEqual(len(sets_list), 1)
-#        self.assertEqual(len(comps_list[0]), len(list(m.b[...].v)))
+        # NOTE: I have been unable to produce this behavior (KeyError)
+        # with blocks.
 
 
 if __name__ == "__main__":
