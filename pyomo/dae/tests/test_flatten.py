@@ -22,6 +22,83 @@ from pyomo.dae.flatten import (
         flatten_components_along_sets,
         )
 
+class TestAssumedBehavior(unittest.TestCase):
+    """
+    These are some behaviors we rely on that weren't
+    immediately obvious would be the case.
+    """
+    def test_cross(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1,2])
+        m.s2 = Set(initialize=[3,4])
+        m.s3 = Set(initialize=['a','b'])
+
+        normalize_index.flatten = True
+
+        for i in m.s1.cross():
+            # A "vacuous cross product" will place set elements in tuples
+            self.assertIs(type(i), tuple)
+
+        for i in m.s1.cross(m.s2, m.s3):
+            self.assertIs(type(i), tuple)
+            for j in i:
+                # A cross product with multiple arguments does not produce
+                # nested tuples
+                self.assertIsNot(type(j), tuple)
+
+        normalize_index.flatten = False
+        # This behavior is consistent regardless of the value of 
+        # normalize_index.flatten
+
+        for i in m.s1.cross():
+            self.assertIs(type(i), tuple)
+        for i in m.s1.cross(m.s2, m.s3):
+            self.assertIs(type(i), tuple)
+            for j in i:
+                self.assertIsNot(type(j), tuple)
+
+        normalize_index.flatten = True
+
+    def test_subsets(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1,2])
+        m.s2 = Set(initialize=[3,4])
+        m.s3 = Set(initialize=['a','b'])
+
+        normalize_index.flatten = True
+
+        s12 = m.s1 * m.s2
+        s12_3 = s12 * m.s3
+
+        s123 = m.s1.cross(m.s2, m.s3)
+
+        subsets12_3 = list(s12_3.subsets())
+        subsets123 = list(s123.subsets())
+
+        # `subsets` identifies the "base sets" regardless
+        # of whether products are nested.
+
+        self.assertEqual(len(subsets12_3), len(subsets123))
+        for s_a, s_b in zip(subsets12_3, subsets123):
+            self.assertIs(s_a, s_b)
+
+        normalize_index.flatten = False
+
+        for i, j in s12_3:
+            # Make sure we have a nested product with flatten False.
+            self.assertIs(type(i), tuple)
+
+        # The behavior of subsets is unchanged
+        subsets12_3 = list(s12_3.subsets())
+        subsets123 = list(s123.subsets())
+
+        self.assertEqual(len(subsets12_3), len(subsets123))
+        for s_a, s_b in zip(subsets12_3, subsets123):
+            self.assertIs(s_a, s_b)
+
+        normalize_index.flatten = True
+
+
 class TestCategorize(unittest.TestCase):
     def _hashRef(self, ref):
         return tuple(sorted(id(_) for _ in ref.values()))
@@ -1050,8 +1127,147 @@ self._hashRef(Reference(m.v_tt)),
             else:
                 raise RuntimeError()
 
+class TestExceptional(unittest.TestCase):
+    """
+    These are the cases that motivate the try/excepts in the slice-checking
+    part of the code.
+    """
+    def test_stop_iteration(self):
+        """
+        StopIteration is raised if we create an empty slice somewhere
+        along the line. It is an open question what we should do in the
+        case of an empty slice, but my preference is to omit it so we
+        don't return a reference that doesn't admit any valid indices.
+        """
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1,2,3])
+        m.s2 = Set(initialize=['a','b','c'])
+
+        m.v = Var(m.s1, m.s2)
+
+        def con_rule(m, i, j):
+            if j == 'a':
+                # con[:, 'a'] will be an empty slice
+                return Constraint.Skip
+            return m.v[i, j] == 5.
+
+        def vacuous_con_rule(m, i, j):
+            # A very odd case
+            return Constraint.Skip
+
+        m.con = Constraint(m.s1, m.s2, rule=con_rule)
+
+        with self.assertRaises(StopIteration):
+            next(iter(m.con[:, 'a']))
+
+        sets = (m.s1,)
+        ctype = Constraint
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), len(m.s2)-1)
+
+        m.del_component(m.con)
+        m.vacuous_con = Constraint(m.s1, m.s2, rule=vacuous_con_rule)
+
+        with self.assertRaises(StopIteration):
+            next(iter(m.vacuous_con[...]))
+
+        sets = (m.s1, m.s2)
+        ctype = Constraint
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(comps_list), 0)
+
+        m.del_component(m.vacuous_con)
+        m.del_component(m.v) # No longer necessary
+
+        # Same behavior can happen for blocks:
+        
+        def block_rule(b, i, j):
+            b.v = Var()
+
+        m.b = Block(m.s1, m.s2, rule=block_rule)
+
+        for i in m.s1:
+            del m.b[i, 'a']
+
+        with self.assertRaises(StopIteration):
+            next(iter(m.b[:, 'a'].v))
+
+        sets = (m.s1,)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), len(m.s2)-1)
+
+        for idx in m.b:
+            del m.b[idx]
+
+        with self.assertRaises(StopIteration):
+            next(iter(m.b[...].v))
+
+        sets = (m.s1, m.s2)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(comps_list), 0)
+
+        # Have a component indexed by all of our sets that doesn't appear
+        # when we flatten... seems like somewhat of a contradiction...
+        subset_set = ComponentSet(m.b.index_set().subsets())
+        for s in sets:
+            self.assertIn(s, subset_set)
+            
+    def test_keyerror(self):
+        """
+        KeyErrors occur when we a component that we don't slice
+        doesn't have data for some members of its indexing set.
+        """
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1,2,3])
+        m.s2 = Set(initialize=['a','b','c'])
+
+        m.v = Var(m.s1, m.s2)
+
+        def con_rule(m, i, j):
+            if j == 'a':
+                return Constraint.Skip
+            return m.v[i, j] == 5.
+
+        m.con = Constraint(m.s1, m.s2, rule=con_rule)
+
+        with self.assertRaises(KeyError):
+            for idx in m.con.index_set():
+                temp = m.con[idx]
+
+        sets = ()
+        ctype = Constraint
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(sets_list), len(comps_list))
+        self.assertEqual(len(sets_list), 1)
+        self.assertIs(sets_list[0][0], UnindexedComponent_set)
+        self.assertEqual(len(comps_list[0]), len(list(m.con.values())))
+
+# FIXME: This behavior is harder to produce for blocks...
+#        m.del_component(m.v)
+#        m.del_component(m.con)
+#
+#        m.b = Block(m.s1, m.s2)
+#        for b in m.b.values():
+#            b.v = Var()
+#
+#        for i in m.s1:
+#            del m.b[i, 'a']
+#
+#        with self.assertRaises(KeyError):
+#            for idx in m.b.index_set():
+#                temp = m.b._data[idx]
+#
+#        sets = ()
+#        ctype = Var
+#        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+#        self.assertEqual(len(sets_list), len(comps_list))
+#        self.assertEqual(len(sets_list), 1)
+#        self.assertEqual(len(comps_list[0]), len(list(m.b[...].v)))
+
 
 if __name__ == "__main__":
-    #unittest.main()
-    TestFlatten().test_flatten_m3_1_2()
-
+    unittest.main()

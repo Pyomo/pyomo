@@ -224,31 +224,6 @@ def _fill_indices_from_product(partial_index_list, product):
             # each entry in the tuple belongs to a single factor set.
             # I do not have to worry about having a product-of-products
             # here because I created the product from "unfactorable sets"
-            #
-# TODO: Remove this code
-#            # To simplify some later code we convert scalar to tuple.
-#            if type(index) is not tuple:
-#                # NOTE: I don't think I ever get here.
-#                # TODO: test this.
-#                # This would not be reliable as it could not distinguish
-#                # between ('a', 1) and (('a', 1),)
-#                # NOTE: My tests pass without this check and conversion
-#                index = (index,)
-#            # We need to generate a new index for every entry of `product`,
-#            # and want to reuse `partial_index_list` as a starting point,
-#            # so we copy it here.
-#            filled_index = partial_index_list.copy()
-#            j = 0
-#            for i, val in enumerate(filled_index):
-#                if val is _NotAnIndex:
-#                    filled_index[i] = index[j]
-#                    # `index` is always a tuple, so this is valid
-#                    j += 1
-#            # Make sure `partial_index_list` has the same number of vacancies
-#            # as `product` has factors. Not _strictly_ necessary.
-#            assert j == len(index)
-#            filled_index = tuple(filled_index)
-#
 
             filled_index = partial_index_list.copy()
 
@@ -268,16 +243,11 @@ def _fill_indices_from_product(partial_index_list, product):
             # because `comp` was created with two set arguments, the first
             # of which was already a product.
 
-#            if len(filled_index) == 1:
-#                yield filled_index[0]
-#            else:
-#                yield filled_index
-
             yield _fill_indices(filled_index, index)
 
             normalize_index.flatten = False
             # Want to get the unflattened factors when we advance the
-            # `product` iterator.
+            # iterator of `product`
     finally:
         # Reset `normalize_index.flatten`
         normalize_index.flatten = _normalize_index_flatten
@@ -306,17 +276,19 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
         other_sets = [s for s in subsets if s not in sets]
         sliced_sets = index_stack + new_sets
 
-        c_is_indexed = not (len(other_sets) == 1 and
-                other_sets[0] is UnindexedComponent_set)
-        # Why not just c.is_indexed()
-
         # We have extended our "index stack;" now we must extend
         # our slice.
 
-        if other_sets and c_is_indexed:
+        if other_sets and c.is_indexed():
+            # We need to iterate over sets that aren't sliced
+            # `c.is_indexed()` covers the case when UnindexedComponent_set
+            # is in `other_sets`.
             cross_prod = other_sets[0].cross(*other_sets[1:])
             # The original implementation was to pick an arbitrary index
             # from the "flattened sets" and slice all the other indices.
+            #
+            # This implementation avoids issues about selecting an arbitrary
+            # index, but requires duplicating some of the slice-iter logic below
 
             for new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 try:
@@ -324,7 +296,8 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                     if type(c_slice) is IndexedComponent_slice:
                         # This is just to make sure we do not have an
                         # empty slice.
-                        next(iter(c_slice.duplicate()))
+                        temp_slice = c_slice.duplicate()
+                        next(iter(temp_slice))
                     yield sliced_sets, c_slice
                 except StopIteration:
                     # We have an empty slice for some reason, e.g.
@@ -338,19 +311,24 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                     pass
         else:
             # `c` is indexed only by sets we would like to slice.
-            # At this point we could just yield sliced_sets, new_slice
-            idx = Ellipsis if c_is_indexed else None
-            # TODO: next(UnindexedComponent_set) instead of None
-            c_slice = getattr(_slice, c.local_name)[idx]
-            # ^ This could fail if we try to apply the same code to
-            # data objects rather than just simple components.
-            yield sliced_sets, c_slice
+            # Slice the component if it's indexed so a future getattr
+            # will be valid.
+            #c_slice = getattr(_slice, c.local_name)[...] if new_sets else \
+            #        getattr(_slice, c.local_name)
+            try:
+                if c.is_indexed():
+                    c_slice = getattr(_slice, c.local_name)[...]
+                    # Make sure this slice is not empty...
+                    next(iter(c_slice.duplicate()))
+                else:
+                    c_slice = getattr(_slice, c.local_name)
+                yield sliced_sets, c_slice
+            except StopIteration:
+                pass
 
     # We now descend into subblocks
     for sub in b.component_objects(Block, descend_into=False):
         subsets = list(sub.index_set().subsets())
-        # TODO: What if one of the user's `sets` is a SetProduct?
-        # Should probably expand it before entering this generator.
         temp_idx = [get_slice_for_set(s) if s in sets else _NotAnIndex
                 for s in subsets]
         new_sets = [s for s in subsets if s in sets]
@@ -365,34 +343,37 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
         # Extend stack with new matched indices.
         index_stack.extend(new_sets)
 
-        is_indexed = sub.is_indexed()
-
-        if other_sets and is_indexed:
+        if other_sets and sub.is_indexed():
             cross_prod = other_sets[0].cross(*other_sets[1:])
 
             for new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 try:
+                    # TODO: try/except
+                    # What is the risk here? sub_slice is "empty."
+                    # This is definitely possible if the block is (somehow)
+                    # skipped at some index of `cross_prod`. This should
+                    # be rare though.
+                    #
+                    # And if new_index is concrete, we will just get keyerrors
+                    # for the indices we want to skip
                     sub_slice = getattr(_slice, sub.local_name)[new_index]
-                    if type(sub_slice) is IndexedComponent_slice:
-                        # Get the first index of the sliced subblock to descend
-                        # into. TODO: Should probably allow some "representative
-                        # index" to be specified for each set so we don't miss
-                        # components that are skipped at endpoints.
-                        #
-                        # Need a function to replace slices in new_index with
-                        # indices from temp_idx...
-#                        ref = Reference(sub_slice.duplicate(), ctype=ctype)
-                        # Need to get the index I want for ref.
-                        # Should use the indices from `cross_prod`, plus the
-                        # indices from my reference map. The former are contained
-                        # in `new_index`. The latter need to be obtained for s
-                        # in sets, then put in the right place in new_index.
+
+                    # Now we need to pick a block data to descend into
+                    if sub.is_indexed():
+                        # We sliced some sets, and need to fill in any
+                        # indices provided by the user
+
+                        # `new_index` could be a scalar, for compatibility with
+                        # `normalize_index.flatten==False`.
                         tupl_new_index = (new_index,) if type(new_index) \
                                 is not tuple else new_index
+                        # Extract the indices of "other sets":
                         incomplete_descend_index = list(
                                 idx if subset not in sets else _NotAnIndex
                                 for idx, subset in zip(tupl_new_index, subsets)
                                 )
+                        # Fill rest of the entries with specified indices for
+                        # sliced sets:
                         descend_index = _fill_indices(incomplete_descend_index,
                                 descend_index_sliced_sets)
 
@@ -403,18 +384,9 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                         # descend into a concrete component, we do so. Otherwise
                         # we use the user's indices, slice the rest, and advance
                         # the iterator.
-
-                        # TODO: try/except
-                        # What is the risk here? sub_slice is "empty."
-                        # This is definitely possible if the block is (somehow)
-                        # skipped at some index of `cross_prod`. This should
-                        # be rare though.
-                        #
-                        # And if new_index is concrete, we will just get keyerrors
-                        # for the indices we want to skip
                     else:
-                        # sub_slice is a block data object
-                        data = sub_slice
+                        # All indices are specified
+                        data = sub[new_index]
                     for st, v in generate_sliced_components(data, index_stack,
                             sub_slice, sets, ctype, index_map):
                         yield tuple(st), v
@@ -430,36 +402,25 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
             # Either `sub` is a simple component, or we are slicing
             # all of its sets. What is common here is that we don't need
             # to iterate over "other sets."
-            #
-            # In this case it may be unnecessary to slice at all...
-            #
-            sub_slice = getattr(_slice, sub.local_name)[...] if new_sets else \
-                    getattr(_slice, sub.local_name)
-                    # Don't use __getitem__(None) to avoid unnecessary additions
-                    # to the call stack.
-            #try:
-            if type(sub_slice) is IndexedComponent_slice:
-                # We have to get the block data object.
-
-                # Get an arbitrary BlockData to descend into.
-                # Should be able to use a supplied index here...
-                # TODO: access this component at the specified index.
-
-                descend_slice = sub[descend_index_sliced_sets]
-                data = descend_slice if type(descend_slice) is not \
-                    IndexedComponent_slice else next(iter(descend_slice))
-                
-                #data = next(iter(sub_slice.duplicate()))
-            else:
-                # `sub_slice` is a simple component
-                data = sub_slice
-            for st, v in generate_sliced_components(data, index_stack,
-                    sub_slice, sets, ctype, index_map):
-                yield tuple(st), v
-            # TODO: Make sure we can actually encounter this exception.
-            #except StopIteration:
-            #    # We encountered an empty slice.
-            #    pass
+            #sub_slice = getattr(_slice, sub.local_name)[...] if new_sets else \
+            #        getattr(_slice, sub.local_name)
+            try:
+                if sub.is_indexed():
+                    sub_slice = getattr(_slice, sub.local_name)[...]
+                    # We have to get the block data object.
+                    descend_slice = sub[descend_index_sliced_sets]
+                    data = descend_slice if type(descend_slice) is not \
+                        IndexedComponent_slice else next(iter(descend_slice))
+                else:
+                    # `sub` is a simple component
+                    sub_slice = getattr(_slice, sub.local_name)
+                    data = sub
+                for st, v in generate_sliced_components(data, index_stack,
+                        sub_slice, sets, ctype, index_map):
+                    yield tuple(st), v
+            except StopIteration:
+                # We encountered an empty slice. This should be very rare.
+                pass
 
         # pop the index sets of the block whose sub-components
         # we just finished iterating over.
@@ -523,6 +484,7 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, index_stack=None
             _slice.attribute_errors_generate_exceptions = False
             _slice.key_errors_generate_exceptions = False
             comps_dict[key].append(Reference(_slice))
+
     # list-of-tuples of Sets:
     sets_list = list(sets for sets in sets_dict.values())
     # list-of-lists of components:
