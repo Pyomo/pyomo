@@ -311,10 +311,8 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                     pass
         else:
             # `c` is indexed only by sets we would like to slice.
-            # Slice the component if it's indexed so a future getattr
+            # Slice the component if it is indexed so a future getattr
             # will be valid.
-            #c_slice = getattr(_slice, c.local_name)[...] if new_sets else \
-            #        getattr(_slice, c.local_name)
             try:
                 if c.is_indexed():
                     c_slice = getattr(_slice, c.local_name)[...]
@@ -348,18 +346,10 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
 
             for new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 try:
-                    # TODO: try/except
-                    # What is the risk here? sub_slice is "empty."
-                    # This is definitely possible if the block is (somehow)
-                    # skipped at some index of `cross_prod`. This should
-                    # be rare though.
-                    #
-                    # And if new_index is concrete, we will just get keyerrors
-                    # for the indices we want to skip
                     sub_slice = getattr(_slice, sub.local_name)[new_index]
 
                     # Now we need to pick a block data to descend into
-                    if sub.is_indexed():
+                    if new_sets:
                         # We sliced some sets, and need to fill in any
                         # indices provided by the user
 
@@ -376,6 +366,8 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                         # sliced sets:
                         descend_index = _fill_indices(incomplete_descend_index,
                                 descend_index_sliced_sets)
+                        if len(descend_index) == 1:
+                            descend_index = descend_index[0]
 
                         descend_slice = sub[descend_index]
                         data = descend_slice if type(descend_slice) is not \
@@ -390,20 +382,18 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
                     for st, v in generate_sliced_components(data, index_stack,
                             sub_slice, sets, ctype, index_map):
                         yield tuple(st), v
-                # TODO: Make sure I can actually encounter these exceptions.
-                # Should I have an option to raise these errors?
                 except StopIteration:
                     # Empty slice due to "skipped" index in subblock.
                     pass
-                except KeyError:
-                    # Trying to access a concrete data object for a "skipped" index.
-                    pass
+                #except KeyError:
+                #    # Trying to access a concrete data object for a "skipped" index.
+                #    # I have been unable to produce this behavior for blocks,
+                #    # but it may be possible somehow.
+                #    pass
         else:
             # Either `sub` is a simple component, or we are slicing
             # all of its sets. What is common here is that we don't need
             # to iterate over "other sets."
-            #sub_slice = getattr(_slice, sub.local_name)[...] if new_sets else \
-            #        getattr(_slice, sub.local_name)
             try:
                 if sub.is_indexed():
                     sub_slice = getattr(_slice, sub.local_name)[...]
@@ -426,21 +416,6 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
         # we just finished iterating over.
         for _ in new_sets:
             index_stack.pop()
-
-# NOTE: There are several cases of "skipped component" that we must be aware of:
-#     - Explicitly skipped _ConstraintData
-#       If the skipped indices are "within slices" (e.g. time.first()),
-#       we simply must be careful to not access these references at the
-#       skipped indices, probably with try/except.
-#       If the skipped indices are "outside slices," we will simply not
-#       generate slices for these indices. (This raises StopIteration above.)
-#     - Skipped _BlockData ? Should be more rare, as blocks are dense by default (?)
-#     - Implicitly skipped components on certain indices of subblocks.
-#       These appear to be relatively common in practice.
-#       I think the only remedy here is to control what index of sliced blocks
-#       we actually descend into...
-#       If we had a "templatized representation" of the block, then we may not
-#       need to choose...
 
 def flatten_components_along_sets(m, sets, ctype, indices=None, index_stack=None):
     """
