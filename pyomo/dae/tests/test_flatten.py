@@ -293,9 +293,6 @@ class TestCategorize(unittest.TestCase):
             self.assertIn(self._hashRef(ref), ref_data)
 
 
-    # TODO: Add tests for Sets with dimen==None
-
-
 class TestFlatten(TestCategorize):
 
     def _hashRef(self, ref):
@@ -906,10 +903,6 @@ self._hashRef(Reference(m.v_tt)),
             else:
                 raise RuntimeError()
 
-    # TODO:
-    # - test flattening along 3 sets
-    # - test where components are skipped or otherwise missing
-
     def test_specified_index_1(self):
         """
         Components indexed by flattened sets and others
@@ -1126,6 +1119,7 @@ self._hashRef(Reference(m.v_tt)),
                     self.assertIn(self._hashRef(comp), ref_data)
             else:
                 raise RuntimeError()
+
 
 class TestExceptional(unittest.TestCase):
     """
