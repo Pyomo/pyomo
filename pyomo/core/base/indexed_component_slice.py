@@ -622,12 +622,6 @@ class _IndexedComponent_slice_iter(object):
                            and not self._iter_over_index:
                             raise
                         break
-                    if _comp is None:
-                        # As when calling `component` with the name of
-                        # a nonexistant component.
-                        #if self._slice.attribute_errors_generate_exceptions:
-                        #    raise AttributeError()
-                        break
                 elif _call[0] == IndexedComponent_slice.set_attribute:
                     # set_attribute should only appear at the deepest
                     # point (end) of the call stack
