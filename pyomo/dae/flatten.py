@@ -417,18 +417,17 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
         for _ in new_sets:
             index_stack.pop()
 
-def flatten_components_along_sets(m, sets, ctype, indices=None, index_stack=None):
+def flatten_components_along_sets(m, sets, ctype, indices=None):
     """
     """
-    if index_stack is None:
-        index_stack = []
-
     if indices is None:
         index_map = ComponentMap()
     elif type(indices) is ComponentMap:
         index_map = indices
     else:
         index_map = ComponentMap(zip(sets, indices))
+
+    index_stack = []
 
     set_of_sets = ComponentSet(sets)
     # Using these two `OrderedDict`s is a workaround because I can't
