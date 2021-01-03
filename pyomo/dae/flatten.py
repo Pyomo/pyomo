@@ -174,8 +174,6 @@ def get_slice_for_set(s):
         # Case for e.g. UnindexedComponent_set
         return None
 
-_UNINDEXED_INDEX = next(iter(UnindexedComponent_set))
-
 class _NotAnIndex(object):
     """ 
     `None` is a valid index, so we use a dummy class to 
@@ -185,16 +183,17 @@ class _NotAnIndex(object):
     pass
 
 def _fill_indices(filled_index, index):
-    # We need to generate a new index for every entry of `product`,
-    # and want to reuse `partial_index_list` as a starting point,
-    # so we copy it here.
+    """
+    `filled_index` is a list with some entries `_NotAnIndex`.
+    We fill those entries with values from `index`, a tuple.
+    """
     j = 0
     for i, val in enumerate(filled_index):
         if val is _NotAnIndex:
             filled_index[i] = index[j]
             # `index` is always a tuple, so this is valid
             j += 1
-    # Make sure `partial_index_list` has the same number of vacancies
+    # Make sure `filled_index` had the same number of vacancies
     # as `product` has factors. Not _strictly_ necessary.
     assert j == len(index)
     filled_index = tuple(filled_index)
@@ -225,6 +224,9 @@ def _fill_indices_from_product(partial_index_list, product):
             # I do not have to worry about having a product-of-products
             # here because I created the product from "unfactorable sets"
 
+            # We need to generate a new index for every entry of `product`,
+            # and want to reuse `partial_index_list` as a starting point,
+            # so we copy it here.
             filled_index = partial_index_list.copy()
 
             normalize_index.flatten = _normalize_index_flatten
@@ -254,6 +256,9 @@ def _fill_indices_from_product(partial_index_list, product):
 
 def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
     """
+    Recursively generate sliced components of a block and its subblocks, along
+    with the sets that were sliced for each component.
+
     `b` is a _BlockData object.
 
     `index_stack` is a list of indices "above" `b` in the
@@ -419,6 +424,22 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
 
 def flatten_components_along_sets(m, sets, ctype, indices=None):
     """
+    This function iterates over components (recursively) contained
+    in a block and partitions their data objects into components
+    indexed only by the specified sets.
+
+    Args:
+        m : Block whose components (and their sub-components) will be
+            partitioned
+        sets : Possible indexing sets for the returned components
+        ctype : Type of component to identify and partition
+        indices : indices of sets to use when descending into subblocks
+
+    Returns:
+        tuple: The first entry is a list of tuples of Pyomo Sets. The
+               second is a list of lists of components, each indexed by
+               the corresponding sets in the first entry.
+        
     """
     if indices is None:
         index_map = ComponentMap()
@@ -463,6 +484,11 @@ def flatten_components_along_sets(m, sets, ctype, indices=None):
     sets_list = list(sets for sets in sets_dict.values())
     # list-of-lists of components:
     comps_list = list(comps for comps in comps_dict.values())
+    # E.g. we return: (
+    #          [(time, space), (time,)],
+    #          [[some_component, ...], [other, ...]],
+    #      )                            ^ These components are indexed by time
+    #            ^ These components are indexed by time and space
     return sets_list, comps_list
 
 def flatten_dae_components(model, time, ctype, indices=None):
