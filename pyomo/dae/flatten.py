@@ -20,6 +20,9 @@ from collections import OrderedDict
 
 
 def get_slice_for_set(s):
+    """
+    Get the slice of the proper dimension for a set.
+    """
     if s.dimen != 0:
         if not normalize_index.flatten:
             return slice(None)
