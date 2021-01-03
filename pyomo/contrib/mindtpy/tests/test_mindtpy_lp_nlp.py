@@ -251,7 +251,7 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True,
                                 add_regularization='level_L1')
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal_LOA_L1(self):
@@ -280,7 +280,7 @@ class TestMindtPy(unittest.TestCase):
                                 add_regularization='level_L1'
                                 )
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample_LOA_L1(self):
@@ -394,7 +394,7 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True,
                                 add_regularization='level_L2')
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal_LOA_L2(self):
@@ -423,7 +423,7 @@ class TestMindtPy(unittest.TestCase):
                                 add_regularization='level_L2'
                                 )
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample_LOA_L2(self):
@@ -537,7 +537,7 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True,
                                 add_regularization='level_L_infinity')
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal_LOA_L_inf(self):
@@ -567,7 +567,7 @@ class TestMindtPy(unittest.TestCase):
                                 add_regularization='level_L_infinity'
                                 )
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample_LOA_L_inf(self):
@@ -681,7 +681,7 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True,
                                 add_regularization='grad_lag')
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal_QOA_grad(self):
@@ -711,7 +711,7 @@ class TestMindtPy(unittest.TestCase):
                                 add_regularization='grad_lag'
                                 )
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample_QOA_grad(self):
@@ -825,7 +825,7 @@ class TestMindtPy(unittest.TestCase):
                                 single_tree=True,
                                 add_regularization='hess_lag')
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
     def test_lazy_OA_Proposal_QOA_hess(self):
@@ -855,7 +855,7 @@ class TestMindtPy(unittest.TestCase):
                                 add_regularization='hess_lag'
                                 )
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.feasible)
+                          TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
     def test_OA_OnlineDocExample_QOA_hess(self):

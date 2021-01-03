@@ -499,10 +499,10 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         # regularization is activated after the first feasible solution is found.
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
             # the master problem might be unbounded, regularization is activated only when a valid bound is provided.
-
-            copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
-                                 solve_data.mip.MindtPy_utils.variable_list,
-                                 config)
+            self.copy_lazy_var_list_values(opt,
+                                           master_mip.MindtPy_utils.variable_list,
+                                           solve_data.mip.MindtPy_utils.variable_list,
+                                           config)
             if config.strategy == 'OA':
                 self.add_lazy_oa_cuts(
                     solve_data.mip, None, solve_data, config, opt)
