@@ -437,7 +437,7 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, index_stack=None
     comps_dict = OrderedDict()
     for index_sets, _slice in generate_sliced_components(m, index_stack,
             m, set_of_sets, ctype, index_map):
-        # Note that index_sets should always be a tuple, never a scalar
+        # Note that index_sets should always be a tuple, never a scalar.
 
         # TODO: Potentially re-order sets at this point.
         # In this way (time, space) would have the same key as (space, time).
@@ -466,9 +466,10 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, index_stack=None
     comps_list = list(comps for comps in comps_dict.values())
     return sets_list, comps_list
 
-def flatten_dae_components(model, time, ctype):
+def flatten_dae_components(model, time, ctype, indices=None):
     target = ComponentSet((time,))
-    sets_list, comps_list = flatten_components_along_sets(model, target, ctype)
+    sets_list, comps_list = flatten_components_along_sets(model, target, ctype,
+            indices=indices)
     # Initialize these variables as, if no components of either category are
     # found, we expect to get an empty list.
     scalar_comps = []
