@@ -14,7 +14,7 @@ from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.suffix import import_suffix_generator
 from pyomo.core.expr.numvalue import native_numeric_types, value
-import pyomo.core.expr.visitor as EXPR
+from pyomo.core.expr.visitor import evaluate_expression
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
@@ -31,7 +31,7 @@ def _convert_to_const(val):
     if val.__class__ in native_numeric_types:
         return val
     elif val.is_expression_type():
-        return EXPR.evaluate_expression(val)
+        return evaluate_expression(val)
     else:
         return value(val)
 
