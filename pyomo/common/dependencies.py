@@ -32,10 +32,19 @@ class ModuleUnavailable(object):
     message: str
         The string message to return in the raised exception
     """
+
+    # We need special handling for Sphinx here, as it will look for the
+    # __sphinx_mock__ attribute on all module-level objects, and we need
+    # that to raise an AttributeError and not a DeferredImportError
+    _getattr_raises_attributeerror = {'__sphinx_mock__',}
+
     def __init__(self, message):
         self._error_message_ = message
 
     def __getattr__(self, attr):
+        if attr in ModuleUnavailable._getattr_raises_attributeerror:
+            raise AttributeError("'%s' object has no attribute '%s'"
+                                 % (type(self).__name__, attr))
         raise DeferredImportError(self._error_message_)
 
     def generate_import_warning(self, logger='pyomo.common'):
