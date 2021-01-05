@@ -74,7 +74,6 @@ class BARONSHELL(SystemCallSolver):
         #               the number's sign.
         self._precision_string = '.17g'
 
-    @staticmethod
     def _get_dummy_input_files(check_license=False):
         with tempfile.NamedTemporaryFile(mode='w',
                                          delete=False) as f:
@@ -113,7 +112,6 @@ class BARONSHELL(SystemCallSolver):
             f.write("OBJ: minimize x1;")
         return (f.name, fr.name, fs.name, ft.name)
 
-    @staticmethod
     def _remove_dummy_input_files(fnames):
         for name in fnames:
             try:
@@ -121,18 +119,17 @@ class BARONSHELL(SystemCallSolver):
             except OSError:
                 pass
 
-    @staticmethod
-    def license_is_valid():
+    def license_is_valid(self):
         """Runs a check for a valid Baron license using the
         given executable (default is 'baron'). All output is
         hidden. If the test fails for any reason (including
         the executable being invalid), then this function
         will return False."""
         solver_exec = self.executable()
-        if (solver_exec, 'licensed') in BARONSHELL._solver_info_cache:
-            return BARONSHELL._solver_info_cache[(solver_exec, 'licensed')]
+        if (solver_exec, 'licensed') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'licensed')]
 
-        fnames= BARONSHELL._get_dummy_input_files(check_license=True)
+        fnames= self._get_dummy_input_files(check_license=True)
         try:
             process = subprocess.Popen([solver_exec, fnames[0]],
                                        stdout=subprocess.PIPE,
@@ -149,10 +146,10 @@ class BARONSHELL(SystemCallSolver):
         except OSError:
             rc = 1
         finally:
-            BARONSHELL._remove_dummy_input_files(fnames)
+            self._remove_dummy_input_files(fnames)
 
         licensed = not rc
-        BARONSHELL._solver_info_cache[(solver_exec, 'licensed')] = licensed
+        self._solver_info_cache[(solver_exec, 'licensed')] = licensed
         return licensed
 
     def _default_executable(self):
@@ -169,8 +166,8 @@ class BARONSHELL(SystemCallSolver):
         Returns a tuple describing the solver executable version.
         """
         solver_exec = self.executable()
-        if (solver_exec, 'version') in BARONSHELL._solver_info_cache:
-            return BARONSHELL._solver_info_cache[(solver_exec, 'version')]
+        if (solver_exec, 'version') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'version')]
 
         if solver_exec is None:
             ver = _extract_version('')
@@ -182,7 +179,7 @@ class BARONSHELL(SystemCallSolver):
             finally:
                 self._remove_dummy_input_files(fnames)
 
-        BARONSHELL._solver_info_cache[(solver_exec, 'version')] = ver
+        self._solver_info_cache[(solver_exec, 'version')] = ver
         return ver
 
     def create_command_line(self, executable, problem_files):

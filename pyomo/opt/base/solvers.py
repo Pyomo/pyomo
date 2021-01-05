@@ -203,23 +203,19 @@ def check_available_solvers(*args):
             name = arg[0]
         opt = SolverFactory(*arg)
         if opt is None or isinstance(opt, UnknownSolver):
-            available = False
-        elif (arg[0] == "gurobi") and \
-           (not GUROBISHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "baron") and \
-           (not BARONSHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "mosek_direct" or arg[0] == "mosek_persistent") and \
-                (not MOSEKDirect.license_is_valid()):
-            available = False
-        else:
-            available = \
-                (opt.available(exception_flag=False)) and \
-                ((not hasattr(opt,'executable')) or \
-                (opt.executable() is not None))
-        if available:
-            ans.append(name)
+            continue # not available
+
+        if not opt.available(exception_flag=False):
+            continue # not available
+
+        if hasattr(opt, 'executable') and opt.executable() is None:
+            continue # not available
+
+        if hasattr(opt, 'license_is_valid') and not opt.license_is_valid():
+            continue # not available
+
+        # At this point, the solver is available (and licensed)
+        ans.append(name)
 
     logging.disable(logging.NOTSET)
 
