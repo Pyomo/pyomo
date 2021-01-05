@@ -78,7 +78,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     elif [ $minorversion -lt 6 ]; then
        virtualenv python $VENV_SYSTEM_PACKAGES --clear
     else
-        python3 -m venv $VENV_SYSTEM_PACKAGES ${WORKSPACE}/python
+        python -m venv $VENV_SYSTEM_PACKAGES ${WORKSPACE}/python
     fi
     # Put the venv at the beginning of the PATH
     export PATH="$WORKSPACE/python/bin:$PATH"
