@@ -33,3 +33,6 @@ obj, theta, cov = pest.theta_est(calc_cov=True)
 print(obj)
 print(theta)
 print(cov)
+
+parmest.graphics.pairwise_plot((theta, cov, 1000), theta_star=theta, alpha=0.8, 
+                               distributions=['MVN'])
