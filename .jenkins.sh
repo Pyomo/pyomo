@@ -71,7 +71,15 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     echo "# Setting up virtual environment"
     echo "#"
-    virtualenv python $VENV_SYSTEM_PACKAGES --clear
+    majorversion=$(python -c 'import sys; print(sys.version_info[0])')
+    minorversion=$(python -c 'import sys; print(sys.version_info[1])')
+    if [ $majorversion -lt 3 ]; then
+       virtualenv python $VENV_SYSTEM_PACKAGES --clear
+    elif [ $minorversion -lt 6 ]; then
+       virtualenv python $VENV_SYSTEM_PACKAGES --clear
+    else
+        python3 -m venv $VENV_SYSTEM_PACKAGES ${WORKSPACE}/python
+    fi
     # Put the venv at the beginning of the PATH
     export PATH="$WORKSPACE/python/bin:$PATH"
     # Because modules set the PYTHONPATH, we need to make sure that the
@@ -94,14 +102,6 @@ if test -z "$MODE" -o "$MODE" == setup; then
     #
     # DO NOT install pyomo-model-libraries
     #
-
-    #
-    # #! lines cannot exceed 128 characters, which Jenkins will
-    # periodically do, especially for matrix jobs.  We will make
-    # the virtualenv relocatable to shorten the line, instead relying
-    # on the virtualenv being the first thing on the PATH.
-    #
-    virtualenv --relocatable python
 
     # Set up coverage tracking for subprocesses
     if test -z "$DISABLE_COVERAGE"; then
