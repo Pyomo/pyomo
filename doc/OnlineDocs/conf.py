@@ -56,7 +56,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest']
     #'sphinx.ext.githubpages']
 
-viewcode_import = True
+viewcode_follow_imported_members = True
 #napoleon_include_private_with_doc = True
 
 # Add any paths that contain templates here, relative to this directory.
