@@ -71,8 +71,14 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     echo "# Setting up virtual environment"
     echo "#"
-    pyver=$(python -c 'import sys; print("%d%d" % sys.version_info[:2])')
-    if [ $pyver -lt 36 ]; then
+    pyver=$(python -c 'import sys; print("%d%02d" % sys.version_info[:2])')
+    if [ $pyver -lt 306 ]; then
+        #
+        # #! lines cannot exceed 128 characters, which Jenkins will
+        # periodically do, especially for matrix jobs.  We will make
+        # the virtualenv relocatable to shorten the line, instead relying
+        # on the virtualenv being the first thing on the PATH.
+        #
         virtualenv python $VENV_SYSTEM_PACKAGES --clear --relocatable
     else
         python -m venv $VENV_SYSTEM_PACKAGES ${WORKSPACE}/python
