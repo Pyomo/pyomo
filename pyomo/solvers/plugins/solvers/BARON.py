@@ -134,7 +134,7 @@ class BARONSHELL(SystemCallSolver):
 
         fnames= BARONSHELL._get_dummy_input_files(check_license=True)
         try:
-            process = subprocess.Popen([executable, fnames[0]],
+            process = subprocess.Popen([solver_exec, fnames[0]],
                                        stdout=subprocess.PIPE,
                                        stderr=subprocess.STDOUT)
             stdout, stderr = process.communicate()
