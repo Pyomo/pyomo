@@ -23,8 +23,10 @@ stats = scipy.stats
 # occasionally dependent conda packages for older distributions
 # (e.g. python 3.5) get released that are either broken not
 # compatible, resulting in a SyntaxError
-sns, seaborn_available = attempt_import('seaborn', alt_names=['sns'],
-                                        only_catch_importerror=False)
+sns, seaborn_available = attempt_import(
+    'seaborn', alt_names=['sns'],
+    catch_exceptions=(ImportError, SyntaxError)
+)
 
 imports_available = numpy_available & scipy_available & pandas_available \
                     & matplotlib_available & seaborn_available
