@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -21,7 +21,10 @@ from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
-from pyomo.opt.results import SolverResults, Solution, SolverStatus, TerminationCondition, SolutionStatus 
+from pyomo.opt.results import (
+    SolverResults, Solution, SolverStatus, TerminationCondition,
+    SolutionStatus,
+)
 from pyomo.opt.solver import SystemCallSolver
 
 from six.moves import zip
@@ -194,8 +197,8 @@ class BARONSHELL(SystemCallSolver):
         if self._timer:
             cmd.insert(0, self._timer)
         return Bunch( cmd=cmd,
-                                    log_file=self._log_file,
-                                    env=None )
+                      log_file=self._log_file,
+                      env=None )
 
     #
     # Assuming the variable values stored in the model will
