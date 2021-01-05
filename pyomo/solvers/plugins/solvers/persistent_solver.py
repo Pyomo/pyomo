@@ -13,7 +13,8 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.suffix import import_suffix_generator
-from pyomo.core.expr.numvalue import native_numeric_types
+from pyomo.core.expr.numvalue import native_numeric_types, value
+import pyomo.core.expr.visitor as EXPR
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
