@@ -956,36 +956,13 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         method is called when moving back up the tree in a depth first search."""
         
         # first check if the node is a leaf
-        #print('exitNode:', node, data)
         nodetype = type(node)
-        node_func = self.node_type_method_map.get(nodetype, None)
-
         if nodetype in native_types or nodetype in pyomo_constant_types:
             return self._pint_dimensionless
 
-        elif node_func is not None:
+        node_func = self.node_type_method_map.get(nodetype, None)
+        if node_func is not None:
             return node_func(self, node, data)
-            if node_func is PintUnitExtractionVisitor._get_unit_for_linear_expression or \
-                    node_func is PintUnitExtractionVisitor._get_unit_for_pow or \
-                    node_func is PintUnitExtractionVisitor._get_units_ExternalFunction:
-                # don't cache
-                return node_func(self, node, data)
-
-            # check the cache
-            if node_func is PintUnitExtractionVisitor._get_unit_for_unary_function:
-                tup = (node_func, node.getname(), tuple(data))
-            else:
-                tup = (node_func, tuple(data))
-
-            pint_unit = self._pyomo_units_container.cache.get(tup, None)
-            if pint_unit is None:
-                pint_unit = node_func(self, node, data)
-                self._pyomo_units_container.cache[tup] = pint_unit
-                #print('Adding {} to cache'.format(tup))
-            else:
-                pass
-                #print('Found {} in cache'.format(tup))
-            return pint_unit #node_func(self, node, data)
 
         elif not node.is_expression_type():
             # this is a leaf, but not a native type
@@ -994,11 +971,8 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             
             # might want to add other common types here
             pyomo_unit = node.get_units()
-
-            # need to change this to only get pint units
             pint_unit = self._pyomo_units_container._get_pint_units(pyomo_unit)
             return pint_unit
-
 
         # not a leaf - check if it is a named expression
         if hasattr(node, 'is_named_expression_type') and node.is_named_expression_type():
@@ -1038,8 +1012,6 @@ class PyomoUnitsContainer(object):
         """Create a PyomoUnitsContainer instance."""
         self._pint_registry = pint_module.UnitRegistry()
 
-        # create a cache of units from expressions
-        self.cache = dict()
 
     def load_definitions_from_file(self, definition_file):
         """Load new units definitions from a file
@@ -1204,35 +1176,6 @@ external
     #                                                                  float(conv_offset))
     #     self._pint_registry.define(defn_str)
 
-    def _get_units_tuple(self, expr):
-        """
-        Return a tuple of the PyomoUnit, and pint_unit corresponding to the expression in expr.
-
-        Parameters
-        ----------
-        expr : Pyomo expression
-           the input expression for extracting units
-
-        Returns
-        -------
-        : tuple (PyomoUnit, pint unit)
-        """
-        if expr is None:
-            return (None, None)
-        #print('_get_units_tuple with:', expr)
-        pyomo_unit, pint_unit = UnitExtractionVisitor(self).walk_expression(expr=expr)
-        if pint_unit == self._pint_registry.dimensionless:
-            pint_unit = None
-        if pyomo_unit is self._pint_registry.dimensionless:
-            pyomo_unit = None
-
-        if pint_unit is not None:
-            assert pyomo_unit is not None
-            if type(pint_unit) != type(self._pint_registry.kg):
-                pint_unit = pint_unit.units
-            return (_PyomoUnit(pint_unit, self._pint_registry), pint_unit)
-
-        return (None, None)
 
     def _get_pint_units(self, expr):
         """
@@ -1355,16 +1298,16 @@ external
         # between the two
         src_base_factor, base_units_src = self._pint_registry.get_base_units(
             src_pint_unit, check_nonmult=True)
-        dest_base_factor, base_units_dest = self._pint_registry.get_base_units(
+        to_base_factor, base_units_to = self._pint_registry.get_base_units(
             to_pint_unit, check_nonmult=True)
 
-        if base_units_src != base_units_dest:
+        if base_units_src != base_units_to:
             raise InconsistentUnitsError(
                 src_pint_unit, to_pint_unit,
                 'Error in convert: units not compatible.')
 
-        return (src_base_factor/dest_base_factor) * _PyomoUnit(
-            to_pint_unit/src_pint_unit, self._pint_registry) * src
+        return (src_base_factor/to_base_factor) * src * _PyomoUnit(
+            to_pint_unit/src_pint_unit, self._pint_registry)
 
     def convert_value(self, num_value, from_units=None, to_units=None):
         """
