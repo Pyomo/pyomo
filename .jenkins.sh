@@ -71,12 +71,9 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     echo "# Setting up virtual environment"
     echo "#"
-    majorversion=$(python -c 'import sys; print(sys.version_info[0])')
-    minorversion=$(python -c 'import sys; print(sys.version_info[1])')
-    if [ $majorversion -lt 3 ]; then
-       virtualenv python $VENV_SYSTEM_PACKAGES --clear
-    elif [ $minorversion -lt 6 ]; then
-       virtualenv python $VENV_SYSTEM_PACKAGES --clear
+    pyver=$(python -c 'import sys; print("%d%d" % sys.version_info[:2])')
+    if [ $pyver -lt 36 ]; then
+        virtualenv python $VENV_SYSTEM_PACKAGES --clear --relocatable
     else
         python -m venv $VENV_SYSTEM_PACKAGES ${WORKSPACE}/python
     fi
