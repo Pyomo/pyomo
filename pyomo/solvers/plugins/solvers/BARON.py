@@ -32,7 +32,7 @@ logger = logging.getLogger('pyomo.solvers')
 class BARONSHELL(SystemCallSolver):
     """The BARON MINLP solver
     """
-
+    _solver_info_cache = {}
 
     def __init__(self, **kwds):
         #
@@ -119,12 +119,16 @@ class BARONSHELL(SystemCallSolver):
                 pass
 
     @staticmethod
-    def license_is_valid(executable='baron'):
+    def license_is_valid():
         """Runs a check for a valid Baron license using the
         given executable (default is 'baron'). All output is
         hidden. If the test fails for any reason (including
         the executable being invalid), then this function
         will return False."""
+        solver_exec = self.executable()
+        if (solver_exec, 'licensed') in BARONSHELL._solver_info_cache:
+            return BARONSHELL._solver_info_cache[(solver_exec, 'licensed')]
+
         fnames= BARONSHELL._get_dummy_input_files(check_license=True)
         try:
             process = subprocess.Popen([executable, fnames[0]],
@@ -143,10 +147,10 @@ class BARONSHELL(SystemCallSolver):
             rc = 1
         finally:
             BARONSHELL._remove_dummy_input_files(fnames)
-        if rc:
-            return False
-        else:
-            return True
+
+        licensed = not rc
+        BARONSHELL._solver_info_cache[(solver_exec, 'licensed')] = licensed
+        return licensed
 
     def _default_executable(self):
         executable = Executable("baron")
@@ -162,16 +166,21 @@ class BARONSHELL(SystemCallSolver):
         Returns a tuple describing the solver executable version.
         """
         solver_exec = self.executable()
+        if (solver_exec, 'version') in BARONSHELL._solver_info_cache:
+            return BARONSHELL._solver_info_cache[(solver_exec, 'version')]
 
         if solver_exec is None:
-            return _extract_version('')
+            ver = _extract_version('')
         else:
             fnames = self._get_dummy_input_files(check_license=False)
             try:
                 results = run([solver_exec, fnames[0]])
-                return _extract_version(results[1])
+                ver = _extract_version(results[1])
             finally:
                 self._remove_dummy_input_files(fnames)
+
+        BARONSHELL._solver_info_cache[(solver_exec, 'version')] = ver
+        return ver
 
     def create_command_line(self, executable, problem_files):
 
