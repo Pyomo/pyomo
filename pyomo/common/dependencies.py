@@ -11,6 +11,7 @@
 import inspect
 import importlib
 import logging
+import sys
 from six import iteritems
 
 class DeferredImportError(ImportError):
