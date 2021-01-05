@@ -74,7 +74,7 @@ class BARONSHELL(SystemCallSolver):
         #               the number's sign.
         self._precision_string = '.17g'
 
-    def _get_dummy_input_files(check_license=False):
+    def _get_dummy_input_files(self, check_license=False):
         with tempfile.NamedTemporaryFile(mode='w',
                                          delete=False) as f:
             # For some reason, if results: 0 is added to the options
@@ -112,7 +112,7 @@ class BARONSHELL(SystemCallSolver):
             f.write("OBJ: minimize x1;")
         return (f.name, fr.name, fs.name, ft.name)
 
-    def _remove_dummy_input_files(fnames):
+    def _remove_dummy_input_files(self, fnames):
         for name in fnames:
             try:
                 os.remove(name)
