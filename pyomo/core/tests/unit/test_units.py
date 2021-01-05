@@ -155,7 +155,7 @@ class TestPyomoUnit(unittest.TestCase):
             self.assertEqual(str_check, str(pyomo_units_container.get_units(x)))
         else:
             # if str_check is None, then we expect the units to be None
-            self.assertEqual(None, pyomo_units_container.get_units(x))
+            self.assertIsNone(pyomo_units_container.get_units(x))
 
     def _get_check_units_fail(self, x, pyomo_units_container, expected_type=None, expected_error=InconsistentUnitsError):
         if expected_type is not None:
@@ -413,7 +413,6 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_ok(linex1, uc, 'kg', EXPR.LinearExpression)
 
         linex2 = sum_product(model.vv, {'A': kg, 'B': m, 'C':kg}, index=['A', 'B', 'C'])
-        print(linex2)
         self._get_check_units_fail(linex2, uc, EXPR.LinearExpression)
 
     def test_named_expression(self):
@@ -430,8 +429,8 @@ class TestPyomoUnit(unittest.TestCase):
         dless = uc.dimensionless
         self._get_check_units_ok(2.0 == 2.0*dless, uc, None, EXPR.EqualityExpression)
         self.assertEqual(uc.get_units(2.0*dless), uc.get_units(2.0))
-        self.assertEqual(None, uc.get_units(2.0*dless))
-        self.assertEqual(None, uc.get_units(kg/kg))
+        self.assertIsNone(uc.get_units(2.0*dless))
+        self.assertIsNone(uc.get_units(kg/kg))
 
     def test_temperatures(self):
         uc = units
