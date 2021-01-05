@@ -429,8 +429,8 @@ def _finalize_matplotlib(module, available):
     # we are in the middle of testing, we need to switch the backend to
     # 'Agg', otherwise attempts to generate plots on CI services without
     # terminal windows will fail.
-    if 'nose' in sys.modules or 'nose2' in sys.modules:
-        matplotlob.use('Agg')
+    if any(mod in sys.modules for mod in ('nose', 'nose2', 'sphinx')):
+        module.use('Agg')
     import matplotlib.pyplot
 
 yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
