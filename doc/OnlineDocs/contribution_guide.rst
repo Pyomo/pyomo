@@ -42,7 +42,7 @@ Testing
 
 Pyomo uses `unittest <https://docs.python.org/3/library/unittest.html>`_,
 `nose <https://nose.readthedocs.io/>`_,
-`GitHub Actions <https://docs.github.com/en/free-pro-team@latest/actions`_,
+`GitHub Actions <https://docs.github.com/en/free-pro-team@latest/actions>`_,
 and Jenkins
 for testing and continuous integration. Submitted code should include 
 tests to establish the validity of its results and/or effects. Unit 
