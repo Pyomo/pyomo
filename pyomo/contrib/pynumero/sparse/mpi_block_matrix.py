@@ -93,33 +93,17 @@ class MPIBlockMatrix(BaseBlockMatrix):
                  nbcols,
                  rank_ownership,
                  mpi_comm,
-                 assert_correct_owners=True):
+                 assert_correct_owners=False):
 
         shape = (nbrows, nbcols)
         self._block_matrix = BlockMatrix(nbrows, nbcols)
         self._mpiw = mpi_comm
-        self._rank_owner = np.zeros(shape, dtype=np.int64)
-        self._owned_mask = np.zeros(shape, dtype=bool)
-        self._unique_owned_mask = np.zeros(shape, dtype=bool)
-
         rank = self._mpiw.Get_rank()
+        self._rank_owner = np.asarray(rank_ownership, dtype=np.int)
+        self._owned_mask = np.bitwise_or(self._rank_owner == rank, self._rank_owner < 0)
+        self._unique_owned_mask = self._rank_owner == rank
 
-        if isinstance(rank_ownership, list):
-            rank_ownership = np.asarray(rank_ownership, dtype=np.int64)
-        if not isinstance(rank_ownership, np.ndarray):
-            raise RuntimeError('rank_ownership must be a list of lists or a numpy array')
-        assert rank_ownership.ndim == 2, 'rank_ownership must be of size 2'
-
-        for i in range(nbrows):
-            for j in range(nbcols):
-                owner = rank_ownership[i, j]
-                assert owner < self._mpiw.Get_size(), \
-                    'rank owner out of range'
-                self._rank_owner[i, j] = owner
-                if rank == owner or owner < 0:
-                    self._owned_mask[i, j] = True
-                    if owner == rank:
-                        self._unique_owned_mask[i, j] = True
+        assert self._rank_owner.ndim == 2, 'rank_ownership must be of size 2'
 
         # Note: this requires communication but is disabled when assertions
         # are turned off
@@ -271,7 +255,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         m = self.bshape[0]
         n = self.bshape[1]
-        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw)
+        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw, assert_correct_owners=False)
         result._block_matrix = self._block_matrix.transpose()
         return result
 
@@ -571,7 +555,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         m, n = self.bshape
-        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
+        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw, assert_correct_owners=False)
         result._block_matrix = self._block_matrix.copy()
         return result
 
@@ -588,7 +572,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         m, n = self.bshape
-        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
+        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw, assert_correct_owners=False)
         result._block_matrix = self._block_matrix.copy_structure()
         return result
 
@@ -596,7 +580,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
     # Note: this requires communication
     def _assert_correct_owners(self, root=0):
-
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
 
@@ -1165,7 +1148,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # create vector
         bv = MPIBlockVector(bm,
                             col_ownership,
-                            self._mpiw)
+                            self._mpiw,
+                            assert_correct_owners=False)
 
         # compute offset columns
         offset = 0
@@ -1215,7 +1199,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # create vector
         bv = MPIBlockVector(bn,
                             row_ownership,
-                            self._mpiw)
+                            self._mpiw,
+                            assert_correct_owners=False)
         # compute offset columns
         offset = 0
         if brow > 0:
@@ -1237,7 +1222,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return bv
 
     @staticmethod
-    def fromBlockMatrix(block_matrix, rank_ownership, mpi_comm):
+    def fromBlockMatrix(block_matrix, rank_ownership, mpi_comm, assert_correct_owners=False):
         """
         Creates a parallel MPIBlockMatrix from blockmatrix
 
@@ -1260,7 +1245,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         mat = MPIBlockMatrix(bm,
                              bn,
                              rank_ownership,
-                             mpi_comm)
+                             mpi_comm,
+                             assert_correct_owners=assert_correct_owners)
 
         # populate matrix
         for i in range(bm):

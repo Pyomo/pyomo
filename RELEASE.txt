@@ -1,6 +1,8 @@
-We are pleased to announce the release of Pyomo 5.7.1. Pyomo is a collection
-of Python software packages that supports a diverse set of optimization
-capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 5.7.2.
+
+Pyomo is a collection of Python software packages that supports a
+diverse set of optimization capabilities for formulating and analyzing
+optimization models.
 
 
 The following are highlights of the 5.7 release series:
@@ -9,10 +11,17 @@ The following are highlights of the 5.7 release series:
  - Standardizing component initialization
  - Distribution of Cythonized wheels
  - Reimplementation of the core Set component
+ - Improved direct and persistent interfaces to Xpress & MOSEK
+ - Adding support for Python 3.9
  - Deprecating pyomo-extras
  - Numerous bug fixes
 
 A full list of updates and changes is available in the CHANGELOG.txt
+
+ADVANCE CHANGE NOTICE:
+ - This is the last Pyomo release to support Python 2.7, 3.4, and 3.5
+ - This is the last Pyomo release to bundle PySP
+ - This is the last Pyomo release that will have a strict PyUtilib dependency
 
 Enjoy!
 

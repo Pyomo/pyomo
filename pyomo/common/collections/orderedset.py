@@ -12,15 +12,13 @@ import six
 from six import itervalues, iteritems
 
 if six.PY3:
-    from collections.abc import MutableSet as collections_MutableSet
+    from collections.abc import MutableSet
 else:
-    from collections import MutableSet as collections_MutableSet
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
+    from collections import MutableSet
 
-class OrderedSet(collections_MutableSet):
+from collections import OrderedDict
+
+class OrderedSet(MutableSet):
     __slots__ = ('_dict')
 
     def __init__(self, iterable=None):
@@ -39,7 +37,7 @@ class OrderedSet(collections_MutableSet):
 
     #
     # This method must be defined for deepcopy/pickling
-    # because this class relies on Python ids.
+    # because this class is slotized.
     #
     def __setstate__(self, state):
         self._dict = state

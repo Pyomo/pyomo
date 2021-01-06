@@ -22,11 +22,17 @@ import math
 import os
 import sys
 
-from pyutilib.services import TempfileManager
 import pyutilib.th as unittest
 
-from pyomo.environ import Set, RangeSet, Param, ConcreteModel, AbstractModel, Constraint, Var, NonNegativeIntegers, Integers, NonNegativeReals, Boolean, Reals, Any, display, value, set_options, sin, cos, tan, log, log10, exp, sqrt, ceil, floor, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh
+from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
+                           AbstractModel, Constraint, Var,
+                           NonNegativeIntegers, Integers,
+                           NonNegativeReals, Boolean, Reals, Any, display,
+                           value, set_options, sin, cos, tan, log, log10,
+                           exp, sqrt, ceil, floor, asin, acos, atan, sinh,
+                           cosh, tanh, asinh, acosh, atanh)
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import _NotValid, _ParamData 
 
 from six import iteritems, itervalues, StringIO
