@@ -129,26 +129,29 @@ class BARONSHELL(SystemCallSolver):
         if (solver_exec, 'licensed') in self._solver_info_cache:
             return self._solver_info_cache[(solver_exec, 'licensed')]
 
-        fnames= self._get_dummy_input_files(check_license=True)
-        try:
-            process = subprocess.Popen([solver_exec, fnames[0]],
-                                       stdout=subprocess.PIPE,
-                                       stderr=subprocess.STDOUT)
-            stdout, stderr = process.communicate()
-            assert stderr is None
-            rc = 0
-            if process.returncode:
-                rc = 1
-            else:
-                stdout = stdout.decode()
-                if "Continuing in demo mode" in stdout:
+        if not solver_exec:
+            licensed = False
+        else:
+            fnames= self._get_dummy_input_files(check_license=True)
+            try:
+                process = subprocess.Popen([solver_exec, fnames[0]],
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.STDOUT)
+                stdout, stderr = process.communicate()
+                assert stderr is None
+                rc = 0
+                if process.returncode:
                     rc = 1
-        except OSError:
-            rc = 1
-        finally:
-            self._remove_dummy_input_files(fnames)
+                else:
+                    stdout = stdout.decode()
+                    if "Continuing in demo mode" in stdout:
+                        rc = 1
+            except OSError:
+                rc = 1
+            finally:
+                self._remove_dummy_input_files(fnames)
+            licensed = not rc
 
-        licensed = not rc
         self._solver_info_cache[(solver_exec, 'licensed')] = licensed
         return licensed
 
