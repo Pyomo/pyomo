@@ -1,16 +1,24 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 """Utility functions and classes for the GDPopt solver."""
+
 from __future__ import division
 
 import logging
-import timeit
 from contextlib import contextmanager
 from math import fabs
 
 import six
-from pyutilib.misc import Container
 
-from pyomo.common import deprecated
-from pyomo.common.collections import ComponentSet
+from pyomo.common import deprecated, timing
+from pyomo.common.collections import ComponentSet, Container
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -402,18 +410,18 @@ def time_code(timing_data_obj, code_block_name, is_main_timer=False):
     allowing calculation of total elapsed time 'on the fly' (e.g. to enforce
     a time limit) using `get_main_elapsed_time(timing_data_obj)`.
     """
-    start_time = timeit.default_timer()
+    start_time = timing.default_timer()
     if is_main_timer:
         timing_data_obj.main_timer_start_time = start_time
     yield
-    elapsed_time = timeit.default_timer() - start_time
+    elapsed_time = timing.default_timer() - start_time
     prev_time = timing_data_obj.get(code_block_name, 0)
     timing_data_obj[code_block_name] = prev_time + elapsed_time
 
 
 def get_main_elapsed_time(timing_data_obj):
     """Returns the time since entering the main `time_code` context"""
-    current_time = timeit.default_timer()
+    current_time = timing.default_timer()
     try:
         return current_time - timing_data_obj.main_timer_start_time
     except AttributeError as e:

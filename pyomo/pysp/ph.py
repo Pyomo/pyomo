@@ -16,7 +16,7 @@ import inspect
 import uuid
 from math import fabs, sqrt
 
-import pyutilib.common
+from pyomo.common.errors import ApplicationError
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core import Var, Set, BooleanSet, IntegerSet, Suffix, value, minimize, maximize
@@ -1156,7 +1156,7 @@ class _PHBase(object):
     #
     # a utility intended for folks who are brave enough to script
     # variable bounds setting in a python file.  same functionality as
-    # above, but applied to all indicies of the variable, in all
+    # above, but applied to all indices of the variable, in all
     # scenarios.
     #
     """
@@ -2137,7 +2137,7 @@ class ProgressiveHedging(_PHBase):
                 self._mapped_module_name[sys_modules_key] = module_name
 
 
-        # a set of all valid PH iteration indicies is generally useful for plug-ins, so create it here.
+        # a set of all valid PH iteration indices is generally useful for plug-ins, so create it here.
         self._iteration_index_set = Set(name="PHIterations")
         self._iteration_index_set.construct()
         for i in range(0,self._max_iterations + 1):
@@ -4241,7 +4241,7 @@ class ProgressiveHedging(_PHBase):
                     print("")
                     self._current_iteration -= 1
                     break
-                except pyutilib.common._exceptions.ApplicationError:
+                except ApplicationError:
                     print("")
                     print(" ** Caught ApplicationError exception. "
                           "Attempting to gracefully exit PH")

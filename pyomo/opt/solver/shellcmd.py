@@ -15,8 +15,8 @@ import sys
 import time
 import logging
 
-from pyutilib.common import ApplicationError, WindowsError
-from pyutilib.misc import Bunch
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Bunch
 from pyutilib.services import TempfileManager
 from pyutilib.subprocess import run
 
@@ -306,7 +306,7 @@ class SystemCallSolver(OptSolver):
                 tee   = self._tee,
                 define_signal_handlers = self._define_signal_handlers
              )
-        except WindowsError:
+        except OSError:
             err = sys.exc_info()[1]
             msg = 'Could not execute the command: %s\tError message: %s'
             raise ApplicationError(msg % (command.cmd, err))
