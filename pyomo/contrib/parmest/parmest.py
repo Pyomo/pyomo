@@ -11,7 +11,7 @@
 #### Adding option for "local" EF starting Sept 2020
 
 # False implies use the EF that is local to parmset
-use_mpisppy_ef = True  # this is for testing only as Sept 2020
+use_mpisppy_ef = False  # this is for testing only as Sept 2020
 # If you really want to be able to run completely without mpisppy
 # then you need to put the mpisppy imports in a try bock, BTW
 
