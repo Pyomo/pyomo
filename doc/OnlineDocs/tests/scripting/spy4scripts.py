@@ -189,7 +189,7 @@ results = opt.solve(instance, warmstart=True)
 # @Pass_warmstart_to_solver
 
 # @Specify_temporary_directory_name
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 TempfileManager.tempdir = YourDirectoryNameGoesHere
 # @Specify_temporary_directory_name
 """

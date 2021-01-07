@@ -1,1 +1,0 @@
-getattr(instance, ParamName)[None] = NewVal
