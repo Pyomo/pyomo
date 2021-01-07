@@ -1,3 +1,0 @@
-model.A = Set()
-model.B = Set()
-model.P = Param(model.A, model.B)

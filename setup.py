@@ -94,8 +94,8 @@ def run_setup():
       # Note: the release number is set in pyomo/version/info.py
       #
       version=get_version(),
-      maintainer='William E. Hart',
-      maintainer_email='wehart@sandia.gov',
+      maintainer='Pyomo Developer Team',
+      maintainer_email='pyomo-developers@googlegroups.com',
       url='http://pyomo.org',
       license='BSD',
       platforms=["any"],

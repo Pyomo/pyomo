@@ -9,13 +9,13 @@
 #  ___________________________________________________________________________
 
 import pyutilib.th as unittest
-import pyomo.version as pyomo
+import pyomo.version as pyomo_ver
 
 
 class Tests(unittest.TestCase):
 
     def test_releaselevel(self):
-        _relLevel = pyomo.version_info[3].split('{')[0].strip()
+        _relLevel = pyomo_ver.version_info[3].split('{')[0].strip()
         self.assertIn( _relLevel,('devel','VOTD','final') )
 
     def test_version(self):
@@ -25,15 +25,19 @@ class Tests(unittest.TestCase):
         except:
             self.skipTest('pkg_resources is not available')
 
-        if pyomo.version_info[3] == 'final':
-            self.assertEqual(pyomo.version, version)
+        if pyomo_ver.version_info[3] == 'final':
+            self.assertEqual(pyomo_ver.version, version)
 
         else:
             tmp_ = version.split('.')
-            self.assertEqual(str(tmp_[0]), str(pyomo.version_info[0]))
-            self.assertEqual(str(tmp_[1]), str(pyomo.version_info[1]))
+            self.assertEqual(str(tmp_[0]), str(pyomo_ver.version_info[0]))
+            self.assertEqual(str(tmp_[1]), str(pyomo_ver.version_info[1]))
+            if tmp_[-1].startswith('dev'):
+                import pyomo.version.info as info
+                self.assertEqual(int(tmp_[-1][3:]), info.serial)
+                tmp_.pop()
             if len(tmp_) > 2:
-                self.assertEqual(str(tmp_[2]), str(pyomo.version_info[2]))
+                self.assertEqual(str(tmp_[2]), str(pyomo_ver.version_info[2]))
 
 
 if __name__ == "__main__":
