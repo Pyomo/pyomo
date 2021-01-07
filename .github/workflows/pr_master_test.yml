@@ -247,10 +247,10 @@ jobs:
         pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
         # pymysql 1.0.0: No longer supports Python 2 or pypy2
-        if [[ ${{matrix.python}} != pypy2 ]] || [[ ${{matrix.python}} != 2.7 ]]; then
-            pip install pymysql
-        else
+        if [[ ${{matrix.python}} == pypy2 ]] || [[ ${{matrix.python}} == 2.7 ]]; then
             pip install pymysql==0.10.1
+        else
+            pip install pymysql
         fi
         if test -z "${{matrix.slim}}"; then
             pip install --cache-dir cache/pip cplex \
