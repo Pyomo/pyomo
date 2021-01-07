@@ -212,7 +212,7 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
            ``leaveNout_bootstrap_test``, ``likelihood_ratio_test``, and 
            ``confidence_region_test``.
 
-        * If theta_values is a tuple, then it contains a mean, covariance, number 
+        * If theta_values is a tuple, then it contains a mean, covariance, and number 
           of samples (mean, cov, n) where mean is a dictionary or Series 
           (indexed by variable name), covariance is a DataFrame (indexed by 
           variable name, one column per variable name), and n is an integer.
