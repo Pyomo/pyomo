@@ -88,7 +88,7 @@ class BaseTester(unittest.TestCase):
     def run_pyomo(self, cmd, root=None):
         cmd = 'pyomo solve --solver=glpk --results-format=json ' \
               '--save-results=%s.jsn %s' % (root, cmd)
-        return subprocess.run([cmd], shell=True)
+        return subprocess.run(cmd, shell=True)
 
 
 class TestJson(BaseTester):
