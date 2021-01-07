@@ -9,11 +9,23 @@
 #  ___________________________________________________________________________
 #### Using mpi-sppy instead of PySP; May 2020
 #### Adding option for "local" EF starting Sept 2020
+#### Wrapping mpi-sppy functionality and local option Jan 2021 ????????
 
-# False implies use the EF that is local to parmset
-use_mpisppy_ef = False  # this is for testing only as Sept 2020
-# If you really want to be able to run completely without mpisppy
-# then you need to put the mpisppy imports in a try bock, BTW
+# False implies use of the EF that is local to parmest
+use_mpisppy = False  # use it if we can
+if use_mpisppy:
+    try:
+        import mpisppy.utils.sputils as sputils
+    except:
+        use_mpisppy = False  # we can't use it
+if use_mpisppy:
+    # These things should be outside the try block.
+    sputils.disable_tictoc_output()
+    import mpisppy.opt.ef as st
+    import mpisppy.scenario_tree as scenario_tree
+else:
+    import pyomo.contrib.parmest.create_ef as local_ef
+    import pyomo.contrib.parmest.scenario_tree as scenario_tree
 
 import re
 import importlib as im
@@ -21,10 +33,6 @@ import logging
 import types
 import json
 from itertools import combinations
-import mpisppy.utils.sputils as sputils
-sputils.disable_tictoc_output()
-
-import pyomo.contrib.parmest.create_ef as local_ef
 
 from pyomo.common.dependencies import (
     attempt_import,
@@ -34,10 +42,6 @@ from pyomo.common.dependencies import (
 )
 
 import pyomo.environ as pyo
-
-####import pyomo.pysp.util.rapper as st
-import mpisppy.opt.ef as st
-import mpisppy.scenario_tree as scenario_tree
 
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
@@ -55,7 +59,13 @@ inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
 
 logger = logging.getLogger(__name__)
 
-
+def ef_nonants(ef):
+    # Wrapper to call someone's ef_nonants
+    # (the function being called is very short, but it might be changed)
+    if use_mpisppy:
+        return sputils.ef_nonants(ef)
+    else:
+        return local_ef.ef_nonants(ef)
 
 #=============================================
 def _object_from_string(instance, vstr):
@@ -107,48 +117,10 @@ def _ef_ROOT_node_Object_from_string(efinstance, vstr):
     efvstr = "MASTER_BLEND_VAR_RootNode["+vstr+"]"
     return _object_from_string(efinstance, efvstr)
 
-#=============================================
-###def _build_compdatalists(model, complist):
-    # March 2018: not used
-    """
-    Convert a list of names of pyomo components (Var and Param)
-    into two lists of so-called data objects found on model.
-
-    args:
-        model: ConcreteModel
-        complist: pyo.Var and pyo.Param names in model
-    return:
-        vardatalist: a list of Vardata objects (perhaps empty)
-        paramdatalist: a list of Paramdata objects or (perhaps empty)
-    """
-    """
-    vardatalist = list()
-    paramdatalist = list()
-
-    if complist is None:
-        raise RuntimeError("Internal: complist cannot be empty")
-    # TBD: require a list (even if it there is only a single element
-    
-    for comp in complist:
-        c = getattr(model, comp)
-        if c.is_indexed() and isinstance(c, pyo.Var):
-            vardatalist.extend([c[i] for i in sorted(c.keys())])
-        elif isinstance(c, pyo.Var):
-            vardatalist.append(c)
-        elif c.is_indexed() and isinstance(c, pyo.Param):
-            paramdatalist.extend([c[i] for i in sorted(c.keys())])
-        elif isinstance(c, pyo.Param):
-            paramdatalist.append(c)
-        else:
-            raise RuntimeError("Invalid component list entry= "+\
-                               (str(c)) + " Expecting Param or Var")
-    
-    return vardatalist, paramdatalist
-    """
 
 def _pysp_instance_creation_callback(scenario_name, node_names=None, cb_data=None):
     """
-    This is going to be called by mpi-sppy and it will call into
+    This is going to be called by mpi-sppy or the local EF and it will call into
     the user's model's callback.
 
     Parameters:
@@ -467,21 +439,18 @@ class Estimator(object):
 
         options = {"solver": "ipopt"}
         scenario_creator_options = {"cb_data": outer_cb_data}
-        if use_mpisppy_ef:
-            EF = st.ExtensiveForm(options,
-                                  scen_names,
-                                  _pysp_instance_creation_callback,
-                                  model_name = "_Q_opt",
-                                  scenario_creator_options\
-                                  =scenario_creator_options,
-                                  suppress_warnings=True)
-            ef = EF.ef
+        if use_mpisppy:
+            ef = sputils.create_EF(scen_names,
+                                    _pysp_instance_creation_callback,
+                                    EF_name = "_Q_opt",
+                                    creator_options=scenario_creator_options)
         else:
             ef = local_ef.create_EF(scen_names,
                                     _pysp_instance_creation_callback,
                                     EF_name = "_Q_opt",
                                     creator_options=scenario_creator_options)
-                                    
+        self.ef_instance = ef
+        
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
         
@@ -504,7 +473,7 @@ class Estimator(object):
             else:
                 # parmest makes the fitted parameters stage 1 variables
                 ind_vars = []
-                for ndname, Var, solval in sputils.ef_nonants(ef):
+                for ndname, Var, solval in ef_nonants(ef):
                     ind_vars.append(Var)
                 # calculate the reduced hessian
                 solve_result, inv_red_hes = \
@@ -520,7 +489,7 @@ class Estimator(object):
 
             # assume all first stage are thetas...
             thetavals = {}
-            for ndname, Var, solval in sputils.ef_nonants(ef):
+            for ndname, Var, solval in ef_nonants(ef):
                 # process the name
                 # the scenarios are blocks, so strip the scenario name
                 vname  = Var.name[Var.name.find(".")+1:]

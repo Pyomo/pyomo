@@ -1,14 +1,15 @@
+# Copyright 2020 by B. Knueven, D. Mildebrath, C. Muir, J-P Watson, and D.L. Woodruff
 # This software is distributed under the 3-clause BSD License.
-# Copy-pasted with very minor modification from create_EF in mpisppy/utils.
+# Copy-pasted with very minor modification from create_EF in mpisppy/utils/sputils.py.
 """
 Note: parmest can make use of mpi-sppy to form the EF so that it could, if it
 needed to, solve using a decomposition. To guard against loss of mpi-sspy,
 we also have this "local" ability to form the EF.
 """
 
-from pyomo.pysp.phutils import find_active_objective
 from pyomo.core.expr.numeric_expr import LinearExpression
 import pyomo.environ as pyo
+from pyomo.core import Objective
 
 def get_objs(scenario_instance):
     """ return the list of objective functions for scenario_instance"""
@@ -252,10 +253,34 @@ def _models_have_same_sense(models):
     '''
     if (len(models) == 0):
         return True, True
-    senses = [find_active_objective(scenario, True).is_minimizing()
+    senses = [find_active_objective(scenario).is_minimizing()
                 for scenario in models.values()]
     sense = senses[0]
     check = all(val == sense for val in senses)
     if (check):
         return (sense == pyo.minimize), check
     return None, check
+
+    
+def find_active_objective(pyomomodel):
+    # return the only active objective or raise and error
+    obj = list(pyomomodel.component_data_objects(
+        Objective, active=True, descend_into=True))
+    if len(obj) != 1:
+        raise RuntimeError("Could not identify exactly one active "
+                           "Objective for model '%s' (found %d objectives)"
+                           % (pyomomodel.name, len(obj)))
+    return obj[0]
+
+def ef_nonants(ef):
+    """ An iterator to give representative Vars subject to non-anticipitivity
+    Args:
+        ef (ConcreteModel): the full extensive form model
+
+    Yields:
+        tree node name, full EF Var name, Var value
+    """
+    for key, val in ef.ref_vars.items():
+        yield (key[0], val, pyo.value(val))
+
+        
