@@ -1,5 +1,0 @@
-Overview
---------
-This overview chapter outlines the book.
-
-// vim: set syntax=asciidoc:

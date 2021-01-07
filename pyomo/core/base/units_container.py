@@ -15,8 +15,8 @@
 This module provides support for including units within Pyomo expressions. This module
 can be used to define units on a model, and to check the consistency of units
 within the underlying constraints and expressions in the model. The module also
-supports conversion of units within expressions to support construction of constraints
-that contain embedded unit conversions.
+supports conversion of units within expressions using the `convert` method to support
+construction of constraints that contain embedded unit conversions.
 
 To use this package within your Pyomo model, you first need an instance of a
 PyomoUnitsContainer. You can use the module level instance already defined as
