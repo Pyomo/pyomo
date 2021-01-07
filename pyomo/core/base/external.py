@@ -47,7 +47,9 @@ class ExternalFunction(Component):
             return AMPLExternalFunction.__new__(AMPLExternalFunction)
 
     def __init__(self, *args, **kwds):
-        self._units = units.get_units(kwds.pop('units', None))
+        self._units = kwds.pop('units', None)
+        if self._units is not None:
+            self._units = units.get_units(self._units)
         self._arg_units = kwds.pop('arg_units', None)
         if self._arg_units is not None:
             self._arg_units = [units.get_units(u) for u in self._arg_units]

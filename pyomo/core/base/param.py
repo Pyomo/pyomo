@@ -252,8 +252,9 @@ class Param(IndexedComponent):
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
         self._default_val   = kwd.pop('default', _NotValid )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
-        self._units         = units.get_units(kwd.pop('units', None))
+        self._units         = kwd.pop('units', None)
         if self._units is not None:
+            self._units = units.get_units(self._units)
             self._mutable = True
         #
         if 'repn' in kwd:

@@ -516,7 +516,9 @@ class Var(IndexedComponent):
         domain = kwd.pop('domain', domain)
         bounds = kwd.pop('bounds', None)
         self._dense = kwd.pop('dense', True)
-        self._units = units.get_units(kwd.pop('units', None))
+        self._units = kwd.pop('units', None)
+        if self._units is not None:
+            self._units = units.get_units(self._units)
 
         #
         # Initialize the base class
