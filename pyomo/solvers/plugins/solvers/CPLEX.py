@@ -776,6 +776,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     break
                 tINPUT.close()
 
+            elif tokens[0] == "objectiveValues":
+                pass
+
             elif tokens[0].startswith("objectiveValue"):
                 objective_value = (tokens[0].split('=')[1].strip()).lstrip("\"").rstrip("\"")
                 soln.objective['__default_objective__']['Value'] = float(objective_value)
