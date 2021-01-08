@@ -1861,7 +1861,7 @@ class Block(ActiveIndexedComponent):
                 "The Block 'options=' keyword is deprecated.  "
                 "Equivalent functionality can be obtained by wrapping "
                 "the rule function to add the options dictionary to "
-                "the function arguments", version='TBD')
+                "the function arguments", version='5.7.2')
             if self.is_indexed():
                 def rule_wrapper(model, *_idx):
                     return _rule(model, *_idx, **_options)
@@ -2042,7 +2042,7 @@ class IndexedBlock(Block):
 #
 @deprecated("generate_cuid_names() is deprecated. "
             "Use the ComponentUID.generate_cuid_string_map() static method",
-            version="TBD")
+            version="5.7.2")
 def generate_cuid_names(block, ctype=None, descend_into=True):
     return ComponentUID.generate_cuid_string_map(block, ctype, descend_into)
 

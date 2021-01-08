@@ -17,13 +17,13 @@ pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
 
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 import pyomo.opt.plugins.sol
 from pyomo.opt.base.solvers import UnknownSolver
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 
 class TestWriter(pyomo.opt.AbstractProblemWriter):
@@ -59,11 +59,11 @@ class Test(unittest.TestCase):
         pyomo.opt.WriterFactory.register('wtest')(TestWriter)
         pyomo.opt.ReaderFactory.register('rtest')(TestReader)
         pyomo.opt.SolverFactory.register('stest')(TestSolver)
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
         pyomo.opt.WriterFactory.unregister('wtest')
         pyomo.opt.ReaderFactory.unregister('rtest')
         pyomo.opt.SolverFactory.unregister('stest')

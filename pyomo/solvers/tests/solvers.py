@@ -56,7 +56,7 @@ def initialize(**kwds):
     elif (obj.name == "gurobi") and \
        (not GUROBISHELL.license_is_valid()):
         obj.available = False
-    elif (obj.name == "mosek_direct") and \
+    elif (obj.name in {"mosek_direct", "mosek_persistent"}) and \
        (not MOSEKDirect.license_is_valid()):
         obj.available = False
     else:

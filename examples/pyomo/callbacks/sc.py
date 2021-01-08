@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.misc import Options
+from pyomo.common.collections import Options
 from pyomo.core import *
 import math
 import random
