@@ -108,7 +108,6 @@ class ExternalGreyBoxModel(object):
             self.supports_hessian_equality_constraints = False
             self.supports_hessian_outputs = False
 
-    @abc.abstractmethod
     def model_capabilities(self):
         """ This method returns a ModelCapabilities object with
         the flags set appropriately for the derived class

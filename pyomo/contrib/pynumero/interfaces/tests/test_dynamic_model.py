@@ -41,16 +41,16 @@ def create_pyomo_model(A1, A2, c1, c2, N, dt):
     m.Tu = pyo.Set(initialize=list(range(N))[1:], ordered=True)
     
     # inputs (controls)
-    m.F1 = pyo.Var(m.Tu, bounds=(0,None), initialize=1.0)
-    m.F2 = pyo.Var(m.Tu, bounds=(0,None), initialize=1.0)
+    m.F1 = pyo.Var(m.Tu, bounds=(0,None), initialize={t:1+0.1*t for t in m.Tu})
+    m.F2 = pyo.Var(m.Tu, bounds=(0,None), initialize={t:2+0.1*t for t in m.Tu})
 
     # state variables
-    m.h1 = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
-    m.h2 = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
+    m.h1 = pyo.Var(m.T, bounds=(0,None), initialize={t:3+0.1*t for t in m.T})
+    m.h2 = pyo.Var(m.T, bounds=(0,None), initialize={t:4+0.1*t for t in m.T})
 
     # algebraics (outputs)
-    m.F12 = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
-    m.Fo = pyo.Var(m.T, bounds=(0,None), initialize=1.0)
+    m.F12 = pyo.Var(m.T, bounds=(0,None), initialize={t:5+0.1*t for t in m.T})
+    m.Fo = pyo.Var(m.T, bounds=(0,None), initialize={t:6+0.1*t for t in m.T})
 
     @m.Constraint(m.Tu)
     def h1bal(m, t):
@@ -312,7 +312,8 @@ class TwoTanksSeries(ExternalGreyBoxModel):
             idx += 1
 
         assert idx == nnz
-        return spa.coo_matrix( (data, (irow,jcol)), shape=(2*(N-1)+2*N, 2*(N-1)+2*N) )
+        hess =  spa.coo_matrix( (data, (irow,jcol)), shape=(2*(N-1)+2*N, 2*(N-1)+2*N) )
+        return hess
     
     def evaluate_hessian_outputs(self):
         N = self._N
@@ -332,6 +333,7 @@ class TwoTanksSeries(ExternalGreyBoxModel):
         jcol = np.zeros(nnz, dtype=np.int64)
         data = np.zeros(nnz, dtype=np.float64)
         idx = 0
+
         # Hess F12_t
         for i in range(N):
             irow[idx] = 2*(N-1)+i
@@ -340,13 +342,14 @@ class TwoTanksSeries(ExternalGreyBoxModel):
             idx += 1
         # Hess Fo_t
         for i in range(N):
-            irow[idx] = 2*(N-1)+i
-            jcol[idx] = 2*(N-1)+i
-            data[idx] = lam[(N-1)+i]*c2*(-1/4)*h2[i]**(-1.5)
+            irow[idx] = 2*(N-1)+N+i
+            jcol[idx] = 2*(N-1)+N+i
+            data[idx] = lam[N+i]*c2*(-1/4)*h2[i]**(-1.5)
             idx += 1
 
         assert idx == nnz
-        return spa.coo_matrix( (data, (irow,jcol)), shape=(2*(N-1)+2*N, 2*(N-1)+2*N) )
+        hess = spa.coo_matrix( (data, (irow,jcol)), shape=(2*(N-1)+2*N, 2*(N-1)+2*N) )
+        return hess
 
 def create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt):
     m2 = pyo.ConcreteModel()
@@ -354,6 +357,16 @@ def create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt):
     m2.Tu = pyo.Set(initialize=list(range(N))[1:], ordered=True)
     m2.egb = ExternalGreyBoxBlock()
     m2.egb.set_external_model(TwoTanksSeries(A1, A2, c1, c2, N, dt))
+
+    # initialize the same as the pyomo model
+    for t in m2.Tu:
+        m2.egb.inputs['F1_{}'.format(t)].value = 1+0.1*t
+        m2.egb.inputs['F2_{}'.format(t)].value = 2+0.1*t
+    for t in m2.T:
+        m2.egb.inputs['h1_{}'.format(t)].value = 3+0.1*t
+        m2.egb.inputs['h2_{}'.format(t)].value = 4+0.1*t
+        m2.egb.outputs['F12_{}'.format(t)].value = 5+0.1*t
+        m2.egb.outputs['Fo_{}'.format(t)].value = 6+0.1*t
 
     @m2.Constraint(m2.Tu)
     def min_inflow(m, t):
@@ -444,6 +457,7 @@ class TestGreyBoxModel(unittest.TestCase):
         mex_nlp.evaluate_hessian_lag(out=mex_h)
         check_sparse_matrix_specific_order(self, m_h, m_x_order, m_x_order, mex_h, mex_x_order, mex_x_order, x1_x2_map, x1_x2_map)
 
+    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
     def test_solve(self):
         A1 = 5
         A2 = 10

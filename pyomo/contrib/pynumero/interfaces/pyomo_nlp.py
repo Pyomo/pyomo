@@ -518,7 +518,7 @@ class PyomoGreyBoxNLP(NLP):
             self._constraints_scaling = None
 
         # might want the user to be able to specify these at some point
-        self._init_greybox_duals = np.ones(self._n_greybox_constraints)
+        self._init_greybox_duals = np.zeros(self._n_greybox_constraints)
         self._init_greybox_primals.flags.writeable = False
         self._init_greybox_duals.flags.writeable = False
         self._greybox_duals = self._init_greybox_duals.copy()
