@@ -22,7 +22,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
                          SortComponents, Transformation, TransformationFactory,
                          value, NonNegativeIntegers, Reals, NonNegativeReals,
-                         Suffix )
+                         Suffix, ComponentMap )
 from pyomo.core.expr import differentiate
 from pyomo.common.collections import ComponentSet
 from pyomo.opt import SolverFactory
@@ -66,14 +66,12 @@ def _constraint_tight(model, constraint):
     val = value(constraint.body)
     ans = [0, 0]
     if constraint.lower is not None:
-        #if value(constraint.lower) >= val:
-        if abs(value(constraint.lower) - val) <= 1e-4:
+        if value(constraint.lower) >= val:
             # tight or in violation of LB
             ans[0] -= 1
 
     if constraint.upper is not None:
-        #if value(constraint.upper) <= val:
-        if abs(value(constraint.upper) - val) <= 1e-4:
+        if value(constraint.upper) <= val:
             # tight or in violation of UB
             ans[1] += 1
 
@@ -292,6 +290,9 @@ def create_cuts_normal_vector(transBlock_rHull, var_info, hull_to_bigm_map,
     # make sure we're cutting off x* by enough.
     if value(cutexpr) < -cut_threshold:
         return [cutexpr >= 0]
+    logger.warning("Generated cut did not remove relaxed BigM solution by more "
+                   "than the specified threshold of %s. Stopping cut "
+                   "generation." % cut_threshold)
     return None
 
 def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
@@ -326,7 +327,7 @@ def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
         expr=clone_without_expression_components(cut.body,
                                                  substitute=bigm_to_hull_map))
 
-    results = opt.solve(instance_rHull, tee=stream_solver)
+    results = opt.solve(instance_rHull, tee=stream_solver, load_solutions=False)
     if verify_successful_solve(results) is not NORMAL:
         logger.warning("Problem to determine how much to "
                        "back off the new cut "
@@ -336,6 +337,7 @@ def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
         transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
         transBlock_rHull.separation_objective.activate()
         return
+    instance_rHull.solutions.load_from(results)
 
     # we're minimizing, val is <= 0
     val = value(transBlock_rHull.infeasibility_objective) - TOL
@@ -878,15 +880,18 @@ class CuttingPlane_Transformation(Transformation):
 
         hull_to_bigm_map = self._create_hull_to_bigm_substitution_map(var_info)
         bigm_to_hull_map = self._create_bigm_to_hull_substition_map(var_info)
+        xhat = ComponentMap()
 
         while (improving):
             # solve rBigM, solution is xstar
-            results = opt.solve(instance_rBigM, tee=stream_solver)
+            results = opt.solve(instance_rBigM, tee=stream_solver,
+                                load_solutions=False)
             if verify_successful_solve(results) is not NORMAL:
                 logger.warning("Relaxed BigM subproblem "
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
+            instance_rBigM.solutions.load_from(results)
 
             rBigM_objVal = value(rBigM_obj)
             logger.warning("rBigM objective = %s" % (rBigM_objVal,))
@@ -923,17 +928,23 @@ class CuttingPlane_Transformation(Transformation):
                              else abs(obj_diff/prev_obj) > epsilon )
 
             # solve separation problem to get xhat.
-            opt.solve(instance_rHull, tee=stream_solver)
+            results = opt.solve(instance_rHull, tee=stream_solver,
+                                load_solutions=False)
             if verify_successful_solve(results) is not NORMAL:
                 logger.warning("Hull separation subproblem "
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
+            instance_rHull.solutions.load_from(results)
             logger.warning("separation problem objective value: %s" %
                            value(transBlock_rHull.separation_objective))
+
+            # save xhat to initialize rBigM with in the next iteration
             if self.verbose:
                 logger.info("xhat is: ")
-                for x_rbigm, x_hull, x_star in var_info:
+            for x_rbigm, x_hull, x_star in var_info:
+                xhat[x_rbigm] = value(x_hull)
+                if self.verbose:
                     logger.info("\t%s = %s" % 
                                 (x_hull.getname(fully_qualified=True,
                                                 name_buffer=NAME_BUFFER), 
@@ -946,6 +957,9 @@ class CuttingPlane_Transformation(Transformation):
             # numerical issues.
             if value(transBlock_rHull.separation_objective) < \
                self._config.separation_objective_threshold:
+                logger.warning("Separation problem objective below threshold of"
+                               " %s: Stopping cut generation." %
+                               self._config.separation_objective_threshold)
                 break
 
             cuts = self._config.create_cuts(transBlock_rHull, var_info,
@@ -958,7 +972,15 @@ class CuttingPlane_Transformation(Transformation):
                                             self._config.do_integer_arithmetic)
            
             # We are done if the cut generator couldn't return a valid cut
-            if cuts is None or not improving:
+            if cuts is None:
+                logger.warning("Did not generate a valid cut, stopping cut "
+                               "generation.")
+                break
+            if not improving:
+                logger.warning("Difference in relaxed BigM problem objective "
+                               "values from past two iterations is below "
+                               "threshold of %s: Stopping cut generation." %
+                               epsilon)
                 break
 
             for cut in cuts:
@@ -977,6 +999,10 @@ class CuttingPlane_Transformation(Transformation):
                 break
                 
             prev_obj = rBigM_objVal
+
+            # Initialize rbigm with xhat (for the next iteration)
+            for x_rbigm, x_hull, x_star in var_info:
+                x_rbigm.value = xhat[x_rbigm]
 
     def _add_transformation_block(self, instance):
         # creates transformation block with a unique name based on name, adds it
