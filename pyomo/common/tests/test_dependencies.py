@@ -50,6 +50,14 @@ class TestDependencies(unittest.TestCase):
         with self.assertRaisesRegex(
                 DeferredImportError, 'Testing import of a non-existant module'):
             module_obj.try_to_call_a_method()
+
+        # Note that some attribute will intentionally raise
+        # AttributeErrors and NOT DeferredImportError:
+        with self.assertRaisesRegex(
+                AttributeError, "'ModuleUnavailable' object has no "
+                "attribute '__sphinx_mock__'"):
+            module_obj.__sphinx_mock__
+
                 
     def test_import_success(self):
         module_obj, module_available = attempt_import(
