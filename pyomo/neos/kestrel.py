@@ -13,7 +13,7 @@
 # This software is a modified version of the Kestrel interface
 # package that is provided by NEOS:  http://www.neos-server.org
 #
-import email.utils
+
 import io
 import os
 import re
@@ -37,6 +37,8 @@ xmlrpclib = attempt_import('xmlrpclib', importer=_xmlrpclib_importer)[0]
 gzip = attempt_import('gzip')[0]
 
 logger = logging.getLogger('pyomo.neos')
+
+_email_re = re.compile(r'([^@]+@[^@]+\.[a-zA-Z0-9]+)$')
 
 class NEOS(object):
     # NEOS currently only supports HTTPS access
@@ -219,13 +221,13 @@ class kestrelAMPL:
     def getEmailAddress(self):
         # Note: the NEOS email address parser is more restrictive than
         # the email.utils parser
-        addr = email.utils.parseaddr(os.getenv('EMAIL'))[1]
-        if addr and re.search('\.[a-zA-Z0-9]+$', addr):
-            return addr
-        addr = email.utils.parseaddr(
-            "%s@%s" % (self.getUserName(), self.getHostName()))[1]
-        if addr and re.search('\.[a-zA-Z0-9]+$', addr):
-            return addr
+        m = _email_re.match(os.environ.get('EMAIL', ''))
+        if m:
+            return m.group()
+        m = _email_re.match(
+            "%s@%s" % (self.getUserName(), self.getHostName()))
+        if m:
+            return m.group()
 
         raise RuntimeError("NEOS requires a valid email address.  "
                            "Please set the 'EMAIL' environment variable")
