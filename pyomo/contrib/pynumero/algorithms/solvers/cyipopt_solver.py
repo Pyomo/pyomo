@@ -347,7 +347,7 @@ def _redirect_stdout():
     newstdout = os.dup(1)
 
     # /dev/null is used just to discard what is being printed
-    devnull = os.open('/dev/null', os.O_WRONLY)
+    devnull = os.open(os.devnull, os.O_WRONLY)
 
     # Duplicate the file descriptor for /dev/null
     # and overwrite the value for stdout (file descriptor 1)
