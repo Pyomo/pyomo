@@ -13,7 +13,7 @@
 # This software is a modified version of the Kestrel interface
 # package that is provided by NEOS:  http://www.neos-server.org
 #
-
+import email.utils
 import io
 import os
 import re
@@ -193,12 +193,7 @@ class kestrelAMPL:
         # one sudo-ed to), whereas USERNAME is the original user who ran
         # sudo.  We include USERNAME to cover Windows, where LOGNAME and
         # USER may not be defined.
-        for _ in ('LOGNAME','USER','USERNAME'):
-            uname = os.getenv(_)
-            if uname is not None:
-                break
-        hostname = socket.getfqdn(socket.gethostname())
-        user = "%s on %s" % (uname,hostname)
+        user = self.getEmailAddress()
         (jobNumber,password) = self.neos.submitJob(xml,user,"kestrel")
         if jobNumber == 0:
             raise RuntimeError("%s\n\tJob not submitted" % (password,))
@@ -211,6 +206,29 @@ class kestrelAMPL:
             "?admin=results&jobnumber=%d&pass=%s\n"
             % (NEOS.scheme, jobNumber,password))
         return (jobNumber,password)
+
+    def getUserName(self):
+        for _ in ('LOGNAME','USER','USERNAME'):
+            uname = os.getenv(_)
+            if uname is not None:
+                return uname
+
+    def getHostName(self):
+        return socket.getfqdn(socket.gethostname())
+
+    def getEmailAddress(self):
+        # Note: the NEOS email address parser is more restrictive than
+        # the email.utils parser
+        addr = email.utils.parseaddr(os.getenv('EMAIL'))[1]
+        if addr and re.search('\.[a-zA-Z0-9]+$', addr):
+            return addr
+        addr = email.utils.parseaddr(
+            "%s@%s" % (self.getUserName(), self.getHostName()))[1]
+        if addr and re.search('\.[a-zA-Z0-9]+$', addr):
+            return addr
+
+        raise RuntimeError("NEOS requires a valid email address.  "
+                           "Please set the 'EMAIL' environment variable")
 
     def getJobAndPassword(self):
         """
@@ -319,12 +337,14 @@ class kestrelAMPL:
         xml = """
               <document>
               <category>kestrel</category>
+              <email>%s</email>
               <solver>%s</solver>
               <inputType>AMPL</inputType>
               %s
               <solver_options>%s</solver_options>
               <nlfile><base64>%s</base64></nlfile>\n""" %\
-                                (solver,priority,
+                                (self.getEmailAddress(),
+                                 solver,priority,
                                  solver_options,
                                  nl_string)
         #
