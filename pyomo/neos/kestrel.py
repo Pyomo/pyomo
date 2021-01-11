@@ -231,7 +231,7 @@ class kestrelAMPL:
 
         raise RuntimeError(
             "NEOS requires a valid email address (default '%s' not valid). "
-            "Please set the 'EMAIL' environment variable.")
+            "Please set the 'EMAIL' environment variable." % (email,))
 
     def getJobAndPassword(self):
         """
