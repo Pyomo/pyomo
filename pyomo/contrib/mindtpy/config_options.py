@@ -378,7 +378,7 @@ def _add_loa_configs(CONFIG):
     ))
     CONFIG.declare('add_cuts_at_incumbent', ConfigValue(
         default=True,
-        description='Whether to add directly at the incumbent solution found in the branch & bound tree of the mip solver',
+        description='Whether to add lazy cuts to the master problem at the incumbent solution found in the branch & bound tree',
         domain=bool
     ))
 
