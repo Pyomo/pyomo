@@ -762,14 +762,18 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            result = subprocess.Popen(command, stdout=subprocess.PIPE,
-                                      stderr=subprocess.STDOUT, bufsize=1)
-            if tee:
-                for line in result.stdout:
-                    sys.stdout.buffer.write(line)
-
-            txt = result.stdout.decode("utf-8")
-            rc = result.returncode
+            with subprocess.Popen(command, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT, bufsize=1,
+                                  universal_newlines=True) as p, \
+                open('logfile', 'w') as f:
+                if tee:
+                    for line in p.stdout:
+                        sys.stdout.write(line)
+                        f.write(line)
+            rc = p.poll()
+            with open('logfile', 'r') as f:
+                txt = f.read()
+            os.remove('logfile')
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)

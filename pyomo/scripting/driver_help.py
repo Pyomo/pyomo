@@ -54,7 +54,7 @@ def command_exec(options):
     if not os.path.exists(cmddir+options.command[0]):
         print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
         return 1
-    return subprocess.run(cmddir+' '.join(options.command)).returncode
+    return subprocess.run([cmddir] + options.command).returncode
 
 #
 # Add a subparser for the pyomo command
