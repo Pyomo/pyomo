@@ -304,10 +304,14 @@ class SystemCallSolver(OptSolver):
                 timeout = self._timelimit if self._timelimit is None else self._timelimit + max(1, 0.01*self._timelimit),
                 env   = command.env,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stderr=subprocess.STDOUT,
+                universal_newlines=True
              )
+            if self._tee:
+                for line in result.stdout:
+                    sys.stdout.write(line)
             rc = result.returncode
-            log = result.stdout.decode("utf-8")
+            log = result.stdout
         except OSError:
             err = sys.exc_info()[1]
             msg = 'Could not execute the command: %s\tError message: %s'

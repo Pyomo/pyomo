@@ -766,10 +766,10 @@ class GAMSShell(_GAMSSolver):
                                   stderr=subprocess.STDOUT, bufsize=1,
                                   universal_newlines=True) as p, \
                 open('logfile', 'w') as f:
-                if tee:
-                    for line in p.stdout:
+                for line in p.stdout:
+                    if tee:
                         sys.stdout.write(line)
-                        f.write(line)
+                    f.write(line)
             rc = p.poll()
             with open('logfile', 'r') as f:
                 txt = f.read()
