@@ -14,11 +14,11 @@ import os
 import sys
 import time
 import logging
+import subprocess
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 import pyomo.common
 from pyomo.opt.base import ResultsFormat
@@ -298,14 +298,15 @@ class SystemCallSolver(OptSolver):
                 _input = command.script
             else:
                 _input = None
-            [rc, log] = run(
+            result = subprocess.run(
                 command.cmd,
                 stdin = _input,
-                timelimit = self._timelimit if self._timelimit is None else self._timelimit + max(1, 0.01*self._timelimit),
-                env   = command.env,
-                tee   = self._tee,
-                define_signal_handlers = self._define_signal_handlers
+                timeout = self._timelimit if self._timelimit is None else self._timelimit + max(1, 0.01*self._timelimit),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
              )
+            rc = result.returncode
+            log = result.stdout.decode("utf-8")
         except OSError:
             err = sys.exc_info()[1]
             msg = 'Could not execute the command: %s\tError message: %s'
