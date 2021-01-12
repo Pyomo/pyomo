@@ -325,10 +325,14 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.LB = max(
                 self.get_best_objective_value(), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
+            if config.add_regularization:
+                solve_data.fake_LB = max(solve_data.fake_LB, self.get_objective_value())
         else:
             solve_data.UB = min(
                 self.get_best_objective_value(), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
+            if config.add_regularization:
+                solve_data.fake_UB = min(solve_data.fake_UB, self.get_objective_value())
         config.logger.info(
             'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s'
             % (solve_data.mip_iter, self.get_objective_value(), self.get_best_objective_value(),

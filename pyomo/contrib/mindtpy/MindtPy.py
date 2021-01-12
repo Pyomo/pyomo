@@ -174,6 +174,10 @@ class MindtPySolver(object):
             # set up bounds
             solve_data.LB = float('-inf')
             solve_data.UB = float('inf')
+            # Since the bound provided in single tree is bound of the B&B tree instead of the obj value of the master problem. Fake bound is needed when single_tree and add_regularization are both activated.
+            if config.single_tree and config.add_regularization:
+                solve_data.fake_LB = float('-inf')
+                solve_data.fake_UB = float('inf')
             solve_data.LB_progress = [solve_data.LB]
             solve_data.UB_progress = [solve_data.UB]
             if config.single_tree and (config.add_no_good_cuts or config.use_tabu_list):
