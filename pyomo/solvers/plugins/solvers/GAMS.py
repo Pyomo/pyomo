@@ -762,10 +762,13 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            result = subprocess.run(command, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
+            result = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT, bufsize=1)
+            if tee:
+                for line in result.stdout:
+                    sys.stdout.buffer.write(line)
+
             txt = result.stdout.decode("utf-8")
-            print(txt)
             rc = result.returncode
 
             if keepfiles:
