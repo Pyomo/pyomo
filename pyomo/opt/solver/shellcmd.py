@@ -302,6 +302,7 @@ class SystemCallSolver(OptSolver):
                 command.cmd,
                 stdin = _input,
                 timeout = self._timelimit if self._timelimit is None else self._timelimit + max(1, 0.01*self._timelimit),
+                env   = command.env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
              )
