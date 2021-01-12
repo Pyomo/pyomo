@@ -66,10 +66,10 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                     - (slack_var if config.add_slack else 0) <= 0)
 
             else:  # Inequality constraint (possibly two-sided)
-                if constr.has_ub() \
+                if (constr.has_ub() \
                     and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                         or (linearize_violated and constr.uslack() < 0) \
-                        or (config.linearize_inactive and constr.uslack() > 0):
+                        or (config.linearize_inactive and constr.uslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_ub()):
                     if config.add_slack:
                         slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
 
@@ -80,10 +80,10 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                               <= constr.upper)
                     )
 
-                if constr.has_lb() \
+                if (constr.has_lb() \
                     and (linearize_active and abs(constr.lslack()) < config.zero_tolerance) \
                         or (linearize_violated and constr.lslack() < 0) \
-                        or (config.linearize_inactive and constr.lslack() > 0):
+                        or (config.linearize_inactive and constr.lslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_lb()):
                     if config.add_slack:
                         slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
 

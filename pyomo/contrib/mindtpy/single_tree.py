@@ -126,10 +126,10 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                              sense='L',
                              rhs=cplex_rhs)
                 else:  # Inequality constraint (possibly two-sided)
-                    if constr.has_ub() \
+                    if (constr.has_ub() \
                         and (linearize_active and abs(constr.uslack()) < config.bound_tolerance) \
                             or (linearize_violated and constr.uslack() < 0) \
-                            or (config.linearize_inactive and constr.uslack() > 0):
+                            or (config.linearize_inactive and constr.uslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_ub()):
 
                         pyomo_expr = sum(
                             value(jacs[constr][var])*(var - var.value) for var in constr_vars) + value(constr.body)
@@ -140,10 +140,10 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                         self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                                  sense='L',
                                  rhs=constr.upper.value + cplex_rhs)
-                    if constr.has_lb() \
+                    if (constr.has_lb() \
                         and (linearize_active and abs(constr.lslack()) < config.bound_tolerance) \
                             or (linearize_violated and constr.lslack() < 0) \
-                            or (config.linearize_inactive and constr.lslack() > 0):
+                            or (config.linearize_inactive and constr.lslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_lb()):
                         pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
                             opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) + value(constr.body)
                         cplex_rhs = - \

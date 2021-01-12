@@ -425,7 +425,7 @@ def setup_master(solve_data, config, fp, regularization_problem):
                 expr=MindtPy.objective_value <= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.LB)
         else:
             MindtPy.cuts.obj_reg_estimate = Constraint(
-                expr=MindtPy.objective_value >= (1 - config.level_coef) * value(solve_data.UB) + config.level_coef * solve_data.UB)
+                expr=MindtPy.objective_value >= (1 - config.level_coef) * value(solve_data.LB) + config.level_coef * solve_data.UB)
 
     else:
         if config.add_slack:
