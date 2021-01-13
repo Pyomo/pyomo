@@ -75,10 +75,10 @@ def assert_units_equivalent(*args):
     #             ("Units between {} and {} are not consistent.".format(str(pyomo_unit_compare), str(pyomo_unit)))
     #
     # this call will raise an exception if an inconsistency is found
-    pint_unit_compare = units._get_pint_units(args[0])
-    for expr in args[1:]:
+    pint_units = [units._get_pint_units(arg) for arg in args]
+    pint_unit_compare = pint_units[0]
+    for pint_unit in pint_units[1:]:
         # this call will raise an exception if an inconsistency is found
-        pint_unit = units._get_pint_units(expr)
         if not pint_unit == pint_unit_compare:
             raise UnitsError \
                 ("Units between {} and {} are not consistent.".format(str(pint_unit_compare), str(pint_unit)))
