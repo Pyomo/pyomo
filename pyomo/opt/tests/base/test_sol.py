@@ -17,8 +17,8 @@ pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
 
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 from pyomo.opt import (TerminationCondition,
                        SolutionStatus,
@@ -26,7 +26,7 @@ from pyomo.opt import (TerminationCondition,
                        check_optimal_termination,
                        assert_optimal_termination)
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 class Test(unittest.TestCase):
 
@@ -35,11 +35,11 @@ class Test(unittest.TestCase):
         import pyomo.environ
 
     def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
         if os.path.exists(currdir+"test_sol.txt"):
             os.remove(currdir+"test_sol.txt")
 

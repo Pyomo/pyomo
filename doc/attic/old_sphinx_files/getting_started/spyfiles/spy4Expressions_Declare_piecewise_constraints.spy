@@ -1,2 +1,0 @@
-#model.pwconst = Piecewise(indexes, yvar, xvar, **Keywords)
-#model.pwconst = Piecewise(yvar,xvar,**Keywords)

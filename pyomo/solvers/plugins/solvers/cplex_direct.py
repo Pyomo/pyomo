@@ -13,7 +13,7 @@ import re
 import six
 import sys
 
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.base import Suffix, Var, Constraint, SOSConstraint, Objective
 from pyomo.core.expr.numvalue import is_fixed
@@ -221,8 +221,15 @@ class CPLEXDirect(DirectSolver):
                     self._solver_model.set_problem_type(self._solver_model.problem_type.QP)
                 else:
                     self._solver_model.set_problem_type(self._solver_model.problem_type.LP)
+
+            # if the user specifies a 'mipgap'
+            # set cplex's mip.tolerances.mipgap
+            if self.options.mipgap is not None:
+                self._solver_model.parameters.mip.tolerances.mipgap.set(float(self.options.mipgap))
             
             for key, option in self.options.items():
+                if key == 'mipgap': # handled above
+                    continue
                 opt_cmd = self._solver_model.parameters
                 key_pieces = key.split('_')
                 for key_piece in key_pieces:
