@@ -51,9 +51,8 @@ def initialize(**kwds):
         obj.available = False
     elif hasattr(opt, 'executable') and opt.executable() is None:
         obj.available = False
-    elif hasattr(opt, 'license_is_valid') \
-         and obj.name not in licensed_solvers_with_demo_mode \
-         and not opt.license_is_valid() is None:
+    elif not opt.license_is_valid() \
+         and obj.name not in licensed_solvers_with_demo_mode:
         obj.available = False
     else:
         obj.available = True

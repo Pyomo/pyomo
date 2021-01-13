@@ -310,9 +310,7 @@ def help_solvers():
                 ver = ''
                 if opt.available(False):
                     avail = '-'
-                    if not hasattr(opt, 'license_is_valid'):
-                        avail = '+'
-                    elif opt.license_is_valid():
+                    if opt.license_is_valid():
                         avail = '+'
                     try:
                         ver = opt.version()

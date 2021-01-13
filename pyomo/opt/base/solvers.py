@@ -97,6 +97,10 @@ class UnknownSolver(object):
             raise ApplicationError("Solver (%s) not available" % str(self.name))
         return False
 
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
+        return False
+
     def warm_start_capable(self):
         """ True is the solver can accept a warm-start solution."""
         return False
@@ -211,7 +215,7 @@ def check_available_solvers(*args):
         if hasattr(opt, 'executable') and opt.executable() is None:
             continue # not available
 
-        if hasattr(opt, 'license_is_valid') and not opt.license_is_valid():
+        if not opt.license_is_valid():
             continue # not available
 
         # At this point, the solver is available (and licensed)
@@ -498,6 +502,10 @@ class OptSolver(object):
 
     def available(self, exception_flag=True):
         """ True if the solver is available """
+        return True
+
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
         return True
 
     def warm_start_capable(self):
