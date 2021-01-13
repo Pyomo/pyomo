@@ -968,11 +968,11 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             # this is a leaf, but not a native type
             if nodetype is _PyomoUnit:
                 return node._get_pint_unit()
-            
-            # might want to add other common types here
-            pyomo_unit = node.get_units()
-            pint_unit = self._pyomo_units_container._get_pint_units(pyomo_unit)
-            return pint_unit
+            elif hasattr(node, 'get_units'):
+                # might want to add other common types here
+                pyomo_unit = node.get_units()
+                pint_unit = self._pyomo_units_container._get_pint_units(pyomo_unit)
+                return pint_unit
 
         # not a leaf - check if it is a named expression
         if hasattr(node, 'is_named_expression_type') and node.is_named_expression_type():
@@ -980,7 +980,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             return pint_unit
 
         raise TypeError('An unhandled expression node type: {} was encountered while retrieving the'
-                        ' units of expression'.format(str(node_type), str(node)))
+                        ' units of expression'.format(str(nodetype), str(node)))
 
     
 class PyomoUnitsContainer(object):
