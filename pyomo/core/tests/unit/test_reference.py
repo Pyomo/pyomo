@@ -804,7 +804,7 @@ class TestReference(unittest.TestCase):
                 KeyError, "Index '1' is not valid for indexed component 'r'"):
             m.r[1] = m.x
 
-    def test_owns_data(self):
+    def test_is_reference(self):
         m = ConcreteModel()
         m.v0 = Var()
         m.v1 = Var([1,2,3])
@@ -812,14 +812,14 @@ class TestReference(unittest.TestCase):
         m.ref0 = Reference(m.v0)
         m.ref1 = Reference(m.v1)
 
-        self.assertTrue(m.v0.owns_data())
-        self.assertTrue(m.v1.owns_data())
+        self.assertFalse(m.v0.is_reference())
+        self.assertFalse(m.v1.is_reference())
 
-        self.assertFalse(m.ref0.owns_data())
-        self.assertFalse(m.ref1.owns_data())
+        self.assertTrue(m.ref0.is_reference())
+        self.assertTrue(m.ref1.is_reference())
 
         unique_vars = list(
-                v for v in m.component_objects(Var) if v.owns_data())
+                v for v in m.component_objects(Var) if not v.is_reference())
         self.assertEqual(len(unique_vars), 2)
 
     def test_referent(self):
