@@ -1,8 +1,8 @@
 import pyomo.environ as pe
 import unittest
 from parameterized import parameterized
-from appsi.base import TerminationCondition, Results, Solver
-from appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
+from pyomo.contrib.appsi.base import TerminationCondition, Results, Solver
+from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
 from typing import Type
 import numpy as np
 

@@ -8,9 +8,9 @@ from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.block import _BlockData
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.numvalue import value
-from appsi.base import PersistentBase
+from pyomo.contrib.appsi.base import PersistentBase
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-from appsi.cmodel import cmodel
+from pyomo.contrib.appsi.cmodel import cmodel
 from pyomo.common.timing import HierarchicalTimer
 from .config import WriterConfig
 from .cmodel_converter import PyomoToCModelWalker

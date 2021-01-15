@@ -1,8 +1,8 @@
 from pyutilib.services import TempfileManager
 from pyomo.common.fileutils import Executable
-from appsi.base import Solver, Results, TerminationCondition, MIPSolverConfig
-from appsi.writers import LPWriter
-from appsi.utils import TeeThread
+from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, MIPSolverConfig
+from pyomo.contrib.appsi.writers import LPWriter
+from pyomo.contrib.appsi.utils import TeeThread
 import logging
 import subprocess
 from pyomo.core.kernel.objective import minimize

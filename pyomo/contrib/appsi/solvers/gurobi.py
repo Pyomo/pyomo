@@ -9,12 +9,12 @@ from pyomo.core.base.sos import SOSConstraint, _SOSConstraintData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import Objective
 from pyomo.common.errors import PyomoException
-from appsi.base import Solver, Results, TerminationCondition, MIPSolverConfig, UpdateConfig, PersistentBase
+from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, MIPSolverConfig, UpdateConfig, PersistentBase
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
 import pyomo.core.expr.numeric_expr as numeric_expr
 import collections
-from appsi.utils import OrderedSet, get_objective, identify_named_expressions
+from pyomo.contrib.appsi.utils import OrderedSet, get_objective, identify_named_expressions
 import math
 from typing import List, Optional, Dict
 from pyomo.common.timing import HierarchicalTimer

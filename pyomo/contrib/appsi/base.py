@@ -146,7 +146,7 @@ class Results(object):
 
     Here is an example workflow:
     >>> import pyomo.environ as pe
-    >>> import appsi
+    >>> from pyomo.contrib import appsi
     >>> m = pe.ConcreteModel()
     >>> m.x = pe.Var()
     >>> m.obj = pe.Objective(expr=m.x**2)

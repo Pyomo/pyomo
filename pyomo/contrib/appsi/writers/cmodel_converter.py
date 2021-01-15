@@ -2,7 +2,7 @@ from typing import Dict
 from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value, is_constant
-from appsi.cmodel import cmodel
+from pyomo.contrib.appsi.cmodel import cmodel
 from pyomo.core.expr import current as _expr
 
 
