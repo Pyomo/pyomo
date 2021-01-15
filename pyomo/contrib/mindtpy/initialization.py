@@ -133,7 +133,7 @@ def init_rNLP(solve_data, config):
     TransformationFactory('core.relax_integer_vars').apply_to(m)
     nlp_args = dict(config.nlp_solver_args)
     nlpopt = SolverFactory(config.nlp_solver)
-    set_solver_options(nlpopt, solve_data, config, type='nlp')
+    set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
         results = nlpopt.solve(m, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = results.solver.termination_condition
@@ -230,7 +230,7 @@ def init_max_binaries(solve_data, config):
     if isinstance(mipopt, PersistentSolver):
         mipopt.set_instance(m)
     mip_args = dict(config.mip_solver_args)
-    set_solver_options(mipopt, solve_data, config, type='mip')
+    set_solver_options(mipopt, solve_data, config, solver_type='mip')
     results = mipopt.solve(m, tee=config.mip_solver_tee, **mip_args)
 
     solve_terminate_cond = results.solver.termination_condition

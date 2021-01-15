@@ -100,7 +100,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
     if config.mip_solver in {'cplex','cplex_persistent', 'gurobi','gurobi_persistent'}:
         mip_args['warmstart'] = True
     set_solver_options(masteropt, solve_data, config,
-                       type='mip', regularization=regularization_problem)
+                       solver_type='mip', regularization=regularization_problem)
     try:
         with time_code(solve_data.timing, 'regularization master' if regularization_problem else ('fp master' if fp else 'master')):
             master_mip_results = masteropt.solve(solve_data.mip,
@@ -347,7 +347,7 @@ def handle_master_unbounded(master_mip, solve_data, config):
     MindtPy.objective_bound = Constraint(
         expr=(-config.obj_bound, MindtPy.mip_obj.expr, config.obj_bound))
     masteropt = SolverFactory(config.mip_solver)
-    set_solver_options(masteropt, solve_data, config, type='mip')
+    set_solver_options(masteropt, solve_data, config, solver_type='mip')
     if isinstance(masteropt, PersistentSolver):
         masteropt.set_instance(master_mip)
     with SuppressInfeasibleWarning():

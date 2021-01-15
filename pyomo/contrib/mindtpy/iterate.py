@@ -421,7 +421,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             masteropt._solver_model.set_log_stream(None)
             masteropt._solver_model.set_error_stream(None)
         mip_args = dict(config.mip_solver_args)
-        set_solver_options(masteropt, solve_data, config, type='mip')
+        set_solver_options(masteropt, solve_data, config, solver_type='mip')
         master_mip_results = masteropt.solve(
             solve_data.mip, tee=config.mip_solver_tee, **mip_args)
         if solve_data.objective_sense == minimize:

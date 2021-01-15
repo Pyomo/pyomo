@@ -66,7 +66,7 @@ def model_is_valid(solve_data, config):
                 'Your model is a NLP (nonlinear program). '
                 'Using NLP solver %s to solve.' % config.nlp_solver)
             nlpopt = SolverFactory(config.nlp_solver)
-            set_solver_options(nlpopt, solve_data, config, type='nlp')
+            set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
             nlpopt.solve(
                 solve_data.original_model, tee=config.nlp_solver_tee, **config.nlp_solver_args)
             return False
@@ -77,7 +77,8 @@ def model_is_valid(solve_data, config):
             masteropt = SolverFactory(config.mip_solver)
             if isinstance(masteropt, PersistentSolver):
                 masteropt.set_instance(solve_data.original_model)
-            set_solver_options(masteropt, solve_data, config, type='mip')
+            set_solver_options(masteropt, solve_data,
+                               config, solver_type='mip')
             masteropt.solve(solve_data.original_model,
                             tee=config.mip_solver_tee, **config.mip_solver_args)
             return False
@@ -399,7 +400,7 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
         expr=sum(norm_constraint_blk.L1_slack_var[idx] for idx in norm_constraint_blk.L1_slack_idx) <= rhs)
 
 
-def set_solver_options(opt, solve_data, config, type, regularization=False):
+def set_solver_options(opt, solve_data, config, solver_type, regularization=False):
     """ set options for MIP/NLP solvers
 
     Args:
@@ -409,7 +410,7 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
             data container that holds solve-instance data
         config: ConfigBlock
             contains the specific configurations for the algorithm
-        type: String
+        solver_type: String
             The type of the solver, i.e. mip or nlp
         regularization (bool, optional): Boolean. 
             Defaults to False.
@@ -418,7 +419,7 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
     # nlp_args = dict(config.nlp_solver_args)
     elapsed = get_main_elapsed_time(solve_data.timing)
     remaining = int(max(config.time_limit - elapsed, 1))
-    if type == 'mip':
+    if solver_type == 'mip':
         solver_name = config.mip_solver
         if regularization:
             if config.projection_mip_threads > 0:
@@ -426,7 +427,7 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
         else:
             if config.threads > 0:
                 opt.options['threads'] = config.threads
-    elif type == 'nlp':
+    elif solver_type == 'nlp':
         solver_name = config.nlp_solver
     # TODO: opt.name doesn't work for GAMS
     if solver_name in {'cplex', 'gurobi', 'gurobi_persistent'}:
@@ -454,20 +455,36 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
         # opt.options['mipgap'] = 0.001
     elif solver_name == 'baron':
         opt.options['MaxTime'] = remaining
+        opt.options['AbsConFeasTol'] = config.zero_tolerance
     elif solver_name == 'ipopt':
         opt.options['max_cpu_time'] = remaining
         opt.options['constr_viol_tol'] = config.zero_tolerance
     elif solver_name == 'gams':
-        if type == 'mip':
+        if solver_type == 'mip':
             opt.options['add_options'] = ['option optcr=0.001;',
                                           'option reslim=%s;' % remaining]
-        elif type == 'nlp':
+        elif solver_type == 'nlp':
             opt.options['add_options'] = ['option reslim=%s;' % remaining]
-            if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth'}:
+            if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth', 'msnlp', 'baron'}:
                 if config.nlp_solver_args['solver'] == 'ipopt':
                     opt.options['add_options'].append('$onecho > ipopt.opt')
+                    opt.options['add_options'].append(
+                        'constr_viol_tol ' + str(config.zero_tolerance))
                 elif config.nlp_solver_args['solver'] == 'ipopth':
                     opt.options['add_options'].append('$onecho > ipopth.opt')
-                opt.options['add_options'].append('constr_viol_tol 1e-08')
+                    opt.options['add_options'].append(
+                        'constr_viol_tol ' + str(config.zero_tolerance))
+                elif config.nlp_solver_args['solver'] == 'conopt':
+                    opt.options['add_options'].append('$onecho > conopt.opt')
+                    opt.options['add_options'].append(
+                        'RTNWMA ' + str(config.zero_tolerance))
+                elif config.nlp_solver_args['solver'] == 'msnlp':
+                    opt.options['add_options'].append('$onecho > msnlp.opt')
+                    opt.options['add_options'].append(
+                        'feasibility_tolerance ' + str(config.zero_tolerance))
+                elif config.nlp_solver_args['solver'] == 'baron':
+                    opt.options['add_options'].append('$onecho > baron.opt')
+                    opt.options['add_options'].append(
+                        'AbsConFeasTol ' + str(config.zero_tolerance))
                 opt.options['add_options'].append('$offecho')
                 opt.options['add_options'].append('GAMS_MODEL.optfile=1')

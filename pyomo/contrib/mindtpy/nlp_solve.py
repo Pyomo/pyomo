@@ -105,7 +105,7 @@ def solve_subproblem(solve_data, config):
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
-    set_solver_options(nlpopt, solve_data, config, type='nlp')
+    set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
         with time_code(solve_data.timing, 'fixed subproblem'):
             results = nlpopt.solve(
@@ -349,7 +349,7 @@ def solve_feasibility_subproblem(solve_data, config):
     TransformationFactory('core.fix_integer_vars').apply_to(feas_subproblem)
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
-    set_solver_options(nlpopt, solve_data, config, type='nlp')
+    set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
         try:
             with time_code(solve_data.timing, 'feasibility subproblem'):
