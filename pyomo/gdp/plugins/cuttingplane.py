@@ -65,13 +65,17 @@ def _constraint_tight(model, constraint):
     """
     val = value(constraint.body)
     ans = [0, 0]
+    # TODO: Should we let the user set this?
+    TOL = 1e-6
     if constraint.lower is not None:
-        if value(constraint.lower) >= val:
+        if value(constraint.lower) >= val or \
+        val - value(constraint.lower) <= TOL:
             # tight or in violation of LB
             ans[0] -= 1
 
     if constraint.upper is not None:
-        if value(constraint.upper) <= val:
+        if value(constraint.upper) <= val or \
+           value(constraint.upper) - val <= TOL:
             # tight or in violation of UB
             ans[1] += 1
 
