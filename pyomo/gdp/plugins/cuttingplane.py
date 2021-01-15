@@ -461,7 +461,7 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('minimum_improvement_threshold', ConfigValue(
         default=0.01,
-        domain=PositiveFloat,
+        domain=NonNegativeFloat,
         description="Threshold value for difference in relaxed bigM problem "
         "objectives used to decide when to stop adding cuts",
         doc="""
@@ -472,7 +472,7 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('separation_objective_threshold', ConfigValue(
         default=0.01,
-        domain=PositiveFloat,
+        domain=NonNegativeFloat,
         description="Threshold value used to decide when to stop adding cuts: "
         "If separation problem objective is not at least this quantity, cut "
         "generation will terminate.",
