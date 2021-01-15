@@ -456,9 +456,18 @@ def set_solver_options(opt, solve_data, config, type, regularization=False):
         opt.options['MaxTime'] = remaining
     elif solver_name == 'ipopt':
         opt.options['max_cpu_time'] = remaining
+        opt.options['constr_viol_tol'] = config.zero_tolerance
     elif solver_name == 'gams':
         if type == 'mip':
             opt.options['add_options'] = ['option optcr=0.001;',
                                           'option reslim=%s;' % remaining]
         elif type == 'nlp':
             opt.options['add_options'] = ['option reslim=%s;' % remaining]
+            if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth'}:
+                if config.nlp_solver_args['solver'] == 'ipopt':
+                    opt.options['add_options'].append('$onecho > ipopt.opt')
+                elif config.nlp_solver_args['solver'] == 'ipopth':
+                    opt.options['add_options'].append('$onecho > ipopth.opt')
+                opt.options['add_options'].append('constr_viol_tol 1e-08')
+                opt.options['add_options'].append('$offecho')
+                opt.options['add_options'].append('GAMS_MODEL.optfile=1')
