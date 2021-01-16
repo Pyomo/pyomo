@@ -103,7 +103,7 @@ class PyomoNLP(AslNLP):
             full_to_equality = self._con_full_eq_map
             equality_mask = self._con_full_eq_mask
             self._condata_to_eq_idx = ComponentMap(
-                    (con, full_to_equality[i]) 
+                    (con, full_to_equality[i])
                     for con, i in six.iteritems(self._condata_to_idx)
                     if equality_mask[i]
                     )
@@ -225,7 +225,7 @@ class PyomoNLP(AslNLP):
 
     def get_equality_constraint_indices(self, constraints):
         """
-        Return the list of equality indices for the constraints 
+        Return the list of equality indices for the constraints
         corresponding to the list of Pyomo constraints provided.
 
         Parameters

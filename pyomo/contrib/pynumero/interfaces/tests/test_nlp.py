@@ -517,7 +517,7 @@ class TestPyomoNLP(unittest.TestCase):
         expected_eq_ids = [id(self.pm.c[i]) for i in eq_indices]
         eq_ids = [id(con) for con in eq_constraints]
         self.assertEqual(eq_ids, expected_eq_ids)
-        
+
         eq_constraint_names = nlp.equality_constraint_names()
         expected_eq_names = [c.getname(fully_qualified=True)
                 for c in nlp.get_pyomo_equality_constraints()]
