@@ -10,11 +10,11 @@
 from scipy.sparse import isspmatrix_coo, coo_matrix
 import numpy as np
 
-try:
-    import mumps
-except ImportError as e:
-    raise ImportError('Error importing mumps. Install pymumps '
-                      'conda install -c conda-forge pymumps')
+from pyomo.common.dependencies import attempt_import
+mumps, mumps_available = attempt_import(
+    'mumps', error_message="Error importing mumps. PyNumero's "
+    "mumps_interface requires pymumps; install it with, e.g., "
+    "'conda install -c conda-forge pymumps'")
 
 from pyomo.contrib.pynumero.sparse import BlockVector
 

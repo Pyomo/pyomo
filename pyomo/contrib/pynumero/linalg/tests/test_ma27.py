@@ -11,7 +11,8 @@ import pyutilib.th as unittest
 from pyomo.contrib.pynumero.dependencies import numpy as np, numpy_available
 if not numpy_available:
     raise unittest.SkipTest('pynumero MA27 tests require numpy')
-from pyomo.contrib.pynumero.linalg.ma27 import *
+import ctypes
+from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
 
 
 @unittest.skipIf(not MA27Interface.available(), reason='MA27 not available')
@@ -101,9 +102,6 @@ class TestMA27Interface(unittest.TestCase):
         self.assertEqual(ma27.get_info(15), 2)
         self.assertEqual(status, 0)
 
-        bad_ent = np.array([2.,3.,4.,6.,1.,5.], dtype=np.double)
-        with self.assertRaisesRegex(AssertionError, 'Wrong number of entries'):
-            ma27.do_numeric_factorization(irn, icn, n, bad_ent)
         with self.assertRaisesRegex(AssertionError, 'Dimension mismatch'):
             ma27.do_numeric_factorization(irn, icn, n+1, ent)
 
@@ -127,11 +125,11 @@ class TestMA27Interface(unittest.TestCase):
 
         n = 5
         ne = 7
-        irn = np.array([1,1,2,2,3,3,5], dtype=np.intc)
-        icn = np.array([1,2,3,5,3,4,5], dtype=np.intc)
+        irn = np.array([1,  1,  2,  2,  3,  3,  5], dtype=np.intc)
+        icn = np.array([1,  2,  3,  5,  3,  4,  5], dtype=np.intc)
+        ent = np.array([2., 3., 4., 6., 1., 5., 1.], dtype=np.double)
         irn = irn - 1
         icn = icn - 1
-        ent = np.array([2.,3.,4.,6.,1.,5.,1.], dtype=np.double)
         rhs = np.array([8.,45.,31.,15.,17.], dtype=np.double)
         status = ma27.do_symbolic_factorization(n, irn, icn)
         status = ma27.do_numeric_factorization(irn, icn, n, ent)
@@ -142,6 +140,26 @@ class TestMA27Interface(unittest.TestCase):
         for i in range(n):
             self.assertAlmostEqual(sol[i], expected_sol[i])
             self.assertEqual(old_rhs[i], rhs[i])
+
+        # Check that we can perform a numeric factorization with different ordering
+        irn_mod = np.array([1,  2,  2,  1,  3,  3,  5], dtype=np.intc)
+        icn_mod = np.array([2,  3,  5,  1,  3,  4,  5], dtype=np.intc)
+        ent_mod = np.array([3., 4., 6., 2., 1., 5., 1.], dtype=np.double)
+        irn_mod -= 1
+        icn_mod -= 1
+        status = ma27.do_numeric_factorization(irn_mod, icn_mod, n, ent_mod)
+        sol = ma27.do_backsolve(rhs)
+        self.assertTrue(np.allclose(sol, np.array(expected_sol)))
+
+        # Check that we can perform a numeric factorization with differnt lengths
+        # due to extra zero entries
+        irn_mod = irn_mod[1:]
+        icn_mod = icn_mod[1:]
+        ent_mod = ent_mod[1:]
+        status = ma27.do_numeric_factorization(irn_mod, icn_mod, n, ent_mod)
+        sol = ma27.do_backsolve(rhs)
+        expected_sol = np.array([4.0, 1.91666666667, 3.0, 4.06666666667, 5.5])
+        self.assertTrue(np.allclose(sol, expected_sol))
 
 
 if __name__ == '__main__':

@@ -27,12 +27,13 @@ try:
 except:
     import pickle
 
-import pyutilib.services
 import pyutilib.pyro
-from pyutilib.pyro import using_pyro4
-import pyutilib.common
+from pyutilib.pyro import using_pyro4, TaskProcessingError
+from pyomo.common.errors import ApplicationError
 from pyomo.common import pyomo_command
 from pyomo.opt.base import SolverFactory, ConverterError
+from pyomo.common.collections import Bunch
+from pyomo.common.tempfiles import TempfileManager
 
 import six
 
@@ -43,7 +44,7 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
     def process(self, data):
         self._worker_task_return_queue = self._current_task_client
-        data = pyutilib.misc.Bunch(**data)
+        data = Bunch(**data)
 
         if hasattr(data, 'action') and \
            data.action == 'Pyomo_pyro_mip_server_shutdown':
@@ -52,7 +53,7 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
             return
 
         time_start = time.time()
-        with pyutilib.services.TempfileManager.push():
+        with TempfileManager.push():
             #
             # Construct the solver on this end, based on the input
             # type stored in "data.opt".  This is slightly more
@@ -76,7 +77,7 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
                 problem_filename_suffix = os.path.split(data.filename)[1]
                 temp_problem_filename = \
-                    pyutilib.services.TempfileManager.\
+                    TempfileManager.\
                     create_tempfile(suffix="."+problem_filename_suffix)
 
                 with open(temp_problem_filename, 'w') as f:
@@ -86,7 +87,7 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
                     warmstart_filename_suffix = \
                         os.path.split(data.warmstart_filename)[1]
                     temp_warmstart_filename = \
-                        pyutilib.services.TempfileManager.\
+                        TempfileManager.\
                         create_tempfile(suffix="."+warmstart_filename_suffix)
                     with open(temp_warmstart_filename, 'w') as f:
                         f.write(data.warmstart_file)
@@ -233,7 +234,7 @@ def main():
                 sys.stderr.write("CONVERTER ERROR:\n")
                 sys.stderr.write(str(sys.exc_info()[1])+"\n")
                 raise
-            except pyutilib.common.ApplicationError:
+            except ApplicationError:
                 sys.stderr.write("APPLICATION ERROR:\n")
                 sys.stderr.write(str(sys.exc_info()[1])+"\n")
                 raise

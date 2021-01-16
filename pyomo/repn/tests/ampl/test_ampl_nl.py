@@ -12,13 +12,11 @@
 #
 
 import os
-import random
 
 import pyutilib.th as unittest
 
 from pyomo.common.getGSL import find_GSL
-from pyomo.environ import *
-import pyomo.opt
+from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Param, Block, ExternalFunction, value
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 

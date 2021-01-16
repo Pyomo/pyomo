@@ -8,30 +8,28 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-imports_available = True
-try:
-    import numpy as np
-    import pandas as pd
-    from scipy import stats
-    import itertools
-    from scipy.interpolate import griddata
-except ImportError:
-    imports_available = False
+import itertools
+from pyomo.common.dependencies import (
+    matplotlib, matplotlib_available,
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+    scipy, scipy_available,
+    check_min_version, attempt_import
+)
 
-try:
-    # matplotlib.pyplot can generate a runtime error on OSX when not
-    # installed as a Framework (as is the case in the CI systems)
-    #
-    # occasionally dependent conda packages for older distributions
-    # (e.g. python 3.5) get released that are either broken not
-    # compatible, resulting in a SyntaxError
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    import matplotlib.tri as tri
-    from matplotlib.lines import Line2D
-except (ImportError, RuntimeError, SyntaxError):
-    imports_available = False
+plt = matplotlib.pyplot
+stats = scipy.stats
 
+# occasionally dependent conda packages for older distributions
+# (e.g. python 3.5) get released that are either broken not
+# compatible, resulting in a SyntaxError
+sns, seaborn_available = attempt_import(
+    'seaborn', alt_names=['sns'],
+    catch_exceptions=(ImportError, SyntaxError)
+)
+
+imports_available = numpy_available & scipy_available & pandas_available \
+                    & matplotlib_available & seaborn_available
 
 def _get_variables(ax,columns):
     sps = ax.get_subplotspec()
@@ -81,11 +79,13 @@ def _get_data_slice(xvar,yvar,columns,data,theta_star):
                 temp[col] = temp[col] + data[col].std()
             data = data.append(temp, ignore_index=True)
     
-    data_slice['obj'] = griddata(np.array(data[columns]),
-                             np.array(data[['obj']]),
-                             np.array(data_slice[columns]),
-                             method='linear',
-                             rescale=True)
+    data_slice['obj'] = scipy.interpolate.griddata(
+        np.array(data[columns]),
+        np.array(data[['obj']]),
+        np.array(data_slice[columns]),
+        method='linear',
+        rescale=True,
+    )
         
     X = data_slice[xvar]
     Y = data_slice[yvar]
@@ -93,15 +93,16 @@ def _get_data_slice(xvar,yvar,columns,data,theta_star):
     
     return X,Y,Z
     
-
-def _add_scatter(x,y,color,label,columns,theta_star):
+# Note: seaborn 0.11 no longer expects color and label to be passed to the 
+#       plotting functions. label is kept here for backward compatibility
+def _add_scatter(x,y,color,columns,theta_star,label=None):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax, columns)
     
     ax.scatter(theta_star[xvar], theta_star[yvar], c=color, s=35)
     
     
-def _add_rectangle_CI(x,y,color,label,columns,lower_bound,upper_bound):
+def _add_rectangle_CI(x,y,color,columns,lower_bound,upper_bound,label=None):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
 
@@ -116,7 +117,7 @@ def _add_rectangle_CI(x,y,color,label,columns,lower_bound,upper_bound):
     ax.plot([xmin, xmin], [ymax, ymin], color=color)
 
 
-def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
+def _add_scipy_dist_CI(x,y,color,columns,ncells,alpha,dist,theta_star,label=None):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
     
@@ -152,31 +153,19 @@ def _add_scipy_dist_CI(x,y,color,label,columns,ncells,alpha,dist,theta_star):
     ax.contour(X,Y,Z, levels=[alpha], colors=color) 
     
     
-def _add_obj_contour(x,y,color,label,columns,data,theta_star):
+def _add_obj_contour(x,y,color,columns,data,theta_star,label=None):
     ax = plt.gca()
     xvar, yvar, loc = _get_variables(ax,columns)
 
     try:
         X, Y, Z = _get_data_slice(xvar,yvar,columns,data,theta_star)
         
-        triang = tri.Triangulation(X, Y)
+        triang = matplotlib.tri.Triangulation(X, Y)
         cmap = plt.cm.get_cmap('Greys')
         
         plt.tricontourf(triang,Z,cmap=cmap)
     except:
         print('Objective contour plot for', xvar, yvar,'slice failed')
-    
-    
-def _add_LR_contour(x,y,color,label,columns,data,theta_star,threshold):
-    ax = plt.gca()
-    xvar, yvar, loc = _get_variables(ax,columns)
-    
-    X, Y, Z = _get_data_slice(xvar,yvar,columns,data,theta_star)
-    
-    triang = tri.Triangulation(X, Y)
-    
-    plt.tricontour(triang,Z,[threshold], colors='r')
-
 
 def _set_axis_limits(g, axis_limits, theta_vals, theta_star):
     
@@ -273,7 +262,13 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     g = sns.PairGrid(thetas)
     
     # Plot histogram on the diagonal
-    g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False) 
+    # Note: distplot is deprecated and will be removed in a future
+    #       version of seaborn, use histplot.  distplot is kept for older
+    #       versions of python.
+    if check_min_version(sns, "0.11"):
+        g.map_diag(sns.histplot)
+    else:
+        g.map_diag(sns.distplot, kde=False, hist=True, norm_hist=False) 
     
     # Plot filled contours using all theta values based on obj
     if 'obj' in theta_values.columns and add_obj_contour:
@@ -282,15 +277,17 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         
     # Plot thetas
     g.map_offdiag(plt.scatter, s=10)
-    legend_elements.append(Line2D([0], [0], marker='o', color='w', label='thetas',
-                          markerfacecolor='cadetblue', markersize=5))
+    legend_elements.append(matplotlib.lines.Line2D(
+        [0], [0], marker='o', color='w', label='thetas',
+        markerfacecolor='cadetblue', markersize=5))
     
     # Plot theta*
     if theta_star is not None:
         g.map_offdiag(_add_scatter, color='k', columns=theta_names, theta_star=theta_star)
         
-        legend_elements.append(Line2D([0], [0], marker='o', color='w', label='theta*',
-                                      markerfacecolor='k', markersize=6))
+        legend_elements.append(matplotlib.lines.Line2D(
+            [0], [0], marker='o', color='w', label='theta*',
+            markerfacecolor='k', markersize=6))
     
     # Plot confidence regions
     colors = ['r', 'mediumblue', 'darkgray']
@@ -308,7 +305,8 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 lb, ub = fit_rect_dist(thetas, alpha)
                 g.map_offdiag(_add_rectangle_CI, color=colors[i], columns=theta_names, 
                             lower_bound=lb, upper_bound=ub)
-                legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
+                legend_elements.append(matplotlib.lines.Line2D(
+                    [0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'MVN':
                 mvn_dist = fit_mvn_dist(thetas)
@@ -317,7 +315,8 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=mvn_dist, 
                             theta_star=theta_star)
-                legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
+                legend_elements.append(matplotlib.lines.Line2D(
+                    [0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'KDE':
                 kde_dist = fit_kde_dist(thetas)
@@ -326,7 +325,8 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=kde_dist, 
                             theta_star=theta_star)
-                legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
+                legend_elements.append(matplotlib.lines.Line2D(
+                    [0], [0], color=colors[i], lw=1, label=dist))
             
     _set_axis_limits(g, axis_limits, thetas, theta_star)
     
@@ -419,8 +419,8 @@ def fit_mvn_dist(theta_values):
     """
     assert isinstance(theta_values, pd.DataFrame)
     
-    dist = stats.multivariate_normal(theta_values.mean(), 
-                                    theta_values.cov(), allow_singular=True)
+    dist = stats.multivariate_normal(
+        theta_values.mean(), theta_values.cov(), allow_singular=True)
     return dist
 
 def fit_kde_dist(theta_values):

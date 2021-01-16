@@ -15,8 +15,8 @@
 This module provides support for including units within Pyomo expressions. This module
 can be used to define units on a model, and to check the consistency of units
 within the underlying constraints and expressions in the model. The module also
-supports conversion of units within expressions to support construction of constraints
-that contain embedded unit conversions.
+supports conversion of units within expressions using the `convert` method to support
+construction of constraints that contain embedded unit conversions.
 
 To use this package within your Pyomo model, you first need an instance of a
 PyomoUnitsContainer. You can use the module level instance already defined as
@@ -24,6 +24,7 @@ PyomoUnitsContainer. You can use the module level instance already defined as
 this module using common notation.
 
     .. doctest::
+       :skipif: not pint_available
 
        >>> from pyomo.environ import units as u
        >>> print(3.0*u.kg)
@@ -37,6 +38,7 @@ like the objective function, constraint, or expression using
 There are other methods there that may be helpful for verifying correct units on a model.
 
     .. doctest::
+       :skipif: not pint_available
 
        >>> from pyomo.environ import ConcreteModel, Var, Objective
        >>> from pyomo.environ import units as u
@@ -105,7 +107,9 @@ information.
 #    * Further investigate issues surrounding absolute and relative temperatures (delta units)
 #    * Extend external function interface to support units for the arguments in addition to the function itself
 
+import logging
 import six
+import sys
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_numeric_types
@@ -115,6 +119,8 @@ from pyomo.core.expr import current as EXPR
 pint_module, pint_available = attempt_import(
     'pint', defer_check=True, error_message='The "pint" package failed '
     'to import. This package is necessary to use Pyomo units.')
+
+logger = logging.getLogger(__name__)
 
 class UnitsError(Exception):
     """
@@ -146,6 +152,8 @@ class _PyomoUnit(NumericValue):
     This module contains a global PyomoUnitsContainer object :py:data:`units`.
     See module documentation for more information.
     """
+    __slots__ = ('_pint_unit', '_pint_registry')
+
     def __init__(self, pint_unit, pint_registry):
         super(_PyomoUnit, self).__init__()
         assert pint_unit is not None
@@ -160,8 +168,6 @@ class _PyomoUnit(NumericValue):
     def _get_pint_registry(self):
         """ Return the pint registry (pint.UnitRegistry) object used to create this unit. """
         return self._pint_registry
-
-    # Todo: test pickle and implement __getstate__/__setstate__ to do the right thing
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """
@@ -253,6 +259,43 @@ class _PyomoUnit(NumericValue):
         Note that :py:meth:`NumericValue.polynomial_degree` calls this method.
         """
         return 0
+
+    def __getstate__(self):
+        state = super(_PyomoUnit, self).__getstate__()
+        state['_pint_unit'] = str(self._pint_unit)
+        if self._pint_registry is not units._pint_registry:
+            # FIXME: we currently will not correctly unpickle units
+            # associated with a unit manager other than the default
+            # singleton.  If we wanted to support this, we would need to
+            # do something like create a global units manager registry
+            # that would associate each unit manager with a name.  We
+            # could then pickle that name and then attempt to restore
+            # the association with the original units manager.  As we
+            # expect all users to just use the global default, for the
+            # time being we will just issue a warning that things may
+            # break.
+            logger.warning(
+                "pickling a _PyomoUnit associated with a PyomoUnitsContainer "
+                "that is not the default singleton (%s.units).  Restoring "
+                "this pickle will attempt to return a unit associated with "
+                "the default singleton." % (__name__,))
+        return state
+
+    def __setstate__(self, state):
+        self._pint_registry = units._pint_registry
+        self._pint_unit = self._pint_registry(state.pop('_pint_unit')).units
+        super(_PyomoUnit, self).__setstate__(state)
+
+    def __deepcopy__(self, memo):
+        # Note that while it is possible to deepcopy the _pint_unit and
+        # _pint_registry object (in pint>0.10), that version does not
+        # support all Python versions currently supported by Pyomo.
+        # Further, Pyomo's use of units relies on a model using a single
+        # instance of the pint unit registry.  As we regularly assemble
+        # block models using multiple clones (deepcopies) of a base
+        # model, it is important that we treat _PyomoUnit objects
+        # as outside the model scope and DO NOT duplicate them.
+        return self
 
     def __float__(self):
         """
@@ -1106,8 +1149,7 @@ class UnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             return (pyomo_unit, pint_unit)
 
         raise TypeError('An unhandled expression node type: {} was encountered while retrieving the'
-                        ' units of expression'.format(str(node_type), str(node)))
-
+                ' units of expression {}'.format(str(type(node)), str(node)))
 
 class PyomoUnitsContainer(object):
     """Class that is used to create and contain units in Pyomo.
@@ -1154,6 +1196,7 @@ class PyomoUnitsContainer(object):
         Then we can add this to the container with:
 
         .. doctest::
+            :skipif: not pint_available
             :hide:
 
             # get a local units object (to avoid duplicate registration
@@ -1164,6 +1207,7 @@ class PyomoUnitsContainer(object):
             ...     tmp = FILE.write("USD = [currency]\\n")
 
         .. doctest::
+            :skipif: not pint_available
 
             >>> u.load_definitions_from_file('my_additional_units.txt')
             >>> print(u.USD)
@@ -1184,6 +1228,7 @@ class PyomoUnitsContainer(object):
         unit, use
 
         .. doctest::
+            :skipif: not pint_available
             :hide:
 
             # get a local units object (to avoid duplicate registration
@@ -1192,6 +1237,7 @@ class PyomoUnitsContainer(object):
             >>> u = _units.PyomoUnitsContainer()
 
         .. doctest::
+            :skipif: not pint_available
 
             >>> u.load_definitions_from_strings(['USD = [currency]'])
             >>> print(u.USD)
@@ -1474,7 +1520,7 @@ class PyomoUnitsContainer(object):
         return dest_quantity.magnitude
 
 
-class DeferredUnitsSingleton(PyomoUnitsContainer):
+class _DeferredUnitsSingleton(PyomoUnitsContainer):
     """A class supporting deferred interrogation of pint_available.
 
     This class supports creating a module-level singleton, but deferring
@@ -1504,4 +1550,4 @@ class DeferredUnitsSingleton(PyomoUnitsContainer):
 # all units within a Pyomo model. If pint is not available, this will
 # cause an error at the first usage See module level documentation for
 # an example.
-units = DeferredUnitsSingleton()
+units = _DeferredUnitsSingleton()

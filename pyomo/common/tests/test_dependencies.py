@@ -17,18 +17,28 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.dependencies import (
     attempt_import, ModuleUnavailable, DeferredImportModule,
     DeferredImportIndicator, DeferredImportError,
-    _DeferredAnd, _DeferredOr
+    _DeferredAnd, _DeferredOr, check_min_version
 )
 
 import pyomo.common.tests.dep_mod as dep_mod
 from pyomo.common.tests.dep_mod import (
-    numpy, numpy_available,
     bogus_nonexisting_module as bogus_nem,
     bogus_nonexisting_module_available as has_bogus_nem,
 )
 
 bogus, bogus_available \
     = attempt_import('nonexisting.module.bogus', defer_check=True)
+
+# global objects for the submodule tests
+def _finalize_pyo(module, available):
+    if available:
+        import pyomo.core
+
+pyo, pyo_available = attempt_import(
+    'pyomo', alt_names=['pyo'],
+    deferred_submodules={'version': None,
+                         'common.tests.dep_mod': ['dm']})
+dm = pyo.common.tests.dep_mod
 
 class TestDependencies(unittest.TestCase):
     def test_import_error(self):
@@ -40,6 +50,14 @@ class TestDependencies(unittest.TestCase):
         with self.assertRaisesRegex(
                 DeferredImportError, 'Testing import of a non-existant module'):
             module_obj.try_to_call_a_method()
+
+        # Note that some attribute will intentionally raise
+        # AttributeErrors and NOT DeferredImportError:
+        with self.assertRaisesRegex(
+                AttributeError, "'ModuleUnavailable' object has no "
+                "attribute '__sphinx_mock__'"):
+            module_obj.__sphinx_mock__
+
                 
     def test_import_success(self):
         module_obj, module_available = attempt_import(
@@ -79,6 +97,8 @@ class TestDependencies(unittest.TestCase):
                                     defer_check=False)
         self.assertTrue(avail)
         self.assertTrue(inspect.ismodule(mod))
+        self.assertTrue(check_min_version(mod, '1.0'))
+        self.assertFalse(check_min_version(mod, '2.0'))
 
         mod, avail = attempt_import('pyomo.common.tests.dep_mod',
                                     minimum_version='2.0',
@@ -100,6 +120,16 @@ class TestDependencies(unittest.TestCase):
                 DeferredImportError, "Failed import "
                 "\(version 1.5 does not satisfy the minimum version 2.0\)"):
             mod.hello
+
+        # Verify check_min_version works with deferred imports
+
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod',
+                                    defer_check=True)
+        self.assertTrue(check_min_version(mod, '1.0'))
+
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod',
+                                    defer_check=True)
+        self.assertFalse(check_min_version(mod, '2.0'))
 
     def test_and_or(self):
         mod0, avail0 = attempt_import('pyutilib',
@@ -227,6 +257,49 @@ class TestDependencies(unittest.TestCase):
         self.assertTrue(avail)
         self.assertEqual(attempted_import, [True])
         self.assertIs(mod._indicator_flag._module, dep_mod)
+
+    def test_deferred_submodules(self):
+        import pyomo
+        pyo_ver = pyomo.version.version
+
+        self.assertIsInstance(pyo, DeferredImportModule)
+        self.assertIsNone(pyo._submodule_name)
+        self.assertEqual(pyo_available._deferred_submodules,
+                         {'.version': None,
+                          '.common': None,
+                          '.common.tests': None,
+                          '.common.tests.dep_mod': ['dm']})
+        # This doesn't cause test_mod to be resolved
+        version = pyo.version
+        self.assertIsInstance(pyo, DeferredImportModule)
+        self.assertIsNone(pyo._submodule_name)
+        self.assertIsInstance(dm, DeferredImportModule)
+        self.assertEqual(dm._submodule_name, '.common.tests.dep_mod')
+        self.assertIsInstance(version, DeferredImportModule)
+        self.assertEqual(version._submodule_name, '.version')
+        # This causes the global objects to be resolved
+        self.assertEqual(version.version, pyo_ver)
+        self.assertTrue(inspect.ismodule(pyo))
+        self.assertTrue(inspect.ismodule(dm))
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "deferred_submodules is only valid if defer_check==True"):
+            mod, mod_available \
+                = attempt_import('nonexisting.module', defer_check=False,
+                                 deferred_submodules={'submod': None})
+
+        mod, mod_available \
+            = attempt_import('nonexisting.module', defer_check=True,
+                             deferred_submodules={'submod.subsubmod': None})
+        self.assertIs(type(mod), DeferredImportModule)
+        self.assertFalse(mod_available)
+        _mod = mod_available._module
+        self.assertIs(type(_mod), ModuleUnavailable)
+        self.assertTrue(hasattr(_mod, 'submod'))
+        self.assertIs(type(_mod.submod), ModuleUnavailable)
+        self.assertTrue(hasattr(_mod.submod, 'subsubmod'))
+        self.assertIs(type(_mod.submod.subsubmod), ModuleUnavailable)
 
 if __name__ == '__main__':
     unittest.main()

@@ -10,12 +10,11 @@
 
 import os
 
-import pyutilib
+from pyomo.common.tempfiles import TempfileManager
 import pyutilib.th as unittest
 
 import pyomo.kernel as pmo
 from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix
-from pyomo.environ import *
 from pyomo.opt import ProblemFormat, convert_problem, SolverFactory, BranchDirection
 from pyomo.solvers.plugins.solvers.CPLEX import CPLEXSHELL, MockCPLEX, _validate_file_name
 
@@ -69,12 +68,12 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
     def setUp(self):
         self.mock_model = self.get_mock_model()
         self.mock_cplex_shell = self.get_mock_cplex_shell(self.mock_model)
-        self.mock_cplex_shell._priorities_file_name = pyutilib.services.TempfileManager.create_tempfile(
+        self.mock_cplex_shell._priorities_file_name = TempfileManager.create_tempfile(
             suffix=".cplex.ord"
         )
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
+        TempfileManager.clear_tempfiles()
 
     def get_mock_model(self):
         model = ConcreteModel()

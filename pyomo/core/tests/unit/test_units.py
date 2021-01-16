@@ -10,15 +10,21 @@
 #  ___________________________________________________________________________
 #
 #
+import pickle
 
 import pyutilib.th as unittest
-from pyomo.environ import *
-from pyomo.util.check_units import assert_units_consistent, assert_units_equivalent
-from pyomo.core.base.template_expr import IndexTemplate
+from pyomo.environ import (
+    ConcreteModel, Var, Param, Set, Constraint, Objective, Expression,
+    ExternalFunction, value, sum_product, maximize, units,
+    log, log10, exp, sqrt, cos, sin, tan, asin, acos, atan, cosh, sinh,
+    tanh, asinh, acosh, atanh, ceil, floor,
+)
+from pyomo.common.log import LoggingIntercept
+from pyomo.util.check_units import assert_units_consistent
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.units_container import (
-    pint_available, InconsistentUnitsError, UnitsError,
+    pint_available, InconsistentUnitsError, UnitsError, PyomoUnitsContainer,
 )
 from six import StringIO
 
@@ -545,6 +551,64 @@ class TestPyomoUnit(unittest.TestCase):
         u.load_definitions_from_strings(["USD = [currency]"])
         expr = 3.0*u.USD
         self._get_check_units_ok(expr, u, 'USD')
+
+    def test_clone(self):
+        m = ConcreteModel()
+        m.x = Var(units=units.kg)
+        m.c = Constraint(expr=m.x**2 <= 10*units.kg**2)
+        i = m.clone()
+        self.assertIs(m.x._units, i.x._units)
+        self.assertEqual(str(m.c.upper), str(i.c.upper))
+        base = StringIO()
+        m.pprint(base)
+        test = StringIO()
+        i.pprint(test)
+        self.assertEqual(base.getvalue(), test.getvalue())
+
+    def test_pickle(self):
+        m = ConcreteModel()
+        m.x = Var(units=units.kg)
+        m.c = Constraint(expr=m.x**2 <= 10*units.kg**2)
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.core.base'):
+            i = pickle.loads(pickle.dumps(m))
+        self.assertEqual("", log.getvalue())
+        self.assertIsNot(m.x, i.x)
+        self.assertIsNot(m.x._units, i.x._units)
+        self.assertEqual(m.x._units, i.x._units)
+        self.assertEqual(str(m.c.upper), str(i.c.upper))
+        base = StringIO()
+        m.pprint(base)
+        test = StringIO()
+        i.pprint(test)
+        self.assertEqual(base.getvalue(), test.getvalue())
+
+        # Test pickling a custom units manager
+        um = PyomoUnitsContainer()
+        m = ConcreteModel()
+        m.x = Var(units=um.kg)
+        m.c = Constraint(expr=m.x**2 <= 10*um.kg**2)
+        log = StringIO()
+        with LoggingIntercept(log, 'pyomo.core.base'):
+            i = pickle.loads(pickle.dumps(m))
+        self.assertIn(
+            "pickling a _PyomoUnit associated with a PyomoUnitsContainer "
+            "that is not the default singleton "
+            "(pyomo.core.base.units_container.units)", log.getvalue())
+        self.assertIsNot(m.x, i.x)
+        self.assertIsNot(m.x._units, i.x._units)
+        # Note that pint is inconsistent when comparing standard units
+        # across different UnitRegistry instances: older versions of
+        # pint would have them compare "not equal" while newer versions
+        # compare equal
+        #
+        # self.assertNotEqual(m.x._units, i.x._units)
+        self.assertEqual(str(m.c.upper), str(i.c.upper))
+        base = StringIO()
+        m.pprint(base)
+        test = StringIO()
+        i.pprint(test)
+        self.assertEqual(base.getvalue(), test.getvalue())
 
 if __name__ == "__main__":
     unittest.main()

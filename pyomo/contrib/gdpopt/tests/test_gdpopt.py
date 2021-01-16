@@ -1,19 +1,30 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Tests for the GDPopt solver plugin."""
 import logging
 from math import fabs
-from os.path import abspath, dirname, join, normpath
+from os.path import join, normpath
 
 from six import StringIO
 
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.collections import Container
 from pyomo.contrib.gdpopt.GDPopt import GDPoptSolver
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.environ import ConcreteModel, Objective, SolverFactory, Var, value, Integers, Block, Constraint, maximize
 from pyomo.gdp import Disjunct, Disjunction
-from pyutilib.misc import import_file, Container
+from pyutilib.misc import import_file
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.opt import TerminationCondition
 

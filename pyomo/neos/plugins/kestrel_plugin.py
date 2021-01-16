@@ -12,14 +12,14 @@ import logging
 import os
 import re
 import six
+import sys
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.opt import SolverFactory, SolverManagerFactory, OptSolver
-from pyomo.opt.parallel.manager import ActionManagerError
+from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
 from pyomo.opt.parallel.async_solver import (
-    AsynchronousSolverManager, ActionStatus
+    AsynchronousSolverManager
 )
-from pyomo.opt.base import OptSolver
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
@@ -32,7 +32,8 @@ def _neos_error(msg, results, current_message):
     error_re = re.compile('error', flags=re.I)
     warn_re = re.compile('warn', flags=re.I)
 
-    logger.error("%s  NEOS log:\n%s" % ( msg, current_message, ))
+    logger.error("%s  NEOS log:\n%s" % ( msg, current_message, ),
+                 exc_info=sys.exc_info())
     soln_data = results.data
     if six.PY3:
         soln_data = soln_data.decode('utf-8')

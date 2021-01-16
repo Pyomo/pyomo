@@ -10,11 +10,8 @@
 
 import numpy as np
 import pandas as pd
-import matplotlib.pylab as plt
 import pyomo.contrib.parmest.parmest as parmest
-from reactor_design import reactor_design_model
-
-plt.close('all')
+from .reactor_design import reactor_design_model
 
 np.random.seed(1234)
 

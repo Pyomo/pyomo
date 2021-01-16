@@ -14,16 +14,12 @@ Unit Tests for pyomo.dae.init_cond
 import os
 from os.path import abspath, dirname
 
-from six import StringIO
 
 import pyutilib.th as unittest
 
-from pyomo.core.base import *
-from pyomo.environ import SolverFactory
-from pyomo.common.collections import ComponentMap
-from pyomo.common.log import LoggingIntercept
-from pyomo.dae import *
-from pyomo.dae.initialization import *
+from pyomo.environ import SolverFactory, ConcreteModel, Set, Block, Var, Constraint, TransformationFactory
+from pyomo.dae import ContinuousSet, DerivativeVar
+from pyomo.dae.initialization import solve_consistent_initial_conditions, get_inconsistent_initial_conditions
 
 currdir = dirname(abspath(__file__)) + os.sep
 

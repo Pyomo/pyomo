@@ -16,9 +16,12 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-from six import itervalues, StringIO
+from six import itervalues, StringIO, iterkeys, iteritems
 
-from pyomo.environ import *
+from pyomo.environ import (
+    ConcreteModel, Block, Var, Set, RangeSet, Param, value,
+)
+from pyomo.common.collections import OrderedDict, ComponentSet
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set import SetProduct, UnorderedSetOf
 from pyomo.core.base.indexed_component import (
@@ -98,6 +101,13 @@ class TestReferenceDict(unittest.TestCase):
         self._lookupTester(m.jb[...], (1,), m.jb[1])
         self._lookupTester(m.jb[...].x[:], (1,2), m.jb[1].x[2])
         self._lookupTester(m.jb[...].x[:], (2,3,2), m.jb[2,3].x[2])
+
+        rd = _ReferenceDict(m.jb[:,:,:].x[:])
+        with self.assertRaises(KeyError):
+            rd[2,3,4,2]
+        rd = _ReferenceDict(m.b[:,4].x[:])
+        with self.assertRaises(KeyError):
+            rd[1,0]
 
     def test_len(self):
         m = self.m
@@ -363,19 +373,19 @@ class TestReference(unittest.TestCase):
         self.assertRaisesRegexp(
             TypeError,
             "First argument to Reference constructors must be a "
-            "component or component slice \(received Foo",
+            "component, component slice, Sequence, or Mapping \(received Foo",
             Reference, Foo()
             )
         self.assertRaisesRegexp(
             TypeError,
             "First argument to Reference constructors must be a "
-            "component or component slice \(received int",
+            "component, component slice, Sequence, or Mapping \(received int",
             Reference, 5
             )
         self.assertRaisesRegexp(
             TypeError,
             "First argument to Reference constructors must be a "
-            "component or component slice \(received None",
+            "component, component slice, Sequence, or Mapping \(received None",
             Reference, None
             )
 
@@ -752,6 +762,47 @@ class TestReference(unittest.TestCase):
         self.assertEqual(value(_y), 20)
         self.assertEqual(value(ref_y[2]), 20)
         self.assertEqual(value(m.b[2].y), 20)
+
+    def test_reference_to_dict(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1,2,3])
+        m.r = Reference({1: m.x, 'a': m.y[2], 3: m.y[1]})
+        self.assertFalse(m.r.index_set().isordered())
+        self.assertEqual(len(m.r), 3)
+        self.assertEqual(set(m.r.keys()), {1,3,'a'})
+        self.assertEqual( ComponentSet(m.r.values()),
+                          ComponentSet([m.x, m.y[2], m.y[1]]) )
+        # You can delete something from the reference
+        del m.r[1]
+        self.assertEqual(len(m.r), 2)
+        self.assertEqual(set(m.r.keys()), {3,'a'})
+        self.assertEqual( ComponentSet(m.r.values()),
+                          ComponentSet([m.y[2], m.y[1]]) )
+        # But not add it back
+        with self.assertRaisesRegex(
+                KeyError, "Index '1' is not valid for indexed component 'r'"):
+            m.r[1] = m.x
+
+    def test_reference_to_list(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1,2,3])
+        m.r = Reference([m.x, m.y[2], m.y[1]])
+        self.assertTrue(m.r.index_set().isordered())
+        self.assertEqual(len(m.r), 3)
+        self.assertEqual(list(m.r.keys()), [0,1,2])
+        self.assertEqual(list(m.r.values()), [m.x, m.y[2], m.y[1]])
+        # You can delete something from the reference
+        del m.r[1]
+        self.assertEqual(len(m.r), 2)
+        self.assertEqual(list(m.r.keys()), [0,2])
+        self.assertEqual(list(m.r.values()), [m.x, m.y[1]])
+        # But not add it back
+        with self.assertRaisesRegex(
+                KeyError, "Index '1' is not valid for indexed component 'r'"):
+            m.r[1] = m.x
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,45 +16,41 @@ from weakref import ref as weakref_ref
 import gc
 import time
 import math
-import functools
 
 try:
     from collections import OrderedDict
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyutilib.math import *
-from pyutilib.misc import Container, PauseGC, Bunch
-
-import pyomo.common
+from pyomo.common import timing, PyomoAPIFactory
+from pyomo.common.collections import Container
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.plugin import ExtensionPoint
-from pyomo.common._task import pyomo_api
 
 from pyomo.core.expr import expr_common
 from pyomo.core.expr.symbol_map import SymbolMap
+from pyomo.core.expr.numeric_expr import clone_counter
 
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
-from pyomo.core.base.set_types import *
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.dataportal.DataPortal import DataPortal
-from pyomo.core.base.plugin import *
-from pyomo.core.base.numvalue import *
+from pyomo.core.base.plugin import IPyomoPresolver
+from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import SimpleBlock
-from pyomo.core.base.set import Set, UnknownSetDimen
-from pyomo.core.base.component import Component, ComponentUID
+from pyomo.core.base.set import Set
+from pyomo.core.base.componentuid import ComponentUID
+from pyomo.core.base.component import Component
 from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 
-import pyomo.opt
-from pyomo.opt.results import SolverResults, Solution, SolutionStatus, UndefinedData
+from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
 
 from six import itervalues, iteritems, StringIO, string_types
-from six.moves import xrange
 try:
     unicode
 except:
@@ -221,17 +217,21 @@ class ModelSolutions(object):
         #
         # If there is a warning, then print a warning message.
         #
-        if (results.solver.status == pyomo.opt.SolverStatus.warning):
+        if (results.solver.status == SolverStatus.warning):
+            tc = getattr(results.solver, 'termination_condition', None)
+            msg = getattr(results.solver, 'message', None)
             logger.warning(
                 'Loading a SolverResults object with a '
-                'warning status into model=%s;\n'
-                '    message from solver=%s'
-                % (instance.name, results.solver.Message))
+                'warning status into model.name="%s";\n'
+                '  - termination condition: %s\n'
+                '  - message from solver: %s'
+                % (instance.name, tc, msg))
         #
-        # If the solver status not one of either OK or Warning, then generate an error.
+        # If the solver status not one of either OK or Warning, then
+        # generate an error.
         #
-        elif results.solver.status != pyomo.opt.SolverStatus.ok:
-            if (results.solver.status == pyomo.opt.SolverStatus.aborted) and \
+        elif results.solver.status != SolverStatus.ok:
+            if (results.solver.status == SolverStatus.aborted) and \
                (len(results.solution) > 0):
                 logger.warning(
                     "Loading a SolverResults object with "
@@ -287,7 +287,7 @@ class ModelSolutions(object):
                 ignore_invalid_labels=ignore_invalid_labels,
                 ignore_fixed_vars=ignore_fixed_vars)
 
-    def store_to(self, results, cuid=False):
+    def store_to(self, results, cuid=False, skip_stale_vars=False):
         """
         Return a Solution() object that is populated with the values in the model.
         """
@@ -318,7 +318,7 @@ class ModelSolutions(object):
                 soln.objective[ sm.getSymbol(obj, labeler) ] = vals
             entry = soln_._entry['variable']
             for obj in instance.component_data_objects(Var, active=True):
-                if obj.stale:
+                if obj.stale and skip_stale_vars:
                     continue
                 vals = entry.get(id(obj), None)
                 if vals is None:
@@ -684,7 +684,7 @@ arguments (which have been ignored):"""
             return self.clone()
 
         if report_timing:
-            pyomo.common.timing.report_timing()
+            timing.report_timing()
 
         if name is None:
             name = self.name
@@ -708,7 +708,7 @@ arguments (which have been ignored):"""
         # If someone passed a rule for creating the instance, fire the
         # rule before constructing the components.
         if instance._rule is not None:
-            instance._rule(instance)
+            instance._rule(instance, next(iter(self.index_set())))
 
         if namespaces:
             _namespaces = list(namespaces)
@@ -743,7 +743,7 @@ arguments (which have been ignored):"""
         with PauseGC() as pgc:
             if preprocessor is None:
                 preprocessor = self.config.preprocessor
-            pyomo.common.PyomoAPIFactory(preprocessor)(self.config, model=self)
+            PyomoAPIFactory(preprocessor)(self.config, model=self)
 
     def load(self, arg, namespaces=[None], profile_memory=0, report_timing=None):
         """
@@ -837,7 +837,7 @@ from solvers are immediately loaded into the original model instance.""")
                     else:
                         assert isinstance(component, Component)
                         clen = 1
-                    print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
+                    print("    %%6.%df seconds required to construct component=%s; %d indices total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
                     tmp_clone_counter = expr_common.clone_counter

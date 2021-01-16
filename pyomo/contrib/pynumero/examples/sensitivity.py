@@ -7,6 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
@@ -110,7 +111,7 @@ x_names = np.array(nlp.variable_names())
 new_x = x[x_indices] + dx
 print("dp:", dp)
 print("dx:", dx)
-print("Variable names: \n",x_names[x_indices])
+print("Variable names: \n", x_names[x_indices])
 print("Sensitivity based x:\n", new_x)
 
 #################################################################

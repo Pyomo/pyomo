@@ -15,7 +15,7 @@ from pyomo.common import deprecated
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
-from pyomo.core.base.component import ActiveComponent, ComponentUID
+from pyomo.core.base.component import ActiveComponent
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core import (
@@ -24,12 +24,12 @@ from pyomo.core import (
     Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalConstraint,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (
-    _warn_for_active_logical_constraint, clone_without_expression_components, target_list,
-    is_child_of, get_src_disjunction,
-    get_src_constraint, get_transformed_constraints,
-    get_src_disjunct, _warn_for_active_disjunction,
-    _warn_for_active_disjunct, )
+from pyomo.gdp.util import ( _warn_for_active_logical_constraint,
+                             clone_without_expression_components, target_list,
+                             is_child_of, get_src_disjunction,
+                             get_src_constraint, get_transformed_constraints,
+                             get_src_disjunct, _warn_for_active_disjunction,
+                             _warn_for_active_disjunct, )
 from functools import wraps
 from six import iteritems, iterkeys
 from weakref import ref as weakref_ref
@@ -420,9 +420,14 @@ class Hull_Reformulation(Transformation):
         # as being local. Note however, that we do declare our own disaggregated
         # variables as local, so they will not be re-disaggregated.
         varSet = []
-        # values of localVarsByDisjunct are ComponentSets, so we need this for
-        # determinism (we iterate through the localVars later)
-        localVars = []
+        # Note that variables are local with respect to a Disjunct. We deal with
+        # them here to do some error checking (if something is obviously not
+        # local since it is used in multiple Disjuncts in this Disjunction) and
+        # also to get a deterministic order in which to process them when we
+        # transform the Disjuncts: Values of localVarsByDisjunct are
+        # ComponentSets, so we need this for determinism (we iterate through the
+        # localVars of a Disjunct later)
+        localVars = ComponentMap()
         for var in varOrder:
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
             # clearly not local if used in more than one disjunct
@@ -433,12 +438,19 @@ class Hull_Reformulation(Transformation):
                                  var.getname(fully_qualified=True,
                                              name_buffer=NAME_BUFFER))
                 varSet.append(var)
+            # disjuncts is a list of length 1
             elif localVarsByDisjunct.get(disjuncts[0]) is not None:
                 if var in localVarsByDisjunct[disjuncts[0]]:
-                    localVars.append(var)
+                    localVars_thisDisjunct = localVars.get(disjuncts[0])
+                    if localVars_thisDisjunct is not None:
+                        localVars[disjuncts[0]].append(var)
+                    else:
+                        localVars[disjuncts[0]] = [var]
                 else:
+                    # It's not local to this Disjunct
                     varSet.append(var)
             else:
+                # We don't even have have any local vars for this Disjunct.
                 varSet.append(var)
 
         # Now that we know who we need to disaggregate, we will do it
@@ -446,12 +458,14 @@ class Hull_Reformulation(Transformation):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
-            self._transform_disjunct(disjunct, transBlock, varSet, localVars)
+            self._transform_disjunct(disjunct, transBlock, varSet,
+                                     localVars.get(disjunct, []))
         orConstraint.add(index, (or_expr, 1))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
         obj._algebraic_constraint = weakref_ref(orConstraint[index])
 
+        # add the reaggregation constraints
         for i, var in enumerate(varSet):
             disaggregatedExpr = 0
             for disjunct in obj.disjuncts:
@@ -551,9 +565,15 @@ class Hull_Reformulation(Transformation):
                 break
             parent_disjunct = parent_disjunct.parent_block()
         if parent_disjunct is not None:
-            localVarSuffix = relaxationBlock.LocalVars = Suffix(
-                direction=Suffix.LOCAL)
-            local_var_set = localVarSuffix[parent_disjunct] = ComponentSet()
+            # This limits the cases that a user is allowed to name something
+            # (other than a Suffix) 'LocalVars' on a Disjunct. But I am assuming
+            # that the Suffix has to be somewhere above the disjunct in the
+            # tree, so I can't put it on a Block that I own. And if I'm coopting
+            # something of theirs, it may as well be here.
+            self._add_local_var_suffix(parent_disjunct)
+            if parent_disjunct.LocalVars.get(parent_disjunct) is None:
+                parent_disjunct.LocalVars[parent_disjunct] = []
+            local_var_set = parent_disjunct.LocalVars[parent_disjunct]
 
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
@@ -581,7 +601,7 @@ class Hull_Reformulation(Transformation):
             # mark this as local because we won't re-disaggregate if this is a
             # nested disjunction
             if local_var_set is not None:
-                local_var_set.add(disaggregatedVar)
+                local_var_set.append(disaggregatedVar)
             # store the mappings from variables to their disaggregated selves on
             # the transformation block.
             relaxationBlock._disaggregatedVarMap['disaggregatedVar'][
@@ -653,12 +673,11 @@ class Hull_Reformulation(Transformation):
         # As opposed to bigm, in hull the only special thing we need to do for
         # nested Disjunctions is to make sure that we move up local var
         # references and also references to the disaggregated variables so that
-        # all will be accessible after we transform this
-        # Disjunct. Mathematically, there is nothing to do: the indicator
+        # all will be accessible after we transform this Disjunct.The indicator
         # variables and disaggregated variables of the inner disjunction will
-        # need to be disaggregated again anyway, and nothing will get
-        # double-bigm-ed. (If an untransformed disjunction is lurking here, we
-        # will catch it below).
+        # need to be disaggregated again, but the transformed constraints will
+        # not be. But this way nothing will get double-bigm-ed. (If an
+        # untransformed disjunction is lurking here, we will catch it below).
 
         # add references to all local variables on block (including the
         # indicator_var)
@@ -723,7 +742,8 @@ class Hull_Reformulation(Transformation):
     def _warn_for_active_logical_statement(
             self, logical_statment, disjunct, var_substitute_map,
             zero_substitute_map):
-        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
+        _warn_for_active_logical_constraint(logical_statment, disjunct,
+                                            NAME_BUFFER)
 
     def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
                                       zero_substitute_map):
@@ -915,6 +935,21 @@ class Hull_Reformulation(Transformation):
         # deactivate now that we have transformed
         obj.deactivate()
 
+    def _add_local_var_suffix(self, disjunct):
+        # If the Suffix is there, we will borrow it. If not, we make it. If it's
+        # something else, we complain.
+        localSuffix = disjunct.component("LocalVars")
+        if localSuffix is None:
+            disjunct.LocalVars = Suffix(direction=Suffix.LOCAL)
+        else:
+            if localSuffix.ctype is Suffix:
+                return
+            raise GDP_Error("A component called 'LocalVars' is declared on "
+                            "Disjunct %s, but it is of type %s, not Suffix."  
+                            % (disjunct.getname(fully_qualified=True,
+                                                name_buffer=NAME_BUFFER), 
+                               localSuffix.ctype))
+
     # These are all functions to retrieve transformed components from
     # original ones and vice versa.
 
@@ -998,8 +1033,8 @@ class Hull_Reformulation(Transformation):
             if transBlock is not None:
                 break
         if transBlock is None:
-            raise GDP_Error("Disjunction '%s' has not been properly transformed: "
-                            "None of its disjuncts are transformed."
+            raise GDP_Error("Disjunction '%s' has not been properly transformed:"
+                            " None of its disjuncts are transformed."
                             % disjunction.name)
 
         try:

@@ -1,3 +1,12 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 #
 # Tests driven by test_baselines.yml
 #
@@ -11,16 +20,13 @@
 
 if __name__ == "__main__":
     import os
-    import sys
     from os.path import abspath, dirname
     currdir = dirname(abspath(__file__))+os.sep
 
-    import pyutilib.th as unittest
-    import pyutilib.services
-    import pyomo.environ
+    from pyomo.common.tempfiles import TempfileManager
 
-    import pyutilib.autotest
-    pyutilib.autotest.create_test_suites(filename=currdir+'test_baselines.yml', _globals=globals())
+    from pyutilib.autotest import create_test_suites
+    create_test_suites(filename=currdir+'test_baselines.yml', _globals=globals())
 
     # GAH: The pyutilib.autotest.create_test_suites function
     #      does some strange things to the TempfileManager state
@@ -28,7 +34,7 @@ if __name__ == "__main__":
     #      updated (I grep'ed for TempfileManager inside pyomo.data
     #      and pyutilib.autotest - nothing). Is this a bug?
     def tearDownModule():
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = None
-        pyutilib.services.TempfileManager.unique_files()
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = None
+        TempfileManager.unique_files()
 

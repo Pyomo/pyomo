@@ -15,12 +15,11 @@ try:
     from collections import OrderedDict
 except:
     from ordereddict import OrderedDict
-from six import iterkeys, advance_iterator, itervalues, iteritems
+from six import iterkeys, iteritems
 from six.moves import xrange
-from pyutilib.misc import Bunch
 import enum
-from pyutilib.math import as_number
-from pyomo.opt.results.container import *
+from pyomo.opt.results.container import MapContainer, ListContainer, ignore
+from pyomo.common.collections import Bunch
 
 default_print_options = Bunch(schema=False,
                               sparse=True,

@@ -8,12 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-import os
+
 import pyutilib.th as unittest
 
 from pyomo.common.getGSL import find_GSL
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Objective, SolverFactory, value
 from pyomo.core.base.external import (PythonCallbackFunction,
+                                      ExternalFunction,
                                       AMPLExternalFunction)
 from pyomo.opt import check_available_solvers
 
@@ -134,6 +135,33 @@ class TestAMPLExternalFunction(unittest.TestCase):
         opt = SolverFactory('ipopt')
         res = opt.solve(model, tee=True)
         self.assertAlmostEqual(value(model.o), 0.885603194411, 7)
+
+    @unittest.skipIf(not check_available_solvers('ipopt'),
+                     "The 'ipopt' solver is not available")
+    def test_clone_gsl_function(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        m = ConcreteModel()
+        m.z_func = ExternalFunction(library=DLL, function="gsl_sf_gamma")
+        self.assertIsInstance(m.z_func, AMPLExternalFunction)
+        m.x = Var(initialize=3, bounds=(1e-5,None))
+        m.o = Objective(expr=m.z_func(m.x))
+
+        opt = SolverFactory('ipopt')
+
+        # Test a simple clone...
+        model2 = m.clone()
+        res = opt.solve(model2, tee=True)
+        self.assertAlmostEqual(value(model2.o), 0.885603194411, 7)
+
+        # Trigger the library to be loaded.  This tests that the CDLL
+        # objects that are created when the SO/DLL are loaded do not
+        # interfere with cloning the model.
+        self.assertAlmostEqual(value(m.o), 2)
+        model3 = m.clone()
+        res = opt.solve(model3, tee=True)
+        self.assertAlmostEqual(value(model3.o), 0.885603194411, 7)
 
 
 if __name__ == "__main__":

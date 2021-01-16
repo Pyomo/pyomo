@@ -36,7 +36,7 @@ def get_packages():
         "Use of the pyomo install-extras is deprecated."
         "The current recommended course of action is to manually install "
         "optional dependencies as needed.",
-        version='TBD')
+        version='5.7.1')
 def install_extras(args=[], quiet=False):
     #
     # Verify that pip is installed

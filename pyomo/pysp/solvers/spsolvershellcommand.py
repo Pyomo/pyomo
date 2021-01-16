@@ -9,13 +9,11 @@
 
 __all__ = ("SPSolverShellCommand",)
 
-import os
 import logging
 import pprint
 
-import pyutilib.misc
-
 import pyomo.common
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.pysp.solvers.spsolver import SPSolver
 
 logger = logging.getLogger('pyomo.pysp')
@@ -28,20 +26,17 @@ class SPSolverShellCommand(SPSolver):
         self._files = {}
 
     def _create_tempdir(self, label, *args, **kwds):
-        dirname = pyutilib.services.\
-                  TempfileManager.create_tempdir(*args, **kwds)
+        dirname = TempfileManager.create_tempdir(*args, **kwds)
         self._files[label] = dirname
         return dirname
 
     def _create_tempfile(self, label, *args, **kwds):
-        filename = pyutilib.services.\
-                   TempfileManager.create_tempfile(*args, **kwds)
+        filename = TempfileManager.create_tempfile(*args, **kwds)
         self._files[label] = filename
         return filename
 
     def _add_tempfile(self, label, filename):
-        pyutilib.services.\
-            TempfileManager.add_tempfile(filename,
+        TempfileManager.add_tempfile(filename,
                                          exists=False)
         self._files[label] = filename
 
@@ -136,13 +131,12 @@ class SPSolverShellCommand(SPSolver):
         assert self.executable is not None
 
         keep_solver_files = kwds.pop("keep_solver_files", False)
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
         try:
             return super(SPSolverShellCommand, self).solve(sp, *args, **kwds)
         finally:
             # cleanup
-            pyutilib.services.TempfileManager.pop(
-                remove=not keep_solver_files)
+            TempfileManager.pop(remove=not keep_solver_files)
             if keep_solver_files:
                 logger.info("Retaining the following solver files:\n"
                             +pprint.pformat(self.files))

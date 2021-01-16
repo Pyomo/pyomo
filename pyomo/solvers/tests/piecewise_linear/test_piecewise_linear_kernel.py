@@ -14,9 +14,9 @@ from os.path import dirname, abspath, join
 thisDir = dirname( abspath(__file__) )
 
 import pyutilib.th as unittest
-import pyutilib.misc
+from pyutilib.misc import import_file
 
-import pyomo.kernel as pmo
+from pyomo.kernel import SolverFactory, variable, maximize, minimize
 from pyomo.solvers.tests.solvers import test_solver_cases
 
 problems = ['convex_var',
@@ -43,19 +43,19 @@ def createTestMethod(pName,problem,solver,writer,kwds):
             obj.skipTest("Solver %s (interface=%s) is not available"
                          % (solver, writer))
 
-        m = pyutilib.misc.import_file(os.path.join(thisDir,
+        m = import_file(os.path.join(thisDir,
                                                    'kernel_problems',
                                                    problem),
                                       clear_cache=True)
 
         model = m.define_model(**kwds)
 
-        opt = pmo.SolverFactory(solver, solver_io=writer)
+        opt = SolverFactory(solver, solver_io=writer)
         results = opt.solve(model)
 
         # non-recursive
         new_results = ((var.name, var.value)
-                       for var in model.components(ctype=pmo.variable.ctype,
+                       for var in model.components(ctype=variable.ctype,
                                                    active=True,
                                                    descend_into=False))
         baseline_results = getattr(obj,problem+'_results')
@@ -79,18 +79,18 @@ def assignTests(cls, problem_list):
             for AUX in aux_list:
                 for REPN in ['sos2','mc','inc','cc','dcc','dlog','log']:
                     for BOUND_TYPE in ['lb','ub','eq']:
-                        for SENSE in [pmo.maximize,pmo.minimize]:
-                            if not( ((BOUND_TYPE == 'lb') and (SENSE == pmo.maximize)) or \
-                                    ((BOUND_TYPE == 'ub') and (SENSE == pmo.minimize)) or \
+                        for SENSE in [maximize, minimize]:
+                            if not( ((BOUND_TYPE == 'lb') and (SENSE ==  maximize)) or \
+                                    ((BOUND_TYPE == 'ub') and (SENSE ==  minimize)) or \
                                     ((REPN == 'mc') and ('step' in PROBLEM)) ):
                                 kwds = {}
                                 kwds['sense'] = SENSE
                                 kwds['repn'] = REPN
                                 kwds['bound'] = BOUND_TYPE
-                                if SENSE == pmo.maximize:
+                                if SENSE == maximize:
                                     attrName = "test_{0}_{1}_{2}_{3}_{4}_{5}".format(PROBLEM,REPN,BOUND_TYPE,'maximize',solver,writer)
                                 else:
-                                    assert SENSE == pmo.minimize
+                                    assert SENSE == minimize
                                     attrName = "test_{0}_{1}_{2}_{3}_{4}_{5}".format(PROBLEM,REPN,BOUND_TYPE,'minimize',solver,writer)
                                 assert len(AUX) == 1
                                 kwds.update(AUX)

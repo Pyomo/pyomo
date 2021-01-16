@@ -1,3 +1,0 @@
-def teaOKrule(model):
-    return(model.x['butter'] + model.x['scones'] == 3)
-model.TeaConst = Constraint(rule=teaOKrule)

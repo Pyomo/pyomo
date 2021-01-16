@@ -8,13 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import copy
-
 from pyomo.core.expr import current as EXPR
 
-from pyomo.core import *
-from pyomo.core.base.expression import _ExpressionData
-from pyomo.core.base.var import SimpleVar, _VarData
+from pyomo.core import (nonpyomo_leaf_types, TransformationFactory, IntegerSet,
+                        Integers, PositiveIntegers, NonPositiveIntegers,
+                        NegativeIntegers, NonNegativeIntegers, Reals, PositiveReals,
+                        NonNegativeReals, NegativeReals, NonPositiveReals,
+                        PercentFraction, RealSet, Var, Set, value, Binary, 
+                        Constraint, Objective)
 from pyomo.core.base.misc import create_name
 from pyomo.core.plugins.transform.util import partial
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation

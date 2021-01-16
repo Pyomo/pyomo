@@ -56,7 +56,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest']
     #'sphinx.ext.githubpages']
 
-viewcode_import = True
+viewcode_follow_imported_members = True
 #napoleon_include_private_with_doc = True
 
 # Add any paths that contain templates here, relative to this directory.
@@ -120,7 +120,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
     # Override default css to get a larger width for local build
     def setup(app):
-        app.add_stylesheet('theme_overrides.css')
+        app.add_css_file('theme_overrides.css')
     html_context = {
         'css_files': [
             '_static/theme_overrides.css',
@@ -213,8 +213,14 @@ texinfo_documents = [
 
 doctest_global_setup = '''
 
-import pyomo.opt
+from pyomo.common.dependencies import (
+    attempt_import, numpy_available, scipy_available, pandas_available,
+    yaml_available, networkx_available, matplotlib_available,
+    pympler_available, dill_available,
+)
+pint_available = attempt_import('pint', defer_check=False)[1]
 
+import pyomo.opt
 # Not using SolverFactory to check solver availability because
 # as of June 2020 there is no way to supress warnings when 
 # solvers are not available

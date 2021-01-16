@@ -15,7 +15,6 @@ from .block_vector import NotFullyDefinedBlockVectorError
 from .block_vector import assert_block_structure as block_vector_assert_block_structure
 from mpi4py import MPI
 import numpy as np
-import copy as cp
 import operator
 
 __all__ = ['MPIBlockVector']
@@ -85,7 +84,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         An MPI communicator. Tyically MPI.COMM_WORLD
     """
 
-    def __new__(cls, nblocks, rank_owner, mpi_comm):
+    def __new__(cls, nblocks, rank_owner, mpi_comm, assert_correct_owners=False):
 
         assert isinstance(nblocks, int)
         assert len(rank_owner) == nblocks
@@ -103,22 +102,15 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         assert np.all(obj._rank_owner < comm_size)
 
         # Determine which blocks are owned by this processor
-        obj._owned_blocks = list()
-        obj._unique_owned_blocks = list()
-        obj._owned_mask = np.zeros(nblocks, dtype=bool)
-        for i, owner in enumerate(obj._rank_owner):
-            if owner == rank or owner < 0:
-                obj._owned_blocks.append(i)
-                obj._owned_mask[i] = True
-                if owner == rank:
-                    obj._unique_owned_blocks.append(i)
+        obj._owned_mask = np.bitwise_or(obj._rank_owner == rank, obj._rank_owner < 0)
+        unique_owned_mask = obj._rank_owner == rank
+        obj._unique_owned_blocks = unique_owned_mask.nonzero()[0]
+        obj._owned_blocks = obj._owned_mask.nonzero()[0]
 
         # containers that facilitate looping
-        obj._owned_blocks = np.array(obj._owned_blocks)
-        obj._unique_owned_blocks = np.array(obj._unique_owned_blocks)
         obj._brow_lengths = np.empty(nblocks, dtype=np.float64)
         obj._brow_lengths.fill(np.nan)
-        obj._undefined_brows = set(range(nblocks))
+        obj._undefined_brows = set(obj._owned_blocks)
 
         # make some pointers unmutable. These arrays don't change after
         # MPIBlockVector has been created
@@ -127,13 +119,16 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         obj._owned_mask.flags.writeable = False
         obj._unique_owned_blocks.flags.writeable = False
 
+        obj._broadcasted = False
+
         return obj
 
-    def __init__(self, nblocks, rank_owner, mpi_comm):
+    def __init__(self, nblocks, rank_owner, mpi_comm, assert_correct_owners=False):
         # Note: this requires communication but is disabled when assertions
         # are turned off
-        assert self._assert_correct_owners(), \
-            'rank_owner must be the same in all processors'
+        if assert_correct_owners:
+            assert self._assert_correct_owners(), \
+                'rank_owner must be the same in all processors'
 
     def __array_prepare__(self, out_arr, context=None):
         return super(MPIBlockVector, self).__array_prepare__(self, out_arr, context)
@@ -208,7 +203,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         if isinstance(x1, MPIBlockVector) and isinstance(x2, MPIBlockVector):
 
             msg = 'BlockVectors must be distributed in same processors'
-            assert np.array_equal(x1._rank_owner, x2._rank_owner), msg
+            assert np.array_equal(x1._rank_owner, x2._rank_owner) or self._mpiw.Get_size() == 1, msg
             assert x1._mpiw == x2._mpiw, 'Need to have same communicator'
 
             res = x1.copy_structure()
@@ -266,8 +261,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns total number of elements in the MPIBlockVector
         """
-        assert_block_structure(self)
-        return np.sum(self._brow_lengths),
+        return (self.size,)
 
     @property
     def size(self):
@@ -275,7 +269,16 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         Returns total number of elements in this MPIBlockVector
         """
         assert_block_structure(self)
-        return np.sum(self._brow_lengths)
+        comm = self._mpiw
+        rank = comm.Get_rank()
+        if rank == 0:
+            indices = self._owned_blocks
+        else:
+            indices = self._unique_owned_blocks
+        local_size = np.sum(self._brow_lengths[indices])
+        size = comm.allreduce(local_size)
+        assert int(size) == size
+        return int(size)
 
     @property
     def ndim(self):
@@ -326,26 +329,30 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """Returns MPI communicator"""
         return self._mpiw
 
+    def is_broadcasted(self):
+        return self._broadcasted
+
     def block_sizes(self, copy=True):
         """
         Returns 1D-Array with sizes of individual blocks in this MPIBlockVector
         """
-        assert_block_structure(self)
+        if not self._broadcasted:
+            self.broadcast_block_sizes()
         if copy:
             return self._brow_lengths.copy()
         return self._brow_lengths
 
     def get_block_size(self, ndx):
-        if ndx in self._undefined_brows:
+        res = self._brow_lengths[ndx]
+        if np.isnan(res):
             raise NotFullyDefinedBlockVectorError('The dimensions of the requested block are not defined.')
-        return self._brow_lengths[ndx]
+        res = int(res)
+        return res
 
     def _set_block_size(self, ndx, size):
         if ndx in self._undefined_brows:
             self._undefined_brows.remove(ndx)
             self._brow_lengths[ndx] = size
-            if len(self._undefined_brows) == 0:
-                self._brow_lengths = np.asarray(self._brow_lengths, dtype=np.int64)
         else:
             if self._brow_lengths[ndx] != size:
                 raise ValueError('Incompatible dimensions for block {ndx}; '
@@ -360,6 +367,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         this MPIBlockVector knows it's dimensions across all blocks. This method
         must be called before running any operations with the MPIBlockVector.
         """
+        assert_block_structure(self)
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
 
@@ -395,7 +403,26 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 msg = 'The dimension of block {} was not specified in any process'.format(i)
 
             # here block_length must only have one element
-            self._set_block_size(i, block_length.pop())
+            self._brow_lengths[i] = block_length.pop()
+
+        self._brow_lengths = np.asarray(self._brow_lengths, dtype=np.int64)
+        self._broadcasted = True
+
+    def finalize_block_sizes(self, broadcast=True, block_sizes=None):
+        """
+        Only set broadcast=False if you know what you are doing!
+
+        Parameters
+        ----------
+        broadcast: bool
+        block_sizes: None or np.ndarray
+        """
+        if broadcast:
+            self.broadcast_block_sizes()
+        else:
+            self._undefined_brows = set()
+            self._brow_lengths = block_sizes
+            self._broadcasted = True
 
     # Note: this requires communication but is only run in __new__
     def _assert_correct_owners(self, root=0):
@@ -529,11 +556,11 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns the indices of the elements that are non-zero.
         """
-        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership, mpi_comm=self.mpi_comm)
+        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership,
+                                mpi_comm=self.mpi_comm, assert_correct_owners=False)
         assert_block_structure(self)
         for i in self._owned_blocks:
             result.set_block(i, self._block_vector.get_block(i).nonzero()[0])
-        result.broadcast_block_sizes()
         return (result,)
 
     def round(self, decimals=0, out=None):
@@ -587,7 +614,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         assert out is None, 'Out keyword not supported'
         assert_block_structure(self)
-        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership, mpi_comm=self.mpi_comm)
+        result = MPIBlockVector(nblocks=self.nblocks, rank_owner=self.rank_ownership,
+                                mpi_comm=self.mpi_comm, assert_correct_owners=False)
         if isinstance(condition, MPIBlockVector):
             # Note: do not need to check same size? this is checked implicitly
             msg = 'BlockVectors must be distributed in same processors'
@@ -595,7 +623,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self._mpiw == condition._mpiw, 'Need to have same communicator'
             for i in self._owned_blocks:
                 result.set_block(i, self.get_block(i).compress(condition.get_block(i)))
-            result.broadcast_block_sizes()
             return result
         if isinstance(condition, BlockVector):
             raise RuntimeError('Operation not supported by MPIBlockVector')
@@ -635,6 +662,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 self.set_block(i, other.get_block(i).copy())
         elif isinstance(other, np.ndarray):
             assert_block_structure(self)
+            if not self.is_broadcasted():
+                self.broadcast_block_sizes()
             assert self.shape == other.shape, 'Dimension mismatch {} != {}'.format(self.shape, other.shape)
             offset = 0
             for idx in range(self.nblocks):
@@ -696,7 +725,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         -------
         MPIBlockVector
         """
-        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm)
+        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm, assert_correct_owners=False)
         result._block_vector = self._block_vector.clone(copy=copy)
         result._brow_lengths = self._brow_lengths.copy()
         result._undefined_brows = set(self._undefined_brows)
@@ -708,7 +737,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns a copy of the MPIBlockVector
         """
-        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm)
+        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm, assert_correct_owners=False)
         result._block_vector = self._block_vector.copy(order=order)
         result._brow_lengths = self._brow_lengths.copy()
         result._undefined_brows = set(self._undefined_brows)
@@ -718,10 +747,18 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         """
         Returns a copy of the MPIBlockVector structure filled with zeros
         """
-        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm)
-        result._block_vector = self._block_vector.copy_structure()
-        result._brow_lengths = self._brow_lengths.copy()
-        result._undefined_brows = set(self._undefined_brows)
+        result = MPIBlockVector(self.nblocks, self.rank_ownership, self.mpi_comm, assert_correct_owners=False)
+        if self.is_broadcasted():
+            result.finalize_block_sizes(broadcast=False, block_sizes=self.block_sizes(copy=False))
+        for bid in self.owned_blocks:
+            block = self.get_block(bid)
+            if block is not None:
+                if isinstance(block, BlockVector):
+                    result.set_block(bid, block.copy_structure())
+                elif type(block) == np.ndarray:
+                    result.set_block(bid, np.zeros(block.size))
+                else:
+                    raise NotImplementedError('Should never get here')
         return result
 
     def fill(self, value):
@@ -773,9 +810,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         elif isinstance(other, BlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
-            return self.dot(other.toMPIBlockVector(self.rank_ownership, self.mpi_comm))
+            return self.dot(other.toMPIBlockVector(self.rank_ownership, self.mpi_comm, assert_correct_owners=False))
         elif isinstance(other, np.ndarray):
-            assert self.shape == other.shape, 'Dimension mismatch: {} != {}'.format(self.shape, other.shape)
             other_bv = self.copy_structure()
             other_bv.copyfrom(other)
             return self.dot(other_bv)
@@ -909,6 +945,8 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         BlockVector
         """
         assert_block_structure(self)
+        if not self.is_broadcasted():
+            self.broadcast_block_sizes()
         result = self.make_local_structure_copy()
 
         local_data = np.zeros(self.size)
@@ -943,7 +981,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
             if isinstance(other, MPIBlockVector):
-                assert np.array_equal(self._rank_owner, other._rank_owner), \
+                assert np.array_equal(self._rank_owner, other._rank_owner) or self._mpiw.Get_size() == 1, \
                     'MPIBlockVectors must be distributed in same processors'
                 assert self._mpiw == other._mpiw, 'Need to have same communicator'
             for i in self._owned_blocks:
@@ -980,7 +1018,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
             if isinstance(other, MPIBlockVector):
-                assert np.array_equal(self._rank_owner, other._rank_owner), \
+                assert np.array_equal(self._rank_owner, other._rank_owner) or self._mpiw.Get_size() == 1, \
                     'MPIBlockVectors must be distributed in same processors'
                 assert self._mpiw == other._mpiw, 'Need to have same communicator'
                 assert_block_structure(other)
@@ -1070,7 +1108,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             assert_block_structure(other)
             assert self.nblocks == other.nblocks, \
                 'Number of blocks mismatch: {} != {}'.format(self.nblocks, other.nblocks)
-            assert np.array_equal(self._rank_owner, other._rank_owner), \
+            assert np.array_equal(self._rank_owner, other._rank_owner) or self._mpiw.Get_size() == 1, \
                 'MPIBlockVectors must be distributed in same processors'
             assert self._mpiw == other._mpiw, 'Need to have same communicator'
 
@@ -1139,7 +1177,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         if self.nblocks != other.nblocks:
             return False
         if isinstance(other, MPIBlockVector):
-            if (self.owned_blocks != other.owned_blocks).any():
+            if (self.owned_blocks != other.owned_blocks).any() and self._mpiw.Get_size() != 1:
                 return False
         for ndx in self.owned_blocks:
             block1 = self.get_block(ndx)
@@ -1215,7 +1253,7 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
             print(msg)
 
     def __len__(self):
-        return self.nblocks
+        raise NotImplementedError('Use size or nblocks')
 
     def __iter__(self):
         raise NotImplementedError('Not supported by MPIBlockVector')

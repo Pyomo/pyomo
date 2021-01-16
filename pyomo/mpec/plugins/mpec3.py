@@ -12,7 +12,6 @@ import logging
 
 from pyomo.core.base import (Transformation,
                              TransformationFactory,
-                             Constraint,
                              Block,
                              SortComponents)
 from pyomo.mpec.complementarity import Complementarity
@@ -35,7 +34,6 @@ class MPEC3_Transformation(Transformation):
         super(MPEC3_Transformation, self).__init__()
 
     def _apply_to(self, instance, **kwds):
-        options = kwds.pop('options', {})
         #
         # Iterate over the model finding Complementarity components
         #

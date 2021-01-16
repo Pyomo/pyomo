@@ -16,13 +16,10 @@ import math
 
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr import current as EXPR
-import pyomo.core.base.param
 from pyomo.core.base import ComponentUID
-from pyomo.core.base.numvalue import is_fixed, is_constant
 from pyomo.core.base.block import (Block,
-                                   SortComponents,
-                                   generate_cuid_names)
-from pyomo.core.base.var import Var, _VarData
+                                   SortComponents)
+from pyomo.core.base.var import Var
 from pyomo.core.base.objective import (Objective,
                                        _ObjectiveData)
 from pyomo.core.base.constraint import (Constraint,
@@ -37,7 +34,7 @@ from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticConstraintBodyAnnotation,
                                     StochasticObjectiveAnnotation,
                                     StochasticVariableBoundsAnnotation)
-from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
+from pyomo.pysp.scenariotree import tree_structure
 from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
 from pyomo.pysp.scenariotree.manager import \
@@ -63,7 +60,7 @@ def _update_data(worker, scenario, data):
     instance = scenario.instance
     assert instance is not None
     for cuid, val in data:
-        cuid.find_component(instance).value = val
+        cuid.find_component_on(instance).value = val
 
 #
 # These distributions are documented by the SMPS format
@@ -402,8 +399,9 @@ class EmbeddedSP(object):
             _map_variable_stages(self.reference_model)
         self.time_stages = tuple(sorted(self.stage_to_variables_map))
         assert self.time_stages[0] == 1
-        self.variable_symbols = generate_cuid_names(self.reference_model,
-                                                    ctype=Var)
+        self.variable_symbols = ComponentUID.generate_cuid_string_map(
+            self.reference_model, ctype=Var,
+            repr_version=tree_structure.CUID_repr_version)
         # remove the parent blocks from this map
         keys_to_delete = []
         for var in self.variable_symbols:
