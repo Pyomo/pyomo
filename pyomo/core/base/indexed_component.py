@@ -259,7 +259,10 @@ class IndexedComponent(Component):
         return self._index is not UnindexedComponent_set
 
     def is_reference(self):
-        """ Return True if this component is a reference. """
+        """Return True if this component is a reference, where
+        "reference" is interpreted as any component that does not
+        own its own data.
+        """
         return self._data is not None and type(self._data) is not dict
 
     def dim(self):
