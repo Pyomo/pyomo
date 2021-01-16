@@ -171,7 +171,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the equality constraints.
         """
         equality_constraints = self.get_pyomo_equality_constraints()
-        return [v.getname() for v in equality_constraints]
+        return [v.getname(fully_qualified=True) for v in equality_constraints]
 
     def get_primal_indices(self, pyomo_variables):
         """
