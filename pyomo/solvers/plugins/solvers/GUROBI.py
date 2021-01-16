@@ -286,7 +286,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             ver = None
             try:
                 ver = tuple(eval(f.getvalue().strip()))
-                while(len(tmp) < 4):
+                while(len(ver) < 4):
                     ver += (0,)
             except SyntaxError:
                 ver = _extract_version('')
