@@ -85,9 +85,9 @@ class PyomoNLP(AslNLP):
                     cdidx[obj()] = int(name[1:])
 
             # Create ComponentMap corresponding to equality constraint indices
-            equality_constraints = self.get_pyomo_equality_constraints()
             self._condata_to_eq_idx = ComponentMap(
-                    [(con, i) for i, con enumerate(equality_constraints)]
+                    (con, i) for con, i in six.iteritems(self._condata_to_idx)
+                    if self._con_full_eq_mask[i]
                     )
 
             # The NL writer advertises the external function libraries
