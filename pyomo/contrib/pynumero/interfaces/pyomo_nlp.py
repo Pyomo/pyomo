@@ -84,12 +84,6 @@ class PyomoNLP(AslNLP):
                 elif name[0] == 'c':
                     cdidx[obj()] = int(name[1:])
 
-            # Create ComponentMap corresponding to equality constraint indices
-            self._condata_to_eq_idx = ComponentMap(
-                    (con, i) for con, i in six.iteritems(self._condata_to_idx)
-                    if self._con_full_eq_mask[i]
-                    )
-
             # The NL writer advertises the external function libraries
             # through the PYOMO_AMPLFUNC environment variable; merge it
             # with any preexisting AMPLFUNC definitions
@@ -103,6 +97,16 @@ class PyomoNLP(AslNLP):
 
             # keep pyomo model in cache
             self._pyomo_model = pyomo_model
+
+            # Create ComponentMap corresponding to equality constraint indices
+            # This must be done after the call to super-init.
+            full_to_equality = self._con_full_eq_map
+            equality_mask = self._con_full_eq_mask
+            self._condata_to_eq_idx = ComponentMap(
+                    (con, full_to_equality[i]) 
+                    for con, i in six.iteritems(self._condata_to_idx)
+                    if equality_mask[i]
+                    )
 
         finally:
             # delete the nl file
@@ -235,7 +239,7 @@ class PyomoNLP(AslNLP):
                     con_eq_idx = self._condata_to_eq_idx[cd]
                     indices.append(con_eq_idx)
             else:
-                con_eq_idx = self._condata_to_eq_idx[cd]
+                con_eq_idx = self._condata_to_eq_idx[c]
                 indices.append(con_eq_idx)
         return indices
 
