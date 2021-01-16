@@ -145,9 +145,13 @@ class PyomoNLP(AslNLP):
         Return an ordered list of the Pyomo ConData objects in
         the order corresponding to the equality constraints.
         """
-        constraints = self.get_pyomo_constraints(self)
-        mask = self._con_full_eq_mask
-        return [con for con, is_eq in zip(constraints, mask) if is_eq]
+        #constraints = self.get_pyomo_constraints()
+        #mask = self._con_full_eq_mask
+        #return [con for con, is_eq in zip(constraints, mask) if is_eq]
+        idx_to_condata = [None]*len(self._condata_to_eq_idx)
+        for c, i in six.iteritems(self._condata_to_eq_idx):
+            idx_to_condata[i] = c
+        return idx_to_condata
 
     def variable_names(self):
         """
@@ -165,7 +169,7 @@ class PyomoNLP(AslNLP):
         pyomo_constraints = self.get_pyomo_constraints()
         return [v.getname(fully_qualified=True) for v in pyomo_constraints]
 
-    def eq_constraint_names(self):
+    def equality_constraint_names(self):
         """
         Return an ordered list of the Pyomo ConData names in
         the order corresponding to the equality constraints.
