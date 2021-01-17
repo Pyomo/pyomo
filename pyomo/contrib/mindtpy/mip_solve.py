@@ -213,7 +213,11 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
     if master_mip_results.solver.termination_condition is tc.infeasible:
         handle_master_infeasible(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.unbounded:
-        handle_master_unbounded(master_mip, solve_data, config)
+        temp_results = handle_master_unbounded(master_mip, solve_data, config)
+    elif master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
+        temp_results = handle_master_unbounded(master_mip, solve_data, config)
+        if temp_results.solver.termination_condition is tc.infeasible:
+            handle_master_infeasible(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
         handle_master_max_timelimit(master_mip, solve_data, config)
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
@@ -347,12 +351,13 @@ def handle_master_unbounded(master_mip, solve_data, config):
     MindtPy.objective_bound = Constraint(
         expr=(-config.obj_bound, MindtPy.mip_obj.expr, config.obj_bound))
     masteropt = SolverFactory(config.mip_solver)
-    set_solver_options(masteropt, solve_data, config, solver_type='mip')
     if isinstance(masteropt, PersistentSolver):
         masteropt.set_instance(master_mip)
+    set_solver_options(masteropt, solve_data, config, solver_type='mip')
     with SuppressInfeasibleWarning():
         master_mip_results = masteropt.solve(
             master_mip, tee=config.mip_solver_tee, **config.mip_solver_args)
+    return master_mip_results
 
 
 def setup_master(solve_data, config, fp, regularization_problem):
