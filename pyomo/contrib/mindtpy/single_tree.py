@@ -519,8 +519,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     handle_master_optimal(
                         master_mip, solve_data, config, update_bound=False)
                 elif master_mip_results.solver.termination_condition is tc.infeasible:
+                    config.logger.info('Projection problem infeasible.')
                     if config.reduce_level_coef:
-                        config.logger.info('Projection problem infeasible.')
                         config.level_coef = config.level_coef / 2
                         master_mip, master_mip_results = solve_master(solve_data, config, regularization_problem=True)
                         config.level_coef = config.level_coef * 2
@@ -534,6 +534,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                 'MindtPy unable to handle projection problem termination condition '
                                 'of %s. Solver message: %s' %
                                 (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
+                    elif config.use_master_incumbent:
+                        config.logger.info('Fixed subproblem will be generated based on the incumbent solution of the master problem.')
                 else:
                     raise ValueError(
                         'MindtPy unable to handle projection problem termination condition '
