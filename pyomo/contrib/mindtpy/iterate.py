@@ -82,9 +82,14 @@ def MindtPy_iteration_loop(solve_data, config):
             if (solve_data.objective_sense == minimize and solve_data.LB != float('-inf')) or (solve_data.objective_sense == maximize and solve_data.UB != float('inf')):
                 master_mip, master_mip_results = solve_master(
                     solve_data, config, regularization_problem=True)
-                if master_mip_results.solver.termination_condition is tc.optimal:
+                if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
                     handle_master_optimal(
                         master_mip, solve_data, config, update_bound=False)
+                else:
+                    raise ValueError(
+                        'MindtPy unable to handle projection problem termination condition '
+                        'of %s. Solver message: %s' %
+                        (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
 
         if algorithm_should_terminate(solve_data, config, check_cycling=True):
             last_iter_cuts = False
@@ -402,7 +407,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
                     MindtPy.cuts.no_good_cuts)].deactivate()
             if config.use_tabu_list:
                 solve_data.tabu_list = solve_data.tabu_list[:-1]
-        if config.add_regularization and MindtPy.find_component('mip_obj') is None:
+        if config.add_regularization is not None and MindtPy.find_component('mip_obj') is None:
             MindtPy.objective_list[-1].activate()
         masteropt = SolverFactory(config.mip_solver)
         # determine if persistent solver is called.

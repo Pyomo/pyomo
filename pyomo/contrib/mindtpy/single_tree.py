@@ -325,13 +325,13 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.LB = max(
                 self.get_best_objective_value(), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
-            if config.add_regularization:
+            if config.use_fake_bound:
                 solve_data.fake_LB = max(solve_data.fake_LB, self.get_objective_value())
         else:
             solve_data.UB = min(
                 self.get_best_objective_value(), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
-            if config.add_regularization:
+            if config.use_fake_bound:
                 solve_data.fake_UB = min(solve_data.fake_UB, self.get_objective_value())
         config.logger.info(
             'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s'
@@ -515,9 +515,30 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             if (solve_data.objective_sense == minimize and solve_data.LB != float('-inf')) or (solve_data.objective_sense == maximize and solve_data.UB != float('inf')):
                 master_mip, master_mip_results = solve_master(
                     solve_data, config, regularization_problem=True)
-                if master_mip_results.solver.termination_condition is tc.optimal:
+                if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
                     handle_master_optimal(
                         master_mip, solve_data, config, update_bound=False)
+                elif master_mip_results.solver.termination_condition is tc.infeasible:
+                    if config.reduce_level_coef:
+                        config.logger.info('Projection problem infeasible.')
+                        config.level_coef = config.level_coef / 2
+                        master_mip, master_mip_results = solve_master(solve_data, config, regularization_problem=True)
+                        config.level_coef = config.level_coef * 2
+                        if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
+                            handle_master_optimal(master_mip, solve_data, config, update_bound=False)
+                        elif master_mip_results.solver.termination_condition is tc.infeasible:
+                            config.logger.info('Projection problem still infeasible with reduced level_coef. '
+                                                'NLP subproblem is generated based on the incumbent solution of the master problem.')
+                        else:
+                            raise ValueError(
+                                'MindtPy unable to handle projection problem termination condition '
+                                'of %s. Solver message: %s' %
+                                (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
+                else:
+                    raise ValueError(
+                        'MindtPy unable to handle projection problem termination condition '
+                        'of %s. Solver message: %s' %
+                        (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
 
         if solve_data.LB + config.bound_tolerance >= solve_data.UB:
             config.logger.info(
