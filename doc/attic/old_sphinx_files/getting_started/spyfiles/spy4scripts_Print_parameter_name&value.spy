@@ -1,4 +1,0 @@
-for parmobject in instance.component_objects(pyo.Param, active=True):
-    print ("Parameter "+str(parmobject.name))
-    for index in parmobject:
-        print ("   ",index, parmobject[index].value)
