@@ -19,7 +19,6 @@ from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbound
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options
-from pyomo.contrib.mindtpy.tabu_list import IncumbentCallback_cplex
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 single_tree, single_tree_available = attempt_import(
@@ -86,7 +85,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
         masteropt._solver_model.set_error_stream(None)
     if config.use_tabu_list:
         tabulist = masteropt._solver_model.register_callback(
-            IncumbentCallback_cplex)
+            tabu_list.IncumbentCallback_cplex)
         tabulist.solve_data = solve_data
         tabulist.opt = masteropt
         masteropt._solver_model.parameters.preprocessing.reduce.set(1)

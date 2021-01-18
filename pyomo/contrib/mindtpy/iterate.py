@@ -24,7 +24,10 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
-from pyomo.contrib.mindtpy.tabu_list import IncumbentCallback_cplex
+from pyomo.common.dependencies import attempt_import
+
+tabu_list, tabu_list_available = attempt_import(
+    'pyomo.contrib.mindtpy.tabu_list')
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -415,7 +418,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)
         if config.use_tabu_list:
             tabulist = masteropt._solver_model.register_callback(
-                IncumbentCallback_cplex)
+                tabu_list.IncumbentCallback_cplex)
             tabulist.solve_data = solve_data
             tabulist.opt = masteropt
             masteropt._solver_model.parameters.preprocessing.reduce.set(1)
