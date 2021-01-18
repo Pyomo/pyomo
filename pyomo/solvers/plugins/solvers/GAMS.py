@@ -611,7 +611,7 @@ class GAMSShell(_GAMSSolver):
                 "No 'gams' command found on system PATH - GAMS shell "
                 "solver functionality is not available.")
         # New versions of GAMS require a license to run anything.
-        # inistead of parsing the output, we will try solving a trivial
+        # Instead of parsing the output, we will try solving a trivial
         # model.
         avail = self._run_simple_model(1)
         if not avail and exception_flag:
