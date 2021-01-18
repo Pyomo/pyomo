@@ -239,13 +239,19 @@ class Ipopt(Solver):
             for v, val in self._primal_sol.items():
                 v.value = val
 
-            results.best_feasible_objective = value(self._writer.get_active_objective().expr)
+            if self._writer.get_active_objective() is None:
+                results.best_feasible_objective = None
+            else:
+                results.best_feasible_objective = value(self._writer.get_active_objective().expr)
         elif results.termination_condition == TerminationCondition.optimal:
-            obj_expr_evaluated = replace_expressions(self._writer.get_active_objective().expr,
-                                                     substitution_map={id(v): val for v, val in self._primal_sol.items()},
-                                                     descend_into_named_expressions=True,
-                                                     remove_named_expressions=True)
-            results.best_feasible_objective = value(obj_expr_evaluated)
+            if self._writer.get_active_objective() is None:
+                results.best_feasible_objective = None
+            else:
+                obj_expr_evaluated = replace_expressions(self._writer.get_active_objective().expr,
+                                                         substitution_map={id(v): val for v, val in self._primal_sol.items()},
+                                                         descend_into_named_expressions=True,
+                                                         remove_named_expressions=True)
+                results.best_feasible_objective = value(obj_expr_evaluated)
         elif self.config.load_solution:
             raise RuntimeError('A feasible solution was not found, so no solution can be loaded.'
                                'Please set opt.config.load_solution=False and check '
@@ -303,10 +309,13 @@ class Ipopt(Solver):
             results = self._parse_sol()
             timer.stop('parse solution')
 
-        if self._writer.get_active_objective().sense == minimize:
-            results.best_objective_bound = -math.inf
+        if self._writer.get_active_objective() is None:
+            results.best_objective_bound = None
         else:
-            results.best_objective_bound = math.inf
+            if self._writer.get_active_objective().sense == minimize:
+                results.best_objective_bound = -math.inf
+            else:
+                results.best_objective_bound = math.inf
 
         return results
 

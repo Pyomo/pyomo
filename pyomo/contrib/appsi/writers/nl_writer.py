@@ -60,6 +60,8 @@ class NLWriter(PersistentBase):
         self._writer = cmodel.NLWriter()
 
         self.add_block(model)
+        if self._objective is None:
+            self.set_objective(None)
 
     def _add_variables(self, variables: List[_GeneralVarData]):
         cvars = cmodel.create_vars(len(variables))

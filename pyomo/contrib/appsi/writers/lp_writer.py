@@ -63,6 +63,8 @@ class LPWriter(PersistentBase):
         self._writer = cmodel.LPWriter()
 
         self.add_block(model)
+        if self._objective is None:
+            self.set_objective(None)
 
     def _add_variables(self, variables: List[_GeneralVarData]):
         cvars = cmodel.create_vars(len(variables))
@@ -205,7 +207,10 @@ class LPWriter(PersistentBase):
                 sense = 1
         cobj = cmodel.LPObjective(const, lin_coef, lin_vars, quad_coef, quad_vars_1, quad_vars_2)
         cobj.sense = sense
-        cname = self._symbol_map.getSymbol(obj, self._obj_labeler)
+        if obj is None:
+            cname = 'objective'
+        else:
+            cname = self._symbol_map.getSymbol(obj, self._obj_labeler)
         cobj.name = cname
         self._writer.objective = cobj
 

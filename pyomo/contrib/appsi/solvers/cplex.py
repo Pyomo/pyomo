@@ -192,19 +192,23 @@ class Cplex(Solver):
         else:
             results.termination_condition = TerminationCondition.unknown
 
-        if cpxprob.solution.get_solution_type() != cpxprob.solution.type.none:
-            if (cpxprob.variables.get_num_binary() + cpxprob.variables.get_num_integer()) == 0:
-                results.best_feasible_objective = cpxprob.solution.get_objective_value()
-                results.best_objective_bound = cpxprob.solution.get_objective_value()
-            else:
-                results.best_feasible_objective = cpxprob.solution.get_objective_value()
-                results.best_objective_bound = cpxprob.solution.MIP.get_best_objective()
-        else:
+        if self._writer.get_active_objective() is None:
             results.best_feasible_objective = None
-            if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
-                results.best_objective_bound = -math.inf
+            results.best_objective_bound = None
+        else:
+            if cpxprob.solution.get_solution_type() != cpxprob.solution.type.none:
+                if (cpxprob.variables.get_num_binary() + cpxprob.variables.get_num_integer()) == 0:
+                    results.best_feasible_objective = cpxprob.solution.get_objective_value()
+                    results.best_objective_bound = cpxprob.solution.get_objective_value()
+                else:
+                    results.best_feasible_objective = cpxprob.solution.get_objective_value()
+                    results.best_objective_bound = cpxprob.solution.MIP.get_best_objective()
             else:
-                results.best_objective_bound = math.inf
+                results.best_feasible_objective = None
+                if cpxprob.objective.get_sense() == cpxprob.objective.sense.minimize:
+                    results.best_objective_bound = -math.inf
+                else:
+                    results.best_objective_bound = math.inf
 
         if config.load_solution:
             if cpxprob.solution.get_solution_type() == cpxprob.solution.type.none:

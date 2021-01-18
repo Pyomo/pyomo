@@ -182,6 +182,17 @@ class Results(object):
         return s
 
 
+class UpdateConfig(object):
+    def __init__(self):
+        self.check_for_new_or_removed_constraints: bool = True
+        self.check_for_new_or_removed_vars: bool = True
+        self.check_for_new_or_removed_params: bool = True
+        self.update_constraints: bool = True
+        self.update_vars: bool = True
+        self.update_params: bool = True
+        self.update_named_expressions: bool = True
+
+
 class Solver(abc.ABC):
     """
     Base class for solver interfaces
@@ -266,7 +277,7 @@ class Solver(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def update_config(self):
+    def update_config(self) -> UpdateConfig:
         pass
 
     @abc.abstractmethod
@@ -316,17 +327,6 @@ class Solver(abc.ABC):
     @abc.abstractmethod
     def update_params(self):
         pass
-
-
-class UpdateConfig(object):
-    def __init__(self):
-        self.check_for_new_or_removed_constraints: bool = True
-        self.check_for_new_or_removed_vars: bool = True
-        self.check_for_new_or_removed_params: bool = True
-        self.update_constraints: bool = True
-        self.update_vars: bool = True
-        self.update_params: bool = True
-        self.update_named_expressions: bool = True
 
 
 """
@@ -391,6 +391,8 @@ class PersistentBase(abc.ABC):
         self.update_config = saved_update_config
         self._model = model
         self.add_block(model)
+        if self._objective is None:
+            self.set_objective(None)
 
     @abc.abstractmethod
     def _add_variables(self, variables: List[_GeneralVarData]):

@@ -275,6 +275,8 @@ class Gurobi(PersistentBase, Solver):
             self._solver_model = self._gurobipy.Model()
 
         self.add_block(model)
+        if self._objective is None:
+            self.set_objective(None)
 
     def _get_expr_from_pyomo_expr(self, expr):
         mutable_linear_coefficients = list()
@@ -621,17 +623,21 @@ class Gurobi(PersistentBase, Solver):
         else:
             results.termination_condition = TerminationCondition.unknown
 
-        try:
-            results.best_feasible_objective = gprob.ObjVal
-        except (self._gurobipy.GurobiError, AttributeError):
+        if self._objective is None:
             results.best_feasible_objective = None
-        try:
-            results.best_objective_bound = gprob.ObjBound
-        except (self._gurobipy.GurobiError, AttributeError):
-            if self._objective.sense == minimize:
-                results.best_objective_bound = -math.inf
-            else:
-                results.best_objective_bound = math.inf
+            results.best_objective_bound = None
+        else:
+            try:
+                results.best_feasible_objective = gprob.ObjVal
+            except (self._gurobipy.GurobiError, AttributeError):
+                results.best_feasible_objective = None
+            try:
+                results.best_objective_bound = gprob.ObjBound
+            except (self._gurobipy.GurobiError, AttributeError):
+                if self._objective.sense == minimize:
+                    results.best_objective_bound = -math.inf
+                else:
+                    results.best_objective_bound = math.inf
 
         timer.start('load solution')
         if config.load_solution:

@@ -533,10 +533,13 @@ void NLWriter::write(std::string filename)
     }
   std::sort(sorted_obj_vars.begin(), sorted_obj_vars.end(), variable_sorter);
 
-  f << "G0 " << grad_obj_nnz << "\n";
-  for (std::pair<std::shared_ptr<Var>, double> p : sorted_obj_vars)
+  if (sorted_obj_vars.size() > 0)
     {
-      f << p.first->index << " " << p.second << "\n"; 
+      f << "G0 " << grad_obj_nnz << "\n";
+      for (std::pair<std::shared_ptr<Var>, double> p : sorted_obj_vars)
+	{
+	  f << p.first->index << " " << p.second << "\n"; 
+	}
     }
   
   f.close();

@@ -209,9 +209,15 @@ class Cbc(Solver):
         if results.termination_condition == TerminationCondition.optimal and self.config.load_solution:
             for v, val in self._primal_sol.items():
                 v.value = val
-            results.best_feasible_objective = obj_val
+            if self._writer.get_active_objective() is None:
+                results.best_feasible_objective = None
+            else:
+                results.best_feasible_objective = obj_val
         elif results.termination_condition == TerminationCondition.optimal:
-            results.best_feasible_objective = obj_val
+            if self._writer.get_active_objective() is None:
+                results.best_feasible_objective = None
+            else:
+                results.best_feasible_objective = obj_val
         elif self.config.load_solution:
             raise RuntimeError('A feasible solution was not found, so no solution can be loaded.'
                                'Please set opt.config.load_solution=False and check '
@@ -305,10 +311,14 @@ class Cbc(Solver):
             results = self._parse_soln()
             timer.stop('parse solution')
 
-        if self._writer.get_active_objective().sense == minimize:
-            results.best_objective_bound = -math.inf
+        if self._writer.get_active_objective() is None:
+            results.best_feasible_objective = None
+            results.best_objective_bound = None
         else:
-            results.best_objective_bound = math.inf
+            if self._writer.get_active_objective().sense == minimize:
+                results.best_objective_bound = -math.inf
+            else:
+                results.best_objective_bound = math.inf
 
         return results
 

@@ -93,8 +93,8 @@ class TestSolvers(unittest.TestCase):
         m.b1 = pe.Param(mutable=True)
         m.b2 = pe.Param(mutable=True)
         m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= m.a1 * m.x + m.b1)
-        m.c2 = pe.Constraint(expr=m.y >= m.a2 * m.x + m.b2)
+        m.c1 = pe.Constraint(expr=(0, m.y - m.a1*m.x - m.b1, None))
+        m.c2 = pe.Constraint(expr=(None, -m.y + m.a2*m.x + m.b2, 0))
         opt: Solver = opt_class()
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
@@ -110,8 +110,68 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
             self.assertTrue(res.best_objective_bound <= m.y.value)
             duals = opt.get_duals()
-            self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
+            self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+
+    @parameterized.expand(input=all_solvers)
+    def test_equality(self, name: str, opt_class: Type[Solver]):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.a1 = pe.Param(mutable=True)
+        m.a2 = pe.Param(mutable=True)
+        m.b1 = pe.Param(mutable=True)
+        m.b2 = pe.Param(mutable=True)
+        m.obj = pe.Objective(expr=m.y)
+        m.c1 = pe.Constraint(expr=m.y == m.a1 * m.x + m.b1)
+        m.c2 = pe.Constraint(expr=m.y == m.a2 * m.x + m.b2)
+        opt: Solver = opt_class()
+
+        params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
+        for (a1, a2, b1, b2) in params_to_test:
+            m.a1.value = a1
+            m.a2.value = a2
+            m.b1.value = b1
+            m.b2.value = b2
+            res: Results = opt.solve(m)
+            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+            self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+            self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
+            self.assertTrue(res.best_objective_bound <= m.y.value)
+            duals = opt.get_duals()
+            self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
+            self.assertAlmostEqual(duals[m.c2], -a1 / (a2 - a1))
+
+    @parameterized.expand(input=all_solvers)
+    def test_no_objective(self, name: str, opt_class: Type[Solver]):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.a1 = pe.Param(mutable=True)
+        m.a2 = pe.Param(mutable=True)
+        m.b1 = pe.Param(mutable=True)
+        m.b2 = pe.Param(mutable=True)
+        m.c1 = pe.Constraint(expr=m.y == m.a1 * m.x + m.b1)
+        m.c2 = pe.Constraint(expr=m.y == m.a2 * m.x + m.b2)
+        opt: Solver = opt_class()
+        opt.config.stream_solver = True
+
+        params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
+        for (a1, a2, b1, b2) in params_to_test:
+            m.a1.value = a1
+            m.a2.value = a2
+            m.b1.value = b1
+            m.b2.value = b2
+            res: Results = opt.solve(m)
+            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+            self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+            self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+            self.assertEqual(res.best_feasible_objective, None)
+            self.assertEqual(res.best_objective_bound, None)
+            duals = opt.get_duals()
+            self.assertAlmostEqual(duals[m.c1], 0)
+            self.assertAlmostEqual(duals[m.c2], 0)
 
     @parameterized.expand(input=all_solvers)
     def test_add_remove_cons(self, name: str, opt_class: Type[Solver]):
@@ -222,6 +282,50 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0.10256137418973625, 4)
         self.assertAlmostEqual(m.y.value, 0.0869525991355825, 4)
 
+    @parameterized.expand(input=qcp_solvers)
+    def test_mutable_quadratic_objective(self, name: str, opt_class: Type[Solver]):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.a = pe.Param(initialize=1, mutable=True)
+        m.b = pe.Param(initialize=-1, mutable=True)
+        m.c = pe.Param(initialize=1, mutable=True)
+        m.d = pe.Param(initialize=1, mutable=True)
+        m.obj = pe.Objective(expr=m.x**2 + m.c*m.y**2 + m.d*m.x)
+        m.ccon = pe.Constraint(expr=m.y >= (m.a*m.x + m.b)**2)
+
+        opt: Solver = opt_class()
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0.2719178742733325, 4)
+        self.assertAlmostEqual(m.y.value, 0.5301035741688002, 4)
+        m.c.value = 3.5
+        m.d.value = -1
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0.6962249634573562, 4)
+        self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
+
+    @parameterized.expand(input=all_solvers)
+    def test_fixed_vars(self, namee: str, opt_class: Type[Solver]):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.x.fix(0)
+        m.y = pe.Var()
+        a1 = 1
+        a2 = -1
+        b1 = 1
+        b2 = 2
+        m.obj = pe.Objective(expr=m.y)
+        m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
+        m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
+        opt: Solver = opt_class()
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
+        m.x.unfix()
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+        self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+
     @parameterized.expand(input=all_solvers)
     def test_mutable_param_with_range(self, name: str, opt_class: Type[Solver]):
         m = pe.ConcreteModel()
@@ -277,3 +381,46 @@ class TestSolvers(unittest.TestCase):
                 duals = opt.get_duals()
                 self.assertAlmostEqual(duals[m.con1], (1 + a1 / (a2 - a1)), 6)
                 self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
+
+    @parameterized.expand(input=all_solvers)
+    def test_add_and_remove_vars(self, name: str, opt_class: Type[Solver]):
+        m = pe.ConcreteModel()
+        m.y = pe.Var(bounds=(-1, None))
+        m.obj = pe.Objective(expr=m.y)
+        opt = opt_class()
+        opt.update_config.update_params = False
+        opt.update_config.update_vars = False
+        opt.update_config.update_constraints = False
+        opt.update_config.update_named_expressions = False
+        opt.update_config.check_for_new_or_removed_params = False
+        opt.update_config.check_for_new_or_removed_constraints = False
+        opt.update_config.check_for_new_or_removed_vars = False
+        opt.config.load_solution = False
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        opt.load_vars()
+        self.assertAlmostEqual(m.y.value, -1)
+        m.x = pe.Var()
+        a1 = 1
+        a2 = -1
+        b1 = 2
+        b2 = 1
+        m.c1 = pe.Constraint(expr=(0, m.y - a1*m.x-b1, None))
+        m.c2 = pe.Constraint(expr=(None, -m.y + a2*m.x+b2, 0))
+        opt.add_variables([m.x])
+        opt.add_constraints([m.c1, m.c2])
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        opt.load_vars()
+        self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+        self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+        opt.remove_constraints([m.c1, m.c2])
+        opt.remove_variables([m.x])
+        m.x.value = None
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        opt.load_vars()
+        self.assertEqual(m.x.value, None)
+        self.assertAlmostEqual(m.y.value, -1)
+        with self.assertRaises(Exception):
+            opt.load_vars([m.x])
