@@ -56,7 +56,7 @@ def _get_constraint_exprs(constraints, hull_to_bigm_map):
             cons.expr, substitute=hull_to_bigm_map))
     return cuts
 
-def _constraint_tight(model, constraint):
+def _constraint_tight(model, constraint, TOL):
     """
     Returns a list [a,b] where a is -1 if the lower bound is tight or
     slightly violated, b is 1 if the upper bound is tight of slightly
@@ -65,17 +65,13 @@ def _constraint_tight(model, constraint):
     """
     val = value(constraint.body)
     ans = [0, 0]
-    # TODO: Should we let the user set this?
-    TOL = 1e-6
     if constraint.lower is not None:
-        if value(constraint.lower) >= val or \
-        val - value(constraint.lower) <= TOL:
+        if val - value(constraint.lower) <= TOL:
             # tight or in violation of LB
             ans[0] -= 1
 
     if constraint.upper is not None:
-        if value(constraint.upper) <= val or \
-           value(constraint.upper) - val <= TOL:
+        if value(constraint.upper) - val <= TOL:
             # tight or in violation of UB
             ans[1] += 1
 
@@ -110,7 +106,8 @@ def _precompute_potentially_useful_constraints(transBlock_rHull,
 
 def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
                     rBigM_linear_constraints, rHull_vars, disaggregated_vars,
-                    norm, cut_threshold, zero_tolerance, integer_arithmetic):
+                    norm, cut_threshold, zero_tolerance, integer_arithmetic,
+                    constraint_tolerance):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
     Finds all the constraints which are tight at xhat (assumed to be the 
@@ -141,6 +138,8 @@ def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
     integer_arithmetic: boolean, whether or not to require Fourier-Motzkin
                         Elimination does integer arithmetic. Only possible 
                         when all data is integer.
+    constraint_tolerance: Tolerance at which we will consider a constraint 
+                          tight.
     """
     instance_rHull = transBlock_rHull.model()
     # In the first iteration, we will compute a list of constraints that could
@@ -156,7 +155,8 @@ def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
     conslist.construct()
     something_interesting = False
     for constraint in transBlock_rHull.constraints_for_FME:
-        multipliers = _constraint_tight(instance_rHull, constraint)
+        multipliers = _constraint_tight(instance_rHull, constraint,
+                                        constraint_tolerance)
         for multiplier in multipliers:
             if multiplier:
                 something_interesting = True
@@ -238,7 +238,8 @@ def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
 def create_cuts_normal_vector(transBlock_rHull, var_info, hull_to_bigm_map,
                               rBigM_linear_constraints, rHull_vars,
                               disaggregated_vars, norm, cut_threshold,
-                              zero_tolerance, integer_arithmetic):
+                              zero_tolerance, integer_arithmetic,
+                              constraint_tolerance):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
     Ignores all parameters except var_info and cut_threshold, and constructs 
@@ -269,6 +270,8 @@ def create_cuts_normal_vector(transBlock_rHull, var_info, hull_to_bigm_map,
                     Fourier-Motzkin elimination. Ignored by this callback
     integer_arithmetic: Ignored by this callback (specifies FME use integer
                         arithmetic)
+    constraint_tolerance: Ignored by this callback (specifies when constraints
+                          are considered tight in FME)
     """
     cutexpr = 0
     if norm == 2:
@@ -422,6 +425,9 @@ class CuttingPlane_Transformation(Transformation):
     do_integer_arithmetic : Whether or not to require Fourier-Motzkin elimination
                             to do integer arithmetic. Only possible when all
                             data is integer.
+    tight_constraint_tolerance : Tolerance at which a constraint is considered
+                                 tight for the Fourier-Motzkin cut generation
+                                 procedure
 
     By default, the callbacks will be set such that the algorithm performed is
     as presented in [1], but with an additional post-processing procedure to
@@ -663,6 +669,20 @@ class CuttingPlane_Transformation(Transformation):
 
         Must be a string which is a unique component name with respect to the 
         Block on which the transformation is called.
+        """
+    ))
+    CONFIG.declare('tight_constraint_tolerance', ConfigValue(
+        default=1e-6, # Gurobi constraint tolerance
+        domain=NonNegativeFloat,
+        description="Tolerance at which a constraint is considered tight for "
+        "the Fourier-Motzkin cut generation procedure.",
+        doc="""
+        For a constraint a^Tx <= b, the Fourier-Motzkin cut generation procedure
+        will consider the constraint tight (and add it to the set of constraints
+        being projected) when a^Tx - b is less than this tolerance. 
+
+        It is recommended to set this tolerance to the constraint tolerance of
+        the solver being used.
         """
     ))
     def __init__(self):
@@ -973,7 +993,9 @@ class CuttingPlane_Transformation(Transformation):
                                             self._config.norm,
                                             self._config.cut_filtering_threshold,
                                             self._config.zero_tolerance,
-                                            self._config.do_integer_arithmetic)
+                                            self._config.do_integer_arithmetic,
+                                            self._config.\
+                                            tight_constraint_tolerance)
            
             # We are done if the cut generator couldn't return a valid cut
             if cuts is None:
