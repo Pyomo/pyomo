@@ -377,6 +377,11 @@ def _add_loa_configs(CONFIG):
         description='the coefficient in the projection master problem'
         'represents how much the linear approximation of the MINLP problem is trusted.'
     ))
+    CONFIG.declare('solution_limit', ConfigValue(
+        default=10,
+        domain=PositiveInt,
+        description='The solution limit for the projection problem since it does not need to be solved to optimality'
+    ))
     CONFIG.declare('add_cuts_at_incumbent', ConfigValue(
         default=True,
         description='Whether to add lazy cuts to the master problem at the incumbent solution found in the branch & bound tree',

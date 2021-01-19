@@ -435,18 +435,18 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
         opt.options['mipgap'] = 0.001
         if regularization == True:
             if solver_name == 'cplex':
-                opt.options['mip limits populate'] = 10
+                opt.options['mip limits populate'] = config.solution_limit
                 opt.options['mip strategy presolvenode'] = 3
                 if config.add_regularization == 'hess_lag':
                     opt.options['optimalitytarget'] = 3
             elif solver_name == 'gurobi':
-                opt.options['SolutionLimit'] = 10
+                opt.options['SolutionLimit'] = config.solution_limit
                 opt.options['Presolve'] = 2
     elif solver_name == 'cplex_persistent':
         opt.options['timelimit'] = remaining
         opt._solver_model.parameters.mip.tolerances.mipgap.set(0.001)
         if regularization == True:
-            opt._solver_model.parameters.mip.limits.populate.set(10)
+            opt._solver_model.parameters.mip.limits.populate.set(config.solution_limit)
             opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
             if config.add_regularization == 'hess_lag':
                 opt._solver_model.parameters.optimalitytarget.set(3)
