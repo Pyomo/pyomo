@@ -11,7 +11,7 @@
 import numpy as np
 import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
-from reactor_design import reactor_design_model
+from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor_design_model 
 
 np.random.seed(1234)
 

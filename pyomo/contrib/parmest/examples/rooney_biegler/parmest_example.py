@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from itertools import product
 import pyomo.contrib.parmest.parmest as parmest
-from rooney_biegler import rooney_biegler_model
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
 
 ### Parameter estimation
 

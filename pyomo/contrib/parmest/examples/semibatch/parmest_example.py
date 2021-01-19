@@ -13,7 +13,7 @@ import pandas as pd
 from itertools import product
 import json
 import pyomo.contrib.parmest.parmest as parmest
-from semibatch import generate_model
+from pyomo.contrib.parmest.examples.semibatch.semibatch import generate_model
 
 ### Parameter estimation
 

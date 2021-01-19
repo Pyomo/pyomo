@@ -10,7 +10,7 @@
 
 import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
-from rooney_biegler import rooney_biegler_model
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
 
 # Vars to estimate
 theta_names = ['asymptote', 'rate_constant']
