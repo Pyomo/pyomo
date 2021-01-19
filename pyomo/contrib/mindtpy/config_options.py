@@ -418,6 +418,7 @@ def check_config(config):
             config.projection_mip_threads = config.threads
             config.logger.info('Set projection_mip_threads equal to threads')
         if config.single_tree:
+            # if no method is activated by users, we will use use_fake_bound by default
             if not (config.use_fake_bound or config.reduce_level_coef or config.use_bb_tree_incumbent):
                 config.use_fake_bound = True
     if config.single_tree:
