@@ -375,14 +375,15 @@ class TestFlatten(TestCategorize):
 
             elif len(sets) == 2 and sets[0] is m.time and sets[1] is m.space:
                 ref_data = {
-                self._hashRef(m.v2),
-                self._hashRef(Reference(m.b.b1[:].v1[:])),
-                self._hashRef(Reference(m.b.b2[:,:].v0)),
-                self._hashRef(Reference(m.b.b1[:].b_s[:].v0)),
-                *list(self._hashRef(Reference(m.v3[:,:,j])) for j in m.comp),
-                *list(self._hashRef(Reference(m.b.b1[:].v2[:,j])) for j in m.comp),
-                *list(self._hashRef(Reference(m.b.b2[:,:].v1[j])) for j in m.comp),
+                    self._hashRef(m.v2),
+                    self._hashRef(Reference(m.b.b1[:].v1[:])),
+                    self._hashRef(Reference(m.b.b2[:,:].v0)),
+                    self._hashRef(Reference(m.b.b1[:].b_s[:].v0)),
                 }
+                ref_data.update(self._hashRef(Reference(m.v3[:,:,j])) for j in m.comp)
+                ref_data.update(self._hashRef(Reference(m.b.b1[:].v2[:,j])) for j in m.comp)
+                ref_data.update(self._hashRef(Reference(m.b.b2[:,:].v1[j])) for j in m.comp)
+
                 assert len(comps) == len(ref_data)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -390,9 +391,9 @@ class TestFlatten(TestCategorize):
             elif (len(sets) == 3 and sets[0] is m.time and sets[1] is m.space
                     and sets[2] is m.time):
                 ref_data = {
-                self._hashRef(m.v_tst),
-                *list(self._hashRef(Reference(m.b.b2[:,:].v2[:,j])) for j in m.comp),
+                    self._hashRef(m.v_tst),
                 }
+                ref_data.update(self._hashRef(Reference(m.b.b2[:,:].v2[:,j])) for j in m.comp)
                 assert len(comps) == len(ref_data)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -400,9 +401,9 @@ class TestFlatten(TestCategorize):
             elif (len(sets) == 3 and sets[0] is m.time and sets[1] is m.space
                     and sets[2] is m.space):
                 ref_data = {
-                self._hashRef(Reference(m.b.b1[:].b_s[:].v1[:])),
-                *list(self._hashRef(Reference(m.b.b1[:].b_s[:].v2[:,j])) for j in m.comp),
+                    self._hashRef(Reference(m.b.b1[:].b_s[:].v1[:])),
                 }
+                ref_data.update(self._hashRef(Reference(m.b.b1[:].b_s[:].v2[:,j])) for j in m.comp),
                 assert len(comps) == len(ref_data)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -447,35 +448,33 @@ class TestFlatten(TestCategorize):
         for sets, comps in zip(sets_list, comps_list):
             if len(sets) == 1 and sets[0] is UnindexedComponent_set:
                 ref_data = {
-                        self._hashRef(m.v0),
-                        *list(self._hashRef(m.v1[t]) for t in T),
-                        *list(self._hashRef(m.v_tt[t1,t2]) for t1, t2 in TT),
-                        *list(self._hashRef(m.b.b1[t].v0) for t in T),
-                        }
+                    self._hashRef(m.v0),
+                }
+                ref_data.update(self._hashRef(m.v1[t]) for t in T)
+                ref_data.update(self._hashRef(m.v_tt[t1,t2]) for t1, t2 in TT)
+                ref_data.update(self._hashRef(m.b.b1[t].v0) for t in T)
                 assert len(comps) == len(ref_data)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
             elif len(sets) == 1 and sets[0] is m.space:
-                ref_data = {
-        *list(self._hashRef(Reference(m.v2[t,:])) for t in T),
-        *list(self._hashRef(Reference(m.v3[t,:,j])) for t, j in TC),
-        *list(self._hashRef(Reference(m.v_tst[t1,:,t2])) for t1, t2 in TT),
-        *list(self._hashRef(Reference(m.b.b1[t].v1[:])) for t in T),
-        *list(self._hashRef(Reference(m.b.b1[t].v2[:,j])) for t, j in TC),
-        *list(self._hashRef(Reference(m.b.b1[t].b_s[:].v0)) for t in T),
-        *list(self._hashRef(Reference(m.b.b2[t,:].v0)) for t in T),
-        *list(self._hashRef(Reference(m.b.b2[t,:].v1[j])) for t, j in TC),
-        *list(self._hashRef(Reference(m.b.b2[t1,:].v2[t2,j])) for t1, t2, j in TTC),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.v2[t,:])) for t in T)
+                ref_data.update(self._hashRef(Reference(m.v3[t,:,j])) for t, j in TC)
+                ref_data.update(self._hashRef(Reference(m.v_tst[t1,:,t2])) for t1, t2 in TT)
+                ref_data.update(self._hashRef(Reference(m.b.b1[t].v1[:])) for t in T)
+                ref_data.update(self._hashRef(Reference(m.b.b1[t].v2[:,j])) for t, j in TC)
+                ref_data.update(self._hashRef(Reference(m.b.b1[t].b_s[:].v0)) for t in T)
+                ref_data.update(self._hashRef(Reference(m.b.b2[t,:].v0)) for t in T)
+                ref_data.update(self._hashRef(Reference(m.b.b2[t,:].v1[j])) for t, j in TC)
+                ref_data.update(self._hashRef(Reference(m.b.b2[t1,:].v2[t2,j])) for t1, t2, j in TTC)
                 assert len(comps) == len(ref_data)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
 
             elif len(sets) == 2 and sets[0] is m.space and sets[1] is m.space:
-                ref_data = {
-        *list(self._hashRef(Reference(m.b.b1[t].b_s[:].v1[:])) for t in T),
-        *list(self._hashRef(Reference(m.b.b1[t].b_s[:].v2[:,j])) for t,j in TC),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.b.b1[t].b_s[:].v1[:])) for t in T)
+                ref_data.update(self._hashRef(Reference(m.b.b1[t].b_s[:].v2[:,j])) for t,j in TC)
                 assert len(comps) == len(ref_data)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -504,29 +503,29 @@ class TestFlatten(TestCategorize):
                     self.assertIn(self._hashRef(comp), ref_data)
             elif len(sets) == 1 and sets[0] is m.time:
                 ref_data = {
-# Components indexed only by time;                        
-self._hashRef(Reference(m.v1)),
-self._hashRef(Reference(m.b.b1[:].v0)),
-# Components indexed by time and some other set(s)
-*list(self._hashRef(Reference(m.v2[:,x])) for x in S),
-*list(self._hashRef(Reference(m.v3[:,x,j])) for x, j in SC),
-*list(self._hashRef(Reference(m.b.b1[:].v1[x])) for x in S),
-*list(self._hashRef(Reference(m.b.b1[:].v2[x,j])) for x, j in SC),
-*list(self._hashRef(Reference(m.b.b1[:].b_s[x].v0)) for x in S),
-*list(self._hashRef(Reference(m.b.b1[:].b_s[x1].v1[x2])) for x1, x2 in SS),
-*list(self._hashRef(Reference(m.b.b1[:].b_s[x1].v2[x2,j])) for x1,x2,j in SSC),
-*list(self._hashRef(Reference(m.b.b2[:,x].v0)) for x in S),
-*list(self._hashRef(Reference(m.b.b2[:,x].v1[j])) for x, j in SC),
-                        }
+                    # Components indexed only by time;                        
+                    self._hashRef(Reference(m.v1)),
+                    self._hashRef(Reference(m.b.b1[:].v0)),
+                }
+                # Components indexed by time and some other set(s)
+                ref_data.update(self._hashRef(Reference(m.v2[:,x])) for x in S)
+                ref_data.update(self._hashRef(Reference(m.v3[:,x,j])) for x, j in SC)
+                ref_data.update(self._hashRef(Reference(m.b.b1[:].v1[x])) for x in S)
+                ref_data.update(self._hashRef(Reference(m.b.b1[:].v2[x,j])) for x, j in SC)
+                ref_data.update(self._hashRef(Reference(m.b.b1[:].b_s[x].v0)) for x in S)
+                ref_data.update(self._hashRef(Reference(m.b.b1[:].b_s[x1].v1[x2])) for x1, x2 in SS)
+                ref_data.update(self._hashRef(Reference(m.b.b1[:].b_s[x1].v2[x2,j])) for x1,x2,j in SSC)
+                ref_data.update(self._hashRef(Reference(m.b.b2[:,x].v0)) for x in S)
+                ref_data.update(self._hashRef(Reference(m.b.b2[:,x].v1[j])) for x, j in SC)
                 assert len(comps) == len(ref_data)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
             elif len(sets) == 2 and sets[0] is m.time and sets[1] is m.time:
                 ref_data = {
-self._hashRef(Reference(m.v_tt)),
-*list(self._hashRef(Reference(m.v_tst[:,x,:])) for x in S),
-*list(self._hashRef(Reference(m.b.b2[:,x].v2[:,j])) for x, j in SC),
-                        }
+                    self._hashRef(Reference(m.v_tt)),
+                }
+                ref_data.update(self._hashRef(Reference(m.v_tst[:,x,:])) for x in S)
+                ref_data.update(self._hashRef(Reference(m.b.b2[:,x].v2[:,j])) for x, j in SC)
                 assert len(comps) == len(ref_data)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -621,31 +620,28 @@ self._hashRef(Reference(m.v_tt)),
         for sets, comps in zip(sets_list, comps_list):
 
             if len(sets) == 1 and sets[0] is m.d1:
-                ref_data = {
-# Don't expand indices:
-*list(self._hashRef(Reference(m.v_12[:,i2])) for i2 in m.d2),
-*list(self._hashRef(Reference(m.v_212[i2a,:,i2b])) for i2a, i2b in D22),
-*list(self._hashRef(Reference(m.v_12n[:,i2,i_n])) for i2, i_n in D2N),
-*list(self._hashRef(Reference(m.v_1n2n[:,i_na,i2,i_nb])) for i_na, i2, i_nb in DN2N),
-*list(self._hashRef(Reference(m.b[:,i2,i_n].v0)) for i2, i_n in D2N),
-*list(self._hashRef(Reference(m.b[:,i2a,i_n].v2[i2b])) for i2a, i_n, i2b in D2N2),
-*list(self._hashRef(Reference(m.b[:,i2,i_na].vn[i_nb])) for i2, i_na, i_nb in D2NN),
-                        }
+                ref_data = set()
+                # Don't expand indices:
+                ref_data.update(self._hashRef(Reference(m.v_12[:,i2])) for i2 in m.d2)
+                ref_data.update(self._hashRef(Reference(m.v_212[i2a,:,i2b])) for i2a, i2b in D22)
+                ref_data.update(self._hashRef(Reference(m.v_12n[:,i2,i_n])) for i2, i_n in D2N)
+                ref_data.update(self._hashRef(Reference(m.v_1n2n[:,i_na,i2,i_nb])) for i_na, i2, i_nb in DN2N)
+                ref_data.update(self._hashRef(Reference(m.b[:,i2,i_n].v0)) for i2, i_n in D2N)
+                ref_data.update(self._hashRef(Reference(m.b[:,i2a,i_n].v2[i2b])) for i2a, i_n, i2b in D2N2)
+                ref_data.update(self._hashRef(Reference(m.b[:,i2,i_na].vn[i_nb])) for i2, i_na, i_nb in D2NN)
                 # Expect length to be 38
                 assert len(ref_data) == len(comps)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
             elif len(sets) == 1 and sets[0] is UnindexedComponent_set:
-                ref_data = {
-                        *list(self._hashRef(v) for v in m.v_2n.values()),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(v) for v in m.v_2n.values())
                 assert len(ref_data) == len(comps)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
             elif len(sets) == 2 and sets[0] is m.d1 and sets[1] is m.d1:
-                ref_data = {
-                *list(self._hashRef(Reference(m.b[:,i2,i_n].v1[:])) for i2, i_n in D2N),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.b[:,i2,i_n].v1[:])) for i2, i_n in D2N)
                 assert len(ref_data) == len(comps)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -691,40 +687,37 @@ self._hashRef(Reference(m.v_tt)),
         for sets, comps in zip(sets_list, comps_list):
 
             if len(sets) == 1 and sets[0] is m.d1:
-                ref_data = {
-                    # Must iterate and slice in a manner consistent with
-                    # `normalize_index.flatten == True`
-                    *list(self._hashRef(Reference(m.v_12[:,i2]))
-                        for i2 in m.d2), # 2
-                    *list(self._hashRef(Reference(m.v_212[i2a,:,i2b]))
-                        for i2a in m.d2 for i2b in m.d2), # 4
-                    *list(self._hashRef(Reference(m.v_12n[:,i2,i_n]))
-                        for i2 in m.d2 for i_n in m.dn), # 4
-                    *list(self._hashRef(Reference(m.v_1n2n[:,i_na,i2,i_nb]))
-                        for i_na in m.dn for i2 in m.d2 for i_nb in m.dn), # 8
-                    *list(self._hashRef(Reference(m.b[:,i2,i_n].v0))
-                        for i2 in m.d2 for i_n in m.dn), # 4
-                    *list(self._hashRef(Reference(m.b[:,i2a,i_n].v2[i2b]))
-                        for i2a in m.d2 for i_n in m.dn for i2b in m.d2), # 8
-                    *list(self._hashRef(Reference(m.b[:,i2,i_na].vn[i_nb]))
-                        for i2 in m.d2 for i_na in m.dn for i_nb in m.dn), # 8
-                        }
+                ref_data = set()
+                # Must iterate and slice in a manner consistent with
+                # `normalize_index.flatten == True`
+                ref_data.update(self._hashRef(Reference(m.v_12[:,i2]))
+                      for i2 in m.d2) # 2
+                ref_data.update(self._hashRef(Reference(m.v_212[i2a,:,i2b]))
+                      for i2a in m.d2 for i2b in m.d2) # 4
+                ref_data.update(self._hashRef(Reference(m.v_12n[:,i2,i_n]))
+                      for i2 in m.d2 for i_n in m.dn) # 4
+                ref_data.update(self._hashRef(Reference(m.v_1n2n[:,i_na,i2,i_nb]))
+                      for i_na in m.dn for i2 in m.d2 for i_nb in m.dn) # 8
+                ref_data.update(self._hashRef(Reference(m.b[:,i2,i_n].v0))
+                      for i2 in m.d2 for i_n in m.dn) # 4
+                ref_data.update(self._hashRef(Reference(m.b[:,i2a,i_n].v2[i2b]))
+                      for i2a in m.d2 for i_n in m.dn for i2b in m.d2) # 8
+                ref_data.update(self._hashRef(Reference(m.b[:,i2,i_na].vn[i_nb]))
+                      for i2 in m.d2 for i_na in m.dn for i_nb in m.dn) # 8
                 assert len(ref_data) == len(comps)
                 assert len(ref_data) == 38
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
             elif len(sets) == 1 and sets[0] is UnindexedComponent_set:
-                ref_data = {
-                        *list(self._hashRef(v) for v in m.v_2n.values()),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(v) for v in m.v_2n.values())
                 assert len(ref_data) == len(comps)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
             elif len(sets) == 2 and sets[0] is m.d1 and sets[1] is m.d1:
-                ref_data = {
-                *list(self._hashRef(Reference(m.b[:,i2,i_n].v1[:]))
-                    for i2 in m.d2 for i_n in m.dn),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.b[:,i2,i_n].v1[:]))
+                      for i2 in m.d2 for i_n in m.dn)
                 assert len(ref_data) == len(comps)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -741,33 +734,31 @@ self._hashRef(Reference(m.v_tt)),
         for sets, comps in zip(sets_list, comps_list):
 
             if len(sets) == 1 and sets[0] is m.d2:
-                ref_data = {
-                    *list(self._hashRef(Reference(m.v_2n[:,:,i_n]))
-                        for i_n in m.dn), # 2
-                    *list(self._hashRef(Reference(m.v_12[i1,:,:]))
-                        for i1 in m.d1), # 2
-                    *list(self._hashRef(Reference(m.v_12n[i1,:,:,i_n]))
-                        for i1 in m.d1 for i_n in m.dn), # 4
-                    *list(self._hashRef(Reference(m.v_1n2n[i1,i_na,:,:,i_nb]))
-                        for i1 in m.d1 for i_na in m.dn for i_nb in m.dn), # 8
-                    *list(self._hashRef(Reference(m.b[i1,:,:,i_n].v0))
-                        for i1 in m.d1 for i_n in m.dn), # 4
-                    *list(self._hashRef(Reference(m.b[i1a,:,:,i_n].v1[i1b]))
-                        for i1a in m.d1 for i_n in m.dn for i1b in m.d1), # 8
-                    *list(self._hashRef(Reference(m.b[i1,:,:,i_na].vn[i_nb]))
-                        for i1 in m.d1 for i_na in m.dn for i_nb in m.dn), # 8
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.v_2n[:,:,i_n]))
+                      for i_n in m.dn) # 2
+                ref_data.update(self._hashRef(Reference(m.v_12[i1,:,:]))
+                      for i1 in m.d1) # 2
+                ref_data.update(self._hashRef(Reference(m.v_12n[i1,:,:,i_n]))
+                      for i1 in m.d1 for i_n in m.dn) # 4
+                ref_data.update(self._hashRef(Reference(m.v_1n2n[i1,i_na,:,:,i_nb]))
+                      for i1 in m.d1 for i_na in m.dn for i_nb in m.dn) # 8
+                ref_data.update(self._hashRef(Reference(m.b[i1,:,:,i_n].v0))
+                      for i1 in m.d1 for i_n in m.dn) # 4
+                ref_data.update(self._hashRef(Reference(m.b[i1a,:,:,i_n].v1[i1b]))
+                      for i1a in m.d1 for i_n in m.dn for i1b in m.d1) # 8
+                ref_data.update(self._hashRef(Reference(m.b[i1,:,:,i_na].vn[i_nb]))
+                      for i1 in m.d1 for i_na in m.dn for i_nb in m.dn) # 8
                 assert len(ref_data) == len(comps)
                 assert len(ref_data) == 36
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
             elif len(sets) == 2 and sets[0] is m.d2 and sets[1] is m.d2:
-                ref_data = {
-                    *list(self._hashRef(Reference(m.v_212[:,:,i1,:,:]))
-                        for i1 in m.d1),
-                    *list(self._hashRef(Reference(m.b[i1,:,:,i_n].v2[:,:]))
-                        for i1 in m.d1 for i_n in m.dn),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.v_212[:,:,i1,:,:]))
+                      for i1 in m.d1)
+                ref_data.update(self._hashRef(Reference(m.b[i1,:,:,i_n].v2[:,:]))
+                      for i1 in m.d1 for i_n in m.dn)
                 assert len(ref_data) == len(comps)
                 assert len(ref_data) == 6
                 for comp in comps:
@@ -790,38 +781,35 @@ self._hashRef(Reference(m.v_tt)),
         for sets, comps in zip(sets_list, comps_list):
 
             if len(sets) == 1 and sets[0] is UnindexedComponent_set:
-                ref_data = {
-                        *list(self._hashRef(v) for v in m.v_12.values()),
-                        *list(self._hashRef(v) for v in m.v_212.values()),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(v) for v in m.v_12.values())
+                ref_data.update(self._hashRef(v) for v in m.v_212.values())
                 assert len(comps) == len(ref_data)
                 assert len(comps) == 12
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
 
             elif len(sets) == 1 and sets[0] is m.dn:
-                ref_data = {
-                    *list(self._hashRef(Reference(m.v_2n[i2,...]))
-                        for i2 in m.d2), # 2
-                    *list(self._hashRef(Reference(m.v_12n[i1,i2,...]))
-                        for i1 in m.d1 for i2 in m.d2), # 4
-                    *list(self._hashRef(Reference(m.b[i1,i2,...].v0))
-                        for i1 in m.d1 for i2 in m.d2), # 4
-                    *list(self._hashRef(Reference(m.b[i1a,i2,...].v1[i1b]))
-                        for i1a in m.d1 for i2 in m.d2 for i1b in m.d1), # 8
-                    *list(self._hashRef(Reference(m.b[i1,i2a,...].v2[i2b]))
-                        for i1 in m.d1 for i2a in m.d2 for i2b in m.d2), # 8
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.v_2n[i2,...]))
+                      for i2 in m.d2) # 2
+                ref_data.update(self._hashRef(Reference(m.v_12n[i1,i2,...]))
+                      for i1 in m.d1 for i2 in m.d2) # 4
+                ref_data.update(self._hashRef(Reference(m.b[i1,i2,...].v0))
+                      for i1 in m.d1 for i2 in m.d2) # 4
+                ref_data.update(self._hashRef(Reference(m.b[i1a,i2,...].v1[i1b]))
+                      for i1a in m.d1 for i2 in m.d2 for i1b in m.d1) # 8
+                ref_data.update(self._hashRef(Reference(m.b[i1,i2a,...].v2[i2b]))
+                      for i1 in m.d1 for i2a in m.d2 for i2b in m.d2) # 8
                 assert len(comps) == len(ref_data)
                 assert len(comps) == 26
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
 
             elif len(sets) == 2 and sets[0] is m.dn and sets[1] is m.dn:
-                ref_data = {
-                    *list(self._hashRef(Reference(m.b[i1,i2,...].vn[...]))
-                        for i1 in m.d1 for i2 in m.d2), # 4
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.b[i1,i2,...].vn[...]))
+                      for i1 in m.d1 for i2 in m.d2) # 4
                 assert len(comps) == len(ref_data)
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -839,10 +827,9 @@ self._hashRef(Reference(m.v_tt)),
 
         for sets, comps in zip(sets_list, comps_list):
             if len(sets) == 1 and sets[0] is m.d2:
-                ref_data = {
-                    *list(self._hashRef(Reference(m.v_2n[:,:,i_n]))
-                        for i_n in m.dn),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.v_2n[:,:,i_n]))
+                      for i_n in m.dn)
                 self.assertEqual(len(ref_data), len(comps))
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -850,15 +837,15 @@ self._hashRef(Reference(m.v_tt)),
             elif len(sets) == 2 and sets[0] is m.d1 and sets[1] is m.d2:
                 ref_data = {
                     self._hashRef(Reference(m.v_12[...])), # 1
-                    *list(self._hashRef(Reference(m.v_12n[:,:,:,i_n]))
-                        for i_n in m.dn), # 2
-                    *list(self._hashRef(Reference(m.v_1n2n[:,i_na,:,:,i_nb]))
-                        for i_na in m.dn for i_nb in m.dn), # 4
-                    *list(self._hashRef(Reference(m.b[:,:,:,i_n].v0))
-                        for i_n in m.dn), # 2
-                    *list(self._hashRef(Reference(m.b[:,:,:,i_na].vn[i_nb]))
-                        for i_na in m.dn for i_nb in m.dn), # 4
-                        }
+                }
+                ref_data.update(self._hashRef(Reference(m.v_12n[:,:,:,i_n]))
+                      for i_n in m.dn) # 2
+                ref_data.update(self._hashRef(Reference(m.v_1n2n[:,i_na,:,:,i_nb]))
+                      for i_na in m.dn for i_nb in m.dn) # 4
+                ref_data.update(self._hashRef(Reference(m.b[:,:,:,i_n].v0))
+                      for i_n in m.dn) # 2
+                ref_data.update(self._hashRef(Reference(m.b[:,:,:,i_na].vn[i_nb]))
+                      for i_na in m.dn for i_nb in m.dn) # 4
                 self.assertEqual(len(ref_data), len(comps))
                 self.assertEqual(len(comps), 13)
                 for comp in comps:
@@ -866,20 +853,18 @@ self._hashRef(Reference(m.v_tt)),
 
             elif (len(sets) == 3 and sets[0] is m.d1 and sets[1] is m.d2
                     and sets[2] is m.d1):
-                ref_data = {
-                    *list(self._hashRef(Reference(m.b[:,:,:,i_n].v1[:]))
-                        for i_n in m.dn), # 2
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.b[:,:,:,i_n].v1[:]))
+                      for i_n in m.dn) # 2
                 self.assertEqual(len(ref_data), len(comps))
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
 
             elif (len(sets) == 3 and sets[0] is m.d1 and sets[1] is m.d2
                     and sets[2] is m.d2):
-                ref_data = {
-                    *list(self._hashRef(Reference(m.b[:,:,:,i_n].v2[:,:]))
-                        for i_n in m.dn), # 2
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.b[:,:,:,i_n].v2[:,:]))
+                      for i_n in m.dn) # 2
                 self.assertEqual(len(ref_data), len(comps))
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -933,12 +918,11 @@ self._hashRef(Reference(m.v_tt)),
                 # We missed b.v2 by descending into the "first" index
                 # of the block
                 self.assertEqual(len(comps), 2*n_phase_comp)
-                ref_data = {
-                        *list(self._hashRef(Reference(m.v[:,j,:,p]))
-                            for j, p in phase_comp),
-                        *list(self._hashRef(Reference(m.b[:,j,:,p].v1))
-                            for j, p in phase_comp),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.v[:,j,:,p]))
+                      for j, p in phase_comp)
+                ref_data.update(self._hashRef(Reference(m.b[:,j,:,p].v1))
+                      for j, p in phase_comp)
                 self.assertEqual(len(ref_data), len(comps))
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -965,13 +949,12 @@ self._hashRef(Reference(m.v_tt)),
                     ref.attribute_errors_generate_exceptions = False
                 incomplete_refs = list(Reference(sl) for sl in incomplete_slices)
 
-                ref_data = {
-                        *list(self._hashRef(Reference(m.v[:,j,:,p]))
-                            for j, p in phase_comp),
-                        *list(self._hashRef(Reference(m.b[:,j,:,p].v1))
-                            for j, p in phase_comp),
-                        *list(self._hashRef(ref) for ref in incomplete_refs),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.v[:,j,:,p]))
+                      for j, p in phase_comp)
+                ref_data.update(self._hashRef(Reference(m.b[:,j,:,p].v1))
+                      for j, p in phase_comp)
+                ref_data.update(self._hashRef(ref) for ref in incomplete_refs)
                 self.assertEqual(len(ref_data), len(comps))
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
@@ -998,13 +981,12 @@ self._hashRef(Reference(m.v_tt)),
                     ref.attribute_errors_generate_exceptions = False
                 incomplete_refs = list(Reference(sl) for sl in incomplete_slices)
 
-                ref_data = {
-                        *list(self._hashRef(Reference(m.v[:,j,:,p]))
-                            for j, p in phase_comp),
-                        *list(self._hashRef(Reference(m.b[:,j,:,p].v1))
-                            for j, p in phase_comp),
-                        *list(self._hashRef(ref) for ref in incomplete_refs),
-                        }
+                ref_data = set()
+                ref_data.update(self._hashRef(Reference(m.v[:,j,:,p]))
+                      for j, p in phase_comp)
+                ref_data.update(self._hashRef(Reference(m.b[:,j,:,p].v1))
+                      for j, p in phase_comp)
+                ref_data.update(self._hashRef(ref) for ref in incomplete_refs)
                 self.assertEqual(len(ref_data), len(comps))
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
