@@ -263,6 +263,7 @@ def _add_tolerance_configs(CONFIG):
         domain=PositiveFloat,
         description='Relative bound tolerance',
         doc='Relative tolerance for bound feasibility checks.'
+            '(UB - LB) / (1e-10+|bestinteger|) <= relative tolerance.'
     ))
     CONFIG.declare('small_dual_tolerance', ConfigValue(
         default=1E-8,
@@ -396,7 +397,6 @@ def _add_loa_configs(CONFIG):
         description='Whether to use the incumbent solution of branch & bound tree in LOA single tree when projection problem is infeasible',
         domain=bool
     ))
-
 
 
 def check_config(config):
