@@ -57,12 +57,12 @@ def build_compression_matrix(compression_mask):
         rank_ownership = np.ones((n, n), dtype=np.int64) * -1
         for i in range(n):
             rank_ownership[i, i] = compression_mask.rank_ownership[i]
-        res = MPIBlockMatrix(nbrows=n, nbcols=n, rank_ownership=rank_ownership, mpi_comm=compression_mask.mpi_comm)
+        res = MPIBlockMatrix(nbrows=n, nbcols=n, rank_ownership=rank_ownership, mpi_comm=compression_mask.mpi_comm,
+                             assert_correct_owners=False)
         for ndx in compression_mask.owned_blocks:
             block = compression_mask.get_block(ndx)
             sub_matrix = build_compression_matrix(block)
             res.set_block(ndx, ndx, sub_matrix)
-        res.broadcast_block_sizes()
         return res
 
 

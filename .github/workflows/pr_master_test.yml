@@ -24,7 +24,7 @@ env:
       nose coverage
   PYTHON_BASE_PKGS: >
       ply six dill ipython networkx openpyxl pathos
-      pint pymysql pyro4 pyyaml sphinx_rtd_theme sympy xlrd
+      pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
       python-louvain
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools
@@ -39,7 +39,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-18.04, macos-latest, windows-latest]
-        python: [2.7, 3.5, 3.6, 3.7, 3.8, pypy2, pypy3]
+        python: [2.7, 3.5, 3.6, 3.7, 3.8, 3.9, pypy2, pypy3]
         other: [""]
         category: ["nightly"]
         # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
@@ -246,6 +246,9 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
+        # pymysql 1.0.0: No longer supports Python 2 or pypy2
+        pip install --cache-dir cache/pip pymysql || \
+            pip install --cache-dir cache/pip pymysql==0.10.1
         if test -z "${{matrix.slim}}"; then
             pip install --cache-dir cache/pip cplex \
                 || echo "WARNING: CPLEX Community Edition is not available"

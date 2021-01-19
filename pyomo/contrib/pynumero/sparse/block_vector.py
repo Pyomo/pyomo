@@ -1357,7 +1357,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         msg += self.__str__()
         print(msg)
 
-    def toMPIBlockVector(self, rank_ownership, mpi_comm):
+    def toMPIBlockVector(self, rank_ownership, mpi_comm, assert_correct_owners=False):
         """
         Creates a parallel MPIBlockVector from this BlockVector
 
@@ -1382,7 +1382,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
         mpi_bv = MPIBlockVector(self.nblocks,
                                 rank_ownership,
-                                mpi_comm)
+                                mpi_comm,
+                                assert_correct_owners=assert_correct_owners)
 
         # populate blocks in the right spaces
         for bid in mpi_bv.owned_blocks:

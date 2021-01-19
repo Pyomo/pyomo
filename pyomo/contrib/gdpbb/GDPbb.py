@@ -92,6 +92,9 @@ class GDPbbSolver(object):
         """
         return True
 
+    def license_is_valid(self):
+        return True
+
     def version(self):
         return __version__
 

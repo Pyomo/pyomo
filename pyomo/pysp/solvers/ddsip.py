@@ -20,7 +20,6 @@ import logging
 import traceback
 
 import pyutilib.subprocess
-import pyutilib.services
 
 from pyomo.opt import (TerminationCondition,
                        SolverStatus,

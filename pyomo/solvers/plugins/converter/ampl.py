@@ -10,9 +10,10 @@
 
 import os.path
 import pyutilib.subprocess
+
 from pyomo.common.errors import ApplicationError
 import pyomo.common
-
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import ProblemFormat, ConverterError
 from pyomo.opt.base.convert import ProblemConverterFactory
 
@@ -48,12 +49,12 @@ class AmplMIPConverter(object):
         _exec = pyomo.common.Executable("ampl")
         if not _exec:
             raise ConverterError("The 'ampl' executable cannot be found")
-        script_filename = pyutilib.services.TempfileManager.create_tempfile(suffix = '.ampl')
+        script_filename = TempfileManager.create_tempfile(suffix = '.ampl')
 
         if args[1] == ProblemFormat.nl:
-            output_filename = pyutilib.services.TempfileManager.create_tempfile(suffix = '.nl')
+            output_filename = TempfileManager.create_tempfile(suffix = '.nl')
         else:
-            output_filename = pyutilib.services.TempfileManager.create_tempfile(suffix = '.mps')
+            output_filename = TempfileManager.create_tempfile(suffix = '.mps')
 
         cmd = [_exec.path(), script_filename]
         #

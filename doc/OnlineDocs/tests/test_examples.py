@@ -53,23 +53,8 @@ package_available = {}
 only_book_tests = set(['Test_nonlinear_ch', 'Test_scripts_ch'])
 
 def _check_available(name):
-    from pyomo.opt.base import (UnknownSolver, SolverFactory)
-    try:
-        opt = SolverFactory(name)
-    except:
-        return False
-    if opt is None or isinstance(opt, UnknownSolver):
-        return False
-    elif (name == "gurobi") and \
-       (not GUROBISHELL.license_is_valid()):
-        return False
-    elif (name == "baron") and \
-       (not BARONSHELL.license_is_valid()):
-        return False
-    else:
-        return (opt.available(exception_flag=False)) and \
-            ((not hasattr(opt,'executable')) or \
-             (opt.executable() is not None))
+    from pyomo.opt.base.solvers import check_available_solvers
+    return bool(check_available_solvers(name))
 
 def check_skip(tfname_, name):
     #
