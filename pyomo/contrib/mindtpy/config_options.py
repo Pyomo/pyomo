@@ -223,7 +223,7 @@ def _add_subsolver_configs(CONFIG):
             'solving the mixed-integer master problems.'
     ))
     CONFIG.declare('mip_solver_mipgap', ConfigValue(
-        implicit=1E-4,
+        default=1E-4,
         domain=PositiveFloat,
         description='mipgap passed to mip solver'
     ))
