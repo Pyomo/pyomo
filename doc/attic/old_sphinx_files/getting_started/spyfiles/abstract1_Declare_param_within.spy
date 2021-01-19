@@ -1,2 +1,0 @@
-model.m = Param(within=NonNegativeIntegers)
-model.n = Param(within=NonNegativeIntegers)
