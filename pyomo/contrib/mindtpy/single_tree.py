@@ -534,7 +534,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                 'MindtPy unable to handle projection problem termination condition '
                                 'of %s. Solver message: %s' %
                                 (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
-                    elif config.use_master_incumbent:
+                    elif config.use_bb_tree_incumbent:
                         config.logger.info('Fixed subproblem will be generated based on the incumbent solution of the master problem.')
                 else:
                     raise ValueError(

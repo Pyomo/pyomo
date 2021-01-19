@@ -391,9 +391,9 @@ def _add_loa_configs(CONFIG):
         description='Whether to reduce level coefficient in LOA single tree when projection problem is infeasible',
         domain=bool
     ))
-    CONFIG.declare('use_master_incumbent', ConfigValue(
+    CONFIG.declare('use_bb_tree_incumbent', ConfigValue(
         default=False,
-        description='Whether to use the incumbent solution of master problem in LOA single tree when projection problem is infeasible',
+        description='Whether to use the incumbent solution of branch & bound tree in LOA single tree when projection problem is infeasible',
         domain=bool
     ))
 
@@ -408,7 +408,7 @@ def check_config(config):
             config.projection_mip_threads = config.threads
             config.logger.info('Set projection_mip_threads equal to threads')
         if config.single_tree:
-            if not (config.use_fake_bound or config.reduce_level_coef or config.use_master_incumbent):
+            if not (config.use_fake_bound or config.reduce_level_coef or config.use_bb_tree_incumbent):
                 config.use_fake_bound = True
     if config.single_tree:
         config.iteration_limit = 1
