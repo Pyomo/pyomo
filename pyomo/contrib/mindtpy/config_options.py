@@ -222,6 +222,11 @@ def _add_subsolver_configs(CONFIG):
         doc='Which MIP subsolver options to be passed to the solver while '
             'solving the mixed-integer master problems.'
     ))
+    CONFIG.declare('mip_solver_mipgap', ConfigBlock(
+        implicit=1E-4,
+        domain=PositiveFloat,
+        description='mipgap passed to mip solver'
+    ))
     CONFIG.declare('threads', ConfigValue(
         default=0,
         domain=NonNegativeInt,

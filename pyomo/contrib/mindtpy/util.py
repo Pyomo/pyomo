@@ -432,7 +432,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     # TODO: opt.name doesn't work for GAMS
     if solver_name in {'cplex', 'gurobi', 'gurobi_persistent'}:
         opt.options['timelimit'] = remaining
-        opt.options['mipgap'] = 0.001
+        opt.options['mipgap'] = config.mip_solver_mipgap
         if regularization == True:
             if solver_name == 'cplex':
                 opt.options['mip limits populate'] = config.solution_limit
@@ -444,7 +444,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                 opt.options['Presolve'] = 2
     elif solver_name == 'cplex_persistent':
         opt.options['timelimit'] = remaining
-        opt._solver_model.parameters.mip.tolerances.mipgap.set(0.001)
+        opt._solver_model.parameters.mip.tolerances.mipgap.set(config.mip_solver_mipgap)
         if regularization == True:
             opt._solver_model.parameters.mip.limits.populate.set(config.solution_limit)
             opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
@@ -452,7 +452,8 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                 opt._solver_model.parameters.optimalitytarget.set(3)
     elif solver_name == 'glpk':
         opt.options['tmlim'] = remaining
-        # opt.options['mipgap'] = 0.001
+        # TODO: mipgap does not work for glpk yet
+        # opt.options['mipgap'] = config.mip_solver_mipgap
     elif solver_name == 'baron':
         opt.options['MaxTime'] = remaining
         opt.options['AbsConFeasTol'] = config.zero_tolerance
@@ -461,11 +462,11 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
         opt.options['constr_viol_tol'] = config.zero_tolerance
     elif solver_name == 'gams':
         if solver_type == 'mip':
-            opt.options['add_options'] = ['option optcr=0.001;',
+            opt.options['add_options'] = ['option optcr=%s;' % config.mip_solver_mipgap,
                                           'option reslim=%s;' % remaining]
         elif solver_type == 'nlp':
             opt.options['add_options'] = ['option reslim=%s;' % remaining]
-            if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth', 'msnlp', 'baron'}:
+            if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth', 'msnlp', 'conopt', 'baron'}:
                 if config.nlp_solver_args['solver'] == 'ipopt':
                     opt.options['add_options'].append('$onecho > ipopt.opt')
                     opt.options['add_options'].append(
