@@ -126,9 +126,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                              sense='L',
                              rhs=cplex_rhs)
                 else:  # Inequality constraint (possibly two-sided)
-                    if (constr.has_ub() \
-                        and (linearize_active and abs(constr.uslack()) < config.bound_tolerance) \
-                            or (linearize_violated and constr.uslack() < 0) \
+                    if (constr.has_ub()
+                        and (linearize_active and abs(constr.uslack()) < config.bound_tolerance)
+                            or (linearize_violated and constr.uslack() < 0)
                             or (config.linearize_inactive and constr.uslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_ub()):
 
                         pyomo_expr = sum(
@@ -140,9 +140,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                         self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                                  sense='L',
                                  rhs=constr.upper.value + cplex_rhs)
-                    if (constr.has_lb() \
-                        and (linearize_active and abs(constr.lslack()) < config.bound_tolerance) \
-                            or (linearize_violated and constr.lslack() < 0) \
+                    if (constr.has_lb()
+                        and (linearize_active and abs(constr.lslack()) < config.bound_tolerance)
+                            or (linearize_violated and constr.lslack() < 0)
                             or (config.linearize_inactive and constr.lslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_lb()):
                         pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
                             opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) + value(constr.body)
@@ -326,13 +326,15 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 self.get_best_objective_value(), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
             if config.use_fake_bound:
-                solve_data.fake_LB = max(solve_data.fake_LB, self.get_objective_value())
+                solve_data.fake_LB = max(
+                    solve_data.fake_LB, self.get_objective_value())
         else:
             solve_data.UB = min(
                 self.get_best_objective_value(), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
             if config.use_fake_bound:
-                solve_data.fake_UB = min(solve_data.fake_UB, self.get_objective_value())
+                solve_data.fake_UB = min(
+                    solve_data.fake_UB, self.get_objective_value())
         config.logger.info(
             'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s'
             % (solve_data.mip_iter, self.get_objective_value(), self.get_best_objective_value(),
@@ -505,14 +507,15 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             # the master problem might be unbounded, regularization is activated only when a valid bound is provided.
             if config.add_cuts_at_incumbent:
                 self.copy_lazy_var_list_values(opt,
-                                            master_mip.MindtPy_utils.variable_list,
-                                            solve_data.mip.MindtPy_utils.variable_list,
-                                            config)
+                                               master_mip.MindtPy_utils.variable_list,
+                                               solve_data.mip.MindtPy_utils.variable_list,
+                                               config)
                 if config.strategy == 'OA':
                     self.add_lazy_oa_cuts(
                         solve_data.mip, None, solve_data, config, opt)
 
-            if (solve_data.objective_sense == minimize and solve_data.LB != float('-inf')) or (solve_data.objective_sense == maximize and solve_data.UB != float('inf')):
+            if ((solve_data.objective_sense == minimize and (solve_data.fake_LB != float('-inf') if config.use_fake_bound else solve_data.LB != float('-inf')))
+                    or (solve_data.objective_sense == maximize and (solve_data.fake_UB != float('inf') if config.use_fake_bound else solve_data.UB != float('inf')))):
                 master_mip, master_mip_results = solve_master(
                     solve_data, config, regularization_problem=True)
                 if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
@@ -522,20 +525,23 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     config.logger.info('Projection problem infeasible.')
                     if config.reduce_level_coef:
                         config.level_coef = config.level_coef / 2
-                        master_mip, master_mip_results = solve_master(solve_data, config, regularization_problem=True)
+                        master_mip, master_mip_results = solve_master(
+                            solve_data, config, regularization_problem=True)
                         config.level_coef = config.level_coef * 2
                         if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
-                            handle_master_optimal(master_mip, solve_data, config, update_bound=False)
+                            handle_master_optimal(
+                                master_mip, solve_data, config, update_bound=False)
                         elif master_mip_results.solver.termination_condition is tc.infeasible:
                             config.logger.info('Projection problem still infeasible with reduced level_coef. '
-                                                'NLP subproblem is generated based on the incumbent solution of the master problem.')
+                                               'NLP subproblem is generated based on the incumbent solution of the master problem.')
                         else:
                             raise ValueError(
                                 'MindtPy unable to handle projection problem termination condition '
                                 'of %s. Solver message: %s' %
                                 (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
                     elif config.use_bb_tree_incumbent:
-                        config.logger.info('Fixed subproblem will be generated based on the incumbent solution of the master problem.')
+                        config.logger.info(
+                            'Fixed subproblem will be generated based on the incumbent solution of the master problem.')
                 else:
                     raise ValueError(
                         'MindtPy unable to handle projection problem termination condition '
