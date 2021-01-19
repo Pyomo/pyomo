@@ -70,6 +70,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                     and (linearize_active and abs(constr.uslack()) < config.zero_tolerance) \
                         or (linearize_violated and constr.uslack() < 0) \
                         or (config.linearize_inactive and constr.uslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_ub()):
+                    # always add the linearization for the epigraph of the objective
                     if config.add_slack:
                         slack_var = target_model.MindtPy_utils.cuts.slack_vars.add()
 
