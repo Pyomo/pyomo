@@ -459,7 +459,9 @@ class block(IBlock):
                 raise KeyError("Objective associated with symbol '%s' "
                                 "is not found on this block"
                                 % (label))
-            unseen_var_ids.remove(id(obj))
+            # Because of __default_objective__, an objective might
+            # appear twice in the objective dictionary.
+            unseen_var_ids.discard(id(obj))
             for _attr_key, attr_value in six.iteritems(entry):
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
