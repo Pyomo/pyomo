@@ -91,13 +91,15 @@ class _MutableQuadraticConstraint(object):
     def get_updated_expression(self):
         gurobi_expr = self.gurobi_model.getQCRow(self.con)
         for ndx, coef in enumerate(self.linear_coefs):
-            new_coef_value = value(coef.expr) - self.last_linear_coef_values[ndx]
-            gurobi_expr += new_coef_value * coef.var
-            self.last_linear_coef_values[ndx] = new_coef_value
+            current_coef_value = value(coef.expr)
+            incremental_coef_value = current_coef_value - self.last_linear_coef_values[ndx]
+            gurobi_expr += incremental_coef_value * coef.var
+            self.last_linear_coef_values[ndx] = current_coef_value
         for ndx, coef in enumerate(self.quadratic_coefs):
-            new_coef_value = value(coef.expr) - self.last_quadratic_coef_values[ndx]
-            gurobi_expr += new_coef_value * coef.var1 * coef.var2
-            self.last_quadratic_coef_values[ndx] = new_coef_value
+            current_coef_value = value(coef.expr)
+            incremental_coef_value = current_coef_value - self.last_quadratic_coef_values[ndx]
+            gurobi_expr += incremental_coef_value * coef.var1 * coef.var2
+            self.last_quadratic_coef_values[ndx] = current_coef_value
         return gurobi_expr
 
     def get_updated_rhs(self):
@@ -123,9 +125,10 @@ class _MutableObjective(object):
                 if gurobi_expr is None:
                     self.gurobi_model.update()
                     gurobi_expr = self.gurobi_model.getObjective()
-                new_coef_value = value(coef.expr) - self.last_quadratic_coef_values[ndx]
-                gurobi_expr += new_coef_value * coef.var1 * coef.var2
-                self.last_quadratic_coef_values[ndx] = new_coef_value
+                current_coef_value = value(coef.expr)
+                incremental_coef_value = current_coef_value - self.last_quadratic_coef_values[ndx]
+                gurobi_expr += incremental_coef_value * coef.var1 * coef.var2
+                self.last_quadratic_coef_values[ndx] = current_coef_value
         return gurobi_expr
 
 
@@ -678,6 +681,8 @@ class Gurobi(PersistentBase, Solver):
         ref_vars = self._referenced_variables
         if vars_to_load is None:
             vars_to_load = self._pyomo_var_to_solver_var_map.keys()
+        else:
+            vars_to_load = [id(v) for v in vars_to_load]
 
         if solution_number != 0:
             self._load_suboptimal_mip_solution(vars_to_load=vars_to_load, solution_number=solution_number)

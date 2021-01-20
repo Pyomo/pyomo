@@ -484,12 +484,12 @@ class PersistentBase(abc.ABC):
             self._set_objective(obj)
 
     def add_block(self, block):
-        self.add_variables([var for var in block.component_data_objects(Var, descend_into=True, sort=True)])
-        self.add_params([p for p in block.component_data_objects(Param, descend_into=True, sort=True)])
+        self.add_variables([var for var in block.component_data_objects(Var, descend_into=True, sort=False)])
+        self.add_params([p for p in block.component_data_objects(Param, descend_into=True, sort=False)])
         self.add_constraints([con for con in block.component_data_objects(Constraint, descend_into=True,
-                                                                          active=True, sort=True)])
+                                                                          active=True, sort=False)])
         self.add_sos_constraints([con for con in block.component_data_objects(SOSConstraint, descend_into=True,
-                                                                              active=True, sort=True)])
+                                                                              active=True, sort=False)])
         obj = get_objective(block)
         if obj is not None:
             self.set_objective(obj)
@@ -549,11 +549,11 @@ class PersistentBase(abc.ABC):
 
     def remove_block(self, block):
         self.remove_constraints([con for con in block.component_data_objects(ctype=Constraint, descend_into=True,
-                                                                             active=True, sort=True)])
+                                                                             active=True, sort=False)])
         self.remove_sos_constraints([con for con in block.component_data_objects(ctype=SOSConstraint, descend_into=True,
-                                                                                 active=True, sort=True)])
-        self.remove_variables([var for var in block.component_data_objects(ctype=Var, descend_into=True, sort=True)])
-        self.remove_params([p for p in block.component_data_objects(ctype=Param, descend_into=True, sort=True)])
+                                                                                 active=True, sort=False)])
+        self.remove_variables([var for var in block.component_data_objects(ctype=Var, descend_into=True, sort=False)])
+        self.remove_params([p for p in block.component_data_objects(ctype=Param, descend_into=True, sort=False)])
 
     @abc.abstractmethod
     def update_variables(self, variables: List[_GeneralVarData]):
@@ -583,7 +583,7 @@ class PersistentBase(abc.ABC):
         current_sos_dict = dict()
         timer.start('vars')
         if config.check_for_new_or_removed_vars or config.update_vars:
-            current_vars_dict = {id(v): v for v in self._model.component_data_objects(Var, descend_into=True, sort=True)}
+            current_vars_dict = {id(v): v for v in self._model.component_data_objects(Var, descend_into=True, sort=False)}
             for v_id, v in current_vars_dict.items():
                 if v_id not in self._vars:
                     new_vars.append(v)
@@ -593,7 +593,7 @@ class PersistentBase(abc.ABC):
         timer.stop('vars')
         timer.start('params')
         if config.check_for_new_or_removed_params:
-            current_params_dict = {id(p): p for p in self._model.component_data_objects(Param, descend_into=True, sort=True)}
+            current_params_dict = {id(p): p for p in self._model.component_data_objects(Param, descend_into=True, sort=False)}
             for p_id, p in current_params_dict.items():
                 if p_id not in self._params:
                     new_params.append(p)
@@ -603,8 +603,8 @@ class PersistentBase(abc.ABC):
         timer.stop('params')
         timer.start('cons')
         if config.check_for_new_or_removed_constraints or config.update_constraints:
-            current_cons_dict = {c: None for c in self._model.component_data_objects(Constraint, descend_into=True, active=True, sort=True)}
-            current_sos_dict = {c: None for c in self._model.component_data_objects(SOSConstraint, descend_into=True, active=True, sort=True)}
+            current_cons_dict = {c: None for c in self._model.component_data_objects(Constraint, descend_into=True, active=True, sort=False)}
+            current_sos_dict = {c: None for c in self._model.component_data_objects(SOSConstraint, descend_into=True, active=True, sort=False)}
             for c in current_cons_dict.keys():
                 if c not in self._vars_referenced_by_con:
                     new_cons.append(c)
