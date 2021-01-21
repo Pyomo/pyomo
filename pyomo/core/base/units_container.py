@@ -387,7 +387,11 @@ class _PyomoUnit(NumericValue):
         : bool
            A string representation for the expression tree.
         """
-        return str(self)
+        if len(self._pint_unit.dimensionality) > 1 or any(
+                i < 0 for i in self._pint_unit.dimensionality.values()):
+            return "("+str(self)+")"
+        else:
+            return str(self)
 
     def __nonzero__(self):
         """Unit is treated as a constant value of 1.0. Therefore, it is always nonzero
