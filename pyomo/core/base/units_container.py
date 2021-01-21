@@ -367,7 +367,7 @@ class _PyomoUnit(NumericValue):
         # delta temperatures).  So that things work cleanly in Python 2
         # and 3, we will generate the string as unicode, then explicitly
         # encode it to UTF-8 in Python 2
-        retstr = u'{:!~s}'.format(self._pint_unit)
+        retstr = u'{:!~C}'.format(self._pint_unit)
         if retstr == '':
             retstr = 'dimensionless'
         if six.PY2:
