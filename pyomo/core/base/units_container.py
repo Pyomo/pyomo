@@ -493,7 +493,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             if ( pint_unit_0 is not pint_unit_i
                  and pint_unit_0 != pint_unit_i
                  and self._pint_registry.get_base_units(pint_unit_0)
-                 != self._pint_registry.get_base_units(pint_unit_0) ):
+                 != self._pint_registry.get_base_units(pint_unit_i) ):
                 raise InconsistentUnitsError(
                     pint_unit_0, pint_unit_i,
                     'Error in units found in expression: %s' % (node,))
