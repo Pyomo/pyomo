@@ -603,6 +603,7 @@ def Reference(reference, ctype=_NotSpecified):
               4 :     1 :    10 :  None : False : False :  Reals
 
     """
+    referent = reference
     if isinstance(reference, IndexedComponent_slice):
         _data = _ReferenceDict(reference)
         _iter = iter(reference)
@@ -692,4 +693,5 @@ def Reference(reference, ctype=_NotSpecified):
     obj = ctype(index, ctype=ctype)
     obj._constructed = True
     obj._data = _data
+    obj.referent = referent
     return obj
