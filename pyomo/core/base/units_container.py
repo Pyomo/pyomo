@@ -490,9 +490,13 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         pint_unit_0 = child_units[0]
         for i in range(1, len(child_units)):
             pint_unit_i = child_units[i]
-            if pint_unit_0 != pint_unit_i:
-                raise InconsistentUnitsError(pint_unit_0, pint_unit_i,
-                        'Error in units found in expression: {}'.format(str(node)))
+            if ( pint_unit_0 is not pint_unit_i
+                 and pint_unit_0 != pint_unit_i
+                 and self._pint_registry.get_base_units(pint_unit_0)
+                 != self._pint_registry.get_base_units(pint_unit_0) ):
+                raise InconsistentUnitsError(
+                    pint_unit_0, pint_unit_i,
+                    'Error in units found in expression: %s' % (node,))
 
         # checks were OK, return the first one in the list
         return pint_unit_0
@@ -711,8 +715,13 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
         for (arg_unit, pint_unit) in zip(arg_units, child_units):
             assert arg_unit is not None
-            if not arg_unit is pint_unit and arg_unit != pint_unit:
-                raise InconsistentUnitsError(arg_unit, pint_unit, 'Inconsistent units found in ExternalFunction.')
+            if ( arg_unit is not pint_unit
+                 and arg_unit != pint_unit
+                 and self._pint_registry.get_base_units(arg_unit)
+                 != self._pint_registry.get_base_units(pint_unit) ):
+                raise InconsistentUnitsError(
+                    arg_unit, pint_unit,
+                    'Inconsistent units found in ExternalFunction.')
 
         # now return the units in node.get_units
         return self._pyomo_units_container._get_pint_units(node.get_units())
@@ -813,10 +822,13 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
         # the _if should already be consistent (since the children were
         # already checked)
-        if child_units[1] is not child_units[2] and \
-           child_units[1] != child_units[2]:
-            raise InconsistentUnitsError(child_units[1], child_units[2],
-                    'Error in units found in expression: {}'.format(str(node)))
+        if ( child_units[1] is not child_units[2]
+             and child_units[1] != child_units[2]
+             and self._pint_registry.get_base_units(child_units[1])
+             != self._pint_registry.get_base_units(child_units[2]) ):
+            raise InconsistentUnitsError(
+                child_units[1], child_units[2],
+                'Error in units found in expression: %s' % (node,))
 
         return child_units[1]
 
