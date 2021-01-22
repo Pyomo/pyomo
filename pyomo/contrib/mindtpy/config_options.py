@@ -392,11 +392,6 @@ def _add_loa_configs(CONFIG):
         description='Whether to add lazy cuts to the master problem at the incumbent solution found in the branch & bound tree',
         domain=bool
     ))
-    CONFIG.declare('use_fake_bound', ConfigValue(
-        default=False,
-        description='Whether to fake bound in LOA single tree to avoid infeasible projection problem',
-        domain=bool
-    ))
     CONFIG.declare('reduce_level_coef', ConfigValue(
         default=False,
         description='Whether to reduce level coefficient in LOA single tree when projection problem is infeasible',
@@ -418,9 +413,9 @@ def check_config(config):
             config.projection_mip_threads = config.threads
             config.logger.info('Set projection_mip_threads equal to threads')
         if config.single_tree:
-            # if no method is activated by users, we will use use_fake_bound by default
-            if not (config.use_fake_bound or config.reduce_level_coef or config.use_bb_tree_incumbent):
-                config.use_fake_bound = True
+            # if no method is activated by users, we will use use_bb_tree_incumbent by default
+            if not (config.reduce_level_coef or config.use_bb_tree_incumbent):
+                config.use_bb_tree_incumbent = True
     if config.single_tree:
         config.iteration_limit = 1
         config.add_slack = False

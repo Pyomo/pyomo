@@ -325,16 +325,10 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.LB = max(
                 self.get_best_objective_value(), solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
-            if config.use_fake_bound:
-                solve_data.fake_LB = max(
-                    solve_data.fake_LB, self.get_objective_value())
         else:
             solve_data.UB = min(
                 self.get_best_objective_value(), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
-            if config.use_fake_bound:
-                solve_data.fake_UB = min(
-                    solve_data.fake_UB, self.get_objective_value())
         config.logger.info(
             'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s'
             % (solve_data.mip_iter, self.get_objective_value(), self.get_best_objective_value(),
@@ -514,8 +508,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     self.add_lazy_oa_cuts(
                         solve_data.mip, None, solve_data, config, opt)
 
-            if ((solve_data.objective_sense == minimize and (solve_data.fake_LB != float('-inf') if config.use_fake_bound else solve_data.LB != float('-inf')))
-                    or (solve_data.objective_sense == maximize and (solve_data.fake_UB != float('inf') if config.use_fake_bound else solve_data.UB != float('inf')))):
+            if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
+                    or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
                 master_mip, master_mip_results = solve_master(
                     solve_data, config, regularization_problem=True)
                 if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
