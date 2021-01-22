@@ -467,7 +467,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         super(PintUnitExtractionVisitor, self).__init__()
         self._pint_registry = pyomo_units_container._pint_registry
         self._pyomo_units_container = pyomo_units_container
-        self._pint_dimensionless = self._pint_registry.dimensionless
+        self._pint_dimensionless = pyomo_units_container._pint_dimensionless
 
     def _get_unit_for_equivalent_children(self, node, child_units):
         """
@@ -566,11 +566,9 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         -------
         : pint unit
         """
-        assert len(child_units) > 1
+        assert len(child_units) == 2
 
-        pint_unit = child_units[0]
-        for i in range(1, len(child_units)):
-            pint_unit *= child_units[1]
+        pint_unit = child_units[0] * child_units[1]
 
         if hasattr(pint_unit, 'units'):
             return pint_unit.units
@@ -973,6 +971,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         
         # first check if the node is a leaf
         nodetype = type(node)
+
         if nodetype in native_types or nodetype in pyomo_constant_types:
             return self._pint_dimensionless
 
@@ -1027,6 +1026,7 @@ class PyomoUnitsContainer(object):
     def __init__(self):
         """Create a PyomoUnitsContainer instance."""
         self._pint_registry = pint_module.UnitRegistry()
+        self._pint_dimensionless = self._pint_registry.dimensionless
 
 
     def load_definitions_from_file(self, definition_file):
@@ -1208,7 +1208,7 @@ external
         : pint unit
         """
         if expr is None:
-            return self._pint_registry.dimensionless
+            return self._pint_dimensionless
 
         pint_units = PintUnitExtractionVisitor(self).walk_expression(expr=expr)
         if hasattr(pint_units, 'units'):
@@ -1238,7 +1238,7 @@ external
         """
         pint_unit = self._get_pint_units(expr)
         if pint_unit.dimensionless:
-            if pint_unit == self._pint_registry.dimensionless:
+            if pint_unit == self._pint_dimensionless:
                 return None
         return _PyomoUnit(pint_unit, self._pint_registry)
 
