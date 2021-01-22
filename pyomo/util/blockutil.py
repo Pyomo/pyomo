@@ -13,7 +13,11 @@
 
 __all__ = ['has_discrete_variables']
 
-from pyomo.core.base import Var
+import logging
+
+from pyomo.core import Var, Constraint, TraversalStrategy
+
+logger = logging.getLogger(__name__)
 
 
 def has_discrete_variables(block):
@@ -21,3 +25,14 @@ def has_discrete_variables(block):
         if not vardata.is_continuous():
             return True
     return False
+
+
+def log_model_constraints(m, logger=logger, active=True):
+    """Prints the model constraints in the model."""
+    for constr in m.component_data_objects(
+            ctype=Constraint, active=active, descend_into=True,
+            descent_order=TraversalStrategy.PrefixDepthFirstSearch):
+        logger.info("%s %s" % (
+            constr.name,
+            ("active" if constr.active else "deactivated")
+        ))
