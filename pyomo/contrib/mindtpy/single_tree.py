@@ -515,7 +515,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
                     handle_master_optimal(
                         master_mip, solve_data, config, update_bound=False)
-                elif master_mip_results.solver.termination_condition is tc.infeasible:
+                elif master_mip_results.solver.termination_condition in {tc.infeasible, tc.infeasibleOrUnbounded}:
                     config.logger.info('Projection problem infeasible.')
                     if config.reduce_level_coef:
                         config.level_coef = config.level_coef / 2
