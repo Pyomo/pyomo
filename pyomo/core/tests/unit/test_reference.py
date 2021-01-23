@@ -27,6 +27,7 @@ from pyomo.core.base.set import SetProduct, UnorderedSetOf
 from pyomo.core.base.indexed_component import (
     UnindexedComponent_set, IndexedComponent
 )
+from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.reference import (
     _ReferenceDict, _ReferenceSet, Reference
 )
@@ -803,6 +804,57 @@ class TestReference(unittest.TestCase):
                 KeyError, "Index '1' is not valid for indexed component 'r'"):
             m.r[1] = m.x
 
+    def test_is_reference(self):
+        m = ConcreteModel()
+        m.v0 = Var()
+        m.v1 = Var([1,2,3])
+
+        m.ref0 = Reference(m.v0)
+        m.ref1 = Reference(m.v1)
+
+        self.assertFalse(m.v0.is_reference())
+        self.assertFalse(m.v1.is_reference())
+
+        self.assertTrue(m.ref0.is_reference())
+        self.assertTrue(m.ref1.is_reference())
+
+        unique_vars = list(
+                v for v in m.component_objects(Var) if not v.is_reference())
+        self.assertEqual(len(unique_vars), 2)
+
+    def test_referent(self):
+        m = ConcreteModel()
+        m.v0 = Var()
+        m.v2 = Var([1, 2, 3],['a', 'b'])
+
+        varlist = [m.v2[1, 'a'], m.v2[1, 'b']]
+
+        vardict = {
+                0: m.v0, 
+                1: m.v2[1, 'a'],
+                2: m.v2[2, 'a'],
+                3: m.v2[3, 'a'],
+                }
+
+        scalar_ref = Reference(m.v0)
+        self.assertIs(scalar_ref.referent, m.v0)
+
+        sliced_ref = Reference(m.v2[:,'a'])
+        referent = sliced_ref.referent
+        self.assertIs(type(referent), IndexedComponent_slice)
+        self.assertEqual(len(referent._call_stack), 1)
+        call, info = referent._call_stack[0]
+        self.assertEqual(call, IndexedComponent_slice.slice_info)
+        self.assertIs(info[0], m.v2)
+        self.assertEqual(info[1], {1: 'a'}) # Fixed
+        self.assertEqual(info[2], {0: slice(None)}) # Sliced
+        self.assertIs(info[3], None) # Ellipsis
+
+        list_ref = Reference(varlist)
+        self.assertIs(list_ref.referent, varlist)
+
+        dict_ref = Reference(vardict)
+        self.assertIs(dict_ref.referent, vardict)
 
 if __name__ == "__main__":
     unittest.main()

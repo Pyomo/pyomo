@@ -76,7 +76,7 @@ class OneVarDisj(unittest.TestCase):
             # (0,0)
             m.x.fix(0)
             m.disj2.indicator_var.fix(0)
-            check_validity(self, cut_expr, cut_lower, cut_upper)
+            check_validity(self, cut_expr, cut_lower, cut_upper, TOL=1e-8)
 
             # (1,0)
             m.x.fix(1)
