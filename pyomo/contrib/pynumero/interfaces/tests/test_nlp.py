@@ -523,6 +523,14 @@ class TestPyomoNLP(unittest.TestCase):
                 for c in nlp.get_pyomo_equality_constraints()]
         self.assertEqual(eq_constraint_names, expected_eq_names)
 
+        # get_pyomo_inequality_constraints
+        ineq_constraints = nlp.get_pyomo_inequality_constraints()
+        # 1, 3, 4, 5, 7, 8, and 9 are the inequality constraints
+        ineq_indices = [1, 3, 4, 5, 7, 8, 9]
+        expected_ineq_ids = [id(self.pm.c[i]) for i in ineq_indices]
+        ineq_ids = [id(con) for con in ineq_constraints]
+        self.assertEqual(eq_ids, expected_eq_ids)
+
         # get_primal_indices
         expected_primal_indices = [i for i in range(9)]
         self.assertTrue(expected_primal_indices == nlp.get_primal_indices([self.pm.x]))
@@ -543,9 +551,23 @@ class TestPyomoNLP(unittest.TestCase):
             # At least one data object in container is not an equality
             nlp.get_equality_constraint_indices([self.pm.c])
         eq_constraints = [self.pm.c[i] for i in pyomo_eq_indices]
-        expected_eq_indices = [0, 1] # indices in the list of equality constraints
-        eq_constraint_indices = nlp.get_equality_constraint_indices(eq_constraints)
+        expected_eq_indices = [0, 1]
+        # ^indices in the list of equality constraints
+        eq_constraint_indices = nlp.get_equality_constraint_indices(
+                eq_constraints)
         self.assertEqual(expected_eq_indices, eq_constraint_indices)
+
+        # get_inequality_constraint_indices
+        pyomo_ineq_indices = [1, 3, 4, 5, 7, 9]
+        with self.assertRaises(KeyError):
+            # At least one data object in container is not an equality
+            nlp.get_inequality_constraint_indices([self.pm.c])
+        ineq_constraints = [self.pm.c[i] for i in pyomo_ineq_indices]
+        expected_ineq_indices = [0, 1, 2, 3, 4, 6]
+        # ^indices in the list of equality constraints; didn't include 8
+        ineq_constraint_indices = nlp.get_inequality_constraint_indices(
+                ineq_constraints)
+        self.assertEqual(expected_ineq_indices, ineq_constraint_indices)
 
         # extract_subvector_grad_objective
         expected_gradient = np.asarray([2*sum((i+1)*(j+1) for j in range(9)) for i in range(9)], dtype=np.float64)
