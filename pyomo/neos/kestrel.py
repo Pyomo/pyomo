@@ -209,29 +209,16 @@ class kestrelAMPL:
             % (NEOS.scheme, jobNumber,password))
         return (jobNumber,password)
 
-    def getUserName(self):
-        for _ in ('LOGNAME','USER','USERNAME'):
-            uname = os.getenv(_)
-            if uname is not None:
-                return uname
-
-    def getHostName(self):
-        return socket.getfqdn(socket.gethostname())
-
     def getEmailAddress(self):
         # Note: the NEOS email address parser is more restrictive than
         # the email.utils parser
-        email = os.environ.get('EMAIL', '')
+        email = os.environ.get('NEOS_EMAIL', '')
         if _email_re.match(email):
             return email
-        if not email:
-            email = "%s@%s" % (self.getUserName(), self.getHostName())
-            if _email_re.match(email):
-                return email
 
         raise RuntimeError(
             "NEOS requires a valid email address (default '%s' not valid). "
-            "Please set the 'EMAIL' environment variable." % (email,))
+            "Please set the 'NEOS_EMAIL' environment variable." % (email,))
 
     def getJobAndPassword(self):
         """
