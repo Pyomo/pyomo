@@ -1,2 +1,0 @@
-# Create a solver
-opt = pyo.SolverFactory('glpk')

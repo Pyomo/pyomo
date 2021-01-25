@@ -22,12 +22,11 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyutilib.misc import PauseGC
-
 from pyomo.common import timing, PyomoAPIFactory
 from pyomo.common.collections import Container
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.plugin import ExtensionPoint
 
 from pyomo.core.expr import expr_common
@@ -44,7 +43,8 @@ from pyomo.core.base.plugin import IPyomoPresolver
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.set import Set
-from pyomo.core.base.component import Component, ComponentUID
+from pyomo.core.base.componentuid import ComponentUID
+from pyomo.core.base.component import Component
 from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 
@@ -218,13 +218,17 @@ class ModelSolutions(object):
         # If there is a warning, then print a warning message.
         #
         if (results.solver.status == SolverStatus.warning):
+            tc = getattr(results.solver, 'termination_condition', None)
+            msg = getattr(results.solver, 'message', None)
             logger.warning(
                 'Loading a SolverResults object with a '
-                'warning status into model=%s;\n'
-                '    message from solver=%s'
-                % (instance.name, results.solver.Message))
+                'warning status into model.name="%s";\n'
+                '  - termination condition: %s\n'
+                '  - message from solver: %s'
+                % (instance.name, tc, msg))
         #
-        # If the solver status not one of either OK or Warning, then generate an error.
+        # If the solver status not one of either OK or Warning, then
+        # generate an error.
         #
         elif results.solver.status != SolverStatus.ok:
             if (results.solver.status == SolverStatus.aborted) and \

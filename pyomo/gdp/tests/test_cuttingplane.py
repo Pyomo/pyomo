@@ -76,7 +76,7 @@ class OneVarDisj(unittest.TestCase):
             # (0,0)
             m.x.fix(0)
             m.disj2.indicator_var.fix(0)
-            check_validity(self, cut_expr, cut_lower, cut_upper)
+            check_validity(self, cut_expr, cut_lower, cut_upper, TOL=1e-8)
 
             # (1,0)
             m.x.fix(1)
@@ -527,7 +527,7 @@ class TwoTermDisj(unittest.TestCase):
     # problem as constraints are never *exactly* satisfied. (The problem being
     # that we need to consider exactly satisfied equalities interesting for
     # FME.)
-    @unittest.skipIf('gurobi' not in solvers, "Ipopt solver not available")
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_equality_constraints_on_disjuncts_with_fme(self):
         m = models.oneVarDisj_2pts()
         m.obj.expr = m.x + m.disj1.indicator_var

@@ -106,6 +106,9 @@ class MultiStart(object):
         """
         return True
 
+    def license_is_valid(self):
+        return True
+
     def solve(self, model, **kwds):
         # initialize keyword args
         config = self.CONFIG(kwds.pop('options', {}))

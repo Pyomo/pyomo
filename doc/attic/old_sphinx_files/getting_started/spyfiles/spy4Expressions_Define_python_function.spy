@@ -1,2 +1,0 @@
-def f(x, p):
-    return x + p

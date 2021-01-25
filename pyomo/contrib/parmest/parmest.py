@@ -10,11 +10,13 @@
 
 import re
 import importlib as im
+import logging
 import types
 import json
 from itertools import combinations
 
 from pyomo.common.dependencies import (
+    attempt_import,
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
     scipy, scipy_available,
@@ -22,9 +24,12 @@ from pyomo.common.dependencies import (
 
 import pyomo.environ as pyo
 import pyomo.pysp.util.rapper as st
-from pyomo.pysp.scenariotree.tree_structure_model import CreateAbstractScenarioTreeModel
+from pyomo.pysp.scenariotree import tree_structure
+from pyomo.pysp.scenariotree.tree_structure_model import (
+    CreateAbstractScenarioTreeModel
+)
 from pyomo.opt import SolverFactory
-from pyomo.environ import Block
+from pyomo.environ import Block, ComponentUID
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
@@ -34,14 +39,10 @@ from pyomo.contrib.parmest.graphics import (fit_rect_dist,
 
 parmest_available = numpy_available & pandas_available & scipy_available
 
-if numpy_available and scipy_available:
-    from pyomo.contrib.pynumero.asl import AmplInterface
-    asl_available = AmplInterface.available()
-else:
-    asl_available = False
+inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
+    'pyomo.contrib.interior_point.inverse_reduced_hessian')
 
-if asl_available:
-    from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
+logger = logging.getLogger(__name__)
 
 __version__ = 0.1
 
@@ -374,12 +375,28 @@ class Estimator(object):
         if (len(self.theta_names) == 1) and (self.theta_names[0] == 'parmest_dummy_var'):
             model.parmest_dummy_var = pyo.Var(initialize = 1.0)
             
-        for theta in self.theta_names:
-            try:
-                var_validate = eval('model.'+theta)
-                var_validate.fixed = False
-            except:
-                print(theta +' is not a variable')
+        for i, theta in enumerate(self.theta_names):
+            # First, leverage the parser in ComponentUID to locate the
+            # component.  If that fails, fall back on the original
+            # (insecure) use of 'eval'
+            var_cuid = ComponentUID(theta)
+            var_validate = var_cuid.find_component_on(model)
+            if var_validate is None:
+                logger.warning(
+                    "theta_name[%s] (%s) was not found on the model",
+                    (i, theta))
+            else:
+                try:
+                    # If the component that was found is not a variable,
+                    # this will generate an exception (and the warning
+                    # in the 'except')
+                    var_validate.fixed = False
+                    # We want to standardize on the CUID string
+                    # representation (which is what PySP will use
+                    # internally)
+                    self.theta_names[i] = repr(var_cuid)
+                except:
+                    logger.warning(theta + ' is not a variable')
         
         if self.obj_function:
             for obj in model.component_objects(Objective):
@@ -463,9 +480,21 @@ class Estimator(object):
             tree_model.BootList = bootlist
         tree_model.cb_data = self.callback_data  # None is OK
 
-        stsolver = st.StochSolver(fsfile = "pyomo.contrib.parmest.parmest",
-                                  fsfct = "_pysp_instance_creation_callback",
-                                  tree_model = tree_model)
+        try:
+            # For structured models, it is important that we use the
+            # updated version of the CUID representation.  PySP (for
+            # backwards compatibility reasons, and so a ton of tests
+            # don't have to be updated) still defaults to the old
+            # representation.
+            _cuidver = tree_structure.CUID_repr_version
+            tree_structure.CUID_repr_version = 2
+            stsolver = st.StochSolver(
+                fsfile = "pyomo.contrib.parmest.parmest",
+                fsfct = "_pysp_instance_creation_callback",
+                tree_model = tree_model
+            )
+        finally:
+            tree_structure.CUID_repr_version = _cuidver
                 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
@@ -497,8 +526,12 @@ class Estimator(object):
                 else:
                     solve_result = solver.solve(self.ef_instance, tee = self.tee)
 
-            elif not asl_available:
-                raise ImportError("parmest requires ASL to calculate the covariance matrix with solver 'ipopt'")
+            # The import error will be raised when we attempt to use
+            # inv_reduced_hessian_barrier below.
+            #
+            #elif not asl_available:
+            #    raise ImportError("parmest requires ASL to calculate the "
+            #                      "covariance matrix with solver 'ipopt'")
             else:
                 # parmest makes the fitted parameters stage 1 variables
                 # thus we need to convert from var names (string) to 
@@ -510,10 +543,12 @@ class Estimator(object):
                     ind_vars.append(self.ef_instance.MASTER_BLEND_VAR_RootNode[v])
         
                 # calculate the reduced hessian
-                solve_result, inv_red_hes = inv_reduced_hessian_barrier(self.ef_instance, 
-                    independent_variables= ind_vars,
-                    solver_options=self.solver_options,
-                    tee=self.tee)
+                solve_result, inv_red_hes = \
+                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                        self.ef_instance,
+                        independent_variables= ind_vars,
+                        solver_options=self.solver_options,
+                        tee=self.tee)
             
             # Extract solution from pysp
             stsolver.scenario_tree.pullScenarioSolutionsFromInstances()
@@ -560,7 +595,7 @@ class Estimator(object):
                 for exp_i in self.ef_instance.component_objects(Block, descend_into=False):
                     vals = {}
                     for var in return_values:
-                        exp_i_var = eval('exp_i.'+ str(var))
+                        exp_i_var = exp_i.find_component(str(var))
                         temp = [pyo.value(_) for _ in exp_i_var.itervalues()]
                         if len(temp) == 1:
                             vals[var] = temp[0]

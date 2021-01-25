@@ -18,8 +18,7 @@ import copy
 import logging
 
 from pyutilib.misc import (ArchiveReaderFactory,
-                           ArchiveReader,
-                           PauseGC)
+                           ArchiveReader)
 
 from pyomo.dataportal import DataPortal
 from pyomo.core import (Block,
@@ -27,6 +26,7 @@ from pyomo.core import (Block,
                         AbstractModel)
 from pyomo.core.base.block import _BlockData
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.plugin import ExtensionPoint
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.tree_structure_model import \

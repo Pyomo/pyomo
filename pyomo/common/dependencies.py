@@ -11,7 +11,10 @@
 import inspect
 import importlib
 import logging
+import sys
 from six import iteritems
+
+from pyomo.common.deprecation import deprecation_warning
 
 class DeferredImportError(ImportError):
     pass
@@ -29,10 +32,19 @@ class ModuleUnavailable(object):
     message: str
         The string message to return in the raised exception
     """
+
+    # We need special handling for Sphinx here, as it will look for the
+    # __sphinx_mock__ attribute on all module-level objects, and we need
+    # that to raise an AttributeError and not a DeferredImportError
+    _getattr_raises_attributeerror = {'__sphinx_mock__',}
+
     def __init__(self, message):
         self._error_message_ = message
 
     def __getattr__(self, attr):
+        if attr in ModuleUnavailable._getattr_raises_attributeerror:
+            raise AttributeError("'%s' object has no attribute '%s'"
+                                 % (type(self).__name__, attr))
         raise DeferredImportError(self._error_message_)
 
     def generate_import_warning(self, logger='pyomo.common'):
@@ -103,7 +115,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
     attributes on the DeferredImportModule.
     """
 
-    def __init__(self, name, alt_names, error_message, only_catch_importerror,
+    def __init__(self, name, alt_names, error_message, catch_exceptions,
                  minimum_version, original_globals, callback, importer,
                  deferred_submodules):
         self._names = [name]
@@ -113,7 +125,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
             if '.' in _n:
                 self._names.append(_n.split('.')[-1])
         self._error_message = error_message
-        self._only_catch_importerror = only_catch_importerror
+        self._catch_exceptions = catch_exceptions
         self._minimum_version = minimum_version
         self._original_globals = original_globals
         self._callback = callback
@@ -129,7 +141,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                 self._module, self._available = attempt_import(
                     name=self._names[0],
                     error_message=self._error_message,
-                    only_catch_importerror=self._only_catch_importerror,
+                    catch_exceptions=self._catch_exceptions,
                     minimum_version=self._minimum_version,
                     callback=self._callback,
                     importer=self._importer,
@@ -142,14 +154,30 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                 self._available = False
                 raise
 
+            # If this module was not found, then we need to check for
+            # deferred submodules and resolve them as well
+            if self._deferred_submodules and \
+               type(self._module) is ModuleUnavailable:
+                err = self._module._error_message_
+                for submod in self._deferred_submodules:
+                    refmod = self._module
+                    for name in submod.split('.')[1:]:
+                        try:
+                            refmod = getattr(refmod, name)
+                        except DeferredImportError:
+                            setattr(refmod, name, ModuleUnavailable(err))
+                            refmod = getattr(refmod, name)
+
             # Replace myself in the original globals() where I was
             # declared
             self.replace_self_in_globals(self._original_globals)
 
         # Replace myself in the caller globals (to avoid calls to
         # this method in the future)
-        _globals = inspect.currentframe().f_back.f_back.f_globals
-        self.replace_self_in_globals(_globals)
+        _frame = inspect.currentframe().f_back
+        while _frame.f_globals is globals():
+            _frame = _frame.f_back
+        self.replace_self_in_globals(_frame.f_globals)
 
     def replace_self_in_globals(self, _globals):
         for name in self._names:
@@ -222,9 +250,10 @@ def check_min_version(module, min_version):
     return _parser(min_version) <= _parser(version)
 
 
-def attempt_import(name, error_message=None, only_catch_importerror=True,
+def attempt_import(name, error_message=None, only_catch_importerror=None,
                    minimum_version=None, alt_names=None, callback=None,
-                   importer=None, defer_check=True, deferred_submodules=None):
+                   importer=None, defer_check=True, deferred_submodules=None,
+                   catch_exceptions=None):
 
     """Attempt to import the specified module.
 
@@ -309,6 +338,20 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
         of "py:class:`DeferredImportIndicator`
 
     """
+    if only_catch_importerror is not None:
+        deprecation_warning(
+            "only_catch_importerror is deprecated.  Pass exceptions to "
+            "catch using the catch_exceptions argument", version='TBD')
+        if catch_exceptions is not None:
+            raise ValueError("Cannot specify both only_catch_importerror "
+                             "and catch_exceptions")
+        if only_catch_importerror:
+            catch_exceptions = (ImportError,)
+        else:
+            catch_exceptions = (ImportError, Exception)
+    if catch_exceptions is None:
+        catch_exceptions = (ImportError,)
+
     # If we are going to defer the check until later, return the
     # deferred import module object
     if defer_check:
@@ -336,13 +379,17 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
             name=name,
             alt_names=alt_names,
             error_message=error_message,
-            only_catch_importerror=only_catch_importerror,
+            catch_exceptions=catch_exceptions,
             minimum_version=minimum_version,
             original_globals=inspect.currentframe().f_back.f_globals,
             callback=callback,
             importer=importer,
             deferred_submodules=deferred)
         return DeferredImportModule(indicator, deferred, None), indicator
+
+    if deferred_submodules:
+        raise ValueError(
+            "deferred_submodules is only valid if defer_check==True")
 
     try:
         if importer is None:
@@ -363,11 +410,8 @@ def attempt_import(name, error_message=None, only_catch_importerror=True,
             error_message = "The %s module version %s does not satisfy " \
                             "the minimum version %s" % (
                                 name, version, minimum_version)
-    except ImportError:
+    except catch_exceptions:
         pass
-    except:
-        if only_catch_importerror:
-            raise
 
     if not error_message:
         error_message = "The %s module (an optional Pyomo dependency) " \
@@ -402,8 +446,15 @@ def _finalize_pympler(module, available):
         import pympler.muppy
 
 def _finalize_matplotlib(module, available):
-    if available:
-        import matplotlib.pyplot
+    if not available:
+        return
+    # You must switch matplotlib backends *before* importing pyplot.  If
+    # we are in the middle of testing, we need to switch the backend to
+    # 'Agg', otherwise attempts to generate plots on CI services without
+    # terminal windows will fail.
+    if any(mod in sys.modules for mod in ('nose', 'nose2', 'sphinx')):
+        module.use('Agg')
+    import matplotlib.pyplot
 
 yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
 pympler, pympler_available = attempt_import(
@@ -418,5 +469,13 @@ dill, dill_available = attempt_import('dill')
 # Note that matplotlib.pyplot can generate a runtime error on OSX when
 # not installed as a Framework (as is the case in the CI systems)
 matplotlib, matplotlib_available = attempt_import(
-    'matplotlib', only_catch_importerror=False, callback=_finalize_matplotlib,
-    deferred_submodules={'pyplot': ['plt']})
+    'matplotlib',
+    callback=_finalize_matplotlib,
+    deferred_submodules={'pyplot': ['plt']},
+    catch_exceptions=(ImportError, RuntimeError),
+)
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle

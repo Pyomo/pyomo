@@ -97,6 +97,10 @@ class UnknownSolver(object):
             raise ApplicationError("Solver (%s) not available" % str(self.name))
         return False
 
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
+        return False
+
     def warm_start_capable(self):
         """ True is the solver can accept a warm-start solution."""
         return False
@@ -190,7 +194,7 @@ SolverFactory = SolverFactoryClass('solver type')
 def check_available_solvers(*args):
     from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
     from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
-    from pyomo.solvers.plugins.solvers.mosek_direct import MosekDirect
+    from pyomo.solvers.plugins.solvers.mosek_direct import MOSEKDirect
 
     logging.disable(logging.WARNING)
 
@@ -203,23 +207,19 @@ def check_available_solvers(*args):
             name = arg[0]
         opt = SolverFactory(*arg)
         if opt is None or isinstance(opt, UnknownSolver):
-            available = False
-        elif (arg[0] == "gurobi") and \
-           (not GUROBISHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "baron") and \
-           (not BARONSHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "mosek") and \
-           (not MosekDirect.license_is_valid()):
-            available = False
-        else:
-            available = \
-                (opt.available(exception_flag=False)) and \
-                ((not hasattr(opt,'executable')) or \
-                (opt.executable() is not None))
-        if available:
-            ans.append(name)
+            continue # not available
+
+        if not opt.available(exception_flag=False):
+            continue # not available
+
+        if hasattr(opt, 'executable') and opt.executable() is None:
+            continue # not available
+
+        if not opt.license_is_valid():
+            continue # not available
+
+        # At this point, the solver is available (and licensed)
+        ans.append(name)
 
     logging.disable(logging.NOTSET)
 
@@ -502,6 +502,10 @@ class OptSolver(object):
 
     def available(self, exception_flag=True):
         """ True if the solver is available """
+        return True
+
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
         return True
 
     def warm_start_capable(self):

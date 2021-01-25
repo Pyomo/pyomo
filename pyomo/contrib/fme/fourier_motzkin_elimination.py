@@ -393,9 +393,12 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                         vars_that_appear_set.add(var)
 
         # we actually begin the recursion here
+        total = len(vars_that_appear)
+        iteration = 1
         while vars_that_appear:
             # first var we will project out
             the_var = vars_that_appear.pop()
+            logger.warning("Projecting out var %s of %s" % (iteration, total))
             if self.verbose:
                 logger.info("Projecting out %s" %
                             the_var.getname(fully_qualified=True,
@@ -465,6 +468,8 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                         logger.info("\t%s <= %s" %
                                     (cons['lower'],
                                      cons['body'].to_expression()))
+
+            iteration += 1
 
         return constraints
 
