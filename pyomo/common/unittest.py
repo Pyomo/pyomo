@@ -32,26 +32,30 @@ class TestCase(_pyunit.TestCase):
     additional functionality:
       - extended suport for test categories
       - additional assertions:
-        * :py:meth:`assertRelativeEqual`
+        * :py:meth:`assertStructuredAlmostEqual`
 
     unittest.TestCase documentation
     -------------------------------
     """
     __doc__ += _unittest.TestCase.__doc__
 
-    def assertRelativeEqual(self, first, second,
-                            places=None, msg=None, delta=None,
-                            allow_second_superset=False):
-        """Test that first and second are equal up to a relative tolerance
+    def assertStructuredAlmostEqual(self, first, second,
+                                    places=None, msg=None, delta=None,
+                                    reltol=None, abstol=None,
+                                    allow_second_superset=False):
+        """Test that first and second are equal up to a tolerance
 
-        This compares first and second using a relative tolerance
-        (`delta`).  It will recursively descend into Sequence and Mapping
-        containers (allowing for the relative comparison of structured
-        data including lists and dicts).
+        This compares first and second using both an absolute (`abstol`) and
+        relative (`reltol`) tolerance.  It will recursively descend into
+        Sequence and Mapping containers (allowing for the relative
+        comparison of structured data including lists and dicts).
 
-        If `places` is supplied, `delta` is computed as `10**-places`.
+        `places` and `delta` is supported for compatibility with
+        assertAlmostEqual.  If `places` is supplied, `abstol` is
+        computed as `10**-places`.  `delta` is an alias for `abstol`.
 
-        If neither `places` nor `delta` is provided, delta defaults to 1e-7.
+        If none of {`abstol`, `reltol`, `places`, `delta`} are specified,
+        `reltol` defaults to 1e-7.
 
         If `allow_second_superset` is True, then:
 
@@ -67,31 +71,68 @@ class TestCase(_pyunit.TestCase):
             `abs(first - second) / max(abs(first), abs(second))`,
         only when first != second (thereby avoiding divide-by-zero errors).
 
-        """
-        if places is not None:
-            if delta is not None:
-                raise ValueError("Cannot specify both places and delta")
-            delta = 10**(-places)
-        if delta is None:
-            delta = 10**-7
+        Parameters
+        ----------
+        first:
+            the first value to compare
+        second:
+            the second value to compare
+        places: int
+            `first` and `second` are considered equivalent if their
+            difference is between `places` decimal places; equivalent to
+            `abstol = 10**-places` (included for compatibility with
+            assertAlmostEqual)
+        msg: str
+            the message to raise on failure
+        delta: float
+            alias for `abstol`
+        abstol: float
+            the absolute tolerance.  `first` and `second` are considered
+            equivalent if their absolute difference is less than `abstol`
+        reltol: float
+            the relative tolerance.  `first` and `second` are considered
+            equivalent if their absolute difference divided by the
+            larget of `first` and `second` is less than `reltol`
+        allow_second_superset: bool
+            If True, then extra entries in containers found on second
+            will not trigger a failure.
 
+        """
+        if sum(1 for _ in (places, delta, abstol) if _ is not None) > 1:
+            raise ValueError("Cannot specify more than one of "
+                             "{places, delta, abstol}")
+
+        if places is not None:
+            abstol = 10**(-places)
+        if delta is not None:
+            abstol = delta
+        if abstol is None and reltol is None:
+            reltol = 10**-7
+
+        fail = None
         try:
-            self._assertRelativeEqual(
-                first, second, delta, not allow_second_superset)
+            self._assertStructuredAlmostEqual(
+                first, second, abstol, reltol, not allow_second_superset)
         except self.failureException as e:
-            raise self.failureException(self._formatMessage(
+            fail = self._formatMessage(
                 msg,
-                "%s\n    Found when comparing with relative tolerance %s:"
-                "\n        first=%s\n        second=%s" % (
+                "%s\n    Found when comparing with tolerance "
+                "(abs=%s, rel=%s):\n"
+                "        first=%s\n        second=%s" % (
                     str(e),
-                    delta,
+                    abstol,
+                    reltol,
                     _unittest.case.safe_repr(first),
                     _unittest.case.safe_repr(second),
-                )))
-            
+                ))
 
-    def _assertRelativeEqual(self, first, second, delta, exact):
-        """Recursive implementation of assertRelativeEqual"""
+        if fail:
+            raise self.failureException(fail)
+
+
+    def _assertStructuredAlmostEqual(self, first, second,
+                                     abstol, reltol, exact):
+        """Recursive implementation of assertStructuredAlmostEqual"""
 
         args = (first, second)
         if all(isinstance(_, Mapping) for _ in args):
@@ -108,8 +149,8 @@ class TestCase(_pyunit.TestCase):
                             _unittest.case.safe_repr(key),
                         ))
                 try:
-                    self._assertRelativeEqual(
-                        first[key], second[key], delta, exact)
+                    self._assertStructuredAlmostEqual(
+                        first[key], second[key], abstol, reltol, exact)
                 except self.failureException as e:
                     raise self.failureException(
                         "%s\n    Found when comparing key %s" % (
@@ -130,7 +171,8 @@ class TestCase(_pyunit.TestCase):
                     ))
             for i, (f, s) in enumerate(zip(first, second)):
                 try:
-                    self._assertRelativeEqual(f, s, delta, exact)
+                    self._assertStructuredAlmostEqual(
+                        f, s, abstol, reltol, exact)
                 except self.failureException as e:
                     raise self.failureException(
                         "%s\n    Found at position %s" % (str(e), i))
@@ -142,14 +184,16 @@ class TestCase(_pyunit.TestCase):
             try:
                 f = float(first)
                 s = float(second)
-                if abs(f - s) / max(abs(f), abs(s)) <= delta:
+                diff = abs(f - s)
+                if abstol is not None and diff <= abstol:
+                    return # PASS!
+                if reltol is not None and diff / max(abs(f), abs(s)) <= reltol:
                     return # PASS!
             except:
                 pass
 
         raise self.failureException(
-            "%s !~= %s (to relative tolerance %s)" % (
+            "%s !~= %s" % (
                 _unittest.case.safe_repr(first),
                 _unittest.case.safe_repr(second),
-                delta,
             ))

@@ -13,10 +13,10 @@ from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-import pyutilib.services
 import pyomo.common
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import ComponentMap, ComponentSet, Options
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt.base.solvers
 from pyomo.opt.base.formats import ResultsFormat
 
@@ -123,7 +123,7 @@ class DirectOrPersistentSolver(OptSolver):
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
 
         self.results = None
 
@@ -159,7 +159,7 @@ class DirectOrPersistentSolver(OptSolver):
                 raise ValueError('{0} solver plugin is not capable of warmstart.'.format(type(self)))
 
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.create_tempfile(suffix='.log')
+            self._log_file = TempfileManager.create_tempfile(suffix='.log')
 
     """ This method should be implemented by subclasses."""
     def _apply_solver(self):

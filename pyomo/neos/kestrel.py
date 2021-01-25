@@ -21,12 +21,9 @@ import six
 import sys
 import time
 import socket
-import gzip
 import base64
 import tempfile
 import logging
-
-from six.moves.http_client import BadStatusLine
 
 from pyomo.common.dependencies import attempt_import
 
@@ -37,8 +34,11 @@ def _xmlrpclib_importer():
         import xmlrpc.client as xmlrpclib
     return xmlrpclib
 xmlrpclib = attempt_import('xmlrpclib', importer=_xmlrpclib_importer)[0]
+gzip = attempt_import('gzip')[0]
 
 logger = logging.getLogger('pyomo.neos')
+
+_email_re = re.compile(r'([^@]+@[^@]+\.[a-zA-Z0-9]+)$')
 
 class NEOS(object):
     # NEOS currently only supports HTTPS access
@@ -150,7 +150,8 @@ class kestrelAMPL:
         try:
             result = self.neos.ping()
             logger.info("OK.")
-        except (socket.error, xmlrpclib.ProtocolError, BadStatusLine):
+        except (socket.error, xmlrpclib.ProtocolError,
+                six.moves.http_client.BadStatusLine):
             e = sys.exc_info()[1]
             self.neos = None
             logger.info("Fail.")
@@ -194,12 +195,7 @@ class kestrelAMPL:
         # one sudo-ed to), whereas USERNAME is the original user who ran
         # sudo.  We include USERNAME to cover Windows, where LOGNAME and
         # USER may not be defined.
-        for _ in ('LOGNAME','USER','USERNAME'):
-            uname = os.getenv(_)
-            if uname is not None:
-                break
-        hostname = socket.getfqdn(socket.gethostname())
-        user = "%s on %s" % (uname,hostname)
+        user = self.getEmailAddress()
         (jobNumber,password) = self.neos.submitJob(xml,user,"kestrel")
         if jobNumber == 0:
             raise RuntimeError("%s\n\tJob not submitted" % (password,))
@@ -212,6 +208,30 @@ class kestrelAMPL:
             "?admin=results&jobnumber=%d&pass=%s\n"
             % (NEOS.scheme, jobNumber,password))
         return (jobNumber,password)
+
+    def getUserName(self):
+        for _ in ('LOGNAME','USER','USERNAME'):
+            uname = os.getenv(_)
+            if uname is not None:
+                return uname
+
+    def getHostName(self):
+        return socket.getfqdn(socket.gethostname())
+
+    def getEmailAddress(self):
+        # Note: the NEOS email address parser is more restrictive than
+        # the email.utils parser
+        email = os.environ.get('EMAIL', '')
+        if _email_re.match(email):
+            return email
+        if not email:
+            email = "%s@%s" % (self.getUserName(), self.getHostName())
+            if _email_re.match(email):
+                return email
+
+        raise RuntimeError(
+            "NEOS requires a valid email address (default '%s' not valid). "
+            "Please set the 'EMAIL' environment variable." % (email,))
 
     def getJobAndPassword(self):
         """
@@ -320,12 +340,14 @@ class kestrelAMPL:
         xml = """
               <document>
               <category>kestrel</category>
+              <email>%s</email>
               <solver>%s</solver>
               <inputType>AMPL</inputType>
               %s
               <solver_options>%s</solver_options>
               <nlfile><base64>%s</base64></nlfile>\n""" %\
-                                (solver,priority,
+                                (self.getEmailAddress(),
+                                 solver,priority,
                                  solver_options,
                                  nl_string)
         #

@@ -73,7 +73,9 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
             if not isinstance(data,Var) and not isinstance(data,Set):
                 data.activate()
         # TODO: delete this subblock
-        self._instance._transformation_data['bilevel.linear_mpec'].block_cuid.find_component(self._instance).deactivate()
+        self._instance._transformation_data[
+            'bilevel.linear_mpec'].block_cuid.find_component_on(
+                self._instance).deactivate()
         #
         # Return the sub-solver return condition value and log
         #

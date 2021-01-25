@@ -17,7 +17,7 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Options, Bunch
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
@@ -40,7 +40,6 @@ except:
 class GUROBI(OptSolver):
     """The GUROBI LP/MIP solver
     """
-
     def __new__(cls, *args, **kwds):
         try:
             mode = kwds['solver_io']
@@ -85,6 +84,7 @@ class GUROBI(OptSolver):
 class GUROBISHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the GUROBI LP/MIP solver
     """
+    _solver_info_cache = {}
 
     def __init__(self, **kwds):
         #
@@ -118,8 +118,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
-    @staticmethod
-    def license_is_valid(executable='gurobi_cl'):
+    def license_is_valid(self):
         """
         Runs a check for a valid Gurobi license using the
         given executable (default is 'gurobi_cl'). All
@@ -127,25 +126,37 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         (including the executable being invalid), then this
         function will return False.
         """
-        try:
-            rc = subprocess.call([executable, "--license"],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
-        except OSError:
-            rc = 1
-        if rc:
-            #
-            # Try the --status flag if --license is not available
-            #
+        solver_exec = self.executable()
+        if (solver_exec, 'licensed') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'licensed')]
+
+        if not solver_exec:
+            licensed = False
+        else:
+            executable = os.path.join(
+                os.path.dirname(solver_exec), 'gurobi_cl')
+
             try:
-                rc = subprocess.call([executable, "--status"],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
+                rc = subprocess.call([executable, "--license"],
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT)
             except OSError:
                 rc = 1
-            if rc:
-                return False
-        return True
+                if rc:
+                    #
+                    # Try the --status flag if --license is not available
+                    #
+                    try:
+                        rc = subprocess.call([executable, "--status"],
+                                             stdout=subprocess.PIPE,
+                                             stderr=subprocess.STDOUT)
+                    except OSError:
+                        rc = 1
+            licensed = not rc
+
+        self._solver_info_cache[(solver_exec, 'licensed')] = licensed
+        return licensed
+
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.soln
@@ -261,24 +272,27 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         Returns a tuple describing the solver executable version.
         """
         solver_exec = self.executable()
-        if solver_exec is None:
-            return _extract_version('')
-        f = StringIO()
-        results = run([solver_exec],
-                                          stdin=('from gurobipy import *; '
-                                                 'print(gurobi.version()); exit()'),
-                                          ostream=f)
-        tmp = None
-        try:
-            tmp = tuple(eval(f.getvalue().strip()))
-            while(len(tmp) < 4):
-                tmp += (0,)
-        except SyntaxError:
-            tmp = None
-        if tmp is None:
-            return _extract_version('')
+        if (solver_exec, 'version') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'version')]
 
-        return tmp[:4]
+        if solver_exec is None:
+            ver = _extract_version('')
+        else:
+            f = StringIO()
+            results = run([solver_exec],
+                          stdin=('from gurobipy import *; '
+                                 'print(gurobi.version()); exit()'),
+                          ostream=f)
+            ver = None
+            try:
+                ver = tuple(eval(f.getvalue().strip()))
+                while(len(ver) < 4):
+                    ver += (0,)
+            except SyntaxError:
+                ver = _extract_version('')
+        ver = ver[:4]
+        self._solver_info_cache[(solver_exec, 'version')] = ver
+        return ver
 
     def create_command_line(self,executable,problem_files):
 

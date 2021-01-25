@@ -99,7 +99,7 @@ class Test(unittest.TestCase):
         del dat_results['Solver'][0]['Time']
         del db_results['Solver'][0]['Time']
         # Compare baselines
-        self.assertRelativeEqual(dat_results, db_results)
+        self.assertStructuredAlmostEqual(dat_results, db_results)
         os.remove(dat_results_file)
         os.remove(db_results_file)
 
@@ -125,7 +125,7 @@ class Test(unittest.TestCase):
         del dat_results['Solver'][0]['Time']
         del sqlite_results['Solver'][0]['Time']
         # Compare baselines
-        self.assertRelativeEqual(dat_results, sqlite_results)
+        self.assertStructuredAlmostEqual(dat_results, sqlite_results)
         os.remove(dat_results_file)
         os.remove(sqlite_results_file)
 

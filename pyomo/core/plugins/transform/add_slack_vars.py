@@ -15,8 +15,8 @@ from six import iterkeys
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 from pyomo.common.config import ConfigBlock, ConfigValue
-from pyomo.core.base.component import ComponentUID
-from pyomo.core.base import _ConstraintData
+from pyomo.core.base import ComponentUID
+from pyomo.core.base.constraint import _ConstraintData
 from pyomo.common.deprecation import deprecation_warning
 
 NAME_BUFFER = {}
