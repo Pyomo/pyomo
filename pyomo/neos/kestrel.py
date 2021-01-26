@@ -127,7 +127,8 @@ class kestrelAMPL:
         self.setup_connection()
 
     def __del__(self):
-        self.neos.__exit__()
+        if self.neos is not None:
+            self.neos.__exit__()
 
     def setup_connection(self):
         # on *NIX, the proxy can show up either upper or lowercase.

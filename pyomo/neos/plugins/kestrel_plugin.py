@@ -50,7 +50,8 @@ class SolverManager_NEOS(AsynchronousSolverManager):
 
     def __del__(self):
         # This is a hack to force the socket to close
-        self.kestrel.neos.__exit__()
+        if self.kestrel.neos is not None:
+            self.kestrel.neos.__exit__()
 
     def clear(self):
         """
