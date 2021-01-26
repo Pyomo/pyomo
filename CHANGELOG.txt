@@ -3,7 +3,7 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 5.7.3   19 Jan 2021
+Pyomo 5.7.3   26 Jan 2021
 -------------------------------------------------------------------------------
 
 ADVANCE CHANGE NOTICE:
@@ -16,21 +16,30 @@ ADVANCE CHANGE NOTICE:
   - Add Python 3.9 to OSX/Windows on the GHA release workflow (#1755)
   - Standardize file line endings (#1764)
   - Resolve matplotlib deferred import failure (#1770)
-  - Mode the ATTIC directory to an internal archived repository (#1762)
+  - Move the ATTIC directory to an internal archived repository (#1762)
   - Rename log_active_constraints to log_model_constraints (#1788)
+  - Remove references to obsolete ordereddict package (#1796)
 - Core
   - Improve units documentation (#1769)
+  - Add is_reference API (#1740)
+  - Add option to not rename components in the scaling transformation (#1596)
 - Documentation
   - Move the doc/attic directory to an internal archived repository (#1773)
 - Solver Interfaces
   - Fix missing imports in the persistent solver interface (#1772)
-  - Update NEOS interface to provide email addresses (#1782, #1783)
+  - Update NEOS interface to provide email addresses (#1782, #1783, #1795)
   - Add mipgap capture to CPLEX direct interface (#1775)
+  - Update solver license_is_valid checks (#1789)
+  - Update CPLEX solution parser for CPLEX 12.10 (#1792)
+- GDP Updates
+  - Fix subproblem initialiations in gdp.cuttingplane (#1780)
 - Testing
   - Fix Jenkins test script (#1771)
   - Fix GHA tests to work with PyMySQL 1.0.0 (#1777)
 - Contrib
-  - PyNumero: resolve portability issue with Cyipopt exception handling (#1781)
+  - PyNumero: resolve portability issue with Cyipopt exception handling, 
+    add PyomoNLP methods for accessing equality/inequality constraints (#1781, 
+    #1791)
 
 -------------------------------------------------------------------------------
 Pyomo 5.7.2   17 Dec 2020
