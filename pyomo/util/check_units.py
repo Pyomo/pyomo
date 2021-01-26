@@ -25,7 +25,6 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.components import iter_component
-#from pyomo.core.base.units_container import UnitExtractionVisitor
 
 def check_units_equivalent(*args):
     """
@@ -66,22 +65,15 @@ def assert_units_equivalent(*args):
     ------
     :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
     """
-    # pyomo_unit_compare, pint_unit_compare = units._get_units_tuple(args[0])
-    # for expr in args[1:]:
-    #     # this call will raise an exception if an inconsistency is found
-    #     pyomo_unit, pint_unit = units._get_units_tuple(expr)
-    #     if not UnitExtractionVisitor(units)._pint_units_equivalent(pint_unit_compare, pint_unit):
-    #         raise UnitsError \
-    #             ("Units between {} and {} are not consistent.".format(str(pyomo_unit_compare), str(pyomo_unit)))
-    #
     # this call will raise an exception if an inconsistency is found
     pint_units = [units._get_pint_units(arg) for arg in args]
     pint_unit_compare = pint_units[0]
     for pint_unit in pint_units[1:]:
         # this call will raise an exception if an inconsistency is found
         if not pint_unit == pint_unit_compare:
-            raise UnitsError \
-                ("Units between {} and {} are not consistent.".format(str(pint_unit_compare), str(pint_unit)))
+            raise UnitsError(
+                "Units between {} and {} are not consistent.".format(
+                    str(pint_unit_compare), str(pint_unit)))
 
 def _assert_units_consistent_constraint_data(condata):
     """
