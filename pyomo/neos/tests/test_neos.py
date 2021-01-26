@@ -33,6 +33,10 @@ try:
 except:
     pass
 
+email_set = True
+if os.environ.get('NEOS_EMAIL') is None:
+    email_set = False
+
 
 #
 # Because the Kestrel tests require connections to the NEOS server, and
@@ -42,6 +46,7 @@ except:
 #
 @unittest.category('nightly')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+@unittest.skipIf(not email_set, "NEOS_EMAIL not set")
 class TestKestrel(unittest.TestCase):
 
     @unittest.skipIf(not yaml_available, "YAML is not available")
