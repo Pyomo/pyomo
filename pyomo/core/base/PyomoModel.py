@@ -27,6 +27,7 @@ from pyomo.common.collections import Container
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.log import is_debug_set
 from pyomo.common.plugin import ExtensionPoint
 
 from pyomo.core.expr import expr_common
@@ -873,7 +874,8 @@ from solvers are immediately loaded into the original model instance.""")
             if data is not None:
                 break
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        generate_debug_messages = is_debug_set(logger)
+        if generate_debug_messages:
             _blockName = "Model" if self.parent_block() is None \
                 else "Block '%s'" % self.name
             logger.debug( "Constructing %s '%s' on %s from data=%s",
@@ -889,11 +891,11 @@ from solvers are immediately loaded into the original model instance.""")
                 type(err).__name__, err )
             raise
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                _out = StringIO()
-                declaration.pprint(ostream=_out)
-                logger.debug("Constructed component '%s':\n    %s"
-                             % ( declaration.name, _out.getvalue()))
+        if generate_debug_messages:
+            _out = StringIO()
+            declaration.pprint(ostream=_out)
+            logger.debug("Constructed component '%s':\n    %s"
+                         % ( declaration.name, _out.getvalue()))
 
         if profile_memory >= 2 and pympler_available:
             mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())

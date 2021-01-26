@@ -16,6 +16,7 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -870,7 +871,7 @@ This has resulted in the conversion of the source to dense form.
         constructed.  We throw an exception if a user tries
         to use an uninitialized Param.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             logger.debug("Constructing Param, name=%s, from data=%s"
                          % ( self.name, str(data) ))
         #
