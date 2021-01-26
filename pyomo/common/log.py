@@ -122,7 +122,7 @@ class WrappingFormatter(logging.Formatter):
 
         # Split the formatted log message (that currently has _flag in
         # lieu of the actual message content) into lines, then
-        # recombine, subtitiuting and wrapping any lines that contain
+        # recombine, substituting and wrapping any lines that contain
         # _flag.
         return '\n'.join(
             self._wrap_msg(l, msg) if self._flag in l else l
@@ -253,7 +253,7 @@ _pyomoLogger.addHandler(_handler)
 
 class LogHandler(logging.StreamHandler):
     @deprecated('The pyomo.common.log.LogHandler class has been deprecated '
-                'in favor of standard Handlers from the python logging module '
+                'in favor of standard Handlers from the Python logging module '
                 'combined with the pyomo.common.log.WrappingFormatter.',
                 version='TBD')
     def __init__(self, base='', stream=None,
