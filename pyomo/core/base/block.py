@@ -1081,7 +1081,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                         _blockName = "Block '%s[...]'" \
                             % self.parent_component().name
                 logger.debug("Constructing %s '%s' on %s from data=%s",
-                             val.__class__.__name__, val.name,
+                             val.__class__.__name__, name,
                              _blockName, str(data))
             try:
                 val.construct(data)
@@ -1094,9 +1094,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 raise
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 if _blockName[-1] == "'":
-                    _blockName = _blockName[:-1] + '.' + val.name + "'"
+                    _blockName = _blockName[:-1] + '.' + name + "'"
                 else:
-                    _blockName = "'" + _blockName + '.' + val.name + "'"
+                    _blockName = "'" + _blockName + '.' + name + "'"
                 _out = StringIO()
                 val.pprint(ostream=_out)
                 logger.debug("Constructed component '%s':\n%s"
