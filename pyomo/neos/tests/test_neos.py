@@ -163,8 +163,10 @@ class TestSolvers_script_min(unittest.TestCase):
     def test_minos(self):
         self._run('minos')
 
-    def test_minto(self):
-        self._run('minto')
+    # This solver doesn't generate a solution file
+    # when the presolver finds the solution
+    #def test_minto(self):
+    #    self._run('minto')
 
     def test_mosek(self):
         self._run('mosek')
@@ -249,7 +251,7 @@ class TestSolvers_cmd_min(TestSolvers_script_min):
 class TestSolvers_cmd_max(TestSolvers_cmd_min):
 
     filename = 't1.py'
-    objective = -1
+    objective = 1
 
 
 if __name__ == "__main__":
