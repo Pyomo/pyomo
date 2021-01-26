@@ -34,8 +34,7 @@ logger = logging.getLogger('pyomo.core')
 # code a work around for the Python 2 case as we are moving
 # closer to a Python 3-only world these types of objects are
 # not memory bottlenecks.
-class DictContainer(IHomogeneousContainer,
-                    collections_MutableMapping):
+class DictContainer(IHomogeneousContainer, MutableMapping):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides dict-like storage functionality.
@@ -159,7 +158,7 @@ class DictContainer(IHomogeneousContainer,
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections_Mapping):
+        if not isinstance(other, Mapping):
             return False
         return {key:(type(val), id(val))
                     for key, val in self.items()} == \
