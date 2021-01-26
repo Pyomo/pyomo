@@ -10,11 +10,7 @@
 
 __all__ = ("PyroAsynchronousActionManager",)
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
-
+from pyomo.common.collections import OrderedDict
 from pyomo.common.dependencies import attempt_import
 from pyomo.opt.parallel.manager import \
     (AsynchronousActionManager,

@@ -10,28 +10,19 @@
 
 import sys
 import logging
-import collections
-if sys.version_info[:2] >= (3,6):
-    _ordered_dict_ = dict
-else:
-    try:
-        _ordered_dict_ = collections.OrderedDict
-    except ImportError:                           #pragma:nocover
-        import ordereddict
-        _ordered_dict_ = ordereddict.OrderedDict
+
+from pyomo.common.collections import OrderedDict, Mapping, MutableMapping
 
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
-import six
-from six import itervalues
-
-if six.PY3:
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Mapping as collections_Mapping
+if sys.version_info[:2] >= (3,7):
+    # dict became ordered in CPython 3.6 and added to the standard in 3.7
+    _ordered_dict_ = dict
 else:
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Mapping as collections_Mapping
+    _ordered_dict_ = OrderedDict
+
+from six import itervalues
 
 logger = logging.getLogger('pyomo.core')
 

@@ -20,12 +20,7 @@ import copy
 import math
 import logging
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
-
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, OrderedDict
 from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
                         Objective, SOSConstraint,
