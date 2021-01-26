@@ -48,6 +48,10 @@ def _neos_error(msg, results, current_message):
     'neos', doc="Asynchronously execute solvers on the NEOS server")
 class SolverManager_NEOS(AsynchronousSolverManager):
 
+    def __del__(self):
+        # This is a hack to force the socket to close
+        self.kestrel.neos.__exit__()
+
     def clear(self):
         """
         Clear manager state
