@@ -179,7 +179,7 @@ def apply_preprocessing(data, parser=None):
     #
     if not data.options.preprocess is None:
         for config_value in data.options.preprocess:
-            preprocess = import_file(config_value)
+            preprocess = import_file(config_value, clear_cache=True)
     #
     for ep in ExtensionPoint(IPyomoScriptPreprocess):
         ep.apply( options=data.options )
@@ -192,7 +192,8 @@ def apply_preprocessing(data, parser=None):
     #
     filter_excepthook=True
     tick = time.time()
-    data.local.usermodel = import_file(data.options.model.filename)
+    data.local.usermodel = import_file(data.options.model.filename,
+                                       clear_cache=True)
     data.local.time_initial_import = time.time()-tick
     filter_excepthook=False
 
@@ -354,7 +355,8 @@ def create_model(data):
                                                  profile_memory=data.options.runtime.profile_memory,
                                                  report_timing=data.options.runtime.report_timing)
             elif suffix == "py":
-                userdata = import_file(data.options.data.files[0])
+                userdata = import_file(data.options.data.files[0],
+                                       clear_cache=True)
                 if "modeldata" in dir(userdata):
                     if len(ep) == 1:
                         msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
@@ -729,7 +731,7 @@ def apply_postprocessing(data, instance=None, results=None):
 
     # options are of type ConfigValue, not raw strings / atomics.
     for config_value in data.options.postprocess:
-        postprocess = import_file(config_value)
+        postprocess = import_file(config_value, clear_cache=True)
         if "pyomo_postprocess" in dir(postprocess):
             postprocess.pyomo_postprocess(data.options, instance,results)
 

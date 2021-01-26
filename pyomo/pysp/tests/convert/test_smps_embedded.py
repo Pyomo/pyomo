@@ -16,7 +16,6 @@ import difflib
 import filecmp
 import shutil
 
-from pyutilib.misc import import_file
 import pyutilib.th as unittest
 
 from six import StringIO
@@ -34,6 +33,7 @@ from pyomo.pysp.embeddedsp import (EmbeddedSP,
                                    StageCostAnnotation,
                                    VariableStageAnnotation)
 from pyomo.pysp.convert.smps import convert_embedded
+from pyomo.common.fileutils import import_file
 
 baa99_basemodel = None
 piecewise_model_embedded = None

@@ -15,11 +15,11 @@ import random
 import argparse
 
 from pyutilib.pyro import shutdown_pyro_components
-from pyutilib.misc import import_file
 
 from pyomo.common import pyomo_command
 from pyomo.common.dependencies import pympler_available, attempt_import
 from pyomo.common.plugin import ExtensionPoint, SingletonPlugin
+from pyomo.common.fileutils import import_file
 from pyomo.core.base import maximize, minimize, Var, Suffix
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory

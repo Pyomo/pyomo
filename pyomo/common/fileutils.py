@@ -16,6 +16,7 @@ import os
 import platform
 import six
 import importlib.util
+import sys
 
 from .deprecation import deprecated
 from . import config
@@ -389,7 +390,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
                      pathlist=pathlist, allow_pathlist_deep_references=False)
 
 
-def import_file(path):
+def import_file(path, clear_cache=False):
     """
     Import a module given the full path/filename of the file.
     Replaces import_file from pyutilib (Pyomo 6.0.0).
@@ -400,6 +401,8 @@ def import_file(path):
     ----------
     path : str
         Full path to .py file.
+    clear_cache: bool
+        Remove module if already loaded. The default is False.
 
     """
     path = os.path.expanduser(os.path.expandvars(path))
@@ -407,6 +410,8 @@ def import_file(path):
     try:
         module_dir, module_file = os.path.split(path)
         module_name, module_ext = os.path.splitext(module_file)
+        if clear_cache and module_name in sys.modules:
+            del sys.modules[module_name]
         spec = importlib.util.spec_from_file_location(module_name, path)
         module = spec.loader.load_module()
     except ImportError:

@@ -6,9 +6,8 @@
 #
 
 # Python imports
-from pyutilib.misc import import_file
 from pyomo.environ import *
-from pyomo.opt import SolverFactory
+from pyomo.common.fileutils import import_file
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.opt.parallel.manager import solve_all_instances

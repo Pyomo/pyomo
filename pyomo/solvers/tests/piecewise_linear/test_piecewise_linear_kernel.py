@@ -43,7 +43,8 @@ def createTestMethod(pName,problem,solver,writer,kwds):
             obj.skipTest("Solver %s (interface=%s) is not available"
                          % (solver, writer))
 
-        m = import_file(os.path.join(thisDir, 'kernel_problems', problem))
+        m = import_file(os.path.join(thisDir, 'kernel_problems', problem),
+                        clear_cache=True)
 
         model = m.define_model(**kwds)
 
