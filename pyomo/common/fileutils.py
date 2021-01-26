@@ -408,8 +408,7 @@ def import_file(path):
         module_dir, module_file = os.path.split(path)
         module_name, module_ext = os.path.splitext(module_file)
         spec = importlib.util.spec_from_file_location(module_name, path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module()
+        module = spec.loader.load_module()
     except ImportError:
         pass
     finally:
