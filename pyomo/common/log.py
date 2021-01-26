@@ -30,6 +30,43 @@ _indentation_re = re.compile(r'\s*')
 _bullet_re = re.compile(r'(?:[-*] +)|(\[\s*[A-Za-z0-9\.]+\s*\] +)')
 _bullet_char = '-*['
 
+_DEBUG = logging.DEBUG
+_NOTSET = logging.NOTSET
+if not __debug__:
+    def is_debug_set(logger):
+        return False
+elif hasattr(getattr(logging.getLogger(), 'manager', None), 'disable'):
+    # This works for CPython and PyPy, but relies on a manager attribute
+    # to get the current value of the logging.disabled() flag
+    # (technically not included in the official logging documentation)
+    def is_debug_set(logger):
+        """A variant of Logger.isEnableFor that returns False if NOTSET
+
+        The implementation of logging.Logger.isEnableFor() returns True
+        if the effective level of the logger is NOTSET.  This variant
+        only returns True if the effective level of the logger is NOTSET
+        < level <= DEBUG.  This is used in Pyomo to detect if the user
+        explicitly requested DEBUG output.
+
+        This implementation mimics the core functionality of
+        isEnabledFor() by directly querying the (undocumented) 'manager'
+        attribute to get the current value for logging.disabled()
+
+        """
+        if logger.manager.disable >= _DEBUG:
+            return False
+        _level = logger.getEffectiveLevel()
+        # Filter out NOTSET and higher levels
+        return _NOTSET < _level <= _DEBUG
+else:
+    # This is inefficient (it indirectly checks effective level twice),
+    # but is included for [as yet unknown] platforms that ONLY implement
+    # the API documented in the logging library
+    def is_debug_set(logger):
+        if not logger.isEnabledFor(_DEBUG):
+            return False
+        return logger.getEffectiveLevel() > _NOTSET
+
 class WrappingFormatter(logging.Formatter):
     _flag = "<<!MSG!>>"
 
