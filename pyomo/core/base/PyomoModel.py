@@ -17,13 +17,8 @@ import gc
 import time
 import math
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
-
 from pyomo.common import timing, PyomoAPIFactory
-from pyomo.common.collections import Container
+from pyomo.common.collections import Container, OrderedDict
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.gc_manager import PauseGC

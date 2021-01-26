@@ -14,7 +14,7 @@ import copy
 import logging
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.collections import  Options
+from pyomo.common.collections import Options, OrderedDict
 from pyomo.common.errors import ApplicationError
 from pyutilib.misc import flatten
 
@@ -23,11 +23,6 @@ from pyomo.dataportal.parse_datacmds import (
 )
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 from pyomo.core.base.set import UnknownSetDimen
-
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
 
 from six.moves import xrange
 try:
