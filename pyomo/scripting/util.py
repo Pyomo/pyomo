@@ -816,7 +816,7 @@ def configure_loggers(options=None, shutdown=False):
         # historically, configure_loggers(shutdown=True) forced 'quiet'
         context.options.runtime.logging = 'quiet'
         context.fileLogger = configure_loggers.fileLogger
-        context.__exit__()
+        context.__exit__(None,None,None)
     else:
         context.__enter__()
         configure_loggers.fileLogger = context.fileLogger
@@ -853,11 +853,9 @@ class PyomoCommandLogContext(object):
             _pyomo.setLevel(logging.INFO)
             _pyutilib.setLevel(logging.INFO)
         elif self.options.runtime.logging == 'verbose':
-            print("VERBOSE!")
             _pyomo.setLevel(logging.DEBUG)
             _pyutilib.setLevel(logging.DEBUG)
         elif self.options.runtime.logging == 'debug':
-            print("DEBUG!")
             _pyomo.setLevel(logging.DEBUG)
             _pyutilib.setLevel(logging.DEBUG)
         elif _pyomo.getEffectiveLevel() == logging.NOTSET:
@@ -883,8 +881,6 @@ class PyomoCommandLogContext(object):
         _pyutilib = logging.getLogger('pyutilib')
         _pyutilib.setLevel(self.original[2])
         _pyutilib.handlers = self.original[3]
-
-        _pyomo.setLevel(logging.ERROR)
 
         if self.fileLogger is not None:
             self.fileLogger.close()
