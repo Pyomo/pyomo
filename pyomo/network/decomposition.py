@@ -284,7 +284,7 @@ class SequentialDecomposition(FOQUSGraph):
         self.cache.clear()
 
         try:
-            return self._run_impl(self, model, function)
+            return self._run_impl(model, function)
         finally:
             # Cleanup
             self.cache.clear()
