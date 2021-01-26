@@ -163,8 +163,8 @@ class TestSolvers_script_min(unittest.TestCase):
     def test_ooqp(self):
         self._run('ooqp')
 
-    def test_path(self):
-        self._run('path')
+    #def test_path(self):
+    #    self._run('path')
 
     def test_snopt(self):
         self._run('snopt')
@@ -186,6 +186,53 @@ class TestSolvers_script_max(TestSolvers_script_min):
         m.c = pyo.Constraint(expr=m.x <= 0.5)
         m.obj = pyo.Objective(expr=2*m.x, sense=pyo.maximize)
         return m
+
+
+@unittest.category('nightly')
+@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+class TestSolvers_cmd_min(TestSolvers_script_min):
+
+    filename = 't2.py'
+    objective = -1
+
+    def _run(self, opt):
+        results = os.path.join(currdir, 'result.json')
+        args = [
+            os.path.join(currdir,self.filename),
+            '--solver-manager=neos',
+            '--solver=%s' % opt,
+            '--logging=quiet',
+            '--save-results=%s' % results,
+            '-c'
+            ]
+        try:
+            output = main.run(args)
+            self.assertEqual(output.errorcode, 0)
+
+            with open(results) as FILE:
+                data = json.load(FILE)
+            #print(json.dumps(data, indent=4))
+
+            self.assertEqual(
+                data['Solver'][0]['Status'], 'ok')
+            self.assertAlmostEqual(
+                data['Solution'][1]['Status'], 'optimal')
+            if 'o' in data['Solution'][1]['Objective']:
+                self.assertAlmostEqual(
+                    data['Solution'][1]['Objective']['o']['Value'], self.objective)
+            self.assertAlmostEqual(
+                data['Solution'][1]['Variable']['x']['Value'], 0.5)
+        finally:
+            cleanup()
+            os.remove(results)
+
+
+@unittest.category('nightly')
+@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+class TestSolvers_cmd_max(TestSolvers_cmd_min):
+
+    filename = 't1.py'
+    objective = -1
 
 
 if __name__ == "__main__":
