@@ -11,7 +11,7 @@
 import numpy as np
 import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
-from reactor_design import reactor_design_model
+from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor_design_model 
 
 ### Parameter estimation
 
@@ -46,7 +46,7 @@ print(theta)
 lNo_theta = pest.theta_est_leaveNout(1) 
 print(lNo_theta.head())
 
-parmest.pairwise_plot(lNo_theta, theta)
+parmest.graphics.pairwise_plot(lNo_theta, theta)
 
 ### Leave one out/boostrap analysis
 # Example use case: leave 50 data points out, run 75 bootstrap samples with the 
@@ -67,7 +67,7 @@ alpha = 0.8
 for i in range(lNo_samples):
     theta_est_N = results[i][1]
     bootstrap_results = results[i][2]
-    parmest.pairwise_plot(bootstrap_results, theta_est_N, alpha, ['MVN'],
+    parmest.graphics.pairwise_plot(bootstrap_results, theta_est_N, alpha, ['MVN'],
                           title= 'Alpha: '+ str(alpha) + ', '+ \
                           str(theta_est_N.loc[0,alpha]))
     
