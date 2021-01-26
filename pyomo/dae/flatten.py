@@ -117,7 +117,7 @@ def _fill_indices_from_product(partial_index_list, product):
         # Reset `normalize_index.flatten`
         normalize_index.flatten = _normalize_index_flatten
 
-def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
+def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
     """
     Recursively generate sliced components of a block and its subblocks, along
     with the sets that were sliced for each component.
@@ -128,8 +128,8 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
     hierarchy. Note that `b` is a data object, so any index
     of its parent component should be included in the stack.
 
-    `_slice` is the slice generated so far. Our goal here is to
-    yield extensions to `_slice` at this level of the hierarchy.
+    `slice_` is the slice generated so far. Our goal here is to
+    yield extensions to `slice_` at this level of the hierarchy.
 
     `sets` is a ComponentSet of Pyomo sets that should be sliced.
 
@@ -162,7 +162,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
 
             for new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 try:
-                    c_slice = getattr(_slice, c.local_name)[new_index]
+                    c_slice = getattr(slice_, c.local_name)[new_index]
                     if type(c_slice) is IndexedComponent_slice:
                         # This is just to make sure we do not have an
                         # empty slice.
@@ -185,11 +185,11 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
             # will be valid.
             try:
                 if c.is_indexed():
-                    c_slice = getattr(_slice, c.local_name)[...]
+                    c_slice = getattr(slice_, c.local_name)[...]
                     # Make sure this slice is not empty...
                     next(iter(c_slice.duplicate()))
                 else:
-                    c_slice = getattr(_slice, c.local_name)
+                    c_slice = getattr(slice_, c.local_name)
                 yield sliced_sets, c_slice
             except StopIteration:
                 pass
@@ -203,7 +203,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
         other_sets = [s for s in subsets if s not in sets]
 
         # For each set we are slicing, if the user specified an index, put it
-        # here. Otherwise, slice the set and we will call next(iter(_slice))
+        # here. Otherwise, slice the set and we will call next(iter(slice_))
         # once the full index is constructed.
         descend_index_sliced_sets = tuple(index_map[s] if s in index_map else 
                 get_slice_for_set(s) for s in new_sets)
@@ -216,7 +216,7 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
 
             for new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 try:
-                    sub_slice = getattr(_slice, sub.local_name)[new_index]
+                    sub_slice = getattr(slice_, sub.local_name)[new_index]
 
                     # Now we need to pick a block data to descend into
                     if new_sets:
@@ -266,14 +266,14 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
             # to iterate over "other sets."
             try:
                 if sub.is_indexed():
-                    sub_slice = getattr(_slice, sub.local_name)[...]
+                    sub_slice = getattr(slice_, sub.local_name)[...]
                     # We have to get the block data object.
                     descend_slice = sub[descend_index_sliced_sets]
                     data = descend_slice if type(descend_slice) is not \
                         IndexedComponent_slice else next(iter(descend_slice))
                 else:
                     # `sub` is a simple component
-                    sub_slice = getattr(_slice, sub.local_name)
+                    sub_slice = getattr(slice_, sub.local_name)
                     data = sub
                 for st, v in generate_sliced_components(data, index_stack,
                         sub_slice, sets, ctype, index_map):
@@ -320,7 +320,7 @@ def flatten_components_along_sets(m, sets, ctype, indices=None):
     # reliably use tuples of components as keys in a `ComponentMap`.
     sets_dict = OrderedDict()
     comps_dict = OrderedDict()
-    for index_sets, _slice in generate_sliced_components(m, index_stack,
+    for index_sets, slice_ in generate_sliced_components(m, index_stack,
             m, set_of_sets, ctype, index_map):
         # Note that index_sets should always be a tuple, never a scalar.
 
@@ -337,13 +337,13 @@ def flatten_components_along_sets(m, sets, ctype, indices=None):
         if key not in comps_dict:
             comps_dict[key] = []
         if len(key) == 0:
-            comps_dict[key].append(_slice)
+            comps_dict[key].append(slice_)
         else:
             # If the user wants to change these flags, they can access the
             # slice via the `referent` attribute of each reference component.
-            _slice.attribute_errors_generate_exceptions = False
-            _slice.key_errors_generate_exceptions = False
-            comps_dict[key].append(Reference(_slice))
+            slice_.attribute_errors_generate_exceptions = False
+            slice_.key_errors_generate_exceptions = False
+            comps_dict[key].append(Reference(slice_))
 
     # list-of-tuples of Sets:
     sets_list = list(sets for sets in sets_dict.values())
