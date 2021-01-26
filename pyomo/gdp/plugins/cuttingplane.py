@@ -22,7 +22,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
                          SortComponents, Transformation, TransformationFactory,
                          value, NonNegativeIntegers, Reals, NonNegativeReals,
-                         Suffix )
+                         Suffix, ComponentMap )
 from pyomo.core.expr import differentiate
 from pyomo.common.collections import ComponentSet
 from pyomo.opt import SolverFactory
@@ -56,7 +56,7 @@ def _get_constraint_exprs(constraints, hull_to_bigm_map):
             cons.expr, substitute=hull_to_bigm_map))
     return cuts
 
-def _constraint_tight(model, constraint):
+def _constraint_tight(model, constraint, TOL):
     """
     Returns a list [a,b] where a is -1 if the lower bound is tight or
     slightly violated, b is 1 if the upper bound is tight of slightly
@@ -66,12 +66,12 @@ def _constraint_tight(model, constraint):
     val = value(constraint.body)
     ans = [0, 0]
     if constraint.lower is not None:
-        if value(constraint.lower) >= val:
+        if val - value(constraint.lower) <= TOL:
             # tight or in violation of LB
             ans[0] -= 1
 
     if constraint.upper is not None:
-        if value(constraint.upper) <= val:
+        if value(constraint.upper) - val <= TOL:
             # tight or in violation of UB
             ans[1] += 1
 
@@ -106,7 +106,8 @@ def _precompute_potentially_useful_constraints(transBlock_rHull,
 
 def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
                     rBigM_linear_constraints, rHull_vars, disaggregated_vars,
-                    norm, cut_threshold, zero_tolerance, integer_arithmetic):
+                    norm, cut_threshold, zero_tolerance, integer_arithmetic,
+                    constraint_tolerance):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
     Finds all the constraints which are tight at xhat (assumed to be the 
@@ -137,6 +138,8 @@ def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
     integer_arithmetic: boolean, whether or not to require Fourier-Motzkin
                         Elimination does integer arithmetic. Only possible 
                         when all data is integer.
+    constraint_tolerance: Tolerance at which we will consider a constraint 
+                          tight.
     """
     instance_rHull = transBlock_rHull.model()
     # In the first iteration, we will compute a list of constraints that could
@@ -152,7 +155,8 @@ def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
     conslist.construct()
     something_interesting = False
     for constraint in transBlock_rHull.constraints_for_FME:
-        multipliers = _constraint_tight(instance_rHull, constraint)
+        multipliers = _constraint_tight(instance_rHull, constraint,
+                                        constraint_tolerance)
         for multiplier in multipliers:
             if multiplier:
                 something_interesting = True
@@ -234,7 +238,8 @@ def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
 def create_cuts_normal_vector(transBlock_rHull, var_info, hull_to_bigm_map,
                               rBigM_linear_constraints, rHull_vars,
                               disaggregated_vars, norm, cut_threshold,
-                              zero_tolerance, integer_arithmetic):
+                              zero_tolerance, integer_arithmetic,
+                              constraint_tolerance):
     """Returns a cut which removes x* from the relaxed bigm feasible region.
 
     Ignores all parameters except var_info and cut_threshold, and constructs 
@@ -265,6 +270,8 @@ def create_cuts_normal_vector(transBlock_rHull, var_info, hull_to_bigm_map,
                     Fourier-Motzkin elimination. Ignored by this callback
     integer_arithmetic: Ignored by this callback (specifies FME use integer
                         arithmetic)
+    constraint_tolerance: Ignored by this callback (specifies when constraints
+                          are considered tight in FME)
     """
     cutexpr = 0
     if norm == 2:
@@ -290,6 +297,9 @@ def create_cuts_normal_vector(transBlock_rHull, var_info, hull_to_bigm_map,
     # make sure we're cutting off x* by enough.
     if value(cutexpr) < -cut_threshold:
         return [cutexpr >= 0]
+    logger.warning("Generated cut did not remove relaxed BigM solution by more "
+                   "than the specified threshold of %s. Stopping cut "
+                   "generation." % cut_threshold)
     return None
 
 def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
@@ -324,7 +334,7 @@ def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
         expr=clone_without_expression_components(cut.body,
                                                  substitute=bigm_to_hull_map))
 
-    results = opt.solve(instance_rHull, tee=stream_solver)
+    results = opt.solve(instance_rHull, tee=stream_solver, load_solutions=False)
     if verify_successful_solve(results) is not NORMAL:
         logger.warning("Problem to determine how much to "
                        "back off the new cut "
@@ -334,6 +344,7 @@ def back_off_constraint_with_calculated_cut_violation(cut, transBlock_rHull,
         transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
         transBlock_rHull.separation_objective.activate()
         return
+    instance_rHull.solutions.load_from(results)
 
     # we're minimizing, val is <= 0
     val = value(transBlock_rHull.infeasibility_objective) - TOL
@@ -386,8 +397,21 @@ class CuttingPlane_Transformation(Transformation):
     solver_options : dictionary of options to pass to the solver
     stream_solver : Whether or not to display solver output
     verbose : Enable verbose output from cuttingplanes algorithm
-    minimum_improvement_threshold : Minimum difference in relaxed BigM objective
+    cuts_name : Optional name for the IndexedConstraint containing the projected
+                cuts (must be a unique name with respect to the instance)
+    minimum_improvement_threshold : Stopping criterion based on improvement in
+                                    Big-M relaxation. This is the minimum 
+                                    difference in relaxed BigM objective
                                     values between consecutive iterations
+    separation_objective_threshold : Stopping criterion based on separation 
+                                     objective. If separation objective is not 
+                                     at least this large, cut generation will 
+                                     terminate.
+    cut_filtering_threshold : Stopping criterion based on effectiveness of the 
+                              generated cut: This is the amount by which 
+                              a cut must be violated at the relaxed bigM 
+                              solution in order to be added to the bigM model
+    max_number_of_cuts : The maximum number of cuts to add to the big-M model
     norm : norm to use in the objective of the separation problem
     tighten_relaxation : callback to modify the GDP model before the hull 
                          relaxation is taken (e.g. could be used to perform 
@@ -396,13 +420,14 @@ class CuttingPlane_Transformation(Transformation):
                   problems
     post_process_cut : callback to perform post-processing on created cuts
     back_off_problem_tolerance : tolerance to use while post-processing
-    cut_filtering_threshold : Amount by which cut is violated at the relaxed bigM
-                              solution in order to be added to the bigM model
     zero_tolerance : Tolerance at which a float will be considered 0 when
                      using Fourier-Motzkin elimination to create cuts.
     do_integer_arithmetic : Whether or not to require Fourier-Motzkin elimination
                             to do integer arithmetic. Only possible when all
                             data is integer.
+    tight_constraint_tolerance : Tolerance at which a constraint is considered
+                                 tight for the Fourier-Motzkin cut generation
+                                 procedure
 
     By default, the callbacks will be set such that the algorithm performed is
     as presented in [1], but with an additional post-processing procedure to
@@ -442,7 +467,7 @@ class CuttingPlane_Transformation(Transformation):
     ))
     CONFIG.declare('minimum_improvement_threshold', ConfigValue(
         default=0.01,
-        domain=PositiveFloat,
+        domain=NonNegativeFloat,
         description="Threshold value for difference in relaxed bigM problem "
         "objectives used to decide when to stop adding cuts",
         doc="""
@@ -451,9 +476,9 @@ class CuttingPlane_Transformation(Transformation):
         generated in the last iteration.  
         """
     ))
-    CONFIG.declare('separation_objective_threhold', ConfigValue(
+    CONFIG.declare('separation_objective_threshold', ConfigValue(
         default=0.01,
-        domain=PositiveFloat,
+        domain=NonNegativeFloat,
         description="Threshold value used to decide when to stop adding cuts: "
         "If separation problem objective is not at least this quantity, cut "
         "generation will terminate.",
@@ -644,6 +669,20 @@ class CuttingPlane_Transformation(Transformation):
 
         Must be a string which is a unique component name with respect to the 
         Block on which the transformation is called.
+        """
+    ))
+    CONFIG.declare('tight_constraint_tolerance', ConfigValue(
+        default=1e-6, # Gurobi constraint tolerance
+        domain=NonNegativeFloat,
+        description="Tolerance at which a constraint is considered tight for "
+        "the Fourier-Motzkin cut generation procedure.",
+        doc="""
+        For a constraint a^Tx <= b, the Fourier-Motzkin cut generation procedure
+        will consider the constraint tight (and add it to the set of constraints
+        being projected) when a^Tx - b is less than this tolerance. 
+
+        It is recommended to set this tolerance to the constraint tolerance of
+        the solver being used.
         """
     ))
     def __init__(self):
@@ -865,15 +904,18 @@ class CuttingPlane_Transformation(Transformation):
 
         hull_to_bigm_map = self._create_hull_to_bigm_substitution_map(var_info)
         bigm_to_hull_map = self._create_bigm_to_hull_substition_map(var_info)
+        xhat = ComponentMap()
 
         while (improving):
             # solve rBigM, solution is xstar
-            results = opt.solve(instance_rBigM, tee=stream_solver)
+            results = opt.solve(instance_rBigM, tee=stream_solver,
+                                load_solutions=False)
             if verify_successful_solve(results) is not NORMAL:
                 logger.warning("Relaxed BigM subproblem "
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
+            instance_rBigM.solutions.load_from(results)
 
             rBigM_objVal = value(rBigM_obj)
             logger.warning("rBigM objective = %s" % (rBigM_objVal,))
@@ -910,17 +952,23 @@ class CuttingPlane_Transformation(Transformation):
                              else abs(obj_diff/prev_obj) > epsilon )
 
             # solve separation problem to get xhat.
-            opt.solve(instance_rHull, tee=stream_solver)
+            results = opt.solve(instance_rHull, tee=stream_solver,
+                                load_solutions=False)
             if verify_successful_solve(results) is not NORMAL:
                 logger.warning("Hull separation subproblem "
                                "did not solve normally. Stopping cutting "
                                "plane generation.\n\n%s" % (results,))
                 return
+            instance_rHull.solutions.load_from(results)
             logger.warning("separation problem objective value: %s" %
                            value(transBlock_rHull.separation_objective))
+
+            # save xhat to initialize rBigM with in the next iteration
             if self.verbose:
                 logger.info("xhat is: ")
-                for x_rbigm, x_hull, x_star in var_info:
+            for x_rbigm, x_hull, x_star in var_info:
+                xhat[x_rbigm] = value(x_hull)
+                if self.verbose:
                     logger.info("\t%s = %s" % 
                                 (x_hull.getname(fully_qualified=True,
                                                 name_buffer=NAME_BUFFER), 
@@ -932,7 +980,10 @@ class CuttingPlane_Transformation(Transformation):
             # so close to zero that the resulting cut is likely to have
             # numerical issues.
             if value(transBlock_rHull.separation_objective) < \
-               self._config.separation_objective_threhold:
+               self._config.separation_objective_threshold:
+                logger.warning("Separation problem objective below threshold of"
+                               " %s: Stopping cut generation." %
+                               self._config.separation_objective_threshold)
                 break
 
             cuts = self._config.create_cuts(transBlock_rHull, var_info,
@@ -942,10 +993,20 @@ class CuttingPlane_Transformation(Transformation):
                                             self._config.norm,
                                             self._config.cut_filtering_threshold,
                                             self._config.zero_tolerance,
-                                            self._config.do_integer_arithmetic)
+                                            self._config.do_integer_arithmetic,
+                                            self._config.\
+                                            tight_constraint_tolerance)
            
             # We are done if the cut generator couldn't return a valid cut
-            if cuts is None or not improving:
+            if cuts is None:
+                logger.warning("Did not generate a valid cut, stopping cut "
+                               "generation.")
+                break
+            if not improving:
+                logger.warning("Difference in relaxed BigM problem objective "
+                               "values from past two iterations is below "
+                               "threshold of %s: Stopping cut generation." %
+                               epsilon)
                 break
 
             for cut in cuts:
@@ -964,6 +1025,10 @@ class CuttingPlane_Transformation(Transformation):
                 break
                 
             prev_obj = rBigM_objVal
+
+            # Initialize rbigm with xhat (for the next iteration)
+            for x_rbigm, x_hull, x_star in var_info:
+                x_rbigm.value = xhat[x_rbigm]
 
     def _add_transformation_block(self, instance):
         # creates transformation block with a unique name based on name, adds it
@@ -1039,7 +1104,7 @@ class CuttingPlane_Transformation(Transformation):
         # rHull is our model and we aren't giving it back (unless in the future
         # we we add a callback to do basic steps to it...), so we just check if
         # dual is there. If it's a Suffix, we'll borrow it. If it's something
-        # else we'll rename it and add the Sufix.
+        # else we'll rename it and add the Suffix.
         dual = rHull.component("dual")
         if dual is None:
             rHull.dual = Suffix(direction=Suffix.IMPORT)
