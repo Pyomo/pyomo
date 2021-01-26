@@ -7,9 +7,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
-from reactor_model_residuals import ReactorModel, ReactorModelNoOutputs, ReactorModelScaled
+from pyomo.contrib.pynumero.examples.external_grey_box.react_example.reactor_model_residuals import ReactorModel, ReactorModelNoOutputs, ReactorModelScaled
 
 def maximize_cb_ratio_residuals_with_output(show_solver_log=False, additional_options={}):
     # in this simple example, we will use an external grey box model representing
