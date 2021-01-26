@@ -90,7 +90,7 @@ def _fill_indices_from_product(partial_index_list, product):
             # We need to generate a new index for every entry of `product`,
             # and want to reuse `partial_index_list` as a starting point,
             # so we copy it here.
-            filled_index = partial_index_list.copy()
+            filled_index = list(partial_index_list)
 
             normalize_index.flatten = _normalize_index_flatten
 
