@@ -11,7 +11,6 @@ import pyutilib.th as unittest
 
 from pyomo.environ import ConcreteModel, Block, Var, Reference, Set, Constraint
 from pyomo.dae import ContinuousSet
-# This inport will have to change when we decide where this should go...
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.indexed_component import (
         UnindexedComponent_set,

@@ -57,7 +57,7 @@ def _fill_indices(filled_index, index):
             # `index` is always a tuple, so this is valid
             j += 1
     # Make sure `filled_index` had the same number of vacancies
-    # as `product` has factors. Not _strictly_ necessary.
+    # as the original SetProduct has factors. Not _strictly_ necessary.
     assert j == len(index)
     filled_index = tuple(filled_index)
 
@@ -70,7 +70,7 @@ def _fill_indices_from_product(partial_index_list, product):
     """ 
     `partial_index_list` is a list of indices, each corresponding to a
     set. If an entry in `partial_index_list` is `_NotAnIndex`, that
-    slot will get filled in by an entry from `setprod`.
+    slot will get filled in by an entry from `product`.
 
     `product` is a `SetProduct` with as many "factors" as there are
     missing indices in `partial_index_list`.
@@ -131,10 +131,12 @@ def generate_sliced_components(b, index_stack, _slice, sets, ctype, index_map):
     `_slice` is the slice generated so far. Our goal here is to
     yield extensions to `_slice` at this level of the hierarchy.
 
+    `sets` is a ComponentSet of Pyomo sets that should be sliced.
+
     `ctype` is the type we are looking for.
 
-    `index_map` is potentially a map from each set in `sets` to a "representative
-              index" to use if we ever have
+    `index_map` is potentially a map from each set in `sets` to a 
+    "representative index" to use when descending into subblocks.
     """
     for c in b.component_objects(ctype, descend_into=False):
         subsets = list(c.index_set().subsets())
