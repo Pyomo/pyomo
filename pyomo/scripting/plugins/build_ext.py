@@ -23,11 +23,11 @@ class ExtensionBuilder(object):
         original_level = logger.level
         logger.setLevel(logging.INFO)
         try:
-            return self._call_impl(args, unparsed)
+            return self._call_impl(args, unparsed, logger)
         finally:
             logger.setLevel(original_level)
 
-    def _call_impl(self, args, unparsed):
+    def _call_impl(self, args, unparsed, logger):
         results = []
         result_fmt = "[%s]  %s"
         returncode = 0
