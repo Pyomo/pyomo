@@ -126,6 +126,9 @@ class kestrelAMPL:
     def __init__(self):
         self.setup_connection()
 
+    def __del__(self):
+        self.neos.__exit__()
+
     def setup_connection(self):
         # on *NIX, the proxy can show up either upper or lowercase.
         # Prefer lower case, and prefer HTTPS over HTTP if the
