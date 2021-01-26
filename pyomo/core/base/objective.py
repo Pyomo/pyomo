@@ -21,6 +21,7 @@ import logging
 from weakref import ref as weakref_ref
 import inspect
 
+from pyomo.common.deprecation import deprecated
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -502,16 +503,15 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
 
     # for backwards compatibility reasons
     @property
+    @deprecated("The .value property getter on SimpleObjective is deprecated. "
+                "Use the .expr property getter instead", version='4.3.11323')
     def value(self):
-        logger.warning("DEPRECATED: The .value property getter on "
-                       "SimpleObjective is deprecated. Use "
-                       "the .expr property getter instead")
         return self.expr
+
     @value.setter
+    @deprecated("The .value property setter on SimpleObjective is deprecated. "
+                "Use the set_value(expr) method instead", version='4.3.11323')
     def value(self, expr):
-        logger.warning("DEPRECATED: The .value property setter on "
-                       "SimpleObjective is deprecated. Use the "
-                       "set_value(expr) method instead")
         self.set_value(expr)
 
     @property
