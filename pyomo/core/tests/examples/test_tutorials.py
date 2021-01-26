@@ -55,7 +55,8 @@ class PyomoTutorials(unittest.TestCase):
         self.cwd = os.getcwd()
         self.tmp_path = list(sys.path)
         os.chdir(tutorial_dir)
-        sys.path = [tutorial_dir] + sys.path
+        sys.path = [os.path.dirname(tutorial_dir)] + sys.path
+        sys.path.append(os.path.dirname(tutorial_dir))
 
     def tearDown(self):
         os.chdir(self.cwd)
