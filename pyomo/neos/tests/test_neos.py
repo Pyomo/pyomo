@@ -86,12 +86,17 @@ class TestKestrel(unittest.TestCase):
     def test_doc(self):
         kestrel = kestrelAMPL()
         tmp = [tuple(name.split(':')) for name in kestrel.solvers()]
-        solvers = set(v[0].lower() for v in tmp if v[1]=='AMPL')
+        amplsolvers = set(v[0].lower() for v in tmp if v[1]=='AMPL')
 
         doc = pyomo.neos.doc
         dockeys = set(doc.keys())
 
-        self.assertEqual(solvers, dockeys)
+        self.assertEqual(amplsolvers, dockeys)
+
+        #gamssolvers = set(v[0].lower() for v in tmp if v[1]=='GAMS')
+        #missing = gamssolvers - amplsolvers
+        #print("HERE", missing)
+        #self.assertEqual(len(missing) == 0)
 
 
 @unittest.category('nightly')
