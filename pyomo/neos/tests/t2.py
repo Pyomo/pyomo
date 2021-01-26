@@ -11,7 +11,7 @@
 from pyomo.environ import ConcreteModel, Var, Objective, Constraint, minimize
 
 M = ConcreteModel()
-M.x = Var(bounds=(0,1))
+M.x = Var(bounds=(0,1), initialize=0)
 M.o = Objective(expr=-2*M.x, sense=minimize)
 M.c = Constraint(expr=M.x <= 0.5)
 
