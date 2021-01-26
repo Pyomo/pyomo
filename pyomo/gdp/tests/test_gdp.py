@@ -15,7 +15,7 @@
 import os
 import sys
 from os.path import abspath, dirname, normpath, join
-from pyutilib.misc import import_file
+from pyomo.common.fileutils import import_file
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples', 'gdp'))
 

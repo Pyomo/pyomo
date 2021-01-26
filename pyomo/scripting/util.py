@@ -20,8 +20,9 @@ import json
 from six import iteritems
 from pyomo.common import pyomo_api
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.fileutils import import_file
 
-from pyutilib.misc import import_file, setup_redirect, reset_redirect
+from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.common.dependencies import (
     yaml, yaml_available, yaml_load_args,
@@ -178,7 +179,7 @@ def apply_preprocessing(data, parser=None):
     #
     if not data.options.preprocess is None:
         for config_value in data.options.preprocess:
-            preprocess = import_file(config_value, clear_cache=True)
+            preprocess = import_file(config_value)
     #
     for ep in ExtensionPoint(IPyomoScriptPreprocess):
         ep.apply( options=data.options )
@@ -191,7 +192,7 @@ def apply_preprocessing(data, parser=None):
     #
     filter_excepthook=True
     tick = time.time()
-    data.local.usermodel = import_file(data.options.model.filename, clear_cache=True)
+    data.local.usermodel = import_file(data.options.model.filename)
     data.local.time_initial_import = time.time()-tick
     filter_excepthook=False
 
@@ -353,7 +354,7 @@ def create_model(data):
                                                  profile_memory=data.options.runtime.profile_memory,
                                                  report_timing=data.options.runtime.report_timing)
             elif suffix == "py":
-                userdata = import_file(data.options.data.files[0], clear_cache=True)
+                userdata = import_file(data.options.data.files[0])
                 if "modeldata" in dir(userdata):
                     if len(ep) == 1:
                         msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
@@ -505,6 +506,8 @@ def apply_optimizer(data, instance=None):
     if len(data.options.solvers[0].suffixes) > 0:
         for suffix_name in data.options.solvers[0].suffixes:
             if suffix_name[0] in ['"',"'"]:
+                # !!THIS SEEMS LIKE A BUG!! - mrmundt #
+                # Suffix has not yet been defined.
                 suffix_name = suffix[1:-1]
             # Don't redeclare the suffix if it already exists
             suffix = getattr(instance, suffix_name, None)
@@ -726,7 +729,7 @@ def apply_postprocessing(data, instance=None, results=None):
 
     # options are of type ConfigValue, not raw strings / atomics.
     for config_value in data.options.postprocess:
-        postprocess = import_file(config_value, clear_cache=True)
+        postprocess = import_file(config_value)
         if "pyomo_postprocess" in dir(postprocess):
             postprocess.pyomo_postprocess(data.options, instance,results)
 
