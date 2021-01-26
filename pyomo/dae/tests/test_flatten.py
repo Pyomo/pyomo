@@ -300,7 +300,7 @@ class TestFlatten(TestCategorize):
         else:
             return tuple(sorted(id(_) for _ in ref.values()))
 
-    def _model_1(self):
+    def _model1_1d_sets(self):
         # One-dimensional sets, no skipping.
         m = ConcreteModel()
         m.time = Set(initialize=[1,2,3])
@@ -339,7 +339,7 @@ class TestFlatten(TestCategorize):
         return m
 
     def test_flatten_m1_along_time_space(self):
-        m = self._model_1()
+        m = self._model1_1d_sets()
         
         sets = ComponentSet((m.time, m.space))
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
@@ -411,7 +411,7 @@ class TestFlatten(TestCategorize):
                 raise RuntimeError()
 
     def test_flatten_m1_empty(self):
-        m = self._model_1()
+        m = self._model1_1d_sets()
         
         sets = ComponentSet()
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
@@ -430,7 +430,7 @@ class TestFlatten(TestCategorize):
                 raise RuntimeError()
 
     def test_flatten_m1_along_space(self):
-        m = self._model_1()
+        m = self._model1_1d_sets()
         
         sets = ComponentSet((m.space,))
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
@@ -481,7 +481,7 @@ class TestFlatten(TestCategorize):
                 raise RuntimeError()
 
     def test_flatten_m1_along_time(self):
-        m = self._model_1()
+        m = self._model1_1d_sets()
         
         sets = ComponentSet((m.time,))
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
@@ -531,7 +531,7 @@ class TestFlatten(TestCategorize):
             else:
                 raise RuntimeError()
 
-    def _model_2(self):
+    def _model2_nd_sets(self):
         # A more simple model, but now with some higher-dimension sets
         m = ConcreteModel()
 
@@ -567,7 +567,7 @@ class TestFlatten(TestCategorize):
         # and "flatten along" sets of dimension > 1 when
         # `normalize_index.flatten == False`, they will have
         # some problems. See issue #1800.
-        m = self._model_2()
+        m = self._model2_nd_sets()
 
         sets = ComponentSet((m.d2,))
         # need to set `flatten` to False here to properly access data,
@@ -603,7 +603,7 @@ class TestFlatten(TestCategorize):
         normalize_index.flatten = True
 
     def test_flatten_m2_1d(self):
-        m = self._model_2()
+        m = self._model2_nd_sets()
 
         sets = ComponentSet((m.d1,))
         # need to set `flatten` to False here to properly access data,
@@ -653,7 +653,7 @@ class TestFlatten(TestCategorize):
 
         normalize_index.flatten = True
 
-    def _model_3(self):
+    def _model3_nd_sets_normalizeflatten(self):
         # The same as model 2, but now with `normalize_index.flatten == True`
         m = ConcreteModel()
 
@@ -679,7 +679,7 @@ class TestFlatten(TestCategorize):
         return m
 
     def test_flatten_m3_1d(self):
-        m = self._model_3()
+        m = self._model3_nd_sets_normalizeflatten()
 
         sets = ComponentSet((m.d1,))
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
@@ -726,7 +726,7 @@ class TestFlatten(TestCategorize):
                     self.assertIn(self._hashRef(comp), ref_data)
 
     def test_flatten_m3_2d(self):
-        m = self._model_3()
+        m = self._model3_nd_sets_normalizeflatten()
 
         sets = ComponentSet((m.d2,))
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
@@ -770,7 +770,7 @@ class TestFlatten(TestCategorize):
                 raise RuntimeError()
 
     def test_flatten_m3_nd(self):
-        m = self._model_3()
+        m = self._model3_nd_sets_normalizeflatten()
 
         # Can't create a slice with multiple ellipses in the same index.
         m.del_component(m.v_1n2n)
@@ -820,7 +820,7 @@ class TestFlatten(TestCategorize):
                 raise RuntimeError()
 
     def test_flatten_m3_1_2(self):
-        m = self._model_3()
+        m = self._model3_nd_sets_normalizeflatten()
 
         sets = ComponentSet((m.d1,m.d2))
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
@@ -1098,7 +1098,7 @@ class TestFlatten(TestCategorize):
             else:
                 raise RuntimeError()
 
-    def _model_4(self):
+    def _model4_three_1d_sets(self):
         # A simple model with three sets to slice
         m = ConcreteModel()
 
@@ -1124,8 +1124,8 @@ class TestFlatten(TestCategorize):
 
         return m
 
-    def test_model_4_xyz(self):
-        m = self._model_4()
+    def test_model4_xyz(self):
+        m = self._model4_three_1d_sets()
 
         sets = (m.X, m.Y, m.Z)
         sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
