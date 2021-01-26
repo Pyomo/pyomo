@@ -563,6 +563,10 @@ class TestFlatten(TestCategorize):
         This test has some issues due to incompatibility between
         slicing and `normalize_index.flatten==False`.
         """
+        # TODO: If the user wants to do what this test attempts
+        # and "flatten along" sets of dimension > 1 when
+        # `normalize_index.flatten == False`, they will have
+        # some problems. See issue #1800.
         m = self._model_2()
 
         sets = ComponentSet((m.d2,))
