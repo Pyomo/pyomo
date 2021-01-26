@@ -16,7 +16,7 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
@@ -221,8 +221,8 @@ class BigM_Transformation(Transformation):
         # the tree. Suffixes lower down in the tree override ones higher
         # up.
         if 'default_bigM' in kwds:
-            logger.warn("DEPRECATED: the 'default_bigM=' argument has been "
-                        "replaced by 'bigM='")
+            deprecation_warning("the 'default_bigM=' argument has been "
+                                "replaced by 'bigM='", version='5.4')
             config.bigM = kwds.pop('default_bigM')
 
         config.set_value(kwds)

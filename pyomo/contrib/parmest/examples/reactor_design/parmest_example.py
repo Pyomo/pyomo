@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from itertools import product
 import pyomo.contrib.parmest.parmest as parmest
-from reactor_design import reactor_design_model
+from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor_design_model 
 
 ### Parameter estimation
 
@@ -40,8 +40,8 @@ print(theta)
 bootstrap_theta = pest.theta_est_bootstrap(50)
 print(bootstrap_theta.head())
 
-parmest.pairwise_plot(bootstrap_theta, title='Bootstrap theta estimates')
-parmest.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'], 
+parmest.graphics.pairwise_plot(bootstrap_theta, title='Bootstrap theta estimates')
+parmest.graphics.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'], 
                       title='Bootstrap theta with confidence regions')
 
 ### Likelihood ratio test
@@ -57,5 +57,5 @@ print(obj_at_theta.head())
 LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
 print(LR.head())
 
-parmest.pairwise_plot(LR, theta, 0.8, 
+parmest.graphics.pairwise_plot(LR, theta, 0.8, 
                       title='LR results within 80% confidence region')

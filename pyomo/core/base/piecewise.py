@@ -48,6 +48,7 @@ import enum
 from pyutilib.misc import flatten_tuple
 
 from pyomo.common.log import is_debug_set
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.block import Block, _BlockData
@@ -1065,11 +1066,11 @@ class Piecewise(Block):
         pw_rep = translate_repn.get(pw_rep,pw_rep)
         if (pw_rep == PWRepn.BIGM_BIN) or \
            (pw_rep == PWRepn.BIGM_SOS1):
-            logger.warning(
-                "DEPRECATED: The 'BIGM_BIN' and 'BIGM_SOS1' "
+            deprecation_warning(
+                "The 'BIGM_BIN' and 'BIGM_SOS1' "
                 "piecewise representations will be removed in "
                 "a future version of Pyomo. They produce incorrect "
-                "results in certain cases")
+                "results in certain cases", version='5.3')
         # translate the user input to the enum type
         bound_type = kwds.pop('pw_constr_type',None)
         bound_type = translate_bound.get(bound_type,bound_type)

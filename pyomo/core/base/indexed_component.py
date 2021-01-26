@@ -19,6 +19,7 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
+from pyomo.common.deprecation import deprecation_warning
 
 from six import PY3, itervalues, iteritems, string_types
 
@@ -604,10 +605,10 @@ You can silence this warning by one of three ways:
                         "Indexed components can only be indexed with simple "
                         "slices: start and stop values are not allowed.")
                 if val.step is not None:
-                    logger.warning(
-                        "DEPRECATION WARNING: The special wildcard slice "
-                        "(::0) is deprecated.  Please use an ellipsis (...) "
-                        "to indicate '0 or more' indices")
+                    deprecation_warning(
+                        "The special wildcard slice (::0) is deprecated.  "
+                        "Please use an ellipsis (...) to indicate "
+                        "'0 or more' indices", version='4.4')
                     val = Ellipsis
                 else:
                     if ellipsis is None:

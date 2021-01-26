@@ -33,6 +33,8 @@ else:
 
 from six.moves import xrange
 
+from pyomo.common.deprecation import deprecated
+
 logger = logging.getLogger('pyomo.common.config')
 
 if 'PYOMO_CONFIG_DIR' in os.environ:
@@ -1464,9 +1466,9 @@ class ConfigList(ConfigBase):
         self._data[-1]._userSet = True
         self._userSet = True
 
+    @deprecated("ConfigList.add() has been deprecated.  Use append()",
+                version='5.7.2')
     def add(self, value=ConfigBase.NoArgument):
-        logger.warning(
-            "DEPRECATED: ConfigList.add() has been deprecated.  Use append()")
         return self.append(value)
 
     def _data_collector(self, level, prefix, visibility=None, docMode=False):
