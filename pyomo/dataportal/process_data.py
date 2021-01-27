@@ -13,7 +13,8 @@ import re
 import copy
 import logging
 
-from pyomo.common.collections import  Options
+from pyomo.common.log import is_debug_set
+from pyomo.common.collections import Options, OrderedDict
 from pyomo.common.errors import ApplicationError
 from pyutilib.misc import flatten
 
@@ -22,11 +23,6 @@ from pyomo.dataportal.parse_datacmds import (
 )
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 from pyomo.core.base.set import UnknownSetDimen
-
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
 
 from six.moves import xrange
 try:
@@ -113,7 +109,7 @@ def _preprocess_data(cmd):
     Called by _process_data() to (1) combine tokens that comprise a tuple
     and (2) combine the ':' token with the previous token
     """
-    generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+    generate_debug_messages = is_debug_set(logger)
     if generate_debug_messages:
         logger.debug("_preprocess_data(start) %s",cmd)
     state = 0
@@ -201,7 +197,7 @@ def _process_set(cmd, _model, _data):
     Called by _process_data() to process a set declaration.
     """
     #print("SET %s" % cmd)
-    generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+    generate_debug_messages = is_debug_set(logger)
     if generate_debug_messages:
         logger.debug("DEBUG: _process_set(start) %s",cmd)
     #
@@ -252,7 +248,7 @@ def _process_set_data(cmd, sname, _model):
     """
     Called by _process_set() to process set data.
     """
-    generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+    generate_debug_messages = is_debug_set(logger)
     if generate_debug_messages:
         logger.debug("DEBUG: _process_set_data(start) %s",cmd)
     if len(cmd) == 0:
@@ -299,7 +295,7 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
     Called by _process_data to process data for a Parameter declaration
     """
     #print('PARAM %s index=%s ncolumns=%s' %(cmd, index, ncolumns))
-    generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+    generate_debug_messages = is_debug_set(logger)
     if generate_debug_messages:
         logger.debug("DEBUG: _process_param(start) %s",cmd)
     #
@@ -568,7 +564,7 @@ def _process_data_list(param_name, dim, cmd):
     """\
  Called by _process_param() to process a list of data for a Parameter.
  """
-    generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+    generate_debug_messages = is_debug_set(logger)
     if generate_debug_messages:
         logger.debug("process_data_list %d %s",dim,cmd)
 
@@ -938,7 +934,7 @@ def _process_data(cmd, _model, _data, _default, Filename_, Lineno_=0, index=None
     global Filename
     Lineno=Lineno_
     Filename=Filename_
-    generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
+    generate_debug_messages = is_debug_set(logger)
     if generate_debug_messages:
         logger.debug("DEBUG: _process_data (start) %s",cmd)
     if len(cmd) == 0:                       #pragma:nocover
