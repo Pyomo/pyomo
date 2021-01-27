@@ -43,7 +43,7 @@ if os.environ.get('NEOS_EMAIL') is None:
     email_set = False
 
 
-@unittest.category('nightly')
+@unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 @unittest.skipIf(not email_set, "NEOS_EMAIL not set")
 class TestKestrel(unittest.TestCase):
@@ -104,7 +104,7 @@ class TestKestrel(unittest.TestCase):
         #self.assertEqual(len(missing) == 0)
 
 
-@unittest.category('nightly')
+@unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 class TestSolvers_script_min(unittest.TestCase):
 
@@ -197,7 +197,7 @@ class TestSolvers_script_min(unittest.TestCase):
         self._run('lgo')
 
 
-@unittest.category('nightly')
+@unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 class TestSolvers_script_max(TestSolvers_script_min):
 
@@ -209,7 +209,7 @@ class TestSolvers_script_max(TestSolvers_script_min):
         return m
 
 
-@unittest.category('nightly')
+@unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 class TestSolvers_cmd_min(TestSolvers_script_min):
 
@@ -252,7 +252,7 @@ class TestSolvers_cmd_min(TestSolvers_script_min):
                 os.remove(results)
 
 
-@unittest.category('nightly')
+@unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 class TestSolvers_cmd_max(TestSolvers_cmd_min):
 
