@@ -20,6 +20,7 @@ from pyomo.repn.standard_repn import StandardRepn
 from pyomo.core.base.constraint import (IndexedConstraint,
                                         _ConstraintData)
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.log import is_debug_set
 
 import six
 from six.moves import xrange
@@ -353,7 +354,7 @@ class MatrixConstraint(collections_Mapping,
 
     def construct(self, data=None):
         """Construct the expression(s) for this constraint."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing constraint %s"
                          % (self.name))
         if self._constructed:

@@ -467,6 +467,9 @@ class PyomoCyIpoptSolver(object):
     def available(self, exception_flag=False):
         return numpy_available and ipopt_available
 
+    def license_is_valid(self):
+        return True
+
     def version(self):
         return tuple(int(_) for _ in ipopt.__version__.split('.'))
 
