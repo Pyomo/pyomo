@@ -17,6 +17,7 @@ import logging
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
+from pyomo.common.log import is_debug_set
 from pyomo.common.tempfiles import TempfileManager
 from pyutilib.subprocess import run
 
@@ -226,7 +227,7 @@ class SystemCallSolver(OptSolver):
         #
         # Execute the command
         #
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Running %s", self._command.cmd)
 
         # display the log/solver file names prior to execution. this is useful

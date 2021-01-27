@@ -189,7 +189,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         super(Fourier_Motzkin_Elimination_Transformation, self).__init__()
 
     def _apply_to(self, instance, **kwds):
-        log_level = logger.getEffectiveLevel()
+        log_level = logger.level
         try:
             assert not NAME_BUFFER
             config = self.CONFIG(kwds.pop('options', {}))

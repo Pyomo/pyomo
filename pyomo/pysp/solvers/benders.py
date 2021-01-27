@@ -28,11 +28,7 @@ import logging
 import time
 import itertools
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
-
+from pyomo.common.collections import OrderedDict
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        undefined)

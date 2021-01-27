@@ -13,10 +13,7 @@ __all__ = ()
 
 import time
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
+from pyomo.common.collections import OrderedDict
 
 import pyomo.opt
 from pyomo.opt.parallel.manager import (ActionManagerError,

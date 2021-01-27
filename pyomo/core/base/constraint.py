@@ -18,6 +18,7 @@ import logging
 from weakref import ref as weakref_ref
 
 import pyutilib.math
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (ZeroConstant,
@@ -797,7 +798,7 @@ class Constraint(ActiveIndexedComponent):
         self._constructed=True
 
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing constraint %s"
                          % (self.name))
 
@@ -1076,9 +1077,7 @@ class ConstraintList(IndexedConstraint):
             return
         self._constructed=True
 
-        generate_debug_messages = \
-            __debug__ and logger.isEnabledFor(logging.DEBUG)
-        if generate_debug_messages:
+        if is_debug_set(logger):
             logger.debug("Constructing constraint list %s"
                          % (self.name))
 

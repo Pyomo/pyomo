@@ -28,6 +28,7 @@ from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.common.collections import ComponentMap, Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import (
@@ -1063,7 +1064,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     data = data.get(name, None)
             else:
                 data = None
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            generate_debug_messages = is_debug_set(logger)
+            if generate_debug_messages:
                 # This is tricky: If we are in the middle of
                 # constructing an indexed block, the block component
                 # already has _constructed=True.  Now, if the
@@ -1081,7 +1083,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                         _blockName = "Block '%s[...]'" \
                             % self.parent_component().name
                 logger.debug("Constructing %s '%s' on %s from data=%s",
-                             val.__class__.__name__, val.name,
+                             val.__class__.__name__, name,
                              _blockName, str(data))
             try:
                 val.construct(data)
@@ -1092,11 +1094,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     str(val.name), str(data).strip(),
                     type(err).__name__, err)
                 raise
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            if generate_debug_messages:
                 if _blockName[-1] == "'":
-                    _blockName = _blockName[:-1] + '.' + val.name + "'"
+                    _blockName = _blockName[:-1] + '.' + name + "'"
                 else:
-                    _blockName = "'" + _blockName + '.' + val.name + "'"
+                    _blockName = "'" + _blockName + '.' + name + "'"
                 _out = StringIO()
                 val.pprint(ostream=_out)
                 logger.debug("Constructed component '%s':\n%s"
@@ -1813,7 +1815,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             self.solutions = ModelSolutions(self)
         self.solutions.add_symbol_map(smap)
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug(
                 "Writing model '%s' to file '%s' with format %s",
                 self.name,
@@ -1917,7 +1919,7 @@ class Block(ActiveIndexedComponent):
         """
         Initialize the block
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing %s '%s', from data=%s",
                          self.__class__.__name__, self.name, str(data))
         if self._constructed:

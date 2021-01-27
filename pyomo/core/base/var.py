@@ -13,6 +13,7 @@ __all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
@@ -588,17 +589,16 @@ class Var(IndexedComponent):
 
     def construct(self, data=None):
         """Construct this component."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             try:
                 name = str(self.name)
             except:
                 # Some Var components don't have a name yet, so just use
                 # the type
                 name = type(self)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(
-                    "Constructing Variable, name=%s, from data=%s"
-                    % (name, str(data)))
+            logger.debug(
+                "Constructing Variable, name=%s, from data=%s"
+                % (name, str(data)))
 
         if self._constructed:
             return
@@ -990,7 +990,7 @@ class VarList(IndexedVar):
 
     def construct(self, data=None):
         """Construct this component."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing variable list %s", self.name)
 
         if self._constructed:

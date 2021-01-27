@@ -11,6 +11,7 @@
 import weakref
 import logging
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import Component, ComponentData
 
@@ -88,14 +89,13 @@ class Alias(Component):
     #
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             try:
                 name = str(self.name)
             except:
                 name = type(self)
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug("Constructing Alias, name=%s, "
-                                 "from data=%s", name, str(data))
+            logger.debug("Constructing Alias, name=%s, "
+                         "from data=%s", name, str(data))
         if self._constructed:
             return
         timer = ConstructionTimer(self)

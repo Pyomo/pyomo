@@ -13,6 +13,7 @@ __all__ = ()
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
 from pyomo.core.base.var import (IndexedVar,
                                  _VarData)
@@ -54,7 +55,7 @@ class ComponentDict(collections_MutableMapping):
             self.update(args[0])
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug(   #pragma:nocover
                 "Constructing ComponentDict object, name=%s, from data=%s"
                 % (self.name, str(data)))
