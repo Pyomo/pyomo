@@ -47,6 +47,7 @@ import enum
 
 from pyutilib.misc import flatten_tuple
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -1173,8 +1174,7 @@ class Piecewise(Block):
         """
         A quick hack to call add after data has been loaded.
         """
-        generate_debug_messages \
-            = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages = is_debug_set(logger)
 
         if self._constructed:
             return

@@ -21,6 +21,7 @@ from six.moves import xrange
 
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, PyomoException
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
@@ -1977,7 +1978,7 @@ class Set(IndexedComponent):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
                 logger.debug("Constructing Set, name=%s, from data=%r"
                              % (self.name, data))
         self._constructed = True
@@ -2293,7 +2294,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
                 logger.debug("Constructing SetOf, name=%s, from data=%r"
                              % (self.name, data))
         self._constructed = True
@@ -2706,7 +2707,7 @@ class RangeSet(Component):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
                 logger.debug("Constructing RangeSet, name=%s, from data=%r"
                              % (self.name, data))
         if data is not None:
@@ -2959,7 +2960,7 @@ class SetOperator(_SetData, Set):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
                 logger.debug("Constructing SetOperator, name=%s, from data=%r"
                              % (self.name, data))
         for s in self._sets:

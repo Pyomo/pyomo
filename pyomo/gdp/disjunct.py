@@ -16,6 +16,7 @@ from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
 from pyomo.common.errors import PyomoException
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
@@ -357,7 +358,7 @@ class Disjunction(ActiveIndexedComponent):
                 self._data[key].xor = bool(value(val[key]))
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing disjunction %s"
                          % (self.name))
         if self._constructed:

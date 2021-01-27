@@ -14,6 +14,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated
 from pyomo.common.timing import ConstructionTimer
 
@@ -360,7 +361,7 @@ class Expression(IndexedComponent):
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug(
                 "Constructing Expression, name=%s, from data=%s"
                 % (self.name, str(data)))
