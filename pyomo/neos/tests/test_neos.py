@@ -189,8 +189,9 @@ class TestSolvers_script_min(unittest.TestCase):
     def test_snopt(self):
         self._run('snopt')
 
-    def test_raposa(self):
-        self._run('raposa')
+    # This test only handles minimization problems
+    #def test_raposa(self):
+    #    self._run('raposa')
 
     def test_lgo(self):
         self._run('lgo')
