@@ -18,9 +18,7 @@
 
 import os
 import json
-from os.path import abspath, dirname
 import os.path
-currdir = dirname(abspath(__file__))
 
 import pyutilib.th as unittest
 
@@ -30,6 +28,9 @@ from pyomo.neos.kestrel import kestrelAMPL
 import pyomo.neos
 
 import pyomo.environ as pyo
+
+from pyomo.common.fileutils import this_file_dir
+currdir = this_file_dir()
 
 neos_available = False
 try:
@@ -43,9 +44,9 @@ if os.environ.get('NEOS_EMAIL') is None:
     email_set = False
 
 
-@unittest.category('neos')
+@unittest.category('nightly', 'neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
-@unittest.skipIf(not email_set, "NEOS_EMAIL not set")
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 class TestKestrel(unittest.TestCase):
 
     def test_pyomo_command(self):
@@ -100,29 +101,10 @@ class TestKestrel(unittest.TestCase):
 
         #gamssolvers = set(v[0].lower() for v in tmp if v[1]=='GAMS')
         #missing = gamssolvers - amplsolvers
-        #print("HERE", missing)
         #self.assertEqual(len(missing) == 0)
 
 
-@unittest.category('neos')
-@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
-class TestSolvers_script_min(unittest.TestCase):
-
-    def _model(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(0,1), initialize=0)
-        m.c = pyo.Constraint(expr=m.x <= 0.5)
-        m.obj = pyo.Objective(expr=-2*m.x, sense=pyo.minimize)
-        return m
-
-    def _run(self, opt):
-        m = self._model()
-        solver_manager = pyo.SolverManagerFactory('neos')
-        results = solver_manager.solve(m, opt=opt)
-
-        self.assertEqual(results.solver[0].status, pyo.SolverStatus.ok)
-        self.assertAlmostEqual(pyo.value(m.x), 0.5)
-
+class RunAllNEOSSolvers(object):
     def test_bonmin(self):
         self._run('bonmin')
 
@@ -197,29 +179,38 @@ class TestSolvers_script_min(unittest.TestCase):
         self._run('lgo')
 
 
-@unittest.category('neos')
-@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
-class TestSolvers_script_max(TestSolvers_script_min):
-
+class DirectDriver(object):
     def _model(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(0,1), initialize=0)
-        m.c = pyo.Constraint(expr=m.x <= 0.5)
-        m.obj = pyo.Objective(expr=2*m.x, sense=pyo.maximize)
+        if self.sense == pyo.minimize:
+            m.c = pyo.Constraint(expr=m.x >= 0.5)
+        else:
+            m.c = pyo.Constraint(expr=m.x <= 0.5)
+        m.obj = pyo.Objective(expr=2*m.x, sense=self.sense)
         return m
 
+    def _run(self, opt):
+        m = self._model()
+        solver_manager = pyo.SolverManagerFactory('neos')
+        results = solver_manager.solve(m, opt=opt)
 
-@unittest.category('neos')
-@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
-class TestSolvers_cmd_min(TestSolvers_script_min):
+        self.assertEqual(results.solver[0].status, pyo.SolverStatus.ok)
+        self.assertAlmostEqual(pyo.value(m.x), 0.5)
 
-    filename = 't2.py'
-    objective = -1
+class PyomoCommandDriver(object):
 
     def _run(self, opt):
+        if self.sense == pyo.minimize:
+            filename = 't2.py'
+            objective = -1
+        else:
+            filename = 't1.py'
+            objective = 1
+
         results = os.path.join(currdir, 'result.json')
         args = [
-            os.path.join(currdir,self.filename),
+            os.path.join(currdir, filename),
             '--solver-manager=neos',
             '--solver=%s' % opt,
             '--logging=quiet',
@@ -232,7 +223,6 @@ class TestSolvers_cmd_min(TestSolvers_script_min):
 
             with open(results) as FILE:
                 data = json.load(FILE)
-            #print(json.dumps(data, indent=4))
 
             self.assertEqual(
                 data['Solver'][0]['Status'], 'ok')
@@ -245,7 +235,8 @@ class TestSolvers_cmd_min(TestSolvers_script_min):
                 self.fail("Expected nonzero solution variables")
             if 'o' in data['Solution'][1]['Objective']:
                 self.assertAlmostEqual(
-                    data['Solution'][1]['Objective']['o']['Value'], self.objective)
+                    data['Solution'][1]['Objective']['o']['Value'],
+                    objective)
         finally:
             cleanup()
             if os.path.exists(results):
@@ -253,11 +244,25 @@ class TestSolvers_cmd_min(TestSolvers_script_min):
 
 
 @unittest.category('neos')
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
-class TestSolvers_cmd_max(TestSolvers_cmd_min):
+class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver,
+                                  unittest.TestCase):
+    sense = pyo.minimize
 
-    filename = 't1.py'
-    objective = 1
+@unittest.category('neos')
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
+@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+class TestSolvers_direct_call_max(RunAllNEOSSolvers, DirectDriver,
+                                  unittest.TestCase):
+    sense = pyo.maximize
+
+@unittest.category('neos')
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
+@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+class TestSolvers_pyomo_cmd_min(RunAllNEOSSolvers, PyomoCommandDriver,
+                                unittest.TestCase):
+    sense = pyo.minimize
 
 
 if __name__ == "__main__":
