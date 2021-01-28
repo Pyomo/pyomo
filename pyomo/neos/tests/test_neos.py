@@ -44,50 +44,29 @@ if os.environ.get('NEOS_EMAIL') is None:
     email_set = False
 
 
+def _model(sense):
+    # Goals of this model:
+    # - linear
+    # - solution has nonzero variable values (so they appear in the results)
+    model = pyo.ConcreteModel()
+    model.y = pyo.Var(bounds=(-10,10), initialize=0.5)
+    model.x = pyo.Var(bounds=(-5,5), initialize=0.5)
+
+    @model.ConstraintList()
+    def c(m):
+        yield m.y >= m.x - 2
+        yield m.y >= - m.x
+        yield m.y <= m.x
+        yield m.y <= 2 - m.x
+
+    model.obj = pyo.Objective(expr=model.y, sense=sense)
+    return model
+
+
 @unittest.category('nightly', 'neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 @unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 class TestKestrel(unittest.TestCase):
-
-    def test_pyomo_command(self):
-        results = os.path.join(currdir, 'result.json')
-        args = [
-            os.path.join(currdir,'t1.py'),
-            '--solver-manager=neos',
-            '--solver=cbc',
-            '--symbolic-solver-labels',
-            '--save-results=%s' % results,
-            '-c',
-            ]
-        try:
-            output = main.run(args)
-            self.assertEqual(output.errorcode, 0)
-
-            with open(results) as FILE:
-                data = json.load(FILE)
-            self.assertEqual(
-                data['Solver'][0]['Status'], 'ok')
-            self.assertAlmostEqual(
-                data['Solution'][1]['Status'], 'optimal')
-            self.assertAlmostEqual(
-                data['Solution'][1]['Objective']['o']['Value'], 1)
-            self.assertAlmostEqual(
-                data['Solution'][1]['Variable']['x']['Value'], 0.5)
-        finally:
-            cleanup()
-            os.remove(results)
-
-    def test_kestrel_plugin(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(0,1), initialize=0)
-        m.c = pyo.Constraint(expr=m.x <= 0.5)
-        m.obj = pyo.Objective(expr=2*m.x, sense=pyo.maximize)
-
-        solver_manager = pyo.SolverManagerFactory('neos')
-        results = solver_manager.solve(m, opt='cbc')
-
-        self.assertEqual(results.solver[0].status, pyo.SolverStatus.ok)
-        self.assertAlmostEqual(pyo.value(m.x), 0.5)
 
     def test_doc(self):
         kestrel = kestrelAMPL()
@@ -132,11 +111,9 @@ class RunAllNEOSSolvers(object):
     def test_knitro(self):
         self._run('knitro')
 
-    # This solver does not return
-    # a solution when all variables are
-    # projected to be at their bounds.
-    #def test_lbfgsb(self):
-    #    self._run('l-bfgs-b')
+    # This solver only handles bound constrained variables
+    def test_lbfgsb(self):
+        self._run('l-bfgs-b', False)
 
     def test_lancelot(self):
         self._run('lancelot')
@@ -150,18 +127,21 @@ class RunAllNEOSSolvers(object):
     def test_minos(self):
         self._run('minos')
 
-    # This solver doesn't generate a solution file
-    # when the presolver finds the solution
-    #def test_minto(self):
-    #    self._run('minto')
+    def test_minto(self):
+        self._run('minto')
 
     def test_mosek(self):
         self._run('mosek')
 
-    # This solver doesn't give the same answer for
-    # min f(x) and max -f(x)
-    #def test_ooqp(self):
-    #    self._run('ooqp')
+    def test_ooqp(self):
+        if self.sense == pyo.maximize:
+            # OOQP does not recognize maximization problems and
+            # minimizes instead.
+            with self.assertRaisesRegex(
+                    AssertionError, '.* != 1 within'):
+                self._run('ooqp')
+        else:
+            self._run('ooqp')
 
     # The simple tests aren't complementarity 
     # problems
@@ -171,42 +151,52 @@ class RunAllNEOSSolvers(object):
     def test_snopt(self):
         self._run('snopt')
 
-    # This test only handles minimization problems
-    #def test_raposa(self):
-    #    self._run('raposa')
+    def test_raposa(self):
+        if self.sense == pyo.maximize:
+            # RAPOSa does not recognize maximization problems and
+            # returns infeasible.
+            with self.assertRaisesRegex(
+                    AssertionError, '.*SolverStatus.warning'):
+                self._run('raposa')
+        else:
+            self._run('raposa')
 
     def test_lgo(self):
         self._run('lgo')
 
 
 class DirectDriver(object):
-    def _model(self):
-        m = pyo.ConcreteModel()
-        m.x = pyo.Var(bounds=(0,1), initialize=0)
-        if self.sense == pyo.minimize:
-            m.c = pyo.Constraint(expr=m.x >= 0.5)
-        else:
-            m.c = pyo.Constraint(expr=m.x <= 0.5)
-        m.obj = pyo.Objective(expr=2*m.x, sense=self.sense)
-        return m
-
-    def _run(self, opt):
-        m = self._model()
+    def _run(self, opt, constrained=True):
+        m = _model(self.sense)
         solver_manager = pyo.SolverManagerFactory('neos')
         results = solver_manager.solve(m, opt=opt)
 
+        expected_y = {
+            (pyo.minimize, True): -1,
+            (pyo.maximize, True):  1,
+            (pyo.minimize, False): -10,
+            (pyo.maximize, False): 10,
+        }[self.sense, constrained]
+
         self.assertEqual(results.solver[0].status, pyo.SolverStatus.ok)
-        self.assertAlmostEqual(pyo.value(m.x), 0.5)
+        if constrained:
+            # If the solver ignores constraints, x is degenerate
+            self.assertAlmostEqual(pyo.value(m.x), 1)
+        self.assertAlmostEqual(pyo.value(m.obj), expected_y)
+        self.assertAlmostEqual(pyo.value(m.y), expected_y)
 
 class PyomoCommandDriver(object):
 
-    def _run(self, opt):
-        if self.sense == pyo.minimize:
-            filename = 't2.py'
-            objective = -1
-        else:
-            filename = 't1.py'
-            objective = 1
+    def _run(self, opt, constrained=True):
+        expected_y = {
+            (pyo.minimize, True): -1,
+            (pyo.maximize, True):  1,
+            (pyo.minimize, False): -10,
+            (pyo.maximize, False): 10,
+        }[self.sense, constrained]
+
+        filename = 'model_min_lp.py' if self.sense == pyo.minimize \
+                   else 'model_max_lp.py'
 
         results = os.path.join(currdir, 'result.json')
         args = [
@@ -223,24 +213,23 @@ class PyomoCommandDriver(object):
 
             with open(results) as FILE:
                 data = json.load(FILE)
-
-            self.assertEqual(
-                data['Solver'][0]['Status'], 'ok')
-            self.assertAlmostEqual(
-                data['Solution'][1]['Status'], 'optimal')
-            if 'x' in data['Solution'][1]['Variable']:
-                self.assertAlmostEqual(
-                    data['Solution'][1]['Variable']['x']['Value'], 0.5)
-            else:
-                self.fail("Expected nonzero solution variables")
-            if 'o' in data['Solution'][1]['Objective']:
-                self.assertAlmostEqual(
-                    data['Solution'][1]['Objective']['o']['Value'],
-                    objective)
         finally:
             cleanup()
             if os.path.exists(results):
                 os.remove(results)
+
+        self.assertEqual(
+            data['Solver'][0]['Status'], 'ok')
+        self.assertAlmostEqual(
+            data['Solution'][1]['Status'], 'optimal')
+        self.assertAlmostEqual(
+            data['Solution'][1]['Objective']['obj']['Value'], expected_y)
+        if constrained:
+            # If the solver ignores constraints, x is degenerate
+            self.assertAlmostEqual(
+                data['Solution'][1]['Variable']['x']['Value'], 1)
+        self.assertAlmostEqual(
+            data['Solution'][1]['Variable']['y']['Value'], expected_y)
 
 
 @unittest.category('neos')
@@ -249,6 +238,11 @@ class PyomoCommandDriver(object):
 class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver,
                                   unittest.TestCase):
     sense = pyo.minimize
+
+    # Add the CBC test to the nightly suite
+    @unittest.category('nightly')
+    def test_cbc(self):
+        super(TestSolvers_direct_call_min, self).test_cbc()
 
 @unittest.category('neos')
 @unittest.skipUnless(email_set, "NEOS_EMAIL not set")
@@ -264,6 +258,10 @@ class TestSolvers_pyomo_cmd_min(RunAllNEOSSolvers, PyomoCommandDriver,
                                 unittest.TestCase):
     sense = pyo.minimize
 
+    # Add the CBC test to the nightly suite
+    @unittest.category('nightly')
+    def test_cbc(self):
+        super(TestSolvers_pyomo_cmd_min, self).test_cbc()
 
 if __name__ == "__main__":
     unittest.main()
