@@ -1780,14 +1780,21 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # user did something like 'model.write("f.nl")' and
             # expected guess_format to create an NL file.
             format = ProblemFormat.cpxlp
-        if (filename is not None) and (format is None):
-            format = guess_format(filename)
+        if filename is not None:
+            _format = guess_format(filename)
             if format is None:
-                raise ValueError(
-                    "Could not infer file format from file name '%s'.\n"
-                    "Either provide a name with a recognized extension "
-                    "or specify the format using the 'format' argument."
-                    % filename)
+                if _format is None:
+                    raise ValueError(
+                        "Could not infer file format from file name '%s'.\n"
+                        "Either provide a name with a recognized extension "
+                        "or specify the format using the 'format' argument."
+                        % filename)
+                else:
+                    format = _format
+            elif format != _format and _format is not None:
+                logger.warning(
+                    "Filename '%s' likely does not match specified "
+                    "file format (%s)" % (filename, format))
         problem_writer = WriterFactory(format)
         if problem_writer is None:
             raise ValueError(
