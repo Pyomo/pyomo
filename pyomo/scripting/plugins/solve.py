@@ -212,7 +212,6 @@ def solve_exec(args, unparsed):
         raise RuntimeError("Failed to create config object")
     config.solvers[0].solver_name = solver
     config.solvers[0].manager = solver_manager
-    #config.display()
 
     from pyomo.scripting.pyomo_command import run_pyomo
     #
