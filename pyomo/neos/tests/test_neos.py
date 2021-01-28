@@ -205,6 +205,7 @@ class PyomoCommandDriver(object):
             '--solver=%s' % opt,
             '--logging=quiet',
             '--save-results=%s' % results,
+            '--results-format=json',
             '-c'
             ]
         try:
