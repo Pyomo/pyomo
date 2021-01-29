@@ -465,26 +465,11 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         on the units of its child arguments. This map is used in exitNode.
         """
         super(PintUnitExtractionVisitor, self).__init__()
-        self._pint_registry = pyomo_units_container._pint_registry
         self._pyomo_units_container = pyomo_units_container
         self._pint_dimensionless = pyomo_units_container._pint_dimensionless
-
-    def _equivalent_pint_units(self, a, b, TOL=1e-12):
-        if a is b or a == b:
-            return True
-        base_a = self._pint_registry.get_base_units(a)
-        base_b = self._pint_registry.get_base_units(b)
-        if base_a[1] != base_b[1]:
-            return False
-        return abs(base_a[0] - base_b[0]) / min(base_a[0], base_b[0]) <= TOL
-
-    def _equivalent_to_dimensionless(self, a, TOL=1e-12):
-        if a is self._pint_dimensionless or a == self._pint_dimensionless:
-            return True
-        base_a = self._pint_registry.get_base_units(a)
-        if not base_a[1].dimensionless:
-            return False
-        return abs(base_a[0] - 1.) / min(base_a[0], 1.) <= TOL
+        self._pint_radian = pyomo_units_container._pint_registry.radian
+        self._equivalent_pint_units = pyomo_units_container._equivalent_pint_units
+        self._equivalent_to_dimensionless = pyomo_units_container._equivalent_to_dimensionless
 
     def _get_unit_for_equivalent_children(self, node, child_units):
         """
@@ -866,8 +851,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
         if self._equivalent_to_dimensionless(child_units[0]):
             return self._pint_dimensionless
-        if self._equivalent_pint_units(
-                child_units[0], self._pint_registry.radian):
+        if self._equivalent_pint_units(child_units[0], self._pint_radian):
             return self._pint_dimensionless
 
         # units are not None, dimensionless, or radians
@@ -896,7 +880,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         assert len(child_units) == 1
 
         if self._equivalent_to_dimensionless(child_units[0]):
-            return self._pint_registry.radians
+            return self._pint_radian
 
         raise UnitsError(
             'Expected dimensionless argument to function in expression {},'
@@ -1199,6 +1183,22 @@ external
     #                                                                  float(conv_offset))
     #     self._pint_registry.define(defn_str)
 
+    def _equivalent_pint_units(self, a, b, TOL=1e-12):
+        if a is b or a == b:
+            return True
+        base_a = self._pint_registry.get_base_units(a)
+        base_b = self._pint_registry.get_base_units(b)
+        if base_a[1] != base_b[1]:
+            return False
+        return abs(base_a[0] - base_b[0]) / min(base_a[0], base_b[0]) <= TOL
+
+    def _equivalent_to_dimensionless(self, a, TOL=1e-12):
+        if a is self._pint_dimensionless or a == self._pint_dimensionless:
+            return True
+        base_a = self._pint_registry.get_base_units(a)
+        if not base_a[1].dimensionless:
+            return False
+        return abs(base_a[0] - 1.) / min(base_a[0], 1.) <= TOL
 
     def _get_pint_units(self, expr):
         """
