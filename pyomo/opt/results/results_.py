@@ -103,7 +103,7 @@ class SolverResults(MapContainer):
                 self.write(**kwds)
         else:
             if not _fmt:
-                _fmt = 'yaml' if yaml_available else 'json'
+                _fmt = 'yaml'
             if _fmt == 'yaml':
                 self.write_yaml(**kwds)
             elif _fmt == 'json':
