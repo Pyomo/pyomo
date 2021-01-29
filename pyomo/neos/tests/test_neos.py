@@ -181,9 +181,9 @@ class DirectDriver(object):
         self.assertEqual(results.solver[0].status, pyo.SolverStatus.ok)
         if constrained:
             # If the solver ignores constraints, x is degenerate
-            self.assertAlmostEqual(pyo.value(m.x), 1)
-        self.assertAlmostEqual(pyo.value(m.obj), expected_y)
-        self.assertAlmostEqual(pyo.value(m.y), expected_y)
+            self.assertAlmostEqual(pyo.value(m.x), 1, delta=1e-5)
+        self.assertAlmostEqual(pyo.value(m.obj), expected_y, delta=1e-5)
+        self.assertAlmostEqual(pyo.value(m.y), expected_y, delta=1e-5)
 
 class PyomoCommandDriver(object):
 
@@ -221,16 +221,19 @@ class PyomoCommandDriver(object):
 
         self.assertEqual(
             data['Solver'][0]['Status'], 'ok')
-        self.assertAlmostEqual(
+        self.assertEqual(
             data['Solution'][1]['Status'], 'optimal')
         self.assertAlmostEqual(
-            data['Solution'][1]['Objective']['obj']['Value'], expected_y)
+            data['Solution'][1]['Objective']['obj']['Value'],
+            expected_y, delta=1e-5)
         if constrained:
             # If the solver ignores constraints, x is degenerate
             self.assertAlmostEqual(
-                data['Solution'][1]['Variable']['x']['Value'], 1)
+                data['Solution'][1]['Variable']['x']['Value'],
+                1, delta=1e-5)
         self.assertAlmostEqual(
-            data['Solution'][1]['Variable']['y']['Value'], expected_y)
+            data['Solution'][1]['Variable']['y']['Value'],
+            expected_y, delta=1e-5)
 
 
 @unittest.category('neos')
