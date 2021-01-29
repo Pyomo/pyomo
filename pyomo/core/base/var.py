@@ -23,6 +23,7 @@ from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, _SetDataBase
+from pyomo.core.base.units_container import units
 from pyomo.core.base.util import is_functor
 
 from six import iteritems, itervalues
@@ -517,7 +518,9 @@ class Var(IndexedComponent):
         bounds = kwd.pop('bounds', None)
         self._dense = kwd.pop('dense', True)
         self._units = kwd.pop('units', None)
-        
+        if self._units is not None:
+            self._units = units.get_units(self._units)
+
         #
         # Initialize the base class
         #
