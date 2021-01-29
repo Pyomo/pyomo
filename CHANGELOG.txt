@@ -22,11 +22,12 @@ ADVANCE CHANGE NOTICE:
   - Convert old deprecation messages to use pyomo.common.deprecation (#1798)
   - Update and standardize Pyomo logging configuration (#1797)
   - Add writer consistency checks between filenames and formats (#1804)
+  - Initialize self.tempdir in TempfileManagerClass (#1806)
 - Core
   - Improve units documentation (#1769)
   - Add is_reference API (#1740)
   - Add option to not rename components in the scaling transformation (#1596)
-  - Improve units processing performance (#1794)
+  - Improve units processing performance (#1794, #1805)
 - Documentation
   - Move the doc/attic directory to an internal archived repository (#1773)
 - Solver Interfaces
@@ -35,6 +36,7 @@ ADVANCE CHANGE NOTICE:
   - Add mipgap capture to CPLEX direct interface (#1775)
   - Update solver license_is_valid checks (#1789)
   - Update CPLEX solution parser for CPLEX 12.10 (#1792)
+  - Resolve issues with the NEOS interface (#1802)
 - DAE Updates
   - Extend flattener to allow multiple sets (#1768)
 - GDP Updates
