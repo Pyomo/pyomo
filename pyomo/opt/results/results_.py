@@ -90,10 +90,10 @@ class SolverResults(MapContainer):
                 'jsn': 'json',
                 'yaml': 'yaml',
                 'yml': 'yaml',
-            }.get(ext, ext)
+            }.get(ext, None)
             if not _fmt:
                 _fmt = normalized_ext
-            elif normalized_ext:
+            elif normalized_ext and _fmt != normalized_ext:
                 logger.warning(
                     "writing results to file (%s) using what appears "
                     "to be an incompatible format (%s)" % (fname, _fmt))

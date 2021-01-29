@@ -1781,7 +1781,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # expected guess_format to create an NL file.
             format = ProblemFormat.cpxlp
         if filename is not None:
-            _format = guess_format(filename)
+            try:
+                _format = guess_format(filename)
+            except AttributeError:
+                # End up here if an ostream is passed to the filename argument
+                _format = None
             if format is None:
                 if _format is None:
                     raise ValueError(
