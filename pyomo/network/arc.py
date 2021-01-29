@@ -16,6 +16,7 @@ from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from six import iteritems
 from weakref import ref as weakref_ref
@@ -290,7 +291,7 @@ class Arc(ActiveIndexedComponent):
 
     def construct(self, data=None):
         """Initialize the Arc"""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing Arc %s" % self.name)
 
         if self._constructed:

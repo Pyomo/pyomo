@@ -12,12 +12,12 @@ import pyutilib.th as unittest
 import pyomo.environ as pyo
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
 from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.log import LoggingIntercept
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import (ProductExpression,
                                           UnaryFunctionExpression)
 import math
-import logging
-import io
+from six import StringIO
 
 
 class DummyExpr(ProductExpression):
@@ -727,7 +727,6 @@ class TestFBBT(unittest.TestCase):
         self.assertEqual(lb, None)
         self.assertEqual(ub, None)
 
-    @unittest.skip('This test passes locally, but not on travis or appveyor. I will add an issue.')
     def test_skip_unknown_expression1(self):
 
         m = pyo.ConcreteModel()
@@ -735,25 +734,17 @@ class TestFBBT(unittest.TestCase):
         m.y = pyo.Var()
         expr = DummyExpr([m.x, m.y])
         m.c = pyo.Constraint(expr=expr == 1)
-        logging_io = io.StringIO()
-        handler = logging.StreamHandler(stream=logging_io)
-        handler.setLevel(logging.WARNING)
-        logger = logging.getLogger('pyomo.contrib.fbbt.fbbt')
-        logger.addHandler(handler)
-        new_bounds = fbbt(m)
-        handler.flush()
+
+        OUT = StringIO()
+        with LoggingIntercept(OUT, 'pyomo.contrib.fbbt.fbbt'):
+            new_bounds = fbbt(m)
+
         self.assertEqual(pyo.value(m.x.lb), 1)
         self.assertEqual(pyo.value(m.x.ub), 1)
         self.assertEqual(pyo.value(m.y.lb), None)
         self.assertEqual(pyo.value(m.y.ub), None)
-        a = "Unsupported expression type for FBBT"
-        b = logging_io.getvalue()
-        a = a.strip()
-        b = b.strip()
-        self.assertTrue(b.startswith(a))
-        logger.removeHandler(handler)
+        self.assertIn("Unsupported expression type for FBBT", OUT.getvalue())
 
-    @unittest.skip('This test passes locally, but not on travis or appveyor. I will add an issue.')
     def test_skip_unknown_expression2(self):
         def dummy_unary_expr(x):
             return 0.5*x
@@ -762,21 +753,14 @@ class TestFBBT(unittest.TestCase):
         m.x = pyo.Var(bounds=(0,4))
         expr = UnaryFunctionExpression((m.x,), name='dummy_unary_expr', fcn=dummy_unary_expr)
         m.c = pyo.Constraint(expr=expr == 1)
-        logging_io = io.StringIO()
-        handler = logging.StreamHandler(stream=logging_io)
-        handler.setLevel(logging.WARNING)
-        logger = logging.getLogger('pyomo.contrib.fbbt.fbbt')
-        logger.addHandler(handler)
-        new_bounds = fbbt(m)
-        handler.flush()
+
+        OUT = StringIO()
+        with LoggingIntercept(OUT, 'pyomo.contrib.fbbt.fbbt'):
+            new_bounds = fbbt(m)
+
         self.assertEqual(pyo.value(m.x.lb), 0)
         self.assertEqual(pyo.value(m.x.ub), 4)
-        a = "Unsupported expression type for FBBT"
-        b = logging_io.getvalue()
-        a = a.strip()
-        b = b.strip()
-        self.assertTrue(b.startswith(a))
-        logger.removeHandler(handler)
+        self.assertIn("Unsupported expression type for FBBT", OUT.getvalue())
 
     def test_compute_expr_bounds(self):
         m = pyo.ConcreteModel()

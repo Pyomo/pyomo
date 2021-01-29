@@ -12,7 +12,7 @@ import json
 import sys
 import argparse
 
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, UnknownSolver
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
 
@@ -29,6 +29,10 @@ def create_parser(parser=None):
         action='store',
         dest='solver',
         default=None)
+    parser.add_argument('--solver-manager',
+        action='store',
+        dest='solver_manager',
+        default='serial')
     parser.add_argument('--generate-config-template',
         action='store',
         dest='template',
@@ -126,9 +130,12 @@ more configuration options than are available with command-line options.
 
 
 def solve_exec(args, unparsed):
+
     import pyomo.scripting.util
     #
+    solver_manager = getattr(args,'solver_manager',None)
     solver = getattr(args,'solver',None)
+    #
     if solver is None:
         #
         # Get configuration values if no solver has been specified
@@ -159,8 +166,9 @@ def solve_exec(args, unparsed):
             sys.exit(1)
 
     config = None
-    with SolverFactory(solver) as opt:
-        if opt is None:
+    _solver = solver if solver_manager == 'serial' else 'asl'
+    with SolverFactory(_solver) as opt:
+        if opt is None or isinstance(opt, UnknownSolver):
             print("ERROR: Unknown solver '%s'!" % solver)
             sys.exit(1)
         #
@@ -202,6 +210,8 @@ def solve_exec(args, unparsed):
 
     if config is None:
         raise RuntimeError("Failed to create config object")
+    config.solvers[0].solver_name = solver
+    config.solvers[0].manager = solver_manager
 
     from pyomo.scripting.pyomo_command import run_pyomo
     #

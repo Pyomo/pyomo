@@ -14,6 +14,7 @@ logger = logging.getLogger('pyomo.core')
 from six import next, iteritems, itervalues
 
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.log import is_debug_set
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Connector, Constraint, \
     ConstraintList, Var, SortComponents
@@ -25,7 +26,7 @@ from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 class ExpandConnectors(Transformation):
 
     def _apply_to(self, instance, **kwds):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             logger.debug("Calling ConnectorExpander")
 
         connectorsFound = False
@@ -35,7 +36,7 @@ class ExpandConnectors(Transformation):
         if not connectorsFound:
             return
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             logger.debug("   Connectors found!")
 
         self._name_buffer = {}

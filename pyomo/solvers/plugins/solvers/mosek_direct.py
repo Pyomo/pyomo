@@ -123,8 +123,7 @@ class MOSEKDirect(DirectSolver):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
-    @staticmethod
-    def license_is_valid():
+    def license_is_valid(self):
         """
         Runs a check for a valid MOSEK license. Returns False if MOSEK fails
         to run on a trivial test case.

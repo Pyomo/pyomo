@@ -98,6 +98,23 @@ class PyomoNLP(AslNLP):
             # keep pyomo model in cache
             self._pyomo_model = pyomo_model
 
+            # Create ComponentMap corresponding to equality constraint indices
+            # This must be done after the call to super-init.
+            full_to_equality = self._con_full_eq_map
+            equality_mask = self._con_full_eq_mask
+            self._condata_to_eq_idx = ComponentMap(
+                    (con, full_to_equality[i])
+                    for con, i in six.iteritems(self._condata_to_idx)
+                    if equality_mask[i]
+                    )
+            full_to_inequality = self._con_full_ineq_map
+            inequality_mask = self._con_full_ineq_mask
+            self._condata_to_ineq_idx = ComponentMap(
+                    (con, full_to_inequality[i])
+                    for con, i in six.iteritems(self._condata_to_idx)
+                    if inequality_mask[i]
+                    )
+
         finally:
             # delete the nl file
             TempfileManager.pop()
@@ -134,6 +151,24 @@ class PyomoNLP(AslNLP):
         idx_to_condata = {i:v for v,i in six.iteritems(self._condata_to_idx)}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
+    def get_pyomo_equality_constraints(self):
+        """
+        Return an ordered list of the Pyomo ConData objects in
+        the order corresponding to the equality constraints.
+        """
+        idx_to_condata = {i: c for c, i in
+                six.iteritems(self._condata_to_eq_idx)}
+        return [idx_to_condata[i] for i in range(len(idx_to_condata))]
+
+    def get_pyomo_inequality_constraints(self):
+        """
+        Return an ordered list of the Pyomo ConData objects in
+        the order corresponding to the inequality constraints.
+        """
+        idx_to_condata = {i: c for c, i in
+                six.iteritems(self._condata_to_ineq_idx)}
+        return [idx_to_condata[i] for i in range(len(idx_to_condata))]
+
     def variable_names(self):
         """
         Return an ordered list of the Pyomo variable
@@ -149,6 +184,22 @@ class PyomoNLP(AslNLP):
         """
         pyomo_constraints = self.get_pyomo_constraints()
         return [v.getname(fully_qualified=True) for v in pyomo_constraints]
+
+    def equality_constraint_names(self):
+        """
+        Return an ordered list of the Pyomo ConData names in
+        the order corresponding to the equality constraints.
+        """
+        equality_constraints = self.get_pyomo_equality_constraints()
+        return [v.getname(fully_qualified=True) for v in equality_constraints]
+
+    def inequality_constraint_names(self):
+        """
+        Return an ordered list of the Pyomo ConData names in
+        the order corresponding to the inequality constraints.
+        """
+        inequality_constraints = self.get_pyomo_inequality_constraints()
+        return [v.getname(fully_qualified=True) for v in inequality_constraints]
 
     def get_primal_indices(self, pyomo_variables):
         """
@@ -191,6 +242,46 @@ class PyomoNLP(AslNLP):
                 con_id = self._condata_to_idx[c]
                 con_indices.append(con_id)
         return con_indices
+
+    def get_equality_constraint_indices(self, constraints):
+        """
+        Return the list of equality indices for the constraints
+        corresponding to the list of Pyomo constraints provided.
+
+        Parameters
+        ----------
+        constraints : list of Pyomo Constraints or ConstraintData objects
+        """
+        indices = []
+        for c in constraints:
+            if c.is_indexed():
+                for cd in c.values():
+                    con_eq_idx = self._condata_to_eq_idx[cd]
+                    indices.append(con_eq_idx)
+            else:
+                con_eq_idx = self._condata_to_eq_idx[c]
+                indices.append(con_eq_idx)
+        return indices
+
+    def get_inequality_constraint_indices(self, constraints):
+        """
+        Return the list of inequality indices for the constraints
+        corresponding to the list of Pyomo constraints provided.
+
+        Parameters
+        ----------
+        constraints : list of Pyomo Constraints or ConstraintData objects
+        """
+        indices = []
+        for c in constraints:
+            if c.is_indexed():
+                for cd in c.values():
+                    con_ineq_idx = self._condata_to_ineq_idx[cd]
+                    indices.append(con_ineq_idx)
+            else:
+                con_ineq_idx = self._condata_to_ineq_idx[c]
+                indices.append(con_ineq_idx)
+        return indices
 
     # overloaded from NLP
     def get_obj_scaling(self):

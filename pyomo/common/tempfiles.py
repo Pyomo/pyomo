@@ -34,9 +34,8 @@ deletion_errors_are_fatal = True
 class TempfileManagerClass:
     """A class that manages temporary files."""
 
-    tempdir = None
-
     def __init__(self, **kwds):
+        self.tempdir = None
         self._tempfiles = [[]]
         self._ctr = -1
 
@@ -62,7 +61,7 @@ class TempfileManagerClass:
                         "to specify the default location for Pyomo "
                         "temporary files has been deprecated.  "
                         "Please set TempfileManager.tempdir in "
-                        "pyomo.common.tempfiles", version='TBD')
+                        "pyomo.common.tempfiles", version='5.7.2')
 
         ans = tempfile.mkstemp(suffix=suffix, prefix=prefix, text=text, dir=dir)
         ans = list(ans)
@@ -105,7 +104,7 @@ class TempfileManagerClass:
                         "to specify the default location for Pyomo "
                         "temporary directories has been deprecated.  "
                         "Please set TempfileManager.tempdir in "
-                        "pyomo.common.tempfiles", version='TBD')
+                        "pyomo.common.tempfiles", version='5.7.2')
 
         dirname = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
         if self._ctr >= 0:
@@ -188,5 +187,6 @@ class TempfileManagerClass:
 
         if len(self._tempfiles) == 0:
             self._tempfiles = [[]]
+
 
 TempfileManager = TempfileManagerClass()
