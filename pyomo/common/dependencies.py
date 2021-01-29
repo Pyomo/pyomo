@@ -341,7 +341,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     if only_catch_importerror is not None:
         deprecation_warning(
             "only_catch_importerror is deprecated.  Pass exceptions to "
-            "catch using the catch_exceptions argument", version='TBD')
+            "catch using the catch_exceptions argument", version='5.7.3')
         if catch_exceptions is not None:
             raise ValueError("Cannot specify both only_catch_importerror "
                              "and catch_exceptions")

@@ -804,7 +804,7 @@ def finalize(data, model=None, instance=None, results=None):
 
 @deprecated("configure_loggers is deprecated. The Pyomo command uses the "
             "PyomoCommandLogContext to update the logger configuration",
-            version='TBD')
+            version='5.7.3')
 def configure_loggers(options=None, shutdown=False):
     context = PyomoCommandLogContext(options)
     if shutdown:
