@@ -135,8 +135,8 @@ class kestrelAMPL(object):
         # unittest.
         #
         # Note that this is only to suppress warnings, as __del__ is not
-        # guaranteed to be called (especially for any onjects that still
-        # exist when the python process terminates)
+        # guaranteed to be called (especially for any objects that still
+        # exist when the Python process terminates)
         if self.neos is not None:
             self.transport.close()
 
