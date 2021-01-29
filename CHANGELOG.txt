@@ -24,10 +24,9 @@ ADVANCE CHANGE NOTICE:
   - Add writer consistency checks between filenames and formats (#1804)
   - Initialize self.tempdir in TempfileManagerClass (#1806)
 - Core
-  - Improve units documentation (#1769)
   - Add is_reference API (#1740)
   - Add option to not rename components in the scaling transformation (#1596)
-  - Improve units processing performance (#1794, #1805)
+  - Improve units documentation and performance (#1769, #1794, #1805)
 - Documentation
   - Move the doc/attic directory to an internal archived repository (#1773)
 - Solver Interfaces
@@ -48,16 +47,11 @@ ADVANCE CHANGE NOTICE:
   - PyNumero: resolve portability issue with Cyipopt exception handling, 
     add PyomoNLP methods for accessing equality/inequality constraints (#1781, 
     #1791)
-   - Parmest: update pairwise plot to use the covariance matrix (#1774)
+  - Parmest: update pairwise plot to use the covariance matrix (#1774)
 
 -------------------------------------------------------------------------------
 Pyomo 5.7.2   17 Dec 2020
 -------------------------------------------------------------------------------
-
-ADVANCE CHANGE NOTICE:
-  - This is the last Pyomo release to support Python 2.7, 3.4, and 3.5
-  - This is the last Pyomo release to bundle PySP
-  - This is the last Pyomo release that will have a strict PyUtilib dependency
 
 - General
   - Increase timeout when loading libraries through CtypesEnviron (#1644)
