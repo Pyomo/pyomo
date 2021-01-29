@@ -132,7 +132,7 @@ def process_setarg(arg):
     if hasattr(arg, 'set_options'):
         deprecation_warning("The set_options set attribute is deprecated.  "
                             "Please explicitly construct complex sets",
-                            version='TBD')
+                            version='5.7.3')
         # If the argument has a set_options attribute, then use
         # it to initialize a set
         args = arg.set_options
