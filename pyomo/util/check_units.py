@@ -68,9 +68,8 @@ def assert_units_equivalent(*args):
     # this call will raise an exception if an inconsistency is found
     pint_units = [units._get_pint_units(arg) for arg in args]
     pint_unit_compare = pint_units[0]
-    for pint_unit in pint_units[1:]:
-        # this call will raise an exception if an inconsistency is found
-        if not pint_unit == pint_unit_compare:
+    for pint_unit in pint_units:
+        if not units._equivalent_pint_units(pint_unit_compare, pint_unit):
             raise UnitsError(
                 "Units between {} and {} are not consistent.".format(
                     str(pint_unit_compare), str(pint_unit)))
