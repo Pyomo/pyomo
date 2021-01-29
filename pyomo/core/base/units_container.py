@@ -469,6 +469,23 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         self._pyomo_units_container = pyomo_units_container
         self._pint_dimensionless = pyomo_units_container._pint_dimensionless
 
+    def _equivalent_pint_units(self, a, b, TOL=1e-12):
+        if a is b or a == b:
+            return True
+        base_a = self._pint_registry.get_base_units(a)
+        base_b = self._pint_registry.get_base_units(b)
+        if base_a[1] != base_b[1]:
+            return False
+        return abs(base_a[0] - base_b[0]) / min(base_a[0], base_b[0]) <= TOL
+
+    def _equivalent_to_dimensionless(self, a, TOL=1e-12):
+        if a is self._pint_dimensionless or a == self._pint_dimensionless:
+            return True
+        base_a = self._pint_registry.get_base_units(a)
+        if not base_a[1].dimensionless:
+            return False
+        return abs(base_a[0] - 1.) / min(base_a[0], 1.) <= TOL
+
     def _get_unit_for_equivalent_children(self, node, child_units):
         """
         Return (and test) the units corresponding to an expression node in the
@@ -486,18 +503,15 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         -------
         : pint unit
         """
-        # TODO: This may be expensive for long summations and, in the case of reporting only, we may want to skip the checks
-        assert len(child_units) > 0
+        # TODO: This may be expensive for long summations and, in the
+        # case of reporting only, we may want to skip the checks
+        assert bool(child_units)
 
         # verify that the pint units are equivalent from each
         # of the child nodes - assume that PyomoUnits are equivalent
         pint_unit_0 = child_units[0]
-        for i in range(1, len(child_units)):
-            pint_unit_i = child_units[i]
-            if ( pint_unit_0 is not pint_unit_i
-                 and pint_unit_0 != pint_unit_i
-                 and self._pint_registry.get_base_units(pint_unit_0)
-                 != self._pint_registry.get_base_units(pint_unit_i) ):
+        for pint_unit_i in child_units:
+            if not self._equivalent_pint_units(pint_unit_0, pint_unit_i):
                 raise InconsistentUnitsError(
                     pint_unit_0, pint_unit_i,
                     'Error in units found in expression: %s' % (node,))
@@ -528,14 +542,15 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         : pint unit
         """
         # StreamBasedExpressionVisitor does not handle the children of this node
-        assert len(child_units) == 0
+        assert not child_units
 
-        # TODO: This may be expensive for long summations and, in the case of reporting only, we may want to skip the checks
+        # TODO: This may be expensive for long summations and, in the
+        # case of reporting only, we may want to skip the checks
         term_unit_list = []
-        if node.constant:
+        if node.constant not in { 0. }:
             # we have a non-zero constant term, get its units
-            const_pint_units = self._pyomo_units_container._get_pint_units(node.constant)
-            term_unit_list.append(const_pint_units)
+            term_unit_list.append(
+                self._pyomo_units_container._get_pint_units(node.constant))
 
         # go through the coefficients and variables
         assert len(node.linear_coefs) == len(node.linear_vars)
@@ -545,7 +560,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             c_units = self._pyomo_units_container._get_pint_units(c)
             term_unit_list.append(c_units*v_units)
 
-        assert len(term_unit_list) > 0
+        assert term_unit_list
 
         return self._get_unit_for_equivalent_children(node, term_unit_list)
 
@@ -595,7 +610,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         assert len(child_units) == 2
 
         # this operation can create a quantity, but we want a pint unit object
-        return (child_units[0]/child_units[1])
+        return child_units[0] / child_units[1]
 
     def _get_unit_for_reciprocal(self, node, child_units):
         """
@@ -617,7 +632,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         assert len(child_units) == 1
 
         # this operation can create a quantity, but we want a pint unit object
-        return (1.0/child_units).units
+        return (1.0 / child_units).units
 
     def _get_unit_for_pow(self, node, child_units):
         """
@@ -639,11 +654,12 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         assert len(child_units) == 2
 
         # the exponent needs to be dimensionless
-        if child_units[1] != self._pint_dimensionless:
+        if not self._equivalent_to_dimensionless(child_units[1]):
             # todo: allow radians?
-            raise UnitsError("Error in sub-expression: {}. "
-                             "Exponents in a pow expression must be dimensionless."
-                             "".format(node))
+            raise UnitsError(
+                "Error in sub-expression: {}. "
+                "Exponents in a pow expression must be dimensionless."
+                "".format(node))
 
         # common case - exponent is a constant number
         exponent = node.args[1]
@@ -651,13 +667,12 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             return child_units[0]**value(exponent)
 
         # if base is dimensioness, exponent doesn't matter
-        if child_units[0] is self._pint_dimensionless or \
-           child_units[0] == self._pint_dimensionless:
+        if self._equivalent_to_dimensionless(child_units[0]):
             return self._pint_dimensionless
 
         # base is not dimensionless, exponent is dimensionless
         # ensure that the exponent is fixed
-        if exponent.is_constant() == False and exponent.is_fixed() == False:
+        if not exponent.is_fixed():
             raise UnitsError("The base of an exponent has units {}, but "
                              "the exponent is not a fixed numerical value."
                              "".format(child_units[0]))
@@ -717,10 +732,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
         for (arg_unit, pint_unit) in zip(arg_units, child_units):
             assert arg_unit is not None
-            if ( arg_unit is not pint_unit
-                 and arg_unit != pint_unit
-                 and self._pint_registry.get_base_units(arg_unit)
-                 != self._pint_registry.get_base_units(pint_unit) ):
+            if not self._equivalent_pint_units(arg_unit, pint_unit):
                 raise InconsistentUnitsError(
                     arg_unit, pint_unit,
                     'Inconsistent units found in ExternalFunction.')
@@ -745,13 +757,13 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         -------
         : pint unit
         """
-        dless = self._pint_dimensionless
         for pint_unit in child_units:
-            if not pint_unit is dless and \
-               not pint_unit == dless:
-                raise UnitsError('Expected no units or dimensionless units in {}, but found {}.'.format(str(node), str(pint_unit)))
+            if not self._equivalent_to_dimensionless(pint_unit):
+                raise UnitsError(
+                    'Expected no units or dimensionless units in {}, '
+                    'but found {}.'.format(str(node), str(pint_unit)))
 
-        return dless
+        return self._pint_dimensionless
 
     def _get_dimensionless_no_children(self, node, child_units):
         """
@@ -824,10 +836,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
         # the _if should already be consistent (since the children were
         # already checked)
-        if ( child_units[1] is not child_units[2]
-             and child_units[1] != child_units[2]
-             and self._pint_registry.get_base_units(child_units[1])
-             != self._pint_registry.get_base_units(child_units[2]) ):
+        if not self._equivalent_pint_units(child_units[1], child_units[2]):
             raise InconsistentUnitsError(
                 child_units[1], child_units[2],
                 'Error in units found in expression: %s' % (node,))
@@ -855,16 +864,16 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         """
         assert len(child_units) == 1
 
-        dless = self._pint_dimensionless
-        rads = self._pint_registry.radians
-        pint_units = child_units[0] 
-        if pint_units is dless or pint_units is rads or\
-           pint_units == dless or pint_units == rads:
-            return dless
+        if self._equivalent_to_dimensionless(child_units[0]):
+            return self._pint_dimensionless
+        if self._equivalent_pint_units(
+                child_units[0], self._pint_registry.radian):
+            return self._pint_dimensionless
 
         # units are not None, dimensionless, or radians
-        raise UnitsError('Expected radians or dimensionless in argument to function in expression {}, but found {}'.format(
-            str(node), str(pint_units)))
+        raise UnitsError(
+            'Expected radians or dimensionless in argument to function '
+            'in expression %s, but found %s' % (node, child_units[0]))
 
     def _get_radians_with_dimensionless_child(self, node, child_units):
         """
@@ -885,15 +894,13 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         : pint unit
         """
         assert len(child_units) == 1
-        pint_units = child_units[0]
 
-        dless = self._pint_dimensionless
-        if pint_units is not dless and pint_units != dless:
-            raise UnitsError('Expected dimensionless argument to function in expression {},'
-                             ' but found {}'.format(
-                             str(node), str(pint_units)))
+        if self._equivalent_to_dimensionless(child_units[0]):
+            return self._pint_registry.radians
 
-        return self._pint_registry.radians
+        raise UnitsError(
+            'Expected dimensionless argument to function in expression {},'
+            ' but found {}'.format(str(node), str(child_units[0])))
 
     def _get_unit_sqrt(self, node, child_units):
         """
@@ -1322,8 +1329,8 @@ external
                 src_pint_unit, to_pint_unit,
                 'Error in convert: units not compatible.')
 
-        return (src_base_factor/to_base_factor) * src * _PyomoUnit(
-            to_pint_unit/src_pint_unit, self._pint_registry)
+        return (src_base_factor/to_base_factor) * _PyomoUnit(
+            to_pint_unit/src_pint_unit, self._pint_registry) * src
 
     def convert_value(self, num_value, from_units=None, to_units=None):
         """
