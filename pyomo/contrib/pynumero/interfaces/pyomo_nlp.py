@@ -533,10 +533,11 @@ class PyomoGreyBoxNLP(NLP):
 
         # compute the hessian for the external greybox models
         # to get some of the statistics
-        # CDL: let's delay this?
-        # self._evaluate_greybox_hessians_and_cache_if_necessary()
-        # self._nnz_greybox_hess = len(self._cached_greybox_hess.data)
-        self._nnz_greybox_hess = None
+        try:
+            self._evaluate_greybox_hessians_and_cache_if_necessary()
+            self._nnz_greybox_hess = len(self._cached_greybox_hess.data)
+        except NotImplementedError:
+            self._nnz_greybox_hess = None
 
     def _invalidate_greybox_primals_cache(self):
         self._greybox_constraints_cached = False
@@ -898,6 +899,7 @@ class PyomoGreyBoxNLP(NLP):
                   np.concatenate((base.col, self._cached_greybox_jac.col)) )
             ))
     """
+
     # overloaded from NLP
     def _evaluate_greybox_hessians_and_cache_if_necessary(self):
         if self._greybox_hess_cached:

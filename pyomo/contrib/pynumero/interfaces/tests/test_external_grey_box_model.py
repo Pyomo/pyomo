@@ -1022,9 +1022,13 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
             pyomo_nlp = PyomoGreyBoxNLP(m)
 
     def test_pressure_drop_single_output(self):
+        self._test_pressure_drop_single_output(PressureDropSingleOutput(),False)
+        self._test_pressure_drop_single_output(PressureDropSingleOutputWithHessian(),True)
+
+    def _test_pressure_drop_single_output(self, ex_model, hessian_support):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(PressureDropSingleOutput())
+        m.egb.set_external_model(ex_model)
         m.egb.inputs['Pin'].value = 100
         m.egb.inputs['Pin'].setlb(50)
         m.egb.inputs['Pin'].setub(150)
@@ -1039,12 +1043,14 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m.egb.outputs['Pout'].setub(100)
         #m.dummy = pyo.Constraint(expr=sum(m.egb.inputs[i] for i in m.egb.inputs) + sum(m.egb.outputs[i] for i in m.egb.outputs) <= 1e6)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2)
+
         pyomo_nlp = PyomoGreyBoxNLP(m)
 
         self.assertEqual(4, pyomo_nlp.n_primals())
         self.assertEqual(1, pyomo_nlp.n_constraints())
         self.assertEqual(4, pyomo_nlp.nnz_jacobian())
-        self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
+        if hessian_support:
+            self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.outputs[Pout]']
         x_order = pyomo_nlp.variable_names()
@@ -1068,7 +1074,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_xinit = np.asarray([100, 2, 3, 50], dtype=np.float64)
         check_vectors_specific_order(self, xinit, x_order, comparison_xinit, comparison_x_order)
         duals_init = pyomo_nlp.init_duals()
-        comparison_duals_init = np.asarray([1], dtype=np.float64)
+        comparison_duals_init = np.asarray([0], dtype=np.float64)
         check_vectors_specific_order(self, duals_init, c_order, comparison_duals_init, comparison_c_order)
 
         self.assertEqual(4, len(pyomo_nlp.create_new_vector('primals')))
@@ -1110,7 +1116,6 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         pyomo_nlp.evaluate_constraints(out=c)
         check_vectors_specific_order(self, c, c_order, comparison_c, comparison_c_order)
         
-
         j = pyomo_nlp.evaluate_jacobian()
         comparison_j = np.asarray([[1, -36, -48, -1]])
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
@@ -1119,15 +1124,23 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         pyomo_nlp.evaluate_jacobian(out=j)
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
-        h = pyomo_nlp.evaluate_hessian_lag()
-        self.assertTrue(h.shape == (4,4))
-        comparison_h = np.asarray([[0, 0, 0, 0],[0, 0, 0, 0], [0, -8*3*21, -8*2*21, 0], [0, 0, 0, 2*1]], dtype=np.float64)
-        check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
+        if hessian_support:
+            h = pyomo_nlp.evaluate_hessian_lag()
+            self.assertTrue(h.shape == (4,4))
+            comparison_h = np.asarray([[0, 0, 0, 0],[0, 0, 0, 0], [0, -8*3*21, -8*2*21, 0], [0, 0, 0, 2*1]], dtype=np.float64)
+            check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
+        else:
+            with self.assertRaises(NotImplementedError):
+                h = pyomo_nlp.evaluate_hessian_lag()
 
     def test_pressure_drop_single_equality(self):
+        self._test_pressure_drop_single_equality(PressureDropSingleEquality(), False)
+        self._test_pressure_drop_single_equality(PressureDropSingleEqualityWithHessian(), True)
+
+    def _test_pressure_drop_single_equality(self, ex_model, hessian_support):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(PressureDropSingleEquality())
+        m.egb.set_external_model(ex_model)
         m.egb.inputs['Pin'].value = 100
         m.egb.inputs['Pin'].setlb(50)
         m.egb.inputs['Pin'].setub(150)
@@ -1146,7 +1159,8 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(4, pyomo_nlp.n_primals())
         self.assertEqual(1, pyomo_nlp.n_constraints())
         self.assertEqual(4, pyomo_nlp.nnz_jacobian())
-        self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
+        if hessian_support:
+            self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[Pout]']
         x_order = pyomo_nlp.variable_names()
@@ -1170,7 +1184,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_xinit = np.asarray([100, 2, 3, 50], dtype=np.float64)
         check_vectors_specific_order(self, xinit, x_order, comparison_xinit, comparison_x_order)
         duals_init = pyomo_nlp.init_duals()
-        comparison_duals_init = np.asarray([1], dtype=np.float64)
+        comparison_duals_init = np.asarray([0], dtype=np.float64)
         check_vectors_specific_order(self, duals_init, c_order, comparison_duals_init, comparison_c_order)
 
         self.assertEqual(4, len(pyomo_nlp.create_new_vector('primals')))
@@ -1220,15 +1234,23 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         pyomo_nlp.evaluate_jacobian(out=j)
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
-        h = pyomo_nlp.evaluate_hessian_lag()
-        self.assertTrue(h.shape == (4,4))
-        comparison_h = np.asarray([[0, 0, 0, 0],[0, 0, 0, 0], [0, 8*3*21, 8*2*21, 0], [0, 0, 0, 2*1]], dtype=np.float64)
-        check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
-        
+        if hessian_support:
+            h = pyomo_nlp.evaluate_hessian_lag()
+            self.assertTrue(h.shape == (4,4))
+            comparison_h = np.asarray([[0, 0, 0, 0],[0, 0, 0, 0], [0, 8*3*21, 8*2*21, 0], [0, 0, 0, 2*1]], dtype=np.float64)
+            check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
+        else:
+            with self.assertRaises(NotImplementedError):
+                h = pyomo_nlp.evaluate_hessian_lag()
+
     def test_pressure_drop_two_outputs(self):
+        self._test_pressure_drop_two_outputs(PressureDropTwoOutputs(), False)
+        self._test_pressure_drop_two_outputs(PressureDropTwoOutputsWithHessian(), True)
+
+    def _test_pressure_drop_two_outputs(self, ex_model, hessian_support):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(PressureDropTwoOutputs())
+        m.egb.set_external_model(ex_model)
         m.egb.inputs['Pin'].value = 100
         m.egb.inputs['Pin'].setlb(50)
         m.egb.inputs['Pin'].setub(150)
@@ -1250,7 +1272,8 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(5, pyomo_nlp.n_primals())
         self.assertEqual(2, pyomo_nlp.n_constraints())
         self.assertEqual(8, pyomo_nlp.nnz_jacobian())
-        self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
+        if hessian_support:
+            self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.outputs[P2]', 'egb.outputs[Pout]']
         x_order = pyomo_nlp.variable_names()
@@ -1274,7 +1297,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_xinit = np.asarray([100, 2, 3, 80, 50], dtype=np.float64)
         check_vectors_specific_order(self, xinit, x_order, comparison_xinit, comparison_x_order)
         duals_init = pyomo_nlp.init_duals()
-        comparison_duals_init = np.asarray([1, 1], dtype=np.float64)
+        comparison_duals_init = np.asarray([0, 0], dtype=np.float64)
         check_vectors_specific_order(self, duals_init, c_order, comparison_duals_init, comparison_c_order)
 
         self.assertEqual(5, len(pyomo_nlp.create_new_vector('primals')))
@@ -1324,15 +1347,23 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         pyomo_nlp.evaluate_jacobian(out=j)
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
-        h = pyomo_nlp.evaluate_hessian_lag()
-        self.assertTrue(h.shape == (5,5))
-        comparison_h = np.asarray([[0, 0, 0, 0, 0],[0, 0, 0, 0, 0], [0, (-4*3*21) + (-8*3*5), (-4*2*21) + (-8*2*5), 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 2*1]], dtype=np.float64)
-        check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
-        
+        if hessian_support:
+            h = pyomo_nlp.evaluate_hessian_lag()
+            self.assertTrue(h.shape == (5,5))
+            comparison_h = np.asarray([[0, 0, 0, 0, 0],[0, 0, 0, 0, 0], [0, (-4*3*21) + (-8*3*5), (-4*2*21) + (-8*2*5), 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 2*1]], dtype=np.float64)
+            check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
+        else:
+            with self.assertRaises(NotImplementedError):
+                h = pyomo_nlp.evaluate_hessian_lag()
+
     def test_pressure_drop_two_equalities(self):
+        self._test_pressure_drop_two_equalities(PressureDropTwoEqualities(), False)
+        self._test_pressure_drop_two_equalities(PressureDropTwoEqualitiesWithHessian(), True)
+
+    def _test_pressure_drop_two_equalities(self, ex_model, hessian_support):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(PressureDropTwoEqualities())
+        m.egb.set_external_model(ex_model)
         m.egb.inputs['Pin'].value = 100
         m.egb.inputs['Pin'].setlb(50)
         m.egb.inputs['Pin'].setub(150)
@@ -1354,7 +1385,8 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(5, pyomo_nlp.n_primals())
         self.assertEqual(2, pyomo_nlp.n_constraints())
         self.assertEqual(8, pyomo_nlp.nnz_jacobian())
-        self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
+        if hessian_support:
+            self.assertEqual(3, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]', 'egb.inputs[P2]', 'egb.inputs[Pout]']
         x_order = pyomo_nlp.variable_names()
@@ -1378,7 +1410,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_xinit = np.asarray([100, 2, 3, 80, 50], dtype=np.float64)
         check_vectors_specific_order(self, xinit, x_order, comparison_xinit, comparison_x_order)
         duals_init = pyomo_nlp.init_duals()
-        comparison_duals_init = np.asarray([1, 1], dtype=np.float64)
+        comparison_duals_init = np.asarray([0, 0], dtype=np.float64)
         check_vectors_specific_order(self, duals_init, c_order, comparison_duals_init, comparison_c_order)
 
         self.assertEqual(5, len(pyomo_nlp.create_new_vector('primals')))
@@ -1420,7 +1452,6 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         pyomo_nlp.evaluate_constraints(out=c)
         check_vectors_specific_order(self, c, c_order, comparison_c, comparison_c_order)
         
-
         j = pyomo_nlp.evaluate_jacobian()
         comparison_j = np.asarray([[-1, 18, 24, 1, 0], [0, 18, 24, -1, 1]])
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
@@ -1429,15 +1460,23 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         pyomo_nlp.evaluate_jacobian(out=j)
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
-        h = pyomo_nlp.evaluate_hessian_lag()
-        self.assertTrue(h.shape == (5,5))
-        comparison_h = np.asarray([[0, 0, 0, 0, 0],[0, 0, 0, 0, 0], [0, (4*3*21) + (4*3*5), (4*2*21) + (4*2*5), 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 2*1]], dtype=np.float64)
-        check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
+        if hessian_support:
+            h = pyomo_nlp.evaluate_hessian_lag()
+            self.assertTrue(h.shape == (5,5))
+            comparison_h = np.asarray([[0, 0, 0, 0, 0],[0, 0, 0, 0, 0], [0, (4*3*21) + (4*3*5), (4*2*21) + (4*2*5), 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 2*1]], dtype=np.float64)
+            check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
+        else:
+            with self.assertRaises(NotImplementedError):
+                h = pyomo_nlp.evaluate_hessian_lag()
 
     def test_pressure_drop_two_equalities_two_outputs(self):
+        self._test_pressure_drop_two_equalities_two_outputs(PressureDropTwoEqualitiesTwoOutputs(), False)
+        self._test_pressure_drop_two_equalities_two_outputs(PressureDropTwoEqualitiesTwoOutputsWithHessian(), True)
+
+    def _test_pressure_drop_two_equalities_two_outputs(self, ex_model, hessian_support):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(PressureDropTwoEqualitiesTwoOutputs())
+        m.egb.set_external_model(ex_model)
         m.egb.inputs['Pin'].value = 100
         m.egb.inputs['Pin'].setlb(50)
         m.egb.inputs['Pin'].setub(150)
@@ -1465,7 +1504,8 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(7, pyomo_nlp.n_primals())
         self.assertEqual(4, pyomo_nlp.n_constraints())
         self.assertEqual(16, pyomo_nlp.nnz_jacobian())
-        self.assertEqual(5, pyomo_nlp.nnz_hessian_lag())
+        if hessian_support:
+            self.assertEqual(5, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]',
                               'egb.inputs[P1]', 'egb.inputs[P3]',
@@ -1491,7 +1531,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_xinit = np.asarray([100, 2, 3, 80, 70, 75, 50], dtype=np.float64)
         check_vectors_specific_order(self, xinit, x_order, comparison_xinit, comparison_x_order)
         duals_init = pyomo_nlp.init_duals()
-        comparison_duals_init = np.asarray([1, 1, 1, 1], dtype=np.float64)
+        comparison_duals_init = np.asarray([0, 0, 0, 0], dtype=np.float64)
         check_vectors_specific_order(self, duals_init, c_order, comparison_duals_init, comparison_c_order)
 
         self.assertEqual(7, len(pyomo_nlp.create_new_vector('primals')))
@@ -1545,24 +1585,32 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         pyomo_nlp.evaluate_jacobian(out=j)
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
-        h = pyomo_nlp.evaluate_hessian_lag()
-        self.assertTrue(h.shape == (7,7))
-        comparison_h = np.asarray([[0, 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0],
-                                   [0, (2*3*21) + (4*3*5) + (-2*3*6) + (-8*3*7), (2*2*21) + (4*2*5) + (-2*2*6) + (-8*2*7), 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 2*1]],
-                                  dtype=np.float64)
-        check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
-        
+        if hessian_support:
+            h = pyomo_nlp.evaluate_hessian_lag()
+            self.assertTrue(h.shape == (7,7))
+            comparison_h = np.asarray([[0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0],
+                                       [0, (2*3*21) + (4*3*5) + (-2*3*6) + (-8*3*7), (2*2*21) + (4*2*5) + (-2*2*6) + (-8*2*7), 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 2*1]],
+                                      dtype=np.float64)
+            check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
+        else:
+            with self.assertRaises(NotImplementedError):
+                h = pyomo_nlp.evaluate_hessian_lag()
+
     def test_external_additional_constraints_vars(self):
+        self._test_external_additional_constraints_vars(PressureDropTwoEqualitiesTwoOutputs(), False)
+        self._test_external_additional_constraints_vars(PressureDropTwoEqualitiesTwoOutputsWithHessian(), True)
+
+    def _test_external_additional_constraints_vars(self, ex_model, hessian_support):
         m = pyo.ConcreteModel()
         m.hin = pyo.Var(bounds=(0,None), initialize=10)
         m.hout = pyo.Var(bounds=(0,None))
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(PressureDropTwoEqualitiesTwoOutputs())
+        m.egb.set_external_model(ex_model)
         m.incon = pyo.Constraint(expr= 0 <= m.egb.inputs['Pin'] - 10*m.hin)
         m.outcon = pyo.Constraint(expr= 0 == m.egb.outputs['Pout'] - 10*m.hout)
         m.egb.inputs['Pin'].value = 100
@@ -1592,7 +1640,8 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         self.assertEqual(9, pyomo_nlp.n_primals())
         self.assertEqual(6, pyomo_nlp.n_constraints())
         self.assertEqual(20, pyomo_nlp.nnz_jacobian())
-        self.assertEqual(5, pyomo_nlp.nnz_hessian_lag())
+        if hessian_support:
+            self.assertEqual(5, pyomo_nlp.nnz_hessian_lag())
 
         comparison_x_order = ['egb.inputs[Pin]', 'egb.inputs[c]', 'egb.inputs[F]',
                               'egb.inputs[P1]', 'egb.inputs[P3]',
@@ -1619,7 +1668,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_xinit = np.asarray([100, 2, 3, 80, 70, 75, 50, 10, 0], dtype=np.float64)
         check_vectors_specific_order(self, xinit, x_order, comparison_xinit, comparison_x_order)
         duals_init = pyomo_nlp.init_duals()
-        comparison_duals_init = np.asarray([1, 1, 1, 1, 0, 0], dtype=np.float64)
+        comparison_duals_init = np.asarray([0, 0, 0, 0, 0, 0], dtype=np.float64)
         check_vectors_specific_order(self, duals_init, c_order, comparison_duals_init, comparison_c_order)
 
         self.assertEqual(9, len(pyomo_nlp.create_new_vector('primals')))
@@ -1675,26 +1724,34 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         pyomo_nlp.evaluate_jacobian(out=j)
         check_sparse_matrix_specific_order(self, j, c_order, x_order, comparison_j, comparison_c_order, comparison_x_order)
 
-        h = pyomo_nlp.evaluate_hessian_lag()
-        self.assertTrue(h.shape == (9,9))
-        comparison_h = np.asarray([[0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                   [0, (2*3*21) + (4*3*5) + (-2*3*6) + (-8*3*7), (2*2*21) + (4*2*5) + (-2*2*6) + (-8*2*7), 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 2*1, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                   [0, 0, 0, 0, 0, 0, 0, 0, 0]],
-                                  dtype=np.float64)
-        check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
-        
+        if hessian_support:
+            h = pyomo_nlp.evaluate_hessian_lag()
+            self.assertTrue(h.shape == (9,9))
+            comparison_h = np.asarray([[0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                       [0, (2*3*21) + (4*3*5) + (-2*3*6) + (-8*3*7), (2*2*21) + (4*2*5) + (-2*2*6) + (-8*2*7), 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 2*1, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                       [0, 0, 0, 0, 0, 0, 0, 0, 0]],
+                                      dtype=np.float64)
+            check_sparse_matrix_specific_order(self, h, x_order, x_order, comparison_h, comparison_x_order, comparison_x_order)
+        else:
+            with self.assertRaises(NotImplementedError):
+                h = pyomo_nlp.evaluate_hessian_lag()
+
     @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
     def test_external_greybox_solve(self):
+        self._test_external_greybox_solve(PressureDropTwoEqualitiesTwoOutputs(), False)
+        self._test_external_greybox_solve(PressureDropTwoEqualitiesTwoOutputsWithHessian(), True)
+
+    def _test_external_greybox_solve(self, ex_model, hessian_support):
         m = pyo.ConcreteModel()
         m.mu = pyo.Var(bounds=(0,None), initialize=1)
         m.egb = ExternalGreyBoxBlock()
-        m.egb.set_external_model(PressureDropTwoEqualitiesTwoOutputs())
+        m.egb.set_external_model(ex_model)
         m.ccon = pyo.Constraint(expr = m.egb.inputs['c'] == 128/(3.14*1e-4)*m.mu*m.egb.inputs['F'])
         m.pcon = pyo.Constraint(expr = m.egb.inputs['Pin'] - m.egb.outputs['Pout'] <= 72)
         m.pincon = pyo.Constraint(expr = m.egb.inputs['Pin'] == 100.0)
@@ -1722,7 +1779,10 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2 + (m.egb.inputs['F']-3)**2)
         pyomo_nlp = PyomoGreyBoxNLP(m)
 
-        options = {'hessian_approximation':'limited-memory'}
+        if hessian_support:
+            options = {}
+        else:
+            options = {'hessian_approximation':'limited-memory'}
         cyipopt_problem = CyIpoptNLP(pyomo_nlp)
         solver = CyIpoptSolver(cyipopt_problem, options)
         x, info = solver.solve(tee=False)
