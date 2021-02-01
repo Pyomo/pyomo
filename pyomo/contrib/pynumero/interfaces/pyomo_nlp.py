@@ -536,7 +536,7 @@ class PyomoGreyBoxNLP(NLP):
         try:
             self._evaluate_greybox_hessians_and_cache_if_necessary()
             self._nnz_greybox_hess = len(self._cached_greybox_hess.data)
-        except NotImplementedError:
+        except (AttributeError, NotImplementedError):
             self._nnz_greybox_hess = None
 
     def _invalidate_greybox_primals_cache(self):

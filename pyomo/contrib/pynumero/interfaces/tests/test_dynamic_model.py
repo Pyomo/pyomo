@@ -114,14 +114,6 @@ class TwoTanksSeries(ExternalGreyBoxModel):
         self._eq_con_mult_values = np.ones(2*(N-1))
         self._output_con_mult_values = np.ones(2*N)
 
-    def model_capabilities(self):
-        capabilities = self.ModelCapabilities()
-        capabilities.supports_jacobian_equality_constraints = True
-        capabilities.supports_hessian_equality_constraints = True
-        capabilities.supports_jacobian_outputs = True
-        capabilities.supports_hessian_outputs = True
-        return capabilities
-
     def input_names(self):
         return self._input_names
 
@@ -139,8 +131,6 @@ class TwoTanksSeries(ExternalGreyBoxModel):
         for k in pyomo_block.outputs:
             pyomo_block.outputs[k].setlb(0)
             pyomo_block.outputs[k].value = 1.0
-
-        
 
     def set_input_values(self, input_values):
         N = self._N
@@ -395,7 +385,8 @@ class TestGreyBoxModel(unittest.TestCase):
 
         m = create_pyomo_model(A1, A2, c1, c2, N, dt)
         solver = pyo.SolverFactory('ipopt')
-        status = solver.solve(m, tee=True)
+        solver.options['linear_solver'] = 'mumps'
+        status = solver.solve(m, tee=False)
         m_nlp = PyomoNLP(m)
 
         mex = create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt)
@@ -468,18 +459,31 @@ class TestGreyBoxModel(unittest.TestCase):
 
         m = create_pyomo_model(A1, A2, c1, c2, N, dt)
         solver = pyo.SolverFactory('cyipopt')
-        #solver.options['print_level'] = 10
-        #solver.options['linear_solver'] = 'mumps'
-        #solver.options['derivative_test'] = 'first-order'
-        status = solver.solve(m, tee=True)
-        #m.pprint()
-                
+        solver.config.options['linear_solver'] = 'mumps'
+        status = solver.solve(m, tee=False)
+                        
         mex = create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt)
         solver = pyo.SolverFactory('cyipopt')
-        #solver.config.options['print_level'] = 10
-        #solver.config.options['derivative_test'] = 'first-order'
-        status = solver.solve(mex, tee=True)
-        #mex.pprint()
+        solver.config.options['linear_solver'] = 'mumps'
+        status = solver.solve(mex, tee=False)
+
+        for k in m.F1:
+            self.assertAlmostEqual(pyo.value(m.F1[k]), pyo.value(mex.egb.inputs['F1_{}'.format(k)]), places=3)
+            self.assertAlmostEqual(pyo.value(m.F2[k]), pyo.value(mex.egb.inputs['F2_{}'.format(k)]), places=3)
+        for k in m.h1:
+            self.assertAlmostEqual(pyo.value(m.h1[k]), pyo.value(mex.egb.inputs['h1_{}'.format(k)]), places=3)
+            self.assertAlmostEqual(pyo.value(m.h2[k]), pyo.value(mex.egb.inputs['h2_{}'.format(k)]), places=3)
+        for k in m.F12:
+            self.assertAlmostEqual(pyo.value(m.F12[k]), pyo.value(mex.egb.outputs['F12_{}'.format(k)]), places=3)
+            self.assertAlmostEqual(pyo.value(m.Fo[k]), pyo.value(mex.egb.outputs['Fo_{}'.format(k)]), places=3)
+        """
+        self._input_names = ['F1_{}'.format(t) for t in range(1,N)]
+        self._input_names.extend(['F2_{}'.format(t) for t in range(1,N)])
+        self._input_names.extend(['h1_{}'.format(t) for t in range(0,N)])
+        self._input_names.extend(['h2_{}'.format(t) for t in range(0,N)])
+        self._output_names = ['F12_{}'.format(t) for t in range(0,N)]
+        self._output_names.extend(['Fo_{}'.format(t) for t in range(0,N)])
+        """
 
 if __name__ == '__main__':
     t = TestGreyBoxModel()
