@@ -539,7 +539,7 @@ class PyomoCyIpoptSolver(object):
             solverStatus = SolverStatus.unknown
             raise
 
-        wall_time = timer.toc("")
+        wall_time = timer.toc(None)
 
         results = SolverResults()
 
