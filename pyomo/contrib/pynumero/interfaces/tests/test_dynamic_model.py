@@ -375,6 +375,8 @@ def create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt):
     return m2
 
 class TestGreyBoxModel(unittest.TestCase):
+
+    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
     def test_compare_evaluations(self):
         A1 = 5
         A2 = 10
