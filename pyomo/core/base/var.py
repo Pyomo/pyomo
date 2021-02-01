@@ -13,6 +13,7 @@ __all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
@@ -22,6 +23,7 @@ from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, _SetDataBase
+from pyomo.core.base.units_container import units
 from pyomo.core.base.util import is_functor
 
 from six import iteritems, itervalues
@@ -516,7 +518,9 @@ class Var(IndexedComponent):
         bounds = kwd.pop('bounds', None)
         self._dense = kwd.pop('dense', True)
         self._units = kwd.pop('units', None)
-        
+        if self._units is not None:
+            self._units = units.get_units(self._units)
+
         #
         # Initialize the base class
         #
@@ -588,17 +592,16 @@ class Var(IndexedComponent):
 
     def construct(self, data=None):
         """Construct this component."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             try:
                 name = str(self.name)
             except:
                 # Some Var components don't have a name yet, so just use
                 # the type
                 name = type(self)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(
-                    "Constructing Variable, name=%s, from data=%s"
-                    % (name, str(data)))
+            logger.debug(
+                "Constructing Variable, name=%s, from data=%s"
+                % (name, str(data)))
 
         if self._constructed:
             return
@@ -990,7 +993,7 @@ class VarList(IndexedVar):
 
     def construct(self, data=None):
         """Construct this component."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing variable list %s", self.name)
 
         if self._constructed:

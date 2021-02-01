@@ -13,6 +13,7 @@ import logging
 import pyomo.common.config as cfg
 from pyomo.common import deprecated
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 from pyomo.core.base.component import ActiveComponent
@@ -192,6 +193,7 @@ class Hull_Reformulation(Transformation):
             Block:       self._transform_block_on_disjunct,
             LogicalConstraint: self._warn_for_active_logical_statement,
             }
+        self._generate_debug_messages = False
 
     def _add_local_vars(self, block, local_var_dict):
         localVars = block.component('LocalVars')
@@ -232,6 +234,7 @@ class Hull_Reformulation(Transformation):
     def _apply_to_impl(self, instance, **kwds):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
+        self._generate_debug_messages = is_debug_set(logger)
 
         targets = self._config.targets
         if targets is None:
@@ -432,7 +435,7 @@ class Hull_Reformulation(Transformation):
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
             # clearly not local if used in more than one disjunct
             if len(disjuncts) > 1:
-                if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                if self._generate_debug_messages:
                     logger.debug("Assuming '%s' is not a local var since it is"
                                  "used in multiple disjuncts." %
                                  var.getname(fully_qualified=True,
@@ -879,7 +882,7 @@ class Hull_Reformulation(Transformation):
                 continue
 
             if c.lower is not None:
-                if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                if self._generate_debug_messages:
                     _name = c.getname(
                         fully_qualified=True, name_buffer=NAME_BUFFER)
                     logger.debug("GDP(Hull): Transforming constraint " +
@@ -901,7 +904,7 @@ class Hull_Reformulation(Transformation):
                     constraintMap['srcConstraints'][newConstraint['lb']] = c
 
             if c.upper is not None:
-                if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                if self._generate_debug_messages:
                     _name = c.getname(
                         fully_qualified=True, name_buffer=NAME_BUFFER)
                     logger.debug("GDP(Hull): Transforming constraint " +

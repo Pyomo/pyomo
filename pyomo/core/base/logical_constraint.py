@@ -15,6 +15,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
@@ -278,7 +279,7 @@ class LogicalConstraint(ActiveIndexedComponent):
         """
         Construct the expression(s) for this logical constraint.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing logical constraint %s" % self.name)
         if self._constructed:
             return
@@ -535,8 +536,7 @@ class LogicalConstraintList(IndexedLogicalConstraint):
         """
         Construct the expression(s) for this logical constraint.
         """
-        generate_debug_messages = \
-            __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages = is_debug_set(logger)
         if generate_debug_messages:
             logger.debug("Constructing logical constraint list %s"
                          % self.name)

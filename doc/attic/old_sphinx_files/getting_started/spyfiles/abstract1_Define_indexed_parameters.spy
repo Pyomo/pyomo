@@ -1,3 +1,0 @@
-model.a = Param(model.I, model.J)
-model.b = Param(model.I)
-model.c = Param(model.J)

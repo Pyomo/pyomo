@@ -17,11 +17,12 @@ from six import StringIO
 
 import pyutilib.th as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
-from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
+from pyomo.environ import (Block, ConcreteModel, Constraint,
                            Objective, TransformationFactory, Var, exp, log,
                            ceil, floor, asin, acos, atan, asinh, acosh, atanh,
                            Binary, quicksum)
 from pyomo.gdp import Disjunction
+from pyomo.network import Port, Arc
 from pyomo.repn.plugins.gams_writer import (StorageTreeChecker,
                                             expression_to_string,
                                             split_long_line)
@@ -157,9 +158,9 @@ class Test(unittest.TestCase):
         m.o = Objective(expr=m.x)
         TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
-        os = StringIO()
-        m.write(os, format='gams', io_options=dict(solver='dicopt'))
-        self.assertIn("USING minlp", os.getvalue())
+        outs = StringIO()
+        m.write(outs, format='gams', io_options=dict(solver='dicopt'))
+        self.assertIn("USING minlp", outs.getvalue())
 
     def test_quicksum(self):
         m = ConcreteModel()
@@ -181,9 +182,9 @@ class Test(unittest.TestCase):
         m.c = Constraint(expr=quicksum([m.y, m.y], linear=True) == 1)
         m.o = Objective(expr=m.x ** 2)
         m.y.fix(1)
-        os = StringIO()
-        m.write(os, format='gams')
-        self.assertIn("USING nlp", os.getvalue())
+        outs = StringIO()
+        m.write(outs, format='gams')
+        self.assertIn("USING nlp", outs.getvalue())
 
     def test_expr_xfrm(self):
         from pyomo.repn.plugins.gams_writer import (
@@ -299,38 +300,38 @@ class Test(unittest.TestCase):
                 "GAMS files cannot represent the unary function atanh"):
             expression_to_string(atanh(m.x), tc, lbl, smap=smap)
 
-    def test_gams_connector_in_active_constraint(self):
+    def test_gams_arc_in_active_constraint(self):
         m = ConcreteModel()
         m.b1 = Block()
         m.b2 = Block()
         m.b1.x = Var()
         m.b2.x = Var()
-        m.b1.c = Connector()
+        m.b1.c = Port()
         m.b1.c.add(m.b1.x)
-        m.b2.c = Connector()
+        m.b2.c = Port()
         m.b2.c.add(m.b2.x)
-        m.c = Constraint(expr=m.b1.c == m.b2.c)
+        m.c = Arc(source=m.b1.c, destination=m.b2.c)
         m.o = Objective(expr=m.b1.x)
-        os = StringIO()
+        outs = StringIO()
         with self.assertRaises(RuntimeError):
-            m.write(os, format="gams")
+            m.write(outs, format="gams")
 
-    def test_gams_expanded_connectors(self):
+    def test_gams_expanded_arcs(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.CON1 = Connector()
+        m.CON1 = Port()
         m.CON1.add(m.x, 'v')
-        m.CON2 = Connector()
+        m.CON2 = Port()
         m.CON2.add(m.y, 'v')
-        m.c = Constraint(expr=m.CON1 + m.CON2 >= 10)
-        TransformationFactory("core.expand_connectors").apply_to(m)
+        m.c = Arc(source=m.CON1, destination=m.CON2)
+        TransformationFactory("network.expand_arcs").apply_to(m)
         m.o = Objective(expr=m.x)
-        os = StringIO()
+        outs = StringIO()
         io_options = dict(symbolic_solver_labels=True)
-        m.write(os, format="gams", io_options=io_options)
+        m.write(outs, format="gams", io_options=io_options)
         # no error if we're here, but check for some identifying string
-        self.assertIn("x + y", os.getvalue())
+        self.assertIn("x - y", outs.getvalue())
 
     def test_split_long_line(self):
         pat = "var1 + log(var2 / 9) - "
@@ -351,9 +352,9 @@ class Test(unittest.TestCase):
         m.x = Var()
         m.c = Constraint(expr=m.x == 2)
         m.o = Objective(expr=m.x)
-        os = StringIO()
-        m.write(os, format="gams", io_options=dict(solver="gurobi"))
-        self.assertIn("option lp=gurobi", os.getvalue())
+        outs = StringIO()
+        m.write(outs, format="gams", io_options=dict(solver="gurobi"))
+        self.assertIn("option lp=gurobi", outs.getvalue())
 
     def test_negative_float_double_operator(self):
         m = ConcreteModel()

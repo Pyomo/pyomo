@@ -25,7 +25,7 @@ Here's a stylized code snippet showing how box plots might be created:
     >>> import pyomo.contrib.parmest.parmest as parmest
     >>> pest = parmest.Estimator(model_function, data, [], objective_function)
     >>> obj, theta, data_rec = pest.theta_est(return_values=['A', 'B']) 
-    >>> parmest.grouped_boxplot(data, data_rec)
+    >>> parmest.graphics.grouped_boxplot(data, data_rec)
 
 Returned Values
 ^^^^^^^^^^^^^^^

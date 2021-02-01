@@ -11,15 +11,11 @@
 __all__ = ['SolutionStatus', 'Solution']
 
 import math
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
 from six import iterkeys, iteritems
 from six.moves import xrange
 import enum
 from pyomo.opt.results.container import MapContainer, ListContainer, ignore
-from pyomo.common.collections import Bunch
+from pyomo.common.collections import Bunch, OrderedDict
 
 default_print_options = Bunch(schema=False,
                               sparse=True,

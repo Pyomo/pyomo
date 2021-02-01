@@ -16,6 +16,7 @@ import logging
 import array
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
 from pyomo.core.base import (SortComponents,
                              Var)
@@ -669,7 +670,7 @@ class MatrixConstraint(collections_Mapping,
         """
         Construct the expression(s) for this constraint.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing constraint %s"
                          % (self.name))
         if self._constructed:

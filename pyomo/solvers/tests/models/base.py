@@ -86,6 +86,11 @@ class _BaseTestModel(object):
         """ Optimize the model """
         assert self.model is not None
 
+        if not io_options:
+            io_options = {}
+        if not solver_options:
+            solver_options = {}
+
         opt = SolverFactory(solver, solver_io=io)
         opt.options.update(solver_options)
 
