@@ -63,6 +63,18 @@ def maximize_cb_ratio_residuals_with_hessian_with_output(show_solver_log=False, 
     pyo.assert_optimal_termination(results)
     return m
 
+def maximize_cb_ratio_residuals_with_hessian_with_output_pyomo(show_solver_log=False, additional_options={}):
+    # this example is the same as the one above, but solves with a pure
+    # pyomo model - this is mostly for comparison and testing
+    m = create_pyomo_reactor_model()
+    solver = pyo.SolverFactory('ipopt')
+    for k,v in additional_options.items():
+        solver.options[k] = v
+    solver.options['linear_solver'] = 'mumps'
+    results = solver.solve(m, tee=show_solver_log)
+    pyo.assert_optimal_termination(results)
+    return m
+
 def maximize_cb_ratio_residuals_with_output_scaling(show_solver_log=False, additional_options={}):
     # in this simple example, we will use an external grey box model representing
     # a steady-state reactor, and solve for the space velocity that maximizes
@@ -177,9 +189,7 @@ if __name__ == '__main__':
     m = maximize_cb_ratio_residuals_with_output(show_solver_log=True)
 
     # the next two are the same model with pyomo/ipopt and external/cyipopt
-    m = create_pyomo_reactor_model()
-    status = pyo.SolverFactory('ipopt').solve(m, tee=True, options={'linear_solver':'mumps'})
-    
+    m = maximize_cb_ratio_residuals_with_hessian_with_output_pyomo(show_solver_log=True)
     m = maximize_cb_ratio_residuals_with_hessian_with_output(show_solver_log=True)
     
     aoptions={'hessian_approximation':'limited-memory',
