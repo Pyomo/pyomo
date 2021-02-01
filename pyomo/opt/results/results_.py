@@ -14,8 +14,10 @@ import math
 import sys
 import copy
 import json
+import logging
+import os.path
 
-from pyomo.common.dependencies import yaml, yaml_load_args
+from pyomo.common.dependencies import yaml, yaml_load_args, yaml_available
 import pyomo.opt
 from pyomo.opt.results.container import (undefined,
                                          ignore,
@@ -29,6 +31,7 @@ import pyomo.opt.results.solver
 from six import iteritems, StringIO
 from six.moves import xrange
 
+logger = logging.getLogger(__name__)
 
 class SolverResults(MapContainer):
 
@@ -75,18 +78,38 @@ class SolverResults(MapContainer):
         return tmp
 
     def write(self, **kwds):
-        if 'filename' in kwds:
-            OUTPUT = open(kwds['filename'],"w")
-            del kwds['filename']
-            kwds['ostream']=OUTPUT
-            self.write(**kwds)
-            OUTPUT.close()
-            return
+        _fmt = kwds.pop('format', None)
+        if _fmt:
+            _fmt = _fmt.lower()
+        fname = kwds.pop('filename', None)
 
-        if not 'format' in kwds or kwds['format'] == 'yaml':
-            self.write_yaml(**kwds)
+        if fname:
+            ext = os.path.splitext(fname)[1].lstrip('.')
+            normalized_ext = {
+                'json': 'json',
+                'jsn': 'json',
+                'yaml': 'yaml',
+                'yml': 'yaml',
+            }.get(ext, None)
+            if not _fmt:
+                _fmt = normalized_ext
+            elif normalized_ext and _fmt != normalized_ext:
+                logger.warning(
+                    "writing results to file (%s) using what appears "
+                    "to be an incompatible format (%s)" % (fname, _fmt))
+            with open(fname, "w") as OUTPUT:
+                kwds['ostream'] = OUTPUT
+                kwds['format'] = _fmt
+                self.write(**kwds)
         else:
-            self.write_json(**kwds)
+            if not _fmt:
+                _fmt = 'yaml'
+            if _fmt == 'yaml':
+                self.write_yaml(**kwds)
+            elif _fmt == 'json':
+                self.write_json(**kwds)
+            else:
+                raise ValueError("Unknown results file format: %s" % (_fmt,))
 
     def write_json(self, **kwds):
         if 'ostream' in kwds:

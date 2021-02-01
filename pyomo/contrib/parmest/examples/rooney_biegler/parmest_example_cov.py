@@ -10,7 +10,7 @@
 
 import pandas as pd
 import pyomo.contrib.parmest.parmest as parmest
-from rooney_biegler import rooney_biegler_model
+from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
 
 # Vars to estimate
 theta_names = ['asymptote', 'rate_constant']
@@ -33,3 +33,6 @@ obj, theta, cov = pest.theta_est(calc_cov=True)
 print(obj)
 print(theta)
 print(cov)
+
+parmest.graphics.pairwise_plot((theta, cov, 1000), theta_star=theta, alpha=0.8, 
+                               distributions=['MVN'])

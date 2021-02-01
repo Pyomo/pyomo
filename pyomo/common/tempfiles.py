@@ -34,9 +34,8 @@ deletion_errors_are_fatal = True
 class TempfileManagerClass:
     """A class that manages temporary files."""
 
-    tempdir = None
-
     def __init__(self, **kwds):
+        self.tempdir = None
         self._tempfiles = [[]]
         self._ctr = -1
 
@@ -188,5 +187,6 @@ class TempfileManagerClass:
 
         if len(self._tempfiles) == 0:
             self._tempfiles = [[]]
+
 
 TempfileManager = TempfileManagerClass()

@@ -29,6 +29,7 @@ env:
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools
   CACHE_VER: v3
+  NEOS_EMAIL: tests@pyomo.org
 
 jobs:
   build:
@@ -89,6 +90,14 @@ jobs:
           python: 3.6
           other: /parallel
           category: parallel
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-18.04
+          python: 3.7
+          other: /singletest
+          category: neos
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -501,8 +510,11 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
-        test.pyomo -v --cat="${{matrix.category}}" \
-            pyomo `pwd`/pyomo-model-libraries
+        CATEGORY=
+        for cat in ${{matrix.category}}; do
+            CATEGORY+=" --cat $cat"
+        done
+        test.pyomo -v $CATEGORY pyomo `pwd`/pyomo-model-libraries
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0

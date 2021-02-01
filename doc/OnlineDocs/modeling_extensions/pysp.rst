@@ -987,46 +987,48 @@ empty will alert the SMPS conversion routines that all variables
 appearing in the single active model objective expression should be
 considered to have stochastic coefficients.
 
-*Annotating Constraint Stages*
+.. # Commenting out documentation of deprecated functionality
 
-Annotating the model with constraint stages is sometimes necessary to
-identify to the SMPS routines that certain constraints belong in the
-second time-stage even though they lack references to any second-stage
-variables. Annotation of constraint stages is achieved using the
-**ConstraintStageAnnotation** annotation type. If this annotation
-is added to the model, it is assumed that it will be fully populated
-with explicit stage assignments for every constraint in the model. The
-``declare`` method should be called giving a ``Constraint`` or ``Block``
-as the first argument and a positive integer as the second argument (1
-signifies the first time stage). Example:
+    *Annotating Constraint Stages*
 
-.. testcode::
+    Annotating the model with constraint stages is sometimes necessary to
+    identify to the SMPS routines that certain constraints belong in the
+    second time-stage even though they lack references to any second-stage
+    variables. Annotation of constraint stages is achieved using the
+    **ConstraintStageAnnotation** annotation type. If this annotation
+    is added to the model, it is assumed that it will be fully populated
+    with explicit stage assignments for every constraint in the model. The
+    ``declare`` method should be called giving a ``Constraint`` or ``Block``
+    as the first argument and a positive integer as the second argument (1
+    signifies the first time stage). Example:
 
-   model.IDX = pyo.RangeSet(5)
+    .. testcode::
 
-   # declare the annotation
-   model.constraint_stage = annotations.ConstraintStageAnnotation()
-   
-   # all constraints on this Block are first-stage
-   model.B = pyo.Block()
-   # ...
-   model.constraint_stage.declare(model.B, 1)
-   
-   # all indices of this indexed constraint are first-stage
-   def C1_rule(m, i):
-       return p*m.x <= q*i
-   model.C1 = pyo.Constraint(model.IDX, rule=C1_rule)
-   model.constraint_stage.declare(model.C1, 1)
-   
-   # all but one index in this indexed constraint are second-stage
-   def C2_rule(m, i):
-       return p*m.x <= q*i
-   model.C2 = pyo.Constraint(model.IDX, rule=C2_rule)
-   for index in model.C2:
-       if index == 3:
-           model.constraint_stage.declare(model.C2[index], 1)
-       else:
-           model.constraint_stage.declare(model.C2[index], 2)
+       model.IDX = pyo.RangeSet(5)
+
+       # declare the annotation
+       model.constraint_stage = annotations.ConstraintStageAnnotation()
+
+       # all constraints on this Block are first-stage
+       model.B = pyo.Block()
+       # ...
+       model.constraint_stage.declare(model.B, 1)
+
+       # all indices of this indexed constraint are first-stage
+       def C1_rule(m, i):
+           return p*m.x <= q*i
+       model.C1 = pyo.Constraint(model.IDX, rule=C1_rule)
+       model.constraint_stage.declare(model.C1, 1)
+
+       # all but one index in this indexed constraint are second-stage
+       def C2_rule(m, i):
+           return p*m.x <= q*i
+       model.C2 = pyo.Constraint(model.IDX, rule=C2_rule)
+       for index in model.C2:
+           if index == 3:
+               model.constraint_stage.declare(model.C2[index], 1)
+           else:
+               model.constraint_stage.declare(model.C2[index], 2)
 
 .. _Edge-Cases:
 

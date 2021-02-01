@@ -2,6 +2,7 @@ import sys
 import logging
 from six import iteritems
 
+from pyomo.common.deprecation import deprecated
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
@@ -100,9 +101,9 @@ class BooleanValue(PyomoObject):
     def local_name(self):
         return self.getname(fully_qualified=False)
 
+    @deprecated("The cname() method has been renamed to getname().",
+                version='5.0')
     def cname(self, *args, **kwds):
-        logger.warning(
-            "DEPRECATED: The cname() method has been renamed to getname()." )
         return self.getname(*args, **kwds)
 
     def is_constant(self):

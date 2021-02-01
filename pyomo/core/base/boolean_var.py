@@ -4,6 +4,7 @@ from six import itervalues, iteritems
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
@@ -324,15 +325,14 @@ class BooleanVar(IndexedComponent):
 
     def construct(self, data=None):
         """Construct this component."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             try:
                 name = str(self.name)
             except:
                 name = type(self)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(
-                    "Constructing Variable, name=%s, from data=%s"
-                    % (name, str(data)))
+            logger.debug(
+                "Constructing Variable, name=%s, from data=%s"
+                % (name, str(data)))
 
         if self._constructed:
             return
@@ -558,7 +558,7 @@ class BooleanVarList(IndexedBooleanVar):
 
     def construct(self, data=None):
         """Construct this component."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing variable list %s", self.name)
 
         # We need to ensure that the indices needed for initialization are

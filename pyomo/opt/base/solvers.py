@@ -97,6 +97,10 @@ class UnknownSolver(object):
             raise ApplicationError("Solver (%s) not available" % str(self.name))
         return False
 
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
+        return False
+
     def warm_start_capable(self):
         """ True is the solver can accept a warm-start solution."""
         return False
@@ -203,23 +207,19 @@ def check_available_solvers(*args):
             name = arg[0]
         opt = SolverFactory(*arg)
         if opt is None or isinstance(opt, UnknownSolver):
-            available = False
-        elif (arg[0] == "gurobi") and \
-           (not GUROBISHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "baron") and \
-           (not BARONSHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "mosek_direct" or arg[0] == "mosek_persistent") and \
-                (not MOSEKDirect.license_is_valid()):
-            available = False
-        else:
-            available = \
-                (opt.available(exception_flag=False)) and \
-                ((not hasattr(opt,'executable')) or \
-                (opt.executable() is not None))
-        if available:
-            ans.append(name)
+            continue # not available
+
+        if not opt.available(exception_flag=False):
+            continue # not available
+
+        if hasattr(opt, 'executable') and opt.executable() is None:
+            continue # not available
+
+        if not opt.license_is_valid():
+            continue # not available
+
+        # At this point, the solver is available (and licensed)
+        ans.append(name)
 
     logging.disable(logging.NOTSET)
 
@@ -502,6 +502,10 @@ class OptSolver(object):
 
     def available(self, exception_flag=True):
         """ True if the solver is available """
+        return True
+
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
         return True
 
     def warm_start_capable(self):
@@ -926,10 +930,15 @@ def default_config_block(solver, init=False):
                 'Print the results object after optimization.',
                 None) ).declare_as_argument(dest="show_results")
     postsolve.declare('results format', ConfigValue(
-                None,
-                str,
-                'Specify the results format:  json or yaml.',
-                None) ).declare_as_argument('--results-format', dest="results_format", metavar="FORMAT").declare_as_argument('--json', dest="results_format", action="store_const", const="json", help="Store results in JSON format")
+        None,
+        str,
+        'Specify the results format:  json or yaml.',
+        None)
+    ).declare_as_argument(
+        '--results-format', dest="results_format", metavar="FORMAT"
+    ).declare_as_argument(
+        '--json', dest="results_format", action="store_const",
+        const="json", help="Store results in JSON format")
     postsolve.declare('summary', ConfigValue(
                 False,
                 bool,

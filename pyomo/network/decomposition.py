@@ -281,10 +281,21 @@ class SequentialDecomposition(FOQUSGraph):
             old_log_level = logger.level
             logger.setLevel(logging.INFO)
 
+        self.cache.clear()
+
+        try:
+            return self._run_impl(model, function)
+        finally:
+            # Cleanup
+            self.cache.clear()
+
+            if self.options["log_info"]:
+                logger.setLevel(old_log_level)
+
+
+    def _run_impl(self, model, function):
         start = time.time()
         logger.info("Starting Sequential Decomposition")
-
-        self.cache.clear()
 
         G = self.options["graph"]
         if G is None:
@@ -338,14 +349,9 @@ class SequentialDecomposition(FOQUSGraph):
                     raise ValueError(
                         "Invalid tear_method '%s'" % (tear_method,))
 
-        self.cache.clear()
-
         end = time.time()
         logger.info("Finished Sequential Decomposition in %.2f seconds" %
             (end - start))
-
-        if self.options["log_info"]:
-            logger.setLevel(old_log_level)
 
     def run_order(self, G, order, function, ignore=None, use_guesses=False):
         """
