@@ -523,18 +523,20 @@ class PyomoGreyBoxNLP(NLP):
         self._init_greybox_duals.flags.writeable = False
         self._greybox_duals = self._init_greybox_duals.copy()
 
-        # make sure the duals get to the external greybox models
-        self.set_duals(self.get_duals())
-
         # compute the jacobian for the external greybox models
         # to get some of the statistics
         self._evaluate_greybox_jacobians_and_cache_if_necessary()
         self._nnz_greybox_jac = len(self._cached_greybox_jac.data)
 
+        # make sure the duals get to the external greybox models
+        self.set_duals(self.get_duals())
+
         # compute the hessian for the external greybox models
         # to get some of the statistics
-        self._evaluate_greybox_hessians_and_cache_if_necessary()
-        self._nnz_greybox_hess = len(self._cached_greybox_hess.data)
+        # CDL: let's delay this?
+        # self._evaluate_greybox_hessians_and_cache_if_necessary()
+        # self._nnz_greybox_hess = len(self._cached_greybox_hess.data)
+        self._nnz_greybox_hess = None
 
     def _invalidate_greybox_primals_cache(self):
         self._greybox_constraints_cached = False
@@ -1026,8 +1028,8 @@ class PyomoGreyBoxNLP(NLP):
 
 class _ExternalGreyBoxModelHelper(object):
     def __init__(self, ex_grey_box_block, vardata_to_idx, con_offset):
-        """This helper takes an ExternalGreyBoxModel and provides the residual
-        and Jacobian computation.
+        """This helper takes an ExternalGreyBoxModel and provides the residual,
+        Jacobian, and Hessian computation mapped to the correct variable space.
 
         The ExternalGreyBoxModel provides an interface that supports
         equality constraints (pure residuals) and output equations. Let

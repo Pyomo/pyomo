@@ -76,7 +76,6 @@ Note:
 
 """
 
-@add_metaclass(abc.ABCMeta)
 class ExternalGreyBoxModel(object):
     """
     This is the base class for building external input output models
@@ -101,27 +100,13 @@ class ExternalGreyBoxModel(object):
         """
         return len(self.output_names())
 
-    class ModelCapabilities:
-        def __init__(self):
-            self.supports_jacobian_equality_constraints = False
-            self.supports_jacobian_outputs = False
-            self.supports_hessian_equality_constraints = False
-            self.supports_hessian_outputs = False
-
-    def model_capabilities(self):
-        """ This method returns a ModelCapabilities object with
-        the flags set appropriately for the derived class
-        """
-        pass
-
-    @abc.abstractmethod
     def input_names(self):
         """
         Provide the list of string names to corresponding to the inputs
         of this external model. These should be returned in the same order
         that they are to be used in set_input_values.
         """
-        pass
+        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement the method: input_names')
 
     def equality_constraint_names(self):
         """
@@ -153,7 +138,6 @@ class ExternalGreyBoxModel(object):
         """
         pass
 
-    @abc.abstractmethod
     def set_input_values(self, input_values):
         """
         This method is called by the solver to set the current values
@@ -161,7 +145,7 @@ class ExternalGreyBoxModel(object):
         necessary for any subsequent calls to evalute_outputs or
         evaluate_derivatives.
         """
-        pass
+        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement the method: set_input_values')
 
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
         """
@@ -170,17 +154,11 @@ class ExternalGreyBoxModel(object):
         class must cache these if necessary for any subsequent calls
         to evaluate_hessian_equality_constraints
         """
-        if self.model_capabilities().supports_hessian_equality_constraints:
-            raise NotImplementedError('ExternalGreyBoxModel supports evaluation of the Hessian'
-                                      ' of the equality constraints, however, the derived model'
-                                      ' is not handling set_equality_constraint_multipliers')
-        elif eq_con_multiplier_values is not None \
-           and len(eq_con_multiplier_values) != 0:
-            print(eq_con_multiplier_values)
-            raise NotImplementedError('set_equality_constraint_multipliers called'
-                                      ' on a model that does not support computation'
-                                      ' of Hessians of equality constraints.'
-                                      )
+        if self.n_equality_constraints() == 0 and \
+           (eq_con_multiplier_values is None or len(eq_con_multiplier_values) == 0):
+            return
+        
+        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement set_equality_constraint_multlipliers.')
 
     def set_output_constraint_multipliers(self, output_con_multiplier_values):
         """
@@ -189,17 +167,11 @@ class ExternalGreyBoxModel(object):
         class must cache these if necessary for any subsequent calls
         to evaluate_hessian_outputs
         """
-        if self.model_capabilities().supports_hessian_outputs:
-            raise NotImplementedError('ExternalGreyBoxModel supports evaluation of the Hessian'
-                                      ' of the outputs, however, the derived model'
-                                      ' is not handling set_output_constraint_multipliers')
-        elif output_con_multiplier_values is not None \
-           and len(output_con_multiplier_values) != 0:
-            raise NotImplementedError('set_output_constraint_multipliers called'
-                                      ' on a model that does not support computation'
-                                      ' of Hessians of outputs.'
-                                      )
+        if self.n_outputs() == 0 and \
+           (output_con_multiplier_values is None or len(output_con_multiplier_values) == 0):
+            return
 
+        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement set_output_constraint_multlipliers.')
 
     def get_equality_constraint_scaling_factors(self):
         """
@@ -270,7 +242,7 @@ class ExternalGreyBoxModel(object):
         """
         raise NotImplementedError('evaluate_hessian_equality_constraints called '
                                   'but not implemented in the derived class.')
-
+    
     def evaluate_hessian_outputs(self):
         """
         Compute the product of the output constraint multipliers with the
@@ -283,7 +255,6 @@ class ExternalGreyBoxModel(object):
         """
         raise NotImplementedError('evaluate_hessian_outputs called '
                                   'but not implemented in the derived class.')
-
 
 class ExternalGreyBoxBlockData(_BlockData):
 
