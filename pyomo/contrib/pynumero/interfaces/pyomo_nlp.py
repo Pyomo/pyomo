@@ -14,7 +14,7 @@ the Ampl Solver Library (ASL) implementation
 
 import os
 import numpy as np
-from six import add_metaclass, itervalues, iteritems
+import six
 from six.moves import xrange
 
 from scipy.sparse import coo_matrix
@@ -79,7 +79,7 @@ class PyomoNLP(AslNLP):
             self._condata_to_idx = cdidx = ComponentMap()
 
             # TODO: Are these names totally consistent?
-            for name, obj in iteritems(symbolMap.bySymbol):
+            for name, obj in six.iteritems(symbolMap.bySymbol):
                 if name[0] == 'v':
                     vdidx[obj()] = int(name[1:])
                 elif name[0] == 'c':
@@ -140,7 +140,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the primals
         """
         # ToDo: is there a more efficient way to do this
-        idx_to_vardata = {i:v for v,i in iteritems(self._vardata_to_idx)}
+        idx_to_vardata = {i:v for v,i in six.iteritems(self._vardata_to_idx)}
         return [idx_to_vardata[i] for i in range(len(idx_to_vardata))]
 
     def get_pyomo_constraints(self):
@@ -149,7 +149,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the primals
         """
         # ToDo: is there a more efficient way to do this
-        idx_to_condata = {i:v for v,i in iteritems(self._condata_to_idx)}
+        idx_to_condata = {i:v for v,i in six.iteritems(self._condata_to_idx)}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
     def get_pyomo_equality_constraints(self):
@@ -501,13 +501,13 @@ class PyomoGreyBoxNLP(NLP):
         self._vardata_to_idx = ComponentMap(self._pyomo_nlp._vardata_to_idx)
         for data in greybox_data:
             # check that none of the inputs / outputs are fixed
-            for v in itervalues(data.inputs):
+            for v in six.itervalues(data.inputs):
                 if v.fixed:
                     raise NotImplementedError('Found a grey box model input that is fixed: {}.'
                                               ' This interface does not currently support fixed'
                                               ' variables. Please add a constraint instead.'
                                               ''.format(v.getname(fully_qualified=True)))
-            for v in itervalues(data.outputs):
+            for v in six.itervalues(data.outputs):
                 if v.fixed:
                     raise NotImplementedError('Found a grey box model output that is fixed: {}.'
                                               ' This interface does not currently support fixed'
@@ -1154,13 +1154,13 @@ class _ExternalGreyBoxModelHelper(object):
         # store the map of input indices (0 .. n_inputs) to
         # the indices in the full primals vector
         self._inputs_to_primals_map = np.fromiter(
-            (vardata_to_idx[v] for v in itervalues(self._block.inputs)),
+            (vardata_to_idx[v] for v in six.itervalues(self._block.inputs)),
             dtype=np.int64, count=n_inputs)
 
         # store the map of output indices (0 .. n_outputs) to
         # the indices in the full primals vector
         self._outputs_to_primals_map = np.fromiter(
-            (vardata_to_idx[v] for v in itervalues(self._block.outputs)),
+            (vardata_to_idx[v] for v in six.itervalues(self._block.outputs)),
             dtype=np.int64, count=n_outputs)
 
         if self._ex_model.n_outputs() == 0 and \
