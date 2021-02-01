@@ -347,7 +347,7 @@ def _redirect_stdout():
     newstdout = os.dup(1)
 
     # /dev/null is used just to discard what is being printed
-    devnull = os.open('/dev/null', os.O_WRONLY)
+    devnull = os.open(os.devnull, os.O_WRONLY)
 
     # Duplicate the file descriptor for /dev/null
     # and overwrite the value for stdout (file descriptor 1)
@@ -467,6 +467,9 @@ class PyomoCyIpoptSolver(object):
     def available(self, exception_flag=False):
         return numpy_available and ipopt_available
 
+    def license_is_valid(self):
+        return True
+
     def version(self):
         return tuple(int(_) for _ in ipopt.__version__.split('.'))
 
@@ -535,7 +538,7 @@ class PyomoCyIpoptSolver(object):
             logger.error(msg, exc_info=sys.exc_info())
             solverStatus = SolverStatus.unknown
             raise
-        
+
         wall_time = timer.toc("")
 
         results = SolverResults()

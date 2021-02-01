@@ -38,6 +38,8 @@ gzip = attempt_import('gzip')[0]
 
 logger = logging.getLogger('pyomo.neos')
 
+_email_re = re.compile(r'([^@]+@[^@]+\.[a-zA-Z0-9]+)$')
+
 class NEOS(object):
     # NEOS currently only supports HTTPS access
     scheme = 'https'
@@ -119,10 +121,24 @@ def ProxiedTransport():
         return ProxiedTransport_PY3()
 
 
-class kestrelAMPL:
+class kestrelAMPL(object):
 
     def __init__(self):
         self.setup_connection()
+
+    def __del__(self):
+        # This is a hack to force the socket to close.  When running
+        # tests under unittest, unittest will report any underlying
+        # socket resources that have not been closed as warnings.  This
+        # will cause the socket to be closed when the kestrelAMPL object
+        # falls out of scope and will suppress the warnings from
+        # unittest.
+        #
+        # Note that this is only to suppress warnings, as __del__ is not
+        # guaranteed to be called (especially for any objects that still
+        # exist when the Python process terminates)
+        if self.neos is not None:
+            self.transport.close()
 
     def setup_connection(self):
         # on *NIX, the proxy can show up either upper or lowercase.
@@ -135,14 +151,17 @@ class kestrelAMPL:
             proxy = os.environ.get(
                 'https_proxy', os.environ.get(
                     'HTTPS_PROXY', proxy))
-        transport = None
         if proxy:
-            transport = ProxiedTransport()
-            transport.set_proxy(proxy)
+            self.transport = ProxiedTransport()
+            self.transport.set_proxy(proxy)
+        elif NEOS.scheme == 'https':
+            self.transport = xmlrpclib.SafeTransport()
+        else:
+            self.transport = xmlrpclib.Transport()
 
         self.neos = xmlrpclib.ServerProxy(
             "%s://%s:%s" % (NEOS.scheme, NEOS.host, NEOS.port),
-            transport=transport)
+            transport=self.transport)
 
         logger.info("Connecting to the NEOS server ... ")
         try:
@@ -179,9 +198,8 @@ class kestrelAMPL:
         results = self.neos.getFinalResults(jobNumber,password)
         if isinstance(results,xmlrpclib.Binary):
             results = results.data
-        #decode results to kestrel.sol
-        # Well try to anyway, any errors will result in error strings in .sol file
-        #  instead of solution.
+        # decode results to kestrel.sol; well try to anyway, any errors
+        # will result in error strings in .sol file instead of solution.
         if stub[-4:] == '.sol':
             stub = stub[:-4]
         solfile = open(stub + ".sol","wb")
@@ -193,12 +211,7 @@ class kestrelAMPL:
         # one sudo-ed to), whereas USERNAME is the original user who ran
         # sudo.  We include USERNAME to cover Windows, where LOGNAME and
         # USER may not be defined.
-        for _ in ('LOGNAME','USER','USERNAME'):
-            uname = os.getenv(_)
-            if uname is not None:
-                break
-        hostname = socket.getfqdn(socket.gethostname())
-        user = "%s on %s" % (uname,hostname)
+        user = self.getEmailAddress()
         (jobNumber,password) = self.neos.submitJob(xml,user,"kestrel")
         if jobNumber == 0:
             raise RuntimeError("%s\n\tJob not submitted" % (password,))
@@ -211,6 +224,17 @@ class kestrelAMPL:
             "?admin=results&jobnumber=%d&pass=%s\n"
             % (NEOS.scheme, jobNumber,password))
         return (jobNumber,password)
+
+    def getEmailAddress(self):
+        # Note: the NEOS email address parser is more restrictive than
+        # the email.utils parser
+        email = os.environ.get('NEOS_EMAIL', '')
+        if _email_re.match(email):
+            return email
+
+        raise RuntimeError(
+            "NEOS requires a valid email address. "
+            "Please set the 'NEOS_EMAIL' environment variable.")
 
     def getJobAndPassword(self):
         """
@@ -319,12 +343,14 @@ class kestrelAMPL:
         xml = """
               <document>
               <category>kestrel</category>
+              <email>%s</email>
               <solver>%s</solver>
               <inputType>AMPL</inputType>
               %s
               <solver_options>%s</solver_options>
               <nlfile><base64>%s</base64></nlfile>\n""" %\
-                                (solver,priority,
+                                (self.getEmailAddress(),
+                                 solver,priority,
                                  solver_options,
                                  nl_string)
         #

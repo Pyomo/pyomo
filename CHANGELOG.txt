@@ -3,13 +3,55 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 5.7.2   17 Dec 2020
+Pyomo 5.7.3   29 Jan 2021
 -------------------------------------------------------------------------------
 
 ADVANCE CHANGE NOTICE:
   - This is the last Pyomo release to support Python 2.7, 3.4, and 3.5
   - This is the last Pyomo release to bundle PySP
   - This is the last Pyomo release that will have a strict PyUtilib dependency
+
+- General
+  - Improve GHA workflow for uploading manylinux wheels (#1758, #1757)
+  - Add Python 3.9 to OSX/Windows on the GHA release workflow (#1755)
+  - Standardize file line endings (#1764)
+  - Resolve matplotlib deferred import failure (#1770)
+  - Move the ATTIC directory to an internal archived repository (#1762)
+  - Rename log_active_constraints to log_model_constraints (#1788)
+  - Remove references to ordereddict package (#1796)
+  - Convert old deprecation messages to use pyomo.common.deprecation (#1798)
+  - Update and standardize Pyomo logging configuration (#1797)
+  - Add writer consistency checks between filenames and formats (#1804)
+  - Initialize self.tempdir in TempfileManagerClass (#1806)
+- Core
+  - Add is_reference API (#1740)
+  - Add option to not rename components in the scaling transformation (#1596)
+  - Improve units documentation and performance (#1769, #1794, #1805)
+- Documentation
+  - Move the doc/attic directory to an internal archived repository (#1773)
+- Solver Interfaces
+  - Fix missing imports in the persistent solver interface (#1772)
+  - Update NEOS interface to provide email addresses (#1782, #1783, #1795)
+  - Add mipgap capture to CPLEX direct interface (#1775)
+  - Update solver license_is_valid checks (#1789)
+  - Update CPLEX solution parser for CPLEX 12.10 (#1792)
+  - Resolve issues with the NEOS interface (#1802)
+- DAE Updates
+  - Extend flattener to allow multiple sets (#1768)
+- GDP Updates
+  - Fix subproblem initialiations in gdp.cuttingplane (#1780)
+- Testing
+  - Fix Jenkins test script (#1771)
+  - Fix GHA tests to work with PyMySQL 1.0.0 (#1777)
+- Contrib
+  - PyNumero: resolve portability issue with Cyipopt exception handling, 
+    add PyomoNLP methods for accessing equality/inequality constraints (#1781, 
+    #1791)
+  - Parmest: update pairwise plot to use the covariance matrix (#1774)
+
+-------------------------------------------------------------------------------
+Pyomo 5.7.2   17 Dec 2020
+-------------------------------------------------------------------------------
 
 - General
   - Increase timeout when loading libraries through CtypesEnviron (#1644)

@@ -28,6 +28,7 @@ from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.common.collections import ComponentMap, Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import (
@@ -1063,7 +1064,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     data = data.get(name, None)
             else:
                 data = None
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            generate_debug_messages = is_debug_set(logger)
+            if generate_debug_messages:
                 # This is tricky: If we are in the middle of
                 # constructing an indexed block, the block component
                 # already has _constructed=True.  Now, if the
@@ -1081,7 +1083,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                         _blockName = "Block '%s[...]'" \
                             % self.parent_component().name
                 logger.debug("Constructing %s '%s' on %s from data=%s",
-                             val.__class__.__name__, val.name,
+                             val.__class__.__name__, name,
                              _blockName, str(data))
             try:
                 val.construct(data)
@@ -1092,11 +1094,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     str(val.name), str(data).strip(),
                     type(err).__name__, err)
                 raise
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            if generate_debug_messages:
                 if _blockName[-1] == "'":
-                    _blockName = _blockName[:-1] + '.' + val.name + "'"
+                    _blockName = _blockName[:-1] + '.' + name + "'"
                 else:
-                    _blockName = "'" + _blockName + '.' + val.name + "'"
+                    _blockName = "'" + _blockName + '.' + name + "'"
                 _out = StringIO()
                 val.pprint(ostream=_out)
                 logger.debug("Constructed component '%s':\n%s"
@@ -1778,14 +1780,25 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # user did something like 'model.write("f.nl")' and
             # expected guess_format to create an NL file.
             format = ProblemFormat.cpxlp
-        if (filename is not None) and (format is None):
-            format = guess_format(filename)
+        if filename is not None:
+            try:
+                _format = guess_format(filename)
+            except AttributeError:
+                # End up here if an ostream is passed to the filename argument
+                _format = None
             if format is None:
-                raise ValueError(
-                    "Could not infer file format from file name '%s'.\n"
-                    "Either provide a name with a recognized extension "
-                    "or specify the format using the 'format' argument."
-                    % filename)
+                if _format is None:
+                    raise ValueError(
+                        "Could not infer file format from file name '%s'.\n"
+                        "Either provide a name with a recognized extension "
+                        "or specify the format using the 'format' argument."
+                        % filename)
+                else:
+                    format = _format
+            elif format != _format and _format is not None:
+                logger.warning(
+                    "Filename '%s' likely does not match specified "
+                    "file format (%s)" % (filename, format))
         problem_writer = WriterFactory(format)
         if problem_writer is None:
             raise ValueError(
@@ -1813,7 +1826,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             self.solutions = ModelSolutions(self)
         self.solutions.add_symbol_map(smap)
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug(
                 "Writing model '%s' to file '%s' with format %s",
                 self.name,
@@ -1917,7 +1930,7 @@ class Block(ActiveIndexedComponent):
         """
         Initialize the block
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing %s '%s', from data=%s",
                          self.__class__.__name__, self.name, str(data))
         if self._constructed:

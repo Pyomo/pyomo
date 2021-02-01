@@ -12,6 +12,7 @@ import logging
 import numpy as np
 from scipy.sparse import coo_matrix
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base import Var, Constraint, value
 from pyomo.core.base.block import _BlockData, Block, declare_custom_block
@@ -311,7 +312,7 @@ class ExternalGreyBoxBlock(Block):
         # Do not set the constructed flag - Block.construct() will do that
 
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing external grey box model %s"
                          % (self.name))
 

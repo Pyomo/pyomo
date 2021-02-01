@@ -17,16 +17,12 @@ import gc
 import time
 import math
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
-
 from pyomo.common import timing, PyomoAPIFactory
-from pyomo.common.collections import Container
+from pyomo.common.collections import Container, OrderedDict
 from pyomo.common.dependencies import pympler, pympler_available
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.log import is_debug_set
 from pyomo.common.plugin import ExtensionPoint
 
 from pyomo.core.expr import expr_common
@@ -571,9 +567,10 @@ class Model(SimpleBlock):
         if cls != Model:
             return super(Model, cls).__new__(cls)
 
-        logger.warning(
-"""DEPRECATION WARNING: Using the 'Model' class is deprecated.  Please
-use the AbstractModel or ConcreteModel class instead.""")
+        deprecation_warning(
+            "Using the 'Model' class is deprecated.  Please use the "
+            "AbstractModel or ConcreteModel class instead.",
+            version='4.3.11323')
         return AbstractModel.__new__(AbstractModel)
 
     def __init__(self, name='unknown', **kwargs):
@@ -762,16 +759,17 @@ arguments (which have been ignored):"""
             dp = DataPortal(data_dict=arg, model=self)
         elif isinstance(arg, SolverResults):
             if len(arg.solution):
-                logger.warning(
-"""DEPRECATION WARNING: the Model.load() method is deprecated for
-loading solutions stored in SolverResults objects.  Call
-Model.solutions.load_from().""")
+                deprecation_warning(
+                    "The Model.load() method is deprecated for loading "
+                    "solutions stored in SolverResults objects.  Call"
+                    "Model.solutions.load_from().", version='4.3.11323')
                 self.solutions.load_from(arg)
             else:
-                logger.warning(
-"""DEPRECATION WARNING: the Model.load() method is deprecated for
-loading solutions stored in SolverResults objects.  By default, results
-from solvers are immediately loaded into the original model instance.""")
+                deprecation_warning(
+                    "The Model.load() method is deprecated for loading "
+                    "solutions stored in SolverResults objects.  By default, "
+                    "results from solvers are immediately loaded into "
+                    "the original model instance.", version='4.3.11323')
             return
         else:
             msg = "Cannot load model model data from with object of type '%s'"
@@ -873,7 +871,8 @@ from solvers are immediately loaded into the original model instance.""")
             if data is not None:
                 break
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        generate_debug_messages = is_debug_set(logger)
+        if generate_debug_messages:
             _blockName = "Model" if self.parent_block() is None \
                 else "Block '%s'" % self.name
             logger.debug( "Constructing %s '%s' on %s from data=%s",
@@ -889,11 +888,11 @@ from solvers are immediately loaded into the original model instance.""")
                 type(err).__name__, err )
             raise
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                _out = StringIO()
-                declaration.pprint(ostream=_out)
-                logger.debug("Constructed component '%s':\n    %s"
-                             % ( declaration.name, _out.getvalue()))
+        if generate_debug_messages:
+            _out = StringIO()
+            declaration.pprint(ostream=_out)
+            logger.debug("Constructed component '%s':\n    %s"
+                         % ( declaration.name, _out.getvalue()))
 
         if profile_memory >= 2 and pympler_available:
             mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
@@ -905,30 +904,30 @@ from solvers are immediately loaded into the original model instance.""")
                 print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
 
 
+    @deprecated("The Model.create() method is deprecated.  Call "
+                "Model.create_instance() to create a concrete instance "
+                "from an abstract model.  You do not need to call "
+                "Model.create() for a concrete model.", version='4.3.11323')
     def create(self, filename=None, **kwargs):
         """
         Create a concrete instance of this Model, possibly using data
         read in from a file.
         """
-        logger.warning(
-"""DEPRECATION WARNING: the Model.create() method is deprecated.  Call
-Model.create_instance() to create a concrete instance from an abstract
-model.  You do not need to call Model.create() for a concrete model.""")
         return self.create_instance(filename=filename, **kwargs)
 
+    @deprecated("Model.transform() is deprecated.", version='4.3.11323')
     def transform(self, name=None, **kwds):
         if name is None:
-            logger.warning(
-"""DEPRECATION WARNING: Model.transform() is deprecated.  Use
-the TransformationFactory iterator to get the list of known
-transformations.""")
+            deprecation_warning(
+                "Use the TransformationFactory iterator to get the list "
+                "of known transformations.", version='4.3.11323')
             return list(TransformationFactory)
 
-        logger.warning(
-"""DEPRECATION WARNING: Model.transform() is deprecated.  Use
-TransformationFactory('%s') to construct a transformation object, or
-TransformationFactory('%s').apply_to(model) to directly apply the
-transformation to the model instance.""" % (name,name,) )
+        deprecation_warning(
+            "Use TransformationFactory('%s') to construct a transformation "
+            "object, or TransformationFactory('%s').apply_to(model) to "
+            "directly apply the transformation to the model instance." % (
+                name,name,), version='4.3.11323')
 
         xfrm = TransformationFactory(name)
         if xfrm is None:

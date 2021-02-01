@@ -151,6 +151,9 @@ class GDPoptSolver(object):
         """
         return True
 
+    def license_is_valid(self):
+        return True
+
     def version(self):
         """Return a 3-tuple describing the solver version."""
         return __version__
