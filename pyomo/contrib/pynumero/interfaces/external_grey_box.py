@@ -47,7 +47,8 @@ To use this interface:
      (or residuals) that need to be converged, and any outputs that
      are computed from your model. It will also need to provide methods to
      compute the residuals, outputs, and the jacobian of these with respect to
-     the inputs. See the documentation on ExternalGreyBoxModel for more details.
+     the inputs. Implement the methods to evaluate hessians is applicable.
+     See the documentation on ExternalGreyBoxModel for more details.
 
    * Create a Pyomo model and make use of the ExternalGreyBoxBlock
      to produce a Pyomo modeling component that represents your
@@ -146,7 +147,8 @@ class ExternalGreyBoxModel(object):
         necessary for any subsequent calls to evalute_outputs or
         evaluate_derivatives.
         """
-        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement the method: set_input_values')
+        raise NotImplementedError('Derived ExternalGreyBoxModel classes need'
+                                  ' to implement the method: set_input_values')
 
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
         """
@@ -157,10 +159,13 @@ class ExternalGreyBoxModel(object):
         """
         # we should check these for efficiency
         assert self.n_equality_constraints() == len(eq_con_multiplier_values) 
-        if not hasattr(self, 'evaluate_hessian_equality_constraints') or self.n_equality_constraints() == 0:
+        if not hasattr(self, 'evaluate_hessian_equality_constraints') \
+           or self.n_equality_constraints() == 0:
             return
         
-        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement set_equality_constraint_multlipliers.')
+        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement'
+                                  ' set_equality_constraint_multlipliers when they'
+                                  ' support Hessian computations.')
 
     def set_output_constraint_multipliers(self, output_con_multiplier_values):
         """
@@ -171,10 +176,13 @@ class ExternalGreyBoxModel(object):
         """
         # we should check these for efficiency
         assert self.n_outputs() == len(output_con_multiplier_values)
-        if not hasattr(self, 'evaluate_hessian_output_constraints') or self.n_outputs() == 0:
+        if not hasattr(self, 'evaluate_hessian_output_constraints') \
+           or self.n_outputs() == 0:
             return
 
-        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement set_output_constraint_multlipliers.')
+        raise NotImplementedError('Derived ExternalGreyBoxModel classes need to implement'
+                                  ' set_output_constraint_multlipliers when they'
+                                  ' support Hessian computations.')
 
     def get_equality_constraint_scaling_factors(self):
         """
@@ -233,31 +241,35 @@ class ExternalGreyBoxModel(object):
         raise NotImplementedError('evaluate_equality_outputs called '
                                   'but not implemented in the derived class.')
 
-#    def evaluate_hessian_equality_constraints(self):
-#        """
-#        Compute the product of the equality constraint multipliers
-#        with the hessian of the equality constraints.
-#        E.g., y_eq^k is the vector of equality constraint multipliers
-#        from set_equality_constraint_multipliers, w_eq(u)=0 are the 
-#        equality constraints, and u^k are the vector of inputs from
-#        set_inputs. This method must return
-#        H_eq^k = sum_i (y_eq^k)_i * grad^2_{uu} w_eq(u^k)
-#        """
-#        raise NotImplementedError('evaluate_hessian_equality_constraints called '
-#                                  'but not implemented in the derived class.')
-#    
-#    def evaluate_hessian_outputs(self):
-#        """
-#        Compute the product of the output constraint multipliers with the
-#        hessian of the outputs. E.g., y_o^k is the vector of output
-#        constraint multipliers from set_output_constraint_multipliers,
-#        u^k are the vector of inputs from set_inputs, and w_o(u) is the
-#        function that computes the vector of outputs at the values for
-#        the input variables. This method must return
-#        H_o^k = sum_i (y_o^k)_i * grad^2_{uu} w_o(u^k)
-#        """
-#        raise NotImplementedError('evaluate_hessian_outputs called '
-#                                  'but not implemented in the derived class.')
+    #
+    # Implement the following methods to provide support for Hessian computations
+    #
+    
+    # def evaluate_hessian_equality_constraints(self):
+    #     """
+    #     Compute the product of the equality constraint multipliers
+    #     with the hessian of the equality constraints.
+    #     E.g., y_eq^k is the vector of equality constraint multipliers
+    #     from set_equality_constraint_multipliers, w_eq(u)=0 are the 
+    #     equality constraints, and u^k are the vector of inputs from
+    #     set_inputs. This method must return
+    #     H_eq^k = sum_i (y_eq^k)_i * grad^2_{uu} w_eq(u^k)
+    #     """
+    #     raise NotImplementedError('evaluate_hessian_equality_constraints called '
+    #                               'but not implemented in the derived class.')
+    
+    # def evaluate_hessian_outputs(self):
+    #     """
+    #     Compute the product of the output constraint multipliers with the
+    #     hessian of the outputs. E.g., y_o^k is the vector of output
+    #     constraint multipliers from set_output_constraint_multipliers,
+    #     u^k are the vector of inputs from set_inputs, and w_o(u) is the
+    #     function that computes the vector of outputs at the values for
+    #     the input variables. This method must return
+    #     H_o^k = sum_i (y_o^k)_i * grad^2_{uu} w_o(u^k)
+    #     """
+    #     raise NotImplementedError('evaluate_hessian_outputs called '
+    #                               'but not implemented in the derived class.')
 
 class ExternalGreyBoxBlockData(_BlockData):
 
