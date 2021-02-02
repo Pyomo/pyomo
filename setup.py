@@ -134,14 +134,6 @@ def run_setup():
       ext_modules = ext_modules,
       entry_points="""
         [console_scripts]
-        runbenders=pyomo.pysp.benders:Benders_main
-        evaluate_xhat=pyomo.pysp.evaluate_xhat:EvaluateXhat_main
-        runph=pyomo.pysp.phinit:PH_main
-        runef=pyomo.pysp.ef_writer_script:main
-        phsolverserver=pyomo.pysp.phsolverserver:main
-        scenariotreeserver=pyomo.pysp.scenariotree.server_pyro:main
-        computeconf=pyomo.pysp.computeconf:main
-
         results_schema=pyomo.scripting.commands:results_schema
         pyro_mip_server = pyomo.scripting.pyro_mip_server:main
         test.pyomo = pyomo.scripting.runtests:runPyomoTests

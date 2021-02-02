@@ -31,7 +31,7 @@ _packages = [
     'pyomo.duality',
     'pyomo.checker',
     'pyomo.repn',
-    'pyomo.pysp',
+    #'pyomo.pysp',
     'pyomo.neos',
     'pyomo.solvers',
     'pyomo.gdp',
