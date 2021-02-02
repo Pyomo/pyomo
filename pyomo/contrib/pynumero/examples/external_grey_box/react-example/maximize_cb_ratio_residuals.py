@@ -9,7 +9,8 @@
 #  ___________________________________________________________________________
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
-from reactor_model_residuals import ReactorModel, ReactorModelNoOutputs, ReactorModelScaled
+from reactor_model_residuals import ReactorModel, ReactorModelWithHessian, \
+    ReactorModelNoOutputs, ReactorModelScaled, create_pyomo_reactor_model
 
 def maximize_cb_ratio_residuals_with_output(show_solver_log=False, additional_options={}):
     # in this simple example, we will use an external grey box model representing
@@ -33,6 +34,43 @@ def maximize_cb_ratio_residuals_with_output(show_solver_log=False, additional_op
     solver.config.options['hessian_approximation'] = 'limited-memory'
     for k,v in additional_options.items():
         solver.config.options[k] = v
+    results = solver.solve(m, tee=show_solver_log)
+    pyo.assert_optimal_termination(results)
+    return m
+
+def maximize_cb_ratio_residuals_with_hessian_with_output(show_solver_log=False, additional_options={}):
+    # in this simple example, we will use an external grey box model representing
+    # a steady-state reactor, and solve for the space velocity that maximizes
+    # the ratio of B to the other components coming out of the reactor
+    # This example illustrates the use of "equality constraints" or residuals
+    # in the external grey box example as well as outputs
+    m = pyo.ConcreteModel()
+
+    # create a block to store the external reactor model
+    m.reactor = ExternalGreyBoxBlock(external_model=ReactorModelWithHessian())
+
+    # The feed concentration will be fixed for this example
+    m.cafcon = pyo.Constraint(expr=m.reactor.inputs['caf'] == 10000)
+    
+    # add an objective function that maximizes the concentration
+    # of cb coming out of the reactor
+    m.obj = pyo.Objective(expr=m.reactor.outputs['cb_ratio'], sense=pyo.maximize)
+
+    solver = pyo.SolverFactory('cyipopt')
+    for k,v in additional_options.items():
+        solver.config.options[k] = v
+    results = solver.solve(m, tee=show_solver_log)
+    pyo.assert_optimal_termination(results)
+    return m
+
+def maximize_cb_ratio_residuals_with_hessian_with_output_pyomo(show_solver_log=False, additional_options={}):
+    # this example is the same as the one above, but solves with a pure
+    # pyomo model - this is mostly for comparison and testing
+    m = create_pyomo_reactor_model()
+    solver = pyo.SolverFactory('ipopt')
+    for k,v in additional_options.items():
+        solver.options[k] = v
+    solver.options['linear_solver'] = 'mumps'
     results = solver.solve(m, tee=show_solver_log)
     pyo.assert_optimal_termination(results)
     return m
@@ -148,17 +186,18 @@ def maximize_cb_ratio_residuals_with_pyomo_variables(show_solver_log=False, addi
     return m
 
 if __name__ == '__main__':
-    #m = maximize_cb_ratio_residuals_with_output(show_solver_log=True)
-    #m.pprint()
+    m = maximize_cb_ratio_residuals_with_output(show_solver_log=True)
+
+    # the next two are the same model with pyomo/ipopt and external/cyipopt
+    m = maximize_cb_ratio_residuals_with_hessian_with_output_pyomo(show_solver_log=True)
+    m = maximize_cb_ratio_residuals_with_hessian_with_output(show_solver_log=True)
+    
     aoptions={'hessian_approximation':'limited-memory',
               #'limited_memory_update_type': 'sr1',
               'nlp_scaling_method': 'user-scaling',
               'print_level':10}
     m = maximize_cb_ratio_residuals_with_output_scaling(show_solver_log=True, additional_options=aoptions)
-    #m.pprint()
-    #m = maximize_cb_ratio_residuals_with_obj(show_solver_log=True)
-    #m.pprint()
-    #m = maximize_cb_ratio_residuals_with_pyomo_variables(show_solver_log=True)
-    #m.pprint()
-    
 
+    m = maximize_cb_ratio_residuals_with_obj(show_solver_log=True)
+    
+    m = maximize_cb_ratio_residuals_with_pyomo_variables(show_solver_log=True)

@@ -241,7 +241,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             self._hess_lag = nlp.evaluate_hessian_lag()
             self._hess_lower_mask = self._hess_lag.row >= self._hess_lag.col
             self._hessian_available = True
-        except NotImplementedError:
+        except (AttributeError, NotImplementedError):
             self._hessian_available = False
             self._hess_lag = None
             self._hess_lower_mask = None
@@ -538,7 +538,8 @@ class PyomoCyIpoptSolver(object):
             logger.error(msg, exc_info=sys.exc_info())
             solverStatus = SolverStatus.unknown
             raise
-        wall_time = timer.toc("")
+
+        wall_time = timer.toc(None)
 
         results = SolverResults()
 

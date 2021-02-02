@@ -84,7 +84,21 @@ class TestExamples(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['cb']), 1071.7410089, places=2)
         self.assertAlmostEqual(pyo.value(m.reactor.outputs['cb_ratio']), 0.15190409266, places=3)
 
-    def test_external_grey_box_react_example_maximize_with_obj(self):
+    def test_external_grey_box_react_example_maximize_with_hessian_with_output(self):
+        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react-example', 'maximize_cb_ratio_residuals.py'))
+        m = ex.maximize_cb_ratio_residuals_with_hessian_with_output()
+        self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.26541996, places=3)
+        self.assertAlmostEqual(pyo.value(m.reactor.inputs['cb']), 1071.7410089, places=2)
+        self.assertAlmostEqual(pyo.value(m.reactor.outputs['cb_ratio']), 0.15190409266, places=3)
+
+    def test_external_grey_box_react_example_maximize_with_hessian_with_output_pyomo(self):
+        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react-example', 'maximize_cb_ratio_residuals.py'))
+        m = ex.maximize_cb_ratio_residuals_with_hessian_with_output_pyomo()
+        self.assertAlmostEqual(pyo.value(m.sv), 1.26541996, places=3)
+        self.assertAlmostEqual(pyo.value(m.cb), 1071.7410089, places=2)
+        self.assertAlmostEqual(pyo.value(m.cb_ratio), 0.15190409266, places=3)
+
+    def test_pyomo_react_example_maximize_with_obj(self):
         ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react-example', 'maximize_cb_ratio_residuals.py'))
         m = ex.maximize_cb_ratio_residuals_with_obj()
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.26541996, places=3)
