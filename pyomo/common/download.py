@@ -97,9 +97,9 @@ class FileDownloader(object):
 
     @classmethod
     def _get_distver_from_lsb_release(cls):
-        dist = subprocess.run(['lsb_release -si'], stdout=subprocess.PIPE,
+        dist = subprocess.run(['lsb_release', '-si'], stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
-        ver = subprocess.run(['lsb_release -sr'], stdout=subprocess.PIPE,
+        ver = subprocess.run(['lsb_release', '-sr'], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         return cls._map_dist(dist.stdout.decode("utf-8").lower().strip()), ver.stdout.decode("utf-8").strip()
 
