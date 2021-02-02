@@ -16,8 +16,9 @@ from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
 from pyomo.common import deprecated
-from pyomo.common.timing import ConstructionTimer
+from pyomo.common.log import is_debug_set
 from pyomo.common.plugin import Plugin, implements
+from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent
@@ -171,7 +172,7 @@ class Connector(IndexedComponent):
 
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):  #pragma:nocover
+        if is_debug_set(logger):  #pragma:nocover
             logger.debug( "Constructing Connector, name=%s, from data=%s"
                           % (self.name, data) )
         if self._constructed:

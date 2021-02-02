@@ -311,9 +311,7 @@ def help_solvers():
                 ver = ''
                 if opt.available(False):
                     avail = '-'
-                    if not hasattr(opt, 'license_is_valid'):
-                        avail = '+'
-                    elif opt.license_is_valid():
+                    if opt.license_is_valid():
                         avail = '+'
                     try:
                         ver = opt.version()
@@ -347,7 +345,7 @@ def help_solvers():
 
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("""The leading symbol (one of *, -, +) indicates the current solver availability.  A plus (+) indicates the solver is currently available to be run from Pyomo with the serial solver manager, and (if applicable) has a valid license.  A minus (-) indicates the solver executables are available but do not reporthaving a valid license.  The solver may still be usable in an unlicensed or "demo" mode for limited problem sizes. An asterisk (*) indicates meta-solvers or generic interfaces, which are always available."""))
+    print(wrapper.fill("""The leading symbol (one of *, -, +) indicates the current solver availability.  A plus (+) indicates the solver is currently available to be run from Pyomo with the serial solver manager, and (if applicable) has a valid license.  A minus (-) indicates the solver executables are available but do not report having a valid license.  The solver may still be usable in an unlicensed or "demo" mode for limited problem sizes. An asterisk (*) indicates meta-solvers or generic interfaces, which are always available."""))
     print('')
     print(wrapper.fill('Pyomo also supports solver interfaces that are wrappers around third-party solver interfaces. These interfaces require a subsolver specification that indicates the solver being executed.  For example, the following indicates that the ipopt solver will be used:'))
     print('')

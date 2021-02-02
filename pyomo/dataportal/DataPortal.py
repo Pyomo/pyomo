@@ -11,6 +11,7 @@
 __all__ = ['DataPortal']
 
 import logging
+from pyomo.common.log import is_debug_set
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 
 logger = logging.getLogger('pyomo.core')
@@ -124,7 +125,7 @@ class DataPortal(object):
 
         Other keyword arguments are passed to the :func:`connect()` method.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
+        if is_debug_set(logger):        #pragma:nocover
             logger.debug("Loading data...")
         #
         # Process arguments
@@ -158,7 +159,7 @@ class DataPortal(object):
         #
         # Read from data manager into self._data and self._default
         #
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
+        if is_debug_set(logger):        #pragma:nocover
             logger.debug("Processing data ...")
         self._data_manager.read()
         status = self._data_manager.process(self._model, self._data, self._default)
@@ -168,7 +169,7 @@ class DataPortal(object):
         #
         if _disconnect:
             self.disconnect()
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
+        if is_debug_set(logger):        #pragma:nocover
             logger.debug("Done.")
 
     def store(self, **kwds):
@@ -181,7 +182,7 @@ class DataPortal(object):
 
         Other keyword arguments are passed to the :func:`connect()` method.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
+        if is_debug_set(logger):        #pragma:nocover
             logger.debug("Storing data...")
         #
         # Process arguments
@@ -217,7 +218,7 @@ class DataPortal(object):
         #
         if _disconnect:
             self.disconnect()
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
+        if is_debug_set(logger):        #pragma:nocover
             logger.debug("Done.")
 
     def data(self, name=None, namespace=None):

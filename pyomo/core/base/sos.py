@@ -15,6 +15,7 @@ import logging
 import six
 from six.moves import zip, xrange
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -218,8 +219,7 @@ class SOSConstraint(ActiveIndexedComponent):
         Construct this component
         """
         assert data is None # because I don't know why it's an argument
-        generate_debug_messages \
-            = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages = is_debug_set(logger)
         if self._constructed is True:   #pragma:nocover
             return
 

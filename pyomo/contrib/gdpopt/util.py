@@ -437,7 +437,7 @@ def get_main_elapsed_time(timing_data_obj):
     version='5.6.9')
 @contextmanager
 def restore_logger_level(logger):
-    old_logger_level = logger.getEffectiveLevel()
+    old_logger_level = logger.level
     yield
     logger.setLevel(old_logger_level)
 
@@ -445,9 +445,9 @@ def restore_logger_level(logger):
 @contextmanager
 def lower_logger_level_to(logger, level=None):
     """Increases logger verbosity by lowering reporting level."""
-    old_logger_level = logger.getEffectiveLevel()
-    if level is not None and old_logger_level > level:
+    if level is not None and logger.getEffectiveLevel() > level:
         # If logger level is higher (less verbose), decrease it
+        old_logger_level = logger.level
         logger.setLevel(level)
         yield
         logger.setLevel(old_logger_level)
