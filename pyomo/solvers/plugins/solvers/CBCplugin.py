@@ -52,12 +52,12 @@ def configure_cbc():
     if not executable:
         return
     cbc_exec = executable.path()
-    results = subprocess.run( [cbc_exec,"-stop"], timeout=1,
+    results = subprocess.run([cbc_exec,"-stop"], timeout=1,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     _cbc_version = _extract_version(results.stdout.decode("utf-8"))
-    results = subprocess.run(
-        [cbc_exec,"dummy","-AMPL","-stop"], timeout=1, stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+    results = subprocess.run([cbc_exec, "dummy", "-AMPL", "-stop"], timeout=1,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
     _cbc_compiled_with_asl = not ('No match for AMPL' in results.stdout)
     if _cbc_version is not None:
         _cbc_old_version = _cbc_version < (2,7,0,0)

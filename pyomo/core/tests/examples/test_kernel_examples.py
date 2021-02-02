@@ -64,7 +64,7 @@ def create_test_method(example):
             if (not testing_solvers['ipopt','nl']) or \
                (not testing_solvers['mosek_direct','python']):
                 self.skipTest("Ipopt or Mosek is not available")
-        result = subprocess.run([sys.executable,example],
+        result = subprocess.run([sys.executable, example],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(result.returncode, 0, msg=result.stdout.decode("utf-8"))
     return testmethod
