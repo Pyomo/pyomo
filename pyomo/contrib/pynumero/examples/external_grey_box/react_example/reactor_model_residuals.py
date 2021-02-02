@@ -20,9 +20,53 @@ box model interface.
 
 from __future__ import division
 
+import pyomo.environ as pyo
 import numpy as np
 from scipy.sparse import coo_matrix
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
+
+def create_pyomo_reactor_model():
+    # this function is here to show what the "ReactorModel" would
+    # look like if it was coded directly in Pyomo
+    # create the concrete model
+    m = pyo.ConcreteModel()
+
+    # set the data (native python data)
+    k1 = 5.0/6.0     # min^-1
+    k2 = 5.0/3.0     # min^-1
+    k3 = 1.0/6000.0  # m^3/(gmol min)
+    #caf = 10000.0    # gmol/m^3
+
+    # create the variables
+    m.sv = pyo.Var(initialize=1.0, bounds=(0,None))
+    m.caf = pyo.Var(initialize=1.0)
+    m.ca = pyo.Var(initialize=1.0, bounds=(0,None))
+    m.cb = pyo.Var(initialize=1.0, bounds=(0,None))
+    m.cc = pyo.Var(initialize=1.0, bounds=(0,None))
+    m.cd = pyo.Var(initialize=1.0, bounds=(0,None))
+    m.cb_ratio = pyo.Var(initialize=1.0)
+
+    # create the objective
+    m.obj = pyo.Objective(expr=m.cb_ratio, sense=pyo.maximize)
+    
+    # create the constraints
+    m.ca_bal = pyo.Constraint(expr = (0 == m.sv * m.caf \
+                                  - m.sv * m.ca - k1 * m.ca \
+                                  -  2.0 * k3 * m.ca ** 2.0))
+
+    m.cb_bal = pyo.Constraint(expr=(0 == -m.sv * m.cb \
+                                + k1 * m.ca - k2 * m.cb))
+
+    m.cc_bal = pyo.Constraint(expr=(0 == -m.sv * m.cc \
+                                + k2 * m.cb))
+
+    m.cd_bal = pyo.Constraint(expr=(0 == -m.sv * m.cd \
+                                + k3 * m.ca ** 2.0))
+
+    m.cb_ratio_con = pyo.Constraint(expr=m.cb/(m.ca + m.cc + m.cd) - m.cb_ratio == 0)
+    m.cafcon = pyo.Constraint(expr=m.caf == 10000)
+
+    return m
 
 class ReactorModel(ExternalGreyBoxModel):
     def __init__(self, use_exact_derivatives=True):
@@ -156,6 +200,105 @@ class ReactorModel(ExternalGreyBoxModel):
         row[2], col[2], data[2] = (0, 4, -cb/(ca+cc+cd)**2)
         row[3], col[3], data[3] = (0, 5, -cb/(ca+cc+cd)**2)
         return coo_matrix((data, (row, col)), shape=(1,6))
+
+
+class ReactorModelWithHessian(ReactorModel):
+    def __init__(self):
+        super(ReactorModelWithHessian,self).__init__(True)
+        self._eq_con_mult_values = np.zeros(4)
+        self._output_con_mult_values = np.zeros(1)
+
+    def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
+        assert len(eq_con_multiplier_values) == 4
+        np.copyto(self._eq_con_mult_values, eq_con_multiplier_values)
+
+    def set_output_constraint_multipliers(self, output_con_multiplier_values):
+        assert len(output_con_multiplier_values) == 1
+        np.copyto(self._output_con_mult_values, output_con_multiplier_values)
+
+    def evaluate_hessian_equality_constraints(self):
+        sv = self._input_values[0]
+        caf = self._input_values[1]
+        ca = self._input_values[2]
+        cb = self._input_values[3]
+        cc = self._input_values[4]
+        cd = self._input_values[5]
+        k1 = 5/6
+        k2 = 5/3
+        k3 = 1/6000
+        lam = self._eq_con_mult_values
+        
+        nnz = 7
+        irow = np.zeros(nnz, dtype=np.int64)
+        jcol = np.zeros(nnz, dtype=np.int64)
+        data = np.zeros(nnz, dtype=np.float64)
+        idx = 0
+        irow[idx], jcol[idx], data[idx] = (1, 0, lam[0]*1.0)
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (2, 0, lam[0]*(-1.0))
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (2, 2, lam[0]*(-4*k3))
+        idx += 1
+
+        irow[idx], jcol[idx], data[idx] = (3, 0, lam[1]*(-1))
+        idx += 1
+
+        irow[idx], jcol[idx], data[idx] = (4, 0, lam[2]*(-1))
+        idx += 1
+
+        irow[idx], jcol[idx], data[idx] = (2, 2, lam[3]*(2*k3))
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (5, 0, lam[3]*(-1))
+        idx += 1
+
+        assert idx == nnz
+        hess = coo_matrix( (data, (irow,jcol)), shape=(6,6) )
+        return hess
+
+    def evaluate_hessian_outputs(self):
+        sv = self._input_values[0]
+        caf = self._input_values[1]
+        ca = self._input_values[2]
+        cb = self._input_values[3]
+        cc = self._input_values[4]
+        cd = self._input_values[5]
+        k1 = 5/6
+        k2 = 5/3
+        k3 = 1/6000
+        lam = self._output_con_mult_values
+        
+        nnz = 9
+        irow = np.zeros(nnz, dtype=np.int64)
+        jcol = np.zeros(nnz, dtype=np.int64)
+        data = np.zeros(nnz, dtype=np.float64)
+
+        h1 = 2*cb/((ca+cc+cd)**3)
+        h2 = -1.0/((ca+cc+cd)**2)
+        
+        idx = 0
+        irow[idx], jcol[idx], data[idx] = (2, 2, lam[0]*h1)
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (3, 2, lam[0]*h2)
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (4, 2, lam[0]*h1)
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (4, 3, lam[0]*h2)
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (4, 4, lam[0]*h1)
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (5, 2, lam[0]*h1)
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (5, 3, lam[0]*h2)
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (5, 4, lam[0]*h1)
+        idx += 1
+        irow[idx], jcol[idx], data[idx] = (5, 5, lam[0]*h1)
+        idx += 1
+
+        assert idx == nnz
+        hess = coo_matrix( (data, (irow,jcol)), shape=(6,6) )
+        return hess
+        
 
 class ReactorModelNoOutputs(ExternalGreyBoxModel):
     def input_names(self):
