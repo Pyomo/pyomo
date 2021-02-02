@@ -55,13 +55,13 @@ jobs:
           PYENV: pip
 
         - os: windows-latest
-          python: 3.5
+          python: 3.7
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
 
         - os: ubuntu-18.04
-          python: 3.7
+          python: 3.8
           other: /mpi
           mpi: 3
           skip_doctest: 1
@@ -94,19 +94,13 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-18.04
-          python: 3.6
+          python: 3.7
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
-
-        exclude:
-        - {os: macos-latest, python: pypy2}
-        - {os: macos-latest, python: pypy3}
-        - {os: windows-latest, python: pypy2}
-        - {os: windows-latest, python: pypy3}
 
     steps:
     - name: Checkout Pyomo source
@@ -277,8 +271,6 @@ jobs:
         conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
         conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
         if test -z "${{matrix.slim}}"; then
-            # Note: CPLEX 12.9 (the last version in conda that supports
-            #    Python 2.7) causes a seg fault in the tests.
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
             conda install -q -y -c fico-xpress xpress \
@@ -505,8 +497,11 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
-        test.pyomo -v --cat="${{matrix.category}}" \
-            pyomo `pwd`/pyomo-model-libraries
+        CATEGORY=
+        for cat in ${{matrix.category}}; do
+            CATEGORY+=" --cat $cat"
+        done
+        test.pyomo -v $CATEGORY pyomo `pwd`/pyomo-model-libraries
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0

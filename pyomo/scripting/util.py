@@ -70,11 +70,6 @@ def setup_environment(data):
     if postsolve:
         if not yaml_available and data.options.postsolve.results_format == 'yaml':
             raise ValueError("Configuration specifies a yaml file, but pyyaml is not installed!")
-        if data.options.postsolve.results_format is None:
-            if yaml_available:
-                data.options.postsolve.results_format = 'yaml'
-            else:
-                data.options.postsolve.results_format = 'json'
     #
     global start_time
     start_time = time.time()
@@ -814,7 +809,7 @@ def finalize(data, model=None, instance=None, results=None):
 
 @deprecated("configure_loggers is deprecated. The Pyomo command uses the "
             "PyomoCommandLogContext to update the logger configuration",
-            version='TBD')
+            version='5.7.3')
 def configure_loggers(options=None, shutdown=False):
     context = PyomoCommandLogContext(options)
     if shutdown:

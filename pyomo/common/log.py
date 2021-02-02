@@ -255,7 +255,7 @@ class LogHandler(logging.StreamHandler):
     @deprecated('The pyomo.common.log.LogHandler class has been deprecated '
                 'in favor of standard Handlers from the Python logging module '
                 'combined with the pyomo.common.log.WrappingFormatter.',
-                version='TBD')
+                version='5.7.3')
     def __init__(self, base='', stream=None,
                  level=logging.NOTSET, verbosity=None):
         super(LogHandler, self).__init__(stream)

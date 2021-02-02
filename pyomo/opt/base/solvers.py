@@ -930,10 +930,15 @@ def default_config_block(solver, init=False):
                 'Print the results object after optimization.',
                 None) ).declare_as_argument(dest="show_results")
     postsolve.declare('results format', ConfigValue(
-                None,
-                str,
-                'Specify the results format:  json or yaml.',
-                None) ).declare_as_argument('--results-format', dest="results_format", metavar="FORMAT").declare_as_argument('--json', dest="results_format", action="store_const", const="json", help="Store results in JSON format")
+        None,
+        str,
+        'Specify the results format:  json or yaml.',
+        None)
+    ).declare_as_argument(
+        '--results-format', dest="results_format", metavar="FORMAT"
+    ).declare_as_argument(
+        '--json', dest="results_format", action="store_const",
+        const="json", help="Store results in JSON format")
     postsolve.declare('summary', ConfigValue(
                 False,
                 bool,

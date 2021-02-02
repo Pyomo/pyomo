@@ -26,6 +26,7 @@ from pyomo.core.base.indexed_component import IndexedComponent, \
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import NumericValue, native_types, value
 from pyomo.core.base.set_types import Any, Reals
+from pyomo.core.base.units_container import units
 
 from six import iteritems, iterkeys, next, itervalues
 
@@ -254,6 +255,7 @@ class Param(IndexedComponent):
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
         self._units         = kwd.pop('units', None)
         if self._units is not None:
+            self._units = units.get_units(self._units)
             self._mutable = True
         #
         if 'repn' in kwd:
@@ -297,6 +299,10 @@ class Param(IndexedComponent):
     @property
     def mutable(self):
         return self._mutable
+
+    def get_units(self):
+        """Return the units for this ParamData"""
+        return self._units
 
     #
     # These are "sparse equivalent" access / iteration methods that

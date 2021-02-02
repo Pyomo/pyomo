@@ -13,7 +13,7 @@
 This module has some helpful methods to support checking units on Pyomo
 module objects.
 """
-from pyomo.core.base.units_container import units, UnitsError, UnitExtractionVisitor
+from pyomo.core.base.units_container import units, UnitsError
 from pyomo.core.base import (Objective, Constraint, Var, Param,
                              Suffix, Set, RangeSet, Block,
                              ExternalFunction, Expression,
@@ -66,13 +66,13 @@ def assert_units_equivalent(*args):
     :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
     """
     # this call will raise an exception if an inconsistency is found
-    pyomo_unit_compare, pint_unit_compare = units._get_units_tuple(args[0])
-    for expr in args[1:]:
-        # this call will raise an exception if an inconsistency is found
-        pyomo_unit, pint_unit = units._get_units_tuple(expr)
-        if not UnitExtractionVisitor(units)._pint_units_equivalent(pint_unit_compare, pint_unit):
-            raise UnitsError \
-                ("Units between {} and {} are not consistent.".format(str(pyomo_unit_compare), str(pyomo_unit)))
+    pint_units = [units._get_pint_units(arg) for arg in args]
+    pint_unit_compare = pint_units[0]
+    for pint_unit in pint_units:
+        if not units._equivalent_pint_units(pint_unit_compare, pint_unit):
+            raise UnitsError(
+                "Units between {} and {} are not consistent.".format(
+                    str(pint_unit_compare), str(pint_unit)))
 
 def _assert_units_consistent_constraint_data(condata):
     """
@@ -132,10 +132,11 @@ def _assert_units_consistent_property_expr(obj):
 def _assert_units_consistent_expression(expr):
     """
     Raise an exception if any units in expr are inconsistent.
-    # this call will raise an error if an inconsistency is found
-    pyomo_unit, pint_unit = units._get_units_tuple(expr=expr)
     """
-    pyomo_unit, pint_unit = units._get_units_tuple(expr)
+    # this will raise an exception if the units are not consistent
+    # in the expression
+    pint_unit = units._get_pint_units(expr)
+    # pyomo_unit = units.get_units(expr)
 
 # Complementarities that are not in standard form do not
 # current work with the checking code. The Units container
