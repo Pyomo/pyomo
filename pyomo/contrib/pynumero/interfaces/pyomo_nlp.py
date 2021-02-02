@@ -1336,7 +1336,7 @@ class _ExternalGreyBoxModelHelper(object):
             eq_hess = self._ex_model.evaluate_hessian_equality_constraints()
             if self._eq_hess_jcol is None:
                 # first time through, let's also check that it is lower triangular
-                if np.any(eq_hess.row - eq_hess.col < 0):
+                if np.any(eq_hess.row < eq_hess.col):
                     raise ValueError('ExternalGreyBoxModel must return lower '
                                      'triangular portion of the Hessian only')
 
@@ -1348,24 +1348,17 @@ class _ExternalGreyBoxModelHelper(object):
 
                 # mapping may have made this not lower triangular
                 mask = col > row
-                if np.any(mask):
-                    temp = row[mask].copy()
-                    row[mask] = col[mask]
-                    col[mask] = temp
+                row[mask], col[mask] = col[mask], row[mask]
 
             data_list.append(eq_hess.data)
             irow_list.append(self._eq_hess_irow)
             jcol_list.append(self._eq_hess_jcol)
-            # # map the columns from the inputs "u" back to the full primals "x"
-            # eq_hess = coo_matrix(
-            #     (eq_hess.data, (self._eq_hess_irow, self._eq_hess_jcol)),
-            #     (self._n_primals, self._n_primals))
 
         if self._ex_model.n_outputs() > 0:
             output_hess = self._ex_model.evaluate_hessian_outputs()
             if self._output_hess_irow is None:
                 # first time through, let's also check that it is lower triangular
-                if np.any(output_hess.row - output_hess.col < 0):
+                if np.any(output_hess.row < output_hess.col):
                     raise ValueError('ExternalGreyBoxModel must return lower '
                                      'triangular portion of the Hessian only')
 
@@ -1377,18 +1370,11 @@ class _ExternalGreyBoxModelHelper(object):
 
                 # mapping may have made this not lower triangular
                 mask = col > row
-                if np.any(mask):
-                    temp = row[mask].copy()
-                    row[mask] = col[mask]
-                    col[mask] = temp
+                row[mask], col[mask] = col[mask], row[mask]
 
             data_list.append(output_hess.data)
             irow_list.append(self._output_hess_irow)
             jcol_list.append(self._output_hess_jcol)
-            # outputs_hess = coo_matrix(
-            #     (outputs_hess.data, (self._outputs_hess_irow, self._outputs_hess_jcol)),
-            #     (self._n_primals, self._n_primals))
-
 
         data = np.concatenate(data_list)
         irow = np.concatenate(irow_list)

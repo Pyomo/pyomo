@@ -284,13 +284,6 @@ class TwoTanksSeries(ExternalGreyBoxModel):
         jcol = np.zeros(nnz, dtype=np.int64)
         data = np.zeros(nnz, dtype=np.float64)
         idx = 0
-#        # Hess h1bal
-#        for i in range(N-1):
-#            irow[idx] = 2*(N-1)+i+1
-#            jcol[idx] = 2*(N-1)+i+1
-#            data[idx] = lam[i]*dt/A1*(-c1/4)*h1[i+1]**(-1.5)
-#            idx += 1
-        # Hess h2bal
         for i in range(N-1):
             irow[idx] = 2*(N-1)+i+1
             jcol[idx] = 2*(N-1)+i+1

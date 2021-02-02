@@ -20,7 +20,7 @@ from pyomo.core.base.util import Initializer
 
 from ..sparse.block_matrix import BlockMatrix
 
-from six import add_metaclass, iteritems
+from six import iteritems
 
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
@@ -47,7 +47,7 @@ To use this interface:
      (or residuals) that need to be converged, and any outputs that
      are computed from your model. It will also need to provide methods to
      compute the residuals, outputs, and the jacobian of these with respect to
-     the inputs. Implement the methods to evaluate hessians is applicable.
+     the inputs. Implement the methods to evaluate hessians if applicable.
      See the documentation on ExternalGreyBoxModel for more details.
 
    * Create a Pyomo model and make use of the ExternalGreyBoxBlock
@@ -82,8 +82,49 @@ class ExternalGreyBoxModel(object):
     """
     This is the base class for building external input output models
     for use with Pyomo and CyIpopt. See the module documentation above,
-    and documentation of individual methods as well as examples.
+    and documentation of individual methods.
+
+    There are examples in:
+    pyomo/contrib/pynumero/examples/external_grey_box/react-example/
+
+    Most methods are documented in the class itself. However, there are
+    methods that are not implemented in the base class that may need
+    to be implemented to provide support for certain features.
+
+    Hessian support:
+
+    If you would like to support Hessian computations for your
+    external model, you will need to implement the following methods to
+    support setting the multipliers that are used when computing the
+    Hessian of the Lagrangian.
+    - set_equality_constraint_multipliers: see documentation in method
+    - set_output_constraint_multipliers: see documentation in method
+    You will also need to implement the following methods to evaluate
+    the required Hessian information:
+
+    def evaluate_hessian_equality_constraints(self):
+        Compute the product of the equality constraint multipliers
+        with the hessian of the equality constraints.
+        E.g., y_eq^k is the vector of equality constraint multipliers
+        from set_equality_constraint_multipliers, w_eq(u)=0 are the
+        equality constraints, and u^k are the vector of inputs from
+        set_inputs. This method must return
+        H_eq^k = sum_i (y_eq^k)_i * grad^2_{uu} w_eq(u^k)
+
+    def evaluate_hessian_outputs(self):
+        Compute the product of the output constraint multipliers with the
+        hessian of the outputs. E.g., y_o^k is the vector of output
+        constraint multipliers from set_output_constraint_multipliers,
+        u^k are the vector of inputs from set_inputs, and w_o(u) is the
+        function that computes the vector of outputs at the values for
+        the input variables. This method must return
+        H_o^k = sum_i (y_o^k)_i * grad^2_{uu} w_o(u^k)
+
+    Examples that show Hessian support are also found in:
+    pyomo/contrib/pynumero/examples/external_grey_box/react-example/
+
     """
+
     def n_inputs(self):
         """ This method returns the number of inputs. You do not
         need to overload this method in derived classes.
@@ -242,34 +283,13 @@ class ExternalGreyBoxModel(object):
                                   'but not implemented in the derived class.')
 
     #
-    # Implement the following methods to provide support for Hessian computations
+    # Implement the following methods to provide support for
+    # Hessian computations: see documentation in class docstring
     #
-    
     # def evaluate_hessian_equality_constraints(self):
-    #     """
-    #     Compute the product of the equality constraint multipliers
-    #     with the hessian of the equality constraints.
-    #     E.g., y_eq^k is the vector of equality constraint multipliers
-    #     from set_equality_constraint_multipliers, w_eq(u)=0 are the 
-    #     equality constraints, and u^k are the vector of inputs from
-    #     set_inputs. This method must return
-    #     H_eq^k = sum_i (y_eq^k)_i * grad^2_{uu} w_eq(u^k)
-    #     """
-    #     raise NotImplementedError('evaluate_hessian_equality_constraints called '
-    #                               'but not implemented in the derived class.')
-    
     # def evaluate_hessian_outputs(self):
-    #     """
-    #     Compute the product of the output constraint multipliers with the
-    #     hessian of the outputs. E.g., y_o^k is the vector of output
-    #     constraint multipliers from set_output_constraint_multipliers,
-    #     u^k are the vector of inputs from set_inputs, and w_o(u) is the
-    #     function that computes the vector of outputs at the values for
-    #     the input variables. This method must return
-    #     H_o^k = sum_i (y_o^k)_i * grad^2_{uu} w_o(u^k)
-    #     """
-    #     raise NotImplementedError('evaluate_hessian_outputs called '
-    #                               'but not implemented in the derived class.')
+    #
+
 
 class ExternalGreyBoxBlockData(_BlockData):
 

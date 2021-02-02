@@ -44,7 +44,6 @@ def check_sparse_matrix_specific_order(tst, m1, m1rows, m1cols, m2, m2rows, m2co
         colmap = [m2cols.index(x) for x in m1cols]
     else:
         colmap = [m2cols.index(m1_m2_cols_map[x]) for x in m1cols]
-    print(colmap)
 
     for i in range(len(m1rows)):
         for j in range(len(m1cols)):
@@ -53,4 +52,3 @@ def check_sparse_matrix_specific_order(tst, m1, m1rows, m1cols, m2, m2rows, m2co
     for i in range(len(m1rows)):
         for j in range(len(m1cols)):
             tst.assertAlmostEqual(m1c[i,j], m2c[i,j], places=7)
-    # tst.assertTrue(np.allclose(m1c, m2c))
