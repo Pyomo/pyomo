@@ -18,11 +18,7 @@ import math
 #       (this has to do with fixing distributed variable id
 #        creation on the new scenario tree manager)
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
-
+from pyomo.common.collections import OrderedDict
 from pyomo.core import (Block, Set, Expression, Param, maximize)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,

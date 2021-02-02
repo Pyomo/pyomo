@@ -1,14 +1,24 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Module with diagnostic utilities for infeasible models."""
-from pyomo.core import Constraint, Var, value, TraversalStrategy
+from pyomo.core import Constraint, Var, value
 from math import fabs
 import logging
 
+from pyomo.common import deprecated
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.util.blockutil import log_model_constraints
 
-logger = logging.getLogger('pyomo.util.infeasible')
-logger.setLevel(logging.INFO)
-
+logger = logging.getLogger(__name__)
 
 def log_infeasible_constraints(
         m, tol=1E-6, logger=logger,
@@ -171,10 +181,8 @@ def log_close_to_bounds(m, tol=1E-6, logger=logger):
                 logger.info('{} near LB'.format(constr.name))
 
 
+@deprecated("log_active_constraints is deprecated.  "
+            "Please use pyomo.util.blockutil.log_model_constraints()",
+            version="5.7.3")
 def log_active_constraints(m, logger=logger):
-    """Prints the active constraints in the model."""
-    for constr in m.component_data_objects(
-        ctype=Constraint, active=True, descend_into=True,
-        descent_order=TraversalStrategy.PrefixDepthFirstSearch
-    ):
-        logger.info("%s active" % constr.name)
+    log_model_constraints(m, logger)

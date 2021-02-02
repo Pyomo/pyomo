@@ -31,6 +31,8 @@ doc = {
 'mosek':    'Interior point NLP solver',
 'ooqp':     'Convex QP solver',
 'path':     'Nonlinear MCP solver',
-'snopt':    'SQP NLP solver'
+'snopt':    'SQP NLP solver',
+'raposa':   'A Global Solver for Polynomial Programming Problems',
+'lgo':      'Lipschitz-Continuous Global Optimizer'
 }
 

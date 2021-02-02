@@ -3,8 +3,8 @@ Installation
 
 Pyomo currently supports the following versions of Python:
 
-* CPython: 2.7, 3.4, 3.5, 3.6, 3.7, 3.8
-* PyPy: 2, 3
+* CPython: 3.6, 3.7, 3.8, 3.9
+* PyPy: 3
 
 
 Using CONDA

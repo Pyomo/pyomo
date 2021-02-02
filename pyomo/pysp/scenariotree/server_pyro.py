@@ -149,7 +149,6 @@ class ScenarioTreeServerPyro(pyu_pyro.TaskWorker):
         data = Bunch(**data)
         result = None
         if not data.action.startswith('ScenarioTreeServerPyro_'):
-            #with PauseGC() as pgc:
             result = getattr(self._worker_map[data.worker_name], data.action)\
                      (*data.args, **data.kwds)
 

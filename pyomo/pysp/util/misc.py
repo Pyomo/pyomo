@@ -20,9 +20,10 @@ import subprocess
 import inspect
 import argparse
 
-from pyutilib.misc import PauseGC, import_file
-from pyutilib.services import TempfileManager
+from pyutilib.misc import import_file
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.errors import ApplicationError
+from pyomo.common.gc_manager import PauseGC
 from pyomo.opt.base import ConverterError
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.plugin import (ExtensionPoint,
@@ -306,7 +307,6 @@ def launch_command(command,
                     import profile
                 import pstats
             except ImportError:
-                configure_loggers(shutdown=True)
                 raise ValueError(
                     "Cannot use the 'profile' option: the Python "
                     "'profile' or 'pstats' package cannot be imported!")
