@@ -95,14 +95,6 @@ if test -z "$MODE" -o "$MODE" == setup; then
     # DO NOT install pyomo-model-libraries
     #
 
-    #
-    # #! lines cannot exceed 128 characters, which Jenkins will
-    # periodically do, especially for matrix jobs.  We will make
-    # the virtualenv relocatable to shorten the line, instead relying
-    # on the virtualenv being the first thing on the PATH.
-    #
-    virtualenv --relocatable python
-
     # Set up coverage tracking for subprocesses
     if test -z "$DISABLE_COVERAGE"; then
         # Clean up old coverage files
