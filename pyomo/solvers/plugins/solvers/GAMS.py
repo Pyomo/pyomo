@@ -629,9 +629,9 @@ class GAMSShell(_GAMSSolver):
             test = os.path.join(tmpdir, 'test.gms')
             with open(test, 'w') as FILE:
                 FILE.write(self._simple_model(n))
-            rc, txt = pyutilib.subprocess.run(
+            result = subprocess.run(
                 [self.executable(), test, "curdir=" + tmpdir, 'lo=0'])
-            return not rc
+            return not result.returncode
         finally:
             shutil.rmtree(tmpdir)
         return False
