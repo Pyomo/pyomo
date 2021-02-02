@@ -98,17 +98,19 @@ def nlwriter_asl_test(self, name):
         pass
 
     # obtain the nl file summary information for comparison with ampl
-    p = subprocess.run(
-        'gjh_asl_json '+currdir+name+'.test.nl rows='
-        +currdir+name+'.test.row cols='+currdir+name+'.test.col',
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    p = subprocess.run(['gjh_asl_json',
+                        currdir+name+'.test.nl',
+                        'rows='+currdir+name+'.test.row',
+                        'cols='+currdir+name+'.test.col'],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     self.assertTrue(p.returncode == 0, msg=p.stdout.decode("utf-8"))
 
     # obtain the nl file summary information for comparison with pyomo
-    p = subprocess.run(
-        'gjh_asl_json '+currdir+name+'.ampl.nl rows='
-        +currdir+name+'.ampl.row cols='+currdir+name+'.ampl.col',
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    p = subprocess.run(['gjh_asl_json',
+                        currdir+name+'.ampl.nl',
+                        'rows='+currdir+name+'.ampl.row',
+                        'cols='+currdir+name+'.ampl.col'],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     self.assertTrue(p.returncode == 0, msg=p.stdout.decode("utf-8"))
 
     self.assertMatchesJsonBaseline(

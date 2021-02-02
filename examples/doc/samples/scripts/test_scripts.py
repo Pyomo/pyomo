@@ -36,7 +36,7 @@ class Test(unittest.TestCase):
         cwd = self.cwd+os.sep+test+os.sep
         os.chdir(cwd)
         with open(cwd+os.sep+'script.log', 'w') as f:
-            subprocess.run(sys.executable+' script.py', stdout=f, stderr=f, shell=True)
+            subprocess.run([sys.executable, 'script.py'], stdout=f, stderr=f)
         if yaml:
             self.assertMatchesYamlBaseline(cwd+"script.log", cwd+"script.out", tolerance=1e-3)
         else:
