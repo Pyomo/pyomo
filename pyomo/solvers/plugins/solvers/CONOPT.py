@@ -80,7 +80,7 @@ class CONOPT(SystemCallSolver):
         if solver_exec is None:
             return _extract_version('')
         results = subprocess.run( [solver_exec], timeout=1,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         return _extract_version(results.stdout.decode("utf-8"))
 
     def create_command_line(self, executable, problem_files):

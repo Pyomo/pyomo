@@ -48,7 +48,7 @@ class ILMLicensedSystemCallSolver(SystemCallSolver):
                     # user hits Ctrl-C.
                     cmd.append("-batch")
                 result = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
+                                        stderr=subprocess.STDOUT)
             except OSError:
                 msg = sys.exc_info()[1]
                 raise ApplicationError("Could not execute the command: ilmtest\n\tError message: "+msg)

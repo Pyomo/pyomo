@@ -134,7 +134,7 @@ class PICOSHELL(SystemCallSolver):
         if solver_exec is None:
             return _extract_version('')
         results = subprocess.run([solver_exec, "--version"], timeout=1,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         # 'PICO --version' seems to print 'pebble <version>, PICO <version>
         # we don't wan't the pebble version being advertised so we split
         # the string at the comma before extracting a version number. It

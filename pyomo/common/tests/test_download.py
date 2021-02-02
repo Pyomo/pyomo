@@ -171,7 +171,7 @@ class Test_FileDownloader(unittest.TestCase):
                 self.assertTrue(v.replace('.','').startswith(dist_ver))
 
             if subprocess.run(['lsb_release'], stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE).returncode == 0:
+                              stderr=subprocess.STDOUT).returncode == 0:
                 d, v = f._get_distver_from_lsb_release()
                 #print(d,v)
                 self.assertEqual(_os, d)

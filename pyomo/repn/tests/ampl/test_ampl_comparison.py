@@ -102,7 +102,7 @@ def nlwriter_asl_test(self, name):
                         currdir+name+'.test.nl',
                         'rows='+currdir+name+'.test.row',
                         'cols='+currdir+name+'.test.col'],
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     self.assertTrue(p.returncode == 0, msg=p.stdout.decode("utf-8"))
 
     # obtain the nl file summary information for comparison with pyomo
@@ -110,7 +110,7 @@ def nlwriter_asl_test(self, name):
                         currdir+name+'.ampl.nl',
                         'rows='+currdir+name+'.ampl.row',
                         'cols='+currdir+name+'.ampl.col'],
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     self.assertTrue(p.returncode == 0, msg=p.stdout.decode("utf-8"))
 
     self.assertMatchesJsonBaseline(

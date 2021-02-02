@@ -33,7 +33,7 @@ def _failIfPyomoResultsDiffer(self, cmd=None, baseline=None, cwd=None):
             INPUT.close()
     
         output = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
+                                stderr=subprocess.STDOUT)
     finally:
         os.chdir(oldpwd)
     

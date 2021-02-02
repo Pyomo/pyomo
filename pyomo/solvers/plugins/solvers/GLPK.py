@@ -35,7 +35,7 @@ def configure_glpk():
     if not Executable("glpsol"):
         return
     result = subprocess.run([Executable('glpsol').path(), "--version"],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             timeout=1)
     errcode = result.returncode
     results = result.stdout.decode("utf-8")

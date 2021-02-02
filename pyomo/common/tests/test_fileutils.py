@@ -89,13 +89,13 @@ class TestFileUtils(unittest.TestCase):
             'from pyomo.common.fileutils import this_file;'
             'print(this_file())'
         ], stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE).stdout.decode("utf-8").strip(),
+            stderr=subprocess.STDOUT).stdout.decode("utf-8").strip(),
             ['<string>','<module>'])
         self.assertEquals(subprocess.run(
             [sys.executable],
             input='from pyomo.common.fileutils import this_file;'
             'print(this_file())'.encode('utf-8'), stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.STDOUT
         ).stdout.decode("utf-8").strip(), '<stdin>')
 
     def test_this_file_dir(self):
