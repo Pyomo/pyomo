@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.math import approx_equal
+from math import isclose
 from pyomo.opt import undefined, SolutionStatus, SolverStatus, TerminationCondition
 
 
@@ -21,14 +21,14 @@ def lp_bounds(results, data, options):
     #
     #
     value = results.problem[0].lower_bound
-    data['lower bound'] = approx_equal(value, options._baseline.problem[0].lower_bound, options.abstol, options.reltol), "'{0}' lower bound for {2} LP (baseline={1})".format(value, options._baseline.problem[0].lower_bound, name)
+    data['lower bound'] = isclose(value, options._baseline.problem[0].lower_bound, options.abstol, options.reltol), "'{0}' lower bound for {2} LP (baseline={1})".format(value, options._baseline.problem[0].lower_bound, name)
     #
     value = results.problem[0].upper_bound
-    data['upper bound'] = approx_equal(value, options._baseline.problem[0].upper_bound, options.abstol, options.reltol), "'{0}' upper bound for {2} LP (baseline={1})".format(value, options._baseline.problem[0].upper_bound, name)
+    data['upper bound'] = isclose(value, options._baseline.problem[0].upper_bound, options.abstol, options.reltol), "'{0}' upper bound for {2} LP (baseline={1})".format(value, options._baseline.problem[0].upper_bound, name)
     #
     value = results.solution[0].gap
     if value != undefined:
-        data['solution gap'] = approx_equal(value, 0.0, options.abstol, options.reltol), "'{0}' solution gap for {1} LP solution".format(value, name)
+        data['solution gap'] = isclose(value, 0.0, options.abstol, options.reltol), "'{0}' solution gap for {1} LP solution".format(value, name)
     #
 
 #
@@ -73,7 +73,7 @@ def lp_feasible_solution(results, data, options, name):
         data['objective name'] = objname == _objname, "'{0}' objective name for {2} LP solution (baseline={1})".format(objname, _objname, name)
         #
         value = results.solution[0].objective[objname].value
-        data['objective value'] = approx_equal(value, options._baseline.solution[0].objective[_objname].value, options.abstol, options.reltol), "'{0}' objective value for {2} LP solution (baseline={1})".format(value, options._baseline.solution[0].objective[_objname].value, name)
+        data['objective value'] = isclose(value, options._baseline.solution[0].objective[_objname].value, options.abstol, options.reltol), "'{0}' objective value for {2} LP solution (baseline={1})".format(value, options._baseline.solution[0].objective[_objname].value, name)
 
 
 def lp_feasible(results, data, options):

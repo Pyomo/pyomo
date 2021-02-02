@@ -16,7 +16,7 @@ from itertools import islice
 
 logger = logging.getLogger('pyomo.core')
 
-from pyutilib.math.util import isclose
+from math import isclose
 from pyomo.common.deprecation import deprecated
 
 from .expr_common import (
