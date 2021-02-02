@@ -71,8 +71,8 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     echo "# Setting up virtual environment"
     echo "#"
-    virtualenv python $VENV_SYSTEM_PACKAGES --clear
-    # Put the venv at the beginning of the PATH
+    python -m venv $VENV_SYSTEM_PACKAGES ${WORKSPACE}/python
+    # Put the virtualenv at the beginning of the PATH
     export PATH="$WORKSPACE/python/bin:$PATH"
     # Because modules set the PYTHONPATH, we need to make sure that the
     # virtualenv appears first
