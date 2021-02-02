@@ -21,7 +21,7 @@ from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
 
-from math import isclose as isclose_default
+from math import isclose
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.objective import (_GeneralObjectiveData,
@@ -50,7 +50,6 @@ logger = logging.getLogger('pyomo.core')
 using_py3 = PY3
 
 
-
 #
 # This checks if the first argument is a numeric value.  If not
 # then this is a Pyomo constant expression, and we can only check if its
@@ -63,12 +62,6 @@ def isclose_const(a, b, rel_tol=1e-9, abs_tol=0.0):
         else:
             return False
     return abs(a-b) <= max( rel_tol * max(abs(a), abs(b)), abs_tol )
-
-#
-# The global isclose() function used below.  This is either isclose_default
-# or isclose_const
-#
-isclose = isclose_default
 
 
 class StandardRepn(object):
@@ -254,9 +247,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     # Use a custom isclose function
     #
     global isclose
-    if compute_values:
-        isclose = isclose_default
-    else:
+    if not compute_values:
         isclose = isclose_const
 
     if True:
