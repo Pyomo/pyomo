@@ -23,10 +23,10 @@ import traceback
 from collections import (defaultdict,
                          namedtuple)
 
+import pyutilib.misc
 from pyutilib.pyro import (shutdown_pyro_components,
                            using_pyro4)
 from pyomo.common.dependencies import dill, dill_available
-from pyomo.common.fileutils import import_file
 from pyomo.opt import (UndefinedData,
                        undefined,
                        SolverStatus,
@@ -1717,7 +1717,8 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
             elif module_name in sys.modules:
                 this_module = sys.modules[module_name]
             else:
-                this_module = import_file(module_name)
+                this_module = pyutilib.misc.import_file(module_name,
+                                                        clear_cache=True)
                 self.modules_imported[module_name] = this_module
                 self.modules_imported[this_module.__file__] = this_module
                 if this_module.__file__.endswith(".pyc"):

@@ -17,7 +17,7 @@ from optparse import OptionParser
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
-from pyomo.common.fileutils import import_file
+from pyutilib.misc import import_file
 from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components)
@@ -969,7 +969,8 @@ class _PHSolverServer(_PHBase):
         elif module_name in sys.modules:
             this_module = sys.modules[module_name]
         else:
-            this_module = import_file(module_name)
+            this_module = import_file(module_name,
+                                      clear_cache=True)
             self._modules_imported[module_name] = this_module
 
         module_attrname = function_name
