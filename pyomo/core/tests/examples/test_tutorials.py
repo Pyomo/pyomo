@@ -68,59 +68,31 @@ class PyomoTutorials(unittest.TestCase):
         sys.stdout = self.save_stdout
         sys.stderr = self.save_stderr
 
-    def construct(self, filename):
-        pass
-
-    def test_data(self):
-        OUTPUT = open(currdir+"data.log", 'w')
+    def driver(self, name):
+        OUTPUT = open(currdir+name+'.log', 'w')
         sys.stdout = OUTPUT
         sys.stderr = OUTPUT
-        runpy.run_module('data', None, "__main__")
+        runpy.run_module(name, None, "__main__")
         OUTPUT.close()
-        self.assertIn(open(tutorial_dir+"data.out", 'r').read(),
-                      open(currdir+"data.log", 'r').read())
-        os.remove(currdir+"data.log")
+        self.assertIn(open(tutorial_dir+name+".out", 'r').read(),
+                      open(currdir+name+".log", 'r').read())
+        os.remove(currdir+name+".log")
+
+    def test_data(self):
+        self.driver('data')
 
     @unittest.skipIf(not ((_win32com and _excel_available) or _xlrd or _openpyxl), "Cannot read excel file.")
     def test_excel(self):
-        OUTPUT = open(currdir+"excel.log", 'w')
-        sys.stdout = OUTPUT
-        sys.stderr = OUTPUT
-        runpy.run_module('excel', None, "__main__")
-        OUTPUT.close()
-        self.assertIn(open(tutorial_dir+"excel.out", 'r').read(),
-                      open(currdir+"excel.log", 'r').read())
-        os.remove(currdir+"excel.log")
+        self.driver('excel')
 
     def test_set(self):
-        OUTPUT = open(currdir+"set.log", 'w')
-        sys.stdout = OUTPUT
-        sys.stderr = OUTPUT
-        runpy.run_module('set', None, "__main__")
-        OUTPUT.close()
-        self.assertIn(open(tutorial_dir+"set.out", 'r').read(),
-                      open(currdir+"set.log", 'r').read())
-        os.remove(currdir+"set.log")
+        self.driver('set')
 
     def test_table(self):
-        OUTPUT = open(currdir+"table.log", 'w')
-        sys.stdout = OUTPUT
-        sys.stderr = OUTPUT
-        runpy.run_module('table', None, "__main__")
-        OUTPUT.close()
-        self.assertIn(open(tutorial_dir+"table.out", 'r').read(),
-                      open(currdir+"table.log", 'r').read())
-        os.remove(currdir+"table.log")
+        self.driver('table')
 
     def test_param(self):
-        OUTPUT = open(currdir+"param.log", 'w')
-        sys.stdout = OUTPUT
-        sys.stderr = OUTPUT
-        runpy.run_module('param', None, "__main__")
-        OUTPUT.close()
-        self.assertIn(open(tutorial_dir+"param.out", 'r').read(),
-                      open(currdir+"param.log", 'r').read())
-        os.remove(currdir+"param.log")
+        self.driver('param')
 
 if __name__ == "__main__":
     unittest.main()
