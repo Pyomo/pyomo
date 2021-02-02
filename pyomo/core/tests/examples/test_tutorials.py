@@ -11,12 +11,13 @@
 # Unit Tests for Pyomo tutorials
 #
 
+import runpy
+import sys
 import os
 from os.path import abspath, dirname
 topdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
 currdir = dirname(abspath(__file__))+os.sep
 tutorial_dir=topdir+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep
-import subprocess
 
 import pyutilib.th as unittest
 
@@ -51,47 +52,75 @@ except:
 class PyomoTutorials(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.cwd = os.getcwd()
+        self.tmp_path = list(sys.path)
+        os.chdir(tutorial_dir)
+        sys.path = [os.path.dirname(tutorial_dir)] + sys.path
+        sys.path.append(os.path.dirname(tutorial_dir))
+        sys.stderr.flush()
+        sys.stdout.flush()
+        self.save_stdout = sys.stdout
+        self.save_stderr = sys.stderr
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+        sys.path = self.tmp_path
+        sys.stdout = self.save_stdout
+        sys.stderr = self.save_stderr
 
     def construct(self, filename):
         pass
 
     def test_data(self):
-        with open(currdir+"data.log", 'w') as f:
-            os.chdir(tutorial_dir)
-            subprocess.call(['python', tutorial_dir+"data.py"], stdout=f)
-            os.chdir(currdir)
-        self.assertFileEqualsBaseline(currdir+"data.log", tutorial_dir+"data.out")
+        OUTPUT = open(currdir+"data.log", 'w')
+        sys.stdout = OUTPUT
+        sys.stderr = OUTPUT
+        runpy.run_module('data', None, "__main__")
+        OUTPUT.close()
+        self.assertIn(open(tutorial_dir+"data.out", 'r').read(),
+                      open(currdir+"data.log", 'r').read())
+        os.remove(currdir+"data.log")
 
     @unittest.skipIf(not ((_win32com and _excel_available) or _xlrd or _openpyxl), "Cannot read excel file.")
     def test_excel(self):
-        with open(currdir+"excel.log", 'w') as f:
-            os.chdir(tutorial_dir)
-            subprocess.call(['python', tutorial_dir+"excel.py"], stdout=f)
-            os.chdir(currdir)
-        self.assertFileEqualsBaseline(currdir+"excel.log", tutorial_dir+"excel.out")
+        OUTPUT = open(currdir+"excel.log", 'w')
+        sys.stdout = OUTPUT
+        sys.stderr = OUTPUT
+        runpy.run_module('excel', None, "__main__")
+        OUTPUT.close()
+        self.assertIn(open(tutorial_dir+"excel.out", 'r').read(),
+                      open(currdir+"excel.log", 'r').read())
+        os.remove(currdir+"excel.log")
 
     def test_set(self):
-        with open(currdir+"set.log", 'w') as f:
-            os.chdir(tutorial_dir)
-            subprocess.call(['python', tutorial_dir+"set.py"], stdout=f)
-            os.chdir(currdir)
-        self.assertFileEqualsBaseline(currdir+"set.log", tutorial_dir+"set.out")
+        OUTPUT = open(currdir+"set.log", 'w')
+        sys.stdout = OUTPUT
+        sys.stderr = OUTPUT
+        runpy.run_module('set', None, "__main__")
+        OUTPUT.close()
+        self.assertIn(open(tutorial_dir+"set.out", 'r').read(),
+                      open(currdir+"set.log", 'r').read())
+        os.remove(currdir+"set.log")
 
     def test_table(self):
-        with open(currdir+"table.log", 'w') as f:
-            os.chdir(tutorial_dir)
-            subprocess.call(['python', tutorial_dir+"table.py"], stdout=f)
-            os.chdir(currdir)
-        self.assertFileEqualsBaseline(currdir+"table.log", tutorial_dir+"table.out")
+        OUTPUT = open(currdir+"table.log", 'w')
+        sys.stdout = OUTPUT
+        sys.stderr = OUTPUT
+        runpy.run_module('table', None, "__main__")
+        OUTPUT.close()
+        self.assertIn(open(tutorial_dir+"table.out", 'r').read(),
+                      open(currdir+"table.log", 'r').read())
+        os.remove(currdir+"table.log")
 
     def test_param(self):
-        with open(currdir+"param.log", 'w') as f:
-            os.chdir(tutorial_dir)
-            subprocess.call(['python', tutorial_dir+"param.py"], stdout=f)
-            os.chdir(currdir)
-        self.assertFileEqualsBaseline(currdir+"param.log", tutorial_dir+"param.out")
-
+        OUTPUT = open(currdir+"param.log", 'w')
+        sys.stdout = OUTPUT
+        sys.stderr = OUTPUT
+        runpy.run_module('param', None, "__main__")
+        OUTPUT.close()
+        self.assertIn(open(tutorial_dir+"param.out", 'r').read(),
+                      open(currdir+"param.log", 'r').read())
+        os.remove(currdir+"param.log")
 
 if __name__ == "__main__":
     unittest.main()
