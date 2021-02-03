@@ -111,111 +111,113 @@ def sensitivity_calculation(method, instance, paramSubList, perturbList,
     Exception
         kaug does not support inequality constraints
     """
+    # This is the call signature and docstring for Jangho's implementation.
+
+    # What is the perturbList argument?
+    pass
+
+def sensitivity_setup(instance, paramList,
+         cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     # Verify User Inputs    
-    if method == 'sipopt':
-        ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
-        if not ipopt_sens.available(False):
-            raise RuntimeError('ipopt_sens is not available')
-        # set sIPOPT data
-        ipopt_sens.options['run_sens'] = 'yes'
-    elif method == 'kaug':
-        ipopt = SolverFactory('ipopt',solver_io='nl')
-        if solver_options is not None:
-            ipopt.options = solver_options
-        kaug = SolverFactory('k_aug',solver_io='nl')
-        dotsens = SolverFactory('dot_sens',solver_io='nl')
-        if not ipopt.available(False):
-            raise RuntimeError('ipopt is not available')
-        if not kaug.available(False):
-            raise RuntimeError('k_aug is not available')
-        if not dotsens.available(False):
-            raise RuntimeError('dotsens is not available')
-        
-        for cc in list(instance.component_data_objects(Constraint, 
-                                   active=True,
-                                   descend_into=True)):
-            if not cc.equality:
-                raise Exception('kaug does not support inequality constraints.')   
-    else:
-        raise ValueError("method should be 'sipopt' or 'kaug'")
-        
-    if len(paramSubList)!=len(perturbList):
-        raise ValueError("Length of paramSubList argument does not equal "
-                        "length of perturbList")
+    err_msg = ("Specified \"parmeters\" must be mutable parameters"
+              "or fixed variables.")
+    for param in paramList:
+        if param.ctype is Param:
+            if not param.mutable:
+                raise ValueError(err_msg)
+        elif param.ctype is Var:
+            if not param.fixed:
+                # No _real_ reason we need the vars to be fixed...
+                raise ValueError(err_msg)
+        else:
+            raise ValueError(err_msg)
 
-    for pp in paramSubList:
-        if pp.ctype is not Param:
-            raise ValueError("paramSubList argument is expecting a list of Params")
-
-    for pp in paramSubList:
-        if not pp._mutable:
-            raise ValueError("parameters within paramSubList must be mutable")  
-        
-    for pp in perturbList:
-        if pp.ctype is not Param:
-            raise ValueError("perturbList argument is expecting a list of Params")
-          
-    # Add model block to compartmentalize all sipopt data
-    b=Block()
-    block_name = unique_component_name(instance, '_'+method+'_data')
-    instance.add_component(block_name, b)
+    # Add model block to compartmentalize data needed by the sensitivity solver
+    block = Block()
+    block_name = unique_component_name(instance, '_SENSITIVITY_TOOLBOX_DATA')
+    # This will add a new block every time it is called on a model,
+    # which is not what we want...
+    instance.add_component(block_name, block)
 
     # Based on user input clone model or use orignal model for analysis
     if cloneModel:
-        b.tmp_lists = (paramSubList, perturbList)
+        block.tmp_list = (paramList,)
         m = instance.clone()
         instance.del_component(block_name)
-        b = getattr(m, block_name)
-        paramSubList, perturbList = b.tmp_lists
-        del b.tmp_lists
+        block = m.component(block_name)
+        paramList, = block.tmp_list
+        del block.tmp_list
     else:
         m = instance
+
+    # Create list of components for substitution/equality constraints
+    subList = []
+    for comp in paramList:
+        # If we wanted to preserve structure, we would add these
+        # objects onto the user's model...
+        if comp.ctype is Param:
+            # Create a Var to replace this param
+            name = '_'.join((comp.local_name, 'var'))
+
+            # initialize variable with the nominal value
+            if comp.is_indexed():
+                d = {k: value(comp[k]) for k in comp.index_set()}
+                myVar = Var(comp.index_set(), initialize=d)
+            else:
+                d = value(comp)
+                myVar = Var(initialize=d)
+            block.add_component(name, myVar)
+            subList.append(myVar)
+
+        if comp.ctype is Var:
+            # Create a Param to set equal to this Var
+            name = '_'.join((comp.local_name, 'param'))
+            if comp.is_indexed():
+                d = {k: value(comp[k]) for k in comp.index_set()}
+                myParam = Param(comp.index_set(), initialize=d)
+            else:
+                d = value(comp)
+                myParam = Param(initialize=d)
+            block.add_component(name, myParam)
+            subList.append(myParam)
     
-    # Generate component maps for associating Variables to perturbations
-    varSubList = []
-    for parameter in paramSubList:
-        tempName = unique_component_name(b,parameter.local_name)
-        # initialize variable with the nominal value
-        if parameter.is_indexed():
-            d = {k: value(parameter[k]) for k in parameter.index_set()}
-        else:
-            d = value(parameter)
-        b.add_component(tempName,Var(parameter.index_set(),initialize=d)) 
-        myVar = b.component(tempName)
-        varSubList.append(myVar)
- 
     # Note: substitutions are not currently compatible with 
     #      ComponentMap [ECSA 2018/11/23], this relates to Issue #755
-    paramCompMap = ComponentMap(zip(paramSubList, varSubList))
-    variableSubMap = {}
-    # variableSubMap = ComponentMap()
-    paramPerturbMap = ComponentMap(zip(paramSubList,perturbList))
-    perturbSubMap = {}
-    # perturbSubMap = ComponentMap()
+    paramCompMap = ComponentMap(zip(paramList, subList))
    
+    variableSubMap = {}
     paramDataList = [] 
-    for parameter in paramSubList:
-        # Loop over each ParamData in the Param Component
-        #
-        # Note: Sets are unordered in Pyomo.  For this to be
-        # deterministic, we need to sort the index (otherwise, the
-        # ordering of things in the paramDataList may change).  We use
-        # sorted_robust to guard against mixed-type Sets in Python 3.x
-        for kk in sorted_robust(parameter):
-            variableSubMap[id(parameter[kk])]=paramCompMap[parameter][kk]
-            perturbSubMap[id(parameter[kk])]=paramPerturbMap[parameter][kk]
-            paramDataList.append(parameter[kk])
+    for comp in paramList:
+        # Prepare the data structure for expression replacement
+        # Note that we only have to replace expressions containing
+        # parameters that are actually `Param` objects.
+        if comp.ctype is Param:
+            # Loop over each ParamData in the Param Component
+            #
+            # Note: Sets are in general unordered in Pyomo.  For this to be
+            # deterministic, we need to sort the index (otherwise, the
+            # ordering of things in the paramDataList may change).  We use
+            # sorted_robust to guard against mixed-type Sets in Python 3.x
+            for idx in sorted_robust(comp):
+                variableSubMap[id(comp[idx])] = paramCompMap[comp][idx]
+                paramDataList.append(comp[idx])
+
+        elif comp.ctype is Var:
+            # Unfix variables that we have been treating as parameters
+            comp.unfix()
+ 
+    import pdb; pdb.set_trace()
 
     # clone Objective, add to Block, and update any Expressions
-    for cc in list(m.component_data_objects(Objective,
+    for obj in list(m.component_data_objects(Objective,
                                             active=True,
                                             descend_into=True)):
-        tempName=unique_component_name(m,cc.local_name)    
-        b.add_component(tempName,
+        tempName = unique_component_name(m, obj.local_name)
+        block.add_component(tempName,
                   Objective(expr=ExpressionReplacementVisitor(
                   substitute=variableSubMap,
                   remove_named_expressions=True).dfs_postorder_stack(cc.expr)))
-        cc.deactivate()
+        obj.deactivate()
     
     # clone Constraints, add to Block, and update any Expressions
     b.constList = ConstraintList()
