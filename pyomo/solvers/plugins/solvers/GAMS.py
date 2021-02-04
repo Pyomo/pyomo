@@ -191,10 +191,8 @@ class GAMSDirect(_GAMSSolver):
         tmpdir = mkdtemp()
         try:
             from gams import GamsWorkspace, DebugLevel
-            GamsWorkspace(debug=DebugLevel.Off,
+            ws = GamsWorkspace(debug=DebugLevel.Off,
                           working_directory=tmpdir)
-            ## !!THIS SEEMS LIKE A BUG!! - mrmundt ##
-            ## ws is undefined
             t1 = ws.add_job_from_string(self._simple_model(n))
             t1.run()
             return True
