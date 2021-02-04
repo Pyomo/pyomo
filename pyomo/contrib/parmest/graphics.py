@@ -198,37 +198,55 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     
     Parameters
     ----------
-    theta_values: DataFrame, columns = variable names and (optionally) 'obj' and alpha values
-        Theta values and (optionally) an objective value and results from 
-        leaveNout_bootstrap_test, likelihood_ratio_test, or 
-        confidence_region_test
-    theta_star: dict or Series, keys = variable names, optional
-        Theta* (or other individual values of theta, also used to 
-        slice higher dimensional contour intervals in 2D)
+    theta_values: DataFrame or tuple
+    
+        * If theta_values is a DataFrame, then it contains one column for each theta variable 
+          and (optionally) an objective value column ('obj') and columns that contains 
+          Boolean results from confidence interval tests (labeled using the alpha value). 
+          Each row is a sample.
+          
+          * Theta variables can be computed from ``theta_est_bootstrap``, 
+            ``theta_est_leaveNout``, and  ``leaveNout_bootstrap_test``.
+          * The objective value can be computed using the ``likelihood_ratio_test``.
+          * Results from confidence interval tests can be computed using the  
+           ``leaveNout_bootstrap_test``, ``likelihood_ratio_test``, and 
+           ``confidence_region_test``.
+
+        * If theta_values is a tuple, then it contains a mean, covariance, and number 
+          of samples (mean, cov, n) where mean is a dictionary or Series 
+          (indexed by variable name), covariance is a DataFrame (indexed by 
+          variable name, one column per variable name), and n is an integer.
+          The mean and covariance are used to create a multivariate normal 
+          sample of n theta values. The covariance can be computed using 
+          ``theta_est(calc_cov=True)``.
+        
+    theta_star: dict or Series, optional
+        Estimated value of theta.  The dictionary or Series is indexed by variable name.  
+        Theta_star is used to slice higher dimensional contour intervals in 2D
     alpha: float, optional
         Confidence interval value, if an alpha value is given and the 
         distributions list is empty, the data will be filtered by True/False 
         values using the column name whose value equals alpha (see results from
-        leaveNout_bootstrap_test, likelihood_ratio_test, or 
-        confidence_region_test)
+        ``leaveNout_bootstrap_test``, ``likelihood_ratio_test``, and 
+        ``confidence_region_test``)
     distributions: list of strings, optional
         Statistical distribution used to define a confidence region, 
         options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, and 
         'Rect' for rectangular.
-        Confidence interval is a 2D slice, using linear interpolation at theta*.
+        Confidence interval is a 2D slice, using linear interpolation at theta_star.
     axis_limits: dict, optional
         Axis limits in the format {variable: [min, max]}
     title: string, optional
         Plot title
     add_obj_contour: bool, optional
         Add a contour plot using the column 'obj' in theta_values.
-        Contour plot is a 2D slice, using linear interpolation at theta*.
+        Contour plot is a 2D slice, using linear interpolation at theta_star.
     add_legend: bool, optional
         Add a legend to the plot
     filename: string, optional
         Filename used to save the figure
     """
-    assert isinstance(theta_values, pd.DataFrame)
+    assert isinstance(theta_values, (pd.DataFrame, tuple))
     assert isinstance(theta_star, (type(None), dict, pd.Series, pd.DataFrame))
     assert isinstance(alpha, (type(None), int, float))
     assert isinstance(distributions, list)
@@ -238,8 +256,20 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     assert isinstance(add_obj_contour, bool)
     assert isinstance(filename, (type(None), str))
     
-    if len(theta_values) == 0:
-        return('Empty data')    
+    # If theta_values is a tuple containing (mean, cov, n), create a DataFrame of values
+    if isinstance(theta_values, tuple):
+        assert(len(theta_values) == 3)
+        mean = theta_values[0]
+        cov = theta_values[1]
+        n = theta_values[2]
+        if isinstance(mean, dict):
+            mean = pd.Series(mean)
+        theta_names = mean.index
+        mvn_dist = stats.multivariate_normal(mean, cov)
+        theta_values = pd.DataFrame(mvn_dist.rvs(n, random_state=1), columns=theta_names)
+            
+    assert(theta_values.shape[0] > 0)
+    
     if isinstance(theta_star, dict):
         theta_star = pd.Series(theta_star)
     if isinstance(theta_star, pd.DataFrame):
@@ -376,16 +406,15 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     else:
         plt.savefig(filename)
         plt.close()
-    
-
+        
 def fit_rect_dist(theta_values, alpha):
     """
     Fit an alpha-level rectangular distribution to theta values
     
     Parameters
     ----------
-    theta_values: DataFrame, columns = variable names
-        Theta values
+    theta_values: DataFrame
+        Theta values, columns = variable names
     alpha: float, optional
         Confidence interval value
     
@@ -410,8 +439,8 @@ def fit_mvn_dist(theta_values):
     
     Parameters
     ----------
-    theta_values: DataFrame, columns = variable names
-        Theta values
+    theta_values: DataFrame
+        Theta values, columns = variable names
     
     Returns
     ---------
@@ -429,8 +458,8 @@ def fit_kde_dist(theta_values):
     
     Parameters
     ----------
-    theta_values: DataFrame, columns = variable names
-        Theta values
+    theta_values: DataFrame
+        Theta values, columns = variable names
     
     Returns
     ---------
@@ -468,10 +497,10 @@ def grouped_boxplot(data1, data2, normalize=False, group_names=['data1', 'data2'
     
     Parameters
     ----------
-    data1: DataFrame, columns = variable names
-        Data set
-    data2: DataFrame, columns = variable names
-        Data set
+    data1: DataFrame
+        Data set, columns = variable names
+    data2: DataFrame
+        Data set, columns = variable names
     normalize : bool, optional
         Normalize both datasets by the median and standard deviation of data1
     group_names : list, optional
@@ -510,10 +539,10 @@ def grouped_violinplot(data1, data2, normalize=False, group_names=['data1', 'dat
     
     Parameters
     ----------
-    data1: DataFrame, columns = variable names
-        Data set
-    data2: DataFrame, columns = variable names
-        Data set
+    data1: DataFrame
+        Data set, columns = variable names
+    data2: DataFrame
+        Data set, columns = variable names
     normalize : bool, optional
         Normalize both datasets by the median and standard deviation of data1
     group_names : list, optional

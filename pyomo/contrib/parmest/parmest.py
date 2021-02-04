@@ -48,9 +48,7 @@ from pyomo.environ import Block, ComponentUID
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import (fit_rect_dist,
-                                            fit_mvn_dist,
-                                            fit_kde_dist)
+import pyomo.contrib.parmest.graphics as graphics
 
 parmest_available = numpy_available & pandas_available & scipy_available
 
@@ -521,6 +519,7 @@ class Estimator(object):
                 expected value.)
                 '''
                 cov = 2 * sse / (n - l) * inv_red_hes
+                cov = pd.DataFrame(cov, index=thetavals.keys(), columns=thetavals.keys())
             
             if len(return_values) > 0:
                 var_values = []
@@ -542,6 +541,7 @@ class Estimator(object):
                     return objval, thetavals, var_values
 
             if calc_cov:
+                
                 return objval, thetavals, cov
             else:
                 return objval, thetavals
@@ -678,12 +678,11 @@ class Estimator(object):
         thetavals: dict
             A dictionary of all values for theta
         variable values: pd.DataFrame
-            Variable values for each variable name in return_values (only for ef_ipopt)
+            Variable values for each variable name in return_values (only for solver='ef_ipopt')
         Hessian: dict
-            A dictionary of dictionaries for the Hessian.
-            The Hessian is not returned if the solver is ef_ipopt.
-        cov: numpy.array
-            Covariance matrix of the fitted parameters (only for ef_ipopt)
+            A dictionary of dictionaries for the Hessian (only for solver='k_aug')
+        cov: pd.DataFrame
+            Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
         """
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
@@ -704,7 +703,7 @@ class Estimator(object):
             Number of bootstrap samples to draw from the data
         samplesize: int or None, optional
             Size of each bootstrap sample. If samplesize=None, samplesize will be 
-			set to the number of samples in the data
+            set to the number of samples in the data
         replacement: bool, optional
             Sample with or without replacement
         seed: int or None, optional
@@ -1029,7 +1028,7 @@ class Estimator(object):
         for a in alphas:
             
             if distribution == 'Rect':
-                lb, ub = fit_rect_dist(theta_values, a)
+                lb, ub = graphics.fit_rect_dist(theta_values, a)
                 training_results[a] = ((theta_values > lb).all(axis=1) & \
                                   (theta_values < ub).all(axis=1))
                 
@@ -1039,7 +1038,7 @@ class Estimator(object):
                                   (test_theta_values < ub).all(axis=1))
                     
             elif distribution == 'MVN':
-                dist = fit_mvn_dist(theta_values)
+                dist = graphics.fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
                 score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)
@@ -1050,7 +1049,7 @@ class Estimator(object):
                     test_result[a] = (Z >= score) 
                 
             elif distribution == 'KDE':
-                dist = fit_kde_dist(theta_values)
+                dist = graphics.fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
                 score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)

@@ -307,7 +307,6 @@ def launch_command(command,
                     import profile
                 import pstats
             except ImportError:
-                configure_loggers(shutdown=True)
                 raise ValueError(
                     "Cannot use the 'profile' option: the Python "
                     "'profile' or 'pstats' package cannot be imported!")

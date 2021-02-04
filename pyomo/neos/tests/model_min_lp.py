@@ -8,12 +8,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import ConcreteModel, Var, Objective, Constraint, maximize
+import pyomo.environ as pyo
 
-M = ConcreteModel()
-M.x = Var(bounds=(0,1))
-M.o = Objective(expr=2*M.x, sense=maximize)
-M.c = Constraint(expr=M.x <= 0.5)
+model = pyo.ConcreteModel()
+model.y = pyo.Var(bounds=(-10,10), initialize=0.5)
+model.x = pyo.Var(bounds=(-5,5), initialize=0.5)
 
-model = M
+@model.ConstraintList()
+def c(m):
+    yield m.y >= m.x - 2
+    yield m.y >= - m.x
+    yield m.y <= m.x
+    yield m.y <= 2 - m.x
 
+model.obj = pyo.Objective(expr=model.y, sense=pyo.minimize)

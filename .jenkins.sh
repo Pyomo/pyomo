@@ -71,14 +71,8 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     echo "# Setting up virtual environment"
     echo "#"
-    pyver=$(python -c 'import sys; print("%d%02d" % sys.version_info[:2])')
-    if [ $pyver -lt 306 ]; then
-        virtualenv python $VENV_SYSTEM_PACKAGES --clear
-    else
-        python -m venv $VENV_SYSTEM_PACKAGES ${WORKSPACE}/python
-    fi
-    # Put the venv at the beginning of the PATH
-    export PATH="$WORKSPACE/python/bin:$PATH"
+    virtualenv python $VENV_SYSTEM_PACKAGES --clear
+    source python/bin/activate
     # Because modules set the PYTHONPATH, we need to make sure that the
     # virtualenv appears first
     LOCAL_SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`

@@ -12,8 +12,9 @@ __all__ = ['UndefinedData', 'undefined', 'ignore', 'ScalarData', 'ListContainer'
 
 import copy
 
-from pyutilib.math import infinity
+from math import inf
 from pyomo.common.collections import Bunch
+
 import enum
 from six import StringIO
 from six.moves import xrange
@@ -106,9 +107,9 @@ class ScalarData(object):
 
         value = self.yaml_fix(self.get_value())
 
-        if value is infinity:
+        if value is inf:
             value = '.inf'
-        elif value is - infinity:
+        elif value is - inf:
             value = '-.inf'
 
         if not option.schema and self.description is None and self.units is None:

@@ -241,10 +241,10 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
         self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 0.5311 from the paper
 
         # Covariance matrix
-        self.assertAlmostEqual(cov[0,0], 6.30579403, places=2) # 6.22864 from paper
-        self.assertAlmostEqual(cov[0,1], -0.4395341, places=2) # -0.4322 from paper
-        self.assertAlmostEqual(cov[1,0], -0.4395341, places=2) # -0.4322 from paper
-        self.assertAlmostEqual(cov[1,1], 0.04193591, places=2) # 0.04124 from paper
+        self.assertAlmostEqual(cov.iloc[0,0], 6.30579403, places=2) # 6.22864 from paper
+        self.assertAlmostEqual(cov.iloc[0,1], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov.iloc[1,0], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov.iloc[1,1], 0.04193591, places=2) # 0.04124 from paper
 
         ''' Why does the covariance matrix from parmest not match the paper? Parmest is
         calculating the exact reduced Hessian. The paper (Rooney and Bielger, 2001) likely
@@ -331,10 +331,10 @@ class Test_parmest_indexed_variables(unittest.TestCase):
         self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
 
         # Covariance matrix
-        self.assertAlmostEqual(cov[0,0], 6.30579403, places=2) # 6.22864 from paper
-        self.assertAlmostEqual(cov[0,1], -0.4395341, places=2) # -0.4322 from paper
-        self.assertAlmostEqual(cov[1,0], -0.4395341, places=2) # -0.4322 from paper
-        self.assertAlmostEqual(cov[1,1], 0.04193591, places=2) # 0.04124 from paper
+        self.assertAlmostEqual(cov.iloc[0,0], 6.30579403, places=2) # 6.22864 from paper
+        self.assertAlmostEqual(cov.iloc[0,1], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov.iloc[1,0], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov.iloc[1,1], 0.04193591, places=2) # 0.04124 from paper
 
 
 
