@@ -209,6 +209,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
             # ordering of things in the paramDataList may change).  We use
             # sorted_robust to guard against mixed-type Sets in Python 3.x
             for idx in sorted_robust(comp):
+                # ^ FIXME This will fail if comp is a ParamData
                 variableSubMap[id(comp[idx])] = paramCompMap[comp][idx]
                 perturbSubMap[id(comp[idx])] = paramPerturbMap[comp][idx]
                 paramDataList.append(comp[idx])
@@ -269,9 +270,27 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
     # paramData to varData constraint list
     block.paramConst = ConstraintList()
-    for ii in paramDataList:
-        jj=variableSubMap[id(ii)]
-        block.paramConst.add(ii==jj)
+    for comp, other in zip(paramList, subList):
+        if comp.ctype is Param:
+            # User provided a param, we added a var
+            assert other.ctype is Var
+            if comp.is_indexed():
+                for idx in comp:
+                    pardata = comp[idx]
+                    vardata = other[idx]
+                    block.paramConst.add(vardata - pardata == 0)
+            else:
+                block.paramConst.add(other - comp == 0)
+        elif comp.ctype is Var:
+            # User provided a var, we added a param
+            assert other.ctype is Param
+            if comp.is_indexed():
+                for idx in comp:
+                    vardata = comp[idx]
+                    pardata = other[idx]
+                    block.paramConst.add(vardata - pardata == 0)
+            else:
+                block.paramConst.add(comp - other == 0)
         
     # Declare Suffixes
     m.sens_state_0 = Suffix(direction=Suffix.EXPORT)
