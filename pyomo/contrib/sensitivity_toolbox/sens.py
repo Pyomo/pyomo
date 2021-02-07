@@ -116,7 +116,7 @@ def _sensitivity_calculation(method, instance, paramSubList, perturbList,
     # What is the perturbList argument?
     pass
 
-def sensitivity_setup(instance, paramList,
+def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     # Verify User Inputs    
     err_msg = ("Specified \"parmeters\" must be mutable parameters"
@@ -132,20 +132,27 @@ def sensitivity_setup(instance, paramList,
         else:
             raise ValueError(err_msg)
 
+    ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
+    ipopt_sens.options['run_sens'] = 'yes'
+    kaug = SolverFactory('k_aug', solver_io='nl')
+    dotsens = SolverFactory('dot_sens', solver_io='nl')
+    ipopt = SolverFactory('ipopt', solver_io='nl')
+
     # Add model block to compartmentalize data needed by the sensitivity solver
     block = Block()
-    block_name = unique_component_name(instance, '_SENSITIVITY_TOOLBOX_DATA')
+    #block_name = unique_component_name(instance, '_SENSITIVITY_TOOLBOX_DATA')
+    block_name = unique_component_name(instance, '_' + method + '_data')
     # This will add a new block every time it is called on a model,
     # which is not what we want...
     instance.add_component(block_name, block)
 
     # Based on user input clone model or use orignal model for analysis
     if cloneModel:
-        block.tmp_list = (paramList,)
+        block.tmp_list = (paramList, perturbList)
         m = instance.clone()
         instance.del_component(block_name)
         block = m.component(block_name)
-        paramList, = block.tmp_list
+        paramList, perturbList = block.tmp_list
         del block.tmp_list
     else:
         m = instance
@@ -157,7 +164,8 @@ def sensitivity_setup(instance, paramList,
         # objects onto the user's model...
         if comp.ctype is Param:
             # Create a Var to replace this param
-            name = '_'.join((comp.local_name, 'var'))
+            #name = '_'.join((comp.local_name, 'var'))
+            name = unique_component_name(block, comp.local_name)
 
             # initialize variable with the nominal value
             if comp.is_indexed():
@@ -184,8 +192,10 @@ def sensitivity_setup(instance, paramList,
     # Note: substitutions are not currently compatible with 
     #      ComponentMap [ECSA 2018/11/23], this relates to Issue #755
     paramCompMap = ComponentMap(zip(paramList, subList))
-   
     variableSubMap = {}
+    paramPerturbMap = ComponentMap(zip(paramList, perturbList))
+    perturbSubMap = {}
+   
     paramDataList = [] 
     for comp in paramList:
         # Prepare the data structure for expression replacement
@@ -200,6 +210,7 @@ def sensitivity_setup(instance, paramList,
             # sorted_robust to guard against mixed-type Sets in Python 3.x
             for idx in sorted_robust(comp):
                 variableSubMap[id(comp[idx])] = paramCompMap[comp][idx]
+                perturbSubMap[id(comp[idx])] = paramPerturbMap[comp][idx]
                 paramDataList.append(comp[idx])
 
         elif comp.ctype is Var:
@@ -307,7 +318,7 @@ def sensitivity_setup(instance, paramList,
         m.sens_state_1[variableSubMap[id(ii)]] = kk
         m.sens_state_value_1[variableSubMap[id(ii)]] = \
                                                    value(perturbSubMap[id(ii)])
-        m.sens_init_constr[b.paramConst[kk]] = kk
+        m.sens_init_constr[block.paramConst[kk]] = kk
         kk += 1    
     
     if method == 'sipopt':
@@ -322,8 +333,8 @@ def sensitivity_setup(instance, paramList,
             
         kk = 1
         for ii in paramDataList:
-            m.dcdp[b.paramConst[kk]] = kk
-            m.DeltaP[b.paramConst[kk]] = value(ii)-value(perturbSubMap[id(ii)])
+            m.dcdp[block.paramConst[kk]] = kk
+            m.DeltaP[block.paramConst[kk]] = value(ii)-value(perturbSubMap[id(ii)])
             kk += 1
         
                     
