@@ -233,10 +233,6 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         # to our private block
         tempName = obj.local_name
         new_expr = param_replacer.dfs_postorder_stack(obj.expr)
-        #block.add_component(tempName,
-        #          Objective(expr=ExpressionReplacementVisitor(
-        #          substitute=variableSubMap,
-        #          remove_named_expressions=True).dfs_postorder_stack(obj.expr)))
         block.add_component(tempName, Objective(expr=new_expr))
         obj.deactivate()
     
@@ -254,16 +250,10 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         if con.equality:
             new_expr = param_replacer.dfs_postorder_stack(con.expr)
             block.constList.add(expr=new_expr)
-            #b.constList.add(expr= ExpressionReplacementVisitor(
-            #        substitute=variableSubMap,
-            #        remove_named_expressions=True).dfs_postorder_stack(con.expr))
         else:
             if con.lower is None or con.upper is None:
                 new_expr = param_replacer.dfs_postorder_stack(con.expr)
                 block.constList.add(expr=new_expr)
-                #b.constList.add(expr=ExpressionReplacementVisitor(
-                #    substitute=variableSubMap,
-                #    remove_named_expressions=True).dfs_postorder_stack(con.expr))
             else:
                 # Constraint must be a ranged inequality, break into separate constraints
                 new_body = param_replacer.dfs_postorder_stack(con.body)
@@ -272,25 +262,9 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
                 # Add constraint for lower bound
                 block.constList.add(expr=(new_lower <= new_upper))
-                #b.constList.add(expr=ExpressionReplacementVisitor(
-                #    substitute=variableSubMap,
-                #    remove_named_expressions=True).dfs_postorder_stack(
-                #        con.lower) <= ExpressionReplacementVisitor(
-                #            substitute=variableSubMap,
-                #            remove_named_expressions=
-                #            True).dfs_postorder_stack(con.body)
-                #    )
 
                 # Add constraint for upper bound
                 block.constList.add(expr=(new_upper >= new_body))
-                #b.constList.add(expr=ExpressionReplacementVisitor(
-                #    substitute=variableSubMap,
-                #    remove_named_expressions=True).dfs_postorder_stack(
-                #        con.upper) >= ExpressionReplacementVisitor(
-                #            substitute=variableSubMap,
-                #            remove_named_expressions=
-                #            True).dfs_postorder_stack(con.body)
-                #    )
         con.deactivate()
 
     # paramData to varData constraint list
