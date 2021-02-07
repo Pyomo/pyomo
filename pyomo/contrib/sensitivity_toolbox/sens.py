@@ -41,7 +41,7 @@ def kaug(instance, paramSubList, perturbList,
 
     return m
 
-def sensitivity_calculation(method, instance, paramSubList, perturbList,
+def _sensitivity_calculation(method, instance, paramSubList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     """This function accepts a Pyomo ConcreteModel, a list of 
     parameters, along with their corresponding perturbation list. The model
@@ -169,7 +169,7 @@ def sensitivity_setup(instance, paramList,
             block.add_component(name, myVar)
             subList.append(myVar)
 
-        if comp.ctype is Var:
+        elif comp.ctype is Var:
             # Create a Param to set equal to this Var
             name = '_'.join((comp.local_name, 'param'))
             if comp.is_indexed():
@@ -206,61 +206,87 @@ def sensitivity_setup(instance, paramList,
             # Unfix variables that we have been treating as parameters
             comp.unfix()
  
-    import pdb; pdb.set_trace()
+    # Visitor that we will use to replace user-provided parameters
+    # in the objective and the constraints.
+    param_replacer = ExpressionReplacementVisitor(
+            substitute=variableSubMap,
+            remove_named_expressions=True,
+            )
 
     # clone Objective, add to Block, and update any Expressions
     for obj in list(m.component_data_objects(Objective,
                                             active=True,
                                             descend_into=True)):
-        tempName = unique_component_name(m, obj.local_name)
-        block.add_component(tempName,
-                  Objective(expr=ExpressionReplacementVisitor(
-                  substitute=variableSubMap,
-                  remove_named_expressions=True).dfs_postorder_stack(cc.expr)))
+        #tempName = unique_component_name(m, obj.local_name)
+        # Should not need unique_component_name as we add this component
+        # to our private block
+        tempName = obj.local_name
+        new_expr = param_replacer.dfs_postorder_stack(obj.expr)
+        #block.add_component(tempName,
+        #          Objective(expr=ExpressionReplacementVisitor(
+        #          substitute=variableSubMap,
+        #          remove_named_expressions=True).dfs_postorder_stack(obj.expr)))
+        block.add_component(tempName, Objective(expr=new_expr))
         obj.deactivate()
     
     # clone Constraints, add to Block, and update any Expressions
-    b.constList = ConstraintList()
-    for cc in list(m.component_data_objects(Constraint, 
+    #
+    # Unfortunate that this deactivates and replaces constraints
+    # even if they don't contain the parameters.
+    # In fact it will do this even if the user only specified fixed
+    # variables.
+    # 
+    block.constList = ConstraintList()
+    for con in list(m.component_data_objects(Constraint, 
                                    active=True,
                                    descend_into=True)):
-        if cc.equality:
-            b.constList.add(expr= ExpressionReplacementVisitor(
-                    substitute=variableSubMap,
-                    remove_named_expressions=True).dfs_postorder_stack(cc.expr))
+        if con.equality:
+            new_expr = param_replacer.dfs_postorder_stack(con.expr)
+            block.constList.add(expr=new_expr)
+            #b.constList.add(expr= ExpressionReplacementVisitor(
+            #        substitute=variableSubMap,
+            #        remove_named_expressions=True).dfs_postorder_stack(con.expr))
         else:
-            if cc.lower is None or cc.upper is None:
-                b.constList.add(expr=ExpressionReplacementVisitor(
-                    substitute=variableSubMap,
-                    remove_named_expressions=True).dfs_postorder_stack(cc.expr))
+            if con.lower is None or con.upper is None:
+                new_expr = param_replacer.dfs_postorder_stack(con.expr)
+                block.constList.add(expr=new_expr)
+                #b.constList.add(expr=ExpressionReplacementVisitor(
+                #    substitute=variableSubMap,
+                #    remove_named_expressions=True).dfs_postorder_stack(con.expr))
             else:
                 # Constraint must be a ranged inequality, break into separate constraints
+                new_body = param_replacer.dfs_postorder_stack(con.body)
+                new_lower = param_replacer.dfs_postorder_stack(con.lower)
+                new_upper = param_replacer.dfs_postorder_stack(con.upper)
 
                 # Add constraint for lower bound
-                b.constList.add(expr=ExpressionReplacementVisitor(
-                    substitute=variableSubMap,
-                    remove_named_expressions=True).dfs_postorder_stack(
-                        cc.lower) <= ExpressionReplacementVisitor(
-                            substitute=variableSubMap,
-                            remove_named_expressions=
-                            True).dfs_postorder_stack(cc.body)
-                    )
+                block.constList.add(expr=(new_lower <= new_upper))
+                #b.constList.add(expr=ExpressionReplacementVisitor(
+                #    substitute=variableSubMap,
+                #    remove_named_expressions=True).dfs_postorder_stack(
+                #        con.lower) <= ExpressionReplacementVisitor(
+                #            substitute=variableSubMap,
+                #            remove_named_expressions=
+                #            True).dfs_postorder_stack(con.body)
+                #    )
+
                 # Add constraint for upper bound
-                b.constList.add(expr=ExpressionReplacementVisitor(
-                    substitute=variableSubMap,
-                    remove_named_expressions=True).dfs_postorder_stack(
-                        cc.upper) >= ExpressionReplacementVisitor(
-                            substitute=variableSubMap,
-                            remove_named_expressions=
-                            True).dfs_postorder_stack(cc.body)
-                    )
-        cc.deactivate()
+                block.constList.add(expr=(new_upper >= new_body))
+                #b.constList.add(expr=ExpressionReplacementVisitor(
+                #    substitute=variableSubMap,
+                #    remove_named_expressions=True).dfs_postorder_stack(
+                #        con.upper) >= ExpressionReplacementVisitor(
+                #            substitute=variableSubMap,
+                #            remove_named_expressions=
+                #            True).dfs_postorder_stack(con.body)
+                #    )
+        con.deactivate()
 
     # paramData to varData constraint list
-    b.paramConst = ConstraintList()
+    block.paramConst = ConstraintList()
     for ii in paramDataList:
         jj=variableSubMap[id(ii)]
-        b.paramConst.add(ii==jj)
+        block.paramConst.add(ii==jj)
         
     # Declare Suffixes
     m.sens_state_0 = Suffix(direction=Suffix.EXPORT)
