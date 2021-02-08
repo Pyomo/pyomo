@@ -315,25 +315,27 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
     
     # for reasons that are not entirely clear, 
     #     ipopt_sens requires the indices to start at 1
-    kk=1
-    for ii in paramDataList:
-        m.sens_state_0[variableSubMap[id(ii)]] = kk
-        m.sens_state_1[variableSubMap[id(ii)]] = kk
-        m.sens_state_value_1[variableSubMap[id(ii)]] = \
-                                                   value(perturbSubMap[id(ii)])
-        m.sens_init_constr[block.paramConst[kk]] = kk
-        kk += 1    
+    # ^ presumably the same reason ConstraintList's indices
+    # start at 1...
+    for i, var in enumerate(sens_vardata):
+        idx = i + 1
+        con = block.paramConst[idx]
+        param = sens_paramdata[i]
+
+        # sipopt
+        m.sens_state_0[var] = idx
+        m.sens_state_1[var] = idx
+        m.sens_state_value_1[var] = value(perturbedParamData[i])
+        m.sens_init_constr[con] = idx
+
+        # k_aug
+        m.dcdp[con] = idx
+        m.DeltaP[con] = value(param - perturbedParamData[i])
     
     if method == 'sipopt':
         # Send the model to the ipopt_sens and collect the solution
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
     elif method == 'kaug':
-        kk = 1
-        for ii in paramDataList:
-            m.dcdp[block.paramConst[kk]] = kk
-            m.DeltaP[block.paramConst[kk]] = value(ii)-value(perturbSubMap[id(ii)])
-            kk += 1
-        
                     
         logger.info("ipopt starts")
         ipopt.solve(m, tee=tee)
@@ -351,28 +353,3 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         logger.debug("dotsens completed")
                 
     return m        
-
-def _add_kaug_suffix(model, suffix_name, _direction):
-    # _add_kaug_suffix checks the model to see if suffix_name already exists.
-    # It adds suffix_name to the model for a given direction '_direction'.
-    suffix = model.component(suffix_name)
-    if _direction == 'IMPORT':
-        if suffix is None:
-            setattr(model, suffix_name, Suffix(direction=Suffix.IMPORT))
-        else:
-            if suffix.ctype is Suffix:
-                return
-            model.del_component(suffix_name)
-            setattr(model, suffix_name, Suffix(direction=Suffix.IMPORT))
-            model.add_component(unique_component_name(model, suffix_name), suffix)
-    elif _direction == 'EXPORT':
-        if suffix is None:
-            setattr(model, suffix_name, Suffix(direction=Suffix.EXPORT))
-        else:
-            if suffix.ctype is Suffix:
-                return
-            model.del_component(suffix_name)
-            setattr(model, suffix_name, Suffix(direction=Suffix.EXPORT))
-            model.add_component(unique_component_name(model, suffix_name), suffix)
-    else:
-        raise ValueError("_direction argument should be 'IMPORT' or 'EXPORT'")
