@@ -41,6 +41,38 @@ def kaug(instance, paramSubList, perturbList,
 
     return m
 
+_SIPOPT_SUFFIXES = {
+        'sens_state_0': Suffix.EXPORT,
+        # ^ Not sure what this suffix does -RBP
+        'sens_state_1': Suffix.EXPORT,
+        'sens_state_value_1': Suffix.EXPORT,
+        'sens_init_constr': Suffix.EXPORT,
+
+        'sens_sol_state_1': Suffix.IMPORT,
+        'sens_sol_state_1_z_L': Suffix.IMPORT,
+        'sens_sol_state_1_z_U': Suffix.IMPORT,
+        }
+
+_K_AUG_SUFFIXES = {
+        'ipopt_zL_out': Suffix.IMPORT,
+        'ipopt_zU_out': Suffix.IMPORT,
+        'ipopt_zL_in': Suffix.EXPORT,
+        'ipopt_zU_in': Suffix.EXPORT,
+        'dcdp': Suffix.EXPORT,
+        'DeltaP': Suffix.EXPORT,
+        }
+
+def _add_sensitivity_suffixes(block):
+    suffix_dict = {}
+    suffix_dict.update(_SIPOPT_SUFFIXES)
+    suffix_dict.update(_K_AUG_SUFFIXES)
+    for name, direction in suffix_dict.items():
+        if block.component(name) is None:
+            # Only add suffix if it doesn't already exist.
+            # If something of this name does already exist, just
+            # assume it is the proper suffix and move on.
+            block.add_component(name, Suffix(direction=direction))
+
 def _sensitivity_calculation(method, instance, paramSubList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     """This function accepts a Pyomo ConcreteModel, a list of 
@@ -116,6 +148,17 @@ def _sensitivity_calculation(method, instance, paramSubList, perturbList,
     # What is the perturbList argument?
     pass
 
+def _generate_data_objects(components):
+    if type(components) not in {list, tuple}:
+        components = (components,)
+    else:
+        for comp in components:
+            if comp.is_indexed():
+                for idx in sorted_robust(comp):
+                    yield comp[idx]
+            else:
+                yield comp
+
 def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     # Verify User Inputs    
@@ -126,9 +169,10 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
             if not param.mutable:
                 raise ValueError(err_msg)
         elif param.ctype is Var:
-            if not param.fixed:
-                # No _real_ reason we need the vars to be fixed...
-                raise ValueError(err_msg)
+            for data in _generate_data_objects(param):
+                if not data.fixed:
+                    # No _real_ reason we need the vars to be fixed...
+                    raise ValueError(err_msg)
         else:
             raise ValueError(err_msg)
 
@@ -157,66 +201,54 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
     else:
         m = instance
 
-    # Create list of components for substitution/equality constraints
-    subList = []
-    for comp in paramList:
-        # If we wanted to preserve structure, we would add these
-        # objects onto the user's model...
-        if comp.ctype is Param:
-            # Create a Var to replace this param
-            #name = '_'.join((comp.local_name, 'var'))
-            name = unique_component_name(block, comp.local_name)
+    userParams = list(param for param in paramList if param.ctype is Param)
+    userVars = list(var for var in paramList if var.ctype is Var)
 
-            # initialize variable with the nominal value
-            if comp.is_indexed():
-                d = {k: value(comp[k]) for k in comp.index_set()}
-                myVar = Var(comp.index_set(), initialize=d)
-            else:
-                d = value(comp)
-                myVar = Var(initialize=d)
-            block.add_component(name, myVar)
-            subList.append(myVar)
+    # For every user-provided var we add a param, and for every user-
+    # provided param we add a var.
+    addedParams = list()
+    for var in userVars:
+        name = '_'.join((var.local_name, 'param'))
+        if var.is_indexed():
+            d = {k: value(var[k]) for k in var.index_set()}
+            myParam = Param(var.index_set(), initialize=d)
+        else:
+            d = value(var)
+            myParam = Param(intialize=d)
+        block.add_component(name, myParam)
+        addedParams.append(myParam)
 
-        elif comp.ctype is Var:
-            # Create a Param to set equal to this Var
-            name = '_'.join((comp.local_name, 'param'))
-            if comp.is_indexed():
-                d = {k: value(comp[k]) for k in comp.index_set()}
-                myParam = Param(comp.index_set(), initialize=d)
-            else:
-                d = value(comp)
-                myParam = Param(initialize=d)
-            block.add_component(name, myParam)
-            subList.append(myParam)
-    
-    # Note: substitutions are not currently compatible with 
-    #      ComponentMap [ECSA 2018/11/23], this relates to Issue #755
-    paramCompMap = ComponentMap(zip(paramList, subList))
-    variableSubMap = {}
-    paramPerturbMap = ComponentMap(zip(paramList, perturbList))
-    perturbSubMap = {}
-   
-    paramDataList = [] 
-    for comp in paramList:
-        # Prepare the data structure for expression replacement
-        # Note that we only have to replace expressions containing
-        # parameters that are actually `Param` objects.
-        if comp.ctype is Param:
-            # Loop over each ParamData in the Param Component
-            #
-            # Note: Sets are in general unordered in Pyomo.  For this to be
-            # deterministic, we need to sort the index (otherwise, the
-            # ordering of things in the paramDataList may change).  We use
-            # sorted_robust to guard against mixed-type Sets in Python 3.x
-            for idx in sorted_robust(comp):
-                # ^ FIXME This will fail if comp is a ParamData
-                variableSubMap[id(comp[idx])] = paramCompMap[comp][idx]
-                perturbSubMap[id(comp[idx])] = paramPerturbMap[comp][idx]
-                paramDataList.append(comp[idx])
+    addedVars = list()
+    for param in userParams:
+        #name = '_'.join((param.local_name, 'var'))
+        name = unique_component_name(block, param.local_name)
+        if param.is_indexed():
+            d = {k: value(param[k]) for k in param.index_set()}
+            myVar = Var(param.index_set(), initialize=d)
+        else:
+            d = value(param)
+            myVar = Var(initialize=d)
+        block.add_component(name, myVar)
+        addedVars.append(myVar)
 
-        elif comp.ctype is Var:
-            # Unfix variables that we have been treating as parameters
-            comp.unfix()
+    userParamData = list(_generate_data_objects(userParams))
+    userVarData = list(_generate_data_objects(userVars))
+    addedVarData = list(_generate_data_objects(addedVars))
+    addedParamData = list(_generate_data_objects(addedParams))
+
+    perturbedParamData = list(_generate_data_objects(perturbList))
+
+    paramDataList = userParamData
+
+    # Presumably, the user provided fixed vars as parameters.
+    # We make sure these are unfixed.
+    for var in userVarData:
+        var.unfix()
+
+    # Populate the dictionaries necessary for replacement
+    paramDataIds = list(id(param) for param in userParamData)
+    variableSubMap = dict(zip(paramDataIds, addedVarData))
+    perturbSubMap = dict(zip(paramDataIds, perturbedParamData))
  
     # Visitor that we will use to replace user-provided parameters
     # in the objective and the constraints.
@@ -236,7 +268,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         new_expr = param_replacer.dfs_postorder_stack(obj.expr)
         block.add_component(tempName, Objective(expr=new_expr))
         obj.deactivate()
-    
+
     # clone Constraints, add to Block, and update any Expressions
     #
     # Unfortunate that this deactivates and replaces constraints
@@ -270,38 +302,16 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
     # paramData to varData constraint list
     block.paramConst = ConstraintList()
-    for comp, other in zip(paramList, subList):
-        if comp.ctype is Param:
-            # User provided a param, we added a var
-            assert other.ctype is Var
-            if comp.is_indexed():
-                for idx in comp:
-                    pardata = comp[idx]
-                    vardata = other[idx]
-                    block.paramConst.add(vardata - pardata == 0)
-            else:
-                block.paramConst.add(other - comp == 0)
-        elif comp.ctype is Var:
-            # User provided a var, we added a param
-            assert other.ctype is Param
-            if comp.is_indexed():
-                for idx in comp:
-                    vardata = comp[idx]
-                    pardata = other[idx]
-                    block.paramConst.add(vardata - pardata == 0)
-            else:
-                block.paramConst.add(comp - other == 0)
-        
+    sens_vardata = userVarData + addedVarData
+    sens_paramdata = addedParamData + userParamData
+
+    # Implementation as a ConstraintList destroys the structure of these
+    # parameters, and I don't see any reason why it is necessary.
+    for var, param in zip(sens_vardata, sens_paramdata):
+        block.paramConst.add(var - param == 0)
+
     # Declare Suffixes
-    m.sens_state_0 = Suffix(direction=Suffix.EXPORT)
-    m.sens_state_1 = Suffix(direction=Suffix.EXPORT)
-    m.sens_state_value_1 = Suffix(direction=Suffix.EXPORT)
-    m.sens_init_constr = Suffix(direction=Suffix.EXPORT)
-    
-    m.sens_sol_state_1 = Suffix(direction=Suffix.IMPORT)
-    m.sens_sol_state_1_z_L = Suffix(direction=Suffix.IMPORT)
-    m.sens_sol_state_1_z_U = Suffix(direction=Suffix.IMPORT)
-    
+    _add_sensitivity_suffixes(m)
     
     # for reasons that are not entirely clear, 
     #     ipopt_sens requires the indices to start at 1
@@ -318,12 +328,6 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         # Send the model to the ipopt_sens and collect the solution
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
     elif method == 'kaug':
-        kaug_suffix = {'ipopt_zL_out':'IMPORT','ipopt_zU_out':'IMPORT', 
-                       'ipopt_zL_in':'EXPORT','ipopt_zU_in':'EXPORT',
-                        'dcdp':'EXPORT','DeltaP':'EXPORT'}
-        for _suffix in kaug_suffix.keys():
-            _add_kaug_suffix(m, _suffix, kaug_suffix[_suffix])
-            
         kk = 1
         for ii in paramDataList:
             m.dcdp[block.paramConst[kk]] = kk
