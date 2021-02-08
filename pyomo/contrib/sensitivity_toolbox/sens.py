@@ -143,9 +143,6 @@ def _sensitivity_calculation(method, instance, paramSubList, perturbList,
     Exception
         kaug does not support inequality constraints
     """
-    # This is the call signature and docstring for Jangho's implementation.
-
-    # What is the perturbList argument?
     pass
 
 def _generate_data_objects(components):
@@ -161,6 +158,43 @@ def _generate_data_objects(components):
 
 def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
+    """
+    """
+    ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
+    ipopt_sens.options['run_sens'] = 'yes'
+    kaug = SolverFactory('k_aug', solver_io='nl')
+    dotsens = SolverFactory('dot_sens', solver_io='nl')
+    ipopt = SolverFactory('ipopt', solver_io='nl')
+
+    m = setup_sensitivity(method, instance, paramList, perturbList,
+         cloneModel=cloneModel, tee=tee, keepfiles=keepfiles,
+         solver_options=solver_options)
+
+    if method == 'kaug':
+        ipopt.solve(m, tee=tee)
+        m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
+        m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
+
+        kaug.options['dsdp_mode'] = ""  #: sensitivity mode!
+        kaug.solve(m, tee=tee)
+
+    perturb_parameters(method, m, paramList, perturbList)
+    # ^ These are the user's paramList and perturbList...
+    # Will they work on the cloned model?
+    # I think so because I only use the names and values in this function.
+
+    if method == 'sipopt':
+        # Send the model to the ipopt_sens and collect the solution
+        results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
+
+    elif method == 'kaug':
+        dotsens.options["dsdp_mode"] = ""
+        dotsens.solve(m, tee=tee) 
+
+    return m
+
+def setup_sensitivity(method, instance, paramList, perturbList,
+         cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     # Verify User Inputs    
     err_msg = ("Specified \"parmeters\" must be mutable parameters"
               "or fixed variables.")
@@ -175,12 +209,6 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
                     raise ValueError(err_msg)
         else:
             raise ValueError(err_msg)
-
-    ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
-    ipopt_sens.options['run_sens'] = 'yes'
-    kaug = SolverFactory('k_aug', solver_io='nl')
-    dotsens = SolverFactory('dot_sens', solver_io='nl')
-    ipopt = SolverFactory('ipopt', solver_io='nl')
 
     # Add model block to compartmentalize data needed by the sensitivity solver
     block = Block()
@@ -325,31 +353,81 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         # sipopt
         m.sens_state_0[var] = idx
         m.sens_state_1[var] = idx
-        m.sens_state_value_1[var] = value(perturbedParamData[i])
+        #m.sens_state_value_1[var] = value(perturbedParamData[i])
         m.sens_init_constr[con] = idx
 
         # k_aug
         m.dcdp[con] = idx
-        m.DeltaP[con] = value(param - perturbedParamData[i])
+        #m.DeltaP[con] = value(param - perturbedParamData[i])
     
-    if method == 'sipopt':
-        # Send the model to the ipopt_sens and collect the solution
-        results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
-    elif method == 'kaug':
-                    
-        logger.info("ipopt starts")
-        ipopt.solve(m, tee=tee)
-        m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
-        m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
-        logger.debug("ipopt completed")
-        #: k_aug
-        logger.info("k_aug starts")
-        kaug.options['dsdp_mode'] = ""  #: sensitivity mode!
-        kaug.solve(m, tee=tee)
-        logger.debug("k_aug completed")
-        dotsens.options["dsdp_mode"] = ""
-        logger.info("dotsens starts")
-        dotsens.solve(m, tee=tee) 
-        logger.debug("dotsens completed")
-                
     return m        
+
+def perturb_parameters(method, instance, paramList, perturbList):
+    """
+    """
+    #block_name = unique_component_name(instance, '_SENSITIVITY_TOOLBOX_DATA')
+    block_name = '_' + method + '_data'
+    block = instance.component(block_name)
+    
+    # Need to put perturbList in the right order. The right order depends
+    # on which of the user-provided "parameters" are vars and which are params.
+    varPerturbValues = list()
+    paramPerturbValues = list()
+    sens_vardata = list()
+    assert len(paramList) == len(perturbList)
+    for comp, ptb in zip(paramList, perturbList):
+        if comp.ctype is Var: 
+            if comp.is_indexed():
+                try:
+                    for idx in sorted_robust(comp):
+                        # Assuming ptb is a parameter
+                        varPerturbValues.append(value(ptb[idx]))
+                        sens_vardata.append(comp[idx])
+                except TypeError:
+                    # ptb is a number
+                    for idx in sorted_robust(comp):
+                        varPerturbValues.append(value(ptb))
+                        sens_vardata.append(comp[idx])
+            else:
+                # My intended use case: comp is a data object
+                # and ptb is a number
+                varPerturbValues.append(value(ptb))
+                sens_vardata.append(comp)
+
+        elif comp.ctype is Param:
+            # This is the var we created for this param in the
+            # previous function.
+            var = block.component(comp.local_name)
+            assert var is not None
+            if comp.is_indexed():
+                try:
+                    for idx in sorted_robust(comp):
+                        # Assuming ptb is a parameter
+                        paramPerturbValues.append(value(ptb[idx]))
+                        sens_vardata.append(var[idx])
+                except TypeError:
+                    # ptb is a number
+                    for idx in sorted_robust(comp):
+                        paramPerturbValues.append(value(ptb))
+                        sens_vardata.append(var[idx])
+            else:
+                # My intended use case: comp is a data object
+                # and ptb is a number
+                paramPerturbValues.append(value(ptb))
+                sens_vardata.append(var)
+
+    # Because this is the order of our sens_vardata and paramConst
+    perturbValues = varPerturbValues + paramPerturbValues
+
+    for i, ptb in enumerate(perturbValues):
+        var = sens_vardata[i]
+        con = block.paramConst[i+1]
+
+        # sipopt
+        instance.sens_state_value_1[var] = ptb
+
+        # k_aug
+        #instance.DeltaP[con] = value(ptb - var)
+        instance.DeltaP[con] = value(var - ptb)
+        # FIXME: ^ This is incorrect. DeltaP should be (ptb - current).
+        # But at least one test doesn't pass unless I use (current - ptb).
