@@ -73,7 +73,18 @@ def _add_sensitivity_suffixes(block):
             # assume it is the proper suffix and move on.
             block.add_component(name, Suffix(direction=direction))
 
-def _sensitivity_calculation(method, instance, paramSubList, perturbList,
+def _generate_data_objects(components):
+    if type(components) not in {list, tuple}:
+        components = (components,)
+    else:
+        for comp in components:
+            if comp.is_indexed():
+                for idx in sorted_robust(comp):
+                    yield comp[idx]
+            else:
+                yield comp
+
+def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     """This function accepts a Pyomo ConcreteModel, a list of 
     parameters, along with their corresponding perturbation list. The model
@@ -142,23 +153,6 @@ def _sensitivity_calculation(method, instance, paramSubList, perturbList,
         dotsens binary must be available
     Exception
         kaug does not support inequality constraints
-    """
-    pass
-
-def _generate_data_objects(components):
-    if type(components) not in {list, tuple}:
-        components = (components,)
-    else:
-        for comp in components:
-            if comp.is_indexed():
-                for idx in sorted_robust(comp):
-                    yield comp[idx]
-            else:
-                yield comp
-
-def sensitivity_calculation(method, instance, paramList, perturbList,
-         cloneModel=True, tee=False, keepfiles=False, solver_options=None):
-    """
     """
     ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
     ipopt_sens.options['run_sens'] = 'yes'
