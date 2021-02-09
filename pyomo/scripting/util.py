@@ -505,9 +505,7 @@ def apply_optimizer(data, instance=None):
     if len(data.options.solvers[0].suffixes) > 0:
         for suffix_name in data.options.solvers[0].suffixes:
             if suffix_name[0] in ['"',"'"]:
-                # !!THIS SEEMS LIKE A BUG!! - mrmundt #
-                # Suffix has not yet been defined.
-                suffix_name = suffix[1:-1]
+                suffix_name = suffix_name[1:-1]
             # Don't redeclare the suffix if it already exists
             suffix = getattr(instance, suffix_name, None)
             if suffix is None:

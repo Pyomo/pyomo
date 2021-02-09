@@ -405,16 +405,13 @@ def import_file(path, clear_cache=False):
     """
     path = os.path.expanduser(os.path.expandvars(path))
     if not os.path.exists(path):
-        raise Exception('File does not exist. Check path.')
-    try:
-        module_dir, module_file = os.path.split(path)
-        module_name, module_ext = os.path.splitext(module_file)
-        if clear_cache and module_name in sys.modules:
-            del sys.modules[module_name]
-        spec = importlib.util.spec_from_file_location(module_name, path)
-        module = spec.loader.load_module()
-    except:
-        raise
+        raise FileNotFoundError('File does not exist. Check path.')
+    module_dir, module_file = os.path.split(path)
+    module_name, module_ext = os.path.splitext(module_file)
+    if clear_cache and module_name in sys.modules:
+        del sys.modules[module_name]
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    module = spec.loader.load_module()
     return module
 
 

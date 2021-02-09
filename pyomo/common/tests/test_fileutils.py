@@ -113,7 +113,7 @@ class TestFileUtils(unittest.TestCase):
             self.fail('test_import_vars - failed to access data in import_ex.py file.')
 
     def test_import_file_no_extension(self):
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(FileNotFoundError) as context:
             import_file(os.path.join(_this_file_dir, 'import_ex'))
         self.assertTrue('File does not exist' in str(context.exception))
 
