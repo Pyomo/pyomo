@@ -396,17 +396,15 @@ def import_file(path, clear_cache=False):
     Replaces import_file from pyutilib (Pyomo 6.0.0).
     
     This function returns the module object that is created.
-
     Parameters
     ----------
     path : str
         Full path to .py file.
     clear_cache: bool
         Remove module if already loaded. The default is False.
-
     """
     path = os.path.expanduser(os.path.expandvars(path))
-    module = None
+    module= None
     try:
         module_dir, module_file = os.path.split(path)
         module_name, module_ext = os.path.splitext(module_file)
@@ -415,7 +413,6 @@ def import_file(path, clear_cache=False):
         spec = importlib.util.spec_from_file_location(module_name, path)
         module = spec.loader.load_module()
     except:
-        print('Path: {}\nModule Directory: {}\nModule Name: {}\nSpec: {}'.format(path, module_dir, module_name, spec))
         raise
     return module
 
