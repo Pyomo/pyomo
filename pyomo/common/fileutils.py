@@ -412,7 +412,6 @@ def import_file(path, clear_cache=False):
         module_name, module_ext = os.path.splitext(module_file)
         if clear_cache and module_name in sys.modules:
             del sys.modules[module_name]
-            print(sys.modules)
         spec = importlib.util.spec_from_file_location(module_name, path)
         module = spec.loader.load_module()
     except Exception as e:
