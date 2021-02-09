@@ -414,10 +414,11 @@ def import_file(path, clear_cache=False):
             del sys.modules[module_name]
         spec = importlib.util.spec_from_file_location(module_name, path)
         module = spec.loader.load_module()
+        if module == None:
+            raise RuntimeError('Module did not load correctly.\nPath: {}\nModule Name: {}\nSpec: {}'.format(path, module_name, spec))
     except:
         raise
-    finally:
-        return module
+    return module
 
 
 class _PathData(object):
