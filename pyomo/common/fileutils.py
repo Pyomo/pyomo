@@ -415,7 +415,7 @@ def import_file(path, clear_cache=False):
         spec = importlib.util.spec_from_file_location(module_name, path)
         module = spec.loader.load_module()
     except:
-        print('Path: {}\nModule Name: {}\nSpec: {}'.format(path, module_name, spec))
+        print('Path: {}\nModule Directory: {}\nModule Name: {}\nSpec: {}'.format(path, module_dir, module_name, spec))
         raise
     return module
 
