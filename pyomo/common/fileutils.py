@@ -406,16 +406,17 @@ def import_file(path, clear_cache=False):
 
     """
     path = os.path.expanduser(os.path.expandvars(path))
-    module= None
+    module = None
     try:
         module_dir, module_file = os.path.split(path)
         module_name, module_ext = os.path.splitext(module_file)
         if clear_cache and module_name in sys.modules:
             del sys.modules[module_name]
+            print(sys.modules)
         spec = importlib.util.spec_from_file_location(module_name, path)
         module = spec.loader.load_module()
-    except ImportError:
-        pass
+    except Exception as e:
+        raise Exception(e)
     finally:
         return module
 
