@@ -414,8 +414,8 @@ def import_file(path, clear_cache=False):
             del sys.modules[module_name]
         spec = importlib.util.spec_from_file_location(module_name, path)
         module = spec.loader.load_module()
-    except Exception as e:
-        raise Exception(e)
+    except:
+        raise
     finally:
         return module
 
