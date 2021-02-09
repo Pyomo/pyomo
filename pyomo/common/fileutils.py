@@ -404,7 +404,8 @@ def import_file(path, clear_cache=False):
         Remove module if already loaded. The default is False.
     """
     path = os.path.expanduser(os.path.expandvars(path))
-    module= None
+    if not os.path.exists(path):
+        raise Exception('File does not exist. Check path.')
     try:
         module_dir, module_file = os.path.split(path)
         module_name, module_ext = os.path.splitext(module_file)

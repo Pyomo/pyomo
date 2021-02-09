@@ -111,7 +111,11 @@ class TestFileUtils(unittest.TestCase):
             importvar = import_ex.a
         except:
             self.fail('test_import_vars - failed to access data in import_ex.py file.')
-        
+
+    def test_import_file_no_extension(self):
+        with self.assertRaises(Exception) as context:
+            import_file(os.path.join(_this_file_dir, 'import_ex'))
+        self.assertTrue('File does not exist' in str(context.exception))
 
     def test_system(self):
         self.assertTrue(platform.system().lower().startswith(_system()))
