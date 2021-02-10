@@ -122,9 +122,7 @@ class TestProjectedNLP(unittest.TestCase):
         projected_nlp = ProjectedNLP(nlp, ['x[0]', 'x[2]', 'y', 'x[1]'])
         expected_names = ['x[0]', 'x[2]', 'y', 'x[1]']
         self.assertEqual(projected_nlp.primals_names(), expected_names)
-        self.assertTrue(np.array_equal(projected_nlp.get_primals(),
-                                       np.asarray([1.0, 4.0, np.nan, 2.0]),
-                                       equal_nan=True))
+        np.testing.assert_equal(projected_nlp.get_primals(),np.asarray([1.0, 4.0, np.nan, 2.0]))
         
         self.assertTrue(np.array_equal(projected_nlp.evaluate_grad_objective(),
                                        np.asarray([8.0, 9.0, 0.0, 1.0])))
@@ -159,9 +157,7 @@ class TestProjectedNLP(unittest.TestCase):
         projected_nlp = ProjectedNLP(nlp, ['x[0]', 'x[2]'])
         expected_names = ['x[0]', 'x[2]']
         self.assertEqual(projected_nlp.primals_names(), expected_names)
-        self.assertTrue(np.array_equal(projected_nlp.get_primals(),
-                                       np.asarray([1.0, 4.0]),
-                                       equal_nan=True))
+        np.testing.assert_equal(projected_nlp.get_primals(),np.asarray([1.0, 4.0]))
         
         self.assertTrue(np.array_equal(projected_nlp.evaluate_grad_objective(),
                                        np.asarray([8.0, 9.0])))
