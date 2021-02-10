@@ -446,8 +446,11 @@ def check_config(config):
         config.add_no_good_cuts = True
         config.use_tabu_list = False
 
-    if config.nlp_solver == 'baron' or (config.nlp_solver == 'gams' and config.nlp_solver_args['solver'] == 'baron'):
+    if config.nlp_solver == 'baron':
         config.equality_relaxation = False
+    if config.nlp_solver == 'gams' and config.nlp_solver.__contains__('solver'):
+        if config.nlp_solver_args['solver'] == 'baron':
+            config.equality_relaxation = False
     # if ecp tolerance is not provided use bound tolerance
     if config.ecp_tolerance is None:
         config.ecp_tolerance = config.bound_tolerance

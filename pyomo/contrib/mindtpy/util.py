@@ -442,8 +442,9 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
             if solver_name == 'cplex':
                 opt.options['mip limits populate'] = config.solution_limit
                 opt.options['mip strategy presolvenode'] = 3
-                if config.add_regularization == 'hess_lag':
-                    opt.options['optimalitytarget'] = 3
+                # TODO: need to discuss if this option should be added.
+                # if config.add_regularization == 'hess_lag':
+                #     opt.options['optimalitytarget'] = 3
             elif solver_name == 'gurobi':
                 opt.options['SolutionLimit'] = config.solution_limit
                 opt.options['Presolve'] = 2
@@ -473,26 +474,32 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                                           'option reslim=%s;' % remaining]
         elif solver_type == 'nlp':
             opt.options['add_options'] = ['option reslim=%s;' % remaining]
-            if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth', 'msnlp', 'conopt', 'baron'}:
-                if config.nlp_solver_args['solver'] == 'ipopt':
-                    opt.options['add_options'].append('$onecho > ipopt.opt')
-                    opt.options['add_options'].append(
-                        'constr_viol_tol ' + str(config.zero_tolerance))
-                elif config.nlp_solver_args['solver'] == 'ipopth':
-                    opt.options['add_options'].append('$onecho > ipopth.opt')
-                    opt.options['add_options'].append(
-                        'constr_viol_tol ' + str(config.zero_tolerance))
-                elif config.nlp_solver_args['solver'] == 'conopt':
-                    opt.options['add_options'].append('$onecho > conopt.opt')
-                    opt.options['add_options'].append(
-                        'RTNWMA ' + str(config.zero_tolerance))
-                elif config.nlp_solver_args['solver'] == 'msnlp':
-                    opt.options['add_options'].append('$onecho > msnlp.opt')
-                    opt.options['add_options'].append(
-                        'feasibility_tolerance ' + str(config.zero_tolerance))
-                elif config.nlp_solver_args['solver'] == 'baron':
-                    opt.options['add_options'].append('$onecho > baron.opt')
-                    opt.options['add_options'].append(
-                        'AbsConFeasTol ' + str(config.zero_tolerance))
-                opt.options['add_options'].append('$offecho')
-                opt.options['add_options'].append('GAMS_MODEL.optfile=1')
+            if config.nlp_solver_args.__contains__('solver'):
+                if config.nlp_solver_args['solver'] in {'ipopt', 'ipopth', 'msnlp', 'conopt', 'baron'}:
+                    if config.nlp_solver_args['solver'] == 'ipopt':
+                        opt.options['add_options'].append(
+                            '$onecho > ipopt.opt')
+                        opt.options['add_options'].append(
+                            'constr_viol_tol ' + str(config.zero_tolerance))
+                    elif config.nlp_solver_args['solver'] == 'ipopth':
+                        opt.options['add_options'].append(
+                            '$onecho > ipopth.opt')
+                        opt.options['add_options'].append(
+                            'constr_viol_tol ' + str(config.zero_tolerance))
+                    elif config.nlp_solver_args['solver'] == 'conopt':
+                        opt.options['add_options'].append(
+                            '$onecho > conopt.opt')
+                        opt.options['add_options'].append(
+                            'RTNWMA ' + str(config.zero_tolerance))
+                    elif config.nlp_solver_args['solver'] == 'msnlp':
+                        opt.options['add_options'].append(
+                            '$onecho > msnlp.opt')
+                        opt.options['add_options'].append(
+                            'feasibility_tolerance ' + str(config.zero_tolerance))
+                    elif config.nlp_solver_args['solver'] == 'baron':
+                        opt.options['add_options'].append(
+                            '$onecho > baron.opt')
+                        opt.options['add_options'].append(
+                            'AbsConFeasTol ' + str(config.zero_tolerance))
+                    opt.options['add_options'].append('$offecho')
+                    opt.options['add_options'].append('GAMS_MODEL.optfile=1')
