@@ -13,7 +13,7 @@ from __future__ import division
 import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.core import (Block, Constraint,
-                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
+                        Objective, Reals, Suffix, Var, minimize, maximize, RangeSet, ConstraintList, TransformationFactory)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory
@@ -21,6 +21,8 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 import numpy as np
+from pyomo.core.expr.taylor_series import taylor_series_expansion
+from pyomo.core.expr.calculus.derivatives import differentiate
 
 logger = logging.getLogger('pyomo.contrib')
 
@@ -317,11 +319,13 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
     # First calculate jacobin and hessian without assigning variable and constraint sequence, then use get_primal_indices to get the indices.
     with time_code(solve_data.timing, 'PyomoNLP'):
         nlp = PyomoNLP(temp_model)
+        lam = [-temp_model.dual[constr] if abs(temp_model.dual[constr]) > config.zero_tolerance else 0
+               for constr in nlp.get_pyomo_constraints()]
+        nlp.set_duals(lam)
         obj_grad = nlp.evaluate_grad_objective().reshape(-1, 1)
         jac = nlp.evaluate_jacobian().toarray()
-        dual_values = np.array(list(
-            temp_model.dual[c] for c in nlp.get_pyomo_constraints())).reshape(-1, 1)
-        jac_lag = obj_grad + jac.transpose().dot(dual_values)
+        jac_lag = obj_grad + jac.transpose().dot(np.array(lam).reshape(-1, 1))
+        jac_lag[abs(jac_lag) < config.zero_tolerance] = 0
         nlp_var = set([i.name for i in nlp.get_pyomo_variables()])
         first_order_term = sum(float(jac_lag[nlp.get_primal_indices([temp_var])[0]]) * (var - temp_var.value) for var,
                                temp_var in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]) if temp_var.name in nlp_var)
@@ -344,6 +348,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
         elif config.add_regularization == 'hess_lag':
             # Implementation 1
             hess_lag = nlp.evaluate_hessian_lag().toarray()
+            hess_lag[abs(hess_lag) < config.zero_tolerance] = 0
             second_order_term = 0.5 * sum((var_i - temp_var_i.value) * float(hess_lag[nlp.get_primal_indices([temp_var_i])[0]][nlp.get_primal_indices([temp_var_j])[0]]) * (var_j - temp_var_j.value)
                                           for var_i, temp_var_i in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
                                           for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
@@ -444,9 +449,11 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                 opt.options['Presolve'] = 2
     elif solver_name == 'cplex_persistent':
         opt.options['timelimit'] = remaining
-        opt._solver_model.parameters.mip.tolerances.mipgap.set(config.mip_solver_mipgap)
+        opt._solver_model.parameters.mip.tolerances.mipgap.set(
+            config.mip_solver_mipgap)
         if regularization == True:
-            opt._solver_model.parameters.mip.limits.populate.set(config.solution_limit)
+            opt._solver_model.parameters.mip.limits.populate.set(
+                config.solution_limit)
             opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
             if config.add_regularization == 'hess_lag':
                 opt._solver_model.parameters.optimalitytarget.set(3)
