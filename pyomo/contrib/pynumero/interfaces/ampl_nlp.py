@@ -21,6 +21,7 @@ except ImportError as e:
 from scipy.sparse import coo_matrix
 import os
 import numpy as np
+from pyomo.common.deprecation import deprecated
 from pyomo.contrib.pynumero.interfaces.nlp import ExtendedNLP
 
 __all__ = ['AslNLP', 'AmplNLP']
@@ -682,10 +683,14 @@ class AmplNLP(AslNLP):
             self._name_to_con_eq_idx = {name:idx for idx,name in enumerate(self._con_eq_idx_to_name)}
             self._name_to_con_ineq_idx = {name:idx for idx,name in enumerate(self._con_ineq_idx_to_name)}
 
-            
-    def variable_names(self):
+    def primals_names(self):
         """Returns ordered list with names of primal variables"""
         return list(self._vidx_to_name)
+
+    @deprecated(msg='This method has been replaced with primals_names', version='', remove_in='6.0')
+    def variable_names(self):
+        """Returns ordered list with names of primal variables"""
+        return self.primals_names()
 
     def constraint_names(self):
         """Returns an ordered list with the names of all the constraints
@@ -702,14 +707,18 @@ class AmplNLP(AslNLP):
         (corresponding to evaluate_ineq_constraints)"""
         return list(self._con_ineq_idx_to_name)
 
+    @deprecated(msg='This method has been replaced with primal_idx', version='', remove_in='6.0')
     def variable_idx(self, var_name):
+        return self.primal_idx(var_name)
+
+    def primal_idx(self, var_name):
         """
-        Returns the index of the variable named var_name
+        Returns the index of the primal variable named var_name
 
         Parameters
         ----------
         var_name: str
-            Name of variable
+            Name of primal variable
 
         Returns
         -------
