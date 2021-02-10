@@ -10,10 +10,12 @@
 
 from pyomo.common.dependencies import attempt_import, scipy, scipy_available
 
+# Note: sparse.BlockVector leverages the __array__ufunc__ interface
+# released in numpy 1.13
 numpy, numpy_available = attempt_import(
     'numpy',
     'Pynumero requires the optional Pyomo dependency "numpy"',
-    minimum_version='1.19.0',
+    minimum_version='1.13.0',
     defer_check=False)
 
 scipy_sparse, scipy_sparse_available = attempt_import(
