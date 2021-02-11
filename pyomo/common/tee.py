@@ -178,6 +178,10 @@ class TeeStream(object):
     def __exit__(self, et, ev, tb):
         self.close()
 
+    def __del__(self):
+        # Implement __del__ to guarantee that file descriptors are closed
+        self.close()
+
     def _start(self, handle):
         if not _peek_available:
             th = threading.Thread(target=self._streamReader, args=(handle,))
