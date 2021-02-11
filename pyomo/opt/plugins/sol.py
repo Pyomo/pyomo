@@ -23,6 +23,10 @@ from pyomo.opt import (SolverResults,
 
 from six.moves import xrange
 
+try:
+    unicode
+except:
+    basestring = str
 
 @results.ReaderFactory.register(str(ResultsFormat.sol))
 class ResultsReader_sol(results.AbstractResultsReader):
@@ -112,8 +116,11 @@ class ResultsReader_sol(results.AbstractResultsReader):
             objno = [int(t[1]), int(t[2])]
         res.solver.message = msg.strip()
         res.solver.message = res.solver.message.replace("\n","; ")
-        if type(res.solver.message) == str:
-            res.solver.message.replace(':', '\\x3a')
+        try:
+            if isinstance(res.solver.message, basestring):
+                res.solver.message.replace(':', '\\x3a')
+        except:
+            pass
         ##res.solver.instanceName = osrl.header.instanceName
         ##res.solver.systime = osrl.header.time
         res.solver.status = SolverStatus.ok
