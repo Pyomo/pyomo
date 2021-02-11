@@ -44,6 +44,9 @@ class TestTeeStream(unittest.TestCase):
         b = StringIO()
         with tee.TeeStream(a,b) as t:
             t.STDOUT.write("Hello\nWorld")
+            # This is a slightly nondeterministic (on Windows), so a
+            # short pause should help
+            time.sleep(0.11)
             t.STDERR.write("interrupting\ncow")
         self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
         self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
@@ -58,7 +61,7 @@ class TestTeeStream(unittest.TestCase):
                 t.STDERR.flush()
                 # This is a slightly nondeterministic, so a short pause
                 # should help
-                time.sleep(0.1)
+                time.sleep(0.11)
                 t.STDOUT.write("World\n")
         finally:
             tee._peek_available = _tmp
@@ -78,7 +81,8 @@ class TestTeeStream(unittest.TestCase):
         bytes_ref = ref.encode()
         log = StringIO()
         with LoggingIntercept(log):
-            with tee.TeeStream() as t:
+            # Note: we must force the encoding for Windows
+            with tee.TeeStream(encoding='utf-8') as t:
                 os.write(t.STDOUT.fileno(), bytes_ref[:-1])
         self.assertEqual(
             log.getvalue(),

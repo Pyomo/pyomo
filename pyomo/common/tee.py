@@ -37,8 +37,9 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class _StreamHandle(object):
-    def __init__(self, mode, buffering, encoding):
+    def __init__(self, mode, buffering, encoding, newline):
         self.buffering = buffering
+        self.newline = newline
         self.read_pipe, self.write_pipe = os.pipe()
         if not buffering and 'b' not in mode:
             # While we support "unbuffered" behavior in text mode,
@@ -94,9 +95,12 @@ class _StreamHandle(object):
                 chars = self.decoder_buffer[:raw_len].decode(self.encoding)
                 break
             except:
-                # partial read of unicode character, try again with
-                # a shorter bytes buffer
-                raw_len -= 1
+                pass
+            # partial read of unicode character, try again with
+            # a shorter bytes buffer
+            raw_len -= 1
+        if self.newline is None:
+            chars = chars.replace('\r\n', '\n').replace('\r', '\n')
         self.output_buffer += chars
         self.decoder_buffer = self.decoder_buffer[raw_len:]
 
@@ -128,8 +132,9 @@ class _StreamHandle(object):
 
 
 class TeeStream(object):
-    def __init__(self, *ostreams):
+    def __init__(self, *ostreams, encoding=None):
         self.ostreams = ostreams
+        self.encoding = encoding
         self._stdout = None
         self._stderr = None
         self._handles = []
@@ -147,8 +152,10 @@ class TeeStream(object):
             self._stderr = self.open(buffering=0)
         return self._stderr
 
-    def open(self, mode='w', buffering=-1, encoding=None):
-        handle = _StreamHandle(mode, buffering, encoding)
+    def open(self, mode='w', buffering=-1, encoding=None, newline=None):
+        if encoding == None:
+            encoding = self.encoding
+        handle = _StreamHandle(mode, buffering, encoding, newline)
         if handle.buffering:
             self._handles.append(handle)
         else:
@@ -222,7 +229,7 @@ class TeeStream(object):
                 new_data = None
                 for handle in handles:
                     try:
-                        pipe = handle.read_pipe
+                        pipe = get_osfhandle(handle.read_pipe)
                         numAvail = PeekNamedPipe(pipe, 0)[1]
                         if numAvail:
                             result, new_data = ReadFile(pipe, numAvail, None)
