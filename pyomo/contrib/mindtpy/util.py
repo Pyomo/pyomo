@@ -423,8 +423,8 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                 opt.options['mip limits populate'] = config.solution_limit
                 opt.options['mip strategy presolvenode'] = 3
                 # TODO: need to discuss if this option should be added.
-                # if config.add_regularization == 'hess_lag':
-                #     opt.options['optimalitytarget'] = 3
+                if config.add_regularization == 'hess_lag':
+                    opt.options['optimalitytarget'] = 3
             elif solver_name == 'gurobi':
                 opt.options['SolutionLimit'] = config.solution_limit
                 opt.options['Presolve'] = 2
