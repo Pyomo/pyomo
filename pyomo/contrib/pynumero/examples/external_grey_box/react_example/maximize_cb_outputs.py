@@ -12,7 +12,7 @@ from __future__ import division
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.external_grey_box import \
     ExternalGreyBoxBlock
-from reactor_model_outputs import ReactorConcentrationsOutputModel
+from pyomo.contrib.pynumero.examples.external_grey_box.react_example.reactor_model_outputs import ReactorConcentrationsOutputModel
 
 def maximize_cb_outputs(show_solver_log=False):
     # in this simple example, we will use an external grey box model representing
