@@ -88,6 +88,14 @@ def MindtPy_iteration_loop(solve_data, config):
                 if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
                     handle_master_optimal(
                         master_mip, solve_data, config, update_bound=False)
+                elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
+                    config.logger.info(
+                        'Regularization problem failed to converge within the time limit.')
+                    solve_data.results.solver.termination_condition = tc.maxTimeLimit
+                    break
+                elif master_mip_results.solver.termination_condition is tc.infeasible:
+                    config.logger.info(
+                        'Regularization problem infeasible.')
                 else:
                     raise ValueError(
                         'MindtPy unable to handle projection problem termination condition '
