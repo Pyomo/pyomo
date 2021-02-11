@@ -254,6 +254,7 @@ def p_statement(p):
     stmt = p[1]
     if stmt == 'set':
         if p[2][-1] == '[':
+            # Just turn off the flatten_list and see what happens
             p[0] = ['set', p[2][:-1], '['] + flatten_list([p[i] for i in xrange(3,len(p)-1)])
         else:
             p[0] = flatten_list([p[i] for i in xrange(1,len(p)-1)])

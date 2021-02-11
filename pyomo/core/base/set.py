@@ -39,6 +39,8 @@ from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
 )
+# normalize_index.flatten might replace most implementations of flatten_tuple
+# explore this substitution
 from pyomo.core.base.global_set import (
     GlobalSets, GlobalSetBase,
 )

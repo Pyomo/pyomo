@@ -172,5 +172,4 @@ class Test(unittest.TestCase):
         self.assertEqual(self.soln.variable[4]["Slack"],0.4)
 
 if __name__ == "__main__":
-    #sys.settrace(pyutilib.misc.traceit)
     unittest.main()
