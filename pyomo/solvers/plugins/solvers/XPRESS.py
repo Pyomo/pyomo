@@ -307,7 +307,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
 
         try:
             if isinstance(results.solver.termination_message, basestring):
-                results.solver.termination_message.replace(':', '\\x3a')
+                results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass
         return results
