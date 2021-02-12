@@ -270,9 +270,11 @@ class TeeStream(object):
                 # send select() a *copy* of the handles list, as we see
                 # deadlocks when handles are added while select() is
                 # waiting
-                handle.state = "select: %r" % (handles,)
+                _handles = list(handles)
+                for handle in _handles:
+                    handle.state = "select: %r" % (_handles,)
                 ready_handles = select(
-                    list(handles), noop, noop, _poll_interval)[0]
+                    _handles, noop, noop, _poll_interval)[0]
                 if not ready_handles:
                     continue
 
