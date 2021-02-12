@@ -95,7 +95,7 @@ class TestFileUtils(unittest.TestCase):
         self.assertEquals(subprocess.run(
             [sys.executable],
             input='from pyomo.common.fileutils import this_file;'
-            'print(this_file())'.encode('utf-8'), stdout=subprocess.PIPE,
+            'print(this_file())', stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, universal_newlines=True
         ).stdout.strip(), '<stdin>')
 
