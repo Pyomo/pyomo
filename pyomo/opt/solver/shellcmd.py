@@ -15,6 +15,7 @@ import sys
 import time
 import logging
 import subprocess
+from six import StringIO
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
@@ -295,32 +296,33 @@ class SystemCallSolver(OptSolver):
 
         start_time = time.time()
 
+        if 'script' in command:
+            _input = command.script
+        else:
+            _input = None
+
+        timeout = self._timelimit
+        if self._timelimit is None:
+            self._timelimit += max(1, 0.01*self._timelimit)
+
+        ostreams = [StringIO()]
+        if self._tee:
+            ostreams.append(sys.stdout)
+
         try:
-            if 'script' in command:
-                _input = command.script
-            else:
-                _input = None
-                ostreams = []
-                if self._tee:
-                    ostreams.append(sys.stdout)
-                with TeeStream(*ostreams) as t:
-                    if ostreams:
-                        out = t.STDOUT
-                        err = t.STDERR
-                    else:
-                        out = err = subprocess.PIPE
-                    result = subprocess.run(
-                        command.cmd,
-                        stdin = _input,
-                        timeout = self._timelimit if self._timelimit is None else self._timelimit + max(1, 0.01*self._timelimit),
-                        env   = command.env,
-                        stdout=out,
-                        stderr=err,
-                        universal_newlines=True
-                        )
+            with TeeStream(*ostreams) as t:
+                result = subprocess.run(
+                    command.cmd,
+                    stdin=_input,
+                    timeout=timeout,
+                    env=command.env,
+                    stdout=t.STDOUT,
+                    stderr=t.STDERR,
+                    universal_newlines=True
+                )
 
             rc = result.returncode
-            log = result.stdout
+            log = ostreams[0].getvalue()
         except OSError:
             err = sys.exc_info()[1]
             msg = 'Could not execute the command: %s\tError message: %s'
