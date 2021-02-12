@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 class _StreamHandle(object):
     def __init__(self, mode, buffering, encoding, newline):
         self.state = 'init'
+        self.select_count = 0
         self.buffering = buffering
         self.newlines = newline
         self.read_pipe, self.write_pipe = os.pipe()
@@ -185,9 +186,11 @@ class TeeStream(object):
         return handle.write_file
 
     def close(self, in_exception=False):
+        state = {}
         # Close all open handles
         for h in self._handles:
             h.close()
+            state[id(h)] = [h.select_count]
 
         # Join all stream processing threads
         join_iter = 1
@@ -197,7 +200,8 @@ class TeeStream(object):
             self._threads[:] = [th for th in self._threads if th.is_alive()]
             if not self._threads:
                 break
-            time.sleep(0.1)
+            for h in self._handles:
+                state[id(h)].append(h.select_count)
             join_iter += 1
             if join_iter == 10:
                 if in_exception:
@@ -206,7 +210,7 @@ class TeeStream(object):
                     break
                 msg = "TeeStream: deadlock observed joining reader threads"
                 for h in self._handles:
-                    msg += "\n    HANDLE STATE: %s" % (h.state,)
+                    msg += "\n    HANDLE STATE: %s: %s" % (h.state,state[id(h)])
                 raise RuntimeError(msg)
 
         self._threads.clear()
@@ -290,6 +294,7 @@ class TeeStream(object):
                 _handles = list(handles)
                 for handle in _handles:
                     handle.state = "select: %r" % (_handles,)
+                    handle.select_count += 1
                 ready_handles = select(
                     _handles, noop, noop, _poll_interval)[0]
                 if not ready_handles:
