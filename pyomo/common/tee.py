@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 class _StreamHandle(object):
     def __init__(self, mode, buffering, encoding, newline):
+        self.state = 'ready'
         self.buffering = buffering
         self.newlines = newline
         self.read_pipe, self.write_pipe = os.pipe()
@@ -178,6 +179,8 @@ class TeeStream(object):
         join_iter = 1
         while self._threads:
             if join_iter == 10:
+                for h in self._handles:
+                    print("HANDLE: %s" % (h.state,))
                 if in_exception:
                     # We are already processing an exception: no reason
                     # to trigger another
@@ -269,6 +272,7 @@ class TeeStream(object):
                     continue
 
                 handle = ready_handles[0]
+                handle.state = 'read'
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
                     handle.finalize(self.ostreams)
@@ -278,9 +282,13 @@ class TeeStream(object):
 
             # At this point, we have new data sitting in the
             # handle.decoder_buffer
+            handle.state = 'decode'
             handle.decodeIncomingBuffer()
 
             # Now, output whatever we have decoded to the output streams
+            handle.state = 'write'
             handle.writeOutputBuffer(self.ostreams)
+
+            handle.state = 'ready'
         #
         #print("MERGED READER: DONE")
