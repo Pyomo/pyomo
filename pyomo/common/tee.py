@@ -175,8 +175,14 @@ class TeeStream(object):
             h.close()
 
         # Join all stream processing threads
-        for th in self._threads:
-            th.join()
+        join_iter = 0
+        while any(th.is_alive() for th in self._threads):
+            join_iter += 1
+            for th in self._threads:
+                th.join(0.1)
+            if join_iter == 10:
+                raise RuntimeError(
+                    "TeeStream: deadlock observed joining reader threads")
 
         self._threads.clear()
         self._handles.clear()
