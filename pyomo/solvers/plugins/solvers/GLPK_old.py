@@ -458,10 +458,8 @@ class GLPKSHELL_old(SystemCallSolver):
         result = subprocess.run([solver_exec, "--version"], timeout=1,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 universal_newlines=True)
-        errcode = result.returncode
-        results = result.stdout
-        if errcode == 0:
-            return _extract_version(results)
+        if not result.returncode:
+            return _extract_version(result.stdout)
         return _extract_version('')
 
     def create_command_line(self, executable, problem_files):

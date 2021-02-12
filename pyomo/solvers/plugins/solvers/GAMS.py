@@ -631,7 +631,9 @@ class GAMSShell(_GAMSSolver):
             with open(test, 'w') as FILE:
                 FILE.write(self._simple_model(n))
             result = subprocess.run(
-                [self.executable(), test, "curdir=" + tmpdir, 'lo=0'])
+                [self.executable(), test, "curdir=" + tmpdir, 'lo=0'],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
             return not result.returncode
         finally:
             shutil.rmtree(tmpdir)

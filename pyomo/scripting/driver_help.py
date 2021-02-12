@@ -22,7 +22,6 @@ import pyutilib.misc
 
 import pyomo.common
 from pyomo.common.collections import Options
-from pyomo.common.tee import TeeStream
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -55,10 +54,9 @@ def command_exec(options):
     if not os.path.exists(cmddir+options.command[0]):
         print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
         return 1
-    ostreams = [sys.stdout]
-    with TeeStream(*ostreams) as t:
-        return subprocess.run([cmddir] + options.command,
-                              stdout=t.STDOUT, stderr=t.STDERR).returncode
+    return subprocess.run([cmddir] + options.command,
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode
 
 #
 # Add a subparser for the pyomo command

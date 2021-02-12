@@ -131,8 +131,8 @@ class FileDownloader(object):
                 dist, ver = cls._get_distver_from_distro()
             elif os.path.exists('/etc/redhat-release'):
                 dist, ver = cls._get_distver_from_redhat_release()
-            elif subprocess.run(['lsb_release'], stdout=subprocess.PIPE,
-                              stderr=subprocess.STDOUT).returncode == 0:
+            elif subprocess.run(['lsb_release'], stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode == 0:
                 dist, ver = cls._get_distver_from_lsb_release()
             elif os.path.exists('/etc/os-release'):
                 # Note that (at least on centos), os_release is an

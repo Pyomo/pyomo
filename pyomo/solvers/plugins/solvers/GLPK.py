@@ -37,10 +37,8 @@ def configure_glpk():
     result = subprocess.run([Executable('glpsol').path(), "--version"],
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             timeout=1, universal_newlines=True)
-    errcode = result.returncode
-    results = result.stdout
-    if errcode == 0:
-        _glpk_version = _extract_version(results)
+    if not result.returncode:
+        _glpk_version = _extract_version(result.stdout)
 
 # Not sure how better to get these constants, but pulled from GLPK
 # documentation and source code (include/glpk.h)
