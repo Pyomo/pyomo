@@ -169,7 +169,7 @@ class TeeStream(object):
         self._start(handle)
         return handle.write_file
 
-    def close(self):
+    def close(self, in_exception=False):
         # Close all open handles
         for h in self._handles:
             h.close()
@@ -179,8 +179,12 @@ class TeeStream(object):
         while any(th.is_alive() for th in self._threads):
             join_iter += 1
             for th in self._threads:
-                th.join(0.1)
+                th.join(_poll_interval)
             if join_iter == 10:
+                if in_exception:
+                    # We are alreeady processing an exception: no reason
+                    # to trigger another
+                    break
                 raise RuntimeError(
                     "TeeStream: deadlock observed joining reader threads")
 
@@ -193,7 +197,7 @@ class TeeStream(object):
         return self
 
     def __exit__(self, et, ev, tb):
-        self.close()
+        self.close(et is not None)
 
     def __del__(self):
         # Implement __del__ to guarantee that file descriptors are closed
