@@ -65,8 +65,9 @@ def create_test_method(example):
                (not testing_solvers['mosek_direct','python']):
                 self.skipTest("Ipopt or Mosek is not available")
         result = subprocess.run([sys.executable, example],
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.assertEqual(result.returncode, 0, msg=result.stdout.decode("utf-8"))
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                universal_newlines=True)
+        self.assertEqual(result.returncode, 0, msg=result.stdout)
     return testmethod
 
 class TestKernelExamples(unittest.TestCase):

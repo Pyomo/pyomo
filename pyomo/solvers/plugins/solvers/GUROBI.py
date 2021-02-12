@@ -280,10 +280,11 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             results = subprocess.run([solver_exec],
                                  input=('from gurobipy import *; print(gurobi.version()); exit()'.encode()),
                                  stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
             ver = None
             try:
-                ver = tuple(eval(results.stdout.decode("utf-8").strip()))
+                ver = tuple(eval(results.stdout.strip()))
                 while(len(ver) < 4):
                     ver += (0,)
             except SyntaxError:

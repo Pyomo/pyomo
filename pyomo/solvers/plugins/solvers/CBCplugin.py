@@ -53,8 +53,9 @@ def configure_cbc():
         return
     cbc_exec = executable.path()
     results = subprocess.run([cbc_exec,"-stop"], timeout=1,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    _cbc_version = _extract_version(results.stdout.decode("utf-8"))
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+    _cbc_version = _extract_version(results.stdout)
     results = subprocess.run([cbc_exec, "dummy", "-AMPL", "-stop"], timeout=1,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT)

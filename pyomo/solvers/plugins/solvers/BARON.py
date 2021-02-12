@@ -178,8 +178,9 @@ class BARONSHELL(SystemCallSolver):
             try:
                 results = subprocess.run([solver_exec, fnames[0]],
                                          stdout=subprocess.PIPE,
-                                         stderr=subprocess.STDOUT)
-                ver = _extract_version(results.stdout.decode("utf-8"))
+                                         stderr=subprocess.STDOUT,
+                                         universal_newlines=True)
+                ver = _extract_version(results.stdout)
             finally:
                 self._remove_dummy_input_files(fnames)
 

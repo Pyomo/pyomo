@@ -659,8 +659,9 @@ class GAMSShell(_GAMSSolver):
             # specify logging to stdout for windows compatibility
             cmd = [solver_exec, "audit", "lo=3"]
             results = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT)
-            return _extract_version(results.stdout.decode("utf-8"))
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True)
+            return _extract_version(results.stdout)
 
     @staticmethod
     def _parse_special_values(value):

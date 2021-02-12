@@ -48,12 +48,13 @@ class ILMLicensedSystemCallSolver(SystemCallSolver):
                     # user hits Ctrl-C.
                     cmd.append("-batch")
                 result = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT)
+                                        stderr=subprocess.STDOUT,
+                                        universal_newlines=True)
             except OSError:
                 msg = sys.exc_info()[1]
                 raise ApplicationError("Could not execute the command: ilmtest\n\tError message: "+msg)
             sys.stdout.flush()
-            for line in result.stdout.decode('utf-8').split("\n"):
+            for line in result.stdout.split("\n"):
                 tokens = re.split('[\t ]+',line.strip())
                 if len(tokens) == 5 and tokens[0] == 'tokens' and tokens[1] == 'reserved:' and tokens[4] == os.environ.get('USER',None):
                     if not (tokens[2] == 'none' or tokens[2] == '0'):

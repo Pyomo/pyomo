@@ -102,16 +102,18 @@ def nlwriter_asl_test(self, name):
                         currdir+name+'.test.nl',
                         'rows='+currdir+name+'.test.row',
                         'cols='+currdir+name+'.test.col'],
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    self.assertTrue(p.returncode == 0, msg=p.stdout.decode("utf-8"))
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                       universal_newlines=True)
+    self.assertTrue(p.returncode == 0, msg=p.stdout)
 
     # obtain the nl file summary information for comparison with pyomo
     p = subprocess.run(['gjh_asl_json',
                         currdir+name+'.ampl.nl',
                         'rows='+currdir+name+'.ampl.row',
                         'cols='+currdir+name+'.ampl.col'],
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    self.assertTrue(p.returncode == 0, msg=p.stdout.decode("utf-8"))
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                       universal_newlines=True)
+    self.assertTrue(p.returncode == 0, msg=p.stdout)
 
     self.assertMatchesJsonBaseline(
         currdir+name+'.test.json',
