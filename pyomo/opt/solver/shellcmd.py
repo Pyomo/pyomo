@@ -20,6 +20,7 @@ from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 from pyomo.common.log import is_debug_set
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.tee import TeeStream
 
 import pyomo.common
 from pyomo.opt.base import ResultsFormat
@@ -299,18 +300,25 @@ class SystemCallSolver(OptSolver):
                 _input = command.script
             else:
                 _input = None
-            result = subprocess.run(
-                command.cmd,
-                stdin = _input,
-                timeout = self._timelimit if self._timelimit is None else self._timelimit + max(1, 0.01*self._timelimit),
-                env   = command.env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True
-             )
-            if self._tee:
-                for line in result.stdout:
-                    sys.stdout.write(line)
+                ostreams = []
+                if self._tee:
+                    ostreams.append(sys.stdout)
+                with TeeStream(*ostreams) as t:
+                    if ostreams:
+                        out = t.STDOUT
+                        err = t.STDERR
+                    else:
+                        out = err = subprocess.PIPE
+                    result = subprocess.run(
+                        command.cmd,
+                        stdin = _input,
+                        timeout = self._timelimit if self._timelimit is None else self._timelimit + max(1, 0.01*self._timelimit),
+                        env   = command.env,
+                        stdout=out,
+                        stderr=err,
+                        universal_newlines=True
+                        )
+
             rc = result.returncode
             log = result.stdout
         except OSError:
