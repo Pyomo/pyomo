@@ -41,7 +41,6 @@ class _StreamHandle(object):
     def __init__(self, mode, buffering, encoding, newline):
         self.state = 'init'
         self.buffering = buffering
-        self.lock = threading.Lock()
         self.newlines = newline
         self.read_pipe, self.write_pipe = os.pipe()
         if not buffering and 'b' not in mode:
@@ -67,8 +66,7 @@ class _StreamHandle(object):
     def close(self):
         # Note that closing the file will close the underlying file
         # descriptor
-        with self.lock:
-            self.write_file.close()
+        self.write_file.close()
 
     def finalize(self, ostreams):
         self.close()
@@ -257,7 +255,7 @@ class TeeStream(object):
                             break
                     except:
                         handle.finalize(self.ostreams)
-                        handles.remove(handle)
+                        self._handles.remove(handle)
                         new_data = None
                 if new_data is None:
                     # PeekNamedPipe is non-blocking; to avoid swamping
@@ -269,14 +267,8 @@ class TeeStream(object):
                 # while the _mergedReader is running, we want to
                 # periodically time out and update the list of handles
                 # that we are waiting for
-                try:
-                    for h in handles:
-                        h.lock.acquire()
-                    ready_handles = select(
-                        handles, noop, noop, _poll_interval)[0]
-                finally:
-                    for h in handles:
-                        h.lock.release()
+                ready_handles = select(
+                    list(handles), noop, noop, _poll_interval)[0]
                 if not ready_handles:
                     continue
 
@@ -285,7 +277,7 @@ class TeeStream(object):
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
                     handle.finalize(self.ostreams)
-                    handles.remove(handle)
+                    self._handles.remove(handle)
                     continue
                 handle.decoder_buffer += new_data
 
