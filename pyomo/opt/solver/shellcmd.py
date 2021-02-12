@@ -298,8 +298,10 @@ class SystemCallSolver(OptSolver):
 
         if 'script' in command:
             _input = command.script
+            _stdin = subprocess.PIPE
         else:
             _input = None
+            _stdin = None
 
         timeout = self._timelimit
         if self._timelimit is not None:
@@ -310,17 +312,22 @@ class SystemCallSolver(OptSolver):
             ostreams.append(sys.stdout)
 
         try:
+            print(command.cmd)
             with TeeStream(*ostreams) as t:
-                result = subprocess.run(
+                proc = subprocess.Popen(
                     command.cmd,
-                    stdin=_input,
-                    timeout=timeout,
+                    stdin=_stdin,
                     env=command.env,
                     stdout=t.STDOUT,
                     stderr=t.STDERR
                 )
+                try:
+                    result = proc.communicate(input=_input, timeout=timeout)
+                except TimeoutExpired:
+                    proc.kill()
+                    result = proc.communicate()
 
-            rc = result.returncode
+            rc = proc.returncode
             log = ostreams[0].getvalue()
         except OSError:
             err = sys.exc_info()[1]
