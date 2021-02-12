@@ -302,7 +302,7 @@ class SystemCallSolver(OptSolver):
             _input = None
 
         timeout = self._timelimit
-        if self._timelimit is None:
+        if self._timelimit is not None:
             self._timelimit += max(1, 0.01*self._timelimit)
 
         ostreams = [StringIO()]
