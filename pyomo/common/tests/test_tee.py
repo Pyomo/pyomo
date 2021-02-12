@@ -44,11 +44,13 @@ class TestTeeStream(unittest.TestCase):
         b = StringIO()
         with tee.TeeStream(a,b) as t:
             t.STDOUT.write("Hello\nWorld")
+            t.STDOUT.flush()
             # This is a slightly nondeterministic (on Windows), so a
             # short pause should help
-            time.sleep(0.1)
+            time.sleep(0.11)
             t.STDERR.write("interrupting\ncow")
-            time.sleep(0.1)
+            t.STDERR.flush()
+            time.sleep(0.11)
         self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
         self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
 
@@ -62,7 +64,7 @@ class TestTeeStream(unittest.TestCase):
                 t.STDERR.flush()
                 # This is a slightly nondeterministic, so a short pause
                 # should help
-                time.sleep(0.15)
+                time.sleep(0.11)
                 t.STDOUT.write("World\n")
         finally:
             tee._peek_available = _tmp
