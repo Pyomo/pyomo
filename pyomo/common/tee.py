@@ -39,20 +39,23 @@ logger = logging.getLogger(__name__)
 class _StreamHandle(object):
     def __init__(self, mode, buffering, encoding, newline):
         self.buffering = buffering
-        self.newline = newline
+        self.newlines = newline
         self.read_pipe, self.write_pipe = os.pipe()
         if not buffering and 'b' not in mode:
             # While we support "unbuffered" behavior in text mode,
             # python does not
             buffering = -1
         self.write_file = os.fdopen(self.write_pipe, mode=mode,
-                                    buffering=buffering, encoding=encoding)
+                                    buffering=buffering, encoding=encoding,
+                                    newline=newline)
         self.decoder_buffer = b''
         try:
-            self.encoding = self.write_file.encoding
-            self.output_buffer = ''
+            self.encoding = encoding or self.write_file.encoding
         except AttributeError:
             self.encoding = None
+        if self.encoding:
+            self.output_buffer = ''
+        else:
             self.output_buffer = b''
 
     def fileno(self):
@@ -99,7 +102,7 @@ class _StreamHandle(object):
             # partial read of unicode character, try again with
             # a shorter bytes buffer
             raw_len -= 1
-        if self.newline is None:
+        if self.newlines is None:
             chars = chars.replace('\r\n', '\n').replace('\r', '\n')
         self.output_buffer += chars
         self.decoder_buffer = self.decoder_buffer[raw_len:]
@@ -119,16 +122,16 @@ class _StreamHandle(object):
 
         for stream in ostreams:
             try:
-                writeOK = stream.write(ostring)
+                written = stream.write(ostring)
             except:
-                writeOK = False
-            if writeOK and not self.buffering:
+                written = 0
+            if written and not self.buffering:
                 stream.flush()
-            if not writeOK:
+            if written != len(ostring):
                 logger.error(
                     "Output stream closed before all output was "
                     "written to it. The following was left in "
-                    "the output buffer:\n\t%r" % (ostring,))
+                    "the output buffer:\n\t%r" % (ostring[written:],))
 
 
 class TeeStream(object):
@@ -153,7 +156,7 @@ class TeeStream(object):
         return self._stderr
 
     def open(self, mode='w', buffering=-1, encoding=None, newline=None):
-        if encoding == None:
+        if encoding is None:
             encoding = self.encoding
         handle = _StreamHandle(mode, buffering, encoding, newline)
         if handle.buffering:
