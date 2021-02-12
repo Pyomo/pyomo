@@ -49,7 +49,7 @@ class _StreamHandle(object):
             buffering = -1
         self.write_file = os.fdopen(self.write_pipe, mode=mode,
                                     buffering=buffering, encoding=encoding,
-                                    newline=newline)
+                                    newline=newline, closefd=False)
         self.decoder_buffer = b''
         try:
             self.encoding = encoding or self.write_file.encoding
@@ -67,9 +67,20 @@ class _StreamHandle(object):
         return self.read_pipe
 
     def close(self):
-        # Note that closing the file will close the underlying file
-        # descriptor
-        self.write_file.close()
+        # Close both the file and the underlying file descriptor.  Note
+        # that this may get called more than once.
+        if self.write_file is not None:
+            self.write_file.close()
+            self.write_file = None
+
+        if self.write_pipe is not None:
+            # If someone else has closed the file descriptor, then
+            # python raises an OSError
+            try:
+                os.close(self.write_pipe)
+            except OSError:
+                pass
+            self.write_pipe = None
 
     def finalize(self, ostreams):
         self.close()
@@ -170,7 +181,6 @@ class TeeStream(object):
             # Unbuffered handles should appear earlier in the list so
             # that they get processed first
             self._handles.insert(0, handle)
-        print("ADD HANDLE: %r" % (handle,))
         self._start(handle)
         return handle.write_file
 
@@ -289,7 +299,6 @@ class TeeStream(object):
                 handle.state = 'read'
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
-                    print("REMOVE HANDLE: %r" % (handle,))
                     handle.finalize(self.ostreams)
                     handles.remove(handle)
                     continue

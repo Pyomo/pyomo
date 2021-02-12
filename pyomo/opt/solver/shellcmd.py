@@ -315,8 +315,8 @@ class SystemCallSolver(OptSolver):
                     command.cmd,
                     input=_input,
                     env=command.env,
-                    stderr=t.STDERR,
                     stdout=t.STDOUT,
+                    stderr=t.STDERR,
                     timeout=timeout,
                     universal_newlines=True,
                 )
