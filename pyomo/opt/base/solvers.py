@@ -171,9 +171,9 @@ class SolverFactoryClass(Factory):
                     if opt is not None:
                         opt.set_options('solver='+_name)
         except:
-            err = sys.exc_info()[1]
+            err = sys.exc_info()
             logger.warning("Failed to create solver with name '%s':\n%s"
-                         % (_name, err))
+                           % (_name, err[1]), exc_info=err)
             opt = None
         if opt is not None and _name != "py" and subsolver is not None:
             # py just creates instance of its subsolver, no need for this option
