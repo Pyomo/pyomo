@@ -39,8 +39,9 @@ logger = logging.getLogger(__name__)
 
 class _StreamHandle(object):
     def __init__(self, mode, buffering, encoding, newline):
-        self.state = 'ready'
+        self.state = 'init'
         self.buffering = buffering
+        self.lock = threading.Lock()
         self.newlines = newline
         self.read_pipe, self.write_pipe = os.pipe()
         if not buffering and 'b' not in mode:
@@ -66,7 +67,8 @@ class _StreamHandle(object):
     def close(self):
         # Note that closing the file will close the underlying file
         # descriptor
-        self.write_file.close()
+        with self.lock:
+            self.write_file.close()
 
     def finalize(self, ostreams):
         self.close()
@@ -267,7 +269,14 @@ class TeeStream(object):
                 # while the _mergedReader is running, we want to
                 # periodically time out and update the list of handles
                 # that we are waiting for
-                ready_handles = select(handles, noop, noop, _poll_interval)[0]
+                try:
+                    for h in handles:
+                        h.lock.acquire()
+                    ready_handles = select(
+                        handles, noop, noop, _poll_interval)[0]
+                finally:
+                    for h in handles:
+                        h.lock.release()
                 if not ready_handles:
                     continue
 
